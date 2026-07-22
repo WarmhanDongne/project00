@@ -10,6 +10,25 @@ cp .env.example .env.dev
 flutter run
 ```
 
+Firebase Functions를 개발할 때는 Node.js 22를 사용합니다.
+
+```bash
+nvm use
+cd functions
+npm install
+npm run lint
+npm run build
+npm run serve
+```
+
+Functions 배포는 프로젝트 루트에서 다음 명령으로 실행합니다.
+
+```bash
+./functions/node_modules/.bin/firebase deploy --only functions
+```
+
+현재 기본 HTTP 함수는 `healthCheck`이며 기본 리전은 서울 리전인 `asia-northeast3`입니다.
+
 Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 
 - Android: `android/app/google-services.json`

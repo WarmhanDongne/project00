@@ -1,0 +1,32 @@
+# Dart / Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Firebase local files
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firepit-log.txt
+ui-debug.log
+
+# Platform build output
+android/app/debug/
+android/app/profile/
+android/app/release/
+ios/Flutter/.last_build_id
