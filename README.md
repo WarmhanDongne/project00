@@ -60,10 +60,11 @@ flutter run
 
 ## 현재 구현 상태
 
-현재는 개발 시작을 위한 구조와 최소 화면 이동이 준비된 상태입니다.
+현재는 UI를 직접 설계하기 위한 빈 앱 상태입니다. `screens`, `widgets`, `router`, `theme` 폴더는 위치만 유지하며 기본 구현을 제공하지 않습니다.
 
-- 완료: Firebase Core 초기화, 기본 테마, 이름 기반 라우팅, 홈/스토어/설정/로그인/게임 화면 골격
+- 완료: Firebase Core 초기화와 빈 `MaterialApp` 실행
 - 완료: Firebase Realtime Database 패키지와 공용 인스턴스
 - 골격: 인증, Firestore, Storage, Functions, Messaging 서비스 인터페이스
 - 골격: 사용자 저장소, 매치메이킹, 실시간 게임 룸, Liar's Bar 상태 관리
+- 미구현: 화면 UI, 공용 위젯, 테마, 라우팅
 - 추후 작업: 실제 인증 흐름, 데이터 직렬화, Firebase 보안 규칙, 에러/로딩 처리, 다국어 코드 생성 및 화면 연결
