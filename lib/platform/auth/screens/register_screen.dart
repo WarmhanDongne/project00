@@ -7,7 +7,9 @@ import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.isGoogleSignIn = false});
+
+  final bool isGoogleSignIn;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -27,7 +29,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isEmailChecked = false;
   bool isCodeSent = false;
   bool isPhoneVerified = false;
-  int pageNumber = 0;
+
+  late int pageNumber = 0;
   String? verificationId;
   int? resendToken;
   XFile? profileImage;
@@ -258,32 +261,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nickname = nicknameController.text.trim();
     showMessage(nickname.length >= 2 ? '사용 가능한 형식입니다.' : '닉네임을 2자 이상 입력해주세요.');
   }
-Future<void> pickProfileImage() async {
-  try {
-    final image = await imagePicker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
 
-    if (image == null) return;
+  Future<void> pickProfileImage() async {
+    try {
+      final image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
 
-    final bytes = await image.readAsBytes();
+      if (image == null) return;
 
-    if (!mounted) return;
+      final bytes = await image.readAsBytes();
 
-    setState(() {
-      profileImage = image;
-      profileImageBytes = bytes;
-    });
-  } catch (error, stackTrace) {
-    debugPrint('프로필 이미지 선택 오류: $error');
-    debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
 
-    if (!mounted) return;
-    showMessage('프로필 사진을 불러오지 못했습니다.\n$error');
+      setState(() {
+        profileImage = image;
+        profileImageBytes = bytes;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('프로필 이미지 선택 오류: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+      showMessage('프로필 사진을 불러오지 못했습니다.\n$error');
+    }
   }
-}
 
   Future<void> completeRegistration() async {
     if (!isPhoneVerified) {
