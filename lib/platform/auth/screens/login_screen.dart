@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/auth/services/firebase_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   // 상태 관리 객체 인스턴스화
   final AuthProvider _authProvider = AuthProvider();
+  final authService = FirebaseAuthService();
+  //이메일+비밀번호 불러오기
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -51,15 +54,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     //ui로딩으로 바꾼후 서버 접속,
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await authService.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       //사용자가 화면에 머물러 있는지 확인
       if (!mounted) return;
-      showMessage('회원가입이 완료되었습니다.');
-    } on FirebaseAuthException catch (error) {
+      showMessage('환영합니다');
+    } on AuthServiceException catch (error) {
       if (!mounted) return;
 
       //error코드에서 메시지 전환시켜 showMessage로 출력
@@ -68,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'invalid-email' => '이메일 형식이 올바르지 않습니다.',
         'weak-password' => '비밀번호는 6자 이상 입력해주세요.',
         'network-request-failed' => '네트워크 연결을 확인해주세요.',
-        _ => error.message ?? '회원가입에 실패했습니다.',
+        _ => error.message,
       };
 
       showMessage(message);
