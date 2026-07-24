@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 class RegisterStepTwo extends StatelessWidget {
@@ -8,6 +10,8 @@ class RegisterStepTwo extends StatelessWidget {
     required this.isLoading,
     required this.isCodeSent,
     required this.isPhoneVerified,
+    required this.profileImageBytes,
+    required this.onPickProfileImage,
     required this.onCheckNickname,
     required this.onSendPhoneCode,
     required this.onConfirmPhoneCode,
@@ -20,6 +24,8 @@ class RegisterStepTwo extends StatelessWidget {
   final bool isLoading;
   final bool isCodeSent;
   final bool isPhoneVerified;
+  final Uint8List? profileImageBytes;
+  final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;
   final VoidCallback onSendPhoneCode;
   final VoidCallback onConfirmPhoneCode;
@@ -28,17 +34,42 @@ class RegisterStepTwo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const CircleAvatar(
-          radius: 50,
-          child: Text('프로필\n사진', textAlign: TextAlign.center),
+        GestureDetector(
+          onTap: isLoading ? null : onPickProfileImage,
+          child: CircleAvatar(
+            radius: 50,
+            backgroundImage: profileImageBytes == null
+                ? null
+                : MemoryImage(profileImageBytes!),
+            child: profileImageBytes == null
+                ? const Text('프로필\n사진', textAlign: TextAlign.center)
+                : null,
+          ),
         ),
         const SizedBox(height: 30),
-        _InputWithButton(
-          controller: nicknameController,
-          hintText: 'NICKNAME:',
-          buttonText: '입력확인',
-          onPressed: isLoading ? null : onCheckNickname,
+        // _InputWithButton(
+        //   controller: nicknameController,
+        //   hintText: 'NICKNAME:',
+        //   buttonText: '사용가능',
+        //   onPressed: isLoading ? null : onCheckNickname,
+        // ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: nicknameController,
+                decoration: InputDecoration(
+                  hintText: 'NICKNAME:',
+                  filled: true,
+                  fillColor: const Color(0xFFD4D4D4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            SizedBox(width: 100, child: Text('')),
+          ],
         ),
+
         const SizedBox(height: 16),
         _InputWithButton(
           controller: phoneController,

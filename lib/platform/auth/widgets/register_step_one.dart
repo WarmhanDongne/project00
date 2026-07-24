@@ -5,7 +5,6 @@ class RegisterStepOne extends StatelessWidget {
     required this.emailController,
     required this.passwordController,
     required this.confirmPasswordController,
-    required this.isLoading,
     required this.isEmailChecked,
     required this.onCheckEmail,
     super.key,
@@ -14,7 +13,6 @@ class RegisterStepOne extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
-  final bool isLoading;
   final bool isEmailChecked;
   final VoidCallback onCheckEmail;
 
@@ -29,6 +27,7 @@ class RegisterStepOne extends StatelessWidget {
                 controller: emailController,
                 enabled: !isEmailChecked,
                 keyboardType: TextInputType.emailAddress,
+
                 decoration: const InputDecoration(
                   hintText: 'ID/EMAIL:',
                   filled: true,
@@ -43,8 +42,8 @@ class RegisterStepOne extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   shape: const RoundedRectangleBorder(),
                 ),
-                onPressed: isLoading || isEmailChecked ? null : onCheckEmail,
-                child: isLoading
+                onPressed: isEmailChecked ? null : onCheckEmail,
+                child: isEmailChecked
                     ? const SizedBox(
                         width: 20,
                         height: 20,
