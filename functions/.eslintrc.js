@@ -15,7 +15,7 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   parserOptions: {
     project: ["tsconfig.json", "tsconfig.dev.json"],
-    tsconfigRootDir: __dirname,   // ← 이 한 줄 추가
+    tsconfigRootDir: __dirname,
     sourceType: "module",
   },
   ignorePatterns: [
