@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
-
+import 'package:project00/platform/auth/screens/register_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -24,6 +24,14 @@ class App extends StatelessWidget {
 
           // 검증된 유저 객체가 메모리에 할당된 경우 (인가 완료)
           if (snapshot.hasData && snapshot.data != null) {
+            // 스트림에서 넘어온 유저 객체 할당
+            final user = snapshot.data!;
+
+            // 필수 정보 누락 여부 검증
+            if (user.phoneNumber == null || user.displayName == null) {
+              // 누락된 정보가 있다면 step2로 이동
+              return const RegisterScreen(isGoogleSignIn: true);
+            }
             return Scaffold(
               appBar: AppBar(
                 title: const Text('Main Workspace'),
