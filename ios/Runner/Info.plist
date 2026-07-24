@@ -79,5 +79,18 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Sign-in Section -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>Editor</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.93097008048-l7ovteo187vpqe8ppime2ck350nvqigi</string>
+    </array>
+  </dict>
+</array>
+<!-- End of the Google Sign-in Section -->
 </dict>
 </plist>

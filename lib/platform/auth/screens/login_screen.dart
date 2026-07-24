@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/firebase_auth_service.dart';
@@ -11,12 +13,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // 상태 관리 객체 인스턴스화
+  final AuthProvider _authProvider = AuthProvider();
   final authService = FirebaseAuthService();
   //이메일+비밀번호 불러오기
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool isLoading = false;
+
+  @override
+  void dispose() {
+    // 위젯 트리가 파괴될 때 Provider 메모리 할당 해제
+    _authProvider.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> signIn() async {
     //아이디+비밀번호 .text처리
@@ -74,18 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  //잠시 나오는 메시지 창 = 메시지 함수
   void showMessage(String message) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -162,11 +167,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: Image.asset(
-                  'assets/images/button/googleLoginButton.png',
-                  fit: BoxFit.fitWidth,
+              GestureDetector(
+                onTap: () async {
+                  // 로딩 중이 아닐 때만 실행되도록 처리
+                  if (isLoading) return;
+
+                  // 상태를 로딩 중으로 변경
+                  setState(() {
+                    isLoading = true;
+                  });
+
+                  // AuthProvider의 구글 로그인 로직 호출
+                  final credential = await _authProvider.signInWithGoogle();
+
+                  if (mounted) {
+                    setState(() {
+                      setState(() {
+                        isLoading = false;
+                      });
+
+                      if (credential != null) {
+                        showMessage('구글 로그인에 성공했습니다.');
+                      } else {
+                        showMessage('구글 로그인에 실패했습니다.');
+                      }
+                    });
+                  }
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Image.asset(
+                    'assets/images/button/googleLoginButton.png',
+                    fit: BoxFit.fitWidth,
+                  ),
                 ),
               ),
             ],
