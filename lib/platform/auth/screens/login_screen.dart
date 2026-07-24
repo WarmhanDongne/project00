@@ -27,10 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
     passwordController.dispose();
     super.dispose();
   }
-  //이메일+비밀번호 불러오기
-
-  //잠시 나오는 메시지 창 = 메시지 함수
-  //showMessage();
 
   Future<void> signIn() async {
     //아이디+비밀번호 .text처리
