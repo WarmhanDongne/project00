@@ -30,11 +30,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isCodeSent = false;
   bool isPhoneVerified = false;
 
-  late int pageNumber = 0;
+  late int pageNumber;
   String? verificationId;
   int? resendToken;
   XFile? profileImage;
   Uint8List? profileImageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    pageNumber = widget.isGoogleSignIn ? 1 : 0; // 구글 로그인 여부 설정
+  }
 
   Future<void> checkEmailDuplicate() async {
     final email = emailController.text.trim();
