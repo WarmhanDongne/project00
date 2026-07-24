@@ -168,11 +168,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: Image.asset(
-                  'assets/images/button/googleLoginButton.png',
-                  fit: BoxFit.fitWidth,
+              GestureDetector(
+                onTap: () async {
+                  // 로딩 중이 아닐 때만 실행되도록 처리
+                  if (isLoading) return;
+
+                  // 상태를 로딩 중으로 변경
+                  setState(() {
+                    isLoading = true;
+                  });
+
+                  // AuthProvider의 구글 로그인 로직 호출
+                  final credential = await _authProvider.signInWithGoogle();
+
+                  if (mounted) {
+                    setState(() {
+                      setState(() {
+                        isLoading = false;
+                      });
+
+                      if (credential != null) {
+                        showMessage('구글 로그인에 성공했습니다.');
+                      } else {
+                        showMessage('구글 로그인에 실패했습니다.');
+                      }
+                    });
+                  }
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Image.asset(
+                    'assets/images/button/googleLoginButton.png',
+                    fit: BoxFit.fitWidth,
+                  ),
                 ),
               ),
             ],
