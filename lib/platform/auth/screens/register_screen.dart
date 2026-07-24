@@ -9,7 +9,7 @@ import 'package:project00/platform/auth/widgets/register_step_two.dart';
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.isGoogleSignIn = false});
 
-  final bool isGoogleSignIn;
+  final bool isGoogleSignIn; // 구글 로그인 여부
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -30,7 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isCodeSent = false;
   bool isPhoneVerified = false;
 
-  late int pageNumber;
+  late int pageNumber; // late로 선언해 나중에 초기화
   String? verificationId;
   int? resendToken;
   XFile? profileImage;
