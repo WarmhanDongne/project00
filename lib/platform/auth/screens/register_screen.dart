@@ -1,7 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:project00/platform/auth/services/firebase_auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
 
@@ -13,6 +14,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final authService = FirebaseAuthService();
+  final imagePicker = ImagePicker();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
@@ -26,6 +29,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isPhoneVerified = false;
   int pageNumber = 0;
   String? verificationId;
+  int? resendToken;
+  XFile? profileImage;
+  Uint8List? profileImageBytes;
 
   Future<void> checkEmailDuplicate() async {
     final email = emailController.text.trim();
@@ -38,34 +44,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showMessage('이메일 형식이 올바르지 않습니다.');
       return;
     }
-
-    setState(() => isLoading = true);
     try {
-      final callable = FirebaseFunctions.instanceFor(
-        region: 'asia-northeast3',
-      ).httpsCallable('checkEmailDuplicate');
-      final result = await callable.call<Map<String, dynamic>>({
-        'email': email,
-      });
-      final isDuplicate = result.data['isDuplicate'] == true;
+      final isDuplicate = await authService.isEmailDuplicate(email);
 
       if (!mounted) return;
       if (isDuplicate) {
         showMessage('이미 사용 중인 이메일입니다.');
         return;
       }
-
       setState(() => isEmailChecked = true);
       showMessage('사용 가능한 이메일입니다.');
-    } on FirebaseFunctionsException catch (error) {
+    } on AuthServiceException catch (error) {
       if (!mounted) return;
-      showMessage(error.message ?? '이메일 중복확인에 실패했습니다.');
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
+      showMessage(error.message);
+    } finally {}
   }
 
-  Future<void> goToNextStep() async {
+  Future<void> createEmailAccount() async {
     if (!isEmailChecked) {
       showMessage('이메일 중복확인을 완료해주세요.');
       return;
@@ -80,22 +75,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showMessage('비밀번호가 일치하지 않습니다.');
       return;
     }
-
     setState(() => isLoading = true);
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      await authService.createEmailAccount(
         email: emailController.text.trim(),
         password: password,
       );
+
       if (!mounted) return;
       setState(() => pageNumber = 1);
-      showMessage('이메일 계정이 생성되었습니다.');
-    } on FirebaseAuthException catch (error) {
+      showMessage('이메일 계정이 생성되었습니다. 휴대폰 인증을 진행해주세요.');
+    } on AuthServiceException catch (error) {
       if (!mounted) return;
       final message = switch (error.code) {
         'email-already-in-use' => '방금 다른 사용자가 가입한 이메일입니다.',
         'weak-password' => '비밀번호는 6자 이상 입력해주세요.',
-        _ => error.message ?? '회원가입에 실패했습니다.',
+        _ => error.message,
       };
       showMessage(message);
     } finally {
@@ -104,127 +99,225 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> sendPhoneCode() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      showMessage('먼저 이메일 계정을 생성해주세요.');
+    if (!authService.hasEmailAccount) {
+      showMessage('이메일 계정을 먼저 생성해주세요.');
       return;
     }
 
     final phone = phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+
     if (!RegExp(r'^01[016789]\d{7,8}$').hasMatch(phone)) {
       showMessage('올바른 휴대폰 번호를 입력해주세요.');
       return;
     }
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
+      await authService.sendPhoneCode(
         phoneNumber: '+82${phone.substring(1)}',
-        verificationCompleted: linkPhoneCredential,
+        forceResendingToken: resendToken,
+
+        verificationCompleted: () async {
+          handlePhoneVerificationCompleted();
+        },
+
         verificationFailed: (error) {
           if (!mounted) return;
-          setState(() => isLoading = false);
-          showMessage(error.message ?? '인증번호 발송에 실패했습니다.');
+
+          setState(() {
+            isLoading = false;
+          });
+
+          debugPrint(
+            'Phone verification failed: ${error.code} / ${error.message}',
+          );
+
+          final message = switch (error.code) {
+            'invalid-phone-number' => '휴대폰 번호 형식이 올바르지 않습니다.',
+            'too-many-requests' => '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+            'quota-exceeded' => 'SMS 인증 한도를 초과했습니다.',
+            'operation-not-allowed' =>
+              '휴대폰 인증 요청이 허용되지 않았습니다. Firebase SMS 설정을 확인해주세요.',
+            _ => error.message,
+          };
+
+          showMessage('$message\n[${error.code}] ${error.message}');
         },
-        codeSent: (id, resendToken) {
+
+        codeSent: (id, token) {
           if (!mounted) return;
+
           setState(() {
             verificationId = id;
+            resendToken = token;
             isCodeSent = true;
             isLoading = false;
           });
+
           showMessage('인증번호가 발송되었습니다.');
         },
+
         codeAutoRetrievalTimeout: (id) {
           verificationId = id;
-          if (mounted) setState(() => isLoading = false);
+
+          if (!mounted) return;
+
+          setState(() {
+            isLoading = false;
+          });
         },
+
+        timeout: const Duration(seconds: 60),
       );
-    } catch (error) {
+    } on AuthServiceException catch (error) {
       if (!mounted) return;
-      setState(() => isLoading = false);
-      showMessage('전화 인증 설정을 확인해주세요.');
+
+      setState(() {
+        isLoading = false;
+      });
+
+      showMessage(error.message);
     }
   }
 
   Future<void> confirmPhoneCode() async {
     final id = verificationId;
     final code = verificationCodeController.text.trim();
+
     if (id == null) {
       showMessage('먼저 인증번호를 발송해주세요.');
       return;
     }
+
     if (!RegExp(r'^\d{6}$').hasMatch(code)) {
       showMessage('6자리 인증번호를 입력해주세요.');
       return;
     }
 
-    setState(() => isLoading = true);
-    await linkPhoneCredential(
-      PhoneAuthProvider.credential(verificationId: id, smsCode: code),
-    );
+    setState(() {
+      isLoading = true;
+    });
+
+    await verifyPhoneCredential(verificationId: id, smsCode: code);
   }
 
-  Future<void> linkPhoneCredential(PhoneAuthCredential credential) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+  Future<void> verifyPhoneCredential({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    if (!authService.hasEmailAccount) {
       if (mounted) {
         setState(() => isLoading = false);
-        showMessage('로그인이 필요합니다.');
+        showMessage('이메일 계정 정보를 찾을 수 없습니다. 다시 가입해주세요.');
       }
       return;
     }
 
     try {
-      final result = await user.linkWithCredential(credential);
-      final linkedUser = result.user;
-      if (linkedUser == null) throw StateError('사용자 정보를 찾을 수 없습니다.');
+      await authService.confirmAndLinkPhoneCode(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(linkedUser.uid)
-          .set({
-            'uid': linkedUser.uid,
-            'email': linkedUser.email,
-            'nickname': nicknameController.text.trim(),
-            'phoneNumber': linkedUser.phoneNumber,
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-
+      handlePhoneVerificationCompleted();
+    } on AuthServiceException catch (error) {
       if (!mounted) return;
+
       setState(() {
-        isPhoneVerified = true;
         isLoading = false;
       });
-      showMessage('휴대폰 인증이 완료되었습니다.');
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      setState(() => isLoading = false);
+
       final message = switch (error.code) {
         'invalid-verification-code' => '인증번호가 올바르지 않습니다.',
-        'credential-already-in-use' => '이미 다른 계정에서 사용하는 번호입니다.',
-        'session-expired' => '인증번호가 만료되었습니다.',
-        _ => error.message ?? '전화번호 연결에 실패했습니다.',
+        'credential-already-in-use' => '이미 다른 계정에서 사용 중인 휴대폰 번호입니다.',
+        'provider-already-linked' => '이미 휴대폰 인증이 연결된 계정입니다.',
+        'session-expired' => '인증번호가 만료되었습니다. 다시 전송해주세요.',
+        'too-many-requests' => '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+        _ => error.message,
       };
+
       showMessage(message);
-    } on FirebaseException catch (error) {
-      if (!mounted) return;
-      setState(() => isLoading = false);
-      showMessage(error.message ?? '사용자 정보 저장에 실패했습니다.');
     }
+  }
+
+  void handlePhoneVerificationCompleted() {
+    if (!mounted) return;
+
+    setState(() {
+      isPhoneVerified = true;
+      isLoading = false;
+    });
+
+    showMessage('휴대폰 인증이 완료되었습니다.');
   }
 
   void checkNickname() {
     final nickname = nicknameController.text.trim();
     showMessage(nickname.length >= 2 ? '사용 가능한 형식입니다.' : '닉네임을 2자 이상 입력해주세요.');
   }
+Future<void> pickProfileImage() async {
+  try {
+    final image = await imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
 
-  void completeRegistration() {
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+
+    if (!mounted) return;
+
+    setState(() {
+      profileImage = image;
+      profileImageBytes = bytes;
+    });
+  } catch (error, stackTrace) {
+    debugPrint('프로필 이미지 선택 오류: $error');
+    debugPrintStack(stackTrace: stackTrace);
+
+    if (!mounted) return;
+    showMessage('프로필 사진을 불러오지 못했습니다.\n$error');
+  }
+}
+
+  Future<void> completeRegistration() async {
     if (!isPhoneVerified) {
       showMessage('휴대폰 인증을 완료해주세요.');
       return;
     }
-    showMessage('가입이 완료되었습니다.');
+
+    if (!authService.hasEmailAndPhoneAccount) {
+      showMessage('회원가입 정보를 확인할 수 없습니다. 다시 시도해주세요.');
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final image = profileImage;
+      final imageBytes = profileImageBytes;
+      if (image != null && imageBytes != null) {
+        await authService.uploadProfileImage(
+          imageBytes: imageBytes,
+          fileName: image.name,
+          contentType: image.mimeType,
+        );
+      }
+      await authService.updateDisplayName(nicknameController.text.trim());
+
+      if (!mounted) return;
+      showMessage('가입이 완료되었습니다.');
+      Navigator.of(context).pop();
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      showMessage(error.message);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   void showMessage(String message) {
@@ -261,7 +354,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     emailController: emailController,
                     passwordController: passwordController,
                     confirmPasswordController: confirmPasswordController,
-                    isLoading: isLoading,
                     isEmailChecked: isEmailChecked,
                     onCheckEmail: checkEmailDuplicate,
                   )
@@ -273,6 +365,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     isLoading: isLoading,
                     isCodeSent: isCodeSent,
                     isPhoneVerified: isPhoneVerified,
+                    profileImageBytes: profileImageBytes,
+                    onPickProfileImage: pickProfileImage,
                     onCheckNickname: checkNickname,
                     onSendPhoneCode: sendPhoneCode,
                     onConfirmPhoneCode: confirmPhoneCode,
@@ -285,7 +379,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onPressed: isLoading
                       ? null
                       : pageNumber == 0
-                      ? goToNextStep
+                      ? createEmailAccount
                       : completeRegistration,
                   child: isLoading
                       ? const SizedBox(

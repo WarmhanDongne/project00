@@ -46,6 +46,9 @@ dependencies:
   cloud_functions: ^6.3.5
   google_sign_in: ^7.2.0
 
+  image_picker: ^1.2.3
+  firebase_storage: ^13.4.5
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
