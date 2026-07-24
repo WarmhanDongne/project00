@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   //잠시 나오는 메시지 창 = 메시지 함수
   //showMessage();
 
-  Future<void> signUp() async {
+  Future<void> signIn() async {
     //아이디+비밀번호 .text처리
     //trim()? 공백 제거
     final email = emailController.text.trim();
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(0),
                           ),
                         ),
-                        onPressed: isLoading ? null : signUp,
+                        onPressed: isLoading ? null : signIn,
                         child: isLoading
                             ? const SizedBox(
                                 width: 20,
