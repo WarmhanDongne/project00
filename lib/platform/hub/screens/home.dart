@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/hub/screens/home_mobile.dart';
+import 'package:project00/platform/hub/screens/home_tablet.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
