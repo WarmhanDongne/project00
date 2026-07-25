@@ -152,8 +152,8 @@ class _GameListState extends State<GameList> {
             Expanded(
               child: GridView.builder(
                 itemCount: games.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 5,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: widget.crossAxisCount,
                   crossAxisSpacing: 26,
                   mainAxisSpacing: 50,
                   childAspectRatio: 164 / 200,
