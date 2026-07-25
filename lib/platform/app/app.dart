@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
-import 'package:project00/platform/hub/screens/home.dart';
+import 'package:project00/platform/hub/screens/home_tablet.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.authStateChanges});
