@@ -88,9 +88,14 @@ class FilterBar extends StatelessWidget {
 }
 
 class GameList extends StatefulWidget {
-  const GameList({super.key, required this.roomProvider});
+  const GameList({
+    super.key,
+    required this.roomProvider,
+    this.crossAxisCount = 5,
+  });
 
   final RoomProvider roomProvider;
+  final int crossAxisCount;
 
   @override
   State<GameList> createState() => _GameListState();
