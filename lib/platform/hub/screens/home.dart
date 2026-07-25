@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:project00/platform/hub/providers/room_provider.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
 import 'package:project00/platform/hub/services/room_service.dart';
+import 'package:project00/platform/hub/widgets/button.dart';
+import 'package:project00/platform/hub/widgets/game_preview_modal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-
-import 'package:project00/shared/player_layouts/player_layout.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -38,9 +38,14 @@ class _HomeState extends State<Home> {
           children: [
             const Row(
               children: [
-                ShopButton(),
+                AppButton(
+                  text: '상점',
+                  width: 160,
+                  backgroundColor: Colors.blue,
+                  onPressed: null,
+                ),
                 SizedBox(width: 300),
-                Expanded(child: SearchBar()),
+                Expanded(child: GameSearchBar()),
                 SizedBox(width: 300),
                 Profile(),
               ],
@@ -50,7 +55,7 @@ class _HomeState extends State<Home> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Gamelist(roomProvider: _roomProvider)),
+                  Expanded(child: GameList(roomProvider: _roomProvider)),
                   const SizedBox(width: 24),
                   MemberTap(provider: _roomProvider),
                 ],
@@ -71,22 +76,29 @@ class FilterBar extends StatelessWidget {
     return Container(
       width: 678,
       height: 50,
-      decoration: const BoxDecoration(color: Colors.grey),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(color: Colors.grey.shade300),
+      child: const Text(
+        '장르 필터 : 재미 / 추리 / 액션 / 심리 / 전략 / 수학 / 공간 / 협동',
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
 
-class Gamelist extends StatefulWidget {
-  const Gamelist({super.key, required this.roomProvider});
+class GameList extends StatefulWidget {
+  const GameList({super.key, required this.roomProvider});
 
   final RoomProvider roomProvider;
 
   @override
-  State<Gamelist> createState() => _GamelistState();
+  State<GameList> createState() => _GameListState();
 }
 
-class _GamelistState extends State<Gamelist> {
+class _GameListState extends State<GameList> {
   final GameService _gameService = GameService();
+
   late final Future<List<Map<String, dynamic>>> _games;
 
   @override
@@ -103,11 +115,21 @@ class _GamelistState extends State<Gamelist> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         if (snapshot.hasError) {
-          return Center(child: Text(snapshot.error.toString()));
+          return Center(
+            child: Text(
+              '게임 목록을 불러오지 못했습니다.\n${snapshot.error}',
+              textAlign: TextAlign.center,
+            ),
+          );
         }
 
         final games = snapshot.data ?? [];
+
+        if (games.isEmpty) {
+          return const Center(child: Text('등록된 게임이 없습니다.'));
+        }
 
         return Column(
           children: [
@@ -134,30 +156,20 @@ class _GamelistState extends State<Gamelist> {
                 itemBuilder: (context, index) {
                   final game = games[index];
 
-                  return GestureDetector(
+                  return GameCard(
+                    game: game,
                     onTap: () {
-                      Navigator.push(
-                        context,
-
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              PlayerSlots(players: widget.roomProvider.members),
-                        ),
+                      showDialog<void>(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (_) {
+                          return GamePreviewDialog(
+                            game: game,
+                            roomProvider: widget.roomProvider,
+                          );
+                        },
                       );
                     },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: game['isOwned'] == true
-                            ? Colors.blue
-                            : Colors.grey,
-                      ),
-                      child: Center(
-                        child: Text(
-                          game['name'] as String? ?? '',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
                   );
                 },
               ),
@@ -169,30 +181,120 @@ class _GamelistState extends State<Gamelist> {
   }
 }
 
-class ShopButton extends StatelessWidget {
-  const ShopButton({super.key});
+class GameCard extends StatelessWidget {
+  const GameCard({super.key, required this.game, required this.onTap});
+
+  final Map<String, dynamic> game;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: () {},
-      label: const Text('상점'),
-      style: FilledButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-        padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 12),
+    final name = game['name']?.toString() ?? '게임 이름';
+    final posterUrl = game['posterUrl']?.toString() ?? '';
+    final playType = game['playType']?.toString() ?? '';
+    final recommendedPlayers = game['recommendedPlayers']?.toString() ?? '';
+    final isOwned = game['isOwned'] == true;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            border: Border.all(color: Colors.grey.shade400),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: posterUrl.isEmpty
+                      ? Container(
+                          color: Colors.grey.shade200,
+                          alignment: Alignment.center,
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.image_outlined, size: 38),
+                              SizedBox(height: 6),
+                              Text('포스터'),
+                            ],
+                          ),
+                        )
+                      : Image.network(
+                          posterUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              return child;
+                            }
+
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                size: 38,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                color: isOwned ? Colors.blue.shade100 : Colors.grey.shade400,
+                child: Column(
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    if (playType.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        playType,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                    if (recommendedPlayers.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '권장 $recommendedPlayers',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class SearchBar extends StatelessWidget {
-  const SearchBar({super.key});
+class GameSearchBar extends StatelessWidget {
+  const GameSearchBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 48,
-      alignment: Alignment.center,
       child: TextField(
         decoration: InputDecoration(
           hintText: '게임 검색',
@@ -203,7 +305,7 @@ class SearchBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          contentPadding: EdgeInsets.zero,
         ),
       ),
     );
@@ -216,21 +318,20 @@ class Profile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
+
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
     return CircleAvatar(
       radius: 24,
       backgroundColor: Colors.grey,
-      backgroundImage: photoUrl == null || photoUrl.isEmpty
-          ? null
-          : NetworkImage(photoUrl),
-      child: photoUrl == null || photoUrl.isEmpty
-          ? const Icon(Icons.person, color: Colors.white)
-          : null,
+      backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+      child: hasPhoto ? null : const Icon(Icons.person, color: Colors.white),
     );
   }
 }
 
 class MemberTap extends StatelessWidget {
-  const MemberTap({required this.provider, super.key});
+  const MemberTap({super.key, required this.provider});
 
   final RoomProvider provider;
 
@@ -244,30 +345,21 @@ class MemberTap extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 16),
-
               SizedBox(
                 height: 50,
                 child: Row(
                   children: [
                     const Text('구성원 목록', style: TextStyle(fontSize: 16)),
                     const Spacer(),
-                    FilledButton.icon(
-                      onPressed: () {},
-                      label: const Text('초기화'),
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(0),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 30,
-                          vertical: 12,
-                        ),
-                      ),
+                    AppButton(
+                      text: '초기화',
+                      width: 130,
+                      backgroundColor: Colors.blue,
+                      onPressed: null,
                     ),
                   ],
                 ),
               ),
-
               if (provider.errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -278,12 +370,12 @@ class MemberTap extends StatelessWidget {
                 )
               else
                 const SizedBox(height: 16),
-
               Expanded(
                 child: Container(
+                  width: double.infinity,
                   color: Colors.grey.shade300,
                   padding: const EdgeInsets.all(12),
-                  child: provider.isInRoom
+                  child: provider.isInRoom && provider.roomCode != null
                       ? Column(
                           children: [
                             Expanded(
@@ -294,16 +386,13 @@ class MemberTap extends StatelessWidget {
                                     RoomService.defaultMaxMembers,
                               ),
                             ),
-
                             const SizedBox(height: 12),
-
                             _InviteRoom(roomCode: provider.roomCode!),
                           ],
                         )
                       : const Center(child: CircularProgressIndicator()),
                 ),
               ),
-
               if (provider.isLoading) const LinearProgressIndicator(),
             ],
           ),
@@ -320,34 +409,30 @@ class _InviteRoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            padding: const EdgeInsets.all(10),
-            color: Colors.white,
-            child: QrImageView(
-              data: roomCode,
-              padding: EdgeInsets.zero,
-              backgroundColor: Colors.white,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 120,
+          height: 120,
+          padding: const EdgeInsets.all(10),
+          color: Colors.white,
+          child: QrImageView(
+            data: roomCode,
+            padding: EdgeInsets.zero,
+            backgroundColor: Colors.white,
           ),
-
-          const SizedBox(height: 12),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            color: Colors.grey.shade500,
-            child: Text(
-              '코드 : $roomCode',
-              style: const TextStyle(fontSize: 15, color: Colors.black),
-            ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          color: Colors.grey.shade500,
+          child: Text(
+            '코드 : $roomCode',
+            style: const TextStyle(fontSize: 15, color: Colors.black),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -367,6 +452,7 @@ class _MemberList extends StatelessWidget {
           '[ 현 인원 ${members.length}/$maxMembers명 ]',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
+        const SizedBox(height: 8),
         Expanded(
           child: members.isEmpty
               ? const Center(child: Text('구성원을 불러오는 중입니다.'))
@@ -374,21 +460,31 @@ class _MemberList extends StatelessWidget {
                   itemCount: members.length,
                   itemBuilder: (context, index) {
                     final member = members[index];
+                    final hasProfileImage = member.profileImageUrl.isNotEmpty;
+
                     return ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         radius: 16,
-                        backgroundImage: member.profileImageUrl.isEmpty
-                            ? null
-                            : NetworkImage(member.profileImageUrl),
-                        child: member.profileImageUrl.isEmpty
-                            ? const Icon(Icons.person, size: 18)
+                        backgroundImage: hasProfileImage
+                            ? NetworkImage(member.profileImageUrl)
                             : null,
+                        child: hasProfileImage
+                            ? null
+                            : const Icon(Icons.person, size: 18),
                       ),
-                      title: Text(member.nickname),
+                      title: Text(
+                        member.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       trailing: member.isHost
-                          ? const Icon(Icons.star, color: Colors.orange)
+                          ? const Icon(
+                              Icons.star,
+                              color: Colors.orange,
+                              size: 20,
+                            )
                           : null,
                     );
                   },
