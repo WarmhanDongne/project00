@@ -36,7 +36,7 @@ class App extends StatelessWidget {
             }
 
             // 로그인 완료 → 홈 화면
-            return const Home();
+            return const HomeTablet();
           }
 
           // 로그인 안 된 경우

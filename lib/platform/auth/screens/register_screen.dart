@@ -324,7 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showMessage('가입이 완료되었습니다.');
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const Home()),
+        MaterialPageRoute(builder: (context) => const HomeTablet()),
       );
     } on AuthServiceException catch (error) {
       if (!mounted) return;

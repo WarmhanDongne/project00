@@ -60,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       showMessage('환영합니다');
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const Home()),
+        MaterialPageRoute(builder: (context) => const HomeTablet()),
       );
     } on AuthServiceException catch (error) {
       if (!mounted) return;
