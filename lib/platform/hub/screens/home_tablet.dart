@@ -55,7 +55,12 @@ class _HomeState extends State<HomeTablet> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: GameList(roomProvider: _roomProvider)),
+                  Expanded(
+                    child: GameList(
+                      roomProvider: _roomProvider,
+                      crossAxisCount: 5,
+                    ),
+                  ),
                   const SizedBox(width: 24),
                   MemberTap(provider: _roomProvider),
                 ],

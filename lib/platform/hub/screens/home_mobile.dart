@@ -45,7 +45,7 @@ class _HomeMobileState extends State<HomeMobile> {
           // 탭 0: 게임 목록
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: GameList(roomProvider: _roomProvider),
+            child: GameList(roomProvider: _roomProvider, crossAxisCount: 2),
           ),
 
           // 탭 1: 방 관리 및 멤버 리스트
