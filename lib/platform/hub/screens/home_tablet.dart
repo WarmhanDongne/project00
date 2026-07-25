@@ -7,14 +7,14 @@ import 'package:project00/platform/hub/widgets/button.dart';
 import 'package:project00/platform/hub/widgets/game_preview_modal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-class Home extends StatefulWidget {
-  const Home({super.key});
+class HomeTablet extends StatefulWidget {
+  const HomeTablet({super.key});
 
   @override
-  State<Home> createState() => _HomeState();
+  State<HomeTablet> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<HomeTablet> {
   final RoomProvider _roomProvider = RoomProvider();
 
   @override
