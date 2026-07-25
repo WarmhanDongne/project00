@@ -3,7 +3,7 @@ import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/firebase_auth_service.dart';
-import 'package:project00/platform/hub/screens/home.dart';
+import 'package:project00/platform/hub/screens/home_tablet.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
