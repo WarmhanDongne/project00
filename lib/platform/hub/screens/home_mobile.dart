@@ -31,13 +31,6 @@ class _HomeMobileState extends State<HomeMobile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // 상단 타이틀 영역에 검색창 배치
-        title: const GameSearchBar(),
-        actions: const [
-          Padding(padding: EdgeInsets.only(right: 16.0), child: Profile()),
-        ],
-      ),
       // IndexedStack을 사용해 탭 전환 시 상태(스크롤 위치 등)를 유지
       body: IndexedStack(
         index: _currentIndex,
