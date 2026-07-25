@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/firebase_auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
-import 'package:project00/platform/hub/screens/home.dart';
+import 'package:project00/platform/hub/screens/home_tablet.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.isGoogleSignIn = false});
@@ -324,7 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showMessage('가입이 완료되었습니다.');
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const Home()),
+        MaterialPageRoute(builder: (context) => const HomeTablet()),
       );
     } on AuthServiceException catch (error) {
       if (!mounted) return;
