@@ -8,12 +8,16 @@ class ThreePlayerLayout extends StatefulWidget {
 }
 
 class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
-  bool isLandscape = true;
+  static const double playerSlotSize = 132;
 
-  final List<Offset> playerPositions = [
-    const Offset(0.42, 0.10), // 태블릿 주인
-    const Offset(0.12, 0.60), // 플레이어 2
-    const Offset(0.70, 0.60), // 플레이어 3
+  // 이 거리 안으로 접근하면 즉시 자리 교환
+  static const double swapTriggerDistance = 110;
+
+  // 플레이어가 배치될 수 있는 고정 자리 3개
+  final List<Offset> slotPositions = [
+    const Offset(0.42, 0.10), // 위쪽
+    const Offset(0.12, 0.60), // 왼쪽 아래
+    const Offset(0.70, 0.60), // 오른쪽 아래
   ];
 
   final List<String> playerNames = [
@@ -22,27 +26,186 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     '주르르르륵',
   ];
 
+  // playerSlotIndexes[플레이어 번호] = 현재 자리 번호
+  List<int> playerSlotIndexes = [0, 1, 2];
+
+  // 드래그 중인 플레이어의 실제 위치
+  final Map<int, Offset> draggingPositions = {};
+
+  // 현재 드래그 중인 플레이어
+  int? draggingPlayerIndex;
+
+  // 같은 자리에서 계속 교환되는 것을 방지
+  int? hoveredSlotIndex;
+
+  void startDragging(int playerIndex) {
+    final currentSlotIndex = playerSlotIndexes[playerIndex];
+
+    setState(() {
+      draggingPlayerIndex = playerIndex;
+      hoveredSlotIndex = null;
+
+      draggingPositions[playerIndex] =
+          slotPositions[currentSlotIndex];
+    });
+  }
+
   void movePlayer({
-    required int index,
+    required int playerIndex,
     required DragUpdateDetails details,
     required Size boardSize,
   }) {
-    final currentPosition = playerPositions[index];
+    final currentPosition =
+        draggingPositions[playerIndex] ??
+        slotPositions[playerSlotIndexes[playerIndex]];
 
-    final nextX =
-        currentPosition.dx + details.delta.dx / boardSize.width;
-    final nextY =
-        currentPosition.dy + details.delta.dy / boardSize.height;
+    final maxX = 1 - (playerSlotSize / boardSize.width);
+    final maxY = 1 - (playerSlotSize / boardSize.height);
+
+    final nextPosition = Offset(
+      (currentPosition.dx +
+              details.delta.dx / boardSize.width)
+          .clamp(0.0, maxX),
+      (currentPosition.dy +
+              details.delta.dy / boardSize.height)
+          .clamp(0.0, maxY),
+    );
 
     setState(() {
-      playerPositions[index] = Offset(
-        nextX.clamp(0.0, 0.84),
-        nextY.clamp(0.0, 0.80),
+      draggingPositions[playerIndex] = nextPosition;
+    });
+
+    checkNearbySlot(
+      playerIndex: playerIndex,
+      draggingPosition: nextPosition,
+      boardSize: boardSize,
+    );
+  }
+
+  void checkNearbySlot({
+    required int playerIndex,
+    required Offset draggingPosition,
+    required Size boardSize,
+  }) {
+    final draggedCenter = Offset(
+      draggingPosition.dx * boardSize.width +
+          playerSlotSize / 2,
+      draggingPosition.dy * boardSize.height +
+          playerSlotSize / 2,
+    );
+
+    final currentSlotIndex =
+        playerSlotIndexes[playerIndex];
+
+    int? nearbySlotIndex;
+    double nearestDistance = double.infinity;
+
+    for (int slotIndex = 0;
+        slotIndex < slotPositions.length;
+        slotIndex++) {
+      // 현재 자신이 차지하고 있는 자리는 검사하지 않음
+      if (slotIndex == currentSlotIndex) {
+        continue;
+      }
+
+      final slotPosition = slotPositions[slotIndex];
+
+      final slotCenter = Offset(
+        slotPosition.dx * boardSize.width +
+            playerSlotSize / 2,
+        slotPosition.dy * boardSize.height +
+            playerSlotSize / 2,
       );
+
+      final distance =
+          (draggedCenter - slotCenter).distance;
+
+      if (distance <= swapTriggerDistance &&
+          distance < nearestDistance) {
+        nearestDistance = distance;
+        nearbySlotIndex = slotIndex;
+      }
+    }
+
+    // 다른 자리 근처에 진입
+    if (nearbySlotIndex != null) {
+      // 이미 같은 자리에서 교환했다면 다시 실행하지 않음
+      if (hoveredSlotIndex == nearbySlotIndex) {
+        return;
+      }
+
+      swapPlayerSlotsWhileDragging(
+        playerIndex: playerIndex,
+        targetSlotIndex: nearbySlotIndex,
+      );
+
+      hoveredSlotIndex = nearbySlotIndex;
+      return;
+    }
+
+    // 모든 자리의 감지 범위에서 벗어나야
+    // 다시 같은 자리로 접근했을 때 교환 가능
+    hoveredSlotIndex = null;
+  }
+
+  void swapPlayerSlotsWhileDragging({
+    required int playerIndex,
+    required int targetSlotIndex,
+  }) {
+    final currentSlotIndex =
+        playerSlotIndexes[playerIndex];
+
+    final targetPlayerIndex =
+        playerSlotIndexes.indexOf(targetSlotIndex);
+
+    if (currentSlotIndex == targetSlotIndex) {
+      return;
+    }
+
+    setState(() {
+      // 대상 자리에 있는 플레이어를
+      // 드래그 플레이어의 기존 자리로 밀어냄
+      if (targetPlayerIndex != -1 &&
+          targetPlayerIndex != playerIndex) {
+        playerSlotIndexes[targetPlayerIndex] =
+            currentSlotIndex;
+      }
+
+      // 드래그 플레이어가 대상 자리를 차지
+      playerSlotIndexes[playerIndex] =
+          targetSlotIndex;
+    });
+  }
+
+  void finishDragging(int playerIndex) {
+    setState(() {
+      // 현재 차지한 고정 자리로 부드럽게 이동
+      draggingPositions.remove(playerIndex);
+
+      draggingPlayerIndex = null;
+      hoveredSlotIndex = null;
+    });
+  }
+
+  void cancelDragging(int playerIndex) {
+    setState(() {
+      draggingPositions.remove(playerIndex);
+
+      draggingPlayerIndex = null;
+      hoveredSlotIndex = null;
     });
   }
 
   void completeSetting() {
+    final playerPositions = List<Offset>.generate(
+      playerNames.length,
+      (index) {
+        final slotIndex = playerSlotIndexes[index];
+        return slotPositions[slotIndex];
+      },
+    );
+
+    debugPrint('플레이어 자리 번호: $playerSlotIndexes');
     debugPrint('플레이어 위치: $playerPositions');
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +213,15 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
         content: Text('자리 설정이 완료되었습니다.'),
       ),
     );
+
+    // 다음 화면으로 이동할 때
+    //
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (_) => const NextPage(),
+    //   ),
+    // );
   }
 
   @override
@@ -57,9 +229,8 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     return Scaffold(
       backgroundColor: const Color(0xfff3f3f3),
       body: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width:  900,
+        child: Container(
+          width: 900,
           height: 620,
           margin: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -71,7 +242,6 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
           child: Column(
             children: [
               const SizedBox(height: 22),
-
               const Text(
                 '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
                 style: TextStyle(
@@ -79,9 +249,7 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 20),
-
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -92,45 +260,28 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
 
                     return Stack(
                       children: [
-                        for (int index = 0;
-                            index < playerNames.length;
-                            index++)
-                          Positioned(
-                            left: playerPositions[index].dx *
-                                boardSize.width,
-                            top: playerPositions[index].dy *
-                                boardSize.height,
-                            child: GestureDetector(
-                              onPanUpdate: (details) {
-                                movePlayer(
-                                  index: index,
-                                  details: details,
-                                  boardSize: boardSize,
-                                );
-                              },
-                              child: PlayerSlot(
-                                nickname: playerNames[index],
-                                isHost: index == 0,
-                              ),
-                            ),
+                        // 플레이어 표시
+                        for (int playerIndex = 0;
+                            playerIndex < playerNames.length;
+                            playerIndex++)
+                          _buildPlayer(
+                            playerIndex: playerIndex,
+                            boardSize: boardSize,
                           ),
 
                         Positioned(
                           right: 24,
                           bottom: 14,
-                          child: Row(
-                            children: [
-                              FilledButton(
-                                onPressed: completeSetting,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor:
-                                      const Color(0xffd4d4d4),
-                                  foregroundColor: Colors.black,
-                                  shape: const RoundedRectangleBorder(),
-                                ),
-                                child: const Text('설정 완료'),
-                              ),
-                            ],
+                          child: FilledButton(
+                            onPressed: completeSetting,
+                            style: FilledButton.styleFrom(
+                              backgroundColor:
+                                  const Color(0xffd4d4d4),
+                              foregroundColor: Colors.black,
+                              shape:
+                                  const RoundedRectangleBorder(),
+                            ),
+                            child: const Text('설정 완료'),
                           ),
                         ),
                       ],
@@ -140,6 +291,58 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayer({
+    required int playerIndex,
+    required Size boardSize,
+  }) {
+    final isDragging =
+        draggingPlayerIndex == playerIndex;
+
+    final position = isDragging
+        ? draggingPositions[playerIndex] ??
+            slotPositions[playerSlotIndexes[playerIndex]]
+        : slotPositions[playerSlotIndexes[playerIndex]];
+
+    return AnimatedPositioned(
+      key: ValueKey(playerIndex),
+
+      // 드래그 중인 플레이어는 손을 즉시 따라감
+      // 밀려나는 플레이어는 부드럽게 이동
+      duration: isDragging
+          ? Duration.zero
+          : const Duration(milliseconds: 350),
+
+      curve: Curves.easeInOutCubic,
+
+      left: position.dx * boardSize.width,
+      top: position.dy * boardSize.height,
+
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanStart: (_) {
+          startDragging(playerIndex);
+        },
+        onPanUpdate: (details) {
+          movePlayer(
+            playerIndex: playerIndex,
+            details: details,
+            boardSize: boardSize,
+          );
+        },
+        onPanEnd: (_) {
+          finishDragging(playerIndex);
+        },
+        onPanCancel: () {
+          cancelDragging(playerIndex);
+        },
+        child: PlayerSlot(
+          nickname: playerNames[playerIndex],
+          isHost: playerIndex == 0,
         ),
       ),
     );
@@ -159,20 +362,41 @@ class PlayerSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.move,
+      cursor: SystemMouseCursors.grab,
       child: Container(
         width: 132,
         height: 132,
         alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Color(0xffd4d4d4),
+        decoration: BoxDecoration(
+          color:const Color(0xffd4d4d4),
         ),
         child: Text(
           nickname,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: isHost ? 16 : 15,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyPlayerSlot extends StatelessWidget {
+  const _EmptyPlayerSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: 132,
+        height: 132,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 2,
           ),
         ),
       ),
