@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
-import 'package:project00/platform/hub/screens/home_tablet.dart';
+import 'package:project00/platform/hub/screens/home.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.authStateChanges});
@@ -36,7 +36,7 @@ class App extends StatelessWidget {
             }
 
             // 로그인 완료 → 홈 화면
-            return const HomeTablet();
+            return const Home();
           }
 
           // 로그인 안 된 경우
