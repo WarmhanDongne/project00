@@ -6,7 +6,9 @@ import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/hub/screens/home.dart';
 
 class App extends StatelessWidget {
-  const App({super.key});
+  const App({super.key, this.authStateChanges});
+
+  final Stream<User?>? authStateChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -15,14 +17,12 @@ class App extends StatelessWidget {
       title: 'Project 00',
 
       home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+        stream: authStateChanges ?? FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           // Firebase 로그인 상태 확인 중
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: Center(child: CircularProgressIndicator()),
             );
           }
 
@@ -32,9 +32,7 @@ class App extends StatelessWidget {
 
             // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
             if (user.phoneNumber == null || user.displayName == null) {
-              return const RegisterScreen(
-                isGoogleSignIn: true,
-              );
+              return const RegisterScreen(isGoogleSignIn: true);
             }
 
             // 로그인 완료 → 홈 화면
