@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/hub/services/game_service.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -52,37 +53,86 @@ class FilterBar extends StatelessWidget {
   }
 }
 
-class Gamelist extends StatelessWidget {
+class Gamelist extends StatefulWidget {
   const Gamelist({super.key});
 
   @override
+  State<Gamelist> createState() => _GamelistState();
+}
+
+class _GamelistState extends State<Gamelist> {
+  final GameService _gameService = GameService();
+
+  late Future<List<Map<String, dynamic>>> _games;
+
+  @override
+  void initState() {
+    super.initState();
+    _games = _gameService.fetchGames();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 16),
-          child: SizedBox(
-            height: 50,
-            child: Align(alignment: Alignment.centerRight, child: FilterBar()),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: GridView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: 15,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              crossAxisSpacing: 26,
-              mainAxisSpacing: 50,
-              childAspectRatio: 164 / 200,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _games,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(snapshot.error.toString()),
+          );
+        }
+
+        final games = snapshot.data ?? [];
+
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: SizedBox(
+                height: 50,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FilterBar(),
+                ),
+              ),
             ),
-            itemBuilder: (context, index) {
-              return Container(color: Colors.grey);
-            },
-          ),
-        ),
-      ],
+            const SizedBox(height: 16),
+
+            Expanded(
+              child: GridView.builder(
+                itemCount: games.length,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  crossAxisSpacing: 26,
+                  mainAxisSpacing: 50,
+                  childAspectRatio: 164 / 200,
+                ),
+                itemBuilder: (context, index) {
+                  final game = games[index];
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: game['isOwned']
+                          ? Colors.blue
+                          : Colors.grey,
+                    ),
+                    child: Center(
+                      child: Text(game['name']),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
