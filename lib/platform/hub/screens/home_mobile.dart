@@ -10,6 +10,21 @@ class HomeMobile extends StatefulWidget {
 class _HomeMobileState extends State<HomeMobile> {
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      body: Column(
+        children: [
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  print("그룹에 참여하기");
+                },
+                child: Text("그룹 참여"),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
