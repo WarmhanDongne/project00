@@ -41,13 +41,21 @@ class _HomeMobileState extends State<HomeMobile> {
                   ),
                 ),
               ),
-              InkWell(
-                onTap: () {
-                  print("click");
-                },
-                child: CircleAvatar(
-                  radius: 25,
-                  backgroundImage: NetworkImage('https://example.com'),
+              Ink(
+                width: 50,
+                height: 50,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: NetworkImage("https://picsum.photos/600/400"),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: InkWell(
+                  customBorder: CircleBorder(),
+                  onTap: () {
+                    print('click');
+                  },
                 ),
               ),
             ],
