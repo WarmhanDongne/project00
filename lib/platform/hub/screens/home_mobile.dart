@@ -81,6 +81,19 @@ class _HomeMobileState extends State<HomeMobile> {
                 SizedBox(height: 10),
               ],
             ),
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    "https://picsum.photos/200/300",
+                    width: 115,
+                    height: 150,
+                    fit: BoxFit.cover, // 지정된 비율에 맞도록 설정
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
