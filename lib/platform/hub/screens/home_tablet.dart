@@ -4,8 +4,6 @@ import 'package:project00/platform/hub/providers/room_provider.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
 import 'package:project00/platform/hub/services/room_service.dart';
 import 'package:project00/platform/hub/widgets/button.dart';
-import 'package:project00/platform/hub/widgets/filter_bar.dart';
-import 'package:project00/platform/hub/widgets/game_card.dart';
 import 'package:project00/platform/hub/widgets/game_preview_modal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -70,6 +68,25 @@ class _HomeState extends State<HomeTablet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class FilterBar extends StatelessWidget {
+  const FilterBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 678,
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(color: Colors.grey.shade300),
+      child: const Text(
+        '장르 필터 : 재미 / 추리 / 액션 / 심리 / 전략 / 수학 / 공간 / 협동',
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -170,6 +187,113 @@ class _GameListState extends State<GameList> {
           ],
         );
       },
+    );
+  }
+}
+
+class GameCard extends StatelessWidget {
+  const GameCard({super.key, required this.game, required this.onTap});
+
+  final Map<String, dynamic> game;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = game['name']?.toString() ?? '게임 이름';
+    final posterUrl = game['posterUrl']?.toString() ?? '';
+    final playType = game['playType']?.toString() ?? '';
+    final recommendedPlayers = game['recommendedPlayers']?.toString() ?? '';
+    final isOwned = game['isOwned'] == true;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            border: Border.all(color: Colors.grey.shade400),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: posterUrl.isEmpty
+                      ? Container(
+                          color: Colors.grey.shade200,
+                          alignment: Alignment.center,
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.image_outlined, size: 38),
+                              SizedBox(height: 6),
+                              Text('포스터'),
+                            ],
+                          ),
+                        )
+                      : Image.network(
+                          posterUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              return child;
+                            }
+
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                size: 38,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                color: isOwned ? Colors.blue.shade100 : Colors.grey.shade400,
+                child: Column(
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    if (playType.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        playType,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                    if (recommendedPlayers.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '권장 $recommendedPlayers',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
