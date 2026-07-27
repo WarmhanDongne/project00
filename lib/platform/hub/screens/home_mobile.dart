@@ -8,6 +8,16 @@ class HomeMobile extends StatefulWidget {
 }
 
 class _HomeMobileState extends State<HomeMobile> {
+  List<GameInfo> dumgames = [
+    GameInfo(
+      title: "a",
+      playTime: 'b',
+      userCount: 'c',
+      gameGenre: 'd',
+      shortExplain: 'e',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,22 +93,81 @@ class _HomeMobileState extends State<HomeMobile> {
                 SizedBox(height: 10),
               ],
             ),
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Image.network(
-                    "https://picsum.photos/200/300",
-                    width: 115,
-                    height: 150,
-                    fit: BoxFit.cover, // 지정된 비율에 맞도록 설정
-                  ),
-                ),
-              ],
-            ),
+            // MobileGameCard(),
+            // SizedBox(height: 10),
+            // MobileGameCard(),
+            // SizedBox(height: 10),
+            // MobileGameCard(),
+            // SizedBox(height: 10),
+            // MobileGameCard(),
           ],
         ),
       ),
     );
   }
+}
+
+class MobileGameCard extends StatelessWidget {
+  // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.
+
+  final GameInfo gameInfo;
+  const MobileGameCard({super.key, required this.gameInfo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8.0),
+          child: Image.network(
+            "https://picsum.photos/200/300",
+            width: 115,
+            height: 150,
+            fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
+          ),
+        ),
+        SizedBox(width: 20),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          //crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+              textScaler: TextScaler.noScaling,
+            ),
+            Text(
+              gameInfo.playTime,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+            ),
+            Text(
+              gameInfo.userCount,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+            ),
+            Text(
+              gameInfo.shortExplain,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// DTO 클래스 선언
+class GameInfo {
+  final String title;
+  final String playTime;
+  final String userCount;
+  final String gameGenre;
+  final String shortExplain;
+
+  GameInfo({
+    required this.title,
+    required this.playTime,
+    required this.userCount,
+    required this.gameGenre,
+    required this.shortExplain,
+  });
 }
