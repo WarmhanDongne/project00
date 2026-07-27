@@ -4,6 +4,7 @@ import 'package:project00/platform/hub/providers/room_provider.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
 import 'package:project00/platform/hub/services/room_service.dart';
 import 'package:project00/platform/hub/widgets/button.dart';
+import 'package:project00/platform/hub/widgets/filter_bar.dart';
 import 'package:project00/platform/hub/widgets/game_preview_modal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -68,25 +69,6 @@ class _HomeState extends State<HomeTablet> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class FilterBar extends StatelessWidget {
-  const FilterBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 678,
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(color: Colors.grey.shade300),
-      child: const Text(
-        '장르 필터 : 재미 / 추리 / 액션 / 심리 / 전략 / 수학 / 공간 / 협동',
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
