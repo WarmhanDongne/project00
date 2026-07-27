@@ -93,7 +93,7 @@ class _HomeMobileState extends State<HomeMobile> {
                 SizedBox(height: 10),
               ],
             ),
-            // MobileGameCard(),
+            MobileGameCard(gameInfo: dumgames[0]),
             // SizedBox(height: 10),
             // MobileGameCard(),
             // SizedBox(height: 10),
@@ -170,4 +170,14 @@ class GameInfo {
     required this.gameGenre,
     required this.shortExplain,
   });
+
+  factory GameInfo.fromJson(Map<String, dynamic> json) {
+    return GameInfo(
+      title: json['name'] as String? ?? '이름 없음',
+      playTime: json['playTime'] as String? ?? '미상',
+      userCount: json['userCount'] as String? ?? '장르 없음',
+      gameGenre: json['genre'] as String? ?? '장르 없음',
+      shortExplain: json['shortExplain'] as String? ?? '설명 없음',
+    );
+  }
 }
