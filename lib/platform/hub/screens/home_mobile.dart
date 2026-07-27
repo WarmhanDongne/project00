@@ -12,16 +12,17 @@ class _HomeMobileState extends State<HomeMobile> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: 20),
 
         child: Column(
           children: [
-            SizedBox(height: 20),
+            SizedBox(height: 10),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
+                  // 그룹 참여
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.black,
                     backgroundColor: Colors.grey[300],
@@ -66,10 +67,11 @@ class _HomeMobileState extends State<HomeMobile> {
               ],
             ),
             Column(
+              // 보유 중인 게임
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                SizedBox(height: 10),
+                SizedBox(height: 20),
                 Text(
                   "보유 중인 게임",
                   style: TextStyle(
