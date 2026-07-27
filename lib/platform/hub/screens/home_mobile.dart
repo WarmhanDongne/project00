@@ -21,8 +21,8 @@ class _HomeMobileState extends State<HomeMobile> {
                   foregroundColor: Colors.black,
                   backgroundColor: Colors.grey[300],
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 50.0,
-                    vertical: 15.0,
+                    horizontal: 40.0,
+                    vertical: 10.0,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(5.0),
@@ -31,7 +31,24 @@ class _HomeMobileState extends State<HomeMobile> {
                 onPressed: () {
                   print("그룹에 참여하기"); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
                 },
-                child: Text("그룹 참여"),
+                child: Text(
+                  "그룹 참여",
+                  style: TextStyle(
+                    fontSize: 20.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  print("click");
+                },
+                child: CircleAvatar(
+                  radius: 25,
+                  backgroundImage: NetworkImage('https://example.com'),
+                ),
               ),
             ],
           ),
