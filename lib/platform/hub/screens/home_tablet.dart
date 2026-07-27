@@ -11,10 +11,10 @@ class HomeTablet extends StatefulWidget {
   const HomeTablet({super.key});
 
   @override
-  State<HomeTablet> createState() => _HomeState();
+  State<HomeTablet> createState() => _HomeTabletState();
 }
 
-class _HomeState extends State<HomeTablet> {
+class _HomeTabletState extends State<HomeTablet> {
   final RoomProvider _roomProvider = RoomProvider();
 
   @override
