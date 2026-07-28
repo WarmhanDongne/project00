@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/platform/hub/services/game_service.dart';
 
 class HomeMobile extends StatefulWidget {
   const HomeMobile({super.key});
@@ -8,15 +10,15 @@ class HomeMobile extends StatefulWidget {
 }
 
 class _HomeMobileState extends State<HomeMobile> {
-  List<GameInfo> dumgames = [
-    GameInfo(
-      title: "a",
-      playTime: 'b',
-      userCount: 'c',
-      gameGenre: 'd',
-      shortExplain: 'e',
-    ),
-  ];
+  late final Future<List<Map<String, dynamic>>>
+  _games; // MobileGameCard에 들어갈 데이터 보관할 객체
+  final GameService _gameService = GameService(); // 데이터 fetch할 객체
+
+  @override
+  void initState() {
+    super.initState();
+    _games = _gameService.fetchGames();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,13 +95,38 @@ class _HomeMobileState extends State<HomeMobile> {
                 SizedBox(height: 10),
               ],
             ),
-            MobileGameCard(gameInfo: dumgames[0]),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _games,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        '게임 목록을 불러오지 못했습니다.\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+                  final games = snapshot.data ?? [];
+
+                  if (games.isEmpty) {
+                    return const Center(child: Text("등록된 게임이 없습니다."));
+                  }
+                  return ListView.builder(
+                    itemCount: games.length,
+                    itemBuilder: (context, index) {
+                      final gameData = games[index];
+                      final gameInfo = GameInfo.fromJson(gameData);
+
+                      return MobileGameCard(gameInfo: gameInfo);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
