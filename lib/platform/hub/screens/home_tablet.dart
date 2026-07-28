@@ -11,10 +11,10 @@ class HomeTablet extends StatefulWidget {
   const HomeTablet({super.key});
 
   @override
-  State<HomeTablet> createState() => _HomeState();
+  State<HomeTablet> createState() => _HomeTabletState();
 }
 
-class _HomeState extends State<HomeTablet> {
+class _HomeTabletState extends State<HomeTablet> {
   final RoomProvider _roomProvider = RoomProvider();
 
   @override
@@ -55,12 +55,7 @@ class _HomeState extends State<HomeTablet> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: GameList(
-                      roomProvider: _roomProvider,
-                      crossAxisCount: 5,
-                    ),
-                  ),
+                  Expanded(child: GameList(roomProvider: _roomProvider)),
                   const SizedBox(width: 24),
                   MemberTap(provider: _roomProvider),
                 ],
@@ -93,14 +88,9 @@ class FilterBar extends StatelessWidget {
 }
 
 class GameList extends StatefulWidget {
-  const GameList({
-    super.key,
-    required this.roomProvider,
-    this.crossAxisCount = 5,
-  });
+  const GameList({super.key, required this.roomProvider});
 
   final RoomProvider roomProvider;
-  final int crossAxisCount;
 
   @override
   State<GameList> createState() => _GameListState();
@@ -158,7 +148,7 @@ class _GameListState extends State<GameList> {
               child: GridView.builder(
                 itemCount: games.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: widget.crossAxisCount,
+                  crossAxisCount: 5,
                   crossAxisSpacing: 26,
                   mainAxisSpacing: 50,
                   childAspectRatio: 164 / 200,
