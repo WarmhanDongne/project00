@@ -163,24 +163,24 @@ class MobileGameCard extends StatelessWidget {
                 children: [
                   Text(
                     gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                     textScaler: TextScaler.noScaling,
                   ),
                   Text(
                     '${gameInfo.playTime}',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                   Text(
                     '${gameInfo.minPlayers} ~ ${gameInfo.maxPlayers}인',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                   Text(
                     gameInfo.genres.join(', '),
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                   Text(
                     gameInfo.shortDescription,
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                 ],
               ),
