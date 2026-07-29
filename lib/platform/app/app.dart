@@ -18,8 +18,8 @@ class App extends StatelessWidget {
         final bool isTablet = constraints.maxWidth >= 600;
 
         final Size currentDesignSize = isTablet
-            ? const Size(834, 1194)
-            : const Size(390, 844);
+            ? const Size(834, 1194) // 테블릿
+            : const Size(390, 844); // 핸드폰
 
         return ScreenUtilInit(
           designSize: currentDesignSize,
