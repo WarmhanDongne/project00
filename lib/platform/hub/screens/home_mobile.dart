@@ -75,12 +75,7 @@ class _HomeMobileState extends State<HomeMobile> {
                         fit: BoxFit.cover,
                       ),
                     ),
-                    child: InkWell(
-                      customBorder: CircleBorder(),
-                      onTap: () {
-                        print('click');
-                      },
-                    ),
+                    child: InkWell(customBorder: CircleBorder(), onTap: () {}),
                   ),
                 ],
               ),
