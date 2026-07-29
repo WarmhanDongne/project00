@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/hub/screens/mobile_group_join.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
 
 class HomeMobile extends StatefulWidget {
@@ -46,7 +47,12 @@ class _HomeMobileState extends State<HomeMobile> {
                     ),
                   ),
                   onPressed: () {
-                    print("그룹에 참여하기"); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MobileGroupJoin(),
+                      ),
+                    ); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
                   },
                   child: Text(
                     "그룹 참여",
