@@ -29,7 +29,31 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
                   ),
                 ), // n명 데이터 받아서 해야함.
                 SizedBox(height: 10.h),
-                Container(height: 310.h, width: 272.w, color: Colors.grey),
+                Container(
+                  height: 310.h,
+                  width: 272.w,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 10.h,
+                  ),
+                  color: Colors.grey,
+                  child: DefaultTextStyle(
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text("* 빵장장"),
+                        Text("    - 플레이어"),
+                        Text("    - 잇츠미"),
+                        Text("    - 저예요"),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
