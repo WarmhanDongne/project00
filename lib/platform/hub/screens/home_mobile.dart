@@ -167,7 +167,7 @@ class MobileGameCard extends StatelessWidget {
                     textScaler: TextScaler.noScaling,
                   ),
                   Text(
-                    '${gameInfo.playTime}',
+                    '${gameInfo.playTime}m',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                   Text(
