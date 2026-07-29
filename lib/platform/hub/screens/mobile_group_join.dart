@@ -47,7 +47,24 @@ class _MobileGroupJoinState extends State<MobileGroupJoin> {
                 "--------------- OR --------------",
                 style: TextStyle(fontWeight: FontWeight(400), fontSize: 25.sp),
               ),
-              SizedBox(height: 26.h),
+              SizedBox(height: 20.h),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsetsGeometry.only(left: 30.w),
+                    child: Text(
+                      "참여 코드 입력",
+                      style: TextStyle(
+                        fontSize: 25.sp,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+                ],
+              ),
               Container(
                 height: 126.h,
                 width: 342.w,
