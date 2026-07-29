@@ -158,7 +158,8 @@ class MobileGameCard extends StatelessWidget {
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
-                //crossAxisAlignment: CrossAxisAlignment.stretch,
+
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
@@ -171,6 +172,10 @@ class MobileGameCard extends StatelessWidget {
                   ),
                   Text(
                     '${gameInfo.minPlayers} ~ ${gameInfo.maxPlayers}인',
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                  ),
+                  Text(
+                    gameInfo.genres.join(', '),
                     style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
                   ),
                   Text(
@@ -207,7 +212,6 @@ class GameInfo {
   });
 
   factory GameInfo.fromJson(Map<String, dynamic> json) {
-    print('$json');
     return GameInfo(
       title: json['name'] as String? ?? '이름 없음',
       playTime: (json['playTimeMin'] as num?)?.toInt() ?? 0,
