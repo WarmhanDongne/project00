@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
 
@@ -142,41 +141,46 @@ class MobileGameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
-          child: Image.network(
-            "https://picsum.photos/200/300",
-            width: 115,
-            height: 150,
-            fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
-          ),
-        ),
-        SizedBox(width: 20),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          //crossAxisAlignment: CrossAxisAlignment.stretch,
+        Row(
           children: [
-            Text(
-              gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-              textScaler: TextScaler.noScaling,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.network(
+                "https://picsum.photos/200/300",
+                width: 115,
+                height: 150,
+                fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
+              ),
             ),
-            Text(
-              gameInfo.playTime,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-            ),
-            Text(
-              gameInfo.userCount,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-            ),
-            Text(
-              gameInfo.shortExplain,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+            SizedBox(width: 20),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              //crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                  textScaler: TextScaler.noScaling,
+                ),
+                Text(
+                  gameInfo.playTime,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                ),
+                Text(
+                  gameInfo.userCount,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                ),
+                Text(
+                  gameInfo.shortExplain,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+                ),
+              ],
             ),
           ],
         ),
+        SizedBox(height: 10),
       ],
     );
   }
