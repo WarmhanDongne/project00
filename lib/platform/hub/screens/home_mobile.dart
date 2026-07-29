@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/hub/services/game_service.dart';
 
 class HomeMobile extends StatefulWidget {
   const HomeMobile({super.key});
@@ -8,15 +9,15 @@ class HomeMobile extends StatefulWidget {
 }
 
 class _HomeMobileState extends State<HomeMobile> {
-  List<GameInfo> dumgames = [
-    GameInfo(
-      title: "a",
-      playTime: 'b',
-      userCount: 'c',
-      gameGenre: 'd',
-      shortExplain: 'e',
-    ),
-  ];
+  late final Future<List<Map<String, dynamic>>>
+  _games; // MobileGameCard에 들어갈 데이터 보관할 객체
+  final GameService _gameService = GameService(); // 데이터 fetch할 객체
+
+  @override
+  void initState() {
+    super.initState();
+    _games = _gameService.fetchGames();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,13 +94,38 @@ class _HomeMobileState extends State<HomeMobile> {
                 SizedBox(height: 10),
               ],
             ),
-            MobileGameCard(gameInfo: dumgames[0]),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
-            // SizedBox(height: 10),
-            // MobileGameCard(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _games,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        '게임 목록을 불러오지 못했습니다.\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+                  final games = snapshot.data ?? [];
+
+                  if (games.isEmpty) {
+                    return const Center(child: Text("등록된 게임이 없습니다."));
+                  }
+                  return ListView.builder(
+                    itemCount: games.length,
+                    itemBuilder: (context, index) {
+                      final gameData = games[index];
+                      final gameInfo = GameInfo.fromJson(gameData);
+
+                      return MobileGameCard(gameInfo: gameInfo);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -115,41 +141,53 @@ class MobileGameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
-          child: Image.network(
-            "https://picsum.photos/200/300",
-            width: 115,
-            height: 150,
-            fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
-          ),
-        ),
-        SizedBox(width: 20),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          //crossAxisAlignment: CrossAxisAlignment.stretch,
+        Row(
           children: [
-            Text(
-              gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-              textScaler: TextScaler.noScaling,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.network(
+                "https://picsum.photos/200/300",
+                width: 115,
+                height: 150,
+                fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
+              ),
             ),
-            Text(
-              gameInfo.playTime,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-            ),
-            Text(
-              gameInfo.userCount,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
-            ),
-            Text(
-              gameInfo.shortExplain,
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight(400)),
+            SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                    textScaler: TextScaler.noScaling,
+                  ),
+                  Text(
+                    '${gameInfo.playTime}m',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                  ),
+                  Text(
+                    '${gameInfo.minPlayers} ~ ${gameInfo.maxPlayers}인',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                  ),
+                  Text(
+                    gameInfo.genres.join(', '),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                  ),
+                  Text(
+                    gameInfo.shortDescription,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+        SizedBox(height: 10),
       ],
     );
   }
@@ -158,26 +196,29 @@ class MobileGameCard extends StatelessWidget {
 // DTO 클래스 선언
 class GameInfo {
   final String title;
-  final String playTime;
-  final String userCount;
-  final String gameGenre;
-  final String shortExplain;
+  final int playTime;
+  final int minPlayers;
+  final int maxPlayers;
+  final List<String> genres;
+  final String shortDescription;
 
   GameInfo({
     required this.title,
     required this.playTime,
-    required this.userCount,
-    required this.gameGenre,
-    required this.shortExplain,
+    required this.minPlayers,
+    required this.maxPlayers,
+    required this.genres,
+    required this.shortDescription,
   });
 
   factory GameInfo.fromJson(Map<String, dynamic> json) {
     return GameInfo(
       title: json['name'] as String? ?? '이름 없음',
-      playTime: json['playTime'] as String? ?? '미상',
-      userCount: json['userCount'] as String? ?? '장르 없음',
-      gameGenre: json['genre'] as String? ?? '장르 없음',
-      shortExplain: json['shortExplain'] as String? ?? '설명 없음',
+      playTime: (json['playTimeMin'] as num?)?.toInt() ?? 0,
+      minPlayers: (json['minPlayers'] as int?)?.toInt() ?? 0,
+      maxPlayers: json['maxPlayers'] as int? ?? 0,
+      genres: json['genres'] != null ? List<String>.from(json['genres']) : [],
+      shortDescription: json['shortDescription'] as String? ?? '설명 없음',
     );
   }
 }

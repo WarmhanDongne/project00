@@ -2,11 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class GameService {
-  GameService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  GameService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -22,8 +20,10 @@ class GameService {
     Set<String> ownedGameIds = {};
 
     if (user != null) {
-      final userSnapshot =
-          await _firestore.collection('users').doc(user.uid).get();
+      final userSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
       final ownedGames = userSnapshot.data()?['ownedGames'];
 
@@ -36,10 +36,21 @@ class GameService {
       final data = doc.data();
 
       return {
-        'id': doc.id,
+        'id': doc.id, // 문서 자체의 고유 ID
         'name': data['name'] ?? '',
         'imageUrl': data['imageUrl'] ?? '',
         'description': data['description'] ?? '',
+        'shortDescription': data['shortDescription'] ?? '',
+        'genres': data['genres'] ?? [],
+        'playTimeMin': data['playTimeMin'] ?? 0,
+        'minPlayers': data['minPlayers'] ?? 0,
+        'maxPlayers': data['maxPlayers'] ?? 0,
+        'isActive': data['isActive'] ?? false,
+        'sortOrder': data['sortOrder'] ?? 0,
+        'createdAt': data['createdAt'],
+        'updatedAt': data['updatedAt'],
+
+        // 파이어베이스 사진에는 없지만 기존 코드에 있던 부분 (유지)
         'price': data['price'] ?? 0,
         'isOwned': ownedGameIds.contains(doc.id),
       };
@@ -52,8 +63,10 @@ class GameService {
 
     if (user == null) return false;
 
-    final userSnapshot =
-        await _firestore.collection('users').doc(user.uid).get();
+    final userSnapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
     final ownedGames = userSnapshot.data()?['ownedGames'];
 
