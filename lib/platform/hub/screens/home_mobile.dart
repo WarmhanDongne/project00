@@ -52,7 +52,7 @@ class _HomeMobileState extends State<HomeMobile> {
                       MaterialPageRoute(
                         builder: (context) => MobileGroupJoin(),
                       ),
-                    ); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
+                    ); // MobileGroupJoin으로 이동
                   },
                   child: Text(
                     "그룹 참여",
