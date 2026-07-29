@@ -13,8 +13,8 @@ class MobileGroupJoin extends StatefulWidget {
 }
 
 class _MobileGroupJoinState extends State<MobileGroupJoin> {
-  late double screenWidth = MediaQuery.sizeOf(context).width;
-  late double screenHeight = MediaQuery.sizeOf(context).height;
+  late double screenWidth = MediaQuery.sizeOf(context).width; // 화면 가로 너비
+  late double screenHeight = MediaQuery.sizeOf(context).height; // 화면 새로 높이
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +34,8 @@ class _MobileGroupJoinState extends State<MobileGroupJoin> {
             ),
             SizedBox(height: 26),
             Container(
-              height: 310,
-              width: 310,
+              height: screenHeight * 0.4,
+              width: screenHeight * 0.4,
               color: Colors.grey,
               child: Center(child: Text('카메라')),
             ),
@@ -53,7 +53,7 @@ class _MobileGroupJoinState extends State<MobileGroupJoin> {
                 child: Text('_______ _______ _______ _______ _______ ________'),
               ),
             ),
-            SizedBox(height: 26),
+            //SizedBox(height: 26),
             TextButton(
               onPressed: () {
                 Navigator.push(
