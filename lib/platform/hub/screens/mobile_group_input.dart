@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/app/app.dart';
 
 class MobileGroupInput extends StatefulWidget {
   const MobileGroupInput({super.key});
@@ -57,6 +56,7 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
               ],
             ),
           ),
+          Center(child: Text('해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)')),
         ],
       ),
     );
