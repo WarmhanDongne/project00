@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class GroupTopBar extends StatelessWidget {
   final VoidCallback onPressed;
+  final String buttonText;
 
-  const GroupTopBar({super.key, required this.onPressed});
+  const GroupTopBar({
+    super.key,
+    required this.onPressed,
+    required this.buttonText,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +30,7 @@ class GroupTopBar extends StatelessWidget {
           ),
           onPressed: onPressed,
           child: Text(
-            "그룹 참여",
+            buttonText,
             style: TextStyle(
               fontSize: 20.0,
               fontWeight: FontWeight.bold,
