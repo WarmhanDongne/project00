@@ -58,7 +58,7 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
           ),
           SizedBox(height: 46.h),
           Padding(
-            padding: EdgeInsetsGeometry.symmetric(horizontal: 23.w),
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 30.w),
             child: Center(
               child: Text(
                 '해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)',
@@ -68,6 +68,39 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
             ),
           ),
           SizedBox(height: 19.h),
+          Row(
+            children: [
+              SizedBox(width: 35.w),
+              Container(
+                width: 253.w,
+                height: 50.h,
+                color: Colors.grey,
+                child: Text(
+                  '닉네임 : 현재 닉네임',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 25.sp,
+                  ),
+                ),
+              ),
+              SizedBox(width: 13.w),
+              Container(
+                width: 66.w,
+                height: 50.h,
+                color: Colors.grey,
+                child: Text(
+                  '수정',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 25.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 64.h),
         ],
       ),
     );
