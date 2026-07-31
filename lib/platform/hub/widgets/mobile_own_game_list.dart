@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class OwnGameList extends StatelessWidget {
   const OwnGameList({super.key, required this._games});
@@ -54,6 +55,7 @@ class MobileGameCard extends StatelessWidget {
       children: [
         Row(
           children: [
+            SizedBox(width: 16.w),
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
               child: Image.network(

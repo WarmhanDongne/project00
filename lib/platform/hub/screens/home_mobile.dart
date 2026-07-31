@@ -26,42 +26,48 @@ class _HomeMobileState extends State<HomeMobile> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
+        body: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
 
-          child: Column(
-            children: [
-              SizedBox(height: 10),
-
-              GroupTopBar(
-                buttonText: "그룹 참여",
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MobileGroupJoin()),
-                  ); // MobileGroupJoin으로 이동
-                },
-              ),
-              Column(
-                // 보유 중인 게임
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisAlignment: MainAxisAlignment.start,
+              child: Column(
                 children: [
-                  SizedBox(height: 20),
-                  Text(
-                    "보유 중인 게임",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
                   SizedBox(height: 10),
+
+                  GroupTopBar(
+                    buttonText: "그룹 참여",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MobileGroupJoin(),
+                        ),
+                      ); // MobileGroupJoin으로 이동
+                    },
+                  ),
+                  Column(
+                    // 보유 중인 게임
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 20),
+                      Text(
+                        "보유 중인 게임",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                    ],
+                  ),
                 ],
               ),
-              OwnGameList(games: _games),
-            ],
-          ),
+            ),
+            OwnGameList(games: _games),
+          ],
         ),
       ),
     );

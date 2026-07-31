@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/hub/screens/mobile_group_join.dart';
+import 'package:project00/platform/hub/services/game_service.dart';
 import 'package:project00/platform/hub/widgets/mobile_group_top_bar.dart';
+import 'package:project00/platform/hub/widgets/mobile_own_game_list.dart';
 import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
 
 class MobileGroupJoined extends StatefulWidget {
@@ -12,6 +14,15 @@ class MobileGroupJoined extends StatefulWidget {
 }
 
 class _MobileGroupJoinedState extends State<MobileGroupJoined> {
+  late final Future<List<Map<String, dynamic>>> _games;
+  final GameService _gameService = GameService();
+
+  @override
+  void initState() {
+    super.initState();
+    _games = _gameService.fetchGames();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -43,6 +54,20 @@ class _MobileGroupJoinedState extends State<MobileGroupJoined> {
               participantsList: ['플레이어', '잇츠미', '저예요', '본인'],
             ),
             SizedBox(height: 36.h),
+            Row(
+              children: [
+                SizedBox(width: 18.w),
+                Text(
+                  '그룹이 보유 중인 게임',
+                  style: TextStyle(
+                    fontSize: 25.sp,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10.h),
+            OwnGameList(games: _games),
           ],
         ),
       ),
