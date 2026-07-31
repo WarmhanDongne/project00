@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
@@ -10,6 +11,62 @@ class MobileGroupInput extends StatefulWidget {
 }
 
 class _MobileGroupInputState extends State<MobileGroupInput> {
+  final MobileRoomProvider _roomProvider = MobileRoomProvider();
+  final TextEditingController _roomCodeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _roomProvider.dispose();
+    _roomCodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _joinRoom() async {
+    FocusScope.of(context).unfocus();
+    final joined = await _roomProvider.joinRoom(_roomCodeController.text);
+    if (!mounted || joined) return;
+
+    final message = _roomProvider.errorMessage;
+    if (message != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _roomProvider,
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('그룹 참여하기'), centerTitle: true),
+          body: SafeArea(
+            child: _roomProvider.isInRoom
+                ? _JoinedRoom(provider: _roomProvider)
+                : _JoinForm(
+                    controller: _roomCodeController,
+                    provider: _roomProvider,
+                    onJoin: _joinRoom,
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _JoinForm extends StatelessWidget {
+  const _JoinForm({
+    required this.controller,
+    required this.provider,
+    required this.onJoin,
+  });
+
+  final TextEditingController controller;
+  final MobileRoomProvider provider;
+  final VoidCallback onJoin;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_bar/widgets/rolebook.dart';
 
 class RegisterStepTwo extends StatelessWidget {
   const RegisterStepTwo({

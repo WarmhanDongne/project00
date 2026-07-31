@@ -8,6 +8,15 @@ import {
 
 initializeApp();
 
+export {
+  createOrLoadRoom,
+  joinRoom,
+  leaveRoom,
+  resetRoom,
+  selectRoomGame,
+  setRoomReady,
+} from "./room-functions.js";
+
 export const checkEmailDuplicate = onCall(
   {region: "asia-northeast3"},
   async (request) => {

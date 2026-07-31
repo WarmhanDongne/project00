@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/shared/player_layouts/player_slot_positions.dart';
 
 class FivePlayerLayout extends StatefulWidget {
   const FivePlayerLayout({super.key});
@@ -13,14 +14,7 @@ class _FivePlayerLayoutState extends State<FivePlayerLayout> {
   // 이 거리 안으로 접근하면 즉시 자리 교환
   static const double swapTriggerDistance = 130;
 
-  // 네 모서리 + 오른쪽 중앙
-  final List<Offset> slotPositions = [
-    const Offset(0.18, 0.05),
-    const Offset(0.68, 0.05),
-    const Offset(0.79, 0.37),
-    const Offset(0.18, 0.69),
-    const Offset(0.68, 0.69),
-  ];
+  List<Offset> slotPositions = const [];
 
   final List<String> playerNames = [
     '태블릿 주인',
@@ -233,6 +227,11 @@ class _FivePlayerLayoutState extends State<FivePlayerLayout> {
                     final boardSize = Size(
                       constraints.maxWidth,
                       constraints.maxHeight,
+                    );
+                    slotPositions = normalizedPlayerSlotTopLeftPositions(
+                      playerCount: 5,
+                      boardSize: boardSize,
+                      slotSize: playerSlotSize,
                     );
 
                     return Stack(

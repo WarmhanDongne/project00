@@ -9,12 +9,8 @@ class Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
-        if (constraints.maxWidth < 1194 && constraints.maxHeight < 834) {
-          return const HomeMobile(); // 600보다 작으면 모바일 화면 리턴
-        } else {
-          return const HomeTablet(); // 기존 작성하신 home.dart의 내용
-        }
+        final isTablet = constraints.biggest.shortestSide >= 600;
+        return isTablet ? const HomeTablet() : const HomeMobile();
       },
     );
   }

@@ -10,6 +10,28 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function roomDocument(roomCode) {
+      return get(
+        /databases/$(database)/documents/rooms/$(roomCode)
+      );
+    }
+
+    function isRoomHost(roomCode) {
+      return signedIn()
+        && roomDocument(roomCode).data.hostUid == request.auth.uid;
+    }
+
+    function isRoomMember(roomCode) {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/rooms/$(roomCode)/members/$(request.auth.uid)
+        );
+    }
+
+    function canAccessRoom(roomCode) {
+      return isRoomHost(roomCode) || isRoomMember(roomCode);
+    }
+
     match /games/{gameId} {
       allow read: if signedIn();
       allow write: if false;
@@ -17,36 +39,84 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if signedIn();
-      allow create, update: if isOwner(userId);
-      allow delete: if false;
+      allow write: if false;
     }
 
+    // 아이패드의 고정 룸 연결 정보입니다.
+    // 생성과 수정은 Cloud Functions만 수행합니다.
     match /userRooms/{userId} {
-      allow read, create, update: if isOwner(userId);
-      allow delete: if false;
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    // 휴대폰 사용자의 현재 참가 룸 연결 정보입니다.
+    match /roomParticipants/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
     }
 
     match /rooms/{roomCode} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.hostUid == request.auth.uid;
-      allow update: if signedIn() && (
+      allow read: if signedIn() && (
         resource.data.hostUid == request.auth.uid
-        || (
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['memberCount', 'updatedAt'])
-          && (
-            request.resource.data.memberCount == resource.data.memberCount + 1
-            || request.resource.data.memberCount == resource.data.memberCount - 1
-          )
-        )
+        || isRoomMember(roomCode)
       );
-      allow delete: if signedIn()
-        && resource.data.hostUid == request.auth.uid;
+      allow write: if false;
+
+      match /devices/{deviceId} {
+        allow read: if isRoomHost(roomCode);
+        allow write: if false;
+      }
 
       match /members/{memberId} {
-        allow read: if signedIn();
-        allow create, update, delete: if isOwner(memberId);
+        allow read: if canAccessRoom(roomCode);
+        allow write: if false;
+      }
+
+      match /matches/{matchId} {
+        allow read: if canAccessRoom(roomCode);
+        allow write: if false;
+
+        match /hands/{playerId} {
+          allow read: if canAccessRoom(roomCode)
+            && request.auth.uid == playerId;
+          allow write: if false;
+        }
+
+        match /events/{eventId} {
+          allow read: if canAccessRoom(roomCode);
+          allow write: if false;
+        }
+
+        match /rounds/{roundId} {
+          allow read: if canAccessRoom(roomCode);
+          allow write: if false;
+
+          match /plays/{playId} {
+            allow read: if canAccessRoom(roomCode);
+            allow write: if false;
+          }
+
+          match /penalties/{penaltyId} {
+            allow read: if canAccessRoom(roomCode);
+            allow write: if false;
+          }
+
+          match /secretPlays/{playId} {
+            allow read, write: if false;
+          }
+
+          match /secretPenalties/{penaltyId} {
+            allow read, write: if false;
+          }
+        }
+
+        match /processedActions/{actionId} {
+          allow read, write: if false;
+        }
+
+        match /serverState/{documentId} {
+          allow read, write: if false;
+        }
       }
     }
   }
