@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:project00/platform/hub/providers/mobile_room_provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
 
 class MobileGroupInput extends StatefulWidget {
   const MobileGroupInput({super.key});
@@ -69,157 +69,96 @@ class _JoinForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
+    return Scaffold(
+      appBar: AppBar(centerTitle: true, title: Text("그룹 참여하기")),
+      body: DefaultTextStyle(
+        style: TextStyle(
+          fontSize: 25.sp,
+          fontWeight: FontWeight.w400,
+          color: Colors.black,
+        ),
+        child: SingleChildScrollView(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.meeting_room_outlined, size: 72),
-              const SizedBox(height: 20),
-              const Text(
-                '아이패드에 표시된 참여 코드를 입력해 주세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 28),
-              TextField(
-                controller: controller,
-                enabled: !provider.isLoading,
-                maxLength: 5,
-                textCapitalization: TextCapitalization.characters,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 8,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                  UpperCaseTextFormatter(),
-                ],
-                decoration: const InputDecoration(
-                  labelText: '참여 코드',
-                  counterText: '',
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => onJoin(),
-              ),
-              if (provider.errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  provider.errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: provider.isLoading ? null : onJoin,
-                child: provider.isLoading
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('방 참가하기'),
-              ),
+              MobileParticipantList(
+                hostName: '방장장',
+                participantsList: ['플레이어', '잇츠미', '저예요'],
+              ), // 참여자 목록
+              SizedBox(height: 46.h),
+              _buildNickNameAnnouncement(), // 닉네임 안내문구
+              SizedBox(height: 19.h),
+              _buildInsertNickName(), // 닉네임 삽입 및 확인 버튼
+              SizedBox(height: 64.h),
+              _buildEnterButton(), // 입장하기 버튼
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _JoinedRoom extends StatelessWidget {
-  const _JoinedRoom({required this.provider});
+  FilledButton _buildEnterButton() {
+    return FilledButton(
+      onPressed: () {},
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.grey,
+        foregroundColor: Colors.black,
+        fixedSize: Size(164.w, 50.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.r)),
+      ),
+      child: Text(
+        '입장하기',
+        style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
+      ),
+    );
+  }
 
-  final MobileRoomProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    final currentMember = provider.members
-        .where((member) => member.uid == currentUid)
-        .firstOrNull;
-    final isReady = currentMember?.isReady ?? false;
-
+  Padding _buildInsertNickName() {
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: EdgeInsets.symmetric(horizontal: 35.w),
+      child: Row(
         children: [
-          Text(
-            '방 ${provider.roomCode}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${provider.members.length}/${provider.room?.maxMembers ?? 0}명',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
           Expanded(
-            child: ListView.separated(
-              itemCount: provider.members.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final member = provider.members[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: member.profileImageUrl.isNotEmpty
-                        ? NetworkImage(member.profileImageUrl)
-                        : null,
-                    child: member.profileImageUrl.isEmpty
-                        ? const Icon(Icons.person)
-                        : null,
-                  ),
-                  title: Text(member.nickname),
-                  trailing: Icon(
-                    member.isReady ? Icons.check_circle : Icons.hourglass_empty,
-                    color: member.isReady ? Colors.green : Colors.grey,
-                  ),
-                );
-              },
+            child: Container(
+              // 닉네임 입력 받기
+              height: 50.h,
+              alignment: Alignment.centerLeft,
+              color: Colors.grey,
+              child: Text('닉네임 : 현재 닉네임'),
             ),
           ),
+          SizedBox(width: 13.w),
           FilledButton(
-            onPressed: provider.isLoading
-                ? null
-                : () {
-                    provider.setReady(!isReady);
-                  },
-            child: Text(isReady ? '준비 취소' : '준비 완료'),
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.grey,
+              foregroundColor: Colors.black,
+              fixedSize: Size(66.w, 50.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(0.r),
+              ),
+              padding: EdgeInsets.zero,
+            ),
+
+            child: Text(
+              '수정',
+              style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
+            ),
           ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: provider.isLoading
-                ? null
-                : () {
-                    provider.leaveRoom();
-                  },
-            child: const Text('방 나가기'),
-          ),
-          if (provider.isLoading) ...[
-            const SizedBox(height: 10),
-            const LinearProgressIndicator(),
-          ],
         ],
       ),
     );
   }
-}
 
-class UpperCaseTextFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    return newValue.copyWith(text: newValue.text.toUpperCase());
+  Padding _buildNickNameAnnouncement() {
+    return Padding(
+      padding: EdgeInsetsGeometry.symmetric(horizontal: 30.w),
+      child: Center(
+        child: Text(
+          '해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
   }
 }
