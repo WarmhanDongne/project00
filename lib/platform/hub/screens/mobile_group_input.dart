@@ -56,7 +56,18 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
               ],
             ),
           ),
-          Center(child: Text('해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)')),
+          SizedBox(height: 46.h),
+          Padding(
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 23.w),
+            child: Center(
+              child: Text(
+                '해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)',
+                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          SizedBox(height: 19.h),
         ],
       ),
     );
