@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/hub/screens/mobile_group_join.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
+import 'package:project00/platform/hub/widgets/mobile_group_top_bar.dart';
 
 class HomeMobile extends StatefulWidget {
   const HomeMobile({super.key});
@@ -31,53 +32,13 @@ class _HomeMobileState extends State<HomeMobile> {
             children: [
               SizedBox(height: 10),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    // 그룹 참여
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Colors.grey[300],
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40.0,
-                        vertical: 10.0,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MobileGroupJoin(),
-                        ),
-                      ); // MobileGroupJoin으로 이동
-                    },
-                    child: Text(
-                      "그룹 참여",
-                      style: TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                  Ink(
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: NetworkImage("https://picsum.photos/600/400"),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: InkWell(customBorder: CircleBorder(), onTap: () {}),
-                  ),
-                ],
+              GroupTopBar(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MobileGroupJoin()),
+                  ); // MobileGroupJoin으로 이동
+                },
               ),
               Column(
                 // 보유 중인 게임

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/platform/hub/screens/mobile_group_joined.dart';
 import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
 
 class MobileGroupInput extends StatefulWidget {
@@ -42,7 +43,12 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
 
   FilledButton _buildEnterButton() {
     return FilledButton(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => MobileGroupJoined()),
+        );
+      },
       style: FilledButton.styleFrom(
         backgroundColor: Colors.grey,
         foregroundColor: Colors.black,
