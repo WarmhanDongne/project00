@@ -19,16 +19,18 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
           fontWeight: FontWeight.w400,
           color: Colors.black,
         ),
-        child: Column(
-          children: [
-            _buildParticipantList(), // 참여자 목록
-            SizedBox(height: 46.h),
-            _buildNickNameAnnouncement(), // 닉네임 안내문구
-            SizedBox(height: 19.h),
-            _buildInsertNickName(), // 닉네임 삽입 및 확인 버튼
-            SizedBox(height: 64.h),
-            _buildEnterButton(), // 입장하기 버튼
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildParticipantList(), // 참여자 목록
+              SizedBox(height: 46.h),
+              _buildNickNameAnnouncement(), // 닉네임 안내문구
+              SizedBox(height: 19.h),
+              _buildInsertNickName(), // 닉네임 삽입 및 확인 버튼
+              SizedBox(height: 64.h),
+              _buildEnterButton(), // 입장하기 버튼
+            ],
+          ),
         ),
       ),
     );
