@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_bar/screens/liarsbar.dart';
 
 class ThreePlayerLayout extends StatefulWidget {
   const ThreePlayerLayout({super.key});
@@ -8,23 +9,19 @@ class ThreePlayerLayout extends StatefulWidget {
 }
 
 class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
-  static const double playerSlotSize = 132;
+  static const double playerSlotSize = 160;
 
   // 이 거리 안으로 접근하면 즉시 자리 교환
-  static const double swapTriggerDistance = 110;
+  static const double swapTriggerDistance = 130;
 
-  // 플레이어가 배치될 수 있는 고정 자리 3개
+  // 왼쪽 위 / 오른쪽 중앙 / 왼쪽 아래
   final List<Offset> slotPositions = [
-    const Offset(0.42, 0.10), // 위쪽
-    const Offset(0.12, 0.60), // 왼쪽 아래
-    const Offset(0.70, 0.60), // 오른쪽 아래
+    const Offset(0.18, 0.05),
+    const Offset(0.79, 0.37),
+    const Offset(0.18, 0.69),
   ];
 
-  final List<String> playerNames = [
-    '태블릿 주인',
-    '이런 식의 닉네임',
-    '주르르르륵',
-  ];
+  final List<String> playerNames = ['태블릿 주인', '이런 식의 닉네임', '주르르르륵'];
 
   // playerSlotIndexes[플레이어 번호] = 현재 자리 번호
   List<int> playerSlotIndexes = [0, 1, 2];
@@ -45,8 +42,7 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
       draggingPlayerIndex = playerIndex;
       hoveredSlotIndex = null;
 
-      draggingPositions[playerIndex] =
-          slotPositions[currentSlotIndex];
+      draggingPositions[playerIndex] = slotPositions[currentSlotIndex];
     });
   }
 
@@ -63,12 +59,14 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     final maxY = 1 - (playerSlotSize / boardSize.height);
 
     final nextPosition = Offset(
-      (currentPosition.dx +
-              details.delta.dx / boardSize.width)
-          .clamp(0.0, maxX),
-      (currentPosition.dy +
-              details.delta.dy / boardSize.height)
-          .clamp(0.0, maxY),
+      (currentPosition.dx + details.delta.dx / boardSize.width).clamp(
+        0.0,
+        maxX,
+      ),
+      (currentPosition.dy + details.delta.dy / boardSize.height).clamp(
+        0.0,
+        maxY,
+      ),
     );
 
     setState(() {
@@ -88,21 +86,16 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     required Size boardSize,
   }) {
     final draggedCenter = Offset(
-      draggingPosition.dx * boardSize.width +
-          playerSlotSize / 2,
-      draggingPosition.dy * boardSize.height +
-          playerSlotSize / 2,
+      draggingPosition.dx * boardSize.width + playerSlotSize / 2,
+      draggingPosition.dy * boardSize.height + playerSlotSize / 2,
     );
 
-    final currentSlotIndex =
-        playerSlotIndexes[playerIndex];
+    final currentSlotIndex = playerSlotIndexes[playerIndex];
 
     int? nearbySlotIndex;
     double nearestDistance = double.infinity;
 
-    for (int slotIndex = 0;
-        slotIndex < slotPositions.length;
-        slotIndex++) {
+    for (int slotIndex = 0; slotIndex < slotPositions.length; slotIndex++) {
       // 현재 자신이 차지하고 있는 자리는 검사하지 않음
       if (slotIndex == currentSlotIndex) {
         continue;
@@ -111,17 +104,13 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
       final slotPosition = slotPositions[slotIndex];
 
       final slotCenter = Offset(
-        slotPosition.dx * boardSize.width +
-            playerSlotSize / 2,
-        slotPosition.dy * boardSize.height +
-            playerSlotSize / 2,
+        slotPosition.dx * boardSize.width + playerSlotSize / 2,
+        slotPosition.dy * boardSize.height + playerSlotSize / 2,
       );
 
-      final distance =
-          (draggedCenter - slotCenter).distance;
+      final distance = (draggedCenter - slotCenter).distance;
 
-      if (distance <= swapTriggerDistance &&
-          distance < nearestDistance) {
+      if (distance <= swapTriggerDistance && distance < nearestDistance) {
         nearestDistance = distance;
         nearbySlotIndex = slotIndex;
       }
@@ -152,11 +141,9 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     required int playerIndex,
     required int targetSlotIndex,
   }) {
-    final currentSlotIndex =
-        playerSlotIndexes[playerIndex];
+    final currentSlotIndex = playerSlotIndexes[playerIndex];
 
-    final targetPlayerIndex =
-        playerSlotIndexes.indexOf(targetSlotIndex);
+    final targetPlayerIndex = playerSlotIndexes.indexOf(targetSlotIndex);
 
     if (currentSlotIndex == targetSlotIndex) {
       return;
@@ -165,15 +152,12 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     setState(() {
       // 대상 자리에 있는 플레이어를
       // 드래그 플레이어의 기존 자리로 밀어냄
-      if (targetPlayerIndex != -1 &&
-          targetPlayerIndex != playerIndex) {
-        playerSlotIndexes[targetPlayerIndex] =
-            currentSlotIndex;
+      if (targetPlayerIndex != -1 && targetPlayerIndex != playerIndex) {
+        playerSlotIndexes[targetPlayerIndex] = currentSlotIndex;
       }
 
       // 드래그 플레이어가 대상 자리를 차지
-      playerSlotIndexes[playerIndex] =
-          targetSlotIndex;
+      playerSlotIndexes[playerIndex] = targetSlotIndex;
     });
   }
 
@@ -197,57 +181,43 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
   }
 
   void completeSetting() {
-    final playerPositions = List<Offset>.generate(
-      playerNames.length,
-      (index) {
-        final slotIndex = playerSlotIndexes[index];
-        return slotPositions[slotIndex];
-      },
-    );
+    final playerPositions = List<Offset>.generate(playerNames.length, (index) {
+      final slotIndex = playerSlotIndexes[index];
+      return slotPositions[slotIndex];
+    });
 
     debugPrint('플레이어 자리 번호: $playerSlotIndexes');
     debugPrint('플레이어 위치: $playerPositions');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('자리 설정이 완료되었습니다.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('자리 설정이 완료되었습니다.')));
 
     // 다음 화면으로 이동할 때
-    //
-    // Navigator.pushReplacement(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (_) => const NextPage(),
-    //   ),
-    // );
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LiarsBar(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff3f3f3),
+      backgroundColor: Colors.white,
       body: Center(
         child: Container(
-          width: 900,
-          height: 620,
-          margin: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(
-              color: const Color(0xffeeeeee),
-            ),
-          ),
+          width: double.infinity,
+          height: double.infinity,
+          color: Colors.white,
           child: Column(
             children: [
               const SizedBox(height: 22),
               const Text(
                 '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -261,9 +231,11 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
                     return Stack(
                       children: [
                         // 플레이어 표시
-                        for (int playerIndex = 0;
-                            playerIndex < playerNames.length;
-                            playerIndex++)
+                        for (
+                          int playerIndex = 0;
+                          playerIndex < playerNames.length;
+                          playerIndex++
+                        )
                           _buildPlayer(
                             playerIndex: playerIndex,
                             boardSize: boardSize,
@@ -275,11 +247,9 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
                           child: FilledButton(
                             onPressed: completeSetting,
                             style: FilledButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xffd4d4d4),
+                              backgroundColor: const Color(0xffd4d4d4),
                               foregroundColor: Colors.black,
-                              shape:
-                                  const RoundedRectangleBorder(),
+                              shape: const RoundedRectangleBorder(),
                             ),
                             child: const Text('설정 완료'),
                           ),
@@ -296,16 +266,12 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     );
   }
 
-  Widget _buildPlayer({
-    required int playerIndex,
-    required Size boardSize,
-  }) {
-    final isDragging =
-        draggingPlayerIndex == playerIndex;
+  Widget _buildPlayer({required int playerIndex, required Size boardSize}) {
+    final isDragging = draggingPlayerIndex == playerIndex;
 
     final position = isDragging
         ? draggingPositions[playerIndex] ??
-            slotPositions[playerSlotIndexes[playerIndex]]
+              slotPositions[playerSlotIndexes[playerIndex]]
         : slotPositions[playerSlotIndexes[playerIndex]];
 
     return AnimatedPositioned(
@@ -313,9 +279,7 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
 
       // 드래그 중인 플레이어는 손을 즉시 따라감
       // 밀려나는 플레이어는 부드럽게 이동
-      duration: isDragging
-          ? Duration.zero
-          : const Duration(milliseconds: 350),
+      duration: isDragging ? Duration.zero : const Duration(milliseconds: 350),
 
       curve: Curves.easeInOutCubic,
 
@@ -350,11 +314,7 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
 }
 
 class PlayerSlot extends StatelessWidget {
-  const PlayerSlot({
-    super.key,
-    required this.nickname,
-    required this.isHost,
-  });
+  const PlayerSlot({super.key, required this.nickname, required this.isHost});
 
   final String nickname;
   final bool isHost;
@@ -364,40 +324,14 @@ class PlayerSlot extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: Container(
-        width: 132,
-        height: 132,
+        width: 160,
+        height: 160,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color:const Color(0xffd4d4d4),
-        ),
+        decoration: BoxDecoration(color: const Color(0xffd4d4d4)),
         child: Text(
           nickname,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyPlayerSlot extends StatelessWidget {
-  const _EmptyPlayerSlot();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: 132,
-        height: 132,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 2,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
         ),
       ),
     );
