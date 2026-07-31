@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
 
 class MobileGroupInput extends StatefulWidget {
   const MobileGroupInput({super.key});
@@ -22,7 +23,10 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _buildParticipantList(), // 참여자 목록
+              MobileParticipantList(
+                hostName: '방장장',
+                participantsList: ['플레이어', '잇츠미', '저예요'],
+              ), // 참여자 목록
               SizedBox(height: 46.h),
               _buildNickNameAnnouncement(), // 닉네임 안내문구
               SizedBox(height: 19.h),
@@ -97,34 +101,6 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
           '해당 그룹에서 사용할 닉네임을 설정할 수 있습니다. (중복 불가)',
           textAlign: TextAlign.center,
         ),
-      ),
-    );
-  }
-
-  Padding _buildParticipantList() {
-    return Padding(
-      padding: EdgeInsetsGeometry.symmetric(horizontal: 46.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text("참여자 [ 4명 ]"), // n명 데이터 받아서 해야함.
-          SizedBox(height: 10.h),
-          Container(
-            height: 310.h,
-            width: 272.w,
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-            color: Colors.grey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text("* 빵장장"),
-                Text("    - 플레이어"),
-                Text("    - 잇츠미"),
-                Text("    - 저예요"),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
