@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+/*
+사용 파일
+mobile_group_input_name에
+*/
+
 class MobileParticipantList extends StatelessWidget {
   int get totalParticipants => participantsList.length; // 참여자
   final String hostName;
