@@ -46,7 +46,7 @@ class _HomeMobileState extends State<HomeMobile> {
                     ),
                   ),
                   onPressed: () {
-                    print("그룹에 참여하기"); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
+                    debugPrint("그룹에 참여하기"); // 나중에 클릭 시 그룹 참여하기 카메라 큐알 페이지로 넘기기
                   },
                   child: Text(
                     "그룹 참여",
@@ -71,7 +71,7 @@ class _HomeMobileState extends State<HomeMobile> {
                   child: InkWell(
                     customBorder: CircleBorder(),
                     onTap: () {
-                      print('click');
+                      debugPrint('click');
                     },
                   ),
                 ),

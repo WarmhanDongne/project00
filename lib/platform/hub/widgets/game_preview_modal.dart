@@ -99,7 +99,7 @@ class GamePreviewDialog extends StatelessWidget {
     final description = _stringValue('description');
     final worldDescription = _stringValue('worldDescription');
     final ruleVideoUrl = _stringValue('ruleVideoUrl');
-    final isOwned = game['isOwned'] == true;
+    // final isOwned = game['isOwned'] == true;
 
     final informationTexts = <String>[
       if (playType.isNotEmpty) playType,

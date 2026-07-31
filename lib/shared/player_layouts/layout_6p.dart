@@ -8,25 +8,32 @@ class SixPlayerLayout extends StatefulWidget {
 }
 
 class _SixPlayerLayoutState extends State<SixPlayerLayout> {
-  static const double playerSlotSize = 132;
+  static const double playerSlotSize = 160;
 
   // 이 거리 안으로 접근하면 즉시 자리 교환
-  static const double swapTriggerDistance = 110;
+  static const double swapTriggerDistance = 130;
 
-  // 플레이어가 배치될 수 있는 고정 자리 3개
+  // 네 모서리 + 왼쪽 / 오른쪽 중앙
   final List<Offset> slotPositions = [
-    Offset(0.10, 0.08),
-    Offset(0.42, 0.08),
-    Offset(0.73, 0.08),
-    Offset(0.10, 0.62),
-    Offset(0.42, 0.62),
-    Offset(0.73, 0.62),
+    const Offset(0.18, 0.05),
+    const Offset(0.68, 0.05),
+    const Offset(0.08, 0.37),
+    const Offset(0.79, 0.37),
+    const Offset(0.18, 0.69),
+    const Offset(0.68, 0.69),
   ];
 
-  final List<String> playerNames = ['태블릿 주인', '이런 식의 닉네임', '주르르르륵'];
+  final List<String> playerNames = [
+    '태블릿 주인',
+    '이런 식의 닉네임',
+    '주르르르륵',
+    '플레이어 4',
+    '플레이어 5',
+    '플레이어 6',
+  ];
 
   // playerSlotIndexes[플레이어 번호] = 현재 자리 번호
-  List<int> playerSlotIndexes = [0, 1, 2];
+  List<int> playerSlotIndexes = [0, 1, 2, 3, 4, 5];
 
   // 드래그 중인 플레이어의 실제 위치
   final Map<int, Offset> draggingPositions = {};
@@ -208,22 +215,18 @@ class _SixPlayerLayoutState extends State<SixPlayerLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff3f3f3),
+      backgroundColor: Colors.white,
       body: Center(
         child: Container(
-          width: 900,
-          height: 620,
-          margin: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xffeeeeee)),
-          ),
+          width: double.infinity,
+          height: double.infinity,
+          color: Colors.white,
           child: Column(
             children: [
               const SizedBox(height: 22),
               const Text(
                 '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -330,32 +333,14 @@ class PlayerSlot extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: Container(
-        width: 132,
-        height: 132,
+        width: 160,
+        height: 160,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: const Color(0xffd4d4d4)),
         child: Text(
           nickname,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyPlayerSlot extends StatelessWidget {
-  const _EmptyPlayerSlot();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: 132,
-        height: 132,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          border: Border.all(color: Colors.grey.shade300, width: 2),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
         ),
       ),
     );

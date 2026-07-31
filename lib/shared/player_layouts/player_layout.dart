@@ -11,11 +11,9 @@ class PlayerSlots extends StatelessWidget {
   const PlayerSlots({super.key, required this.players});
 
   final List<RoomMember> players;
-  final number=3;
-
   @override
   Widget build(BuildContext context) {
-    switch (number) {
+    switch (players.length) {
       case 1:
         return const ThreePlayerLayout();
       case 2:
