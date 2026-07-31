@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/providers/room_provider.dart';
+import 'package:project00/platform/hub/providers/tablet_room_provider.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
-import 'package:project00/platform/hub/services/room_service.dart';
+import 'package:project00/platform/hub/services/room_models.dart';
 import 'package:project00/platform/hub/widgets/button.dart';
 import 'package:project00/platform/hub/widgets/game_preview_modal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -15,18 +15,19 @@ class HomeTablet extends StatefulWidget {
 }
 
 class _HomeTabletState extends State<HomeTablet> {
-  final RoomProvider _roomProvider = RoomProvider();
-
-  @override
-  void initState() {
-    super.initState();
-    _roomProvider.initializePersonalRoom();
-  }
+  final TabletRoomProvider _roomProvider = TabletRoomProvider();
 
   @override
   void dispose() {
     _roomProvider.dispose();
     super.dispose();
+  }
+
+  String searchWord = '';
+  void searchChanged(String value) {
+    setState(() {
+      searchWord = value;
+    });
   }
 
   @override
@@ -36,18 +37,26 @@ class _HomeTabletState extends State<HomeTablet> {
         padding: const EdgeInsets.all(25),
         child: Column(
           children: [
-            const Row(
+            Row(
               children: [
-                AppButton(
+                const AppButton(
                   text: '상점',
                   width: 160,
                   backgroundColor: Colors.blue,
                   onPressed: null,
                 ),
-                SizedBox(width: 300),
-                Expanded(child: GameSearchBar()),
-                SizedBox(width: 300),
-                Profile(),
+                const SizedBox(width: 300),
+                Expanded(child: GameSearchBar(onChanged: searchChanged)),
+                const SizedBox(width: 300),
+                AppButton(
+                  text: 'Logout',
+                  width: 160,
+                  backgroundColor: Colors.blue,
+                  onPressed: () async {
+                    await logout();
+                  },
+                ),
+                const Profile(),
               ],
             ),
             const SizedBox(height: 24),
@@ -66,6 +75,11 @@ class _HomeTabletState extends State<HomeTablet> {
       ),
     );
   }
+}
+
+//임시 로그아웃
+Future<void> logout() async {
+  await FirebaseAuth.instance.signOut();
 }
 
 class FilterBar extends StatelessWidget {
@@ -90,13 +104,14 @@ class FilterBar extends StatelessWidget {
 class GameList extends StatefulWidget {
   const GameList({super.key, required this.roomProvider});
 
-  final RoomProvider roomProvider;
+  final TabletRoomProvider roomProvider;
 
   @override
   State<GameList> createState() => _GameListState();
 }
 
 class _GameListState extends State<GameList> {
+  //리스트 블러오는 클라스 호출생성.
   final GameService _gameService = GameService();
 
   late final Future<List<Map<String, dynamic>>> _games;
@@ -104,6 +119,7 @@ class _GameListState extends State<GameList> {
   @override
   void initState() {
     super.initState();
+    //리스트 불러오기
     _games = _gameService.fetchGames();
   }
 
@@ -128,7 +144,7 @@ class _GameListState extends State<GameList> {
         final games = snapshot.data ?? [];
 
         if (games.isEmpty) {
-          return const Center(child: Text('등록된 게임이 없습니다.'));
+          return const Center(child: Text('구매된 게임이 없습니다.'));
         }
 
         return Column(
@@ -190,7 +206,7 @@ class GameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = game['name']?.toString() ?? '게임 이름';
-    final posterUrl = game['posterUrl']?.toString() ?? '';
+    final imageUrl = game['imageUrl']?.toString() ?? '';
     final playType = game['playType']?.toString() ?? '';
     final recommendedPlayers = game['recommendedPlayers']?.toString() ?? '';
     final isOwned = game['isOwned'] == true;
@@ -210,7 +226,7 @@ class GameCard extends StatelessWidget {
               Expanded(
                 child: SizedBox(
                   width: double.infinity,
-                  child: posterUrl.isEmpty
+                  child: imageUrl.isEmpty
                       ? Container(
                           color: Colors.grey.shade200,
                           alignment: Alignment.center,
@@ -224,7 +240,7 @@ class GameCard extends StatelessWidget {
                           ),
                         )
                       : Image.network(
-                          posterUrl,
+                          imageUrl,
                           fit: BoxFit.cover,
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) {
@@ -289,13 +305,15 @@ class GameCard extends StatelessWidget {
 }
 
 class GameSearchBar extends StatelessWidget {
-  const GameSearchBar({super.key});
+  const GameSearchBar({super.key, required this.onChanged});
 
+  final ValueChanged<String> onChanged;
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
       child: TextField(
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: '게임 검색',
           prefixIcon: const Icon(Icons.search),
@@ -333,7 +351,7 @@ class Profile extends StatelessWidget {
 class MemberTap extends StatelessWidget {
   const MemberTap({super.key, required this.provider});
 
-  final RoomProvider provider;
+  final TabletRoomProvider provider;
 
   @override
   Widget build(BuildContext context) {
@@ -352,10 +370,18 @@ class MemberTap extends StatelessWidget {
                     const Text('구성원 목록', style: TextStyle(fontSize: 16)),
                     const Spacer(),
                     AppButton(
-                      text: '초기화',
+                      text: provider.isInRoom ? '초기화' : '초대하기',
                       width: 130,
                       backgroundColor: Colors.blue,
-                      onPressed: null,
+                      onPressed: provider.isLoading
+                          ? null
+                          : () {
+                              if (provider.isInRoom) {
+                                provider.resetRoom();
+                              } else {
+                                provider.createRoom();
+                              }
+                            },
                     ),
                   ],
                 ),
@@ -383,14 +409,21 @@ class MemberTap extends StatelessWidget {
                                 members: provider.members,
                                 maxMembers:
                                     provider.room?.maxMembers ??
-                                    RoomService.defaultMaxMembers,
+                                    RoomLimits.defaultMaxMembers,
                               ),
                             ),
                             const SizedBox(height: 12),
                             _InviteRoom(roomCode: provider.roomCode!),
                           ],
                         )
-                      : const Center(child: CircularProgressIndicator()),
+                      : Center(
+                          child: Text(
+                            provider.isLoading
+                                ? '방을 생성하고 있습니다.'
+                                : '초대하기를 눌러 방을 만들어주세요.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                 ),
               ),
               if (provider.isLoading) const LinearProgressIndicator(),
