@@ -16,6 +16,7 @@ class MobileGroupJoined extends StatefulWidget {
 class _MobileGroupJoinedState extends State<MobileGroupJoined> {
   late final Future<List<Map<String, dynamic>>> _games;
   final GameService _gameService = GameService();
+  final bool isGameSelected = false;
 
   @override
   void initState() {
@@ -67,10 +68,27 @@ class _MobileGroupJoinedState extends State<MobileGroupJoined> {
               ],
             ),
             SizedBox(height: 10.h),
-            OwnGameList(games: _games),
+            if (isGameSelected == true)
+              SelectedGame()
+            else
+              OwnGameList(games: _games),
           ],
         ),
       ),
     );
+  }
+}
+
+class SelectedGame extends StatefulWidget {
+  const SelectedGame({super.key});
+
+  @override
+  State<SelectedGame> createState() => _SelecTedGameState();
+}
+
+class _SelecTedGameState extends State<SelectedGame> {
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
   }
 }
