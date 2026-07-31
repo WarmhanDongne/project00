@@ -76,8 +76,20 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.grey,
                     foregroundColor: Colors.black,
+                    fixedSize: Size(66.w, 50.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(0.r),
+                    ),
+                    padding: EdgeInsets.zero,
                   ),
-                  child: Text('수정'),
+
+                  child: Text(
+                    '수정',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 25.sp,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -92,7 +104,10 @@ class _MobileGroupInputState extends State<MobileGroupInput> {
                   borderRadius: BorderRadius.circular(0.r),
                 ),
               ),
-              child: Text('입장하기'),
+              child: Text(
+                '입장하기',
+                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
+              ),
             ),
           ],
         ),
