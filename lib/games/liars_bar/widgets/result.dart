@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/tablet/screens/tablet_home.dart';
+import 'package:project00/platform/home/tablet/screens/tablet_home.dart';
 
 class Result extends StatelessWidget {
   const Result({super.key});

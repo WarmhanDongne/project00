@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_bar/widgets/result.dart';
 import 'package:project00/games/liars_bar/widgets/sideblock.dart';
-import 'package:project00/shared/animations/card_deal.dart';
-import 'package:project00/shared/animations/card_play_animation.dart';
-import 'package:project00/shared/animations/round_start_reveal.dart';
+import 'package:project00/games/liars_bar/animations/card_deal.dart';
+import 'package:project00/games/liars_bar/animations/card_play_animation.dart';
+import 'package:project00/games/liars_bar/animations/round_start_reveal.dart';
 
 class TabletGame extends StatefulWidget {
   const TabletGame({super.key});

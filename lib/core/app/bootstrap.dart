@@ -1,0 +1,12 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:project00/firebase/firebase_options.dart';
+import 'package:project00/core/app/app.dart';
+
+Future<void> bootstrap() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env.dev');
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const App());
+}

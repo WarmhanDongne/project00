@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
-import 'package:project00/platform/app/app.dart';
-import 'firebase_options.dart';
+import 'package:project00/core/app/app.dart';
+import 'package:project00/firebase/firebase_options.dart';
 
 void main() async {
   // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화 보장
