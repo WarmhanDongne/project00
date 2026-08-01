@@ -52,14 +52,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
               SizedBox(height: 4.h),
               Padding(
                 padding: EdgeInsetsGeometry.symmetric(horizontal: 23.w),
-                child: Text(
-                  "테블릿에 표시된 QR 코드를 스캔, 혹은 참여 코드를 입력해 주세요. ",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 25.sp,
-                  ),
-                ),
+                child: joinGuidance(),
               ),
               SizedBox(height: 26.h),
               Container(
@@ -69,11 +62,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
                 child: Center(child: Text('카메라')),
               ),
               SizedBox(height: 36.h),
-              Text(
-                "--------------- OR --------------",
-                style: TextStyle(fontWeight: FontWeight(400), fontSize: 25.sp),
-              ),
-              SizedBox(height: 20.h),
+              Divider(color: Colors.grey, thickness: 1.0, height: 20.h),
               Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,6 +127,14 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
           ),
         ),
       ),
+    );
+  }
+
+  Text joinGuidance() {
+    return Text(
+      "테블릿에 표시된 QR 코드를 스캔, 혹은 참여 코드를 입력해 주세요. ",
+      textAlign: TextAlign.center,
+      style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
     );
   }
 }
