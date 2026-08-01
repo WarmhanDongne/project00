@@ -79,8 +79,8 @@ flutter:
     # - .env.dev
     - assets/images/
     - assets/images/button/
-    - assets/games/liars_bar/images/background/
-    - assets/games/liars_bar/images/cards/
+    - assets/games/liars_poker/images/background/
+    - assets/games/liars_poker/images/cards/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/

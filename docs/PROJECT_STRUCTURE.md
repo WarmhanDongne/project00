@@ -103,7 +103,7 @@ lib/main.dart
 | `assets/images/icons/` | 앱 공용 아이콘 이미지 |
 | `assets/images/backgrounds/` | 앱 공용 배경 이미지 |
 | `assets/images/button/` | 이미지 기반 공용 버튼 리소스 |
-| `assets/games/liars_bar/` | Liar's Bar 전용 이미지, 소리, 애니메이션 |
+| `assets/games/liars_poker/` | Liar's Poker 전용 이미지, 소리, 애니메이션 |
 | `assets/games/_game_template/` | 새 게임용 에셋 구조 참고 위치 |
 | `assets/fonts/` | 커스텀 폰트 |
 | `assets/sounds/` | 여러 화면이나 게임이 공유하는 사운드 |
@@ -204,14 +204,14 @@ lib/main.dart
 | `game_registry.dart` | 앱에서 제공하는 게임 목록 등록 |
 | `_game_template/template_game.dart` | 모든 게임이 제공해야 할 기본 정보 계약 |
 | `_game_template/widgets/` | 새 게임 생성 시 참고할 위젯 위치 |
-| `liars_bar/liars_bar_game.dart` | Liar's Bar 식별자와 표시 이름 |
-| `liars_bar/models/liars_bar_state.dart` | 게임 단계와 현재 턴 상태 |
-| `liars_bar/providers/liars_bar_provider.dart` | 게임 화면 상태 골격 |
-| `liars_bar/repositories/liars_bar_repository.dart` | 게임 데이터 통신 계약 |
-| `liars_bar/screens/liars_bar_room_screen.dart` | 게임 대기실 |
-| `liars_bar/screens/liars_bar_game_screen.dart` | 실제 플레이 화면 |
-| `liars_bar/screens/liars_bar_result_screen.dart` | 결과 화면 |
-| `liars_bar/widgets/` | 탄창, 카드 패, Liar 호출 버튼, 좌석 등 전용 UI |
+| `liars_poker/liars_poker_game.dart` | Liar's Poker 식별자와 표시 이름 |
+| `liars_poker/models/liars_poker_state.dart` | 게임 단계와 현재 턴 상태 |
+| `liars_poker/providers/liars_poker_provider.dart` | 게임 화면 상태 골격 |
+| `liars_poker/repositories/liars_poker_repository.dart` | 게임 데이터 통신 계약 |
+| `liars_poker/screens/liars_poker_room_screen.dart` | 게임 대기실 |
+| `liars_poker/screens/liars_poker_game_screen.dart` | 실제 플레이 화면 |
+| `liars_poker/screens/liars_poker_result_screen.dart` | 결과 화면 |
+| `liars_poker/widgets/` | 탄창, 카드 패, Liar 호출 버튼, 좌석 등 전용 UI |
 
 ## 새 게임 추가 방법
 

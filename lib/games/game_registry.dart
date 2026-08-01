@@ -1,5 +1,5 @@
-import 'package:project00/games/liars_bar/liars_bar_game.dart';
+import 'package:project00/games/liars_poker/liars_poker_game.dart';
 
 abstract final class GameRegistry {
-  static const games = [LiarsBarGame()];
+  static const games = [LiarsPokerGame()];
 }

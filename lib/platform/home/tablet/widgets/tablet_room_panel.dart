@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
@@ -7,7 +8,12 @@ import 'package:qr_flutter/qr_flutter.dart';
 class TabletRoomPanel extends StatelessWidget {
   const TabletRoomPanel({super.key, required this.provider});
 
-  final TabletRoomProvider provider;
+  // final TabletRoomProvider provider;
+  final RoomProvider provider;
+
+  void createRoom() {
+    provider.createRoom();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,50 +32,37 @@ class TabletRoomPanel extends StatelessWidget {
                     const Text('구성원 목록', style: TextStyle(fontSize: 16)),
                     const Spacer(),
                     AppButton(
-                      text: provider.isInRoom ? '초기화' : '초대하기',
+                      text: provider.roomCode == null ? '생성하기' : '초기화',
                       width: 130,
                       backgroundColor: Colors.blue,
-                      onPressed: provider.isLoading
-                          ? null
-                          : () {
-                              if (provider.isInRoom) {
-                                provider.resetRoom();
-                              } else {
-                                provider.createRoom();
-                              }
-                            },
+                      onPressed: () => createRoom(),
                     ),
                   ],
                 ),
               ),
-              if (provider.errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    provider.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                )
-              else
-                const SizedBox(height: 16),
+              // if (provider.errorMessage != null)
+              //   Padding(
+              //     padding: const EdgeInsets.symmetric(vertical: 8),
+              //     child: null,
+              //   )
+              // else
+              const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   width: double.infinity,
                   color: Colors.grey.shade300,
                   padding: const EdgeInsets.all(12),
-                  child: provider.isInRoom && provider.roomCode != null
+                  child: provider.roomCode != null
                       ? Column(
                           children: [
                             Expanded(
                               child: _MemberList(
                                 members: provider.members,
-                                maxMembers:
-                                    provider.room?.maxMembers ??
-                                    RoomLimits.defaultMaxMembers,
+                                maxMembers: RoomLimits.defaultMaxMembers,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _InviteRoom(roomCode: provider.roomCode!),
+                            QR(roomCode: provider.roomCode!),
                           ],
                         )
                       : Center(
@@ -91,8 +84,8 @@ class TabletRoomPanel extends StatelessWidget {
   }
 }
 
-class _InviteRoom extends StatelessWidget {
-  const _InviteRoom({required this.roomCode});
+class QR extends StatelessWidget {
+  const QR({super.key, required this.roomCode});
 
   final String roomCode;
 

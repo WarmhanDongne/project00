@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/providers/game_list_provider.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
@@ -15,8 +16,8 @@ class TabletHome extends StatefulWidget {
 }
 
 class _TabletHomeState extends State<TabletHome> {
-  final TabletRoomProvider _roomProvider = TabletRoomProvider();
-
+  final RoomProvider roomProvider = RoomProvider();
+  final GameProvider gameProvider=GameProvider();
   String searchWord = '';
 
   void searchChanged(String value) {
@@ -27,7 +28,7 @@ class _TabletHomeState extends State<TabletHome> {
 
   @override
   void dispose() {
-    _roomProvider.dispose();
+    roomProvider.dispose();
     super.dispose();
   }
 
@@ -63,9 +64,9 @@ class _TabletHomeState extends State<TabletHome> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: GameList(roomProvider: _roomProvider)),
+                  Expanded(child: GameList(roomProvider: roomProvider, gameProvider: gameProvider),),
                   const SizedBox(width: 24),
-                  TabletRoomPanel(provider: _roomProvider),
+                  TabletRoomPanel(provider: roomProvider),
                 ],
               ),
             ),
