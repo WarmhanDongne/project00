@@ -4,7 +4,7 @@
 */
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/hub/screens/mobile_group_input.dart';
+import 'package:project00/platform/hub/screens/mobile_group_input_name.dart';
 
 class MobileGroupJoin extends StatefulWidget {
   const MobileGroupJoin({super.key});
