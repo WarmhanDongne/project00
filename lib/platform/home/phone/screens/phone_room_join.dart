@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:project00/platform/home/phone/screens/phone_room_input.dart';
+import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
 
 class PhoneRoomJoin extends StatefulWidget {
   const PhoneRoomJoin({super.key});
@@ -36,7 +36,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhoneRoomInput(
+        builder: (context) => PhoneRoomNickname(
           roomCode: roomCode,
         ), // 입력 완료 버튼 클릭 후 받고 처리한 roomCode를 파라미터로 주고 PhoneRoomInput로 이동
       ),
