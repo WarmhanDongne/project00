@@ -131,12 +131,20 @@ function parseGameId(value: unknown): string {
  * 충돌 가능성이 낮은 5자리 참여 코드를 생성합니다.
  * @return 생성된 참여 코드
  */
-function generateRoomCode(): string {
+function CreateRoomCode(): string {
   return Array.from(
     {length: ROOM_CODE_LENGTH},
     () => ROOM_CODE_CHARS[randomInt(ROOM_CODE_CHARS.length)],
   ).join("");
 }
+export const createRoomCode = onCall(
+  { region: REGION },
+  async () => {
+    return {
+      roomCode: CreateRoomCode(),
+    };
+  },
+);
 
 /**
  * 인증 토큰에서 공개 가능한 플레이어 정보를 만듭니다.
@@ -165,117 +173,6 @@ function memberData(request: CallableRequest<unknown>, uid: string) {
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
-
-export const createOrLoadRoom = onCall<CreateOrLoadRoomData>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request);
-    const db = getFirestore();
-    requireTabletClient(request.data?.clientType);
-    const maxMembers = parseMaxMembers(request.data?.maxMembers);
-    const userRoomRef = db.collection("userRooms").doc(uid);
-
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const candidateCode = generateRoomCode();
-
-      try {
-        const roomCode = await db.runTransaction(async (transaction) => {
-          const userRoomSnapshot = await transaction.get(userRoomRef);
-          const savedCode = userRoomSnapshot.data()?.roomCode;
-          const selectedCode =
-            typeof savedCode === "string" ? savedCode : candidateCode;
-          const roomRef = db.collection("rooms").doc(selectedCode);
-          const tableDeviceRef = roomRef.collection("devices").doc(uid);
-          const legacyMemberRef = roomRef.collection("members").doc(uid);
-
-          const roomSnapshot = await transaction.get(roomRef);
-          const tableDeviceSnapshot = await transaction.get(tableDeviceRef);
-          const legacyMemberSnapshot = await transaction.get(legacyMemberRef);
-
-          if (!userRoomSnapshot.exists && roomSnapshot.exists) {
-            throw new HttpsError(
-              "already-exists",
-              "방 코드가 중복되었습니다.",
-            );
-          }
-
-          if (
-            roomSnapshot.exists &&
-            roomSnapshot.get("hostUid") !== uid
-          ) {
-            throw new HttpsError(
-              "permission-denied",
-              "다른 사용자의 방에는 접근할 수 없습니다.",
-            );
-          }
-
-          if (!userRoomSnapshot.exists) {
-            transaction.set(userRoomRef, {
-              uid,
-              roomCode: selectedCode,
-              createdAt: FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-          }
-
-          if (!roomSnapshot.exists) {
-            transaction.set(roomRef, {
-              code: selectedCode,
-              gameId: "",
-              selectedGameId: null,
-              currentMatchId: null,
-              hostUid: uid,
-              status: "waiting",
-              memberCount: 0,
-              maxMembers,
-              createdAt: FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-          } else {
-            const updates: Record<string, unknown> = {
-              maxMembers,
-              updatedAt: FieldValue.serverTimestamp(),
-            };
-
-            if (legacyMemberSnapshot.exists) {
-              const oldMemberCount =
-                roomSnapshot.get("memberCount") as number | undefined;
-              updates.memberCount = Math.max(0, (oldMemberCount ?? 1) - 1);
-              transaction.delete(legacyMemberRef);
-            }
-            transaction.update(roomRef, updates);
-          }
-
-          if (!tableDeviceSnapshot.exists) {
-            transaction.set(tableDeviceRef, {
-              uid,
-              role: "table",
-              registeredAt: FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-          }
-
-          return selectedCode;
-        });
-
-        return {roomCode};
-      } catch (error: unknown) {
-        if (
-          error instanceof HttpsError &&
-          error.code === "already-exists"
-        ) {
-          continue;
-        }
-        throw error;
-      }
-    }
-
-    throw new HttpsError(
-      "resource-exhausted",
-      "사용 가능한 방 코드를 생성하지 못했습니다.",
-    );
-  },
-);
 
 /**
  * 아이패드 소유자의 기존 방과 참가자 연결을 제거합니다.
@@ -368,12 +265,12 @@ export const joinRoom = onCall<RoomCodeData>(
       if (!roomSnapshot.exists) {
         throw new HttpsError("not-found", "존재하지 않는 방입니다.");
       }
-      if (roomSnapshot.get("hostUid") === uid) {
-        throw new HttpsError(
-          "failed-precondition",
-          "아이패드 계정은 플레이어로 참가할 수 없습니다.",
-        );
-      }
+      // if (roomSnapshot.get("hostUid") === uid) {
+      //   throw new HttpsError(
+      //     "failed-precondition",
+      //     "아이패드 계정은 플레이어로 참가할 수 없습니다.",
+      //   );
+      // }
       if (roomSnapshot.get("status") !== "waiting") {
         throw new HttpsError(
           "failed-precondition",

@@ -17,6 +17,12 @@ export {
   setRoomReady,
 } from "./room-functions.js";
 
+export {
+  challengeLiarsPoker,
+  startLiarsPokerMatch,
+  submitLiarsPokerCards,
+} from "./liars-poker/functions.js";
+
 export const checkEmailDuplicate = onCall(
   {region: "asia-northeast3"},
   async (request) => {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/home/services/game_service.dart';
-import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/providers/game_list_provider.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
 
 class FilterBar extends StatelessWidget {
@@ -24,47 +24,52 @@ class FilterBar extends StatelessWidget {
 }
 
 class GameList extends StatefulWidget {
-  const GameList({super.key, required this.roomProvider});
+  const GameList({
+    super.key,
+    required this.gameProvider,
+    required this.roomProvider,
+  });
 
-  final TabletRoomProvider roomProvider;
+  final GameProvider gameProvider;
+  final RoomProvider roomProvider;
 
   @override
   State<GameList> createState() => _GameListState();
 }
 
 class _GameListState extends State<GameList> {
-  final GameService _gameService = GameService();
-
-  late final Future<List<GameInfo>> _games;
-
   @override
   void initState() {
     super.initState();
-    _games = _gameService.fetchGames();
+    widget.gameProvider.fetchGames();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<GameInfo>>(
-      future: _games,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+    return AnimatedBuilder(
+      animation: widget.gameProvider,
+      builder: (context, _) {
+        if (widget.gameProvider.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
 
-        if (snapshot.hasError) {
+        if (widget.gameProvider.errorMessage != null) {
           return Center(
             child: Text(
-              '게임 목록을 불러오지 못했습니다.\n${snapshot.error}',
+              widget.gameProvider.errorMessage!,
               textAlign: TextAlign.center,
             ),
           );
         }
 
-        final games = snapshot.data ?? const <GameInfo>[];
+        final games = widget.gameProvider.games;
 
         if (games.isEmpty) {
-          return const Center(child: Text('구매된 게임이 없습니다.'));
+          return const Center(
+            child: Text('구매된 게임이 없습니다.'),
+          );
         }
 
         return Column(
@@ -83,7 +88,8 @@ class _GameListState extends State<GameList> {
             Expanded(
               child: GridView.builder(
                 itemCount: games.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 5,
                   crossAxisSpacing: 26,
                   mainAxisSpacing: 50,
@@ -97,7 +103,6 @@ class _GameListState extends State<GameList> {
                     onTap: () {
                       showDialog<void>(
                         context: context,
-                        barrierDismissible: true,
                         builder: (_) {
                           return GamePreviewDialog(
                             game: game,
@@ -118,7 +123,11 @@ class _GameListState extends State<GameList> {
 }
 
 class GameCard extends StatelessWidget {
-  const GameCard({super.key, required this.game, required this.onTap});
+  const GameCard({
+    super.key,
+    required this.game,
+    required this.onTap,
+  });
 
   final GameInfo game;
   final VoidCallback onTap;
@@ -156,13 +165,15 @@ class GameCard extends StatelessWidget {
                       : Image.network(
                           game.imageUrl,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
+                          loadingBuilder:
+                              (context, child, progress) {
+                            if (progress == null) return child;
                             return const Center(
                               child: CircularProgressIndicator(),
                             );
                           },
-                          errorBuilder: (context, error, stackTrace) {
+                          errorBuilder:
+                              (context, error, stackTrace) {
                             return const Center(
                               child: Icon(
                                 Icons.broken_image_outlined,
@@ -182,18 +193,21 @@ class GameCard extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      game.name.isEmpty ? '게임 이름' : game.name,
+                      game.name.isEmpty
+                          ? '게임 이름'
+                          : game.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    if (game.minPlayers > 0 || game.maxPlayers > 0) ...[
+                    if (game.minPlayers > 0 ||
+                        game.maxPlayers > 0) ...[
                       const SizedBox(height: 3),
                       Text(
                         '${game.minPlayers}~${game.maxPlayers}명 · ${game.playTime}분',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],
@@ -201,8 +215,6 @@ class GameCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         game.genresText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],

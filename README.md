@@ -65,6 +65,6 @@ flutter run
 - 완료: Firebase Core 초기화와 빈 `MaterialApp` 실행
 - 완료: Firebase Realtime Database 패키지와 공용 인스턴스
 - 골격: 인증, Firestore, Storage, Functions, Messaging 서비스 인터페이스
-- 골격: 사용자 저장소, 매치메이킹, 실시간 게임 룸, Liar's Bar 상태 관리
+- 골격: 사용자 저장소, 매치메이킹, 실시간 게임 룸, Liar's Poker 상태 관리
 - 미구현: 화면 UI, 공용 위젯, 테마, 라우팅
 - 추후 작업: 실제 인증 흐름, 데이터 직렬화, Firebase 보안 규칙, 에러/로딩 처리, 다국어 코드 생성 및 화면 연결

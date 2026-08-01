@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/liars_poker/screens/liars_poker.dart';
+import 'package:project00/games/liars_poker/widgets/player_layouts/player_layout_editor.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
-import 'package:project00/games/liars_bar/widgets/player_layouts/player_layout.dart';
 
 class GamePreviewDialog extends StatelessWidget {
   const GamePreviewDialog({
@@ -13,7 +15,7 @@ class GamePreviewDialog extends StatelessWidget {
   });
 
   final GameInfo game;
-  final TabletRoomProvider roomProvider;
+  final RoomProvider roomProvider;
 
   String _playerCountText() {
     if (game.minPlayers > 0 && game.maxPlayers > 0) {
@@ -35,19 +37,17 @@ class GamePreviewDialog extends StatelessWidget {
   }
 
   Future<void> _startGame(BuildContext context) async {
-    final members = List<RoomMember>.from(roomProvider.members);
+    final members = roomProvider.members
+        .where((member) => member.isActive && member.isPlayer)
+        .toList(growable: false);
     final currentPlayerCount = members.length;
+    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
     final maxPlayers = game.maxPlayers > 0 ? game.maxPlayers : 6;
 
-    if (!roomProvider.isInRoom) {
-      _showMessage(context, '방 정보를 불러오는 중입니다.');
+    if (currentPlayerCount < minPlayers) {
+      _showMessage(context, '이 게임을 시작하려면 최소 $minPlayers명이 필요합니다.');
       return;
     }
-
-    // if (currentPlayerCount < minPlayers) {
-    //   _showMessage(context, '이 게임을 시작하려면 최소 $minPlayers명이 필요합니다.');
-    //   return;
-    // }
 
     if (currentPlayerCount > maxPlayers) {
       _showMessage(context, '이 게임은 최대 $maxPlayers명까지 플레이할 수 있습니다.');
@@ -66,10 +66,38 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
-    // 현재 모달 경로를 PlayerSlots 경로로 교체합니다.
-    // pop 후 같은 context를 사용하는 문제를 피할 수 있습니다.
+    final initialLayout = _createPlayerLayout(members);
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => PlayerSlots(players: members)),
+      MaterialPageRoute(
+        builder: (layoutContext) => PlayerLayoutEditor(
+          initialLayout: initialLayout,
+          onComplete: (completedLayout) {
+            Navigator.of(layoutContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => LiarsPoker(playerLayout: completedLayout),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  PlayerLayoutModel _createPlayerLayout(List<RoomMember> members) {
+    return PlayerLayoutModel(
+      players: List.unmodifiable(
+        List.generate(members.length, (index) {
+          final member = members[index];
+          return PlayerLayoutPlayer(
+            uid: member.uid,
+            nickname: member.nickname,
+            profileImageUrl: member.profileImageUrl,
+            isHost: member.isHost,
+            seatIndex: index,
+          );
+        }, growable: false),
+      ),
     );
   }
 
