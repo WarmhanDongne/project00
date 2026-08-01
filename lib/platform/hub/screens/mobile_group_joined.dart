@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/hub/dto/game_info.dart';
 import 'package:project00/platform/hub/screens/mobile_group_join.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
-import 'package:project00/platform/hub/widgets/mobile_game_card.dart';
 import 'package:project00/platform/hub/widgets/mobile_group_top_bar.dart';
 import 'package:project00/platform/hub/widgets/mobile_own_game_list.dart';
 import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
-import 'package:project00/shared/widgets/cards/card.dart';
 
 class MobileGroupJoined extends StatefulWidget {
   const MobileGroupJoined({super.key});
