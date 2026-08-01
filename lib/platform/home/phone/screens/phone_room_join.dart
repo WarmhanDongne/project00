@@ -56,31 +56,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
                 child: joinGuidance(),
               ),
               SizedBox(height: 26.h),
-              Container(
-                height: 310.h,
-                width: 310.w,
-                color: Colors.grey,
-                child: MobileScanner(
-                  onDetect: (capture) {
-                    final List<Barcode> barcodes = capture.barcodes;
-                    for (final barcode in barcodes) {
-                      if (barcode.rawValue != null) {
-                        final scannedCode = barcode.rawValue!
-                            .trim()
-                            .toUpperCase();
-                        if (scannedCode.length == 5) {
-                          setState(() {
-                            _roomCodeController.text = scannedCode;
-                          });
-
-                          _openNameInput();
-                          break;
-                        }
-                      }
-                    }
-                  },
-                ),
-              ),
+              cameraSection(),
               SizedBox(height: 36.h),
               Divider(color: Colors.grey, thickness: 1.0, height: 20.h),
               enterJoinCode(),
@@ -90,6 +66,32 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Container cameraSection() {
+    return Container(
+      height: 310.h,
+      width: 310.w,
+      color: Colors.grey,
+      child: MobileScanner(
+        onDetect: (capture) {
+          final List<Barcode> barcodes = capture.barcodes;
+          for (final barcode in barcodes) {
+            if (barcode.rawValue != null) {
+              final scannedCode = barcode.rawValue!.trim().toUpperCase();
+              if (scannedCode.length == 5) {
+                setState(() {
+                  _roomCodeController.text = scannedCode;
+                });
+                // 스캔 성공 시
+                _openNameInput();
+                break;
+              }
+            }
+          }
+        },
       ),
     );
   }
