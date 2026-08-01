@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_input.dart';
 
 class PhoneRoomJoin extends StatefulWidget {
@@ -59,7 +60,26 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
                 height: 310.h,
                 width: 310.w,
                 color: Colors.grey,
-                child: Center(child: Text('카메라')),
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final List<Barcode> barcodes = capture.barcodes;
+                    for (final barcode in barcodes) {
+                      if (barcode.rawValue != null) {
+                        final scannedCode = barcode.rawValue!
+                            .trim()
+                            .toUpperCase();
+                        if (scannedCode.length == 5) {
+                          setState(() {
+                            _roomCodeController.text = scannedCode;
+                          });
+
+                          _openNameInput();
+                          break;
+                        }
+                      }
+                    }
+                  },
+                ),
               ),
               SizedBox(height: 36.h),
               Divider(color: Colors.grey, thickness: 1.0, height: 20.h),
