@@ -164,7 +164,7 @@ class _JoinForm extends StatelessWidget {
           ),
           SizedBox(width: 13.w),
           FilledButton(
-            onPressed: null,
+            onPressed: () {},
             style: FilledButton.styleFrom(
               backgroundColor: Colors.grey,
               foregroundColor: Colors.black,

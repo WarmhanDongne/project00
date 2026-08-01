@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_input.dart';
 
 class PhoneRoomJoin extends StatefulWidget {
@@ -35,7 +36,9 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhoneRoomInput(roomCode: roomCode),
+        builder: (context) => PhoneRoomInput(
+          roomCode: roomCode,
+        ), // 입력 완료 버튼 클릭 후 받고 처리한 roomCode를 파라미터로 주고 PhoneRoomInput로 이동
       ),
     );
   }
@@ -55,12 +58,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
                 child: joinGuidance(),
               ),
               SizedBox(height: 26.h),
-              Container(
-                height: 310.h,
-                width: 310.w,
-                color: Colors.grey,
-                child: Center(child: Text('카메라')),
-              ),
+              cameraSection(),
               SizedBox(height: 36.h),
               Divider(color: Colors.grey, thickness: 1.0, height: 20.h),
               enterJoinCode(),
@@ -70,6 +68,33 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Container cameraSection() {
+    return Container(
+      height: 310.h,
+      width: 310.w,
+      color: Colors.grey,
+      child: MobileScanner(
+        onDetect: (capture) {
+          final List<Barcode> barcodes = capture.barcodes;
+          for (final barcode in barcodes) {
+            if (barcode.rawValue != null) {
+              final scannedCode = barcode.rawValue!.trim().toUpperCase();
+              if (scannedCode.length == 5) {
+                setState(() {
+                  _roomCodeController.text =
+                      scannedCode; // _roomCodeController에 스캔을 통해 얻은 코드 주입
+                });
+                // 스캔 성공 시 닉네임 수정으로 이동
+                _openNameInput();
+                break;
+              }
+            }
+          }
+        },
       ),
     );
   }
