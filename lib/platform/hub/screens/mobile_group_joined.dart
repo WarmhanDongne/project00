@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/platform/hub/dto/game_info.dart';
 import 'package:project00/platform/hub/screens/mobile_group_join.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
+import 'package:project00/platform/hub/widgets/mobile_game_card.dart';
 import 'package:project00/platform/hub/widgets/mobile_group_top_bar.dart';
 import 'package:project00/platform/hub/widgets/mobile_own_game_list.dart';
 import 'package:project00/platform/hub/widgets/mobile_participant_list.dart';
+import 'package:project00/shared/widgets/cards/card.dart';
 
 class MobileGroupJoined extends StatefulWidget {
   const MobileGroupJoined({super.key});
@@ -16,7 +19,7 @@ class MobileGroupJoined extends StatefulWidget {
 class _MobileGroupJoinedState extends State<MobileGroupJoined> {
   late final Future<List<Map<String, dynamic>>> _games;
   final GameService _gameService = GameService();
-  final bool isGameSelected = false;
+  final bool isGameSelected = true;
 
   @override
   void initState() {
@@ -68,27 +71,15 @@ class _MobileGroupJoinedState extends State<MobileGroupJoined> {
               ],
             ),
             SizedBox(height: 10.h),
-            if (isGameSelected == true)
-              SelectedGame()
-            else
+            if (isGameSelected == true) ...[
+              Text('data'),
+
+              //SizedBox(height: 10.h),
+            ] else
               OwnGameList(games: _games),
           ],
         ),
       ),
     );
-  }
-}
-
-class SelectedGame extends StatefulWidget {
-  const SelectedGame({super.key});
-
-  @override
-  State<SelectedGame> createState() => _SelecTedGameState();
-}
-
-class _SelecTedGameState extends State<SelectedGame> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
   }
 }
