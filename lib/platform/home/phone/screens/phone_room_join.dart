@@ -36,7 +36,9 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhoneRoomInput(roomCode: roomCode),
+        builder: (context) => PhoneRoomInput(
+          roomCode: roomCode,
+        ), // 입력 완료 버튼 클릭 후 받고 처리한 roomCode를 파라미터로 주고 PhoneRoomInput로 이동
       ),
     );
   }
@@ -83,9 +85,10 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
               final scannedCode = barcode.rawValue!.trim().toUpperCase();
               if (scannedCode.length == 5) {
                 setState(() {
-                  _roomCodeController.text = scannedCode;
+                  _roomCodeController.text =
+                      scannedCode; // _roomCodeController에 스캔을 통해 얻은 코드 주입
                 });
-                // 스캔 성공 시
+                // 스캔 성공 시 닉네임 수정으로 이동
                 _openNameInput();
                 break;
               }
