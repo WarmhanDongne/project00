@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_bar/screens/liarsbar.dart';
+import 'package:project00/shared/player_layouts/player_slot_positions.dart';
 
 class ThreePlayerLayout extends StatefulWidget {
   const ThreePlayerLayout({super.key});
@@ -14,12 +15,7 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
   // 이 거리 안으로 접근하면 즉시 자리 교환
   static const double swapTriggerDistance = 130;
 
-  // 왼쪽 위 / 오른쪽 중앙 / 왼쪽 아래
-  final List<Offset> slotPositions = [
-    const Offset(0.18, 0.05),
-    const Offset(0.79, 0.37),
-    const Offset(0.18, 0.69),
-  ];
+  List<Offset> slotPositions = const [];
 
   final List<String> playerNames = ['태블릿 주인', '이런 식의 닉네임', '주르르르륵'];
 
@@ -194,12 +190,10 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
     ).showSnackBar(const SnackBar(content: Text('자리 설정이 완료되었습니다.')));
 
     // 다음 화면으로 이동할 때
-    
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LiarsBar(),
-      ),
+      MaterialPageRoute(builder: (_) => const LiarsBar()),
     );
   }
 
@@ -226,6 +220,11 @@ class _ThreePlayerLayoutState extends State<ThreePlayerLayout> {
                     final boardSize = Size(
                       constraints.maxWidth,
                       constraints.maxHeight,
+                    );
+                    slotPositions = normalizedPlayerSlotTopLeftPositions(
+                      playerCount: 3,
+                      boardSize: boardSize,
+                      slotSize: playerSlotSize,
                     );
 
                     return Stack(

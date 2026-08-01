@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/shared/player_layouts/player_slot_positions.dart';
 
 class FourPlayerLayout extends StatefulWidget {
   const FourPlayerLayout({super.key});
@@ -13,13 +14,7 @@ class _FourPlayerLayoutState extends State<FourPlayerLayout> {
   // 이 거리 안으로 접근하면 즉시 자리 교환
   static const double swapTriggerDistance = 130;
 
-  // 중앙 테이블을 감싸는 네 모서리
-  final List<Offset> slotPositions = [
-    const Offset(0.18, 0.05),
-    const Offset(0.68, 0.05),
-    const Offset(0.18, 0.69),
-    const Offset(0.68, 0.69),
-  ];
+  List<Offset> slotPositions = const [];
 
   final List<String> playerNames = ['태블릿 주인', '이런 식의 닉네임', '주르르르륵', '플레이어 4'];
 
@@ -226,6 +221,11 @@ class _FourPlayerLayoutState extends State<FourPlayerLayout> {
                     final boardSize = Size(
                       constraints.maxWidth,
                       constraints.maxHeight,
+                    );
+                    slotPositions = normalizedPlayerSlotTopLeftPositions(
+                      playerCount: 4,
+                      boardSize: boardSize,
+                      slotSize: playerSlotSize,
                     );
 
                     return Stack(

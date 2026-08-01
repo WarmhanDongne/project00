@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/providers/room_provider.dart';
-import 'package:project00/platform/hub/services/room_service.dart';
+import 'package:project00/platform/hub/providers/tablet_room_provider.dart';
+import 'package:project00/platform/hub/services/room_models.dart';
 import 'package:project00/platform/hub/widgets/button.dart';
 import 'package:project00/shared/player_layouts/player_layout.dart';
 
@@ -12,7 +12,7 @@ class GamePreviewDialog extends StatelessWidget {
   });
 
   final Map<String, dynamic> game;
-  final RoomProvider roomProvider;
+  final TabletRoomProvider roomProvider;
 
   String _stringValue(String key) {
     final value = game[key];
@@ -22,6 +22,7 @@ class GamePreviewDialog extends StatelessWidget {
     }
     return value.toString();
   }
+
   int? _nullableIntValue(String key) {
     final value = game[key];
     if (value is int) {
@@ -62,7 +63,7 @@ class GamePreviewDialog extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _startGame(BuildContext context) {
+  Future<void> _startGame(BuildContext context) async {
     final members = List<RoomMember>.from(roomProvider.members);
     final currentPlayerCount = members.length;
     // final minPlayers = _nullableIntValue('minPlayers') ?? 2;
@@ -83,6 +84,19 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
+    final gameId = _stringValue('id');
+    if (gameId.isEmpty) {
+      _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    final selected = await roomProvider.selectGame(gameId);
+    if (!context.mounted) return;
+    if (!selected) {
+      _showMessage(context, roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.');
+      return;
+    }
+
     // 현재 모달 경로를 PlayerSlots 경로로 교체합니다.
     // pop 후 같은 context를 사용하는 문제를 피할 수 있습니다.
     Navigator.of(context).pushReplacement(
@@ -93,7 +107,7 @@ class GamePreviewDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameName = _stringValue('name');
-    final posterUrl = _stringValue('posterUrl');
+    final imageUrl = _stringValue('imageUrl');
     final playType = _stringValue('playType');
     final genre = _stringValue('genre');
     final description = _stringValue('description');
@@ -120,10 +134,7 @@ class GamePreviewDialog extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    width: 230,
-                    child: _PosterImage(imageUrl: posterUrl),
-                  ),
+                  SizedBox(width: 230, child: _PosterImage(imageUrl: imageUrl)),
                   const SizedBox(width: 28),
                   Expanded(
                     child: Padding(
@@ -136,7 +147,7 @@ class GamePreviewDialog extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 33,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
@@ -186,16 +197,18 @@ class GamePreviewDialog extends StatelessWidget {
                           Align(
                             alignment: Alignment.centerRight,
                             child: AppButton(
-                              text:'시작하기',
+                              text: '시작하기',
                               // text: isOwned ? '시작하기' : '구매 필요',
                               width: 140,
                               height: 48,
                               backgroundColor: Colors.grey.shade200,
                               foregroundColor: Colors.black,
-                              onPressed: () => _startGame(context),
-                                  // onPressed: isOwned
-                                  // ? () => _startGame(context)
-                                  // : null,
+                              onPressed: () {
+                                _startGame(context);
+                              },
+                              // onPressed: isOwned
+                              // ? () => _startGame(context)
+                              // : null,
                             ),
                           ),
                         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/shared/player_layouts/player_slot_positions.dart';
 
 class TwoPlayerLayout extends StatefulWidget {
   const TwoPlayerLayout({super.key});
@@ -13,11 +14,7 @@ class _TwoPlayerLayoutState extends State<TwoPlayerLayout> {
   // 이 거리 안으로 접근하면 즉시 자리 교환
   static const double swapTriggerDistance = 130;
 
-  // 중앙 테이블 기준 왼쪽 / 오른쪽
-  final List<Offset> slotPositions = [
-    const Offset(0.08, 0.37),
-    const Offset(0.78, 0.37),
-  ];
+  List<Offset> slotPositions = const [];
 
   final List<String> playerNames = ['태블릿 주인', '이런 식의 닉네임'];
 
@@ -224,6 +221,11 @@ class _TwoPlayerLayoutState extends State<TwoPlayerLayout> {
                     final boardSize = Size(
                       constraints.maxWidth,
                       constraints.maxHeight,
+                    );
+                    slotPositions = normalizedPlayerSlotTopLeftPositions(
+                      playerCount: 2,
+                      boardSize: boardSize,
+                      slotSize: playerSlotSize,
                     );
 
                     return Stack(
