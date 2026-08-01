@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_bar/screens/game_mobile.dart';
-import 'package:project00/games/liars_bar/screens/game_tablet.dart';
+import 'package:project00/games/liars_bar/screens/phone_game.dart';
+import 'package:project00/games/liars_bar/screens/tablet_game.dart';
 
 class LiarsBar extends StatelessWidget {
   const LiarsBar({super.key});
@@ -11,9 +11,9 @@ class LiarsBar extends StatelessWidget {
       builder: (context, constraints) {
         // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
         if (constraints.maxWidth < 600) {
-          return const GameMobile();
+          return const PhoneGame();
         } else {
-          return const GameTablet(); 
+          return const TabletGame();
         }
       },
     );

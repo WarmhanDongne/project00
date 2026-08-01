@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/providers/tablet_room_provider.dart';
-import 'package:project00/platform/hub/services/room_models.dart';
-import 'package:project00/platform/hub/widgets/button.dart';
+import 'package:project00/platform/dto/dto_game_info.dart';
+import 'package:project00/platform/hub/tablet/providers/tablet_room_provider.dart';
+import 'package:project00/platform/hub/services/room_common.dart';
+import 'package:project00/platform/hub/tablet/widgets/tablet_button.dart';
 import 'package:project00/shared/player_layouts/player_layout.dart';
 
 class GamePreviewDialog extends StatelessWidget {
@@ -11,48 +12,18 @@ class GamePreviewDialog extends StatelessWidget {
     required this.roomProvider,
   });
 
-  final Map<String, dynamic> game;
+  final GameInfo game;
   final TabletRoomProvider roomProvider;
 
-  String _stringValue(String key) {
-    final value = game[key];
-
-    if (value == null) {
-      return '';
-    }
-    return value.toString();
-  }
-
-  int? _nullableIntValue(String key) {
-    final value = game[key];
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    if (value is String) {
-      return int.tryParse(value);
-    }
-    return null;
-  }
-
   String _playerCountText() {
-    final minPlayers = _nullableIntValue('minPlayers');
-    final maxPlayers = _nullableIntValue('maxPlayers');
-    final recommendedPlayers = _stringValue('recommendedPlayers');
-
-    if (recommendedPlayers.isNotEmpty) {
-      return '권장 인원 $recommendedPlayers';
+    if (game.minPlayers > 0 && game.maxPlayers > 0) {
+      return '플레이 인원 ${game.minPlayers}~${game.maxPlayers}명';
     }
-    if (minPlayers != null && maxPlayers != null) {
-      return '플레이 인원 $minPlayers~$maxPlayers명';
+    if (game.minPlayers > 0) {
+      return '최소 ${game.minPlayers}명';
     }
-    if (minPlayers != null) {
-      return '최소 $minPlayers명';
-    }
-    if (maxPlayers != null) {
-      return '최대 $maxPlayers명';
+    if (game.maxPlayers > 0) {
+      return '최대 ${game.maxPlayers}명';
     }
     return '';
   }
@@ -66,8 +37,7 @@ class GamePreviewDialog extends StatelessWidget {
   Future<void> _startGame(BuildContext context) async {
     final members = List<RoomMember>.from(roomProvider.members);
     final currentPlayerCount = members.length;
-    // final minPlayers = _nullableIntValue('minPlayers') ?? 2;
-    final maxPlayers = _nullableIntValue('maxPlayers') ?? 6;
+    final maxPlayers = game.maxPlayers > 0 ? game.maxPlayers : 6;
 
     if (!roomProvider.isInRoom) {
       _showMessage(context, '방 정보를 불러오는 중입니다.');
@@ -84,13 +54,12 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
-    final gameId = _stringValue('id');
-    if (gameId.isEmpty) {
+    if (game.id.isEmpty) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
       return;
     }
 
-    final selected = await roomProvider.selectGame(gameId);
+    final selected = await roomProvider.selectGame(game.id);
     if (!context.mounted) return;
     if (!selected) {
       _showMessage(context, roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.');
@@ -106,19 +75,10 @@ class GamePreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gameName = _stringValue('name');
-    final imageUrl = _stringValue('imageUrl');
-    final playType = _stringValue('playType');
-    final genre = _stringValue('genre');
-    final description = _stringValue('description');
-    final worldDescription = _stringValue('worldDescription');
-    final ruleVideoUrl = _stringValue('ruleVideoUrl');
-    // final isOwned = game['isOwned'] == true;
-
     final informationTexts = <String>[
-      if (playType.isNotEmpty) playType,
+      if (game.playTime > 0) '플레이 시간 ${game.playTime}분',
       if (_playerCountText().isNotEmpty) _playerCountText(),
-      if (genre.isNotEmpty) genre,
+      if (game.genresText.isNotEmpty) game.genresText,
     ];
 
     return Dialog(
@@ -134,7 +94,10 @@ class GamePreviewDialog extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(width: 230, child: _PosterImage(imageUrl: imageUrl)),
+                  SizedBox(
+                    width: 230,
+                    child: _PosterImage(imageUrl: game.imageUrl),
+                  ),
                   const SizedBox(width: 28),
                   Expanded(
                     child: Padding(
@@ -143,7 +106,7 @@ class GamePreviewDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            gameName.isEmpty ? '게임 이름' : gameName,
+                            game.name.isEmpty ? '게임 이름' : game.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -162,27 +125,13 @@ class GamePreviewDialog extends StatelessWidget {
                                   _GameInformationChip(text: text),
                               ],
                             ),
-                          if (worldDescription.isNotEmpty) ...[
-                            const SizedBox(height: 14),
-                            Text(
-                              worldDescription,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                height: 1.4,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
                           const SizedBox(height: 12),
                           Expanded(
                             child: SingleChildScrollView(
                               child: Text(
-                                description.isEmpty
+                                game.description.isEmpty
                                     ? '게임 설명이 없습니다.'
-                                    : description,
+                                    : game.description,
                                 style: const TextStyle(
                                   fontSize: 15,
                                   height: 1.5,
@@ -192,7 +141,7 @@ class GamePreviewDialog extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          _RuleVideoArea(videoUrl: ruleVideoUrl),
+                          _RuleVideoArea(videoUrl: game.ruleVideoUrl),
                           const SizedBox(height: 14),
                           Align(
                             alignment: Alignment.centerRight,

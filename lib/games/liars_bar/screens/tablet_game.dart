@@ -5,14 +5,14 @@ import 'package:project00/shared/animations/card_deal.dart';
 import 'package:project00/shared/animations/card_play_animation.dart';
 import 'package:project00/shared/animations/round_start_reveal.dart';
 
-class GameTablet extends StatefulWidget {
-  const GameTablet({super.key});
+class TabletGame extends StatefulWidget {
+  const TabletGame({super.key});
 
   @override
-  State<GameTablet> createState() => _GameTabletState();
+  State<TabletGame> createState() => _TabletGameState();
 }
 
-class _GameTabletState extends State<GameTablet> {
+class _TabletGameState extends State<TabletGame> {
   static const int _playerCount = 6;
   static const int _cardsPerPlayer = 5;
 

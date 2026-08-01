@@ -3,17 +3,43 @@
 카메라를 통한 큐알 스캔 또는 참여 코드로 그룹에 입장하는 단계의 페이지.
 */
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/hub/screens/mobile_group_input_name.dart';
+import 'package:project00/platform/hub/phone/screens/phone_group_input_name.dart';
 
-class MobileGroupJoin extends StatefulWidget {
-  const MobileGroupJoin({super.key});
+class PhoneGroupJoin extends StatefulWidget {
+  const PhoneGroupJoin({super.key});
 
   @override
-  State<MobileGroupJoin> createState() => _MobileGroupJoinState();
+  State<PhoneGroupJoin> createState() => _PhoneGroupJoinState();
 }
 
-class _MobileGroupJoinState extends State<MobileGroupJoin> {
+class _PhoneGroupJoinState extends State<PhoneGroupJoin> {
+  final TextEditingController _roomCodeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _roomCodeController.dispose();
+    super.dispose();
+  }
+
+  void _openNameInput() {
+    final roomCode = _roomCodeController.text.trim().toUpperCase();
+    if (roomCode.length != 5) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('5자리 참여 코드를 입력해주세요.')));
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhoneGroupInput(roomCode: roomCode),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -65,14 +91,27 @@ class _MobileGroupJoinState extends State<MobileGroupJoin> {
                   SizedBox(height: 20.h),
                 ],
               ),
-              Container(
-                height: 126.h,
+              SizedBox(
                 width: 342.w,
-                color: Colors.grey,
-                child: Center(
-                  child: Text(
-                    '_______ _______ _______ _______ _______ ________',
+                child: TextField(
+                  controller: _roomCodeController,
+                  maxLength: 5,
+                  textAlign: TextAlign.center,
+                  textCapitalization: TextCapitalization.characters,
+                  style: TextStyle(
+                    fontSize: 32.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 10,
                   ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                  ],
+                  decoration: const InputDecoration(
+                    hintText: 'ABCDE',
+                    counterText: '',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _openNameInput(),
                 ),
               ),
               SizedBox(height: 36.h),
@@ -91,14 +130,7 @@ class _MobileGroupJoinState extends State<MobileGroupJoin> {
                     ),
                   ),
 
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MobileGroupInput(),
-                      ),
-                    );
-                  },
+                  onPressed: _openNameInput,
                   child: Text('입력 완료'),
                 ),
               ),

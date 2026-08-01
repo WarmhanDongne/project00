@@ -1,5 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:project00/platform/hub/services/room_models.dart';
+import 'package:project00/platform/hub/services/room_common.dart';
 
 abstract interface class TabletRoomCommandService {
   Future<String> createOrLoadRoom({

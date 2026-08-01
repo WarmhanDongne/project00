@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/widgets/mobile_game_card.dart';
-
-import '../dto/game_info.dart';
+import 'package:project00/platform/dto/dto_game_info.dart';
+import 'package:project00/platform/hub/phone/widgets/phone_game_card.dart';
 
 class OwnGameList extends StatelessWidget {
-  const OwnGameList({super.key, required this._games});
+  const OwnGameList({super.key, required this.games});
 
-  final Future<List<Map<String, dynamic>>> _games;
+  final Future<List<GameInfo>> games;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _games,
+      child: FutureBuilder<List<GameInfo>>(
+        future: games,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -33,10 +32,7 @@ class OwnGameList extends StatelessWidget {
           return ListView.builder(
             itemCount: games.length,
             itemBuilder: (context, index) {
-              final gameData = games[index];
-              final gameInfo = GameInfo.fromJson(gameData);
-
-              return MobileGameCard(gameInfo: gameInfo);
+              return PhoneGameCard(gameInfo: games[index]);
             },
           );
         },

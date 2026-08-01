@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class GameMobile extends StatelessWidget {
-  const GameMobile({super.key});
+class PhoneGame extends StatelessWidget {
+  const PhoneGame({super.key});
 
   @override
   Widget build(BuildContext context) {

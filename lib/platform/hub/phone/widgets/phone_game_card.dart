@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/hub/dto/game_info.dart';
+import 'package:project00/platform/dto/dto_game_info.dart';
 
-class MobileGameCard extends StatelessWidget {
+class PhoneGameCard extends StatelessWidget {
   // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.
 
   final GameInfo gameInfo;
-  const MobileGameCard({super.key, required this.gameInfo});
+  const PhoneGameCard({super.key, required this.gameInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -17,12 +17,29 @@ class MobileGameCard extends StatelessWidget {
             SizedBox(width: 16.w),
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
-              child: Image.network(
-                "https://picsum.photos/200/300",
-                width: 115,
-                height: 150,
-                fit: BoxFit.cover, // 지정한 비율에 이미자가 맞도록 설정
-              ),
+              child: gameInfo.imageUrl.isEmpty
+                  ? Container(
+                      width: 115,
+                      height: 150,
+                      color: Colors.grey.shade300,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_outlined),
+                    )
+                  : Image.network(
+                      gameInfo.imageUrl,
+                      width: 115,
+                      height: 150,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 115,
+                          height: 150,
+                          color: Colors.grey.shade300,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.broken_image_outlined),
+                        );
+                      },
+                    ),
             ),
             SizedBox(width: 20),
             Expanded(
@@ -32,7 +49,7 @@ class MobileGameCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    gameInfo.title, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
+                    gameInfo.name, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                     textScaler: TextScaler.noScaling,
                   ),
@@ -49,7 +66,7 @@ class MobileGameCard extends StatelessWidget {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                   Text(
-                    gameInfo.shortDescription,
+                    gameInfo.description,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
                   ),
                 ],

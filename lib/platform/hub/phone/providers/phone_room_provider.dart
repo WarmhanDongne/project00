@@ -1,13 +1,13 @@
 import 'package:project00/platform/hub/providers/room_session_provider.dart';
-import 'package:project00/platform/hub/services/mobile_room_command_service.dart';
+import 'package:project00/platform/hub/phone/services/phone_room_command_service.dart';
 
-class MobileRoomProvider extends RoomSessionProvider {
-  MobileRoomProvider({
+class PhoneRoomProvider extends RoomSessionProvider {
+  PhoneRoomProvider({
     super.queryService,
-    MobileRoomCommandService? commandService,
-  }) : _commandService = commandService ?? FirebaseMobileRoomCommandService();
+    PhoneRoomCommandService? commandService,
+  }) : _commandService = commandService ?? FirebasePhoneRoomCommandService();
 
-  final MobileRoomCommandService _commandService;
+  final PhoneRoomCommandService _commandService;
 
   Future<bool> joinRoom(String rawRoomCode) async {
     final roomCode = rawRoomCode.trim().toUpperCase();

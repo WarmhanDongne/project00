@@ -4,7 +4,7 @@ import 'package:project00/platform/app/app.dart';
 
 void main() {
   testWidgets('빈 앱이 실행된다', (tester) async {
-    await tester.pumpWidget(App(authStateChanges: Stream<User?>.value(null)));
+    await tester.pumpWidget(App(userChanges: Stream<User?>.value(null)));
     expect(tester.takeException(), isNull);
   });
 }

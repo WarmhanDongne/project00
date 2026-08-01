@@ -1,5 +1,5 @@
 import 'package:project00/platform/hub/providers/room_session_provider.dart';
-import 'package:project00/platform/hub/services/tablet_room_command_service.dart';
+import 'package:project00/platform/hub/tablet/services/tablet_room_command_service.dart';
 
 class TabletRoomProvider extends RoomSessionProvider {
   TabletRoomProvider({

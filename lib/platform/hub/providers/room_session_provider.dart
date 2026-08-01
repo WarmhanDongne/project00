@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:project00/platform/hub/services/room_models.dart';
+import 'package:project00/platform/hub/services/room_common.dart';
 import 'package:project00/platform/hub/services/room_query_service.dart';
 
 abstract class RoomSessionProvider extends ChangeNotifier {

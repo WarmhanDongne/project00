@@ -1,7 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:project00/platform/hub/services/room_models.dart';
+import 'package:project00/platform/hub/services/room_common.dart';
 
-abstract interface class MobileRoomCommandService {
+abstract interface class PhoneRoomCommandService {
   Future<void> joinRoom(String roomCode);
 
   Future<void> setReady({required String roomCode, required bool isReady});
@@ -9,8 +9,8 @@ abstract interface class MobileRoomCommandService {
   Future<void> leaveRoom(String roomCode);
 }
 
-class FirebaseMobileRoomCommandService implements MobileRoomCommandService {
-  FirebaseMobileRoomCommandService({FirebaseFunctions? functions})
+class FirebasePhoneRoomCommandService implements PhoneRoomCommandService {
+  FirebasePhoneRoomCommandService({FirebaseFunctions? functions})
     : _functions =
           functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
 

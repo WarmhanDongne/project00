@@ -4,18 +4,19 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/app/device_layout.dart';
 import 'package:project00/platform/hub/screens/home.dart';
 
 class App extends StatelessWidget {
-  const App({super.key, this.authStateChanges});
+  const App({super.key, this.userChanges});
 
-  final Stream<User?>? authStateChanges;
+  final Stream<User?>? userChanges;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isTablet = constraints.maxWidth >= 600;
+        final isTablet = DeviceLayout.isTablet(constraints);
 
         final Size currentDesignSize = isTablet
             ? const Size(834, 1194) // 테블릿
@@ -28,8 +29,7 @@ class App extends StatelessWidget {
             title: 'Project 00',
 
             home: StreamBuilder<User?>(
-              stream:
-                  authStateChanges ?? FirebaseAuth.instance.authStateChanges(),
+              stream: userChanges ?? FirebaseAuth.instance.userChanges(),
               builder: (context, snapshot) {
                 // Firebase 로그인 상태 확인 중
                 if (snapshot.connectionState == ConnectionState.waiting) {

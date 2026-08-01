@@ -3,15 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /*
 사용 파일
-mobile_group_input_name에
+phone_group_input_name에
 */
 
-class MobileParticipantList extends StatelessWidget {
+class PhoneParticipantList extends StatelessWidget {
   int get totalParticipants => participantsList.length; // 참여자
   final String hostName;
   final List<String> participantsList;
 
-  const MobileParticipantList({
+  const PhoneParticipantList({
     super.key,
     required this.hostName,
     required this.participantsList,

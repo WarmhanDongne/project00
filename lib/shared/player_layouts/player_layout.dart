@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/services/room_models.dart';
+import 'package:project00/platform/hub/services/room_common.dart';
 
 import 'package:project00/shared/player_layouts/layout_2p.dart';
 import 'package:project00/shared/player_layouts/layout_3p.dart';

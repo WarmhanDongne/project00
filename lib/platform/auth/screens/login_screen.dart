@@ -3,7 +3,6 @@ import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/firebase_auth_service.dart';
-import 'package:project00/platform/hub/screens/home.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,11 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
       //사용자가 화면에 머물러 있는지 확인
       if (!mounted) return;
       showMessage('환영합니다');
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const Home()),
-        (route) => false,
-      );
     } on AuthServiceException catch (error) {
       if (!mounted) return;
 
@@ -185,18 +179,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   // AuthProvider의 구글 로그인 로직 호출
                   final credential = await _authProvider.signInWithGoogle();
 
-                  if (mounted) {
-                    setState(() {
-                      setState(() {
-                        isLoading = false;
-                      });
+                  if (!mounted) return;
 
-                      if (credential != null) {
-                        showMessage('구글 로그인에 성공했습니다.');
-                      } else {
-                        showMessage('구글 로그인에 실패했습니다.');
-                      }
-                    });
+                  setState(() {
+                    isLoading = false;
+                  });
+
+                  if (credential != null) {
+                    showMessage('구글 로그인에 성공했습니다.');
+                  } else {
+                    showMessage('구글 로그인에 실패했습니다.');
                   }
                 },
                 child: SizedBox(

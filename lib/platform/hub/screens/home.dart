@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/screens/home_mobile.dart';
-import 'package:project00/platform/hub/screens/home_tablet.dart';
+import 'package:project00/platform/app/device_layout.dart';
+import 'package:project00/platform/hub/phone/screens/phone_home.dart';
+import 'package:project00/platform/hub/tablet/screens/tablet_home.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -9,8 +10,8 @@ class Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.biggest.shortestSide >= 600;
-        return isTablet ? const HomeTablet() : const HomeMobile();
+        final isTablet = DeviceLayout.isTablet(constraints);
+        return isTablet ? const TabletHome() : const PhoneHome();
       },
     );
   }

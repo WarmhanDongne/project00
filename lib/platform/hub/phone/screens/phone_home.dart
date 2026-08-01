@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/screens/mobile_group_join.dart';
+import 'package:project00/platform/dto/dto_game_info.dart';
+import 'package:project00/platform/hub/phone/screens/phone_group_join.dart';
 import 'package:project00/platform/hub/services/game_service.dart';
-import 'package:project00/platform/hub/widgets/mobile_group_top_bar.dart';
-import 'package:project00/platform/hub/widgets/mobile_own_game_list.dart';
+import 'package:project00/platform/hub/phone/widgets/phone_group_top_bar.dart';
+import 'package:project00/platform/hub/phone/widgets/phone_own_game_list.dart';
 
-class HomeMobile extends StatefulWidget {
-  const HomeMobile({super.key});
+class PhoneHome extends StatefulWidget {
+  const PhoneHome({super.key});
 
   @override
-  State<HomeMobile> createState() => _HomeMobileState();
+  State<PhoneHome> createState() => _PhoneHomeState();
 }
 
-class _HomeMobileState extends State<HomeMobile> {
-  late final Future<List<Map<String, dynamic>>>
-  _games; // MobileGameCard에 들어갈 데이터 보관할 객체
+class _PhoneHomeState extends State<PhoneHome> {
+  late final Future<List<GameInfo>> _games; // PhoneGameCard에 들어갈 데이터 보관할 객체
   final GameService _gameService = GameService(); // 데이터 fetch할 객체
 
   @override
@@ -41,9 +41,9 @@ class _HomeMobileState extends State<HomeMobile> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MobileGroupJoin(),
+                          builder: (context) => PhoneGroupJoin(),
                         ),
-                      ); // MobileGroupJoin으로 이동
+                      ); // PhoneGroupJoin으로 이동
                     },
                   ),
                   Column(

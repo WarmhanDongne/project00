@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/hub/screens/home_tablet.dart';
+import 'package:project00/platform/hub/tablet/screens/tablet_home.dart';
 
 class Result extends StatelessWidget {
   const Result({super.key});
@@ -75,7 +75,7 @@ class Buttons extends StatelessWidget {
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, animation, _) => const HomeTablet(),
+                pageBuilder: (_, animation, _) => const TabletHome(),
                 transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (_, animation, _, child) {
                   final curved = CurvedAnimation(
