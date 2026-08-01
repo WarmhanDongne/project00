@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/lobby/providers/tablet_room_provider.dart';
-import 'package:project00/platform/lobby/services/room_common.dart';
+import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:project00/games/liars_bar/widgets/player_layouts/player_layout.dart';
 

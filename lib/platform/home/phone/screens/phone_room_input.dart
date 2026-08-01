@@ -1,20 +1,20 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/lobby/providers/phone_room_provider.dart';
-import 'package:project00/platform/lobby/screens/phone_group_joined.dart';
-import 'package:project00/platform/lobby/widgets/phone_participant_list.dart';
+import 'package:project00/platform/home/room/providers/phone_room_provider.dart';
+import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 
-class PhoneGroupInput extends StatefulWidget {
-  const PhoneGroupInput({super.key, required this.roomCode});
+class PhoneRoomInput extends StatefulWidget {
+  const PhoneRoomInput({super.key, required this.roomCode});
 
   final String roomCode;
 
   @override
-  State<PhoneGroupInput> createState() => _PhoneGroupInputState();
+  State<PhoneRoomInput> createState() => _PhoneRoomInputState();
 }
 
-class _PhoneGroupInputState extends State<PhoneGroupInput> {
+class _PhoneRoomInputState extends State<PhoneRoomInput> {
   final PhoneRoomProvider _roomProvider = PhoneRoomProvider();
   late final TextEditingController _roomCodeController;
 
@@ -50,7 +50,7 @@ class _PhoneGroupInputState extends State<PhoneGroupInput> {
       animation: _roomProvider,
       builder: (context, _) {
         if (_roomProvider.isInRoom) {
-          return PhoneGroupJoined(provider: _roomProvider);
+          return PhoneRoomWaiting(provider: _roomProvider);
         }
 
         return Scaffold(
@@ -100,7 +100,7 @@ class _JoinForm extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20.h),
-            PhoneParticipantList(
+            PhoneRoomParticipantList(
               hostName: '태블릿 방장',
               participantsList: [nickname],
             ),

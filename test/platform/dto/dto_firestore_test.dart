@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/lobby/models/room_data.dart';
-import 'package:project00/platform/lobby/models/room_device.dart';
-import 'package:project00/platform/lobby/models/room_member.dart';
-import 'package:project00/platform/lobby/models/user_room.dart';
+import 'package:project00/platform/home/room/models/room_data.dart';
+import 'package:project00/platform/home/room/models/room_device.dart';
+import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/user_room.dart';
 
 void main() {
   group('Firestore DTO', () {

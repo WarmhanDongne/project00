@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class GroupTopBar extends StatelessWidget {
+class PhoneHeader extends StatelessWidget {
   final VoidCallback onPressed;
   final String buttonText;
 
-  const GroupTopBar({
+  const PhoneHeader({
     super.key,
     required this.onPressed,
     required this.buttonText,

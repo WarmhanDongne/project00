@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/models/game_info.dart';
 import 'package:project00/platform/home/services/game_service.dart';
-import 'package:project00/platform/lobby/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
 
 class FilterBar extends StatelessWidget {

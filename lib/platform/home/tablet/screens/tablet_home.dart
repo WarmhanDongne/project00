@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/lobby/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
-import 'package:project00/platform/lobby/widgets/tablet_member_panel.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
 
 class TabletHome extends StatefulWidget {
@@ -65,7 +65,7 @@ class _TabletHomeState extends State<TabletHome> {
                 children: [
                   Expanded(child: GameList(roomProvider: _roomProvider)),
                   const SizedBox(width: 24),
-                  MemberTap(provider: _roomProvider),
+                  TabletRoomPanel(provider: _roomProvider),
                 ],
               ),
             ),

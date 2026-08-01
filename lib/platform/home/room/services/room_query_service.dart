@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:project00/platform/lobby/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 
 abstract interface class RoomQueryService {
   Stream<RoomData?> watchRoom(String roomCode);

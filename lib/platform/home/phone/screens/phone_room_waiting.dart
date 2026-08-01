@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/lobby/providers/phone_room_provider.dart';
+import 'package:project00/platform/home/room/providers/phone_room_provider.dart';
 import 'package:project00/platform/home/services/game_service.dart';
-import 'package:project00/platform/home/phone/widgets/phone_group_top_bar.dart';
+import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
-import 'package:project00/platform/lobby/widgets/phone_participant_list.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 
-class PhoneGroupJoined extends StatefulWidget {
-  const PhoneGroupJoined({super.key, required this.provider});
+class PhoneRoomWaiting extends StatefulWidget {
+  const PhoneRoomWaiting({super.key, required this.provider});
 
   final PhoneRoomProvider provider;
 
   @override
-  State<PhoneGroupJoined> createState() => _PhoneGroupJoinedState();
+  State<PhoneRoomWaiting> createState() => _PhoneRoomWaitingState();
 }
 
-class _PhoneGroupJoinedState extends State<PhoneGroupJoined> {
+class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   late final Future<List<GameInfo>> _games;
   final GameService _gameService = GameService();
 
@@ -42,7 +42,7 @@ class _PhoneGroupJoinedState extends State<PhoneGroupJoined> {
               child: Column(
                 children: [
                   SizedBox(height: 10.h),
-                  GroupTopBar(
+                  PhoneHeader(
                     buttonText: "그룹 나가기",
                     onPressed: () async {
                       final left = await widget.provider.leaveRoom();
@@ -59,7 +59,7 @@ class _PhoneGroupJoinedState extends State<PhoneGroupJoined> {
               style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16.h),
-            PhoneParticipantList(
+            PhoneRoomParticipantList(
               hostName: '태블릿 방장',
               participantsList: members
                   .map((member) => member.nickname)

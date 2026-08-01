@@ -5,6 +5,6 @@ class CardsDeck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(child: Card());
+    return const Card();
   }
 }

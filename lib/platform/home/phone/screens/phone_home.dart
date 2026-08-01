@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/models/game_info.dart';
-import 'package:project00/platform/lobby/screens/phone_group_join.dart';
+import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/services/game_service.dart';
-import 'package:project00/platform/home/phone/widgets/phone_group_top_bar.dart';
+import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 
 class PhoneHome extends StatefulWidget {
@@ -35,15 +35,15 @@ class _PhoneHomeState extends State<PhoneHome> {
                 children: [
                   SizedBox(height: 10),
 
-                  GroupTopBar(
+                  PhoneHeader(
                     buttonText: "그룹 참여",
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PhoneGroupJoin(),
+                          builder: (context) => PhoneRoomJoin(),
                         ),
-                      ); // PhoneGroupJoin으로 이동
+                      ); // PhoneRoomJoin으로 이동
                     },
                   ),
                   Column(

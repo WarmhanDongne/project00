@@ -5,16 +5,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/lobby/screens/phone_group_input_name.dart';
+import 'package:project00/platform/home/phone/screens/phone_room_input.dart';
 
-class PhoneGroupJoin extends StatefulWidget {
-  const PhoneGroupJoin({super.key});
+class PhoneRoomJoin extends StatefulWidget {
+  const PhoneRoomJoin({super.key});
 
   @override
-  State<PhoneGroupJoin> createState() => _PhoneGroupJoinState();
+  State<PhoneRoomJoin> createState() => _PhoneRoomJoinState();
 }
 
-class _PhoneGroupJoinState extends State<PhoneGroupJoin> {
+class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   final TextEditingController _roomCodeController = TextEditingController();
 
   @override
@@ -35,7 +35,7 @@ class _PhoneGroupJoinState extends State<PhoneGroupJoin> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhoneGroupInput(roomCode: roomCode),
+        builder: (context) => PhoneRoomInput(roomCode: roomCode),
       ),
     );
   }

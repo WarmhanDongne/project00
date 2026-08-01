@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/lobby/services/room_common.dart';
-import 'package:project00/platform/lobby/providers/tablet_room_provider.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/providers/tablet_room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-class MemberTap extends StatelessWidget {
-  const MemberTap({super.key, required this.provider});
+class TabletRoomPanel extends StatelessWidget {
+  const TabletRoomPanel({super.key, required this.provider});
 
   final TabletRoomProvider provider;
 
