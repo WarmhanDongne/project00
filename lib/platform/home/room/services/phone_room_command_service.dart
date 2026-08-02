@@ -1,5 +1,6 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 abstract interface class PhoneRoomCommandService {
   Future<void> joinRoom(String roomCode);
@@ -9,36 +10,67 @@ abstract interface class PhoneRoomCommandService {
   Future<void> leaveRoom(String roomCode);
 }
 
-class FirebasePhoneRoomCommandService implements PhoneRoomCommandService {
-  FirebasePhoneRoomCommandService({FirebaseFunctions? functions})
-    : _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
-
-  final FirebaseFunctions _functions;
+class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
-  Future<void> joinRoom(String roomCode) {
-    return _call('joinRoom', <String, Object?>{'roomCode': roomCode});
-  }
+  Future<void> joinRoom(String roomCode) async {
+    // 유저 객체 생성 및 유저 존재 테스트
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const RoomCommandException('인증 정보가 없습니다.');
+    }
 
-  @override
-  Future<void> setReady({required String roomCode, required bool isReady}) {
-    return _call('setRoomReady', <String, Object?>{
-      'roomCode': roomCode,
-      'isReady': isReady,
+    final uid = user.uid;
+    final code = roomCode.trim().toUpperCase();
+    final roomRef = _database.ref('rooms/$code');
+
+    // 메모리 세션 존재를 단발성 조회
+    final snapshot = await roomRef.get();
+    if (!snapshot.exists) {
+      throw const RoomCommandException('방을 찾을 수 없습니다.');
+    }
+
+    final data = snapshot.value as Map<dynamic, dynamic>;
+    final maxMembers =
+        data['maxMembers'] as int? ?? RoomLimits.defaultMaxMembers;
+
+    final playersSnapshot = await roomRef.child('players').get();
+    final currentMembers = playersSnapshot.children.length;
+
+    if (currentMembers >= maxMembers) {
+      throw const RoomCommandException('방 인원이 초과되었습니다.');
+    }
+
+    final playerRef = roomRef.child('players/$uid');
+
+    // 소켓 상태 모니터링
+    // 데이터 쓰기 연산 이전에 서버 측 데몬에 disconnect 인터럽트를 선제적으로 예약
+    await playerRef.onDisconnect().update({'isConnected': false});
+
+    // 데이터 변이
+    // 검증이 완료된 상태이므로 set() 연산을 통해 메모리 블록을 완전히 덮어씀
+    await playerRef.set({
+      'uid': uid,
+      'nickname': user.displayName ?? 'Player',
+      'profileImageUrl': user.photoURL ?? '',
+      'isConnected': true,
+      'seatIndex': -1,
+      'role': 'player',
+      'status': 'active',
     });
   }
 
   @override
   Future<void> leaveRoom(String roomCode) {
-    return _call('leaveRoom', <String, Object?>{'roomCode': roomCode});
+    // TODO: implement leaveRoom
+    throw UnimplementedError();
   }
 
-  Future<void> _call(String name, Map<String, Object?> data) async {
-    try {
-      await _functions.httpsCallable(name).call(data);
-    } on FirebaseFunctionsException catch (error) {
-      throw RoomCommandException(error.message ?? '방 요청에 실패했습니다.');
-    }
+  @override
+  Future<void> setReady({required String roomCode, required bool isReady}) {
+    // TODO: implement setReady
+    throw UnimplementedError();
   }
 }

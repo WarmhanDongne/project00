@@ -5,7 +5,7 @@ class PhoneRoomProvider extends RoomSessionProvider {
   PhoneRoomProvider({
     super.queryService,
     PhoneRoomCommandService? commandService,
-  }) : _commandService = commandService ?? FirebasePhoneRoomCommandService();
+  }) : _commandService = commandService ?? RtdbPhoneRoomCommandService();
 
   final PhoneRoomCommandService _commandService;
 

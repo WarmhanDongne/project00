@@ -6,7 +6,7 @@ import 'package:project00/platform/home/room/services/room_query_service.dart';
 
 abstract class RoomSessionProvider extends ChangeNotifier {
   RoomSessionProvider({RoomQueryService? queryService})
-    : _queryService = queryService ?? FirebaseRoomQueryService();
+    : _queryService = queryService ?? RtdbRoomQueryService();
 
   final RoomQueryService _queryService;
 
