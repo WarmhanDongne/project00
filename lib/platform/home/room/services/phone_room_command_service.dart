@@ -16,6 +16,7 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
 
   @override
   Future<void> joinRoom(String roomCode) async {
+    // 유저 객체 생성 및 유저 존재 테스트
     final user = _auth.currentUser;
     if (user == null) {
       throw const RoomCommandException('인증 정보가 없습니다.');
@@ -23,7 +24,7 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
 
     final uid = user.uid;
     final code = roomCode.trim().toUpperCase();
-    final roomRef = _database.ref('room/$code');
+    final roomRef = _database.ref('rooms/$code');
 
     // 메모리 세션 존재를 단발성 조회
     final snapshot = await roomRef.get();
@@ -56,10 +57,8 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
       'profileImageUrl': user.photoURL ?? '',
       'isConnected': true,
       'seatIndex': -1,
-      'isReady': false,
       'role': 'player',
-      'status': 'actice',
-      'joinedAt': ServerValue.timestamp,
+      'status': 'active',
     });
   }
 
