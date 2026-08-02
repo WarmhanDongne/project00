@@ -24,7 +24,7 @@ class PhoneRoomParticipantList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text("참여자 [ $totalParticipants명 ]"), // n명 데이터 받아서 해야함.
+          Text("참여자 [ $totalParticipants명 ]"),
           SizedBox(height: 10.h),
           Container(
             height: 310.h,

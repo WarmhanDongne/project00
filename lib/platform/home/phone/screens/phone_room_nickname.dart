@@ -5,16 +5,16 @@ import 'package:project00/platform/home/room/providers/phone_room_provider.dart'
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 
-class PhoneRoomInput extends StatefulWidget {
-  const PhoneRoomInput({super.key, required this.roomCode});
+class PhoneRoomNickname extends StatefulWidget {
+  const PhoneRoomNickname({super.key, required this.roomCode});
 
   final String roomCode;
 
   @override
-  State<PhoneRoomInput> createState() => _PhoneRoomInputState();
+  State<PhoneRoomNickname> createState() => _PhoneRoomNickname();
 }
 
-class _PhoneRoomInputState extends State<PhoneRoomInput> {
+class _PhoneRoomNickname extends State<PhoneRoomNickname> {
   final PhoneRoomProvider _roomProvider = PhoneRoomProvider();
   late final TextEditingController _roomCodeController;
 
@@ -46,6 +46,11 @@ class _PhoneRoomInputState extends State<PhoneRoomInput> {
 
   @override
   Widget build(BuildContext context) {
+    /*
+    1. 초기 진입 시: _roomProvider.isInRoom이 false이므로 _JoinForm 렌더링.
+    2. 입장하기 클릭:  올바른 코드일 경우 _roomProvider.isInRoom가 true로 바뀌며 notifyListeners() 호출
+    3. AnimatedBuilder가 상태변화 감지 후 isInRoom == true. PhoneRoomWaiting를 렌더링한다.
+     */
     return AnimatedBuilder(
       animation: _roomProvider,
       builder: (context, _) {
@@ -164,7 +169,7 @@ class _JoinForm extends StatelessWidget {
           ),
           SizedBox(width: 13.w),
           FilledButton(
-            onPressed: null,
+            onPressed: () {},
             style: FilledButton.styleFrom(
               backgroundColor: Colors.grey,
               foregroundColor: Colors.black,
