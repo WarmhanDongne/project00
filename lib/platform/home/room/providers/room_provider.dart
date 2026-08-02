@@ -16,15 +16,17 @@ class RoomProvider extends ChangeNotifier {
   String? errorMessage;
   String? selectedGameId;
 
+  Future<List<RoomMember>> getRoomPlayers(String roomCode) async {
+    members = await _service.getRoomPlayers(roomCode);
+    notifyListeners();
+    return members;
+  }
+
   Future<void> createRoom() async {
     isLoading = true;
-    notifyListeners();
-
     roomCode = await _service.createRoom();
-
     isLoading = false;
     notifyListeners();
-
     listenRoom();
   }
 
@@ -33,13 +35,10 @@ class RoomProvider extends ChangeNotifier {
 
     try {
       await _service.selectGame(roomCode: roomCode!, gameId: gameId);
-
       return true;
     } catch (e) {
       errorMessage = e.toString();
-
       notifyListeners();
-
       return false;
     }
   }
@@ -52,7 +51,6 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription = _service.watchRoom(roomCode!).listen((event) {
       // 나중에 event.snapshot.value를 읽어서
       // members 등을 갱신하면 됩니다.
-
       notifyListeners();
     });
   }
