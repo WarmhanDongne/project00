@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/widgets/player_layouts/player_slot_positions.dart';
+import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 
 /// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.
 class RoundStartReveal extends StatefulWidget {

@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
-import 'package:project00/platform/home/screens/home.dart';
+import 'package:project00/platform/home/home.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/widgets/player_layouts/player_slot_positions.dart';
+import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 
 // final playKey = GlobalKey<CardPlayAnimationState>();
 
