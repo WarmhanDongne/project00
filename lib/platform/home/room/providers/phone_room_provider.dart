@@ -23,17 +23,6 @@ class PhoneRoomProvider extends RoomSessionProvider {
     return result ?? false;
   }
 
-  Future<bool> setReady(bool isReady) async {
-    final code = roomCode;
-    if (code == null) return false;
-
-    final result = await runCommand(() async {
-      await _commandService.setReady(roomCode: code, isReady: isReady);
-      return true;
-    });
-    return result ?? false;
-  }
-
   Future<bool> leaveRoom() async {
     final code = roomCode;
     if (code == null) return false;
