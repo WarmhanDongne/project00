@@ -17,14 +17,19 @@ class PhoneRoomJoin extends StatefulWidget {
 
 class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   final TextEditingController _roomCodeController = TextEditingController();
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
+  bool _isOpeningNameInput = false;
 
   @override
   void dispose() {
+    _scannerController.dispose();
     _roomCodeController.dispose();
     super.dispose();
   }
 
-  void _openNameInput() {
+  Future<void> _openNameInput() async {
     final roomCode = _roomCodeController.text.trim().toUpperCase();
     if (roomCode.length != 5) {
       ScaffoldMessenger.of(context)
@@ -33,7 +38,18 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
       return;
     }
 
-    Navigator.push(
+    if (_isOpeningNameInput) return;
+    _isOpeningNameInput = true;
+
+    try {
+      await _scannerController.stop();
+    } on MobileScannerException {
+      // 카메라 사용이 불가능해도 참여 코드를 직접 입력해 입장할 수 있습니다.
+    }
+
+    if (!mounted) return;
+
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PhoneRoomNickname(
@@ -41,6 +57,14 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
         ), // 입력 완료 버튼 클릭 후 받고 처리한 roomCode를 파라미터로 주고 PhoneRoomInput로 이동
       ),
     );
+
+    if (!mounted) return;
+    _isOpeningNameInput = false;
+    try {
+      await _scannerController.start();
+    } on MobileScannerException {
+      // 권한이 거부된 경우에도 수동 코드 입력 기능은 계속 사용할 수 있습니다.
+    }
   }
 
   @override
@@ -78,16 +102,16 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
       width: 310.w,
       color: Colors.grey,
       child: MobileScanner(
+        controller: _scannerController,
         onDetect: (capture) {
+          if (_isOpeningNameInput) return;
+
           final List<Barcode> barcodes = capture.barcodes;
           for (final barcode in barcodes) {
             if (barcode.rawValue != null) {
               final scannedCode = barcode.rawValue!.trim().toUpperCase();
               if (scannedCode.length == 5) {
-                setState(() {
-                  _roomCodeController.text =
-                      scannedCode; // _roomCodeController에 스캔을 통해 얻은 코드 주입
-                });
+                _roomCodeController.text = scannedCode;
                 // 스캔 성공 시 닉네임 수정으로 이동
                 _openNameInput();
                 break;

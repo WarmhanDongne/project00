@@ -17,11 +17,6 @@ const DEFAULT_MAX_MEMBERS = 6;
 const ROOM_CODE_LENGTH = 5;
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-type CreateOrLoadRoomData = {
-  clientType?: unknown;
-  maxMembers?: unknown;
-};
-
 type ResetRoomData = {
   clientType?: unknown;
 };
@@ -65,32 +60,6 @@ function requireTabletClient(clientType: unknown): void {
 }
 
 /**
- * 클라이언트가 보낸 최대 인원 값을 검증합니다.
- * @param value 검사할 값
- * @return 검증된 최대 인원
- */
-function parseMaxMembers(value: unknown): number {
-  if (value === undefined) {
-    return DEFAULT_MAX_MEMBERS;
-  }
-  if (!Number.isInteger(value)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "최대 인원은 정수여야 합니다.",
-    );
-  }
-
-  const maxMembers = value as number;
-  if (maxMembers < 2 || maxMembers > 12) {
-    throw new HttpsError(
-      "invalid-argument",
-      "최대 인원은 2명에서 12명 사이여야 합니다.",
-    );
-  }
-  return maxMembers;
-}
-
-/**
  * 방 코드를 정규화하고 유효성을 검사합니다.
  * @param value 검사할 값
  * @return 정규화된 방 코드
@@ -131,17 +100,17 @@ function parseGameId(value: unknown): string {
  * 충돌 가능성이 낮은 5자리 참여 코드를 생성합니다.
  * @return 생성된 참여 코드
  */
-function CreateRoomCode(): string {
+function generateRoomCode(): string {
   return Array.from(
     {length: ROOM_CODE_LENGTH},
     () => ROOM_CODE_CHARS[randomInt(ROOM_CODE_CHARS.length)],
   ).join("");
 }
 export const createRoomCode = onCall(
-  { region: REGION },
+  {region: REGION},
   async () => {
     return {
-      roomCode: CreateRoomCode(),
+      roomCode: generateRoomCode(),
     };
   },
 );
@@ -176,7 +145,7 @@ function memberData(request: CallableRequest<unknown>, uid: string) {
 
 /**
  * 아이패드 소유자의 기존 방과 참가자 연결을 제거합니다.
- * 클라이언트는 완료 후 createOrLoadRoom을 호출해 새 방을 생성합니다.
+ * 클라이언트는 완료 후 새 방을 생성합니다.
  */
 export const resetRoom = onCall<ResetRoomData>(
   {region: REGION},

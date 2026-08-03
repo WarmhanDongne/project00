@@ -1,6 +1,7 @@
-import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:project00/firebase/services/realtime_database_service.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 
 abstract interface class PhoneRoomCommandService {
   Future<void> joinRoom(String roomCode);
@@ -11,8 +12,12 @@ abstract interface class PhoneRoomCommandService {
 }
 
 class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  RtdbPhoneRoomCommandService({FirebaseDatabase? database, FirebaseAuth? auth})
+    : _database = database ?? RealtimeDatabaseService.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseDatabase _database;
+  final FirebaseAuth _auth;
 
   @override
   Future<void> joinRoom(String roomCode) async {
