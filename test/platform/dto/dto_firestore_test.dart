@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_data.dart';
 import 'package:project00/platform/home/room/models/room_device.dart';
 import 'package:project00/platform/home/room/models/room_member.dart';

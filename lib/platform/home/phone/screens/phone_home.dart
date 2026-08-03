@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
-import 'package:project00/platform/home/game/service/service/game_list_service.dart';
+import 'package:project00/platform/home/game/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 
