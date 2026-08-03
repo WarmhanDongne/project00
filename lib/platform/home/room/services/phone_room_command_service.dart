@@ -5,8 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 abstract interface class PhoneRoomCommandService {
   Future<void> joinRoom(String roomCode);
 
-  Future<void> setReady({required String roomCode, required bool isReady});
-
   Future<void> leaveRoom(String roomCode);
 }
 
@@ -63,14 +61,23 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
   }
 
   @override
-  Future<void> leaveRoom(String roomCode) {
-    // TODO: implement leaveRoom
-    throw UnimplementedError();
-  }
+  Future<void> leaveRoom(String roomCode) async {
+    final user = _auth.currentUser;
 
-  @override
-  Future<void> setReady({required String roomCode, required bool isReady}) {
-    // TODO: implement setReady
-    throw UnimplementedError();
+    // user null 여부 검증
+    if (user == null) {
+      throw const RoomCommandException('인증 정보가 없습니다.');
+    }
+    // playerRef에
+    final uid = user.uid;
+    final code = roomCode.trim().toUpperCase();
+    final roomRef = _database.ref('rooms/$code');
+    final playerRef = roomRef.child('players/$uid');
+
+    // joinRoom의 연결 끊김 감지 트리거 취소
+    await playerRef.onDisconnect().cancel();
+
+    // 플레이어 노드 즉시 삭제
+    await playerRef.remove();
   }
 }
