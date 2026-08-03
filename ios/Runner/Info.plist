@@ -32,6 +32,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>app-1-93097008048-ios-09b7ee6976bbf5cdd49475</string>
+				<string>com.googleusercontent.apps.93097008048-l7ovteo187vpqe8ppime2ck350nvqigi</string>
 			</array>
 		</dict>
 	</array>
@@ -39,6 +40,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>프로필 사진을 선택하기 위해 사진 라이브러리에 접근합니다.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>그룹 참여 QR 코드를 스캔하기 위해 카메라에 접근합니다.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -79,18 +82,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Google Sign-in Section -->
-<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleTypeRole</key>
-    <string>Editor</string>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>com.googleusercontent.apps.93097008048-l7ovteo187vpqe8ppime2ck350nvqigi</string>
-    </array>
-  </dict>
-</array>
-<!-- End of the Google Sign-in Section -->
 </dict>
 </plist>
