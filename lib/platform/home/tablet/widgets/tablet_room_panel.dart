@@ -121,7 +121,7 @@ class QR extends StatelessWidget {
 class _MemberList extends StatelessWidget {
   const _MemberList({required this.members, required this.maxMembers});
 
-  final List<RoomMember> members;
+  final List<RoomPlayer> members;
   final int maxMembers;
 
   @override

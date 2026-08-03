@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/services/phone_room_command_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
@@ -15,13 +15,13 @@ class RoomProvider extends ChangeNotifier {
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
-  List<RoomMember> members = [];
+  List<RoomPlayer> members = [];
   bool isLoading = false;
 
   String? errorMessage;
   String? selectedGameId;
 
-  Future<List<RoomMember>> getRoomPlayers(String roomCode) async {
+  Future<List<RoomPlayer>> getRoomPlayers(String roomCode) async {
     members = await _service.getRoomPlayers(roomCode);
     notifyListeners();
     return members;

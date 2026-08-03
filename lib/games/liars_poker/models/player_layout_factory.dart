@@ -2,7 +2,7 @@ import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 class PlayerLayoutFactory {
-  static PlayerLayoutModel create(List<RoomMember> members) {
+  static PlayerLayoutModel create(List<RoomPlayer> members) {
     return PlayerLayoutModel(
       players: List.unmodifiable(
         List.generate(members.length, (index) {

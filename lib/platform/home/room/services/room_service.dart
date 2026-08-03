@@ -1,7 +1,7 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/platform/home/room/models/ramdom.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 
 class RoomService {
   final FirebaseDatabase realtime = RealtimeDatabaseService.instance;
@@ -23,7 +23,7 @@ class RoomService {
     }
   }
 
-  Future<List<RoomMember>> getRoomPlayers(String roomCode) async {
+  Future<List<RoomPlayer>> getRoomPlayers(String roomCode) async {
     final realtime = FirebaseDatabase.instance;
 
     final snapshot = await realtime.ref('rooms/$roomCode/players').get();
@@ -33,7 +33,7 @@ class RoomService {
     final data = Map<String, dynamic>.from(snapshot.value as Map);
 
     return data.entries.map((entry) {
-      return RoomMember.fromJson(Map<String, dynamic>.from(entry.value));
+      return RoomPlayer.fromJson(Map<String, dynamic>.from(entry.value));
     }).toList();
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_data.dart';
 import 'package:project00/platform/home/room/models/room_device.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/models/user_room.dart';
 
 void main() {
@@ -54,7 +54,7 @@ void main() {
         'roomCode': '3298Y',
       });
       final device = RoomDevice.fromJson({'uid': 'host-uid', 'role': 'table'});
-      final member = RoomMember.fromJson({
+      final member = RoomPlayer.fromJson({
         'uid': 'player-uid',
         'nickname': '플레이어',
         'role': 'player',
