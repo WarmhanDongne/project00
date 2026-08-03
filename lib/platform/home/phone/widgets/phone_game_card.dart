@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 
 class PhoneGameCard extends StatelessWidget {
   // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.

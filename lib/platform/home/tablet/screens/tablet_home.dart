@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/game/service/provider/game_list_provider.dart';
+import 'package:project00/platform/home/game/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';

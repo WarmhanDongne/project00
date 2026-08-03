@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -16,23 +17,19 @@ class FirebaseAuthService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
+    FirebaseFirestore? firestore,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _functions =
            functions ??
            FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
-       _storage = storage ?? FirebaseStorage.instance;
-
+       _storage = storage ?? FirebaseStorage.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
+  final FirebaseFirestore _firestore;
 
-  bool get hasEmailAccount => _auth.currentUser?.email != null;
-
-  bool get hasEmailAndPhoneAccount {
-    final user = _auth.currentUser;
-    return user?.email != null && user?.phoneNumber != null;
-  }
-
+  //이메일 중복확인
   Future<bool> isEmailDuplicate(String email) async {
     try {
       final callable = _functions.httpsCallable('checkEmailDuplicate');
@@ -48,6 +45,7 @@ class FirebaseAuthService {
     }
   }
 
+  //회원가입
   Future<void> createEmailAccount({
     required String email,
     required String password,
@@ -62,68 +60,13 @@ class FirebaseAuthService {
     }
   }
 
+  //로그인
   Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-    } on FirebaseAuthException catch (error) {
-      throw _toServiceException(error);
-    }
-  }
-
-  Future<void> sendPhoneCode({
-    required String phoneNumber,
-    required Future<void> Function() verificationCompleted,
-    required void Function(AuthServiceException error) verificationFailed,
-    required void Function(String verificationId, int? resendToken) codeSent,
-    required void Function(String verificationId) codeAutoRetrievalTimeout,
-    int? forceResendingToken,
-    Duration timeout = const Duration(seconds: 60),
-  }) async {
-    try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (credential) async {
-          try {
-            await _linkPhoneCredential(credential);
-            await verificationCompleted();
-          } on AuthServiceException catch (error) {
-            verificationFailed(error);
-          }
-        },
-        verificationFailed: (error) {
-          verificationFailed(_toServiceException(error));
-        },
-        codeSent: codeSent,
-        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
-        forceResendingToken: forceResendingToken,
-        timeout: timeout,
-      );
-    } on FirebaseAuthException catch (error) {
-      throw _toServiceException(error);
-    }
-  }
-
-  Future<void> confirmAndLinkPhoneCode({
-    required String verificationId,
-    required String smsCode,
-  }) {
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
-    return _linkPhoneCredential(credential);
-  }
-
-  Future<void> _linkPhoneCredential(PhoneAuthCredential credential) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const AuthServiceException('user-not-found', '로그인된 이메일 계정이 없습니다.');
-    }
-    try {
-      await user.linkWithCredential(credential);
     } on FirebaseAuthException catch (error) {
       throw _toServiceException(error);
     }
@@ -141,11 +84,13 @@ class FirebaseAuthService {
     }
   }
 
+  //프로필사진 업로드
   Future<String> uploadProfileImage({
     required Uint8List imageBytes,
     required String fileName,
     String? contentType,
   }) async {
+    //현재 로그인되어있는 유저
     final user = _auth.currentUser;
     if (user == null) {
       throw const AuthServiceException('user-not-found', '로그인된 사용자가 없습니다.');
@@ -157,9 +102,8 @@ class FirebaseAuthService {
     final safeExtension = RegExp(r'^[a-z0-9]+$').hasMatch(extension)
         ? extension
         : 'jpg';
-    final reference = _storage.ref(
-      'profile_images/${user.uid}/profile.$safeExtension',
-    );
+    //업로드 위치
+    final reference = _storage.ref('users/${user.uid}/profile.$safeExtension');
 
     try {
       await reference.putData(
@@ -177,6 +121,25 @@ class FirebaseAuthService {
     }
   }
 
+  //프로필사진+닉네임+UID 묶어서 firestore에 저장하기
+  Future<void> createUserDocument() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw const AuthServiceException('user-not-found', '로그인된 사용자가 없습니다.');
+    }
+
+    //유저 구조
+    await _firestore.collection('users').doc(user.uid).set({
+      'uid': user.uid,
+      'email': user.email,
+      'nickname': user.displayName,
+      'profileImageUrl': user.photoURL,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  //예외 변경해주는
   AuthServiceException _toServiceException(FirebaseAuthException error) {
     return AuthServiceException(
       error.code,
