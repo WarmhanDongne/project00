@@ -1,5 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 
 class LiarsPokerGameService {
   final FirebaseDatabase realtime;

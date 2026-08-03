@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
 class RoomProvider extends ChangeNotifier {
@@ -44,6 +44,10 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> removePlayer(String userUid)async{
+    await _service.removePlayer(roomCode!, userUid);
+  }
+  
   Future<bool> savePlayerSeatIndexes(Map<String, int> seatIndexesByUid) async {
     final code = roomCode;
     if (code == null) {
