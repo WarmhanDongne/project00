@@ -7,7 +7,6 @@ class RoomMember {
     required this.nickname,
     required this.profileImageUrl,
     required this.isHost,
-    required this.isReady,
     required this.role,
     required this.status,
     this.joinedAt,
@@ -31,7 +30,6 @@ class RoomMember {
       nickname: firestoreString(json['nickname'], fallback: '사용자'),
       profileImageUrl: firestoreString(json['profileImageUrl']),
       isHost: isHost,
-      isReady: json['isReady'] as bool? ?? false,
       role: firestoreString(
         json['role'],
         fallback: isHost ? 'table' : 'player',
@@ -46,7 +44,6 @@ class RoomMember {
   final String nickname;
   final String profileImageUrl;
   final bool isHost;
-  final bool isReady;
   final String role;
   final String status;
   final DateTime? joinedAt;

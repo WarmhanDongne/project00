@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
 import 'package:project00/games/liars_poker/widgets/player_layouts/player_layout_editor.dart';
 import 'package:project00/platform/home/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 
 class GamePreviewDialog extends StatelessWidget {
@@ -66,7 +65,7 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
-    final initialLayout = _createPlayerLayout(members);
+    final initialLayout = PlayerLayoutFactory.create(members);
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -84,22 +83,7 @@ class GamePreviewDialog extends StatelessWidget {
     );
   }
 
-  PlayerLayoutModel _createPlayerLayout(List<RoomMember> members) {
-    return PlayerLayoutModel(
-      players: List.unmodifiable(
-        List.generate(members.length, (index) {
-          final member = members[index];
-          return PlayerLayoutPlayer(
-            uid: member.uid,
-            nickname: member.nickname,
-            profileImageUrl: member.profileImageUrl,
-            isHost: member.isHost,
-            seatIndex: index,
-          );
-        }, growable: false),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
