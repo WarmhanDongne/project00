@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/home/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/phone_room_provider.dart';
-import 'package:project00/platform/home/services/game_service.dart';
+import 'package:project00/platform/home/game/service/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';

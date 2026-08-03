@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:project00/platform/auth/services/firebase_auth_service.dart';
+import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
 
