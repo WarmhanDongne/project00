@@ -71,7 +71,21 @@ class GamePreviewDialog extends StatelessWidget {
       MaterialPageRoute(
         builder: (layoutContext) => PlayerLayoutEditor(
           initialLayout: initialLayout,
-          onComplete: (completedLayout) {
+          onComplete: (completedLayout) async {
+            //자리 realtime database에 저장
+            final saved = await roomProvider.savePlayerSeatIndexes({
+              for (final player in completedLayout.players)
+                player.uid: player.seatIndex,
+            });
+            if (!layoutContext.mounted) return;
+            if (!saved) {
+              _showMessage(
+                layoutContext,
+                roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+              );
+              return;
+            }
+
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => LiarsPoker(playerLayout: completedLayout),
@@ -82,8 +96,6 @@ class GamePreviewDialog extends StatelessWidget {
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {

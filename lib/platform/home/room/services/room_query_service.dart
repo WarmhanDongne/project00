@@ -1,5 +1,5 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 abstract interface class RoomQueryService {
@@ -10,7 +10,10 @@ abstract interface class RoomQueryService {
 }
 
 class RtdbRoomQueryService implements RoomQueryService {
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
+  RtdbRoomQueryService({FirebaseDatabase? database})
+    : _database = database ?? RealtimeDatabaseService.instance;
+
+  final FirebaseDatabase _database;
 
   @override
   Stream<RoomData?> watchRoom(String roomCode) {

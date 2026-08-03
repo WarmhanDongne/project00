@@ -39,13 +39,17 @@ class TabletRoomPanel extends StatelessWidget {
                   ],
                 ),
               ),
-              // if (provider.errorMessage != null)
-              //   Padding(
-              //     padding: const EdgeInsets.symmetric(vertical: 8),
-              //     child: null,
-              //   )
-              // else
-              const SizedBox(height: 16),
+              if (provider.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    provider.errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                )
+              else
+                const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   width: double.infinity,
