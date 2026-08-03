@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/platform/home/room/models/ramdom.dart';
-import 'package:project00/platform/home/room/models/room_member.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 
 class RoomService {
   RoomService({
@@ -93,5 +93,9 @@ class RoomService {
       'roomCode': roomCode,
       'seatIndexesByUid': seatIndexesByUid,
     });
+  }
+
+  Future<void> removePlayer(String roomCode,String userUid)async{
+    await realtime.ref('rooms/$roomCode/players/$userUid').remove();
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/tablet/screens/tablet_home.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 
 class PhoneHeader extends StatelessWidget {
   final VoidCallback onPressed;
@@ -38,6 +40,12 @@ class PhoneHeader extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
+        ),
+        AppButton(
+          text: 'Logout',
+          width: 160,
+          backgroundColor: Colors.blue,
+          onPressed: logout,
         ),
         Ink(
           width: 50,

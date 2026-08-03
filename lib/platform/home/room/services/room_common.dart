@@ -1,6 +1,6 @@
 export 'package:project00/platform/home/room/models/room_data.dart';
 export 'package:project00/platform/home/room/models/room_device.dart';
-export 'package:project00/platform/home/room/models/room_member.dart';
+export 'package:project00/platform/home/room/models/room_player.dart';
 export 'package:project00/platform/home/room/models/user_room.dart';
 
 abstract final class RoomLimits {

@@ -60,6 +60,7 @@ class TabletRoomPanel extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _MemberList(
+                                provider: provider,
                                 members: provider.members,
                                 maxMembers: RoomLimits.defaultMaxMembers,
                               ),
@@ -123,8 +124,9 @@ class QR extends StatelessWidget {
 }
 
 class _MemberList extends StatelessWidget {
-  const _MemberList({required this.members, required this.maxMembers});
+  const _MemberList({required this.members, required this.maxMembers, required this.provider});
 
+  final RoomProvider provider;
   final List<RoomMember> members;
   final int maxMembers;
 
@@ -164,13 +166,26 @@ class _MemberList extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: member.isHost
-                          ? const Icon(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+
+                        children: [
+                          if (member.isHost)
+                            const Icon(
                               Icons.star,
                               color: Colors.orange,
                               size: 20,
-                            )
-                          : null,
+                            ),
+
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: '강퇴',
+                            onPressed: () async {
+                              await provider.removePlayer(member.uid);
+                            },
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

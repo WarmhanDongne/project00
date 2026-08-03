@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
+import 'package:project00/platform/home/home.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.isGoogleSignIn = false});
@@ -162,6 +163,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await authService.createUserDocument();
       if (!mounted) return;
       showMessage('가입이 완료되었습니다.');
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const Home()));
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       showMessage(error.message);
