@@ -12,8 +12,6 @@ class RegisterStepTwo extends StatelessWidget {
     required this.profileImageBytes,
     required this.onPickProfileImage,
     required this.onCheckNickname,
-    required this.onSendPhoneCode,
-    required this.onConfirmPhoneCode,
     super.key,
   });
 
@@ -26,8 +24,6 @@ class RegisterStepTwo extends StatelessWidget {
   final Uint8List? profileImageBytes;
   final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;
-  final VoidCallback onSendPhoneCode;
-  final VoidCallback onConfirmPhoneCode;
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +42,6 @@ class RegisterStepTwo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 30),
-        // _InputWithButton(
-        //   controller: nicknameController,
-        //   hintText: 'NICKNAME:',
-        //   buttonText: '사용가능',
-        //   onPressed: isLoading ? null : onCheckNickname,
-        // ),
         Row(
           children: [
             Expanded(
@@ -67,71 +57,6 @@ class RegisterStepTwo extends StatelessWidget {
             const SizedBox(width: 16),
             SizedBox(width: 100, child: Text('')),
           ],
-        ),
-
-        const SizedBox(height: 16),
-        _InputWithButton(
-          controller: phoneController,
-          hintText: 'TEL:',
-          keyboardType: TextInputType.phone,
-          buttonText: isCodeSent ? '재전송' : '인증하기',
-          onPressed: isLoading || isPhoneVerified ? null : onSendPhoneCode,
-        ),
-        if (isCodeSent) ...[
-          const SizedBox(height: 16),
-          _InputWithButton(
-            controller: verificationCodeController,
-            hintText: 'VERIFICATION CODE:',
-            keyboardType: TextInputType.number,
-            buttonText: isPhoneVerified ? '인증완료' : '확인',
-            onPressed: isLoading || isPhoneVerified ? null : onConfirmPhoneCode,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _InputWithButton extends StatelessWidget {
-  const _InputWithButton({
-    required this.controller,
-    required this.hintText,
-    required this.buttonText,
-    required this.onPressed,
-    this.keyboardType,
-  });
-
-  final TextEditingController controller;
-  final String hintText;
-  final String buttonText;
-  final VoidCallback? onPressed;
-  final TextInputType? keyboardType;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hintText,
-              filled: true,
-              fillColor: const Color(0xFFD4D4D4),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 100,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              shape: const RoundedRectangleBorder(),
-            ),
-            onPressed: onPressed,
-            child: Text(buttonText),
-          ),
         ),
       ],
     );

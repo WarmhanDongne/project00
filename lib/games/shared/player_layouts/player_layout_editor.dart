@@ -2,9 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/liars_poker/widgets/player_layouts/player_slot_positions.dart';
+import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 
-typedef PlayerLayoutCompleted = void Function(PlayerLayoutModel playerLayout);
+typedef PlayerLayoutCompleted =
+    Future<void> Function(PlayerLayoutModel playerLayout);
 
 /// 2~6명의 플레이어 자리를 하나의 화면에서 배치하는 편집기입니다.
 class PlayerLayoutEditor extends StatefulWidget {
@@ -34,6 +35,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor> {
 
   int? _draggingPlayerIndex;
   int? _hoveredSlotIndex;
+  bool _isCompleting = false;
 
   int get _playerCount => widget.initialLayout.playerCount;
 
@@ -147,13 +149,27 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor> {
     });
   }
 
-  void _completeSetting() {
+  Future<void> _completeSetting() async {
+    if (_isCompleting) return;
+
     final completedLayout = widget.initialLayout.updateSeats(
       _playerSlotIndexes,
     );
 
     debugPrint('플레이어 자리 번호: ${completedLayout.seatIndexes}');
-    widget.onComplete(completedLayout);
+    setState(() {
+      _isCompleting = true;
+    });
+
+    try {
+      await widget.onComplete(completedLayout);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCompleting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -197,13 +213,20 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor> {
                         right: 24,
                         bottom: 14,
                         child: FilledButton(
-                          onPressed: _completeSetting,
+                          onPressed: _isCompleting ? null : _completeSetting,
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xffd4d4d4),
                             foregroundColor: Colors.black,
                             shape: const RoundedRectangleBorder(),
                           ),
-                          child: const Text('설정 완료'),
+                          child: _isCompleting
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('설정 완료'),
                         ),
                       ),
                     ],

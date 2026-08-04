@@ -1,6 +1,7 @@
-import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:project00/firebase/services/realtime_database_service.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 
 abstract interface class PhoneRoomCommandService {
   Future<void> joinRoom(String roomCode);
@@ -9,8 +10,12 @@ abstract interface class PhoneRoomCommandService {
 }
 
 class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  RtdbPhoneRoomCommandService({FirebaseDatabase? database, FirebaseAuth? auth})
+    : _database = database ?? RealtimeDatabaseService.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseDatabase _database;
+  final FirebaseAuth _auth;
 
   @override
   Future<void> joinRoom(String roomCode) async {
@@ -31,13 +36,13 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
     }
 
     final data = snapshot.value as Map<dynamic, dynamic>;
-    final maxMembers =
-        data['maxMembers'] as int? ?? RoomLimits.defaultMaxPlayers;
+    final maxplayers =
+        data['maxplayers'] as int? ?? RoomLimits.defaultMaxPlayers;
 
     final playersSnapshot = await roomRef.child('players').get();
-    final currentMembers = playersSnapshot.children.length;
+    final currentplayers = playersSnapshot.children.length;
 
-    if (currentMembers >= maxMembers) {
+    if (currentplayers >= maxplayers) {
       throw const RoomCommandException('방 인원이 초과되었습니다.');
     }
 

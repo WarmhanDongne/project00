@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
-import 'package:project00/games/liars_poker/widgets/player_layouts/player_layout_editor.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 
@@ -37,7 +37,7 @@ class GamePreviewDialog extends StatelessWidget {
 
   Future<void> _startGame(BuildContext context) async {
     final players = roomProvider.players
-        .where((member) => member.isActive && member.isPlayer)
+        .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
     final currentPlayerCount = players.length;
     final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
@@ -71,7 +71,21 @@ class GamePreviewDialog extends StatelessWidget {
       MaterialPageRoute(
         builder: (layoutContext) => PlayerLayoutEditor(
           initialLayout: initialLayout,
-          onComplete: (completedLayout) {
+          onComplete: (completedLayout) async {
+            //자리 realtime database에 저장
+            final saved = await roomProvider.savePlayerSeatIndexes({
+              for (final player in completedLayout.players)
+                player.uid: player.seatIndex,
+            });
+            if (!layoutContext.mounted) return;
+            if (!saved) {
+              _showMessage(
+                layoutContext,
+                roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+              );
+              return;
+            }
+
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => LiarsPoker(playerLayout: completedLayout),

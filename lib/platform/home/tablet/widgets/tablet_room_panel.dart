@@ -39,13 +39,17 @@ class TabletRoomPanel extends StatelessWidget {
                   ],
                 ),
               ),
-              // if (provider.errorMessage != null)
-              //   Padding(
-              //     padding: const EdgeInsets.symmetric(vertical: 8),
-              //     child: null,
-              //   )
-              // else
-              const SizedBox(height: 16),
+              if (provider.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    provider.errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                )
+              else
+                const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -55,9 +59,10 @@ class TabletRoomPanel extends StatelessWidget {
                       ? Column(
                           children: [
                             Expanded(
-                              child: _MemberList(
+                              child: _PlayerList(
                                 players: provider.players,
                                 maxplayers: RoomLimits.defaultMaxPlayers,
+                                provider: provider,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -118,9 +123,14 @@ class QR extends StatelessWidget {
   }
 }
 
-class _MemberList extends StatelessWidget {
-  const _MemberList({required this.players, required this.maxplayers});
+class _PlayerList extends StatelessWidget {
+  const _PlayerList({
+    required this.players,
+    required this.maxplayers,
+    required this.provider,
+  });
 
+  final RoomProvider provider;
   final List<RoomPlayer> players;
   final int maxplayers;
 
@@ -140,8 +150,8 @@ class _MemberList extends StatelessWidget {
               : ListView.builder(
                   itemCount: players.length,
                   itemBuilder: (context, index) {
-                    final member = players[index];
-                    final hasProfileImage = member.profileImageUrl.isNotEmpty;
+                    final player = players[index];
+                    final hasProfileImage = player.profileImageUrl.isNotEmpty;
 
                     return ListTile(
                       dense: true,
@@ -149,24 +159,37 @@ class _MemberList extends StatelessWidget {
                       leading: CircleAvatar(
                         radius: 16,
                         backgroundImage: hasProfileImage
-                            ? NetworkImage(member.profileImageUrl)
+                            ? NetworkImage(player.profileImageUrl)
                             : null,
                         child: hasProfileImage
                             ? null
                             : const Icon(Icons.person, size: 18),
                       ),
                       title: Text(
-                        member.nickname,
+                        player.nickname,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: member.isHost
-                          ? const Icon(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+
+                        children: [
+                          if (player.isHost)
+                            const Icon(
                               Icons.star,
                               color: Colors.orange,
                               size: 20,
-                            )
-                          : null,
+                            ),
+
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: '강퇴',
+                            onPressed: () async {
+                              await provider.removePlayer(player.uid);
+                            },
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

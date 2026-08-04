@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_data.dart';
 import 'package:project00/platform/home/room/models/room_device.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
@@ -36,8 +36,8 @@ void main() {
         'code': '3298Y',
         'gameId': 'liars_poker',
         'hostUid': 'host-uid',
-        'maxMembers': 6,
-        'memberCount': 0,
+        'maxplayers': 6,
+        'playerCount': 0,
         'selectedGameId': 'liars_poker',
         'currentMatchId': null,
         'status': 'waiting',
@@ -48,13 +48,13 @@ void main() {
       expect(room.currentMatchId, isNull);
     });
 
-    test('userRooms, devices, members 문서 필드를 변환한다', () {
+    test('userRooms, devices, players 문서 필드를 변환한다', () {
       final userRoom = UserRoom.fromJson({
         'uid': 'host-uid',
         'roomCode': '3298Y',
       });
       final device = RoomDevice.fromJson({'uid': 'host-uid', 'role': 'table'});
-      final member = RoomPlayer.fromJson({
+      final player = RoomPlayer.fromJson({
         'uid': 'player-uid',
         'nickname': '플레이어',
         'role': 'player',
@@ -64,8 +64,8 @@ void main() {
 
       expect(userRoom.roomCode, '3298Y');
       expect(device.isTable, isTrue);
-      expect(member.isPlayer, isTrue);
-      expect(member.isActive, isTrue);
+      expect(player.isPlayer, isTrue);
+      expect(player.isActive, isTrue);
     });
   });
 }

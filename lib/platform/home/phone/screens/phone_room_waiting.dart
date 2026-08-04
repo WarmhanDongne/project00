@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/home/models/game_info.dart';
+import 'package:project00/platform/home/game/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/services/game_service.dart';
+import 'package:project00/platform/home/game/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
@@ -28,8 +28,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   Widget build(BuildContext context) {
-    final members = widget.provider.players
-        .where((member) => member.isActive)
+    final players = widget.provider.players
+        .where((player) => player.isActive)
         .toList(growable: false);
     final selectedGameId = widget.provider.selectedGameId;
 
@@ -61,8 +61,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             SizedBox(height: 16.h),
             PhoneRoomParticipantList(
               hostName: '태블릿 방장',
-              participantsList: members
-                  .map((member) => member.nickname)
+              participantsList: players
+                  .map((player) => player.nickname)
                   .toList(growable: false),
             ),
             SizedBox(height: 36.h),

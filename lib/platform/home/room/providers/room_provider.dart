@@ -15,6 +15,9 @@ class RoomProvider extends ChangeNotifier {
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
+
+  StreamSubscription<List<RoomPlayer>>? playerSubscription;
+
   List<RoomPlayer> players = [];
   bool isLoading = false;
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
@@ -73,16 +76,57 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> removePlayer(String userUid) async {
+    await _service.removePlayer(roomCode!, userUid);
+  }
+
+  Future<bool> savePlayerSeatIndexes(Map<String, int> seatIndexesByUid) async {
+    final code = roomCode;
+    if (code == null) {
+      errorMessage = '방 정보를 확인할 수 없습니다.';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      await _service.savePlayerSeatIndexes(
+        roomCode: code,
+        seatIndexesByUid: seatIndexesByUid,
+      );
+      errorMessage = null;
+      return true;
+    } catch (error) {
+      errorMessage = error.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   void listenRoom() {
     if (roomCode == null) return;
 
     roomSubscription?.cancel();
+    playerSubscription?.cancel();
 
     roomSubscription = _service.watchRoom(roomCode!).listen((event) {
-      // 나중에 event.snapshot.value를 읽어서
-      // players 등을 갱신하면 됩니다.
+      final value = event.snapshot.value;
+      if (value is Map) {
+        final selectedGame = value['selectedGame'];
+        selectedGameId = selectedGame is String ? selectedGame : null;
+      }
       notifyListeners();
-    });
+    }, onError: _handleSubscriptionError);
+    playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
+      roomPlayer,
+    ) {
+      players = roomPlayer;
+      notifyListeners();
+    }, onError: _handleSubscriptionError);
+  }
+
+  void _handleSubscriptionError(Object error) {
+    errorMessage = error.toString();
+    notifyListeners();
   }
 
   // ============================================== Phone을 위한 CODE ========================================
@@ -131,6 +175,7 @@ class RoomProvider extends ChangeNotifier {
   @override
   void dispose() {
     roomSubscription?.cancel();
+    playerSubscription?.cancel();
     super.dispose();
   }
 }

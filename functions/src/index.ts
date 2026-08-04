@@ -9,7 +9,6 @@ import {
 initializeApp();
 
 export {
-  createOrLoadRoom,
   joinRoom,
   leaveRoom,
   resetRoom,
@@ -22,6 +21,10 @@ export {
   startLiarsPokerMatch,
   submitLiarsPokerCards,
 } from "./liars-poker/functions.js";
+
+export {
+  saveRealtimePlayerSeatIndexes,
+} from "./realtime-room-functions.js";
 
 export const checkEmailDuplicate = onCall(
   {region: "asia-northeast3"},
