@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
-import 'package:project00/platform/home/game/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 
@@ -88,7 +88,10 @@ class GamePreviewDialog extends StatelessWidget {
 
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => LiarsPoker(playerLayout: completedLayout),
+                builder: (_) => LiarsPoker(
+                  playerLayout: completedLayout,
+                  provider: roomProvider,
+                ),
               ),
             );
           },

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/game/models/game_info.dart';
-import 'package:project00/platform/home/game/provider/game_list_provider.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
 

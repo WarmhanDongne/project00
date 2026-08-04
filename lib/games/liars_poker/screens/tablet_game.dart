@@ -5,11 +5,13 @@ import 'package:project00/games/liars_poker/animations/round_start_reveal.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/widgets/result.dart';
 import 'package:project00/games/liars_poker/widgets/sideblock.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class TabletGame extends StatefulWidget {
-  const TabletGame({super.key, required this.playerLayout});
+  const TabletGame({super.key, required this.playerLayout,required this.provider});
 
   final PlayerLayoutModel playerLayout;
+ final RoomProvider provider;
 
   @override
   State<TabletGame> createState() => TabletGameState();
@@ -181,7 +183,7 @@ class TabletGameState extends State<TabletGame> {
                 ),
               ),
             ),
-          const Positioned(top: 20, right: 20, child: SideBlock()),
+          Positioned(top: 20, right: 20, child: SideBlock(provider:widget.provider)),
         ],
       ),
     );

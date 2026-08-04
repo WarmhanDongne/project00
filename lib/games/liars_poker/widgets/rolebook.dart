@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:video_player/video_player.dart';
 
 class RoleBook extends StatelessWidget {
-  const RoleBook({super.key});
+  const RoleBook({super.key, required this.provider});
 
+  final RoomProvider provider;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -23,7 +25,7 @@ class RoleBook extends StatelessWidget {
               flex: 1,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [BasicRole(), Cards()],
+                children: [BasicRole(provider:provider), const Cards()],
               ),
             ),
             Expanded(
@@ -51,8 +53,9 @@ class RoleBook extends StatelessWidget {
 }
 
 class BasicRole extends StatelessWidget {
-  const BasicRole({super.key});
+  const BasicRole({super.key,required this.provider});
 
+final RoomProvider provider;
   final String markdown = '''
 # 기본 규칙
 
@@ -73,9 +76,9 @@ class BasicRole extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Liar's Poker",
-          style: TextStyle(fontSize: 60, fontWeight: FontWeight.w700),
+        Text(
+           provider.selectedGame!.name,
+          style: const TextStyle(fontSize: 60, fontWeight: FontWeight.w700),
         ),
 
         const SizedBox(height: 15),
