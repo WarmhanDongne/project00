@@ -2,17 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/services/phone_room_command_service.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
 class RoomProvider extends ChangeNotifier {
-  // PhoneRoomCommandService 의존성 주입
-  RoomProvider({PhoneRoomCommandService? commandService})
-    : _commandService = commandService ?? RtdbPhoneRoomCommandService();
-  final PhoneRoomCommandService _commandService;
   final RoomService _service = RoomService();
   final GameService _gameService = GameService();
 
@@ -70,18 +65,29 @@ class RoomProvider extends ChangeNotifier {
   Future<bool> selectGame(String gameId) async {
     if (roomCode == null) return false;
 
-    try {
+    // try {
+    //   await _service.selectGame(roomCode: roomCode!, gameId: gameId);
+    //   return true;
+    // } catch (e) {
+    //   errorMessage = e.toString();
+    //   notifyListeners();
+    //   return false;
+    // }
+    final result = await _runCommand<bool>(() async {
       await _service.selectGame(roomCode: roomCode!, gameId: gameId);
       return true;
-    } catch (e) {
-      errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    }
+    });
+
+    return result ?? false;
   }
 
-  Future<void> removePlayer(String userUid) async {
-    await _service.removePlayer(roomCode!, userUid);
+  Future<bool> removePlayer(String userUid) async {
+    //await _service.removePlayer(roomCode!, userUid);
+    final result = await _runCommand<bool>(() async {
+      await _service.removePlayer(roomCode!, userUid);
+      return true;
+    });
+    return result ?? false;
   }
 
   Future<bool> savePlayerSeatIndexes(Map<String, int> seatIndexesByUid) async {
@@ -92,18 +98,27 @@ class RoomProvider extends ChangeNotifier {
       return false;
     }
 
-    try {
+    // try {
+    //   await _service.savePlayerSeatIndexes(
+    //     roomCode: code,
+    //     seatIndexesByUid: seatIndexesByUid,
+    //   );
+    //   errorMessage = null;
+    //   return true;
+    // } catch (error) {
+    //   errorMessage = error.toString();
+    //   notifyListeners();
+    //   return false;
+    // }
+    final result = await _runCommand<bool>(() async {
       await _service.savePlayerSeatIndexes(
         roomCode: code,
         seatIndexesByUid: seatIndexesByUid,
       );
-      errorMessage = null;
       return true;
-    } catch (error) {
-      errorMessage = error.toString();
-      notifyListeners();
-      return false;
-    }
+    });
+
+    return result ?? false;
   }
 
   void listenRoom() {
@@ -152,7 +167,7 @@ class RoomProvider extends ChangeNotifier {
 
     // joinRoom 실행
     final result = await _runCommand(() async {
-      await _commandService.joinRoom(code);
+      await _service.joinRoom(code);
       return true;
     });
 
@@ -169,7 +184,7 @@ class RoomProvider extends ChangeNotifier {
     if (code == null) return false;
 
     final result = await _runCommand<bool>(() async {
-      await _commandService.leaveRoom(code);
+      await _service.leaveRoom(code);
       return true;
     });
     if (result == true) {
