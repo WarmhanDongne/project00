@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
 class RoomProvider extends ChangeNotifier {
   final RoomService _service = RoomService();
+  final GameService _gameService = GameService();
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
@@ -16,6 +19,7 @@ class RoomProvider extends ChangeNotifier {
 
   String? errorMessage;
   String? selectedGameId;
+  GameInfo? selectedGame;
 
   Future<List<RoomMember>> getRoomPlayers(String roomCode) async {
     members = await _service.getRoomPlayers(roomCode);
@@ -44,10 +48,10 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> removePlayer(String userUid)async{
+  Future<void> removePlayer(String userUid) async {
     await _service.removePlayer(roomCode!, userUid);
   }
-  
+
   Future<bool> savePlayerSeatIndexes(Map<String, int> seatIndexesByUid) async {
     final code = roomCode;
     if (code == null) {
@@ -76,14 +80,26 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     memberSubscription?.cancel();
 
-    roomSubscription = _service.watchRoom(roomCode!).listen((event) {
+    roomSubscription = _service.watchRoom(roomCode!).listen((event) async {
       final value = event.snapshot.value;
+
       if (value is Map) {
-        final selectedGame = value['selectedGame'];
-        selectedGameId = selectedGame is String ? selectedGame : null;
+        final gameId = value['selectedGame'] as String?;
+
+        if (gameId != selectedGameId) {
+          selectedGameId = gameId;
+
+          if (gameId != null) {
+            selectedGame = await _gameService.getGame(gameId);
+          } else {
+            selectedGame = null;
+          }
+        }
       }
+
       notifyListeners();
     }, onError: _handleSubscriptionError);
+
     memberSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomMembers,
     ) {

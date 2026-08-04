@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/tablet/widgets/player_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -124,7 +125,11 @@ class QR extends StatelessWidget {
 }
 
 class _MemberList extends StatelessWidget {
-  const _MemberList({required this.members, required this.maxMembers, required this.provider});
+  const _MemberList({
+    required this.members,
+    required this.maxMembers,
+    required this.provider,
+  });
 
   final RoomProvider provider;
   final List<RoomMember> members;
@@ -143,52 +148,7 @@ class _MemberList extends StatelessWidget {
         Expanded(
           child: members.isEmpty
               ? const Center(child: Text('구성원을 불러오는 중입니다.'))
-              : ListView.builder(
-                  itemCount: members.length,
-                  itemBuilder: (context, index) {
-                    final member = members[index];
-                    final hasProfileImage = member.profileImageUrl.isNotEmpty;
-
-                    return ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        radius: 16,
-                        backgroundImage: hasProfileImage
-                            ? NetworkImage(member.profileImageUrl)
-                            : null,
-                        child: hasProfileImage
-                            ? null
-                            : const Icon(Icons.person, size: 18),
-                      ),
-                      title: Text(
-                        member.nickname,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-
-                        children: [
-                          if (member.isHost)
-                            const Icon(
-                              Icons.star,
-                              color: Colors.orange,
-                              size: 20,
-                            ),
-
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            tooltip: '강퇴',
-                            onPressed: () async {
-                              await provider.removePlayer(member.uid);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              : MemberListView(provider: provider, members: members),
         ),
       ],
     );
