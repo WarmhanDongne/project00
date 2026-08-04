@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/home/tablet/screens/tablet_home.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 
@@ -22,10 +23,7 @@ class PhoneHeader extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: Colors.black,
             backgroundColor: Colors.grey[300],
-            padding: const EdgeInsets.symmetric(
-              horizontal: 40.0,
-              vertical: 10.0,
-            ),
+            padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 10.0.h),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(5.0),
             ),
@@ -34,7 +32,7 @@ class PhoneHeader extends StatelessWidget {
           child: Text(
             buttonText,
             style: TextStyle(
-              fontSize: 20.0,
+              fontSize: 20.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
               letterSpacing: -0.5,
@@ -43,13 +41,13 @@ class PhoneHeader extends StatelessWidget {
         ),
         AppButton(
           text: 'Logout',
-          width: 160,
+          width: 110.w,
           backgroundColor: Colors.blue,
           onPressed: logout,
         ),
         Ink(
-          width: 50,
-          height: 50,
+          width: 50.w,
+          height: 50.h,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             image: DecorationImage(
