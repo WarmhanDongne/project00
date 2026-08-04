@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/services/phone_room_command_service.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
@@ -23,6 +22,7 @@ class RoomProvider extends ChangeNotifier {
   String? errorMessage;
   String? selectedGameId;
 
+  // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
     // 로딩 시작 및 이전 에러 초기화
     isLoading = true;
@@ -85,21 +85,46 @@ class RoomProvider extends ChangeNotifier {
     });
   }
 
-  // ============================================== Phone을 위한 CODE ====================================
+  // ============================================== Phone을 위한 CODE ========================================
   Future<bool> joinRoom(String rawRoomCode) async {
-    // 지역 변수 선언
+    // Room code 받기
     final code = rawRoomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
+    // joinRoom 실행
     final result = await _runCommand(() async {
       await _commandService.joinRoom(code);
       return true;
     });
+
+    // return 분기
     if (result == true) {
       roomCode = code;
       listenRoom();
     }
     return result ?? false;
+  }
+
+  Future<bool> leaveRoom() async {
+    final code = roomCode;
+    if (code == null) return false;
+
+    final result = await _runCommand<bool>(() async {
+      await _commandService.leaveRoom(code);
+      return true;
+    });
+    if (result == true) {
+      clearRoom();
+    }
+    return result ?? false;
+  }
+
+  void clearRoom() {
+    roomSubscription?.cancel();
+    roomCode = null;
+    players = [];
+    selectedGameId = null;
+    notifyListeners();
   }
 
   @override
