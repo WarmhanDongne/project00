@@ -56,8 +56,8 @@ class TabletRoomPanel extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _MemberList(
-                                members: provider.members,
-                                maxMembers: RoomLimits.defaultMaxMembers,
+                                players: provider.players,
+                                maxplayers: RoomLimits.defaultMaxPlayers,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -119,10 +119,10 @@ class QR extends StatelessWidget {
 }
 
 class _MemberList extends StatelessWidget {
-  const _MemberList({required this.members, required this.maxMembers});
+  const _MemberList({required this.players, required this.maxplayers});
 
-  final List<RoomPlayer> members;
-  final int maxMembers;
+  final List<RoomPlayer> players;
+  final int maxplayers;
 
   @override
   Widget build(BuildContext context) {
@@ -130,17 +130,17 @@ class _MemberList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '[ 현 인원 ${members.length}/$maxMembers명 ]',
+          '[ 현 인원 ${players.length}/$maxplayers명 ]',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: members.isEmpty
+          child: players.isEmpty
               ? const Center(child: Text('구성원을 불러오는 중입니다.'))
               : ListView.builder(
-                  itemCount: members.length,
+                  itemCount: players.length,
                   itemBuilder: (context, index) {
-                    final member = members[index];
+                    final member = players[index];
                     final hasProfileImage = member.profileImageUrl.isNotEmpty;
 
                     return ListTile(
