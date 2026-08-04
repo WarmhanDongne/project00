@@ -4,7 +4,7 @@ export 'package:project00/platform/home/room/models/room_player.dart';
 export 'package:project00/platform/home/room/models/user_room.dart';
 
 abstract final class RoomLimits {
-  static const int defaultMaxMembers = 6;
+  static const int defaultMaxPlayers = 6;
 }
 
 class RoomCommandException implements Exception {

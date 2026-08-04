@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/home/room/providers/phone_room_provider.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class PhoneRoomNickname extends StatefulWidget {
   const PhoneRoomNickname({super.key, required this.roomCode});
@@ -15,7 +15,7 @@ class PhoneRoomNickname extends StatefulWidget {
 }
 
 class _PhoneRoomNickname extends State<PhoneRoomNickname> {
-  final PhoneRoomProvider _roomProvider = PhoneRoomProvider();
+  final RoomProvider _roomProvider = RoomProvider();
   late final TextEditingController _roomCodeController;
 
   @override
@@ -81,7 +81,7 @@ class _JoinForm extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final PhoneRoomProvider provider;
+  final RoomProvider provider;
   final VoidCallback onJoin;
 
   @override

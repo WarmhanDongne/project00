@@ -4,7 +4,7 @@ import 'package:project00/platform/home/room/services/room_common.dart';
 
 abstract interface class RoomQueryService {
   Stream<RoomData?> watchRoom(String roomCode);
-  Stream<List<RoomMember>> watchMembers(String roomCode);
+  Stream<List<RoomPlayer>> watchPlayers(String roomCode);
   Stream<List<RoomDevice>> watchDevices(String roomCode);
   Stream<UserRoom?> watchUserRoom(String uid);
 }
@@ -26,14 +26,14 @@ class RtdbRoomQueryService implements RoomQueryService {
   }
 
   @override
-  Stream<List<RoomMember>> watchMembers(String roomCode) {
+  Stream<List<RoomPlayer>> watchPlayers(String roomCode) {
     return _database.ref('rooms/$roomCode/players').onValue.map((event) {
       if (!event.snapshot.exists) return [];
       final data = event.snapshot.value as Map<dynamic, dynamic>;
 
       return data.entries.map((entry) {
-        final memberData = Map<String, dynamic>.from(entry.value as Map);
-        return RoomMember.fromJson(memberData, documentId: entry.key as String);
+        final playerData = Map<String, dynamic>.from(entry.value as Map);
+        return RoomPlayer.fromJson(playerData, key: entry.key as String);
       }).toList();
     });
   }

@@ -36,10 +36,10 @@ class GamePreviewDialog extends StatelessWidget {
   }
 
   Future<void> _startGame(BuildContext context) async {
-    final members = roomProvider.members
-        .where((member) => member.isActive && member.isPlayer)
+    final players = roomProvider.players
+        .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
-    final currentPlayerCount = members.length;
+    final currentPlayerCount = players.length;
     final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
     final maxPlayers = game.maxPlayers > 0 ? game.maxPlayers : 6;
 
@@ -65,7 +65,7 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
-    final initialLayout = PlayerLayoutFactory.create(members);
+    final initialLayout = PlayerLayoutFactory.create(players);
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(

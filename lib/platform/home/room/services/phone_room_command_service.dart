@@ -36,13 +36,13 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
     }
 
     final data = snapshot.value as Map<dynamic, dynamic>;
-    final maxMembers =
-        data['maxMembers'] as int? ?? RoomLimits.defaultMaxMembers;
+    final maxplayers =
+        data['maxplayers'] as int? ?? RoomLimits.defaultMaxPlayers;
 
     final playersSnapshot = await roomRef.child('players').get();
-    final currentMembers = playersSnapshot.children.length;
+    final currentplayers = playersSnapshot.children.length;
 
-    if (currentMembers >= maxMembers) {
+    if (currentplayers >= maxplayers) {
       throw const RoomCommandException('방 인원이 초과되었습니다.');
     }
 

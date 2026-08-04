@@ -3,10 +3,14 @@ import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class MemberListView extends StatelessWidget {
-  const MemberListView({super.key, required this.provider, required this.members});
+  const MemberListView({
+    super.key,
+    required this.provider,
+    required this.members,
+  });
 
   final RoomProvider provider;
-  final List<RoomMember> members;
+  final List<RoomPlayer> members;
 
   @override
   Widget build(BuildContext context) {

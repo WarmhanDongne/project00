@@ -60,10 +60,10 @@ class TabletRoomPanel extends StatelessWidget {
                       ? Column(
                           children: [
                             Expanded(
-                              child: _MemberList(
+                              child: _PlayerList(
+                                players: provider.players,
+                                maxplayers: RoomLimits.defaultMaxPlayers,
                                 provider: provider,
-                                members: provider.members,
-                                maxMembers: RoomLimits.defaultMaxMembers,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -124,16 +124,16 @@ class QR extends StatelessWidget {
   }
 }
 
-class _MemberList extends StatelessWidget {
-  const _MemberList({
-    required this.members,
-    required this.maxMembers,
+class _PlayerList extends StatelessWidget {
+  const _PlayerList({
+    required this.players,
+    required this.maxplayers,
     required this.provider,
   });
 
   final RoomProvider provider;
-  final List<RoomMember> members;
-  final int maxMembers;
+  final List<RoomPlayer> players;
+  final int maxplayers;
 
   @override
   Widget build(BuildContext context) {
@@ -141,14 +141,59 @@ class _MemberList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '[ 현 인원 ${members.length}/$maxMembers명 ]',
+          '[ 현 인원 ${players.length}/$maxplayers명 ]',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: members.isEmpty
+          child: players.isEmpty
               ? const Center(child: Text('구성원을 불러오는 중입니다.'))
-              : MemberListView(provider: provider, members: members),
+              : ListView.builder(
+                  itemCount: players.length,
+                  itemBuilder: (context, index) {
+                    final player = players[index];
+                    final hasProfileImage = player.profileImageUrl.isNotEmpty;
+
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundImage: hasProfileImage
+                            ? NetworkImage(player.profileImageUrl)
+                            : null,
+                        child: hasProfileImage
+                            ? null
+                            : const Icon(Icons.person, size: 18),
+                      ),
+                      title: Text(
+                        player.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+
+                        children: [
+                          if (player.isHost)
+                            const Icon(
+                              Icons.star,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: '강퇴',
+                            onPressed: () async {
+                              await provider.removePlayer(player.uid);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

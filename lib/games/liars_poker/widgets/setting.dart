@@ -120,7 +120,7 @@ class RoomInfo extends StatelessWidget {
             Expanded(
               child: MemberListView(
                 provider: provider,
-                members: provider.members,
+                members: provider.players,
               ),
             ),
             const SizedBox(height: 20),

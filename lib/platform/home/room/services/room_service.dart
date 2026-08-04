@@ -2,7 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
-import 'package:project00/platform/home/room/models/ramdom.dart';
+import 'package:project00/platform/home/room/models/random.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 
 class RoomService {
@@ -43,20 +43,20 @@ class RoomService {
     }
   }
 
-  Future<List<RoomMember>> getRoomPlayers(String roomCode) async {
+  Future<List<RoomPlayer>> getRoomPlayers(String roomCode) async {
     final snapshot = await realtime.ref('rooms/$roomCode/players').get();
-    return _membersFromSnapshot(snapshot);
+    return _playersFromSnapshot(snapshot);
   }
 
   Stream<DatabaseEvent> watchRoom(String roomCode) {
     return realtime.ref('rooms/$roomCode').onValue;
   }
 
-  Stream<List<RoomMember>> watchRoomPlayers(String roomCode) {
+  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
         .ref('rooms/$roomCode/players')
         .onValue
-        .map((event) => _membersFromSnapshot(event.snapshot));
+        .map((event) => _playersFromSnapshot(event.snapshot));
   }
 
   //게임 선택
@@ -67,7 +67,7 @@ class RoomService {
     await realtime.ref('rooms/$roomCode').update({'selectedGame': gameId});
   }
 
-  List<RoomMember> _membersFromSnapshot(DataSnapshot snapshot) {
+  List<RoomPlayer> _playersFromSnapshot(DataSnapshot snapshot) {
     final value = snapshot.value;
     if (!snapshot.exists || value is! Map) {
       return const [];
@@ -76,12 +76,12 @@ class RoomService {
     return value.entries
         .where((entry) => entry.value is Map)
         .map(
-          (entry) => RoomMember.fromJson(
+          (entry) => RoomPlayer.fromJson(
             Map<String, dynamic>.from(entry.value as Map),
-            documentId: entry.key.toString(),
+            key: entry.key.toString(),
           ),
         )
-        .where((member) => member.isPlayer && member.isActive)
+        .where((player) => player.isPlayer && player.isActive)
         .toList(growable: false);
   }
 
@@ -95,7 +95,7 @@ class RoomService {
     });
   }
 
-  Future<void> removePlayer(String roomCode,String userUid)async{
+  Future<void> removePlayer(String roomCode, String userUid) async {
     await realtime.ref('rooms/$roomCode/players/$userUid').remove();
   }
 }
