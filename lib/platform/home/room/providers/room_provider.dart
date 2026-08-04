@@ -119,6 +119,7 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  // 메모리 초기화 leaveRoom에서 사용
   void clearRoom() {
     roomSubscription?.cancel();
     roomCode = null;

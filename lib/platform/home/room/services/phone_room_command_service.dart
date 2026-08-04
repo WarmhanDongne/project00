@@ -32,7 +32,7 @@ class RtdbPhoneRoomCommandService implements PhoneRoomCommandService {
 
     final data = snapshot.value as Map<dynamic, dynamic>;
     final maxMembers =
-        data['maxMembers'] as int? ?? RoomLimits.defaultMaxMembers;
+        data['maxMembers'] as int? ?? RoomLimits.defaultMaxPlayers;
 
     final playersSnapshot = await roomRef.child('players').get();
     final currentMembers = playersSnapshot.children.length;
