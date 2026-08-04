@@ -23,7 +23,6 @@ class RoomService {
   Future<String> createRoom() async {
     final hostUid = _auth.currentUser?.uid;
     if (hostUid == null) {
-      // throw StateError('방을 만들려면 로그인이 필요합니다.');
       throw const RoomCommandException('방을 만들려면 로그인이 필요합니다.');
     }
 

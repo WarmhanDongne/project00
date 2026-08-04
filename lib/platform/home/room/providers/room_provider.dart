@@ -55,24 +55,19 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> createRoom() async {
-    isLoading = true;
-    roomCode = await _service.createRoom();
-    isLoading = false;
-    notifyListeners();
-    listenRoom();
+    final code = await _runCommand<String>(() async {
+      return await _service.createRoom();
+    });
+
+    if (code != null) {
+      roomCode = code;
+      listenRoom();
+    }
   }
 
   Future<bool> selectGame(String gameId) async {
     if (roomCode == null) return false;
 
-    // try {
-    //   await _service.selectGame(roomCode: roomCode!, gameId: gameId);
-    //   return true;
-    // } catch (e) {
-    //   errorMessage = e.toString();
-    //   notifyListeners();
-    //   return false;
-    // }
     final result = await _runCommand<bool>(() async {
       await _service.selectGame(roomCode: roomCode!, gameId: gameId);
       return true;
@@ -82,7 +77,6 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<bool> removePlayer(String userUid) async {
-    //await _service.removePlayer(roomCode!, userUid);
     final result = await _runCommand<bool>(() async {
       await _service.removePlayer(roomCode!, userUid);
       return true;
@@ -98,18 +92,6 @@ class RoomProvider extends ChangeNotifier {
       return false;
     }
 
-    // try {
-    //   await _service.savePlayerSeatIndexes(
-    //     roomCode: code,
-    //     seatIndexesByUid: seatIndexesByUid,
-    //   );
-    //   errorMessage = null;
-    //   return true;
-    // } catch (error) {
-    //   errorMessage = error.toString();
-    //   notifyListeners();
-    //   return false;
-    // }
     final result = await _runCommand<bool>(() async {
       await _service.savePlayerSeatIndexes(
         roomCode: code,
