@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:project00/platform/home/game/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
 
 class GameService {
   GameService({FirebaseFirestore? firestore, FirebaseAuth? auth})
@@ -63,5 +63,17 @@ class GameService {
     if (ownedGames is! List) return false;
 
     return ownedGames.whereType<String>().contains(gameId);
+  }
+
+  Future<GameInfo?> getGame(String gameId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('games')
+        .doc(gameId)
+        .get();
+
+    if (!snapshot.exists) {
+      return null;
+    }
+    return GameInfo.fromSnapshot(snapshot);
   }
 }

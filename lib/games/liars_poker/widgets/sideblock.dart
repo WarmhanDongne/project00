@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/widgets/rolebook.dart';
 import 'package:project00/games/liars_poker/widgets/setting.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class SideBlock extends StatefulWidget {
-  const SideBlock({super.key});
+  const SideBlock({super.key, required this.provider});
 
+  final RoomProvider provider;
   @override
   State<SideBlock> createState() => _SideBlockState();
 }
@@ -25,9 +27,9 @@ class _SideBlockState extends State<SideBlock> {
                   builder: (context) {
                     return Align(
                       alignment: Alignment(0, 0.7), // 아래로 이동
-                      child: const Material(
+                      child: Material(
                         color: Colors.transparent,
-                        child: RoleBook(),
+                        child: RoleBook(provider: widget.provider),
                       ),
                     );
                   },
@@ -43,9 +45,9 @@ class _SideBlockState extends State<SideBlock> {
                   builder: (context) {
                     return Align(
                       alignment: Alignment(0, 0.7), // 아래로 이동
-                      child: const Material(
+                      child: Material(
                         color: Colors.transparent,
-                        child: Setting(),
+                        child: Setting(provider: widget.provider),
                       ),
                     );
                   },

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/sound/provider.dart/sound_provider.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/tablet/widgets/player_list.dart';
+import 'package:provider/provider.dart';
 
 class Setting extends StatelessWidget {
-  const Setting({super.key});
+  const Setting({super.key, required this.provider});
+
+  final RoomProvider provider;
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +31,10 @@ class Setting extends StatelessWidget {
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Expanded(flex: 1, child: GameInfo()),
-                  Expanded(flex: 1, child: RoomInfo()),
-                  Expanded(flex: 1, child: Sound()),
+                children: [
+                  Expanded(flex: 1, child: GameInfo(provider: provider)),
+                  Expanded(flex: 1, child: RoomInfo(provider: provider)),
+                  const Expanded(flex: 1, child: Sound()),
                 ],
               ),
             ),
@@ -41,7 +47,9 @@ class Setting extends StatelessWidget {
 }
 
 class GameInfo extends StatelessWidget {
-  const GameInfo({super.key});
+  const GameInfo({super.key, required this.provider});
+
+  final RoomProvider provider;
 
   @override
   Widget build(BuildContext context) {
@@ -56,16 +64,28 @@ class GameInfo extends StatelessWidget {
               style: TextStyle(fontSize: 30, fontWeight: FontWeight(900)),
             ),
             Text(
-              "Liar's Poker",
+              provider.selectedGame!.name,
               style: TextStyle(fontSize: 30, fontWeight: FontWeight(900)),
             ),
-            Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                color: const Color(0xfff5f5f5),
-                border: Border.all(color: Colors.black26, width: 2),
-                borderRadius: BorderRadius.circular(20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                provider.selectedGame!.imageUrl,
+                width: 280,
+                height: 280,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      color: const Color(0xfff5f5f5),
+                      border: Border.all(color: Colors.black26, width: 2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.broken_image, size: 64),
+                  );
+                },
               ),
             ),
           ],
@@ -76,8 +96,9 @@ class GameInfo extends StatelessWidget {
 }
 
 class RoomInfo extends StatelessWidget {
-  const RoomInfo({super.key});
+  const RoomInfo({super.key, required this.provider});
 
+  final RoomProvider provider;
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -86,47 +107,34 @@ class RoomInfo extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "현재 방 정보",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight(900)),
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "플레이어 목록",
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-
-                ...["맥도날드 감자튀김 도둑", "김하준", "윤유원", "배워져 남주자"].map(
-                  (name) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 18,
-                          backgroundImage: AssetImage(
-                            "assets/images/profile.png",
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(name, style: const TextStyle(fontSize: 22)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 20),
+            const Text(
+              "플레이어 목록",
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 50),
-            Text(
+            const SizedBox(height: 12),
+            Expanded(
+              child: MemberListView(
+                provider: provider,
+                members: provider.players,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
               "방코드",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight(600)),
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
             ),
             Center(
               child: Text(
-                "J3KL4K",
-                style: TextStyle(fontSize: 50, fontWeight: FontWeight(800)),
+                provider.roomCode ?? "",
+                style: const TextStyle(
+                  fontSize: 50,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],
@@ -143,12 +151,52 @@ class Sound extends StatefulWidget {
   State<Sound> createState() => _SoundState();
 }
 
-class SoundSlider extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final double value;
-  final ValueChanged<double> onChanged;
+class _SoundState extends State<Sound> {
+  @override
+  Widget build(BuildContext context) {
+    final soundProvider = context.watch<SoundProvider>();
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '소리',
+            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 20),
+          SoundSlider(
+            title: '전체',
+            icon: Icons.volume_up_rounded,
+            value: soundProvider.masterVolume,
+            onChanged: (value) {
+              context.read<SoundProvider>().setMasterVolume(value);
+            },
+          ),
+          SoundSlider(
+            title: '효과',
+            icon: Icons.graphic_eq,
+            value: soundProvider.effectVolume,
+            onChanged: (value) {
+              context.read<SoundProvider>().setEffectVolume(value);
+            },
+          ),
+          SoundSlider(
+            title: '배경',
+            icon: Icons.music_note,
+            value: soundProvider.bgmVolume,
+            onChanged: (value) {
+              context.read<SoundProvider>().setBgmVolume(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SoundSlider extends StatelessWidget {
   const SoundSlider({
     super.key,
     required this.title,
@@ -156,6 +204,11 @@ class SoundSlider extends StatelessWidget {
     required this.value,
     required this.onChanged,
   });
+
+  final String title;
+  final IconData icon;
+  final double value;
+  final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -176,78 +229,19 @@ class SoundSlider extends StatelessWidget {
             min: 0,
             max: 100,
             divisions: 100,
-            label: value.toInt().toString(),
+            label: value.round().toString(),
             onChanged: onChanged,
           ),
         ),
         SizedBox(
           width: 40,
           child: Text(
-            value.toInt().toString(),
+            value.round().toString(),
             textAlign: TextAlign.end,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SoundState extends State<Sound> {
-  double masterVolume = 50;
-  double effectVolume = 80;
-  double bgmVolume = 30;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SizedBox(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "소리",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight(900)),
-            ),
-            Column(
-              children: [
-                SoundSlider(
-                  title: '전체',
-                  icon: Icons.volume_up_rounded,
-                  value: masterVolume,
-                  onChanged: (value) {
-                    setState(() {
-                      masterVolume = value;
-                    });
-                  },
-                ),
-                SoundSlider(
-                  title: '효과',
-                  icon: Icons.graphic_eq,
-                  value: effectVolume,
-                  onChanged: (value) {
-                    setState(() {
-                      effectVolume = value;
-                    });
-                  },
-                ),
-                SoundSlider(
-                  title: '배경',
-                  icon: Icons.music_note,
-                  value: bgmVolume,
-                  onChanged: (value) {
-                    setState(() {
-                      bgmVolume = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            //  Image.asset("null"),
-          ],
-        ),
-      ),
     );
   }
 }

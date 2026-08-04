@@ -43,7 +43,7 @@ class App extends StatelessWidget {
                   final user = snapshot.data!;
 
                   // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
-                  if (user.phoneNumber == null || user.displayName == null) {
+                  if (user.displayName == null) {
                     return const RegisterScreen(isGoogleSignIn: true);
                   }
 

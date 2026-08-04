@@ -4,6 +4,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/services/phone_room_command_service.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
 class RoomProvider extends ChangeNotifier {
@@ -12,6 +14,7 @@ class RoomProvider extends ChangeNotifier {
     : _commandService = commandService ?? RtdbPhoneRoomCommandService();
   final PhoneRoomCommandService _commandService;
   final RoomService _service = RoomService();
+  final GameService _gameService = GameService();
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
@@ -24,6 +27,7 @@ class RoomProvider extends ChangeNotifier {
 
   String? errorMessage;
   String? selectedGameId;
+  GameInfo? selectedGame;
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
@@ -108,12 +112,23 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
 
-    roomSubscription = _service.watchRoom(roomCode!).listen((event) {
+    roomSubscription = _service.watchRoom(roomCode!).listen((event) async {
       final value = event.snapshot.value;
+
       if (value is Map) {
-        final selectedGame = value['selectedGame'];
-        selectedGameId = selectedGame is String ? selectedGame : null;
+        final gameId = value['selectedGame'] as String?;
+
+        if (gameId != selectedGameId) {
+          selectedGameId = gameId;
+
+          if (gameId != null) {
+            selectedGame = await _gameService.getGame(gameId);
+          } else {
+            selectedGame = null;
+          }
+        }
       }
+
       notifyListeners();
     }, onError: _handleSubscriptionError);
     playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
