@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/home/tablet/widgets/player_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
