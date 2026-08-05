@@ -30,3 +30,5 @@ android/app/debug/
 android/app/profile/
 android/app/release/
 ios/Flutter/.last_build_id
+# DevTools settings
+devtools_options.yaml

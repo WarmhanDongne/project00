@@ -28,6 +28,8 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ?? '사용자';
     _nicknameController = TextEditingController(text: initialNickname);
+    _roomProvider.roomCode = widget.roomCode;
+    _roomProvider.listenRoom();
   }
 
   @override
@@ -77,7 +79,13 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
         MaterialPageRoute(
           builder: (context) => PhoneRoomWaiting(provider: _roomProvider),
         ),
-      );
+      ).then((_) {
+        // 다시 그룹으로 돌아왔을 때 방 정보를 다시 구독
+        if (mounted) {
+          _roomProvider.roomCode = widget.roomCode;
+          _roomProvider.listenRoom();
+        }
+      });
     } else {
       // 실패 시 에러 메세지 렌더
       final message = _roomProvider.errorMessage;
@@ -212,23 +220,6 @@ class _JoinForm extends StatelessWidget {
             ),
           ),
           SizedBox(width: 13.w),
-          FilledButton(
-            onPressed: () {},
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.grey,
-              foregroundColor: Colors.black,
-              fixedSize: Size(66.w, 50.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(0.r),
-              ),
-              padding: EdgeInsets.zero,
-            ),
-
-            child: Text(
-              '확인', // 닉네임 변경 됐다는 안내 문구 보이기
-              style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
-            ),
-          ),
         ],
       ),
     );

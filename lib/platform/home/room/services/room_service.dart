@@ -146,7 +146,7 @@ class RoomService {
     // 검증이 완료된 상태이므로 set() 연산을 통해 메모리 블록을 완전히 덮어씀
     await playerRef.set({
       'uid': uid,
-      'nickname': user.displayName ?? 'Player',
+      'nickname': nickname,
       'profileImageUrl': user.photoURL ?? '',
       'isConnected': true,
       'seatIndex': -1,
