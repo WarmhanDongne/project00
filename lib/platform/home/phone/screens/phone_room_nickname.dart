@@ -31,16 +31,33 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
     super.dispose();
   }
 
+  // _JoinForm에 onJoin: _joinRoom으로 주입.
   Future<void> _joinRoom() async {
+    // 자동으로 키보드 화면 내리기
     FocusScope.of(context).unfocus();
+    // 방 입장 트랜잭션 요청
     final joined = await _roomProvider.joinRoom(_roomCodeController.text);
-    if (!mounted || joined) return;
 
-    final message = _roomProvider.errorMessage;
-    if (message != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
+    // 비동기 작업 후 현재 화면에 머물러 있는지 검사
+    if (!mounted) return;
+
+    // 트랜잭션 결과에 따른 분기
+    if (joined) {
+      // 성공 시 그룹 입장
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PhoneRoomWaiting(provider: _roomProvider),
+        ),
+      );
+    } else {
+      // 실패 시 에러 메세지 렌더
+      final message = _roomProvider.errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      }
     }
   }
 
