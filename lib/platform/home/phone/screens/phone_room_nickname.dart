@@ -63,29 +63,20 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
 
   @override
   Widget build(BuildContext context) {
-    /*
-    1. 초기 진입 시: _roomProvider.isInRoom이 false이므로 _JoinForm 렌더링.
-    2. 입장하기 클릭:  올바른 코드일 경우 _roomProvider.isInRoom가 true로 바뀌며 notifyListeners() 호출
-    3. AnimatedBuilder가 상태변화 감지 후 isInRoom == true. PhoneRoomWaiting를 렌더링한다.
-     */
-    return AnimatedBuilder(
-      animation: _roomProvider,
-      builder: (context, _) {
-        if (_roomProvider.isInRoom) {
-          return PhoneRoomWaiting(provider: _roomProvider);
-        }
-
-        return Scaffold(
-          appBar: AppBar(title: const Text('그룹 참여하기'), centerTitle: true),
-          body: SafeArea(
-            child: _JoinForm(
+    return Scaffold(
+      appBar: AppBar(title: const Text('그룹 참여하기'), centerTitle: true),
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: _roomProvider,
+          builder: (context, _) {
+            return _JoinForm(
               controller: _roomCodeController,
               provider: _roomProvider,
               onJoin: _joinRoom,
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }
