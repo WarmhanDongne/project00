@@ -27,6 +27,7 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
     final initialNickname = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ?? '사용자';
+    _nicknameController = TextEditingController(text: initialNickname);
   }
 
   @override
@@ -119,12 +120,12 @@ class _JoinForm extends StatelessWidget {
             SizedBox(height: 20.h),
             PhoneRoomParticipantList(
               hostName: '태블릿 방장',
-              participantsList: [nickname],
+              participantsList: [nicknameController.text],
             ),
             SizedBox(height: 46.h),
             _buildNickNameAnnouncement(),
             SizedBox(height: 19.h),
-            _buildInsertNickName(nickname),
+            _buildInsertNickName(),
             if (provider.errorMessage != null) ...[
               SizedBox(height: 16.h),
               Padding(
@@ -165,7 +166,7 @@ class _JoinForm extends StatelessWidget {
     );
   }
 
-  Padding _buildInsertNickName(String nickname) {
+  Padding _buildInsertNickName() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 35.w),
       child: Row(
@@ -176,7 +177,15 @@ class _JoinForm extends StatelessWidget {
               height: 50.h,
               alignment: Alignment.centerLeft,
               color: Colors.grey,
-              child: Text('닉네임 : $nickname'),
+              child: TextField(
+                controller: nicknameController,
+                decoration: InputDecoration(
+                  prefixText: '닉네임: ',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
+                  border: InputBorder.none,
+                ),
+                style: TextStyle(fontSize: 20.sp, color: Colors.black),
+              ),
             ),
           ),
           SizedBox(width: 13.w),
