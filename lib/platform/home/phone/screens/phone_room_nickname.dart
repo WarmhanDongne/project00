@@ -43,7 +43,10 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
     // 자동으로 키보드 화면 내리기
     FocusScope.of(context).unfocus();
     // 방 입장 트랜잭션 요청
-    final joined = await _roomProvider.joinRoom(_roomCodeController.text);
+    final joined = await _roomProvider.joinRoom(
+      _roomCodeController.text,
+      _nicknameController.text, // 설정한 nickname provider에게 전달
+    );
 
     // 비동기 작업 후 현재 화면에 머물러 있는지 검사
     if (!mounted) return;
@@ -202,7 +205,7 @@ class _JoinForm extends StatelessWidget {
             ),
 
             child: Text(
-              '수정',
+              '확인', // 닉네임 변경 됐다는 안내 문구 보이기
               style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
             ),
           ),

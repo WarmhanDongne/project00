@@ -101,7 +101,7 @@ class RoomService {
 
   // ========================================================== phone ==================================================================
 
-  Future<void> joinRoom(String roomCode) async {
+  Future<void> joinRoom(String roomCode, String nickname) async {
     // 유저 객체 생성 및 유저 존재 테스트
     final user = _auth.currentUser;
     if (user == null) {
@@ -127,6 +127,13 @@ class RoomService {
 
     if (currentplayers >= maxplayers) {
       throw const RoomCommandException('방 인원이 초과되었습니다.');
+    }
+
+    final playersMap = playersSnapshot.value as Map<dynamic, dynamic>? ?? {}; //
+    for (final playerValues in playersMap.values) {
+      if (nickname == playerValues[nickname]) {
+        throw const RoomCommandException('이미 사용 중인 닉네임입니다.');
+      }
     }
 
     final playerRef = roomRef.child('players/$uid');

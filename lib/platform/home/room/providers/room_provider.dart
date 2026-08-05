@@ -142,14 +142,14 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // ============================================== Phone을 위한 CODE ========================================
-  Future<bool> joinRoom(String rawRoomCode) async {
+  Future<bool> joinRoom(String rawRoomCode, String nickname) async {
     // Room code 받기
     final code = rawRoomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
     // joinRoom 실행
     final result = await _runCommand(() async {
-      await _service.joinRoom(code);
+      await _service.joinRoom(code, nickname); // 서비스에 roomcode와 nickname 전달
       return true;
     });
 
