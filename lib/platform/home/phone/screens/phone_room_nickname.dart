@@ -42,10 +42,28 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
   Future<void> _joinRoom() async {
     // 자동으로 키보드 화면 내리기
     FocusScope.of(context).unfocus();
+    final inputNickname = _nicknameController.text.trim();
+
+    final isDuplicate = _roomProvider.players.any(
+      // players 리스트 중 하나라도 nickname이 inputNickname과 같으면 isDuplicate는 true
+      (player) => player.nickname == inputNickname,
+    );
+
+    if (isDuplicate) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('이미 사용 중인 닉네임입니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return; // joinRoom 차단.
+    }
     // 방 입장 트랜잭션 요청
     final joined = await _roomProvider.joinRoom(
       _roomCodeController.text,
-      _nicknameController.text, // 설정한 nickname provider에게 전달
+      inputNickname, // 설정한 nickname provider에게 전달
     );
 
     // 비동기 작업 후 현재 화면에 머물러 있는지 검사
@@ -123,7 +141,9 @@ class _JoinForm extends StatelessWidget {
             SizedBox(height: 20.h),
             PhoneRoomParticipantList(
               hostName: '태블릿 방장',
-              participantsList: [nicknameController.text],
+              participantsList: provider.players
+                  .map((player) => player.nickname)
+                  .toList(),
             ),
             SizedBox(height: 46.h),
             _buildNickNameAnnouncement(),
