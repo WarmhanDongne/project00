@@ -17,17 +17,23 @@ class PhoneRoomNickname extends StatefulWidget {
 class _PhoneRoomNickname extends State<PhoneRoomNickname> {
   final RoomProvider _roomProvider = RoomProvider();
   late final TextEditingController _roomCodeController;
+  late final TextEditingController _nicknameController;
 
   @override
   void initState() {
     super.initState();
     _roomCodeController = TextEditingController(text: widget.roomCode);
+    final user = FirebaseAuth.instance.currentUser;
+    final initialNickname = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : user?.email?.split('@').first ?? '사용자';
   }
 
   @override
   void dispose() {
     _roomProvider.dispose();
     _roomCodeController.dispose();
+    _nicknameController.dispose();
     super.dispose();
   }
 
@@ -70,6 +76,7 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
           animation: _roomProvider,
           builder: (context, _) {
             return _JoinForm(
+              nicknameController: _nicknameController,
               controller: _roomCodeController,
               provider: _roomProvider,
               onJoin: _joinRoom,
@@ -86,19 +93,16 @@ class _JoinForm extends StatelessWidget {
     required this.controller,
     required this.provider,
     required this.onJoin,
+    required this.nicknameController,
   });
 
   final TextEditingController controller;
   final RoomProvider provider;
   final VoidCallback onJoin;
+  final TextEditingController nicknameController;
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final nickname = user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!.trim()
-        : user?.email?.split('@').first ?? '사용자';
-
     return DefaultTextStyle(
       style: TextStyle(
         fontSize: 25.sp,
