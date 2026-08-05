@@ -28,48 +28,44 @@ class _PhoneHomeState extends State<PhoneHome> {
       child: Scaffold(
         body: Column(
           children: [
+            PhoneHeader(
+              buttonText: "그룹 참여",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PhoneRoomJoin()),
+                ); // PhoneRoomJoin으로 이동
+              },
+            ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
 
-              child: Column(
-                children: [
-                  SizedBox(height: 10),
-
-                  PhoneHeader(
-                    buttonText: "그룹 참여",
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PhoneRoomJoin(),
-                        ),
-                      ); // PhoneRoomJoin으로 이동
-                    },
-                  ),
-                  Column(
-                    // 보유 중인 게임
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 20),
-                      Text(
-                        "보유 중인 게임",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                    ],
-                  ),
-                ],
-              ),
+              child: Column(children: [SizedBox(height: 10), gameListText()]),
             ),
             OwnGameList(games: _games),
           ],
         ),
       ),
+    );
+  }
+
+  Column gameListText() {
+    return Column(
+      // 보유 중인 게임
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        SizedBox(height: 20),
+        Text(
+          "보유 중인 게임",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 10),
+      ],
     );
   }
 }

@@ -37,21 +37,13 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       child: Scaffold(
         body: Column(
           children: [
-            Padding(
-              padding: EdgeInsetsGeometry.symmetric(horizontal: 16.w),
-              child: Column(
-                children: [
-                  SizedBox(height: 10.h),
-                  PhoneHeader(
-                    buttonText: "그룹 나가기",
-                    onPressed: () async {
-                      final left = await widget.provider.leaveRoom();
-                      if (!context.mounted || !left) return;
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              ),
+            PhoneHeader(
+              buttonText: "그룹 나가기",
+              onPressed: () async {
+                final left = await widget.provider.leaveRoom();
+                if (!context.mounted || !left) return;
+                Navigator.of(context).pop();
+              },
             ),
             SizedBox(height: 26.h),
             Text(
