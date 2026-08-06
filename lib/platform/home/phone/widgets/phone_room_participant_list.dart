@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/*
-사용 파일
-phone_room_input에
-*/
-
 class PhoneRoomParticipantList extends StatelessWidget {
   int get totalParticipants => participantsList.length; // 참여자
   final String hostName;
