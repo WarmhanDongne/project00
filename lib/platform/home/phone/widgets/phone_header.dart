@@ -20,23 +20,47 @@ class PhoneHeader extends StatelessWidget {
     final photoURL = user?.photoURL;
     final hasPhoto = photoURL != null && photoURL.isNotEmpty;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        groupButton(), // 그룹 참여하기 or 그룹 나가기 버튼.
-        logoutButton(),
-        GestureDetector(
-          onTap: () {},
-          child: CircleAvatar(
-            radius: 25.r,
-            backgroundColor: Colors.grey.shade300,
-            backgroundImage: hasPhoto ? NetworkImage(photoURL) : null,
-            child: hasPhoto
-                ? null
-                : const Icon(Icons.person, color: Colors.white),
+    return Padding(
+      /*         Padding(
+              padding: EdgeInsetsGeometry.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  SizedBox(height: 10.h),
+                  PhoneHeader(
+                    buttonText: "그룹 나가기",
+                    onPressed: () async {
+                      final left = await widget.provider.leaveRoom();
+                      if (!context.mounted || !left) return;
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ), */
+      padding: EdgeInsetsGeometry.symmetric(horizontal: 16.w),
+      child: Column(
+        children: [
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              groupButton(), // 그룹 참여하기 or 그룹 나가기 버튼.
+              logoutButton(),
+              GestureDetector(
+                onTap: () {},
+                child: CircleAvatar(
+                  radius: 25.r,
+                  backgroundColor: Colors.grey.shade300,
+                  backgroundImage: hasPhoto ? NetworkImage(photoURL) : null,
+                  child: hasPhoto
+                      ? null
+                      : const Icon(Icons.person, color: Colors.white),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
