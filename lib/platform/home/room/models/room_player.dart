@@ -31,6 +31,9 @@ class RoomPlayer {
   final int seatIndex;
   final String role;
   final String status;
+  final DateTime? joinedAt;
+  final DateTime? updatedAt;
+  final int penaltyAttemptCount;
   final bool isHost;
 
   bool get isPlayer => role == 'player';

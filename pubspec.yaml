@@ -56,6 +56,8 @@ dependencies:
   audioplayers: ^6.8.1
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
+  roulette: ^0.3.2
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -82,6 +84,7 @@ flutter:
     # - .env.dev
     - assets/images/
     - assets/images/button/
+    - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
     - assets/games/liars_poker/images/cards/
     - assets/sounds/
