@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
@@ -20,9 +22,13 @@ void main() async {
   );
 
   final soundProvider = SoundProvider();
-  await soundProvider.initialize();
-
   runApp(
     ChangeNotifierProvider.value(value: soundProvider, child: const App()),
   );
+
+  // 네이티브 오디오 플러그인이 첫 화면 렌더링을 막지 않도록
+  // 첫 프레임이 그려진 뒤 사운드를 초기화합니다.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(soundProvider.initialize());
+  });
 }

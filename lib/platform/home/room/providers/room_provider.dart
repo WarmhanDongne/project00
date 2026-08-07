@@ -119,4 +119,6 @@ class RoomProvider extends ChangeNotifier {
     memberSubscription?.cancel();
     super.dispose();
   }
+
+  Future<void> updatePenaltyAttemptCount(String uid, param1) async {}
 }

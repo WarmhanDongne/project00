@@ -82,6 +82,7 @@ class SoundService {
   /// ----------------------------
 
   Future<void> dispose() async {
-    await Future.wait([_bgmPlayer.dispose(), _effectPlayer.dispose()]);
+    await _bgmPlayer.dispose();
+    await _effectPlayer.dispose();
   }
 }

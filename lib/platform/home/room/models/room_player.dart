@@ -10,7 +10,8 @@ class RoomMember {
     required this.role,
     required this.status,
     this.joinedAt,
-    this.updatedAt,
+    this.updatedAt, 
+    required this.penaltyAttemptCount,
   });
 
   factory RoomMember.fromSnapshot(
@@ -34,6 +35,7 @@ class RoomMember {
         json['role'],
         fallback: isHost ? 'table' : 'player',
       ),
+      penaltyAttemptCount:firestoreInt(json['penaltyAttemptCount']),
       status: firestoreString(json['status'], fallback: 'active'),
       joinedAt: firestoreDateTime(json['joinedAt']),
       updatedAt: firestoreDateTime(json['updatedAt']),
@@ -48,6 +50,7 @@ class RoomMember {
   final String status;
   final DateTime? joinedAt;
   final DateTime? updatedAt;
+  final int penaltyAttemptCount;
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';
