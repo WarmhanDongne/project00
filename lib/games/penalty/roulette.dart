@@ -143,7 +143,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 1000,
+      width: 1300,
       height: 900,
       child: Stack(
         children: [
@@ -350,7 +350,7 @@ class RouletteWheel extends StatelessWidget {
                   height: 150,
                   child: ClipOval(
                     child: Transform.rotate(
-                      angle:math.pi,
+                      angle: math.pi,
                       child: Image.asset(
                         'assets/images/widgets/roulette/lever_stick.png',
                         fit: BoxFit.contain,
@@ -365,16 +365,18 @@ class RouletteWheel extends StatelessWidget {
             right: -470,
             top: 0,
             bottom: 400,
-            child: Transform.translate(
-              offset: Offset(0, 400 * leverProgress),
-              child: Center(
-                child: SizedBox(
-                  width: 630,
-                  child: Transform.scale(
-                    scale: 1.3,
-                    child: Image.asset(
-                      'assets/images/widgets/roulette/lever_head.png',
-                      fit: BoxFit.contain,
+            child: IgnorePointer(
+              child: Transform.translate(
+                offset: Offset(0, 400 * leverProgress),
+                child: Center(
+                  child: SizedBox(
+                    width: 630,
+                    child: Transform.scale(
+                      scale: 1.3,
+                      child: Image.asset(
+                        'assets/images/widgets/roulette/lever_head.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
