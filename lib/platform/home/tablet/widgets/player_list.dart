@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
-class MemberListView extends StatelessWidget {
-  const MemberListView({super.key, required this.provider, required this.members});
+class PlayerListView extends StatelessWidget {
+  const PlayerListView({
+    super.key,
+    required this.provider,
+    required this.players,
+  });
 
   final RoomProvider provider;
-  final List<RoomMember> members;
+  final List<RoomPlayer> players;
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: members.length,
+      itemCount: players.length,
       itemBuilder: (context, index) {
-        final member = members[index];
-        final hasProfileImage = member.profileImageUrl.isNotEmpty;
+        final player = players[index];
+        final hasProfileImage = player.profileImageUrl.isNotEmpty;
 
         return ListTile(
           dense: true,
@@ -22,25 +26,25 @@ class MemberListView extends StatelessWidget {
           leading: CircleAvatar(
             radius: 16,
             backgroundImage: hasProfileImage
-                ? NetworkImage(member.profileImageUrl)
+                ? NetworkImage(player.profileImageUrl)
                 : null,
             child: hasProfileImage ? null : const Icon(Icons.person, size: 18),
           ),
           title: Text(
-            member.nickname,
+            player.nickname,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (member.isHost)
+              if (player.isHost)
                 const Icon(Icons.star, color: Colors.orange, size: 20),
               IconButton(
                 icon: const Icon(Icons.close),
                 tooltip: '강퇴',
                 onPressed: () async {
-                  await provider.removePlayer(member.uid);
+                  await provider.removePlayer(player.uid);
                 },
               ),
             ],

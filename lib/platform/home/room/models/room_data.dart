@@ -7,8 +7,8 @@ class RoomData {
     required this.gameId,
     required this.hostUid,
     required this.status,
-    required this.memberCount,
-    required this.maxMembers,
+    required this.playerCount,
+    required this.maxplayers,
     required this.selectedGameId,
     required this.currentMatchId,
     this.createdAt,
@@ -30,8 +30,8 @@ class RoomData {
       gameId: firestoreString(json['gameId']),
       hostUid: firestoreString(json['hostUid']),
       status: firestoreString(json['status'], fallback: 'waiting'),
-      memberCount: firestoreInt(json['memberCount']),
-      maxMembers: firestoreInt(json['maxMembers'], fallback: 6),
+      playerCount: firestoreInt(json['playerCount']),
+      maxplayers: firestoreInt(json['maxplayers'], fallback: 6),
       selectedGameId: json['selectedGameId'] as String?,
       currentMatchId: json['currentMatchId'] as String?,
       createdAt: firestoreDateTime(json['createdAt']),
@@ -43,8 +43,8 @@ class RoomData {
   final String gameId;
   final String hostUid;
   final String status;
-  final int memberCount;
-  final int maxMembers;
+  final int playerCount;
+  final int maxplayers;
   final String? selectedGameId;
   final String? currentMatchId;
   final DateTime? createdAt;

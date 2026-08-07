@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/home/room/providers/phone_room_provider.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class PhoneRoomNickname extends StatefulWidget {
   const PhoneRoomNickname({super.key, required this.roomCode});
@@ -15,60 +15,105 @@ class PhoneRoomNickname extends StatefulWidget {
 }
 
 class _PhoneRoomNickname extends State<PhoneRoomNickname> {
-  final PhoneRoomProvider _roomProvider = PhoneRoomProvider();
+  final RoomProvider _roomProvider = RoomProvider();
   late final TextEditingController _roomCodeController;
+  late final TextEditingController _nicknameController;
 
   @override
   void initState() {
     super.initState();
     _roomCodeController = TextEditingController(text: widget.roomCode);
+    final user = FirebaseAuth.instance.currentUser;
+    final initialNickname = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : user?.email?.split('@').first ?? '사용자';
+    _nicknameController = TextEditingController(text: initialNickname);
+    _roomProvider.roomCode = widget.roomCode;
+    _roomProvider.listenRoom();
   }
 
   @override
   void dispose() {
     _roomProvider.dispose();
     _roomCodeController.dispose();
+    _nicknameController.dispose();
     super.dispose();
   }
 
+  // _JoinForm에 onJoin: _joinRoom으로 주입.
   Future<void> _joinRoom() async {
+    // 자동으로 키보드 화면 내리기
     FocusScope.of(context).unfocus();
-    final joined = await _roomProvider.joinRoom(_roomCodeController.text);
-    if (!mounted || joined) return;
+    final inputNickname = _nicknameController.text.trim();
 
-    final message = _roomProvider.errorMessage;
-    if (message != null) {
+    final isDuplicate = _roomProvider.players.any(
+      // players 리스트 중 하나라도 nickname이 inputNickname과 같으면 isDuplicate는 true
+      (player) => player.nickname == inputNickname,
+    );
+
+    if (isDuplicate) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('이미 사용 중인 닉네임입니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return; // joinRoom 차단.
+    }
+    // 방 입장 트랜잭션 요청
+    final joined = await _roomProvider.joinRoom(
+      _roomCodeController.text,
+      inputNickname, // 설정한 nickname provider에게 전달
+    );
+
+    // 비동기 작업 후 현재 화면에 머물러 있는지 검사
+    if (!mounted) return;
+
+    // 트랜잭션 결과에 따른 분기
+    if (joined) {
+      // 성공 시 그룹 입장
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PhoneRoomWaiting(provider: _roomProvider),
+        ),
+      ).then((_) {
+        // 다시 그룹으로 돌아왔을 때 방 정보를 다시 구독
+        if (mounted) {
+          _roomProvider.roomCode = widget.roomCode;
+          _roomProvider.listenRoom();
+        }
+      });
+    } else {
+      // 실패 시 에러 메세지 렌더
+      final message = _roomProvider.errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    /*
-    1. 초기 진입 시: _roomProvider.isInRoom이 false이므로 _JoinForm 렌더링.
-    2. 입장하기 클릭:  올바른 코드일 경우 _roomProvider.isInRoom가 true로 바뀌며 notifyListeners() 호출
-    3. AnimatedBuilder가 상태변화 감지 후 isInRoom == true. PhoneRoomWaiting를 렌더링한다.
-     */
-    return AnimatedBuilder(
-      animation: _roomProvider,
-      builder: (context, _) {
-        if (_roomProvider.isInRoom) {
-          return PhoneRoomWaiting(provider: _roomProvider);
-        }
-
-        return Scaffold(
-          appBar: AppBar(title: const Text('그룹 참여하기'), centerTitle: true),
-          body: SafeArea(
-            child: _JoinForm(
+    return Scaffold(
+      appBar: AppBar(title: const Text('그룹 참여하기'), centerTitle: true),
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: _roomProvider,
+          builder: (context, _) {
+            return _JoinForm(
+              nicknameController: _nicknameController,
               controller: _roomCodeController,
               provider: _roomProvider,
               onJoin: _joinRoom,
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -78,19 +123,16 @@ class _JoinForm extends StatelessWidget {
     required this.controller,
     required this.provider,
     required this.onJoin,
+    required this.nicknameController,
   });
 
   final TextEditingController controller;
-  final PhoneRoomProvider provider;
+  final RoomProvider provider;
   final VoidCallback onJoin;
+  final TextEditingController nicknameController;
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final nickname = user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!.trim()
-        : user?.email?.split('@').first ?? '사용자';
-
     return DefaultTextStyle(
       style: TextStyle(
         fontSize: 25.sp,
@@ -107,12 +149,14 @@ class _JoinForm extends StatelessWidget {
             SizedBox(height: 20.h),
             PhoneRoomParticipantList(
               hostName: '태블릿 방장',
-              participantsList: [nickname],
+              participantsList: provider.players
+                  .map((player) => player.nickname)
+                  .toList(),
             ),
             SizedBox(height: 46.h),
             _buildNickNameAnnouncement(),
             SizedBox(height: 19.h),
-            _buildInsertNickName(nickname),
+            _buildInsertNickName(),
             if (provider.errorMessage != null) ...[
               SizedBox(height: 16.h),
               Padding(
@@ -153,7 +197,7 @@ class _JoinForm extends StatelessWidget {
     );
   }
 
-  Padding _buildInsertNickName(String nickname) {
+  Padding _buildInsertNickName() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 35.w),
       child: Row(
@@ -164,27 +208,18 @@ class _JoinForm extends StatelessWidget {
               height: 50.h,
               alignment: Alignment.centerLeft,
               color: Colors.grey,
-              child: Text('닉네임 : $nickname'),
+              child: TextField(
+                controller: nicknameController,
+                decoration: InputDecoration(
+                  prefixText: '닉네임: ',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
+                  border: InputBorder.none,
+                ),
+                style: TextStyle(fontSize: 20.sp, color: Colors.black),
+              ),
             ),
           ),
           SizedBox(width: 13.w),
-          FilledButton(
-            onPressed: () {},
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.grey,
-              foregroundColor: Colors.black,
-              fixedSize: Size(66.w, 50.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(0.r),
-              ),
-              padding: EdgeInsets.zero,
-            ),
-
-            child: Text(
-              '수정',
-              style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
-            ),
-          ),
         ],
       ),
     );

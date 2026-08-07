@@ -1,6 +1,5 @@
 /* eslint-disable valid-jsdoc */
-
-import {randomInt} from "node:crypto";
+import { randomInt } from "node:crypto";
 
 import {
   CallableRequest,
@@ -10,6 +9,7 @@ import {
 import {
   FieldValue,
   getFirestore,
+  Transaction,
 } from "firebase-admin/firestore";
 
 import {
@@ -117,8 +117,10 @@ function parsePlayers(value: unknown): LiarsPokerPlayer[] {
 
 /** 매치 문서의 테이블 랭크를 검증합니다. */
 function parseTableRank(value: unknown): LiarsPokerRank {
-  if (typeof value === "string" &&
-      LIARS_POKER_RANKS.includes(value as LiarsPokerRank)) {
+  if (
+    typeof value === "string" &&
+    LIARS_POKER_RANKS.includes(value as LiarsPokerRank)
+  ) {
     return value as LiarsPokerRank;
   }
   throw new HttpsError("data-loss", "테이블 카드 정보가 없습니다.");
@@ -127,12 +129,12 @@ function parseTableRank(value: unknown): LiarsPokerRank {
 /** 클라이언트가 전달한 좌석을 참가자 UID와 대조합니다. */
 function parsePlayerSeats(
   value: unknown,
-  memberIds: string[],
+  playerIds: string[],
 ): Map<string, number> {
   if (value === undefined || value === null) {
-    return new Map(memberIds.map((uid, index) => [uid, index]));
+    return new Map(playerIds.map((uid, index) => [uid, index]));
   }
-  if (!Array.isArray(value) || value.length !== memberIds.length) {
+  if (!Array.isArray(value) || value.length !== playerIds.length) {
     throw new HttpsError(
       "invalid-argument",
       "플레이어 수와 좌석 정보 수가 같아야 합니다.",
@@ -141,9 +143,12 @@ function parsePlayerSeats(
 
   const seats = new Map<string, number>();
   for (const rawSeat of value as PlayerSeatInput[]) {
-    if (typeof rawSeat !== "object" || rawSeat === null ||
-        typeof rawSeat.uid !== "string" ||
-        !Number.isInteger(rawSeat.seatIndex)) {
+    if (
+      typeof rawSeat !== "object" ||
+      rawSeat === null ||
+      typeof rawSeat.uid !== "string" ||
+      !Number.isInteger(rawSeat.seatIndex)
+    ) {
       throw new HttpsError(
         "invalid-argument",
         "플레이어 좌석 정보가 올바르지 않습니다.",
@@ -152,13 +157,15 @@ function parsePlayerSeats(
     seats.set(rawSeat.uid, rawSeat.seatIndex as number);
   }
 
-  const memberIdSet = new Set(memberIds);
+  const playerIdSet = new Set(playerIds);
   const seatIndexes = [...seats.values()];
-  const validMembers = seats.size === memberIds.length &&
-    [...seats.keys()].every((uid) => memberIdSet.has(uid));
-  const validSeats = new Set(seatIndexes).size === memberIds.length &&
-    seatIndexes.every((seat) => seat >= 0 && seat < memberIds.length);
-  if (!validMembers || !validSeats) {
+  const validPlayers =
+    seats.size === playerIds.length &&
+    [...seats.keys()].every((uid) => playerIdSet.has(uid));
+  const validSeats =
+    new Set(seatIndexes).size === playerIds.length &&
+    seatIndexes.every((seat) => seat >= 0 && seat < playerIds.length);
+  if (!validPlayers || !validSeats) {
     throw new HttpsError(
       "invalid-argument",
       "좌석은 참가 플레이어마다 중복 없이 지정해야 합니다.",
@@ -168,18 +175,18 @@ function parsePlayerSeats(
 }
 
 export const startLiarsPokerMatch = onCall<StartMatchData>(
-  {region: REGION},
-  async (request) => {
+  { region: REGION },
+  async (request: CallableRequest<StartMatchData>) => {
     const uid = requireUid(request);
     const roomCode = parseRoomCode(request.data?.roomCode);
     const db = getFirestore();
     const roomRef = db.collection("rooms").doc(roomCode);
-    const membersQuery = roomRef.collection("members").orderBy("joinedAt");
+    const playersQuery = roomRef.collection("players").orderBy("joinedAt");
     const matchRef = roomRef.collection("matches").doc();
 
-    await db.runTransaction(async (transaction) => {
+    await db.runTransaction(async (transaction: Transaction) => {
       const roomSnapshot = await transaction.get(roomRef);
-      const memberSnapshot = await transaction.get(membersQuery);
+      const playerSnapshot = await transaction.get(playersQuery);
 
       if (!roomSnapshot.exists) {
         throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
@@ -207,22 +214,25 @@ export const startLiarsPokerMatch = onCall<StartMatchData>(
         );
       }
 
-      const members = memberSnapshot.docs.filter((document) => {
-        const member = document.data();
-        return member.status === "active" && member.role === "player";
+      const activePlayers = playerSnapshot.docs.filter((document: any) => {
+        const player = document.data();
+        return player.status === "active" && player.role === "player";
       });
-      if (members.length < MIN_PLAYERS || members.length > MAX_PLAYERS) {
+      if (
+        activePlayers.length < MIN_PLAYERS ||
+        activePlayers.length > MAX_PLAYERS
+      ) {
         throw new HttpsError(
           "failed-precondition",
           `플레이어는 ${MIN_PLAYERS}~${MAX_PLAYERS}명이어야 합니다.`,
         );
       }
 
-      const memberIds = members.map((member) => member.id);
-      const seats = parsePlayerSeats(request.data?.playerSeats, memberIds);
-      const players: LiarsPokerPlayer[] = members.map((member) => {
-        const data = member.data();
-        const seatIndex = seats.get(member.id);
+      const playerIds = activePlayers.map((player: any) => player.id);
+      const seats = parsePlayerSeats(request.data?.playerSeats, playerIds);
+      const players: LiarsPokerPlayer[] = activePlayers.map((player: any) => {
+        const data = player.data();
+        const seatIndex = seats.get(player.id);
         if (seatIndex === undefined) {
           throw new HttpsError(
             "data-loss",
@@ -230,11 +240,13 @@ export const startLiarsPokerMatch = onCall<StartMatchData>(
           );
         }
         return {
-          uid: member.id,
-          nickname: typeof data.nickname === "string" ?
-            data.nickname : "사용자",
-          profileImageUrl: typeof data.profileImageUrl === "string" ?
-            data.profileImageUrl : "",
+          uid: player.id,
+          nickname:
+            typeof data.nickname === "string" ? data.nickname : "사용자",
+          profileImageUrl:
+            typeof data.profileImageUrl === "string"
+              ? data.profileImageUrl
+              : "",
           seatIndex,
           remainingCardCount: CARDS_PER_PLAYER,
           eliminated: false,
@@ -288,25 +300,28 @@ export const startLiarsPokerMatch = onCall<StartMatchData>(
       });
     });
 
-    return {success: true, roomCode, matchId: matchRef.id};
+    return { success: true, roomCode, matchId: matchRef.id };
   },
 );
 
 export const submitLiarsPokerCards = onCall<SubmitCardsData>(
-  {region: REGION},
-  async (request) => {
+  { region: REGION },
+  async (request: CallableRequest<SubmitCardsData>) => {
     const uid = requireUid(request);
     const roomCode = parseRoomCode(request.data?.roomCode);
     const matchId = parseId(request.data?.matchId, "matchId");
     const actionId = parseId(request.data?.actionId, "actionId");
     const cardIds = parseCardIds(request.data?.cardIds);
     const db = getFirestore();
-    const matchRef = db.collection("rooms").doc(roomCode)
-      .collection("matches").doc(matchId);
+    const matchRef = db
+      .collection("rooms")
+      .doc(roomCode)
+      .collection("matches")
+      .doc(matchId);
     const handRef = matchRef.collection("hands").doc(uid);
     const actionRef = matchRef.collection("processedActions").doc(actionId);
 
-    const result = await db.runTransaction(async (transaction) => {
+    const result = await db.runTransaction(async (transaction: Transaction) => {
       const matchSnapshot = await transaction.get(matchRef);
       const handSnapshot = await transaction.get(handRef);
       const actionSnapshot = await transaction.get(actionRef);
@@ -328,7 +343,10 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
         );
       }
       if (match.currentPlayerId !== uid) {
-        throw new HttpsError("permission-denied", "현재 플레이어의 턴이 아닙니다.");
+        throw new HttpsError(
+          "permission-denied",
+          "현재 플레이어의 턴이 아닙니다.",
+        );
       }
 
       const players = parsePlayers(match.players);
@@ -354,9 +372,9 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
         revealed: false,
       };
       const updatedPlayers = players.map((player) =>
-        player.uid === uid ?
-          {...player, remainingCardCount: remainingCards.length} :
-          player,
+        player.uid === uid
+          ? { ...player, remainingCardCount: remainingCards.length }
+          : player,
       );
       const roundRef = matchRef.collection("rounds").doc(String(round));
       const publicPlayRef = roundRef.collection("plays").doc(actionId);
@@ -411,18 +429,21 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
 );
 
 export const challengeLiarsPoker = onCall<MatchActionData>(
-  {region: REGION},
-  async (request) => {
+  { region: REGION },
+  async (request: CallableRequest<MatchActionData>) => {
     const uid = requireUid(request);
     const roomCode = parseRoomCode(request.data?.roomCode);
     const matchId = parseId(request.data?.matchId, "matchId");
     const actionId = parseId(request.data?.actionId, "actionId");
     const db = getFirestore();
-    const matchRef = db.collection("rooms").doc(roomCode)
-      .collection("matches").doc(matchId);
+    const matchRef = db
+      .collection("rooms")
+      .doc(roomCode)
+      .collection("matches")
+      .doc(matchId);
     const actionRef = matchRef.collection("processedActions").doc(actionId);
 
-    const result = await db.runTransaction(async (transaction) => {
+    const result = await db.runTransaction(async (transaction: Transaction) => {
       const matchSnapshot = await transaction.get(matchRef);
       const actionSnapshot = await transaction.get(actionRef);
       if (actionSnapshot.exists) return actionSnapshot.data();
@@ -441,7 +462,10 @@ export const challengeLiarsPoker = onCall<MatchActionData>(
         );
       }
       if (match.currentPlayerId !== uid) {
-        throw new HttpsError("permission-denied", "현재 플레이어의 턴이 아닙니다.");
+        throw new HttpsError(
+          "permission-denied",
+          "현재 플레이어의 턴이 아닙니다.",
+        );
       }
 
       const lastPlay = match.lastPlay as PublicPlay | null;
@@ -453,10 +477,10 @@ export const challengeLiarsPoker = onCall<MatchActionData>(
       }
       const round = typeof match.round === "number" ? match.round : 1;
       const roundRef = matchRef.collection("rounds").doc(String(round));
-      const secretPlayRef = roundRef.collection("secretPlays")
+      const secretPlayRef = roundRef
+        .collection("secretPlays")
         .doc(lastPlay.playId);
-      const publicPlayRef = roundRef.collection("plays")
-        .doc(lastPlay.playId);
+      const publicPlayRef = roundRef.collection("plays").doc(lastPlay.playId);
       const secretSnapshot = await transaction.get(secretPlayRef);
       if (!secretSnapshot.exists) {
         throw new HttpsError("data-loss", "제출 카드 정보를 찾을 수 없습니다.");
@@ -500,7 +524,7 @@ export const challengeLiarsPoker = onCall<MatchActionData>(
         phase: "penalty",
         challenge,
         penaltyPlayerId: loserId,
-        lastPlay: {...lastPlay, revealed: true, actualRanks},
+        lastPlay: { ...lastPlay, revealed: true, actualRanks },
         version: FieldValue.increment(1),
         updatedAt: FieldValue.serverTimestamp(),
       });
