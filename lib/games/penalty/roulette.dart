@@ -155,13 +155,14 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
             ),
           ),
           Positioned(
-            top: 100,
-            right: 0,
-            bottom: 100,
-            width: 260,
+            top: 120,
+            right: -150,
+            bottom: 120,
+            width: 420,
             child: IgnorePointer(
               ignoring: _isLeverLocked || _isSpinning,
-              child: GestureDetector(
+              child: 
+              GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onVerticalDragStart: _onLeverDragStart,
                 onVerticalDragUpdate: _onLeverDragUpdate,
