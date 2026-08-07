@@ -38,8 +38,6 @@ class PlayerListView extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (player.isHost)
-                const Icon(Icons.star, color: Colors.orange, size: 20),
               IconButton(
                 icon: const Icon(Icons.close),
                 tooltip: '강퇴',

@@ -12,7 +12,7 @@ class PlayerLayoutFactory {
             uid: player.uid,
             nickname: player.nickname,
             profileImageUrl: player.profileImageUrl,
-            isHost: player.isHost,
+
             seatIndex: index,
           );
         }),

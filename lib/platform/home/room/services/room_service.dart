@@ -162,6 +162,7 @@ class RoomService {
       'seatIndex': -1,
       'role': 'player',
       'status': 'active',
+      'penaltyAttemptCount': 0,
     });
   }
 
@@ -183,5 +184,25 @@ class RoomService {
 
     // 플레이어 노드 즉시 삭제
     await playerRef.remove();
+  }
+
+  // ========================= 게임 플레이를 위한 메소드 ==========================
+
+  // 게임 진행 중에 penaltyAttemptCount 갱신을 위한 메소드
+  Future<void> updatePenaltyAttemptCount(
+    String roomCode,
+    String uid,
+    int incrementBy,
+  ) async {
+    final ref = realtime.ref(
+      'rooms/$roomCode/players/$uid/penaltyAttemptCount',
+    );
+    await ref.runTransaction((currentValue) {
+      if (currentValue == null) {
+        return Transaction.success(incrementBy);
+      }
+      final int current = currentValue as int;
+      return Transaction.success(current + incrementBy);
+    });
   }
 }
