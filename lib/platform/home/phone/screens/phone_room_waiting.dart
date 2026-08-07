@@ -37,6 +37,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             final players = widget.provider.players
                 .where((players) => players.isActive)
                 .toList(growable: false);
+            final uids = widget.provider.players
+                .map((players) => players.uid)
+                .toList(growable: false);
             final selectedGameId = widget.provider.selectedGameId;
             final selectedGame = widget.provider.selectedGame;
             return Column(
