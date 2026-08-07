@@ -99,6 +99,16 @@ class RoomService {
     await realtime.ref('rooms/$roomCode/players/$userUid').remove();
   }
 
+  Future<void> sendRouletteResult({
+    required String roomCode,
+    required String userUid,
+    required String result,
+  }) async {
+    await realtime.ref('rooms/$roomCode/players/$userUid/penalty').update({
+      'result': result,
+    });
+  }
+
   // ========================================================== phone ==================================================================
 
   Future<void> joinRoom(String roomCode, String nickname) async {
