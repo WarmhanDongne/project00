@@ -45,10 +45,7 @@ class TabletGameState extends State<TabletGame> {
   void initState() {
     super.initState();
 
-    _remainingCardCounts = List<int>.filled(
-      _playerCount,
-      _cardsPerPlayer,
-    );
+    _remainingCardCounts = List<int>.filled(_playerCount, _cardsPerPlayer);
   }
 
   // ---------------------------------------------------------------------------
@@ -96,11 +93,7 @@ class TabletGameState extends State<TabletGame> {
     required int cardCount,
   }) {
     if (cardCount < 1 || cardCount > 3) {
-      throw ArgumentError.value(
-        cardCount,
-        'cardCount',
-        '카드는 1~3장이어야 합니다.',
-      );
+      throw ArgumentError.value(cardCount, 'cardCount', '카드는 1~3장이어야 합니다.');
     }
 
     final playerIndex = widget.playerLayout.players.indexWhere(
@@ -121,10 +114,7 @@ class TabletGameState extends State<TabletGame> {
       _submittedPlay = _SubmittedPlay(
         eventId: eventId,
         playerIndex: playerIndex,
-        frontCardAssets: List<String>.filled(
-          cardCount,
-          _cardAssetForRank('Q'),
-        ),
+        frontCardAssets: List<String>.filled(cardCount, _cardAssetForRank('Q')),
       );
 
       _gameStatus = GameStatus.cardsPlaying;
@@ -230,10 +220,7 @@ class TabletGameState extends State<TabletGame> {
         playerIndex: 0,
 
         // 테스트용 카드 2장
-        frontCardAssets: [
-          _cardAssetForRank('Q'),
-          _cardAssetForRank('Q'),
-        ],
+        frontCardAssets: [_cardAssetForRank('Q'), _cardAssetForRank('Q')],
       );
 
       _gameStatus = GameStatus.cardsPlaying;
@@ -252,11 +239,7 @@ class TabletGameState extends State<TabletGame> {
     final playerIndex = previousPlay?.playerIndex ?? 0;
     final cardCount = previousPlay?.frontCardAssets.length ?? 2;
 
-    final testRanks = <String>[
-      'Q',
-      'K',
-      'A',
-    ];
+    final testRanks = <String>['Q', 'K', 'A'];
 
     setState(() {
       _submittedPlay = _SubmittedPlay(
@@ -264,9 +247,7 @@ class TabletGameState extends State<TabletGame> {
         playerIndex: playerIndex,
         frontCardAssets: List<String>.generate(
           cardCount,
-          (index) => _cardAssetForRank(
-            testRanks[index % testRanks.length],
-          ),
+          (index) => _cardAssetForRank(testRanks[index % testRanks.length]),
           growable: false,
         ),
       );
@@ -326,15 +307,11 @@ class TabletGameState extends State<TabletGame> {
           ),
 
           // 게임 상태 화면
-          Positioned.fill(
-            child: _buildStatusLayer(),
-          ),
+          Positioned.fill(child: _buildStatusLayer()),
 
           // 카드 제출/공개 애니메이션
           if (_shouldShowSubmittedPlay)
-            Positioned.fill(
-              child: _buildSubmittedPlayLayer(),
-            ),
+            Positioned.fill(child: _buildSubmittedPlayLayer()),
 
           // 벌칙 룰렛
           if (_gameStatus == GameStatus.penalty)
@@ -342,13 +319,8 @@ class TabletGameState extends State<TabletGame> {
               child: Center(
                 child: PenaltyRoulette(
                   attemptCount: 0,
-                  onSafe: () {
-                    debugPrint('생존');
-                    showResult();
-                  },
-                  onEliminated: () {
-                    debugPrint('탈락');
-                    showResult();
+                  onResult: (result) async {
+                    await widget.provider.sendRouletteResult(result as String);
                   },
                 ),
               ),
@@ -382,19 +354,13 @@ class TabletGameState extends State<TabletGame> {
             ),
 
           // 왼쪽 위 상태 선택
-          Positioned(
-            top: 20,
-            left: 20,
-            child: _buildGameStatusSelector(),
-          ),
+          Positioned(top: 20, left: 20, child: _buildGameStatusSelector()),
 
           // 오른쪽 위 메뉴
           Positioned(
             top: 20,
             right: 20,
-            child: SideBlock(
-              provider: widget.provider,
-            ),
+            child: SideBlock(provider: widget.provider),
           ),
         ],
       ),
@@ -405,16 +371,11 @@ class TabletGameState extends State<TabletGame> {
     return Container(
       width: 270,
       height: 58,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
         color: const Color(0xee151515),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white38,
-          width: 1.5,
-        ),
+        border: Border.all(color: Colors.white38, width: 1.5),
         boxShadow: const [
           BoxShadow(
             color: Colors.black54,
@@ -439,16 +400,18 @@ class TabletGameState extends State<TabletGame> {
             fontSize: 17,
             fontWeight: FontWeight.w700,
           ),
-          items: GameStatus.values.map((status) {
-            return DropdownMenuItem<GameStatus>(
-              value: status,
-              child: Text(
-                _gameStatusLabel(status),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(growable: false),
+          items: GameStatus.values
+              .map((status) {
+                return DropdownMenuItem<GameStatus>(
+                  value: status,
+                  child: Text(
+                    _gameStatusLabel(status),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              })
+              .toList(growable: false),
           onChanged: _selectGameStatus,
         ),
       ),
@@ -487,8 +450,7 @@ class TabletGameState extends State<TabletGame> {
       case GameStatus.penalty:
         return RoundStartReveal(
           key: ValueKey(_roundNumber),
-          tableAsset:
-              'assets/games/liars_poker/images/background/$_table.png',
+          tableAsset: 'assets/games/liars_poker/images/background/$_table.png',
           playerCount: _playerCount,
           playerSeatIndexes: _seatIndexes,
           remainingCardCounts: _remainingCardCounts,
@@ -501,9 +463,7 @@ class TabletGameState extends State<TabletGame> {
         );
 
       case GameStatus.result:
-        return const Center(
-          child: Result(),
-        );
+        return const Center(child: Result());
 
       case GameStatus.finished:
         return const Center(

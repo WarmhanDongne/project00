@@ -3,17 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:roulette/roulette.dart';
 
+enum RouletteResult { safe, eliminated }
+
 class PenaltyRoulette extends StatefulWidget {
   const PenaltyRoulette({
     super.key,
     required this.attemptCount,
-    required this.onSafe,
-    required this.onEliminated,
+    required this.onResult,
   });
-
   final int attemptCount;
-  final VoidCallback onSafe;
-  final VoidCallback onEliminated;
+  final ValueChanged<RouletteResult> onResult;
 
   @override
   State<PenaltyRoulette> createState() => _PenaltyRouletteState();
@@ -133,11 +132,9 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
 
     final isEliminated = sections[selectedIndex];
 
-    if (isEliminated) {
-      widget.onEliminated();
-    } else {
-      widget.onSafe();
-    }
+    widget.onResult(
+      isEliminated ? RouletteResult.eliminated : RouletteResult.safe,
+    );
   }
 
   @override
@@ -161,8 +158,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
             width: 420,
             child: IgnorePointer(
               ignoring: _isLeverLocked || _isSpinning,
-              child: 
-              GestureDetector(
+              child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onVerticalDragStart: _onLeverDragStart,
                 onVerticalDragUpdate: _onLeverDragUpdate,

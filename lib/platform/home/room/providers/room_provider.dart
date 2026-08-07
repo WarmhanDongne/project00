@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -13,7 +14,6 @@ class RoomProvider extends ChangeNotifier {
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
-
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
 
   List<RoomPlayer> players = [];
@@ -101,6 +101,21 @@ class RoomProvider extends ChangeNotifier {
     });
 
     return result ?? false;
+  }
+
+  Future<void> sendRouletteResult(String result) async {
+    final code = roomCode;
+    final userUid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (code == null || userUid == null) {
+      throw Exception('방 코드 또는 사용자 정보가 없습니다.');
+    }
+
+    await _service.sendRouletteResult(
+      roomCode: code,
+      userUid: userUid,
+      result: result,
+    );
   }
 
   void listenRoom() {
