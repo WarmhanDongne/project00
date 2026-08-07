@@ -24,7 +24,7 @@ class RoomPlayer {
       role: json['role'] as String? ?? 'player',
       status: json['status'] as String? ?? 'active',
       isHost: json['isHost'] as bool? ?? false,
-      penaltyAttemptCount:json['penaltyAttemptCount'],
+      penaltyAttemptCount: json['penaltyAttemptCount'] as int ?? 0,
     );
   }
 
