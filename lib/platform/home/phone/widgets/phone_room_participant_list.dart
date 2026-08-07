@@ -3,14 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class PhoneRoomParticipantList extends StatelessWidget {
   int get totalParticipants => participantsList.length; // 참여자
-  final String hostName;
+
   final List<String> participantsList;
 
-  const PhoneRoomParticipantList({
-    super.key,
-    required this.hostName,
-    required this.participantsList,
-  });
+  const PhoneRoomParticipantList({super.key, required this.participantsList});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +31,6 @@ class PhoneRoomParticipantList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text("* $hostName"),
                   ...participantsList.map((name) => Text("    - $name")),
                 ],
               ),

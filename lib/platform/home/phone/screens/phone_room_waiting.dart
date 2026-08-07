@@ -50,7 +50,6 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                 ),
                 SizedBox(height: 16.h),
                 PhoneRoomParticipantList(
-                  hostName: '태블릿 방장',
                   participantsList: players
                       .map((player) => player.nickname)
                       .toList(growable: false),

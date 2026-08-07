@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -24,6 +23,8 @@ class RoomProvider extends ChangeNotifier {
   String? errorMessage;
   String? selectedGameId;
   GameInfo? selectedGame;
+
+  String hostNickname = '테블릿 방장';
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {

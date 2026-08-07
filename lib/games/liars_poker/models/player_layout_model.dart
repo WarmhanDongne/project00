@@ -53,14 +53,13 @@ class PlayerLayoutPlayer {
     required this.uid,
     required this.nickname,
     required this.profileImageUrl,
-    required this.isHost,
+
     required this.seatIndex,
   });
 
   final String uid;
   final String nickname;
   final String profileImageUrl;
-  final bool isHost;
 
   /// 테이블 주변에서 몇 번째 자리인지 나타냅니다.
   final int seatIndex;
@@ -70,7 +69,6 @@ class PlayerLayoutPlayer {
       uid: uid,
       nickname: nickname,
       profileImageUrl: profileImageUrl,
-      isHost: isHost,
       seatIndex: seatIndex ?? this.seatIndex,
     );
   }

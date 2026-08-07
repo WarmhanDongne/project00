@@ -148,7 +148,6 @@ class _JoinForm extends StatelessWidget {
             ),
             SizedBox(height: 20.h),
             PhoneRoomParticipantList(
-              hostName: '태블릿 방장',
               participantsList: provider.players
                   .map((player) => player.nickname)
                   .toList(),
