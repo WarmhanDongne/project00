@@ -8,6 +8,9 @@ class RoomPlayer {
     required this.role,
     required this.status,
     this.isHost = false,
+    this.joinedAt,
+    this.updatedAt,
+    required this.penaltyAttemptCount,
   });
 
   factory RoomPlayer.fromJson(Map<String, dynamic> json, {String? key}) {
@@ -21,6 +24,7 @@ class RoomPlayer {
       role: json['role'] as String? ?? 'player',
       status: json['status'] as String? ?? 'active',
       isHost: json['isHost'] as bool? ?? false,
+      penaltyAttemptCount:json['penaltyAttemptCount'],
     );
   }
 
