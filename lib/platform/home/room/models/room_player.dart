@@ -7,7 +7,6 @@ class RoomPlayer {
     required this.seatIndex,
     required this.role,
     required this.status,
-    this.isHost = false,
     this.joinedAt,
     this.updatedAt,
     required this.penaltyAttemptCount,
@@ -23,8 +22,7 @@ class RoomPlayer {
       seatIndex: json['seatIndex'] as int? ?? -1,
       role: json['role'] as String? ?? 'player',
       status: json['status'] as String? ?? 'active',
-      isHost: json['isHost'] as bool? ?? false,
-      penaltyAttemptCount: json['penaltyAttemptCount'] as int ?? 0,
+      penaltyAttemptCount: json['penaltyAttemptCount'] as int? ?? 0,
     );
   }
 
@@ -38,7 +36,6 @@ class RoomPlayer {
   final DateTime? joinedAt;
   final DateTime? updatedAt;
   final int penaltyAttemptCount;
-  final bool isHost;
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -17,12 +16,15 @@ class RoomProvider extends ChangeNotifier {
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
 
   List<RoomPlayer> players = [];
+  List<GameInfo> groupGames = [];
   bool isLoading = false;
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
   String? errorMessage;
   String? selectedGameId;
   GameInfo? selectedGame;
+
+  String hostNickname = '테블릿 방장';
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
@@ -130,8 +132,15 @@ class RoomProvider extends ChangeNotifier {
     }, onError: _handleSubscriptionError);
     playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomPlayer,
-    ) {
+    ) async {
       players = roomPlayer;
+      // 활성화된 유저의 uids 추출
+      final activeUids = players
+          .where((p) => p.isActive)
+          .map((p) => p.uid)
+          .toList(growable: false);
+      // 활성화된 유저들이 보유한 gameInfo 객체 리스트 노티
+      groupGames = await _gameService.fetchGroupGames(activeUids);
       notifyListeners();
     }, onError: _handleSubscriptionError);
   }

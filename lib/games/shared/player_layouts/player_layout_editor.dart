@@ -300,10 +300,6 @@ class _PlayerSlot extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (player.isHost) ...[
-                  const Icon(Icons.star, size: 18, color: Colors.orange),
-                  const SizedBox(width: 4),
-                ],
                 Flexible(
                   child: Text(
                     player.nickname,
