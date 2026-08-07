@@ -7,13 +7,10 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https";
-import {
-  FieldValue,
-  getFirestore,
-} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 
 const REGION = "asia-northeast3";
-const DEFAULT_MAX_MEMBERS = 6;
+const DEFAULT_MAX_PLAYERS = 6;
 const ROOM_CODE_LENGTH = 5;
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -70,9 +67,7 @@ function parseRoomCode(value: unknown): string {
   }
 
   const roomCode = value.trim().toUpperCase();
-  const validCode = new RegExp(
-    `^[${ROOM_CODE_CHARS}]{${ROOM_CODE_LENGTH}}$`,
-  );
+  const validCode = new RegExp(`^[${ROOM_CODE_CHARS}]{${ROOM_CODE_LENGTH}}$`);
   if (!validCode.test(roomCode)) {
     throw new HttpsError("invalid-argument", "올바른 방 코드가 아닙니다.");
   }
@@ -106,14 +101,11 @@ function generateRoomCode(): string {
     () => ROOM_CODE_CHARS[randomInt(ROOM_CODE_CHARS.length)],
   ).join("");
 }
-export const createRoomCode = onCall(
-  {region: REGION},
-  async () => {
-    return {
-      roomCode: generateRoomCode(),
-    };
-  },
-);
+export const createRoomCode = onCall({region: REGION}, async () => {
+  return {
+    roomCode: generateRoomCode(),
+  };
+});
 
 /**
  * 인증 토큰에서 공개 가능한 플레이어 정보를 만듭니다.
@@ -121,7 +113,7 @@ export const createRoomCode = onCall(
  * @param uid 플레이어 UID
  * @return Firestore에 저장할 공개 플레이어 정보
  */
-function memberData(request: CallableRequest<unknown>, uid: string) {
+function playerData(request: CallableRequest<unknown>, uid: string) {
   const name = request.auth?.token.name;
   const email = request.auth?.token.email;
   const picture = request.auth?.token.picture;
@@ -183,10 +175,10 @@ export const resetRoom = onCall<ResetRoomData>(
       });
     });
 
-    const memberSnapshot = await roomRef.collection("members").get();
-    if (!memberSnapshot.empty) {
-      const participantRefs = memberSnapshot.docs.map((member) =>
-        db.collection("roomParticipants").doc(member.id),
+    const playerSnapshot = await roomRef.collection("players").get();
+    if (!playerSnapshot.empty) {
+      const participantRefs = playerSnapshot.docs.map((player) =>
+        db.collection("roomParticipants").doc(player.id),
       );
       const participantSnapshots = await db.getAll(...participantRefs);
       const batch = db.batch();
@@ -223,12 +215,12 @@ export const joinRoom = onCall<RoomCodeData>(
     const roomCode = parseRoomCode(request.data?.roomCode);
     const db = getFirestore();
     const roomRef = db.collection("rooms").doc(roomCode);
-    const memberRef = roomRef.collection("members").doc(uid);
+    const playerRef = roomRef.collection("players").doc(uid);
     const participantRef = db.collection("roomParticipants").doc(uid);
 
     await db.runTransaction(async (transaction) => {
       const roomSnapshot = await transaction.get(roomRef);
-      const memberSnapshot = await transaction.get(memberRef);
+      const playerSnapshot = await transaction.get(playerRef);
       const participantSnapshot = await transaction.get(participantRef);
 
       if (!roomSnapshot.exists) {
@@ -248,33 +240,30 @@ export const joinRoom = onCall<RoomCodeData>(
       }
 
       const previousRoomCode = participantSnapshot.data()?.roomCode;
-      if (
-        participantSnapshot.exists &&
-        previousRoomCode !== roomCode
-      ) {
+      if (participantSnapshot.exists && previousRoomCode !== roomCode) {
         throw new HttpsError(
           "failed-precondition",
           "이미 다른 방에 참가하고 있습니다.",
         );
       }
 
-      if (!memberSnapshot.exists) {
-        const memberCount =
-          (roomSnapshot.get("memberCount") as number | undefined) ?? 0;
-        const maxMembers =
-          (roomSnapshot.get("maxMembers") as number | undefined) ??
-          DEFAULT_MAX_MEMBERS;
+      if (!playerSnapshot.exists) {
+        const playerCount =
+          (roomSnapshot.get("playerCount") as number | undefined) ?? 0;
+        const maxPlayers =
+          (roomSnapshot.get("maxPlayers") as number | undefined) ??
+          DEFAULT_MAX_PLAYERS;
 
-        if (memberCount >= maxMembers) {
+        if (playerCount >= maxPlayers) {
           throw new HttpsError(
             "resource-exhausted",
             "방의 최대 인원을 초과했습니다.",
           );
         }
 
-        transaction.set(memberRef, memberData(request, uid));
+        transaction.set(playerRef, playerData(request, uid));
         transaction.update(roomRef, {
-          memberCount: memberCount + 1,
+          playerCount: playerCount + 1,
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
@@ -308,13 +297,13 @@ export const setRoomReady = onCall<ReadyData>(
 
     const db = getFirestore();
     const roomRef = db.collection("rooms").doc(roomCode);
-    const memberRef = roomRef.collection("members").doc(uid);
+    const playerRef = roomRef.collection("players").doc(uid);
 
     await db.runTransaction(async (transaction) => {
       const roomSnapshot = await transaction.get(roomRef);
-      const memberSnapshot = await transaction.get(memberRef);
+      const playerSnapshot = await transaction.get(playerRef);
 
-      if (!roomSnapshot.exists || !memberSnapshot.exists) {
+      if (!roomSnapshot.exists || !playerSnapshot.exists) {
         throw new HttpsError("not-found", "참가 중인 방이 아닙니다.");
       }
       if (roomSnapshot.get("status") !== "waiting") {
@@ -324,7 +313,7 @@ export const setRoomReady = onCall<ReadyData>(
         );
       }
 
-      transaction.update(memberRef, {
+      transaction.update(playerRef, {
         isReady: request.data.isReady,
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -341,15 +330,15 @@ export const leaveRoom = onCall<RoomCodeData>(
     const roomCode = parseRoomCode(request.data?.roomCode);
     const db = getFirestore();
     const roomRef = db.collection("rooms").doc(roomCode);
-    const memberRef = roomRef.collection("members").doc(uid);
+    const playerRef = roomRef.collection("players").doc(uid);
     const participantRef = db.collection("roomParticipants").doc(uid);
 
     await db.runTransaction(async (transaction) => {
       const roomSnapshot = await transaction.get(roomRef);
-      const memberSnapshot = await transaction.get(memberRef);
+      const playerSnapshot = await transaction.get(playerRef);
       const participantSnapshot = await transaction.get(participantRef);
 
-      if (!roomSnapshot.exists || !memberSnapshot.exists) {
+      if (!roomSnapshot.exists || !playerSnapshot.exists) {
         if (
           participantSnapshot.exists &&
           participantSnapshot.get("roomCode") === roomCode
@@ -365,11 +354,11 @@ export const leaveRoom = onCall<RoomCodeData>(
         );
       }
 
-      const memberCount =
-        (roomSnapshot.get("memberCount") as number | undefined) ?? 1;
-      transaction.delete(memberRef);
+      const playerCount =
+        (roomSnapshot.get("playerCount") as number | undefined) ?? 1;
+      transaction.delete(playerRef);
       transaction.update(roomRef, {
-        memberCount: Math.max(0, memberCount - 1),
+        playerCount: Math.max(0, playerCount - 1),
         updatedAt: FieldValue.serverTimestamp(),
       });
 

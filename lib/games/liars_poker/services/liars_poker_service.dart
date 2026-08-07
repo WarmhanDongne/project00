@@ -9,7 +9,7 @@ class LiarsPokerGameService {
   Future<void> startGame({
     required String roomCode,
     required String hostUid,
-    required List<RoomMember> players,
+    required List<RoomPlayer> players,
   }) async {
     // 카드 덱 생성
     // 카드 섞기

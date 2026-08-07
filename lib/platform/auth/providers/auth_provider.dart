@@ -9,12 +9,26 @@ class AuthProvider extends ChangeNotifier {
 
   final FirebaseAuthService _authService;
 
+  bool _isDisposed = false;
   bool _isLoading = false;
   bool get isLoading => _isLoading;
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
   User? get currentUser => FirebaseAuth.instance.currentUser;
   bool get isSignedIn => currentUser != null;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
 
   void _setLoading(bool value) {
     _isLoading = value;

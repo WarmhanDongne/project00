@@ -1,56 +1,40 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:project00/firebase/utils/firestore_value.dart';
-
-class RoomMember {
-  const RoomMember({
+class RoomPlayer {
+  const RoomPlayer({
     required this.uid,
     required this.nickname,
     required this.profileImageUrl,
-    required this.isHost,
+    required this.isConnected,
+    required this.seatIndex,
     required this.role,
     required this.status,
-    this.joinedAt,
-    this.updatedAt, 
-    required this.penaltyAttemptCount,
+    this.isHost = false,
   });
 
-  factory RoomMember.fromSnapshot(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
-    return RoomMember.fromJson(
-      snapshot.data() ?? const {},
-      documentId: snapshot.id,
-    );
-  }
-
-  factory RoomMember.fromJson(Map<String, dynamic> json, {String? documentId}) {
-    final isHost = json['isHost'] as bool? ?? false;
-
-    return RoomMember(
-      uid: firestoreString(json['uid'], fallback: documentId ?? ''),
-      nickname: firestoreString(json['nickname'], fallback: '사용자'),
-      profileImageUrl: firestoreString(json['profileImageUrl']),
-      isHost: isHost,
-      role: firestoreString(
-        json['role'],
-        fallback: isHost ? 'table' : 'player',
-      ),
-      penaltyAttemptCount:firestoreInt(json['penaltyAttemptCount']),
-      status: firestoreString(json['status'], fallback: 'active'),
-      joinedAt: firestoreDateTime(json['joinedAt']),
-      updatedAt: firestoreDateTime(json['updatedAt']),
+  factory RoomPlayer.fromJson(Map<String, dynamic> json, {String? key}) {
+    // RTDB에서 넘어온 JSON 딕셔너리를 Dart 표준으로 캐스팅
+    return RoomPlayer(
+      uid: key ?? json['uid'] as String? ?? '',
+      nickname: json['nickname'] as String? ?? 'Player',
+      profileImageUrl: json['profileImageUrl'] as String? ?? '',
+      isConnected: json['isConnected'] as bool? ?? true,
+      seatIndex: json['seatIndex'] as int? ?? -1,
+      role: json['role'] as String? ?? 'player',
+      status: json['status'] as String? ?? 'active',
+      isHost: json['isHost'] as bool? ?? false,
     );
   }
 
   final String uid;
   final String nickname;
   final String profileImageUrl;
-  final bool isHost;
+  final bool isConnected;
+  final int seatIndex;
   final String role;
   final String status;
   final DateTime? joinedAt;
   final DateTime? updatedAt;
   final int penaltyAttemptCount;
+  final bool isHost;
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';
