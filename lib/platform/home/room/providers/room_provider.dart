@@ -141,7 +141,7 @@ class RoomProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ============================================== Phone을 위한 CODE ========================================
+  // ============================================== Phone을 위한 메서드 ========================================
   Future<bool> joinRoom(String rawRoomCode, String nickname) async {
     // Room code 받기
     final code = rawRoomCode.trim().toUpperCase();
@@ -191,5 +191,16 @@ class RoomProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> updatePenaltyAttemptCount(String uid, param1) async {}
+  // PenaltyAttemptCount 업데이트 바인딩 메소드
+  Future<void> incrementPenaltyAttemptCount(
+    String uid, {
+    int amount = 1,
+  }) async {
+    final code = roomCode;
+    if (code == null) return;
+
+    await _runCommand(() async {
+      await _service.updatePenaltyAttemptCount(code, uid, amount);
+    });
+  }
 }
