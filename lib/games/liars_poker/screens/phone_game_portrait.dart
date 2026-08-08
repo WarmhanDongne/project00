@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart'; // HandCardStack import 추가
 import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
-import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
+import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
@@ -57,7 +57,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             top: 50.h,
             left: 20.w,
             right: 20.w,
-            child: TopBar(
+            child: TopBarPortrait(
               entryAnimation: _controlsEntryController,
               leadingWidget: Assets.games.liarsPoker.images.table.tableKingWhite
                   .image(height: 24.h, filterQuality: FilterQuality.high),
@@ -80,7 +80,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             left: 0,
             right: 0,
             height: 350.h,
-            child: HandCardStack(
+            child: HandCardStackPortrait(
               onRevealCompleted: _showGameControls,
               onSelectionChanged: (indexes) {
                 debugPrint('선택된 카드 인덱스: $indexes');

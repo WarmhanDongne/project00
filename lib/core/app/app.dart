@@ -14,17 +14,21 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isTablet = DeviceLayout.isTablet(constraints);
+    // LayoutBuilder 대신 빌드 단계에서 View.of(context)를 사용해 화면 크기를 구합니다.
+    final view = View.of(context);
+    final size = view.physicalSize / view.devicePixelRatio;
+    
+    // shortestSide를 기준으로 태블릿 여부를 판단합니다.
+    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
-        final Size currentDesignSize = isTablet
-            ? const Size(834, 1194) // 테블릿
-            : const Size(390, 844); // 핸드폰
+    final Size currentDesignSize = isTablet
+        ? const Size(834, 1194) // 테블릿
+        : const Size(390, 844); // 핸드폰
 
-        return ScreenUtilInit(
-          designSize: currentDesignSize,
-          child: MaterialApp(
+    return ScreenUtilInit(
+      ensureScreenSize: true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
+      designSize: currentDesignSize,
+      child: MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Project 00',
 
@@ -57,7 +61,5 @@ class App extends StatelessWidget {
             ),
           ),
         );
-      },
-    );
   }
 }
