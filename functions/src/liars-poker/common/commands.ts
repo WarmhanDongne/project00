@@ -20,5 +20,30 @@ export function recordCommand(
   command: ProcessedCommand,
 ): void {
   game.server.processedCommands ??= {};
-  game.server.processedCommands[commandId] = command;
+  game.server.processedCommands[commandId] = {
+    ...command,
+    // RTDB는 중첩 객체 안의 undefined도 허용하지 않습니다.
+    result: removeUndefined(command.result) as Record<string, unknown>,
+  };
+}
+
+/** 명령 응답을 RTDB에 안전하게 저장할 수 있는 값으로 정리합니다. */
+function removeUndefined(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(
+      (item) => item === undefined ? null : removeUndefined(item),
+    );
+  }
+
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
+      if (item !== undefined) result[key] = removeUndefined(item);
+    }
+    return result;
+  }
+
+  return value;
 }

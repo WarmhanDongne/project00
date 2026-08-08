@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {createDeck} from "../lib/liars-poker/common/deck.js";
 import {dealCards} from "../lib/liars-poker/common/deal-card.js";
+import {recordCommand} from "../lib/liars-poker/common/commands.js";
 import {
   findNextAlivePlayer,
 } from "../lib/liars-poker/common/next-turn.js";
@@ -80,11 +81,12 @@ test("새 라운드는 생존자에게만 손패를 재분배한다", () => {
   restartRound(game, "uid3", 100);
 
   assert.equal(game.public.round, 2);
-  assert.equal(game.public.phase, "playing");
+  assert.equal(game.public.phase, "dealing");
   assert.equal(game.public.turnUid, "uid3");
-  assert.equal(Object.keys(game.private.uid1.hand).length, 5);
-  assert.equal(Object.keys(game.private.uid3.hand).length, 5);
-  assert.equal(game.private.uid2, undefined);
+  assert.deepEqual(game.private, {});
+  assert.equal(Object.keys(game.server.pendingHands.uid1.hand).length, 5);
+  assert.equal(Object.keys(game.server.pendingHands.uid3.hand).length, 5);
+  assert.equal(game.server.pendingHands.uid2, undefined);
 });
 
 test("게임 종료 시 승자와 종료 상태가 기록된다", () => {
@@ -94,4 +96,23 @@ test("게임 종료 시 승자와 종료 상태가 기록된다", () => {
   assert.equal(game.public.phase, "finished");
   assert.equal(game.public.winnerUid, "uid2");
   assert.equal(game.public.finishedAt, 200);
+});
+
+test("명령 결과의 undefined 값은 RTDB 저장 전에 제거된다", () => {
+  const game = gameState();
+  recordCommand(game, "roulette_1", {
+    uid: "uid1",
+    type: "penaltyResolved",
+    createdAt: 300,
+    result: {
+      success: true,
+      winnerUid: undefined,
+      nested: {turnUid: undefined, round: 2},
+    },
+  });
+
+  assert.deepEqual(game.server.processedCommands.roulette_1.result, {
+    success: true,
+    nested: {round: 2},
+  });
 });

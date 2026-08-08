@@ -28,7 +28,8 @@ export interface PublicLastPlay {
 
 export interface PublicGameState {
   status: "playing" | "finished";
-  phase: "playing" | "lastCardChallenge" | "penalty" | "finished";
+  phase: "dealing" | "playing" | "lastCardChallenge" | "penalty" |
+    "finished";
   round: number;
   revision: number;
   table: Exclude<CardRank, "JOKER">;
@@ -60,6 +61,8 @@ export interface ServerGameState {
   lastPlayCards: GameCard[] | null;
   processedCommands: Record<string, ProcessedCommand>;
   roundStarterUid: string;
+  /** 태블릿 배분 연출이 끝나기 전까지 클라이언트에 공개하지 않는 손패입니다. */
+  pendingHands?: Record<string, PrivatePlayerState>;
 }
 
 export interface LiarsPokerGameState {

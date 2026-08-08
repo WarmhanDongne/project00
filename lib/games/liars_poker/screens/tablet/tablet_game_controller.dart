@@ -39,6 +39,7 @@ class TabletGameController extends ChangeNotifier {
   int penaltyAttemptCount = 0;
   int rouletteRetry = 0;
   bool isResolvingPenalty = false;
+  bool isProcessingMenuCommand = false;
   String? penaltyTargetUid;
   List<SubmittedPlay> roundPlays = const [];
   String? activeAnimationPlayId;
@@ -64,9 +65,26 @@ class TabletGameController extends ChangeNotifier {
 
   void initialize() {
     _publicGameSubscription?.cancel();
+    unawaited(_warmUpGameplayCommands());
     _publicGameSubscription = gameService.query
         .watchPublicGame(roomCode)
         .listen(_handlePublicGame, onError: _handlePublicGameError);
+  }
+
+  Future<void> _warmUpGameplayCommands() async {
+    try {
+      await gameService.command.warmUpGameplayCommands();
+    } catch (_) {
+      // 사전 준비 실패는 실제 명령의 자동 재시도로 복구되므로 UI에 표시하지 않습니다.
+    }
+  }
+
+  Future<void> _warmUpLiarCommand() async {
+    try {
+      await gameService.command.warmUpLiarCommand();
+    } catch (_) {
+      // 실제 라이어 명령에서 재시도하므로 사전 준비 오류는 무시합니다.
+    }
   }
 
   void _handlePublicGame(DatabaseEvent event) {
@@ -140,10 +158,15 @@ class TabletGameController extends ChangeNotifier {
       status = GameStatus.cardsRevealing;
     } else if (hasNewSubmission) {
       status = GameStatus.cardsPlaying;
+      unawaited(_warmUpLiarCommand());
     } else if (snapshot.phase == 'penalty' &&
         status != GameStatus.cardsRevealing) {
       status = GameStatus.penalty;
+    } else if (snapshot.phase == 'dealing') {
+      // 새 라운드와 게임 재시작 모두 다시 카드 배분부터 진행합니다.
+      status = GameStatus.dealing;
     } else if (isNewRound) {
+      // 새 라운드에서도 태블릿 카드 배분 애니메이션을 다시 실행합니다.
       status = GameStatus.roundStarting;
     } else if (isFirstSnapshot && roundPlays.isEmpty) {
       // 게임 화면에 처음 들어왔을 때만 카드 배분 애니메이션을 실행합니다.
@@ -160,6 +183,42 @@ class TabletGameController extends ChangeNotifier {
 
   void _handlePublicGameError(Object error) {
     onError('게임 상태를 불러오지 못했습니다.', error);
+  }
+
+  /// 현재 방과 좌석은 유지하고 게임 데이터만 새로 만듭니다.
+  Future<bool> restartGame() async {
+    if (isProcessingMenuCommand) return false;
+
+    isProcessingMenuCommand = true;
+    notifyListeners();
+    try {
+      await gameService.command.restartGame(roomCode: roomCode);
+      return true;
+    } catch (error) {
+      onError('게임을 재시작하지 못했습니다.', error);
+      return false;
+    } finally {
+      isProcessingMenuCommand = false;
+      notifyListeners();
+    }
+  }
+
+  /// RTDB 방은 삭제하지 않고 현재 게임 상태만 종료합니다.
+  Future<bool> endGame() async {
+    if (isProcessingMenuCommand) return false;
+
+    isProcessingMenuCommand = true;
+    notifyListeners();
+    try {
+      await gameService.command.endGame(roomCode: roomCode);
+      return true;
+    } catch (error) {
+      onError('게임을 종료하지 못했습니다.', error);
+      return false;
+    } finally {
+      isProcessingMenuCommand = false;
+      notifyListeners();
+    }
   }
 
   /// 룰렛 결과만 Cloud Function에 전달합니다.
@@ -187,8 +246,17 @@ class TabletGameController extends ChangeNotifier {
   // 화면 애니메이션 완료 이벤트
   // -------------------------------------------------------------------------
 
-  void onDealCompleted() {
+  Future<void> onDealCompleted() async {
     changeStatus(GameStatus.roundStarting);
+
+    // 이전 서버 버전이나 개발용 로컬 상태에서는 별도 완료 호출이 필요 없습니다.
+    if (serverPhase != 'dealing') return;
+
+    try {
+      await gameService.command.completeDealing(roomCode: roomCode);
+    } catch (error) {
+      onError('카드 배분 완료 상태를 반영하지 못했습니다.', error);
+    }
   }
 
   void onRoundRevealCompleted() {
