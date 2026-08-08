@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
+import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
@@ -43,6 +45,14 @@ class _PhoneHomeState extends State<PhoneHome> {
               child: Column(children: [SizedBox(height: 10), gameListText()]),
             ),
             OwnGameList(games: _games),
+            Button(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MafiaPhoneGame()),
+              ),
+              text: "마피아 게임<-",
+              color: Colors.black,
+            ),
           ],
         ),
       ),
