@@ -13,9 +13,9 @@ class PhoneGame extends StatelessWidget {
     return OrientationBuilder(
       builder: (context, orientation) {
         if (orientation == Orientation.portrait) {
-          return const PhoneGamePortrait(); // 팀원 작업 영역
+          return const PhoneGamePortrait(); // 세로 모드
         } else {
-          return const PhoneGameLandscape(); // 하준 님 작업 영역
+          return const PhoneGameLandscape(); // 가로 모드
         }
       },
     );
