@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
 
 class HandCardStack extends StatefulWidget {
-  // 상단에서 데이터를 주입받을 수 있도록 Nullable 리스트로 선언
   final List<String>? cards;
   final ValueChanged<int>? onCardSelected;
 
-  const HandCardStack({
-    super.key,
-    this.cards, // required 제거
-    this.onCardSelected,
-  });
+  const HandCardStack({super.key, this.cards, this.onCardSelected});
 
   @override
   State<HandCardStack> createState() => _HandCardStackState();
@@ -17,74 +13,150 @@ class HandCardStack extends StatefulWidget {
 
 class _HandCardStackState extends State<HandCardStack> {
   int? _selectedIndex;
-  late final List<String> _renderCards; // 실제 렌더링 파이프라인에 들어갈 배열
+  late final List<String> _renderCards;
+
+  // 상태 변수: true일 경우 딜링 애니메이션 렌더링, false일 경우 인터랙티브 스택 렌더링
+  bool _isDealing = true;
+
+  // 렌더링 상수 정의 (PhoneCardReceiveAnimation과 동일한 파라미터 공유)
+  static const double _cardWidth = 110.0;
+  static const double _spreadStepX = 35.0;
+  static const double _spreadStepY = 35.0;
+  static const double _selectedElevation = 20.0;
 
   @override
   void initState() {
     super.initState();
-    // 위젯 마운트 시 데이터 바인딩: 부모가 준 데이터가 있으면 사용, 없으면 내부 더미 데이터 할당
-    _renderCards = widget.cards ?? ['K', 'Q', 'A', 'A', 'Joker'];
+    // Null-safety 처리 및 더미 에셋 바인딩
+    _renderCards =
+        widget.cards ??
+        [
+          'assets/games/liars_poker/images/cards/white K.png',
+          'assets/games/liars_poker/images/cards/white Q.png',
+          'assets/games/liars_poker/images/cards/white A.png',
+          'assets/games/liars_poker/images/cards/white A.png',
+          'assets/games/liars_poker/images/cards/white Joker.png',
+        ];
   }
 
   @override
   Widget build(BuildContext context) {
-    const double cardSpacing = 35.0;
-    const double cardWidth = 110.0;
-    const double cardHeight = 160.0;
-    const double selectedElevationY = 20.0;
+    if (_isDealing) {
+      return PhoneCardReceiveAnimation(
+        frontCardAssets: _renderCards,
+        cardWidth: _cardWidth,
+        spreadStepX: _spreadStepX,
+        spreadStepY: _spreadStepY,
+        onCompleted: () {
+          if (mounted) {
+            setState(() {
+              _isDealing = false;
+            });
+          }
+        },
+      );
+    }
 
-    // 전체 렌더링 컨테이너 너비 계산
-    final double stackWidth =
-        cardWidth + (_renderCards.length - 1) * cardSpacing;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 부모 제약 조건에 따른 뷰포트 영역 계산
+        final size = Size(
+          constraints.hasBoundedWidth ? constraints.maxWidth : 400,
+          constraints.hasBoundedHeight ? constraints.maxHeight : 600,
+        );
 
-    return SizedBox(
-      width: stackWidth,
-      height: cardHeight + selectedElevationY,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: List.generate(_renderCards.length, (index) {
-          final bool isSelected = _selectedIndex == index;
+        final centerX = size.width / 2;
+        final centerY = size.height / 2;
+        const cardAspectRatio = 512 / 350;
+        final cardHeight = _cardWidth * cardAspectRatio;
+        final cardCount = _renderCards.length;
 
-          return Positioned(
-            left: index * cardSpacing,
-            top: isSelected ? 0 : selectedElevationY,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedIndex = isSelected ? null : index;
-                });
+        return SizedBox.fromSize(
+          size: size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: List.generate(cardCount, (index) {
+              final centeredIndex = index - (cardCount - 1) / 2;
+              final isSelected = _selectedIndex == index;
 
-                if (widget.onCardSelected != null && _selectedIndex != null) {
-                  widget.onCardSelected!(_selectedIndex!);
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(
-                  milliseconds: 150,
-                ), // 하드웨어 프레임 드랍 방지를 위해 짧게 설정
-                width: cardWidth,
-                height: cardHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(
-                    color: isSelected ? Colors.red : Colors.grey.shade400,
-                    width: isSelected ? 2.0 : 1.0,
+              // 좌표 동기화: 애니메이션 컴포넌트의 Spread Target Position 공식과 동일한 연산
+              final baseLeft =
+                  centerX + (centeredIndex * _spreadStepX) - (_cardWidth / 2);
+              final baseTop =
+                  centerY + (centeredIndex * _spreadStepY) - (cardHeight / 2);
+
+              return AnimatedPositioned(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOutCubic,
+                left: baseLeft,
+                // 선택(Tap) 시 Y축 평행 이동을 통한 Elevate 효과 적용
+                top: isSelected ? baseTop - _selectedElevation : baseTop,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    setState(() {
+                      _selectedIndex = isSelected ? null : index;
+                    });
+                    if (widget.onCardSelected != null &&
+                        _selectedIndex != null) {
+                      widget.onCardSelected!(_selectedIndex!);
+                    }
+                  },
+                  child: _StaticCardFace(
+                    asset: _renderCards[index],
+                    cardWidth: _cardWidth,
+                    cardHeight: cardHeight,
+                    isSelected: isSelected,
                   ),
                 ),
-                alignment: Alignment.topLeft,
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  _renderCards[index], // 할당된 메모리 데이터 참조
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StaticCardFace extends StatelessWidget {
+  final String asset;
+  final double cardWidth;
+  final double cardHeight;
+  final bool isSelected;
+
+  const _StaticCardFace({
+    required this.asset,
+    required this.cardWidth,
+    required this.cardHeight,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: cardWidth,
+      height: cardHeight,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        border: isSelected
+            ? Border.all(color: Colors.redAccent, width: 2.0)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x66000000),
+            blurRadius: isSelected ? 14.0 : 7.0,
+            offset: isSelected ? const Offset(0, 8.0) : const Offset(0, 5.0),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8.0),
+        child: Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+        ),
       ),
     );
   }
