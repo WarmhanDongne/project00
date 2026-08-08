@@ -167,9 +167,9 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // ============================================== Phone을 위한 메서드 ========================================
-  Future<bool> joinRoom(String rawRoomCode, String nickname) async {
+  Future<bool> joinRoom(String roomCode, String nickname) async {
     // Room code 받기
-    final code = rawRoomCode.trim().toUpperCase();
+    final code = roomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
     // joinRoom 실행
