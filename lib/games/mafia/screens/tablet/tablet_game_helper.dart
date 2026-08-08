@@ -1,17 +1,25 @@
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 const int cardsPerPlayer = 5;
 
-const String _cardAssetRoot = 'assets/games/liars_poker/images/cards';
-
 /// 서버에서 받은 카드 랭크를 태블릿 카드 이미지로 변환합니다.
-String cardAssetForRank(String rank) {
+AssetGenImage cardAssetForRank(String rank) {
   return switch (rank.toUpperCase()) {
-    'A' => '$_cardAssetRoot/white A.png',
-    'K' => '$_cardAssetRoot/white K.png',
-    'Q' => '$_cardAssetRoot/white Q.png',
-    'JOKER' => '$_cardAssetRoot/white Joker.png',
-    _ => '$_cardAssetRoot/white back.png',
+    'A' => Assets.games.liarsPoker.images.cards.whiteA,
+    'K' => Assets.games.liarsPoker.images.cards.whiteK,
+    'Q' => Assets.games.liarsPoker.images.cards.whiteQ,
+    'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker,
+    _ => Assets.games.liarsPoker.images.cards.whiteBack,
+  };
+}
+
+AssetGenImage tableAssetForRank(String rank) {
+  return switch (rank.toUpperCase()) {
+    'A' => Assets.games.liarsPoker.images.background.a,
+    'K' => Assets.games.liarsPoker.images.background.k,
+    'Q' => Assets.games.liarsPoker.images.background.q,
+    _ => Assets.games.liarsPoker.images.background.q,
   };
 }
 
@@ -28,7 +36,7 @@ class SubmittedPlay {
 
   final String eventId;
   final int playerIndex;
-  final List<String> frontCardAssets;
+  final List<AssetGenImage> frontCardAssets;
   final int submittedAt;
   final bool isRevealed;
   final bool animateEntry;
@@ -36,7 +44,7 @@ class SubmittedPlay {
   SubmittedPlay copyWith({
     String? eventId,
     int? playerIndex,
-    List<String>? frontCardAssets,
+    List<AssetGenImage>? frontCardAssets,
     int? submittedAt,
     bool? isRevealed,
     bool? animateEntry,

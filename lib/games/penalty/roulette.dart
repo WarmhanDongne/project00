@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:roulette/roulette.dart';
 
 enum RouletteResult { safe, eliminated }
@@ -242,10 +243,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: Offset(0, 35),
                 child: Transform.scale(
                   scale: 1.6, // 8% 확대
-                  child: Image(
-                    image: AssetImage(
-                      'assets/images/widgets/roulette/border.png',
-                    ),
+                  child: Assets.images.widgets.roulette.border.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -260,10 +258,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: Offset(0, 22),
                 child: Transform.scale(
                   scale: 0.9, // 8% 확대
-                  child: Image(
-                    image: AssetImage(
-                      'assets/images/widgets/roulette/centerStone.png',
-                    ),
+                  child: Assets.images.widgets.roulette.centerStone.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -278,10 +273,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: Offset(0, -410),
                 child: Transform.scale(
                   scale: 0.8, // 8% 확대
-                  child: Image(
-                    image: AssetImage(
-                      'assets/images/widgets/roulette/pointer.png',
-                    ),
+                  child: Assets.images.widgets.roulette.pointer.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -297,8 +289,7 @@ class RouletteWheel extends StatelessWidget {
             child: Center(
               child: SizedBox(
                 width: 450,
-                child: Image.asset(
-                  'assets/images/widgets/roulette/lever_bottom.png',
+                child: Assets.images.widgets.roulette.leverBottom.image(
                   fit: BoxFit.contain,
                 ),
               ),
@@ -327,8 +318,7 @@ class RouletteWheel extends StatelessWidget {
                   width: 150,
                   height: 150,
                   child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/widgets/roulette/lever_stick.png',
+                    child: Assets.images.widgets.roulette.leverStick.image(
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -347,8 +337,7 @@ class RouletteWheel extends StatelessWidget {
                   child: ClipOval(
                     child: Transform.rotate(
                       angle: math.pi,
-                      child: Image.asset(
-                        'assets/images/widgets/roulette/lever_stick.png',
+                      child: Assets.images.widgets.roulette.leverStick.image(
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -369,8 +358,7 @@ class RouletteWheel extends StatelessWidget {
                     width: 630,
                     child: Transform.scale(
                       scale: 1.3,
-                      child: Image.asset(
-                        'assets/images/widgets/roulette/lever_head.png',
+                      child: Assets.images.widgets.roulette.leverHead.image(
                         fit: BoxFit.contain,
                       ),
                     ),

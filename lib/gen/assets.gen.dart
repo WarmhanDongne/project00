@@ -9,7 +9,10 @@
 // ignore_for_file: type=lint
 // ignore_for_file: deprecated_member_use,directives_ordering,implicit_dynamic_list_literal,unnecessary_import
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart' as _svg;
+import 'package:vector_graphics/vector_graphics.dart' as _vg;
 
 class $AssetsGamesGen {
   const $AssetsGamesGen();
@@ -26,6 +29,9 @@ class $AssetsImagesGen {
 
   /// Directory path: assets/images/button
   $AssetsImagesButtonGen get button => const $AssetsImagesButtonGen();
+
+  /// Directory path: assets/images/others
+  $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
 
   /// Directory path: assets/images/widgets
   $AssetsImagesWidgetsGen get widgets => const $AssetsImagesWidgetsGen();
@@ -87,8 +93,23 @@ class $AssetsImagesButtonGen {
   List<AssetGenImage> get values => [googleLoginButton];
 }
 
+class $AssetsImagesOthersGen {
+  const $AssetsImagesOthersGen();
+
+  /// File path: assets/images/others/codeExample.png
+  AssetGenImage get codeExample =>
+      const AssetGenImage('assets/images/others/codeExample.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [codeExample];
+}
+
 class $AssetsImagesWidgetsGen {
   const $AssetsImagesWidgetsGen();
+
+  /// Directory path: assets/images/widgets/layout
+  $AssetsImagesWidgetsLayoutGen get layout =>
+      const $AssetsImagesWidgetsLayoutGen();
 
   /// Directory path: assets/images/widgets/roulette
   $AssetsImagesWidgetsRouletteGen get roulette =>
@@ -102,6 +123,10 @@ class $AssetsGamesLiarsPokerImagesGen {
   $AssetsGamesLiarsPokerImagesBackgroundGen get background =>
       const $AssetsGamesLiarsPokerImagesBackgroundGen();
 
+  /// Directory path: assets/games/liars_poker/images/button
+  $AssetsGamesLiarsPokerImagesButtonGen get button =>
+      const $AssetsGamesLiarsPokerImagesButtonGen();
+
   /// Directory path: assets/games/liars_poker/images/cards
   $AssetsGamesLiarsPokerImagesCardsGen get cards =>
       const $AssetsGamesLiarsPokerImagesCardsGen();
@@ -110,9 +135,9 @@ class $AssetsGamesLiarsPokerImagesGen {
   $AssetsGamesLiarsPokerImagesIconsGen get icons =>
       const $AssetsGamesLiarsPokerImagesIconsGen();
 
-  /// Directory path: assets/games/liars_poker/images/phone
-  $AssetsGamesLiarsPokerImagesPhoneGen get phone =>
-      const $AssetsGamesLiarsPokerImagesPhoneGen();
+  /// Directory path: assets/games/liars_poker/images/table
+  $AssetsGamesLiarsPokerImagesTableGen get table =>
+      const $AssetsGamesLiarsPokerImagesTableGen();
 }
 
 class $AssetsGamesMafiaImagesGen {
@@ -122,9 +147,28 @@ class $AssetsGamesMafiaImagesGen {
   $AssetsGamesMafiaImagesBackgroundGen get background =>
       const $AssetsGamesMafiaImagesBackgroundGen();
 
+  /// Directory path: assets/games/mafia/images/cards
+  $AssetsGamesMafiaImagesCardsGen get cards =>
+      const $AssetsGamesMafiaImagesCardsGen();
+
   /// Directory path: assets/games/mafia/images/icons
   $AssetsGamesMafiaImagesIconsGen get icons =>
       const $AssetsGamesMafiaImagesIconsGen();
+
+  /// Directory path: assets/games/mafia/images/other
+  $AssetsGamesMafiaImagesOtherGen get other =>
+      const $AssetsGamesMafiaImagesOtherGen();
+}
+
+class $AssetsImagesWidgetsLayoutGen {
+  const $AssetsImagesWidgetsLayoutGen();
+
+  /// File path: assets/images/widgets/layout/ipad.png
+  AssetGenImage get ipad =>
+      const AssetGenImage('assets/images/widgets/layout/ipad.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [ipad];
 }
 
 class $AssetsImagesWidgetsRouletteGen {
@@ -206,6 +250,23 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
   ];
 }
 
+class $AssetsGamesLiarsPokerImagesButtonGen {
+  const $AssetsGamesLiarsPokerImagesButtonGen();
+
+  /// File path: assets/games/liars_poker/images/button/button_liar_black.svg
+  SvgGenImage get buttonLiarBlack => const SvgGenImage(
+    'assets/games/liars_poker/images/button/button_liar_black.svg',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/button_liar_white.png
+  AssetGenImage get buttonLiarWhite => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_liar_white.png',
+  );
+
+  /// List of all assets
+  List<dynamic> get values => [buttonLiarBlack, buttonLiarWhite];
+}
+
 class $AssetsGamesLiarsPokerImagesCardsGen {
   const $AssetsGamesLiarsPokerImagesCardsGen();
 
@@ -260,48 +321,60 @@ class $AssetsGamesLiarsPokerImagesIconsGen {
     'assets/games/liars_poker/images/icons/setting_icon.png',
   );
 
+  /// File path: assets/games/liars_poker/images/icons/setting_phone.png
+  AssetGenImage get settingPhone => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/setting_phone.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/icons/tip.png
+  AssetGenImage get tip =>
+      const AssetGenImage('assets/games/liars_poker/images/icons/tip.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [roleIcon, settingIcon];
+  List<AssetGenImage> get values => [roleIcon, settingIcon, settingPhone, tip];
 }
 
-class $AssetsGamesLiarsPokerImagesPhoneGen {
-  const $AssetsGamesLiarsPokerImagesPhoneGen();
+class $AssetsGamesLiarsPokerImagesTableGen {
+  const $AssetsGamesLiarsPokerImagesTableGen();
 
-  /// File path: assets/games/liars_poker/images/phone/ACE TABLE.png
-  AssetGenImage get aceTable => const AssetGenImage(
-    'assets/games/liars_poker/images/phone/ACE TABLE.png',
+  /// File path: assets/games/liars_poker/images/table/table_ace_black.svg
+  SvgGenImage get tableAceBlack => const SvgGenImage(
+    'assets/games/liars_poker/images/table/table_ace_black.svg',
   );
 
-  /// File path: assets/games/liars_poker/images/phone/KING TABLE.png
-  AssetGenImage get kingTable => const AssetGenImage(
-    'assets/games/liars_poker/images/phone/KING TABLE.png',
+  /// File path: assets/games/liars_poker/images/table/table_ace_white.png
+  AssetGenImage get tableAceWhite => const AssetGenImage(
+    'assets/games/liars_poker/images/table/table_ace_white.png',
   );
 
-  /// File path: assets/games/liars_poker/images/phone/Liar.png
-  AssetGenImage get liar =>
-      const AssetGenImage('assets/games/liars_poker/images/phone/Liar.png');
-
-  /// File path: assets/games/liars_poker/images/phone/QUEEN TABLE.png
-  AssetGenImage get queenTable => const AssetGenImage(
-    'assets/games/liars_poker/images/phone/QUEEN TABLE.png',
+  /// File path: assets/games/liars_poker/images/table/table_king_black.svg
+  SvgGenImage get tableKingBlack => const SvgGenImage(
+    'assets/games/liars_poker/images/table/table_king_black.svg',
   );
 
-  /// File path: assets/games/liars_poker/images/phone/bulb.png
-  AssetGenImage get bulb =>
-      const AssetGenImage('assets/games/liars_poker/images/phone/bulb.png');
+  /// File path: assets/games/liars_poker/images/table/table_king_white.png
+  AssetGenImage get tableKingWhite => const AssetGenImage(
+    'assets/games/liars_poker/images/table/table_king_white.png',
+  );
 
-  /// File path: assets/games/liars_poker/images/phone/setting.png
-  AssetGenImage get setting =>
-      const AssetGenImage('assets/games/liars_poker/images/phone/setting.png');
+  /// File path: assets/games/liars_poker/images/table/table_queen_black.svg
+  SvgGenImage get tableQueenBlack => const SvgGenImage(
+    'assets/games/liars_poker/images/table/table_queen_black.svg',
+  );
+
+  /// File path: assets/games/liars_poker/images/table/table_queen_white.png
+  AssetGenImage get tableQueenWhite => const AssetGenImage(
+    'assets/games/liars_poker/images/table/table_queen_white.png',
+  );
 
   /// List of all assets
-  List<AssetGenImage> get values => [
-    aceTable,
-    kingTable,
-    liar,
-    queenTable,
-    bulb,
-    setting,
+  List<dynamic> get values => [
+    tableAceBlack,
+    tableAceWhite,
+    tableKingBlack,
+    tableKingWhite,
+    tableQueenBlack,
+    tableQueenWhite,
   ];
 }
 
@@ -328,6 +401,10 @@ class $AssetsGamesMafiaImagesBackgroundGen {
     'assets/games/mafia/images/background/background_night_phone.png',
   );
 
+  /// Directory path: assets/games/mafia/images/background/bird
+  $AssetsGamesMafiaImagesBackgroundBirdGen get bird =>
+      const $AssetsGamesMafiaImagesBackgroundBirdGen();
+
   /// List of all assets
   List<AssetGenImage> get values => [
     backgroundMorning,
@@ -335,6 +412,10 @@ class $AssetsGamesMafiaImagesBackgroundGen {
     backgroundNight,
     backgroundNightPhone,
   ];
+}
+
+class $AssetsGamesMafiaImagesCardsGen {
+  const $AssetsGamesMafiaImagesCardsGen();
 }
 
 class $AssetsGamesMafiaImagesIconsGen {
@@ -372,6 +453,66 @@ class $AssetsGamesMafiaImagesIconsGen {
     settingWhite,
     tip,
     tipLight,
+  ];
+}
+
+class $AssetsGamesMafiaImagesOtherGen {
+  const $AssetsGamesMafiaImagesOtherGen();
+
+  /// File path: assets/games/mafia/images/other/dead_message.png
+  AssetGenImage get deadMessage =>
+      const AssetGenImage('assets/games/mafia/images/other/dead_message.png');
+
+  /// File path: assets/games/mafia/images/other/talk_phone.png
+  AssetGenImage get talkPhone =>
+      const AssetGenImage('assets/games/mafia/images/other/talk_phone.png');
+
+  /// File path: assets/games/mafia/images/other/talk_tablet.png
+  AssetGenImage get talkTablet =>
+      const AssetGenImage('assets/games/mafia/images/other/talk_tablet.png');
+
+  /// File path: assets/games/mafia/images/other/vote_box.png
+  AssetGenImage get voteBox =>
+      const AssetGenImage('assets/games/mafia/images/other/vote_box.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    deadMessage,
+    talkPhone,
+    talkTablet,
+    voteBox,
+  ];
+}
+
+class $AssetsGamesMafiaImagesBackgroundBirdGen {
+  const $AssetsGamesMafiaImagesBackgroundBirdGen();
+
+  /// File path: assets/games/mafia/images/background/bird/night_bird0.png
+  AssetGenImage get nightBird0 => const AssetGenImage(
+    'assets/games/mafia/images/background/bird/night_bird0.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/bird/night_bird1.png
+  AssetGenImage get nightBird1 => const AssetGenImage(
+    'assets/games/mafia/images/background/bird/night_bird1.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/bird/night_bird2.png
+  AssetGenImage get nightBird2 => const AssetGenImage(
+    'assets/games/mafia/images/background/bird/night_bird2.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/bird/night_bird3.png
+  AssetGenImage get nightBird3 => const AssetGenImage(
+    'assets/games/mafia/images/background/bird/night_bird3.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    nightBird0,
+    nightBird1,
+    nightBird2,
+    nightBird3,
   ];
 }
 
@@ -469,4 +610,78 @@ class AssetGenImageAnimation {
   final bool isAnimation;
   final Duration duration;
   final int frames;
+}
+
+class SvgGenImage {
+  const SvgGenImage(this._assetName, {this.size, this.flavors = const {}})
+    : _isVecFormat = false;
+
+  const SvgGenImage.vec(this._assetName, {this.size, this.flavors = const {}})
+    : _isVecFormat = true;
+
+  final String _assetName;
+  final Size? size;
+  final Set<String> flavors;
+  final bool _isVecFormat;
+
+  _svg.SvgPicture svg({
+    Key? key,
+    bool matchTextDirection = false,
+    AssetBundle? bundle,
+    String? package,
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+    AlignmentGeometry alignment = Alignment.center,
+    bool allowDrawingOutsideViewBox = false,
+    WidgetBuilder? placeholderBuilder,
+    String? semanticsLabel,
+    bool excludeFromSemantics = false,
+    _svg.SvgTheme? theme,
+    _svg.ColorMapper? colorMapper,
+    ColorFilter? colorFilter,
+    Clip clipBehavior = Clip.hardEdge,
+    @deprecated Color? color,
+    @deprecated BlendMode colorBlendMode = BlendMode.srcIn,
+    @deprecated bool cacheColorFilter = false,
+  }) {
+    final _svg.BytesLoader loader;
+    if (_isVecFormat) {
+      loader = _vg.AssetBytesLoader(
+        _assetName,
+        assetBundle: bundle,
+        packageName: package,
+      );
+    } else {
+      loader = _svg.SvgAssetLoader(
+        _assetName,
+        assetBundle: bundle,
+        packageName: package,
+        theme: theme,
+        colorMapper: colorMapper,
+      );
+    }
+    return _svg.SvgPicture(
+      loader,
+      key: key,
+      matchTextDirection: matchTextDirection,
+      width: width,
+      height: height,
+      fit: fit,
+      alignment: alignment,
+      allowDrawingOutsideViewBox: allowDrawingOutsideViewBox,
+      placeholderBuilder: placeholderBuilder,
+      semanticsLabel: semanticsLabel,
+      excludeFromSemantics: excludeFromSemantics,
+      colorFilter:
+          colorFilter ??
+          (color == null ? null : ColorFilter.mode(color, colorBlendMode)),
+      clipBehavior: clipBehavior,
+      cacheColorFilter: cacheColorFilter,
+    );
+  }
+
+  String get path => _assetName;
+
+  String get keyName => _assetName;
 }

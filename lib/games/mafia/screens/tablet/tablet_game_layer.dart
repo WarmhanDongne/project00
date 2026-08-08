@@ -3,6 +3,7 @@ import 'package:project00/games/liars_poker/animations/card_deal.dart';
 import 'package:project00/games/liars_poker/animations/round_start_reveal.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/widgets/result_tablet.dart';
+import 'package:project00/games/mafia/screens/tablet/tablet_game_helper.dart';
 
 /// 대기, 카드 배분, 라운드, 결과 등 상태별 기본 화면을 그립니다.
 class TabletGameLayer extends StatelessWidget {
@@ -47,7 +48,7 @@ class TabletGameLayer extends StatelessWidget {
       GameStatus.cardsRevealing ||
       GameStatus.penalty => RoundStartReveal(
         key: ValueKey('round-$roundNumber'),
-        tableAsset: 'assets/games/liars_poker/images/background/$table.png',
+        tableAsset: tableAssetForRank(table),
         playerCount: playerCount,
         playerSeatIndexes: playerSeatIndexes,
         remainingCardCounts: remainingCardCounts,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/mafia/widgets/sideblock_phone.dart';
+import 'package:project00/gen/assets.gen.dart';
 
-final bool isMorning = false;
+final bool isMorning = true;
 
 class MafiaPhoneGame extends StatelessWidget {
   const MafiaPhoneGame({super.key});
@@ -28,13 +29,11 @@ class _GameBackground extends StatelessWidget {
     return ColoredBox(
       color: Colors.black,
       child: isMorning
-          ? Image.asset(
-              'assets/games/mafia/images/background/background_morning_phone.png',
+          ? Assets.games.mafia.images.background.backgroundMorningPhone.image(
               fit: BoxFit.cover,
               alignment: Alignment.center,
             )
-          : Image.asset(
-              'assets/games/mafia/images/background/background_night_phone.png',
+          : Assets.games.mafia.images.background.backgroundNightPhone.image(
               fit: BoxFit.cover,
               alignment: Alignment.center,
             ),

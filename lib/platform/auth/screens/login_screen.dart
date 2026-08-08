@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
@@ -193,8 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 child: SizedBox(
                   width: double.infinity,
-                  child: Image.asset(
-                    'assets/images/button/googleLoginButton.png',
+                  child: Assets.images.button.googleLoginButton.image(
                     fit: BoxFit.fitWidth,
                   ),
                 ),

@@ -1,27 +1,38 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
-import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
+
+/// 받은 카드 덱이 중앙으로 들어온 뒤, 사용자의 탭을 기다렸다가 공개됩니다.
+///
+/// 진입 중에는 모든 카드를 뒷면으로 유지합니다. 덱을 누르면 중앙에서
+/// 먼저 왼쪽에서 오른쪽 방향으로 회전한 뒤 좌상단에서 우하단으로 펼쳐집니다.
 class PhoneCardReceiveAnimation extends StatefulWidget {
   const PhoneCardReceiveAnimation({
     super.key,
     required this.frontCardAssets,
-    this.backCardAsset = 'assets/games/liars_poker/images/cards/white back.png',
+    this.backCardAsset,
     this.cardWidth = 169.0,
-    this.spreadStepX = 35.0, // 대각선 펼침 X축 간격
-    this.spreadStepY = 35.0, // 대각선 펼침 Y축 간격
+    this.spreadStepX = 35.0,
+    this.spreadStepY = 35.0,
     this.totalDuration = const Duration(milliseconds: 2200),
     this.autoplay = true,
     this.onCompleted,
   }) : assert(frontCardAssets.length > 0),
-       assert(cardWidth > 0);
+       assert(cardWidth > 0),
+       assert(totalDuration > Duration.zero);
 
-  final List<String> frontCardAssets;
-  final String backCardAsset;
+  final List<AssetGenImage> frontCardAssets;
+  final AssetGenImage? backCardAsset;
   final double cardWidth;
   final double spreadStepX;
   final double spreadStepY;
+
+  /// 자동 진입과 탭 후 공개 애니메이션을 합친 기준 시간입니다.
   final Duration totalDuration;
+
+  /// true이면 화면이 열릴 때 카드 덱이 자동으로 중앙까지 들어옵니다.
   final bool autoplay;
   final VoidCallback? onCompleted;
 
@@ -31,51 +42,92 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
 }
 
 class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+    with TickerProviderStateMixin {
+  late final AnimationController _entryController;
+  late final AnimationController _revealController;
+
+  bool _isEntryCompleted = false;
+  bool _isRevealStarted = false;
+
+  Duration get _entryDuration => Duration(
+    milliseconds: math.max(
+      1,
+      (widget.totalDuration.inMilliseconds * 0.34).round(),
+    ),
+  );
+
+  Duration get _revealDuration => Duration(
+    milliseconds: math.max(
+      1,
+      widget.totalDuration.inMilliseconds - _entryDuration.inMilliseconds,
+    ),
+  );
+
+  bool get _canReveal => _isEntryCompleted && !_isRevealStarted;
 
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: widget.totalDuration)
-          ..addStatusListener((status) {
-            if (status == AnimationStatus.completed) {
-              widget.onCompleted?.call();
-            }
-          });
+    _entryController = AnimationController(
+      vsync: this,
+      duration: _entryDuration,
+    )..addStatusListener(_handleEntryStatus);
+    _revealController = AnimationController(
+      vsync: this,
+      duration: _revealDuration,
+    )..addStatusListener(_handleRevealStatus);
 
     if (widget.autoplay) {
-      _controller.forward();
+      _entryController.forward();
     }
   }
 
   @override
   void didUpdateWidget(PhoneCardReceiveAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (oldWidget.totalDuration != widget.totalDuration) {
-      _controller.duration = widget.totalDuration;
+      _entryController.duration = _entryDuration;
+      _revealController.duration = _revealDuration;
     }
-    if (!oldWidget.autoplay && widget.autoplay && !_controller.isAnimating) {
-      _controller.forward(from: 0);
+
+    if (!oldWidget.autoplay && widget.autoplay && !_isEntryCompleted) {
+      _entryController.forward();
     }
+  }
+
+  void _handleEntryStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+
+    setState(() {
+      _isEntryCompleted = true;
+    });
+  }
+
+  void _handleRevealStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      widget.onCompleted?.call();
+    }
+  }
+
+  void _revealCards() {
+    if (!_canReveal) return;
+
+    setState(() {
+      _isRevealStarted = true;
+    });
+    _revealController.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _entryController
+      ..removeStatusListener(_handleEntryStatus)
+      ..dispose();
+    _revealController
+      ..removeStatusListener(_handleRevealStatus)
+      ..dispose();
     super.dispose();
-  }
-
-  /// 비선형(Curve) 진행률을 선형적인 Interval 구간 내에서 추출하는 유틸리티 함수
-  double _intervalProgress(
-    double value,
-    double begin,
-    double end,
-    Curve curve,
-  ) {
-    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
-    return curve.transform(progress);
   }
 
   @override
@@ -88,15 +140,20 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
         );
 
         return AnimatedBuilder(
-          animation: _controller,
+          animation: Listenable.merge([_entryController, _revealController]),
           builder: (context, _) {
             return SizedBox.fromSize(
               size: size,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  for (var i = widget.frontCardAssets.length - 1; i >= 0; i--)
-                    _buildAnimatedCard(size: size, cardIndex: i),
+                  for (
+                    var index = 0;
+                    index < widget.frontCardAssets.length;
+                    index++
+                  )
+                    _buildAnimatedCard(size: size, cardIndex: index),
+                  if (_canReveal) _buildRevealTapTarget(size),
                 ],
               ),
             );
@@ -106,98 +163,120 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     );
   }
 
+  Widget _buildRevealTapTarget(Size size) {
+    const cardAspectRatio = 512 / 350;
+    final cardHeight = widget.cardWidth * cardAspectRatio;
+
+    return Positioned(
+      left: (size.width - widget.cardWidth) / 2,
+      top: (size.height - cardHeight) / 2,
+      width: widget.cardWidth,
+      height: cardHeight,
+      child: Semantics(
+        button: true,
+        label: '카드 확인',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _revealCards,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAnimatedCard({required Size size, required int cardIndex}) {
     const cardAspectRatio = 512 / 350;
     final cardHeight = widget.cardWidth * cardAspectRatio;
     final cardCount = widget.frontCardAssets.length;
+    final center = Offset(size.width / 2, size.height / 2);
+    final centeredIndex = cardIndex - (cardCount - 1) / 2;
 
-    // 1단계: 패 진입 (Translation) [0.0 ~ 0.3]
-    final dropProgress = _intervalProgress(
-      _controller.value,
-      0.0,
-      0.3,
-      Curves.easeOutCubic,
-    );
+    // 카드 덱 전체가 위에서 내려와 중앙에 묵직하게 멈춥니다.
+    final entryProgress = Curves.easeOutCubic.transform(_entryController.value);
+    final entryStart = Offset(center.dx, -cardHeight / 2 - 32);
+    final deckOffset = Offset(cardIndex * 0.7, cardIndex * 1.25);
+    final deckPosition = center + deckOffset;
+    final entryPosition = Offset.lerp(
+      entryStart + deckOffset,
+      deckPosition,
+      entryProgress,
+    )!;
 
-    // 2단계: 카드 뒤집기 (3D Rotation Y) [0.35 ~ 0.65]
+    // 1단계: 카드가 겹쳐진 상태에서 덱 전체를 먼저 공개합니다.
     final flipProgress = _intervalProgress(
-      _controller.value,
-      0.35,
-      0.65,
+      _revealController.value,
+      0.06,
+      0.48,
       Curves.easeInOutCubic,
     );
+    final flipLift = math.sin(flipProgress * math.pi);
 
-    // 3단계: 대각선 펼침 (Offset Spread) [0.7 ~ 1.0]
+    // 2단계: 회전이 완전히 끝난 후 좌상단에서 우하단으로 펼칩니다.
     final spreadProgress = _intervalProgress(
-      _controller.value,
-      0.7,
-      1.0,
+      _revealController.value,
+      0.52,
+      1,
       Curves.easeOutCubic,
     );
-
-    // -- Translation 계산 --
-    final startY = -cardHeight - 50; // 화면 위쪽 바깥 좌표
-    final centerY = size.height / 2;
-    final centerX = size.width / 2;
-
-    final centerPosition = Offset(centerX, centerY);
-    final dropPosition = Offset(
-      centerX,
-      lerpDouble(startY, centerY, dropProgress)!,
+    final spreadTarget = Offset(
+      center.dx + centeredIndex * widget.spreadStepX,
+      center.dy + centeredIndex * widget.spreadStepY,
     );
+    var position = Offset.lerp(entryPosition, spreadTarget, spreadProgress)!;
+    position += Offset(0, -cardHeight * 0.07 * flipLift);
 
-    // Spread 시 전체 카드 덱이 화면 중앙에 오도록 인덱스 정규화 (-N ~ +N 형태)
-    final centeredIndex = cardIndex - (cardCount - 1) / 2;
-    final spreadTargetPosition = Offset(
-      centerX + (centeredIndex * widget.spreadStepX),
-      centerY + (centeredIndex * widget.spreadStepY),
-    );
-
-    Offset currentPosition = dropPosition;
-    if (spreadProgress > 0) {
-      currentPosition = Offset.lerp(
-        centerPosition,
-        spreadTargetPosition,
-        spreadProgress,
-      )!;
-    }
-
-    // -- 3D Rotation Y 계산 --
     final isFrontVisible = flipProgress >= 0.5;
-
-    // Y축 기준 회전 각도: π(뒷면) -> 0(앞면)
     final yRotation = isFrontVisible
         ? math.pi * (1 - flipProgress)
-        : math.pi * flipProgress;
-
-    // Z축 심도 시뮬레이션: 회전이 일어날 때 카드가 화면 쪽으로 살짝 떠오르는 효과 (Sine Curve)
-    final flipLift = math.sin(flipProgress * math.pi);
-    currentPosition += Offset(0, -cardHeight * 0.15 * flipLift);
+        : -math.pi * flipProgress;
+    final scale = lerpDouble(0.97, 1, entryProgress)! * (1 + flipLift * 0.025);
 
     return Positioned(
-      left: currentPosition.dx - widget.cardWidth / 2,
-      top: currentPosition.dy - cardHeight / 2,
+      left: position.dx - widget.cardWidth / 2,
+      top: position.dy - cardHeight / 2,
       width: widget.cardWidth,
       height: cardHeight,
-      child: Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..setEntry(3, 2, 0.0015) // 원근법(Perspective) 값 할당
-          ..rotateY(yRotation),
-        child: _CardFace(
-          asset: isFrontVisible
-              ? widget.frontCardAssets[cardIndex]
-              : widget.backCardAsset,
-          flipLift: flipLift,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: entryProgress,
+          child: Transform.scale(
+            scale: scale,
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.0015)
+                ..rotateY(yRotation),
+              child: _CardFace(
+                asset: isFrontVisible
+                    ? widget.frontCardAssets[cardIndex]
+                    : widget.backCardAsset ??
+                          Assets.games.liarsPoker.images.cards.whiteBack,
+                flipLift: flipLift,
+              ),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  double _intervalProgress(
+    double value,
+    double begin,
+    double end,
+    Curve curve,
+  ) {
+    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
+    return curve.transform(progress);
   }
 }
 
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.asset, required this.flipLift});
-  final String asset;
+
+  final AssetGenImage asset;
   final double flipLift;
 
   @override
@@ -209,15 +288,14 @@ class _CardFace extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: const Color(0x66000000),
-            blurRadius: 7 + flipLift * 10,
-            offset: Offset(0, 5 + flipLift * 8),
+            blurRadius: 7 + flipLift * 8,
+            offset: Offset(0, 5 + flipLift * 5),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.asset(
-          asset,
+        child: asset.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
         ),

@@ -31,7 +31,7 @@ class _LiarAccusationState extends State<LiarAccusation> {
         child: Container(
           width: double.infinity,
           decoration: const BoxDecoration(color: Colors.transparent),
-          child: Assets.games.liarsPoker.images.phone.liar.image(
+          child: Assets.games.liarsPoker.images.button.buttonLiarWhite.image(
             width: 290.w,
             height: 193.h,
           ),

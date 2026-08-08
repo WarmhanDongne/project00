@@ -271,7 +271,7 @@ class TabletGameController extends ChangeNotifier {
     final play = SubmittedPlay(
       eventId: eventId,
       playerIndex: playerIndex,
-      frontCardAssets: List<String>.filled(cardCount, cardAssetForRank('Q')),
+      frontCardAssets: List.filled(cardCount, cardAssetForRank('Q')),
       submittedAt: submittedAt,
     );
     roundPlays = List.unmodifiable([...roundPlays, play]);
@@ -365,7 +365,7 @@ class TabletGameController extends ChangeNotifier {
     final revealedPlay = SubmittedPlay(
       eventId: eventId,
       playerIndex: playerIndex,
-      frontCardAssets: List<String>.generate(
+      frontCardAssets: List.generate(
         cardCount,
         (index) => cardAssetForRank(ranks[index % ranks.length]),
         growable: false,
