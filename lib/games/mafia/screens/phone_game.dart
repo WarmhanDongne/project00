@@ -16,6 +16,8 @@ class MafiaPhoneGame extends StatelessWidget {
         children: [
           const Positioned.fill(child: _GameBackground()),
           Positioned.fill(child: Header()),
+
+          Positioned.fill(child: FreeTalk()),
           Positioned.fill(
             child: RoleCardRevealAnimation(
               backCardAsset: Assets.games.mafia.images.cards.roleBack,
@@ -73,5 +75,49 @@ class _BodyState extends State<Body> {
   @override
   Widget build(BuildContext context) {
     return const Placeholder();
+  }
+}
+
+class FreeTalk extends StatelessWidget {
+  const FreeTalk({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "자유토론",
+            style: TextStyle(fontSize: 50, fontWeight: FontWeight.w900),
+          ),
+          Text(
+            "2m 30s",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          Assets.games.mafia.images.other.talkPhone.image(
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+
+          FilledButton(
+            onPressed: null,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(240, 60),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: const Text("토론 종료하기"),
+          ),
+        ],
+      ),
+    );
   }
 }
