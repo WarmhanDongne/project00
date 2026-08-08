@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_landscape.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_landscape.dart';
+import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart'; // 기존 위젯 그대로 import
 
 class PhoneGameLandscape extends StatefulWidget {
   const PhoneGameLandscape({super.key});
@@ -25,7 +26,6 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
           ),
 
           // 2. 상단 UI (로고, 아이콘)
-          // SafeArea를 고려하여 top과 좌우 패딩을 줍니다.
           Positioned(
             top: 20,
             left: 30,
@@ -33,21 +33,20 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
             child: SafeArea(
               child: TopBarLandscape(
                 onTipPressed: () {
-                  // 팁 버튼 액션
+                  debugPrint('팁 버튼 눌림');
                 },
                 onSettingPressed: () {
-                  // 설정 버튼 액션
+                  debugPrint('설정 버튼 눌림');
                 },
               ),
             ),
           ),
 
-          // 3. 카드 덱 묶음 (좌측 중앙~하단 배치)
-          // 가로로 펼쳐지도록 width를 넓게 잡아줍니다.
+          // 3. 카드 덱 묶음 (좌측 배치)
           Positioned(
             bottom: 30,
             left: 40,
-            width: 450, // 카드 5장이 겹쳐서 펼쳐질 충분한 너비
+            width: 450,
             height: 250,
             child: HandCardStackLandscape(
               onCardSelected: (index) {
@@ -56,12 +55,18 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
             ),
           ),
 
-          // 4. (추후 추가할 영역) 우측 Liar 버튼
-          // Positioned(
-          //   right: 40,
-          //   bottom: 40,
-          //   child: const LiarAccusation(),
-          // ),
+          // 4. 기존 Liar 버튼 재사용 (우측 하단 배치)
+          Positioned(
+            right: 40,
+            bottom: 60, // 카드 덱과 비슷한 높이에 위치하도록 조정
+            child: LiarAccusation(
+              width: 220, // 가로 모드용 고정 너비 주입 (ScreenUtil 무시됨)
+              height: 145, // 비율에 맞춘 높이 주입
+              onAccuse: () {
+                debugPrint('LIAR! 버튼 눌림');
+              },
+            ),
+          ),
         ],
       ),
     );
