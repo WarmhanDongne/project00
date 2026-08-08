@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 
 class SpectatorLandscape extends StatelessWidget {
-  final List<String> survivors;
+  final List<PlayerLayoutPlayer> players;
 
-  const SpectatorLandscape({super.key, required this.survivors});
+  const SpectatorLandscape({super.key, required this.players});
 
   @override
   Widget build(BuildContext context) {
@@ -32,24 +33,24 @@ class SpectatorLandscape extends StatelessWidget {
                   filterQuality: FilterQuality.high,
                 ),
                 // 타이머 컨테이너
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    "00:30",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(
+                //     horizontal: 16,
+                //     vertical: 8,
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: Colors.white,
+                //     borderRadius: BorderRadius.circular(8),
+                //   ),
+                //   child: const Text(
+                //     "00:30",
+                //     style: TextStyle(
+                //       fontSize: 20,
+                //       fontWeight: FontWeight.bold,
+                //       color: Colors.black,
+                //     ),
+                //   ),
+                // ),
                 Row(
                   children: [
                     Assets.games.liarsPoker.images.icons.tip.image(
@@ -130,37 +131,42 @@ class SpectatorLandscape extends StatelessWidget {
             child: Wrap(
               spacing: 16,
               runSpacing: 12,
-              children: survivors
-                  .map(
-                    (name) => SizedBox(
-                      width: 150, // 각 항목의 고정 너비
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: Colors.grey.shade300,
-                            child: const Icon(
-                              Icons.person,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
+              children: players.map((player) {
+                final hasProfileImage = player.profileImageUrl.isNotEmpty;
+
+                return SizedBox(
+                  width: 150, // 각 항목의 고정 너비
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage: hasProfileImage
+                            ? NetworkImage(player.profileImageUrl)
+                            : null,
+                        child: hasProfileImage
+                            ? null
+                            : const Icon(
+                                Icons.person,
+                                size: 18,
+                                color: Colors.white,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
-                  )
-                  .toList(),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          player.nickname,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],

@@ -17,12 +17,14 @@ class PhoneGamePlayer {
   const PhoneGamePlayer({
     required this.uid,
     required this.nickname,
+    required this.profileImageUrl,
     required this.status,
     required this.remainingCardCount,
   });
 
   final String uid;
   final String nickname;
+  final String profileImageUrl;
   final String status;
   final int remainingCardCount;
 }
@@ -225,6 +227,7 @@ class PhoneGameController extends ChangeNotifier {
       result[uid] = PhoneGamePlayer(
         uid: uid,
         nickname: _string(data['nickname'], fallback: 'Player'),
+        profileImageUrl: _string(data['profileImageUrl'], fallback: ''),
         status: _string(data['status'], fallback: 'alive'),
         remainingCardCount: _integer(data['remainingCardCount']) ?? 0,
       );

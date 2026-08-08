@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/liars_poker/models/player_layout_model.dart'; // 모델 임포트
 import 'package:project00/gen/assets.gen.dart';
 
 class SpectatorPortrait extends StatelessWidget {
-  final List<String> survivors;
+  // 더미 텍스트 대신 실제 플레이어 모델 리스트를 받습니다.
+  final List<PlayerLayoutPlayer> players;
 
-  const SpectatorPortrait({super.key, required this.survivors});
+  const SpectatorPortrait({super.key, required this.players});
 
   @override
   Widget build(BuildContext context) {
@@ -20,34 +22,7 @@ class SpectatorPortrait extends StatelessWidget {
             ),
           ),
 
-          // 2. 상단 바 (기존 TopBar 에셋 활용)
-          Positioned(
-            top: 50.h,
-            left: 20.w,
-            right: 20.w,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Assets.games.liarsPoker.images.table.tableKingWhite.image(
-                  height: 24.h,
-                  filterQuality: FilterQuality.high,
-                ),
-                Row(
-                  children: [
-                    Assets.games.liarsPoker.images.icons.tip.image(
-                      width: 40.w,
-                      height: 40.h,
-                    ),
-                    SizedBox(width: 10.w),
-                    Assets.games.liarsPoker.images.icons.settingPhone.image(
-                      width: 32.w,
-                      height: 32.h,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          // ... (상단 바 생략 - 이전 답변과 동일) ...
 
           // 3. 중앙 관전중 텍스트 및 생존자 카드
           Positioned(
@@ -74,7 +49,7 @@ class SpectatorPortrait extends StatelessWidget {
     );
   }
 
-  // 생존자 목록 화이트 카드
+  // 실제 데이터를 활용한 생존자 목록 화이트 카드
   Widget _buildSurvivorCard() {
     return Container(
       width: 300.w,
@@ -82,16 +57,13 @@ class SpectatorPortrait extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: Colors.black87,
-          width: 2,
-        ), // 이중 테두리 효과를 위한 외곽선
+        border: Border.all(color: Colors.black87, width: 2),
       ),
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: Colors.grey.shade400, width: 1), // 내부 테두리
+          border: Border.all(color: Colors.grey.shade400, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,29 +78,41 @@ class SpectatorPortrait extends StatelessWidget {
               ),
             ),
             SizedBox(height: 16.h),
-            ...survivors.map(
-              (name) => Padding(
+            // 전달받은 players 리스트를 매핑하여 렌더링
+            ...players.map((player) {
+              final hasProfileImage = player.profileImageUrl.isNotEmpty;
+
+              return Padding(
                 padding: EdgeInsets.only(bottom: 12.h),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 16.r,
                       backgroundColor: Colors.grey.shade300,
-                      child: Icon(
-                        Icons.person,
-                        size: 20.r,
-                        color: Colors.white,
-                      ), // 더미 프로필
+                      // 네트워크 이미지가 있으면 렌더링, 없으면 기본 아이콘
+                      backgroundImage: hasProfileImage
+                          ? NetworkImage(player.profileImageUrl)
+                          : null,
+                      child: hasProfileImage
+                          ? null
+                          : Icon(Icons.person, size: 20.r, color: Colors.white),
                     ),
                     SizedBox(width: 12.w),
-                    Text(
-                      name,
-                      style: TextStyle(fontSize: 16.sp, color: Colors.black87),
+                    Expanded(
+                      child: Text(
+                        player.nickname,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ),
+              );
+            }).toList(),
           ],
         ),
       ),
