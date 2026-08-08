@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/widgets/phone/top_control_bar.dart';
 // import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 
 class PhoneGame extends StatefulWidget {
   const PhoneGame({
@@ -27,13 +27,15 @@ class _PhoneGameState extends State<PhoneGame> {
               filterQuality: FilterQuality.high,
             ),
           ),
+          const Positioned(child: TopControlBar()),
 
-          const Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(child: HandCardStack()),
-          ),
+          // hand_card(손패) 렌더링 부분
+          // const Positioned(
+          //   bottom: 40,
+          //   left: 0,
+          //   right: 0,
+          //   child: Center(child: HandCardStack()),
+          // ),
         ],
       ),
     );

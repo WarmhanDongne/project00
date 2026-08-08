@@ -59,6 +59,7 @@ dependencies:
   roulette: ^0.3.2
   dev: ^1.0.0
   flutter_gen_runner: ^5.15.0
+  flutter_svg: ^2.3.0
   
 dev_dependencies:
   flutter_test:
@@ -90,6 +91,7 @@ flutter:
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
     - assets/games/liars_poker/images/cards/
+    - assets/games/liars_poker/images/phone/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/
