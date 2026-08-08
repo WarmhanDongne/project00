@@ -95,7 +95,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  for (var i = 0; i < widget.frontCardAssets.length; i++)
+                  for (var i = widget.frontCardAssets.length - 1; i >= 0; i--)
                     _buildAnimatedCard(size: size, cardIndex: i),
                 ],
               ),

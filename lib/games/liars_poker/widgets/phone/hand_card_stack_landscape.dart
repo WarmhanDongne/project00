@@ -19,7 +19,7 @@ class _HandCardStackLandscapeState extends State<HandCardStackLandscape> {
 
   // 가로 모드에 맞게 사이즈 및 간격 조정
   static const double _cardWidth = 140.0; // 세로 모드(169.0)보다 약간 축소
-  static const double _spreadStepX = 45.0; // 카드가 일렬로 겹치도록 X축 간격 지정
+  static const double _spreadStepX = 115.0; // 카드가 일렬로 겹치도록 X축 간격 지정
   static const double _spreadStepY = 0.0; // 대각선이 아닌 일자 배치를 위해 0으로 설정
   static const double _selectedElevation = 20.0;
 
@@ -74,11 +74,14 @@ class _HandCardStackLandscapeState extends State<HandCardStackLandscape> {
           size: size,
           child: Stack(
             clipBehavior: Clip.none,
-            children: List.generate(cardCount, (index) {
+            children: List.generate(cardCount, (reverseIndex) {
+              // 렌더링 순서만 역순으로 뒤집고, 진짜 데이터 인덱스(index)는 그대로 유지
+              final index = cardCount - 1 - reverseIndex;
+
               final centeredIndex = index - (cardCount - 1) / 2;
               final isSelected = _selectedIndex == index;
 
-              // 펼침 타겟 포지션 계산 (Y축 변동 없음)
+              // 펼침 타겟 포지션 계산
               final baseLeft =
                   centerX + (centeredIndex * _spreadStepX) - (_cardWidth / 2);
               final baseTop =

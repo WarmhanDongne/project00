@@ -14,7 +14,7 @@ class TopBarLandscape extends StatelessWidget {
       children: [
         // 왼쪽: KING'S TABLE 로고
         Assets.games.liarsPoker.images.phone.kingTable.image(
-          height: 24, // 디자인 비율에 맞게 높이 고정
+          height: 35, // 디자인 비율에 맞게 높이 고정
           filterQuality: FilterQuality.high,
         ),
 

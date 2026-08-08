@@ -30,7 +30,7 @@ class _LiarAccusationLandscapeState extends State<LiarAccusationLandscape> {
         child: Container(
           decoration: const BoxDecoration(color: Colors.transparent),
           child: Assets.games.liarsPoker.images.phone.liar.image(
-            width: 220, // 가로 모드 뷰포트에 맞춘 고정 너비
+            width: 195, // 가로 모드 뷰포트에 맞춘 고정 너비
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
           ),
