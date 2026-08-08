@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart'; // HandCardStack import 추가
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
-import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
+import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/gen/assets.gen.dart';
 // import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 
@@ -36,7 +36,7 @@ class _PhoneGamePortrait extends State<PhoneGamePortrait> {
             top: 50.h,
             left: 20.w,
             right: 20.w,
-            child: TopBar(
+            child: TopBarPortrait(
               leadingWidget: Assets.games.liarsPoker.images.phone.kingTable
                   .image(height: 24.h, filterQuality: FilterQuality.high),
             ),

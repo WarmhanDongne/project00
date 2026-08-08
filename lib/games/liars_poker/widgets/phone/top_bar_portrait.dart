@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-class TopBar extends StatelessWidget {
+class TopBarPortrait extends StatelessWidget {
   final Widget leadingWidget; // 부모로부터 주입 받을 위젯 선언
   final VoidCallback? onTipPressed; // 팁 버튼 클릭 시 동작 함수
   final VoidCallback? onSettingPressed; // 세팅 버튼 클릭 시 동작 함수
 
-  const TopBar({
+  const TopBarPortrait({
     super.key,
     required this.leadingWidget,
     this.onTipPressed,
