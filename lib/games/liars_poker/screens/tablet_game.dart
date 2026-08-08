@@ -13,8 +13,8 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
 /// 상태 처리는 [TabletGameController], 화면 구성은 각 layer 파일이 담당합니다.
-class TabletGame extends StatefulWidget {
-  const TabletGame({
+class LiarsPokerTabletGame extends StatefulWidget {
+  const LiarsPokerTabletGame({
     super.key,
     required this.playerLayout,
     required this.provider,
@@ -28,10 +28,10 @@ class TabletGame extends StatefulWidget {
   final LiarsPokerService gameService;
 
   @override
-  State<TabletGame> createState() => TabletGameState();
+  State<LiarsPokerTabletGame> createState() => TabletGameState();
 }
 
-class TabletGameState extends State<TabletGame> {
+class TabletGameState extends State<LiarsPokerTabletGame> {
   late final TabletGameController _controller;
 
   GameStatus get gameStatus => _controller.status;
