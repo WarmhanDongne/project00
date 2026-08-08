@@ -2,7 +2,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
-import 'package:project00/platform/home/room/models/random.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 class RoomService {
@@ -20,26 +19,47 @@ class RoomService {
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
 
+  Future<User> ensureAuthenticated() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      return currentUser;
+    }
+    final credential = await FirebaseAuth.instance.signInAnonymously();
+    final user = credential.user;
+    if (user == null) {
+      throw const RoomCommandException('사용자 인증에 실패했습니다.');
+    }
+    return user;
+  }
+
   Future<String> createRoom() async {
-    final hostUid = _auth.currentUser?.uid;
-    if (hostUid == null) {
+    final user = _auth.currentUser;
+
+    if (user == null) {
       throw const RoomCommandException('방을 만들려면 로그인이 필요합니다.');
     }
 
-    while (true) {
-      final code = RoomCodeGenerator.generate();
+    try {
+      final response = await _functions
+          .httpsCallable('createRealtimeRoom')
+          .call();
 
-      final snapshot = await realtime.ref('rooms/$code').get();
+      final data = Map<String, dynamic>.from(response.data as Map);
 
-      if (!snapshot.exists) {
-        await realtime.ref('rooms/$code').set({
-          'roomCode': code,
-          'hostUid': hostUid,
-          'createdAt': ServerValue.timestamp,
-        });
+      final roomCode = data['roomCode'] as String?;
 
-        return code;
+      if (roomCode == null || roomCode.isEmpty) {
+        throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
+
+      return roomCode;
+    } on FirebaseFunctionsException catch (error) {
+      throw RoomCommandException(error.message ?? '방을 생성하지 못했습니다.');
+    } catch (error) {
+      if (error is RoomCommandException) {
+        rethrow;
+      }
+      throw RoomCommandException('방을 생성하지 못했습니다: $error');
     }
   }
 
@@ -49,7 +69,7 @@ class RoomService {
   }
 
   Stream<DatabaseEvent> watchRoom(String roomCode) {
-    return realtime.ref('rooms/$roomCode').onValue;
+    return realtime.ref('rooms/$roomCode/selectedGame').onValue;
   }
 
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
@@ -99,16 +119,6 @@ class RoomService {
     await realtime.ref('rooms/$roomCode/players/$userUid').remove();
   }
 
-  Future<void> sendRouletteResult({
-    required String roomCode,
-    required String userUid,
-    required String result,
-  }) async {
-    await realtime.ref('rooms/$roomCode/players/$userUid/penalty').update({
-      'result': result,
-    });
-  }
-
   // ========================================================== phone ==================================================================
 
   Future<void> joinRoom(String roomCode, String nickname) async {
@@ -123,25 +133,27 @@ class RoomService {
     final roomRef = realtime.ref('rooms/$code');
 
     // 메모리 세션 존재를 단발성 조회
-    final snapshot = await roomRef.get();
-    if (!snapshot.exists) {
+    final roomCodeSnapshot = await roomRef.child('roomCode').get();
+    if (!roomCodeSnapshot.exists) {
       throw const RoomCommandException('방을 찾을 수 없습니다.');
     }
-
-    final data = snapshot.value as Map<dynamic, dynamic>;
-    final maxplayers =
-        data['maxplayers'] as int? ?? RoomLimits.defaultMaxPlayers;
+    final maxPlayersSnapshot = await roomRef.child('maxPlayers').get();
+    final maxPlayers =
+        maxPlayersSnapshot.value as int? ?? RoomLimits.defaultMaxPlayers;
 
     final playersSnapshot = await roomRef.child('players').get();
     final currentplayers = playersSnapshot.children.length;
 
-    if (currentplayers >= maxplayers) {
+    if (currentplayers >= maxPlayers) {
       throw const RoomCommandException('방 인원이 초과되었습니다.');
     }
 
     final playersMap = playersSnapshot.value as Map<dynamic, dynamic>? ?? {}; //
+
     for (final playerValues in playersMap.values) {
-      if (nickname == playerValues[nickname]) {
+      if (playerValues is! Map) continue;
+      final playerMap = Map<dynamic, dynamic>.from(playerValues);
+      if (playerMap['nickname'] == nickname) {
         throw const RoomCommandException('이미 사용 중인 닉네임입니다.');
       }
     }
@@ -150,10 +162,6 @@ class RoomService {
 
     // 소켓 상태 모니터링
     // 데이터 쓰기 연산 이전에 서버 측 데몬에 disconnect 인터럽트를 선제적으로 예약
-    await playerRef.onDisconnect().update({'isConnected': false});
-
-    // 데이터 변이
-    // 검증이 완료된 상태이므로 set() 연산을 통해 메모리 블록을 완전히 덮어씀
     await playerRef.set({
       'uid': uid,
       'nickname': nickname,
@@ -164,6 +172,8 @@ class RoomService {
       'status': 'active',
       'penaltyAttemptCount': 0,
     });
+
+    await playerRef.onDisconnect().update({'isConnected': false});
   }
 
   Future<void> leaveRoom(String roomCode) async {
@@ -184,25 +194,5 @@ class RoomService {
 
     // 플레이어 노드 즉시 삭제
     await playerRef.remove();
-  }
-
-  // ========================= 게임 플레이를 위한 메소드 ==========================
-
-  // 게임 진행 중에 penaltyAttemptCount 갱신을 위한 메소드
-  Future<void> updatePenaltyAttemptCount(
-    String roomCode,
-    String uid,
-    int incrementBy,
-  ) async {
-    final ref = realtime.ref(
-      'rooms/$roomCode/players/$uid/penaltyAttemptCount',
-    );
-    await ref.runTransaction((currentValue) {
-      if (currentValue == null) {
-        return Transaction.success(incrementBy);
-      }
-      final int current = currentValue as int;
-      return Transaction.success(current + incrementBy);
-    });
   }
 }

@@ -87,6 +87,7 @@ flutter:
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
     - assets/games/liars_poker/images/cards/
+    - assets/games/liars_poker/images/icons/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/

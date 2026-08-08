@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$roomCode": {
+        ".write": "auth != null && !data.exists() && newData.child('controllerUid').val() == auth.uid",
+        "roomCode": {
+          ".read": "auth != null"
+        },
+        "controllerUid": {
+          ".read": "auth != null && (data.val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())"
+        },
+        "createdAt": {
+          ".read": "auth != null"
+        },
+        "maxPlayers": {
+          ".read": "auth != null"
+        },
+        "selectedGame": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid) && root.child('rooms').child($roomCode).child('game').child('public').child('status').val() != 'playing'"
+        },
+        "players": {
+          ".read": "auth != null",
+          "$playerUid": {
+            ".write": "auth != null && (auth.uid == $playerUid || root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid)",
+            ".validate": "!newData.exists() || (newData.child('uid').val() == $playerUid && newData.child('nickname').isString() && newData.child('nickname').val().length > 0 && newData.child('nickname').val().length <= 20 && newData.child('seatIndex').isNumber())"
+          }
+        },
+        "game": {
+          ".read": false,
+          ".write": false,
+          "public": {
+            ".read": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())"
+          },
+          "private": {
+            "$playerUid": {
+              ".read": "auth != null && auth.uid == $playerUid"
+            }
+          },
+          "server": {
+            ".read": false,
+            ".write": false
+          }
+        }
+      }
+    }
+  }
+}
