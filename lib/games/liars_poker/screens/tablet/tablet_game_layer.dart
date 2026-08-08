@@ -14,6 +14,7 @@ class TabletGameLayer extends StatelessWidget {
     required this.playerSeatIndexes,
     required this.cardsPerPlayer,
     required this.roundNumber,
+    required this.cardPileVersion,
     required this.table,
     required this.remainingCardCounts,
     required this.onDealCompleted,
@@ -27,6 +28,7 @@ class TabletGameLayer extends StatelessWidget {
   final List<int> playerSeatIndexes;
   final int cardsPerPlayer;
   final int roundNumber;
+  final int cardPileVersion;
   final String table;
   final List<int> remainingCardCounts;
   final VoidCallback onDealCompleted;
@@ -39,7 +41,7 @@ class TabletGameLayer extends StatelessWidget {
     return switch (status) {
       GameStatus.waiting => const _StatusMessage('게임 시작 대기 중'),
       GameStatus.dealing => CardDealAnimation(
-        key: ValueKey('deal-$roundNumber'),
+        key: ValueKey('deal-$roundNumber-$cardPileVersion'),
         playerCount: playerCount,
         playerSeatIndexes: playerSeatIndexes,
         cardsPerPlayer: cardsPerPlayer,

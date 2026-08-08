@@ -29,6 +29,8 @@ class PhoneGamePlayer {
 
 /// 휴대폰의 공개 게임 상태와 개인 손패 구독, Cloud Function 명령을 관리합니다.
 class PhoneGameController extends ChangeNotifier {
+  static const int _cardsPerNewHand = 5;
+
   PhoneGameController({
     required this.roomCode,
     required this.uid,
@@ -43,6 +45,7 @@ class PhoneGameController extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _handSubscription;
   bool _hasPublicSnapshot = false;
   bool _hasHandSnapshot = false;
+  String? _lastDealtHandSignature;
 
   String status = 'waiting';
   String phase = 'playing';
@@ -62,6 +65,13 @@ class PhoneGameController extends ChangeNotifier {
   List<AssetGenImage> handCardAssets = const [];
 
   bool isCommandInFlight = false;
+  bool hasRevealedHand = false;
+
+  /// 새로운 5장 손패가 실제로 도착할 때마다 증가합니다.
+  ///
+  /// 라운드 번호가 다시 1부터 시작하는 게임 재시작에서도 손패 위젯을 새로
+  /// 만들 수 있도록 화면의 key에는 [round] 대신 이 값을 사용합니다.
+  int handDealVersion = 0;
   String? errorMessage;
 
   bool get isInitialLoading => !_hasPublicSnapshot || !_hasHandSnapshot;
@@ -133,6 +143,8 @@ class PhoneGameController extends ChangeNotifier {
 
     _hasPublicSnapshot = true;
 
+    final previousPhase = phase;
+    final previousRound = round;
     final data = Map<Object?, Object?>.from(value);
     status = _string(data['status'], fallback: 'playing');
     phase = _string(data['phase'], fallback: 'playing');
@@ -143,6 +155,11 @@ class PhoneGameController extends ChangeNotifier {
     round = _integer(data['round']) ?? 1;
     revision = _integer(data['revision']) ?? revision;
     players = Map.unmodifiable(_parsePlayers(data['players']));
+
+    if (phase == 'dealing' &&
+        (previousPhase != 'dealing' || previousRound != round)) {
+      hasRevealedHand = false;
+    }
 
     final lastPlay = data['lastPlay'];
     if (lastPlay is Map) {
@@ -176,6 +193,20 @@ class PhoneGameController extends ChangeNotifier {
 
     // RTDB Map의 순서에 의존하지 않고 카드 ID 기준으로 화면 순서를 고정합니다.
     parsedCards.sort((left, right) => left.id.compareTo(right.id));
+
+    // 카드 배분 단계와 개인 손패 이벤트의 도착 순서는 기기마다 달라질 수
+    // 있습니다. 따라서 공개 상태는 phase가 아니라 실제 새 5장 카드 ID를
+    // 기준으로 초기화합니다. 카드 제출로 4장 이하가 되는 변화에는 반응하지
+    // 않으므로 펼친 상태가 유지됩니다.
+    if (parsedCards.length == _cardsPerNewHand) {
+      final dealtHandSignature = parsedCards.map((card) => card.id).join('|');
+      if (dealtHandSignature != _lastDealtHandSignature) {
+        _lastDealtHandSignature = dealtHandSignature;
+        hasRevealedHand = false;
+        handDealVersion += 1;
+      }
+    }
+
     handCards = List.unmodifiable(parsedCards);
     handCardAssets = List.unmodifiable(
       parsedCards.map((card) => _cardAssetForRank(card.rank)),
@@ -265,6 +296,11 @@ class PhoneGameController extends ChangeNotifier {
     if (errorMessage == null) return;
     errorMessage = null;
     notifyListeners();
+  }
+
+  /// 방향 전환 뒤에도 같은 라운드의 공개된 손패 상태를 유지합니다.
+  void markHandRevealed() {
+    hasRevealedHand = true;
   }
 
   void _handleSubscriptionError(Object error) {

@@ -24,6 +24,7 @@ class PhoneGamePortrait extends StatefulWidget {
 class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controlsEntryController;
+  bool _wasDealing = false;
 
   @override
   void initState() {
@@ -32,6 +33,19 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
       vsync: this,
       duration: const Duration(milliseconds: 920),
     );
+    if (widget.controller?.hasRevealedHand == true) {
+      _controlsEntryController.value = 1;
+    }
+  }
+
+  void _markRevealStarted() {
+    widget.controller?.markHandRevealed();
+  }
+
+  void _handleRevealCompleted() {
+    widget.controller?.markHandRevealed();
+    if (mounted) setState(() {});
+    _showGameControls();
   }
 
   void _showGameControls() {
@@ -66,6 +80,21 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
   }
 
   Widget _buildGameScreen(PhoneGameController? controller) {
+    final isDealing = controller?.phase == 'dealing';
+    if (isDealing && !_wasDealing) {
+      _wasDealing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _controlsEntryController.reset();
+      });
+    } else if (!isDealing) {
+      _wasDealing = false;
+    }
+    final showControls =
+        controller == null ||
+        (controller.hasRevealedHand &&
+            controller.phase != 'dealing' &&
+            controller.handCards.isNotEmpty);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -73,17 +102,18 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             child: Assets.games.liarsPoker.images.background.backgroundPhone
                 .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
           ),
-          Positioned(
-            top: 50.h,
-            left: 20.w,
-            right: 20.w,
-            child: TopBarPortrait(
-              entryAnimation: _controlsEntryController,
-              leadingWidget: _tableAsset(
-                controller?.table ?? 'K',
-              ).image(height: 24.h, filterQuality: FilterQuality.high),
+          if (showControls)
+            Positioned(
+              top: 50.h,
+              left: 20.w,
+              right: 20.w,
+              child: TopBarPortrait(
+                entryAnimation: _controlsEntryController,
+                leadingWidget: _tableAsset(
+                  controller?.table ?? 'K',
+                ).image(height: 24.h, filterQuality: FilterQuality.high),
+              ),
             ),
-          ),
           if (controller != null &&
               !controller.isInitialLoading &&
               controller.phase != 'dealing' &&
@@ -105,24 +135,25 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 ),
               ),
             ),
-          Positioned(
-            top: 640.h,
-            left: 20.w,
-            right: 0,
-            child: PhoneControlEntryAnimation(
-              animation: _controlsEntryController,
-              style: PhoneControlEntryStyle.heavyDrop,
-              begin: 0.02,
-              end: 1,
-              child: LiarAccusation(
-                enabled: controller?.canCallLiar ?? true,
-                onAccuse: controller == null
-                    ? null
-                    : () => unawaited(controller.callLiar()),
+          if (showControls)
+            Positioned(
+              top: 640.h,
+              left: 20.w,
+              right: 0,
+              child: PhoneControlEntryAnimation(
+                animation: _controlsEntryController,
+                style: PhoneControlEntryStyle.heavyDrop,
+                begin: 0.02,
+                end: 1,
+                child: LiarAccusation(
+                  enabled: controller?.canCallLiar ?? true,
+                  onAccuse: controller == null
+                      ? null
+                      : () => unawaited(controller.callLiar()),
+                ),
               ),
             ),
-          ),
-          if (controller?.phase == 'lastCardChallenge')
+          if (showControls && controller?.phase == 'lastCardChallenge')
             Positioned(
               top: 590.h,
               left: 70.w,
@@ -192,7 +223,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
       return const SizedBox.shrink();
     }
 
-    if (controller.handCards.isEmpty) {
+    if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       _showControlsAfterFrame();
       if (!controller.isEliminated) return const SizedBox.shrink();
       return Center(
@@ -204,10 +235,12 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     }
 
     return HandCardStackPortrait(
-      key: ValueKey('round-${controller.round}'),
+      key: ValueKey('portrait-deal-${controller.handDealVersion}'),
       cards: controller.handCardAssets,
       enabled: controller.canSelectCards,
-      onRevealCompleted: _showGameControls,
+      initiallyRevealed: controller.hasRevealedHand,
+      onRevealStarted: _markRevealStarted,
+      onRevealCompleted: _handleRevealCompleted,
       onCardsSubmitRequested: controller.submitCardIndexes,
     );
   }

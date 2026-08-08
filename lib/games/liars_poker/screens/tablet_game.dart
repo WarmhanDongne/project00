@@ -128,6 +128,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   playerSeatIndexes: _controller.seatIndexes,
                   cardsPerPlayer: cardsPerPlayer,
                   roundNumber: _controller.roundNumber,
+                  cardPileVersion: _controller.cardPileVersion,
                   table: _controller.table,
                   remainingCardCounts: _controller.remainingCardCounts,
                   onDealCompleted: _controller.onDealCompleted,
@@ -139,6 +140,10 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
               if (_controller.shouldShowSubmittedPlay)
                 Positioned.fill(
                   child: TabletGameAnimation(
+                    key: ValueKey(
+                      'card-pile-${_controller.roundNumber}-'
+                      '${_controller.cardPileVersion}',
+                    ),
                     roundPlays: _controller.roundPlays,
                     activePlayId: _controller.activeAnimationPlayId,
                     playerCount: _controller.playerCount,
