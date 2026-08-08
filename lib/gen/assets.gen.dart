@@ -172,6 +172,11 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     'assets/games/liars_poker/images/background/phone_background.png',
   );
 
+  /// File path: assets/games/liars_poker/images/background/phone_background_withe.png
+  AssetGenImage get phoneBackgroundWithe => const AssetGenImage(
+    'assets/games/liars_poker/images/background/phone_background_withe.png',
+  );
+
   /// List of all assets
   List<AssetGenImage> get values => [
     a,
@@ -180,6 +185,7 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     background,
     backgroundMafia,
     phoneBackground,
+    phoneBackgroundWithe,
   ];
 }
 
@@ -242,9 +248,9 @@ class $AssetsGamesLiarsPokerImagesPhoneGen {
   SvgGenImage get bulb =>
       const SvgGenImage('assets/games/liars_poker/images/phone/bulb.svg');
 
-  /// File path: assets/games/liars_poker/images/phone/settings.svg
-  SvgGenImage get settings =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/settings.svg');
+  /// File path: assets/games/liars_poker/images/phone/setting.svg
+  SvgGenImage get setting =>
+      const SvgGenImage('assets/games/liars_poker/images/phone/setting.svg');
 
   /// List of all assets
   List<SvgGenImage> get values => [
@@ -253,7 +259,7 @@ class $AssetsGamesLiarsPokerImagesPhoneGen {
     liar,
     queenTable,
     bulb,
-    settings,
+    setting,
   ];
 }
 
