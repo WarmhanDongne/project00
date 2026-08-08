@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
+import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -36,6 +38,15 @@ class GamePreviewDialog extends StatelessWidget {
   }
 
   Future<void> _startGame(BuildContext context) async {
+    // Mafia UI 개발 중에는 방 인원, 자리 배치, Cloud Function 실행을
+    // 모두 건너뛰고 독립된 테스트 화면으로 바로 이동합니다.
+    if (game.id == 'mafia') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const MafiaTestScreen()),
+      );
+      return;
+    }
+
     final players = roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
@@ -86,11 +97,29 @@ class GamePreviewDialog extends StatelessWidget {
               return;
             }
 
+            final roomCode = roomProvider.roomCode;
+            if (roomCode == null) {
+              _showMessage(layoutContext, '방 정보를 확인할 수 없습니다.');
+              return;
+            }
+
+            final gameService = LiarsPokerService();
+            try {
+              await gameService.command.startGame(roomCode: roomCode);
+            } catch (error) {
+              if (!layoutContext.mounted) return;
+              _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
+              return;
+            }
+            if (!layoutContext.mounted) return;
+
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => LiarsPoker(
                   playerLayout: completedLayout,
                   provider: roomProvider,
+                  roomCode: roomCode,
+                  gameService: gameService,
                 ),
               ),
             );

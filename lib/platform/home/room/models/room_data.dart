@@ -5,7 +5,7 @@ class RoomData {
   const RoomData({
     required this.code,
     required this.gameId,
-    required this.hostUid,
+    required this.controllerUid,
     required this.status,
     required this.playerCount,
     required this.maxplayers,
@@ -28,7 +28,10 @@ class RoomData {
     return RoomData(
       code: firestoreString(json['code'], fallback: documentId ?? ''),
       gameId: firestoreString(json['gameId']),
-      hostUid: firestoreString(json['hostUid']),
+      controllerUid: firestoreString(
+        json['controllerUid'],
+        fallback: firestoreString(json['hostUid']),
+      ),
       status: firestoreString(json['status'], fallback: 'waiting'),
       playerCount: firestoreInt(json['playerCount']),
       maxplayers: firestoreInt(json['maxplayers'], fallback: 6),
@@ -41,7 +44,7 @@ class RoomData {
 
   final String code;
   final String gameId;
-  final String hostUid;
+  final String controllerUid;
   final String status;
   final int playerCount;
   final int maxplayers;

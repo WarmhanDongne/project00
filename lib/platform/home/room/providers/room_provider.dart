@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -24,8 +23,6 @@ class RoomProvider extends ChangeNotifier {
   String? errorMessage;
   String? selectedGameId;
   GameInfo? selectedGame;
-
-  String hostNickname = '테블릿 방장';
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
@@ -106,21 +103,6 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
-  Future<void> sendRouletteResult(String result) async {
-    final code = roomCode;
-    final userUid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (code == null || userUid == null) {
-      throw Exception('방 코드 또는 사용자 정보가 없습니다.');
-    }
-
-    await _service.sendRouletteResult(
-      roomCode: code,
-      userUid: userUid,
-      result: result,
-    );
-  }
-
   void listenRoom() {
     if (roomCode == null) return;
 
@@ -128,19 +110,15 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
 
     roomSubscription = _service.watchRoom(roomCode!).listen((event) async {
-      final value = event.snapshot.value;
+      final gameId = event.snapshot.value as String?;
 
-      if (value is Map) {
-        final gameId = value['selectedGame'] as String?;
+      if (gameId != selectedGameId) {
+        selectedGameId = gameId;
 
-        if (gameId != selectedGameId) {
-          selectedGameId = gameId;
-
-          if (gameId != null) {
-            selectedGame = await _gameService.getGame(gameId);
-          } else {
-            selectedGame = null;
-          }
+        if (gameId != null) {
+          selectedGame = await _gameService.getGame(gameId);
+        } else {
+          selectedGame = null;
         }
       }
 
@@ -214,18 +192,5 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     super.dispose();
-  }
-
-  // PenaltyAttemptCount 업데이트 바인딩 메소드
-  Future<void> incrementPenaltyAttemptCount(
-    String uid, {
-    int amount = 1,
-  }) async {
-    final code = roomCode;
-    if (code == null) return;
-
-    await _runCommand(() async {
-      await _service.updatePenaltyAttemptCount(code, uid, amount);
-    });
   }
 }
