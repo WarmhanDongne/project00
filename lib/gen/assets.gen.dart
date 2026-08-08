@@ -16,6 +16,9 @@ class $AssetsGamesGen {
 
   /// Directory path: assets/games/liars_poker
   $AssetsGamesLiarsPokerGen get liarsPoker => const $AssetsGamesLiarsPokerGen();
+
+  /// Directory path: assets/games/mafia
+  $AssetsGamesMafiaGen get mafia => const $AssetsGamesMafiaGen();
 }
 
 class $AssetsImagesGen {
@@ -66,6 +69,13 @@ class $AssetsGamesLiarsPokerGen {
       const $AssetsGamesLiarsPokerImagesGen();
 }
 
+class $AssetsGamesMafiaGen {
+  const $AssetsGamesMafiaGen();
+
+  /// Directory path: assets/games/mafia/images
+  $AssetsGamesMafiaImagesGen get images => const $AssetsGamesMafiaImagesGen();
+}
+
 class $AssetsImagesButtonGen {
   const $AssetsImagesButtonGen();
 
@@ -96,9 +106,25 @@ class $AssetsGamesLiarsPokerImagesGen {
   $AssetsGamesLiarsPokerImagesCardsGen get cards =>
       const $AssetsGamesLiarsPokerImagesCardsGen();
 
+  /// Directory path: assets/games/liars_poker/images/icons
+  $AssetsGamesLiarsPokerImagesIconsGen get icons =>
+      const $AssetsGamesLiarsPokerImagesIconsGen();
+
   /// Directory path: assets/games/liars_poker/images/phone
   $AssetsGamesLiarsPokerImagesPhoneGen get phone =>
       const $AssetsGamesLiarsPokerImagesPhoneGen();
+}
+
+class $AssetsGamesMafiaImagesGen {
+  const $AssetsGamesMafiaImagesGen();
+
+  /// Directory path: assets/games/mafia/images/background
+  $AssetsGamesMafiaImagesBackgroundGen get background =>
+      const $AssetsGamesMafiaImagesBackgroundGen();
+
+  /// Directory path: assets/games/mafia/images/icons
+  $AssetsGamesMafiaImagesIconsGen get icons =>
+      const $AssetsGamesMafiaImagesIconsGen();
 }
 
 class $AssetsImagesWidgetsRouletteGen {
@@ -164,11 +190,6 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     'assets/games/liars_poker/images/background/background_mafia.png',
   );
 
-  /// File path: assets/games/liars_poker/images/background/phone_background.png
-  AssetGenImage get phoneBackground => const AssetGenImage(
-    'assets/games/liars_poker/images/background/phone_background.png',
-  );
-
   /// File path: assets/games/liars_poker/images/background/phone_background_withe.png
   AssetGenImage get phoneBackgroundWithe => const AssetGenImage(
     'assets/games/liars_poker/images/background/phone_background_withe.png',
@@ -181,13 +202,17 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     q,
     background,
     backgroundMafia,
-    phoneBackground,
     phoneBackgroundWithe,
   ];
 }
 
 class $AssetsGamesLiarsPokerImagesCardsGen {
   const $AssetsGamesLiarsPokerImagesCardsGen();
+
+  /// File path: assets/games/liars_poker/images/cards/card_count.png
+  AssetGenImage get cardCount => const AssetGenImage(
+    'assets/games/liars_poker/images/cards/card_count.png',
+  );
 
   /// File path: assets/games/liars_poker/images/cards/white A.png
   AssetGenImage get whiteA =>
@@ -213,12 +238,30 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [
+    cardCount,
     whiteA,
     whiteJoker,
     whiteK,
     whiteQ,
     whiteBack,
   ];
+}
+
+class $AssetsGamesLiarsPokerImagesIconsGen {
+  const $AssetsGamesLiarsPokerImagesIconsGen();
+
+  /// File path: assets/games/liars_poker/images/icons/role_icon.png
+  AssetGenImage get roleIcon => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/role_icon.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/icons/setting_icon.png
+  AssetGenImage get settingIcon => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/setting_icon.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [roleIcon, settingIcon];
 }
 
 class $AssetsGamesLiarsPokerImagesPhoneGen {
@@ -259,6 +302,76 @@ class $AssetsGamesLiarsPokerImagesPhoneGen {
     queenTable,
     bulb,
     setting,
+  ];
+}
+
+class $AssetsGamesMafiaImagesBackgroundGen {
+  const $AssetsGamesMafiaImagesBackgroundGen();
+
+  /// File path: assets/games/mafia/images/background/background_morning.png
+  AssetGenImage get backgroundMorning => const AssetGenImage(
+    'assets/games/mafia/images/background/background_morning.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_morning_phone.png
+  AssetGenImage get backgroundMorningPhone => const AssetGenImage(
+    'assets/games/mafia/images/background/background_morning_phone.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_night.png
+  AssetGenImage get backgroundNight => const AssetGenImage(
+    'assets/games/mafia/images/background/background_night.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_night_phone.png
+  AssetGenImage get backgroundNightPhone => const AssetGenImage(
+    'assets/games/mafia/images/background/background_night_phone.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    backgroundMorning,
+    backgroundMorningPhone,
+    backgroundNight,
+    backgroundNightPhone,
+  ];
+}
+
+class $AssetsGamesMafiaImagesIconsGen {
+  const $AssetsGamesMafiaImagesIconsGen();
+
+  /// File path: assets/games/mafia/images/icons/role_icon.png
+  AssetGenImage get roleIcon =>
+      const AssetGenImage('assets/games/mafia/images/icons/role_icon.png');
+
+  /// File path: assets/games/mafia/images/icons/setting_black.png
+  AssetGenImage get settingBlack =>
+      const AssetGenImage('assets/games/mafia/images/icons/setting_black.png');
+
+  /// File path: assets/games/mafia/images/icons/setting_icon.png
+  AssetGenImage get settingIcon =>
+      const AssetGenImage('assets/games/mafia/images/icons/setting_icon.png');
+
+  /// File path: assets/games/mafia/images/icons/setting_white.png
+  AssetGenImage get settingWhite =>
+      const AssetGenImage('assets/games/mafia/images/icons/setting_white.png');
+
+  /// File path: assets/games/mafia/images/icons/tip.png
+  AssetGenImage get tip =>
+      const AssetGenImage('assets/games/mafia/images/icons/tip.png');
+
+  /// File path: assets/games/mafia/images/icons/tip_light.png
+  AssetGenImage get tipLight =>
+      const AssetGenImage('assets/games/mafia/images/icons/tip_light.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    roleIcon,
+    settingBlack,
+    settingIcon,
+    settingWhite,
+    tip,
+    tipLight,
   ];
 }
 

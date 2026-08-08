@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_landscape.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_landscape.dart';
-import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart'; // 기존 위젯 그대로 import
+import 'package:project00/games/liars_poker/widgets/phone/liar_accusation_landscape.dart';
 
 class PhoneGameLandscape extends StatefulWidget {
   const PhoneGameLandscape({super.key});
@@ -55,13 +55,11 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
             ),
           ),
 
-          // 4. 기존 Liar 버튼 재사용 (우측 하단 배치)
+          // 4. Liar 버튼 (우측 하단 배치)
           Positioned(
             right: 40,
-            bottom: 60, // 카드 덱과 비슷한 높이에 위치하도록 조정
-            child: LiarAccusation(
-              width: 220, // 가로 모드용 고정 너비 주입 (ScreenUtil 무시됨)
-              height: 145, // 비율에 맞춘 높이 주입
+            bottom: 60, // 카드 덱의 시각적 중앙과 비슷해지도록 하단 여백 설정
+            child: LiarAccusationLandscape(
               onAccuse: () {
                 debugPrint('LIAR! 버튼 눌림');
               },
