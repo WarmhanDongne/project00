@@ -6,18 +6,18 @@ import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
 // import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 
-class PhoneGame extends StatefulWidget {
-  const PhoneGame({
+class PhoneGamePortrait extends StatefulWidget {
+  const PhoneGamePortrait({
     super.key,
     //required this.playerLayout
   });
   //final PlayerLayoutModel playerLayout;
 
   @override
-  State<PhoneGame> createState() => _PhoneGameState();
+  State<PhoneGamePortrait> createState() => _PhoneGamePortrait();
 }
 
-class _PhoneGameState extends State<PhoneGame> {
+class _PhoneGamePortrait extends State<PhoneGamePortrait> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
