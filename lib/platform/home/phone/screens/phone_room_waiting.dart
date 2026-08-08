@@ -1,5 +1,10 @@
+import 'dart:async';
+
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/liars_poker/screens/phone_game.dart';
+import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -17,6 +22,77 @@ class PhoneRoomWaiting extends StatefulWidget {
 }
 
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
+  StreamSubscription<DatabaseEvent>? _gameStatusSubscription;
+  String? _subscribedRoomCode;
+  bool _isOpeningGame = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.provider.addListener(_syncGameStatusSubscription);
+    _syncGameStatusSubscription();
+  }
+
+  void _syncGameStatusSubscription() {
+    final roomCode = widget.provider.roomCode;
+    final isLiarsPoker = widget.provider.selectedGameId == 'liars_poker';
+
+    if (!isLiarsPoker || roomCode == null) {
+      unawaited(_gameStatusSubscription?.cancel());
+      _gameStatusSubscription = null;
+      _subscribedRoomCode = null;
+      return;
+    }
+
+    if (_subscribedRoomCode == roomCode && _gameStatusSubscription != null) {
+      return;
+    }
+
+    unawaited(_gameStatusSubscription?.cancel());
+    _subscribedRoomCode = roomCode;
+    final gameService = LiarsPokerService();
+    _gameStatusSubscription = gameService.query
+        .watchStatus(roomCode)
+        .listen(
+          (event) {
+            if (event.snapshot.value == 'playing') {
+              unawaited(_openLiarsPoker(roomCode, gameService));
+            }
+          },
+          onError: (Object error) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text('게임 시작 상태를 확인하지 못했습니다: $error')),
+              );
+          },
+        );
+  }
+
+  Future<void> _openLiarsPoker(
+    String roomCode,
+    LiarsPokerService gameService,
+  ) async {
+    if (_isOpeningGame || !mounted) return;
+    _isOpeningGame = true;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PhoneGame(roomCode: roomCode, gameService: gameService),
+      ),
+    );
+
+    _isOpeningGame = false;
+  }
+
+  @override
+  void dispose() {
+    widget.provider.removeListener(_syncGameStatusSubscription);
+    _gameStatusSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(

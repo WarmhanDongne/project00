@@ -1,14 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart'; // HandCardStack import 추가
 import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
+import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
+///
+/// [controller]를 생략하면 기존 UI 확인용 더미 손패로 동작합니다.
 class PhoneGamePortrait extends StatefulWidget {
-  const PhoneGamePortrait({super.key});
+  const PhoneGamePortrait({super.key, this.controller});
+
+  final PhoneGameController? controller;
 
   @override
   State<PhoneGamePortrait> createState() => _PhoneGamePortraitState();
@@ -27,13 +34,18 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     );
   }
 
-  /// 카드가 모두 펼쳐진 뒤 헤더와 라이어 버튼을 같은 타임라인으로 입장시킵니다.
   void _showGameControls() {
     if (_controlsEntryController.isAnimating ||
         _controlsEntryController.isCompleted) {
       return;
     }
     _controlsEntryController.forward();
+  }
+
+  void _showControlsAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showGameControls();
+    });
   }
 
   @override
@@ -44,14 +56,22 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
 
   @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    if (controller == null) return _buildGameScreen(null);
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => _buildGameScreen(controller),
+    );
+  }
+
+  Widget _buildGameScreen(PhoneGameController? controller) {
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(
-            child: Assets.games.liarsPoker.images.background.background.image(
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
+            child: Assets.games.liarsPoker.images.background.backgroundPhone
+                .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
           ),
           Positioned(
             top: 50.h,
@@ -59,10 +79,32 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             right: 20.w,
             child: TopBarPortrait(
               entryAnimation: _controlsEntryController,
-              leadingWidget: Assets.games.liarsPoker.images.table.tableKingWhite
-                  .image(height: 24.h, filterQuality: FilterQuality.high),
+              leadingWidget: _tableAsset(
+                controller?.table ?? 'K',
+              ).image(height: 24.h, filterQuality: FilterQuality.high),
             ),
           ),
+          if (controller != null &&
+              !controller.isInitialLoading &&
+              controller.phase != 'dealing' &&
+              controller.handCards.isNotEmpty)
+            Positioned(
+              top: 112.h,
+              left: 24.w,
+              right: 24.w,
+              child: Text(
+                controller.statusMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: controller.isMyTurn
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
+                ),
+              ),
+            ),
           Positioned(
             top: 640.h,
             left: 20.w,
@@ -72,28 +114,109 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
               style: PhoneControlEntryStyle.heavyDrop,
               begin: 0.02,
               end: 1,
-              child: const LiarAccusation(),
+              child: LiarAccusation(
+                enabled: controller?.canCallLiar ?? true,
+                onAccuse: controller == null
+                    ? null
+                    : () => unawaited(controller.callLiar()),
+              ),
             ),
           ),
+          if (controller?.phase == 'lastCardChallenge')
+            Positioned(
+              top: 590.h,
+              left: 70.w,
+              right: 70.w,
+              child: FilledButton(
+                onPressed: controller!.canPassLastCardChallenge
+                    ? () => unawaited(controller.passLastCardChallenge())
+                    : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF50675A),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0x6650675A),
+                ),
+                child: const Text('라이어 아님 · 새 라운드 진행'),
+              ),
+            ),
           Positioned(
             top: 212.h,
             left: 0,
             right: 0,
             height: 350.h,
-            child: HandCardStackPortrait(
-              onRevealCompleted: _showGameControls,
-              onSelectionChanged: (indexes) {
-                debugPrint('선택된 카드 인덱스: $indexes');
-              },
-              onCardsSubmitted: (indexes) {
-                // 실제 게임 연동 시 인덱스에 대응하는 cardId를
-                // LiarsPokerCommandService.submitCards에 전달합니다.
-                debugPrint('제출한 카드 인덱스: $indexes');
-              },
-            ),
+            child: _buildHand(controller),
           ),
+          if (controller?.errorMessage != null)
+            Positioned(
+              top: 155.h,
+              left: 24.w,
+              right: 24.w,
+              child: GestureDetector(
+                onTap: controller!.clearError,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xE62B1717),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      controller.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Widget _buildHand(PhoneGameController? controller) {
+    if (controller == null) {
+      return HandCardStackPortrait(onRevealCompleted: _showGameControls);
+    }
+
+    if (controller.isInitialLoading) {
+      return const SizedBox.shrink();
+    }
+
+    // 손패 데이터가 먼저 도착해도 태블릿의 실제 배분 연출이 끝날 때까지
+    // 카드 위→아래 진입 애니메이션을 생성하지 않습니다.
+    if (controller.phase == 'dealing') {
+      return const SizedBox.shrink();
+    }
+
+    if (controller.handCards.isEmpty) {
+      _showControlsAfterFrame();
+      if (!controller.isEliminated) return const SizedBox.shrink();
+      return Center(
+        child: const Text(
+          '내 손패 없음',
+          style: TextStyle(color: Colors.white70, fontSize: 17),
+        ),
+      );
+    }
+
+    return HandCardStackPortrait(
+      key: ValueKey('round-${controller.round}'),
+      cards: controller.handCardAssets,
+      enabled: controller.canSelectCards,
+      onRevealCompleted: _showGameControls,
+      onCardsSubmitRequested: controller.submitCardIndexes,
+    );
+  }
+
+  AssetGenImage _tableAsset(String rank) {
+    return switch (rank.toUpperCase()) {
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+    };
   }
 }

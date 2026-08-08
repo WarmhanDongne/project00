@@ -13,15 +13,19 @@ class HandCardStackPortrait extends StatefulWidget {
   const HandCardStackPortrait({
     super.key,
     this.cards,
+    this.enabled = true,
     this.maxSelection = 3,
     this.onSelectionChanged,
+    this.onCardsSubmitRequested,
     this.onCardsSubmitted,
     this.onRevealCompleted,
   }) : assert(maxSelection > 0);
 
   final List<AssetGenImage>? cards;
+  final bool enabled;
   final int maxSelection;
   final ValueChanged<List<int>>? onSelectionChanged;
+  final Future<bool> Function(List<int> indexes)? onCardsSubmitRequested;
   final ValueChanged<List<int>>? onCardsSubmitted;
   final VoidCallback? onRevealCompleted;
 
@@ -64,6 +68,17 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
       });
       _notifySelectionChanged();
     }
+
+    if (oldWidget.enabled &&
+        !widget.enabled &&
+        _selectedCardIds.isNotEmpty &&
+        !_isSubmitting) {
+      _selectedCardIds.clear();
+      _isDragging = false;
+      _draggingCardId = null;
+      _dragOffsetY = 0;
+      _notifySelectionChanged();
+    }
   }
 
   @override
@@ -96,6 +111,8 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   ];
 
   void _toggleSelection(int cardId) {
+    if (!widget.enabled || _isSubmitting) return;
+
     if (!_selectedCardIds.contains(cardId) &&
         _selectedCardIds.length >= widget.maxSelection) {
       _showSelectionLimitMessage();
@@ -111,6 +128,8 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   void _startDragging(int cardId) {
+    if (!widget.enabled || _isSubmitting) return;
+
     var selectionChanged = false;
 
     if (!_selectedCardIds.contains(cardId)) {
@@ -136,7 +155,12 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   void _updateDrag(DragUpdateDetails details) {
-    if (!_isDragging || _draggingCardId == null || _isSubmitting) return;
+    if (!widget.enabled ||
+        !_isDragging ||
+        _draggingCardId == null ||
+        _isSubmitting) {
+      return;
+    }
 
     final nextOffset = (_dragOffsetY + details.delta.dy).clamp(
       -_submitThreshold - 24,
@@ -145,7 +169,7 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
 
     if (nextOffset <= -_submitThreshold) {
       _dragOffsetY = -_submitThreshold;
-      _submitSelectedCards();
+      unawaited(_submitSelectedCards());
       return;
     }
 
@@ -164,12 +188,31 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
     });
   }
 
-  void _submitSelectedCards() {
+  Future<void> _submitSelectedCards() async {
     if (_selectedCardIds.isEmpty || _isSubmitting) return;
 
-    _isSubmitting = true;
     final submittedIndexes = List<int>.unmodifiable(_selectedIndexes);
     final submittedIds = Set<int>.of(_selectedCardIds);
+    setState(() {
+      _isSubmitting = true;
+      _dragOffsetY = -_submitThreshold;
+    });
+
+    final submitRequested = widget.onCardsSubmitRequested;
+    final accepted = submitRequested == null
+        ? true
+        : await submitRequested(submittedIndexes);
+    if (!mounted) return;
+
+    if (!accepted) {
+      setState(() {
+        _isSubmitting = false;
+        _isDragging = false;
+        _draggingCardId = null;
+        _dragOffsetY = 0;
+      });
+      return;
+    }
 
     setState(() {
       _renderCards.removeWhere((card) => submittedIds.contains(card.id));
@@ -177,11 +220,11 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
       _isDragging = false;
       _draggingCardId = null;
       _dragOffsetY = 0;
+      _isSubmitting = false;
     });
 
     widget.onSelectionChanged?.call(const []);
     widget.onCardsSubmitted?.call(submittedIndexes);
-    _isSubmitting = false;
   }
 
   void _notifySelectionChanged() {
@@ -310,11 +353,13 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         transformAlignment: Alignment.center,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => _toggleSelection(card.id),
-          onVerticalDragStart: (_) => _startDragging(card.id),
-          onVerticalDragUpdate: _updateDrag,
-          onVerticalDragEnd: (_) => _finishDrag(),
-          onVerticalDragCancel: _finishDrag,
+          onTap: widget.enabled ? () => _toggleSelection(card.id) : null,
+          onVerticalDragStart: widget.enabled
+              ? (_) => _startDragging(card.id)
+              : null,
+          onVerticalDragUpdate: widget.enabled ? _updateDrag : null,
+          onVerticalDragEnd: widget.enabled ? (_) => _finishDrag() : null,
+          onVerticalDragCancel: widget.enabled ? _finishDrag : null,
           child: Semantics(
             selected: isSelected,
             label: isSelected ? '선택된 카드' : '선택하지 않은 카드',

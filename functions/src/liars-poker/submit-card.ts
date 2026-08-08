@@ -22,6 +22,7 @@ type SubmitCardsData = {
   roomCode?: unknown;
   commandId?: unknown;
   cardIds?: unknown;
+  warmup?: unknown;
 };
 
 /** 현재 플레이어의 손패에서 1~3장을 제출합니다. */
@@ -29,6 +30,9 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);
+    if (request.data?.warmup === true) {
+      return {success: true, type: "warmup"};
+    }
     const roomCode = parseRoomCode(request.data?.roomCode);
     const commandId = parseCommandId(request.data?.commandId);
     const cardIds = parseCardIds(request.data?.cardIds);

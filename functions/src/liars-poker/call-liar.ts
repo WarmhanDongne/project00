@@ -16,13 +16,20 @@ import {
   requireUid,
 } from "./common/validator.js";
 
-type CallLiarData = {roomCode?: unknown; commandId?: unknown};
+type CallLiarData = {
+  roomCode?: unknown;
+  commandId?: unknown;
+  warmup?: unknown;
+};
 
 /** 현재 플레이어가 직전 제출에 대해 라이어를 선언합니다. */
 export const callLiarsPoker = onCall<CallLiarData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);
+    if (request.data?.warmup === true) {
+      return {success: true, type: "warmup"};
+    }
     const roomCode = parseRoomCode(request.data?.roomCode);
     const commandId = parseCommandId(request.data?.commandId);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);

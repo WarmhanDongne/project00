@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/tablet/screens/tablet_home.dart';
 
 class Result extends StatelessWidget {
-  const Result({super.key});
+  const Result({super.key, this.onRestartGame, this.onExitToLobby});
+
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onExitToLobby;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +45,13 @@ class Result extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Align(alignment: AlignmentGeometry.bottomRight, child: Buttons()),
+              Align(
+                alignment: AlignmentGeometry.bottomRight,
+                child: Buttons(
+                  onRestartGame: onRestartGame,
+                  onExitToLobby: onExitToLobby,
+                ),
+              ),
             ],
           ),
         ),
@@ -53,14 +61,17 @@ class Result extends StatelessWidget {
 }
 
 class Buttons extends StatelessWidget {
-  const Buttons({super.key});
+  const Buttons({super.key, this.onRestartGame, this.onExitToLobby});
+
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onExitToLobby;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         TextButton(
-          onPressed: () {},
+          onPressed: onRestartGame,
           child: const Text(
             '다시하기',
             style: TextStyle(
@@ -71,29 +82,7 @@ class Buttons extends StatelessWidget {
           ),
         ),
         TextButton(
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (_, animation, _) => const TabletHome(),
-                transitionDuration: const Duration(milliseconds: 350),
-                transitionsBuilder: (_, animation, _, child) {
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOut,
-                  );
-
-                  return FadeTransition(
-                    opacity: curved,
-                    child: ScaleTransition(
-                      scale: Tween(begin: 0.96, end: 1.0).animate(curved),
-                      child: child,
-                    ),
-                  );
-                },
-              ),
-            );
-          },
+          onPressed: onExitToLobby,
           child: const Text(
             '로비로',
             style: TextStyle(

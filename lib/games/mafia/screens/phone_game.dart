@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/role_card_reveal_animation.dart';
 import 'package:project00/games/mafia/widgets/sideblock_phone.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -15,6 +16,12 @@ class MafiaPhoneGame extends StatelessWidget {
         children: [
           const Positioned.fill(child: _GameBackground()),
           Positioned.fill(child: Header()),
+          Positioned.fill(
+            child: RoleCardRevealAnimation(
+              backCardAsset: Assets.games.mafia.images.cards.roleBack,
+              frontCardAsset: Assets.games.mafia.images.cards.roleCitizen,
+            ),
+          ),
         ],
       ),
     );
@@ -51,7 +58,7 @@ class Header extends StatefulWidget {
 class _HeaderState extends State<Header> {
   @override
   Widget build(BuildContext context) {
-    return Container(child: SideBlock(isMorning: isMorning));
+    return SideBlock(isMorning: isMorning);
   }
 }
 
@@ -63,20 +70,6 @@ class Body extends StatefulWidget {
 }
 
 class _BodyState extends State<Body> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class RoleCard extends StatefulWidget {
-  const RoleCard({super.key});
-
-  @override
-  State<RoleCard> createState() => _RoleCardState();
-}
-
-class _RoleCardState extends State<RoleCard> {
   @override
   Widget build(BuildContext context) {
     return const Placeholder();

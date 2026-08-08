@@ -24,6 +24,7 @@ import {CARDS_PER_PLAYER} from "./restart-round.js";
 
 type StartGameData = {
   roomCode?: unknown;
+  restart?: unknown;
 };
 
 /**
@@ -34,6 +35,7 @@ export const startLiarsPokerGame =
     {region: REGION},
     async (request) => {
       const uid = requireUid(request);
+      const restart = request.data?.restart === true;
 
       const roomCode = parseRoomCode(
         request.data?.roomCode,
@@ -113,7 +115,8 @@ export const startLiarsPokerGame =
       const initialGame: LiarsPokerGameState = {
         public: {
           status: "playing",
-          phase: "playing",
+          // 태블릿의 실제 배분 애니메이션이 끝날 때까지 플레이를 막습니다.
+          phase: "dealing",
           round: 1,
           revision: 1,
           table: createTable(),
@@ -127,11 +130,13 @@ export const startLiarsPokerGame =
           startedAt: now,
           updatedAt: now,
         },
-        private: privateStates,
+        // 실제 손패는 태블릿 배분 연출이 끝난 뒤 private 경로로 이동합니다.
+        private: {},
         server: {
           lastPlayCards: null,
           processedCommands: {},
           roundStarterUid: firstPlayer.uid,
+          pendingHands: privateStates,
         },
       };
 
@@ -153,7 +158,8 @@ export const startLiarsPokerGame =
 
             if (
               existingGame?.public?.status ===
-              "playing"
+              "playing" &&
+              !restart
             ) {
               // undefined를 반환하면 트랜잭션이 중단됩니다.
               return;
@@ -175,6 +181,7 @@ export const startLiarsPokerGame =
         roomCode,
         turnUid: firstPlayer.uid,
         revision: 1,
+        restarted: restart,
       };
     },
   );

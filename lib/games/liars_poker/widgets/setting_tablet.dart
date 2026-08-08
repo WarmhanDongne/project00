@@ -5,9 +5,16 @@ import 'package:project00/platform/home/tablet/widgets/player_list.dart';
 import 'package:provider/provider.dart';
 
 class Setting extends StatelessWidget {
-  const Setting({super.key, required this.provider});
+  const Setting({
+    super.key,
+    required this.provider,
+    this.onRestartGame,
+    this.onEndGame,
+  });
 
   final RoomProvider provider;
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onEndGame;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +45,7 @@ class Setting extends StatelessWidget {
                 ],
               ),
             ),
-            const Buttons(),
+            Buttons(onRestartGame: onRestartGame, onEndGame: onEndGame),
           ],
         ),
       ),
@@ -247,7 +254,16 @@ class SoundSlider extends StatelessWidget {
 }
 
 class Buttons extends StatelessWidget {
-  const Buttons({super.key});
+  const Buttons({super.key, this.onRestartGame, this.onEndGame});
+
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onEndGame;
+
+  void _closeAndRun(BuildContext context, VoidCallback? action) {
+    if (action == null) return;
+    Navigator.of(context).pop();
+    action();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -262,10 +278,22 @@ class Buttons extends StatelessWidget {
         const SizedBox(height: 30),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
-          children: const [
-            Button(text: "게임 재시작", color: Colors.green, onPressed: null),
-            SizedBox(width: 30),
-            Button(text: "게임 종료", color: Colors.red, onPressed: null),
+          children: [
+            Button(
+              text: "게임 재시작",
+              color: Colors.green,
+              onPressed: onRestartGame == null
+                  ? null
+                  : () => _closeAndRun(context, onRestartGame),
+            ),
+            const SizedBox(width: 30),
+            Button(
+              text: "게임 종료",
+              color: Colors.red,
+              onPressed: onEndGame == null
+                  ? null
+                  : () => _closeAndRun(context, onEndGame),
+            ),
           ],
         ),
       ],
