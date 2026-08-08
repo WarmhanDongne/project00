@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart'; // HandCardStack import 추가
+import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart'; // HandCardStack import 추가
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -55,7 +55,7 @@ class _PhoneGamePortrait extends State<PhoneGamePortrait> {
             right: 0,
             height: 350
                 .h, // LayoutBuilder가 뷰포트를 계산할 수 있도록 높이 제약 조건(Bounded Height) 제공
-            child: HandCardStack(
+            child: HandCardStackPortrait(
               onCardSelected: (index) {
                 // 비즈니스 로직 연동 (예: 서버로 선택한 카드 정보 전송)
                 debugPrint('선택된 카드 인덱스: $index');

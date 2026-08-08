@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
 
-class HandCardStack extends StatefulWidget {
+class HandCardStackPortrait extends StatefulWidget {
   final List<String>? cards;
   final ValueChanged<int>? onCardSelected;
 
-  const HandCardStack({super.key, this.cards, this.onCardSelected});
+  const HandCardStackPortrait({super.key, this.cards, this.onCardSelected});
 
   @override
-  State<HandCardStack> createState() => _HandCardStackState();
+  State<HandCardStackPortrait> createState() => _HandCardStackPortrait();
 }
 
-class _HandCardStackState extends State<HandCardStack> {
+class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   int? _selectedIndex;
   late final List<String> _renderCards;
 
