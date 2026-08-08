@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_animation.dart';
@@ -166,8 +167,7 @@ class _GameBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.black,
-      child: Image.asset(
-        'assets/games/liars_poker/images/background/background.png',
+      child: Assets.games.liarsPoker.images.background.background.image(
         fit: BoxFit.contain,
         alignment: Alignment.center,
       ),

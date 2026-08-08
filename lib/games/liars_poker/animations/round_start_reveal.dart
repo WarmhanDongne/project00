@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 /// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.
 class RoundStartReveal extends StatefulWidget {
@@ -13,8 +14,7 @@ class RoundStartReveal extends StatefulWidget {
     this.playerSeatIndexes,
     this.playerPositions,
     this.tableWidth = 200,
-    this.cardCountAsset =
-        'assets/games/liars_poker/images/cards/card_count.png',
+    this.cardCountAsset,
     this.duration = const Duration(milliseconds: 980),
     this.orbitScale = 1,
     this.onCompleted,
@@ -30,7 +30,7 @@ class RoundStartReveal extends StatefulWidget {
          'playerPositions의 개수는 playerCount와 같아야 합니다.',
        );
 
-  final String tableAsset;
+  final AssetGenImage tableAsset;
   final int playerCount;
   final List<int> remainingCardCounts;
   final List<int>? playerSeatIndexes;
@@ -39,7 +39,7 @@ class RoundStartReveal extends StatefulWidget {
   final List<Offset>? playerPositions;
 
   final double tableWidth;
-  final String cardCountAsset;
+  final AssetGenImage? cardCountAsset;
   final Duration duration;
 
   /// 기본 플레이어 위치를 중앙 원 바깥 방향으로 확장하는 비율입니다.
@@ -156,8 +156,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                       opacity: opacity,
                       child: Transform.scale(
                         scale: scale,
-                        child: Image.asset(
-                          widget.tableAsset,
+                        child: widget.tableAsset.image(
                           width: widget.tableWidth,
                           fit: BoxFit.contain,
                           filterQuality: FilterQuality.high,
@@ -232,7 +231,9 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                 ),
                 _RemainingCardCounter(
                   key: ValueKey(playerIndex),
-                  asset: widget.cardCountAsset,
+                  asset:
+                      widget.cardCountAsset ??
+                      Assets.games.liarsPoker.images.cards.cardCount,
                   count: widget.remainingCardCounts[playerIndex],
                 ),
               ],
@@ -272,7 +273,6 @@ class _FloorShadow extends StatelessWidget {
     required this.blurRadius,
     required this.spreadRadius,
     required this.opacity,
-    this.shape = BoxShape.rectangle,
     this.borderRadius,
   });
 
@@ -281,7 +281,6 @@ class _FloorShadow extends StatelessWidget {
   final double blurRadius;
   final double spreadRadius;
   final double opacity;
-  final BoxShape shape;
   final BorderRadius? borderRadius;
 
   @override
@@ -292,8 +291,7 @@ class _FloorShadow extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0x01000000),
-          shape: shape,
-          borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
+          borderRadius: borderRadius,
           boxShadow: [
             BoxShadow(
               color: Color.fromRGBO(0, 0, 0, opacity),
@@ -318,7 +316,7 @@ class _RemainingCardCounter extends StatefulWidget {
     required this.count,
   });
 
-  final String asset;
+  final AssetGenImage asset;
   final int count;
 
   @override
@@ -375,8 +373,7 @@ class _RemainingCardCounterState extends State<_RemainingCardCounter>
       fit: StackFit.expand,
       alignment: Alignment.center,
       children: [
-        Image.asset(
-          widget.asset,
+        widget.asset.image(
           fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
         ),

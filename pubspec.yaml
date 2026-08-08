@@ -88,14 +88,19 @@ flutter:
     # - .env.dev
     - assets/images/
     - assets/images/button/
+    - assets/images/others/
+    - assets/images/widgets/layout/
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
+    - assets/games/liars_poker/images/button/
     - assets/games/liars_poker/images/cards/
-    - assets/games/liars_poker/images/phone/
     - assets/games/liars_poker/images/icons/
+    - assets/games/liars_poker/images/table/
     - assets/games/mafia/images/background/
+    - assets/games/mafia/images/background/bird/
     - assets/games/mafia/images/cards/
     - assets/games/mafia/images/icons/
+    - assets/games/mafia/images/other/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/

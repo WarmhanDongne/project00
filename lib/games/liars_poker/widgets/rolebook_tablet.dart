@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -25,7 +26,10 @@ class RoleBook extends StatelessWidget {
               flex: 1,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [BasicRole(provider:provider), const Cards()],
+                children: [
+                  BasicRole(provider: provider),
+                  const Cards(),
+                ],
               ),
             ),
             Expanded(
@@ -53,9 +57,9 @@ class RoleBook extends StatelessWidget {
 }
 
 class BasicRole extends StatelessWidget {
-  const BasicRole({super.key,required this.provider});
+  const BasicRole({super.key, required this.provider});
 
-final RoomProvider provider;
+  final RoomProvider provider;
   final String markdown = '''
 # 기본 규칙
 
@@ -77,7 +81,7 @@ final RoomProvider provider;
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-           provider.selectedGame!.name,
+          provider.selectedGame!.name,
           style: const TextStyle(fontSize: 60, fontWeight: FontWeight.w700),
         ),
 
@@ -99,11 +103,11 @@ class Cards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> cardImages = [
-      'assets/games/liars_poker/images/cards/white A.png',
-      'assets/games/liars_poker/images/cards/white K.png',
-      'assets/games/liars_poker/images/cards/white Q.png',
-      'assets/games/liars_poker/images/cards/white Joker.png',
+    final cardImages = <AssetGenImage>[
+      Assets.games.liarsPoker.images.cards.whiteA,
+      Assets.games.liarsPoker.images.cards.whiteK,
+      Assets.games.liarsPoker.images.cards.whiteQ,
+      Assets.games.liarsPoker.images.cards.whiteJoker,
     ];
 
     return Expanded(
@@ -128,8 +132,7 @@ class Cards extends StatelessWidget {
                   width: 140,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(18),
-                    child: Image.asset(
-                      cardImages[index],
+                    child: cardImages[index].image(
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) {
                         return Container(

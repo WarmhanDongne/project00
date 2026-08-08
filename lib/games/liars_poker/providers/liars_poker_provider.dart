@@ -20,7 +20,6 @@ class LiarsPokerProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _handSubscription;
 
   String? _roomCode;
-  String? _uid;
 
   Map<String, dynamic> publicGame = {};
   List<dynamic> myHand = [];
@@ -36,19 +35,17 @@ class LiarsPokerProvider extends ChangeNotifier {
     required String uid,
   }) async {
     _roomCode = roomCode;
-    _uid = uid;
 
     await _publicSubscription?.cancel();
     await _handSubscription?.cancel();
 
-    _publicSubscription =
-        _query.watchPublicGame(roomCode).listen(_onPublicChanged);
+    _publicSubscription = _query
+        .watchPublicGame(roomCode)
+        .listen(_onPublicChanged);
 
-    _handSubscription =
-        _query.watchPrivateHand(
-          roomCode: roomCode,
-          uid: uid,
-        ).listen(_onHandChanged);
+    _handSubscription = _query
+        .watchPrivateHand(roomCode: roomCode, uid: uid)
+        .listen(_onHandChanged);
   }
 
   // ===================== listeners =====================
@@ -85,22 +82,15 @@ class LiarsPokerProvider extends ChangeNotifier {
     if (_roomCode == null) return;
 
     await _runLoading(() async {
-      await _command.startGame(
-        roomCode: _roomCode!,
-      );
+      await _command.startGame(roomCode: _roomCode!);
     });
   }
 
-  Future<void> submitCards(
-    List<String> cardIds,
-  ) async {
+  Future<void> submitCards(List<String> cardIds) async {
     if (_roomCode == null) return;
 
     await _runLoading(() async {
-      await _command.submitCards(
-        roomCode: _roomCode!,
-        cardIds: cardIds,
-      );
+      await _command.submitCards(roomCode: _roomCode!, cardIds: cardIds);
     });
   }
 
@@ -108,9 +98,7 @@ class LiarsPokerProvider extends ChangeNotifier {
     if (_roomCode == null) return;
 
     await _runLoading(() async {
-      await _command.callLiar(
-        roomCode: _roomCode!,
-      );
+      await _command.callLiar(roomCode: _roomCode!);
     });
   }
 
@@ -118,30 +106,21 @@ class LiarsPokerProvider extends ChangeNotifier {
     if (_roomCode == null) return;
 
     await _runLoading(() async {
-      await _command.passLastCardChallenge(
-        roomCode: _roomCode!,
-      );
+      await _command.passLastCardChallenge(roomCode: _roomCode!);
     });
   }
 
-  Future<void> resolvePenalty(
-    String result,
-  ) async {
+  Future<void> resolvePenalty(String result) async {
     if (_roomCode == null) return;
 
     await _runLoading(() async {
-      await _command.resolvePenalty(
-        roomCode: _roomCode!,
-        result: result,
-      );
+      await _command.resolvePenalty(roomCode: _roomCode!, result: result);
     });
   }
 
   // ===================== common =====================
 
-  Future<void> _runLoading(
-    Future<void> Function() action,
-  ) async {
+  Future<void> _runLoading(Future<void> Function() action) async {
     try {
       errorMessage = null;
       isLoading = true;
