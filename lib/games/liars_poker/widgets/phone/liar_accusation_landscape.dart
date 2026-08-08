@@ -29,7 +29,7 @@ class _LiarAccusationLandscapeState extends State<LiarAccusationLandscape> {
         duration: const Duration(milliseconds: 100),
         child: Container(
           decoration: const BoxDecoration(color: Colors.transparent),
-          child: Assets.games.liarsPoker.images.phone.liar.image(
+          child: Assets.games.liarsPoker.images.button.buttonLiarWhite.image(
             width: 195, // 가로 모드 뷰포트에 맞춘 고정 너비
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,

@@ -13,8 +13,8 @@ class TopBarLandscape extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // 왼쪽: KING'S TABLE 로고
-        Assets.games.liarsPoker.images.phone.kingTable.image(
-          height: 35, // 디자인 비율에 맞게 높이 고정
+        Assets.games.liarsPoker.images.table.tableKingWhite.image(
+          height: 30, // 디자인 비율에 맞게 높이 고정
           filterQuality: FilterQuality.high,
         ),
 
@@ -25,7 +25,7 @@ class TopBarLandscape extends StatelessWidget {
         GestureDetector(
           onTap: onTipPressed,
           behavior: HitTestBehavior.opaque,
-          child: Assets.games.liarsPoker.images.phone.bulb.image(
+          child: Assets.games.liarsPoker.images.icons.tip.image(
             width: 45, // 가로 모드 공간에 맞게 조절
             height: 45,
           ),
@@ -34,7 +34,7 @@ class TopBarLandscape extends StatelessWidget {
         GestureDetector(
           onTap: onSettingPressed,
           behavior: HitTestBehavior.opaque,
-          child: Assets.games.liarsPoker.images.phone.setting.image(
+          child: Assets.games.liarsPoker.images.icons.settingIcon.image(
             width: 32,
             height: 32,
           ),

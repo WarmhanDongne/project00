@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 class HandCardStackLandscape extends StatefulWidget {
-  final List<String>? cards;
+  final List<AssetGenImage>? cards;
   final ValueChanged<int>? onCardSelected;
 
   const HandCardStackLandscape({super.key, this.cards, this.onCardSelected});
@@ -13,7 +14,7 @@ class HandCardStackLandscape extends StatefulWidget {
 
 class _HandCardStackLandscapeState extends State<HandCardStackLandscape> {
   int? _selectedIndex;
-  late final List<String> _renderCards;
+  late final List<AssetGenImage> _renderCards;
   // 초기 딜링 애니메이션 여부: true (진행), false (완료)
   bool _isDealing = true;
 
@@ -30,11 +31,11 @@ class _HandCardStackLandscapeState extends State<HandCardStackLandscape> {
     _renderCards =
         widget.cards ??
         [
-          'assets/games/liars_poker/images/cards/white K.png',
-          'assets/games/liars_poker/images/cards/white Q.png',
-          'assets/games/liars_poker/images/cards/white Q.png',
-          'assets/games/liars_poker/images/cards/white A.png',
-          'assets/games/liars_poker/images/cards/white Joker.png',
+          Assets.games.liarsPoker.images.cards.whiteK,
+          Assets.games.liarsPoker.images.cards.whiteQ,
+          Assets.games.liarsPoker.images.cards.whiteQ,
+          Assets.games.liarsPoker.images.cards.whiteA,
+          Assets.games.liarsPoker.images.cards.whiteJoker,
         ];
   }
 
@@ -121,7 +122,7 @@ class _HandCardStackLandscapeState extends State<HandCardStackLandscape> {
 }
 
 class _StaticCardFace extends StatelessWidget {
-  final String asset;
+  final AssetGenImage asset;
   final double cardWidth;
   final double cardHeight;
   final bool isSelected;
@@ -154,8 +155,7 @@ class _StaticCardFace extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8.0),
-        child: Image.asset(
-          asset,
+        child: asset.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
         ),
