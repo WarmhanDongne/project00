@@ -34,8 +34,10 @@ export function restartRound(
     }
   }
 
-  game.private = privateStates;
-  game.public.phase = "playing";
+  // 새 라운드도 태블릿 딜링이 끝나기 전에는 휴대폰에 손패를 공개하지 않습니다.
+  game.private = {};
+  game.server.pendingHands = privateStates;
+  game.public.phase = "dealing";
   game.public.round += 1;
   game.public.revision += 1;
   game.public.table = createTable();

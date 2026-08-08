@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
@@ -90,6 +92,25 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
 
   void finishGame() => _controller.changeStatus(GameStatus.finished);
 
+  void _restartGame() {
+    unawaited(_controller.restartGame());
+  }
+
+  void _endGame() {
+    unawaited(_endGameAndReturnToLobby());
+  }
+
+  Future<void> _endGameAndReturnToLobby() async {
+    final ended = await _controller.endGame();
+    if (!mounted || !ended) return;
+    _returnToLobby();
+  }
+
+  void _returnToLobby() {
+    // 새 홈 화면을 만들지 않고 기존 홈으로 돌아가 RoomProvider를 유지합니다.
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,15 +128,22 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   playerSeatIndexes: _controller.seatIndexes,
                   cardsPerPlayer: cardsPerPlayer,
                   roundNumber: _controller.roundNumber,
+                  cardPileVersion: _controller.cardPileVersion,
                   table: _controller.table,
                   remainingCardCounts: _controller.remainingCardCounts,
                   onDealCompleted: _controller.onDealCompleted,
                   onRoundRevealCompleted: _controller.onRoundRevealCompleted,
+                  onRestartGame: _restartGame,
+                  onExitToLobby: _returnToLobby,
                 ),
               ),
               if (_controller.shouldShowSubmittedPlay)
                 Positioned.fill(
                   child: TabletGameAnimation(
+                    key: ValueKey(
+                      'card-pile-${_controller.roundNumber}-'
+                      '${_controller.cardPileVersion}',
+                    ),
                     roundPlays: _controller.roundPlays,
                     activePlayId: _controller.activeAnimationPlayId,
                     playerCount: _controller.playerCount,
@@ -144,6 +172,8 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   provider: widget.provider,
                   status: _controller.status,
                   onDebugStatusChanged: _controller.selectDebugStatus,
+                  onRestartGame: _restartGame,
+                  onEndGame: _endGame,
                 ),
               ),
             ],

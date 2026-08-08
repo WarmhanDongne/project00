@@ -229,25 +229,13 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     'assets/games/liars_poker/images/background/background.png',
   );
 
-  /// File path: assets/games/liars_poker/images/background/background_mafia.png
-  AssetGenImage get backgroundMafia => const AssetGenImage(
-    'assets/games/liars_poker/images/background/background_mafia.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/background/phone_background_withe.png
-  AssetGenImage get phoneBackgroundWithe => const AssetGenImage(
-    'assets/games/liars_poker/images/background/phone_background_withe.png',
+  /// File path: assets/games/liars_poker/images/background/background_phone.png
+  AssetGenImage get backgroundPhone => const AssetGenImage(
+    'assets/games/liars_poker/images/background/background_phone.png',
   );
 
   /// List of all assets
-  List<AssetGenImage> get values => [
-    a,
-    k,
-    q,
-    background,
-    backgroundMafia,
-    phoneBackgroundWithe,
-  ];
+  List<AssetGenImage> get values => [a, k, q, background, backgroundPhone];
 }
 
 class $AssetsGamesLiarsPokerImagesButtonGen {
@@ -416,6 +404,17 @@ class $AssetsGamesMafiaImagesBackgroundGen {
 
 class $AssetsGamesMafiaImagesCardsGen {
   const $AssetsGamesMafiaImagesCardsGen();
+
+  /// File path: assets/games/mafia/images/cards/role_back.png
+  AssetGenImage get roleBack =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_back.png');
+
+  /// File path: assets/games/mafia/images/cards/role_citizen.png
+  AssetGenImage get roleCitizen =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_citizen.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [roleBack, roleCitizen];
 }
 
 class $AssetsGamesMafiaImagesIconsGen {

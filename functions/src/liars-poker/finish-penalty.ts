@@ -95,9 +95,10 @@ export const resolveLiarsPokerPenalty = onCall<ResolvePenaltyData>(
         result,
         penaltyTargetUid: targetUid,
         status: game.public.status,
-        winnerUid: game.public.winnerUid,
+        // RTDB에서는 null 필드가 읽을 때 생략되므로 undefined일 수도 있습니다.
+        winnerUid: game.public.winnerUid ?? null,
         round: game.public.round,
-        turnUid: game.public.turnUid,
+        turnUid: game.public.turnUid ?? null,
         revision: game.public.revision,
       };
       recordCommand(game, commandId, {

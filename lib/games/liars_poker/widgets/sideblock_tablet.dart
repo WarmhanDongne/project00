@@ -5,9 +5,16 @@ import 'package:project00/games/liars_poker/widgets/setting_tablet.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class SideBlock extends StatefulWidget {
-  const SideBlock({super.key, required this.provider});
+  const SideBlock({
+    super.key,
+    required this.provider,
+    this.onRestartGame,
+    this.onEndGame,
+  });
 
   final RoomProvider provider;
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onEndGame;
   @override
   State<SideBlock> createState() => _SideBlockState();
 }
@@ -52,7 +59,11 @@ class _SideBlockState extends State<SideBlock> {
                       alignment: const Alignment(0, 0.7), // 아래로 이동
                       child: Material(
                         color: Colors.transparent,
-                        child: Setting(provider: widget.provider),
+                        child: Setting(
+                          provider: widget.provider,
+                          onRestartGame: widget.onRestartGame,
+                          onEndGame: widget.onEndGame,
+                        ),
                       ),
                     );
                   },

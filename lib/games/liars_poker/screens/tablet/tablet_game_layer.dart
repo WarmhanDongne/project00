@@ -14,10 +14,13 @@ class TabletGameLayer extends StatelessWidget {
     required this.playerSeatIndexes,
     required this.cardsPerPlayer,
     required this.roundNumber,
+    required this.cardPileVersion,
     required this.table,
     required this.remainingCardCounts,
     required this.onDealCompleted,
     required this.onRoundRevealCompleted,
+    required this.onRestartGame,
+    required this.onExitToLobby,
   });
 
   final GameStatus status;
@@ -25,17 +28,20 @@ class TabletGameLayer extends StatelessWidget {
   final List<int> playerSeatIndexes;
   final int cardsPerPlayer;
   final int roundNumber;
+  final int cardPileVersion;
   final String table;
   final List<int> remainingCardCounts;
   final VoidCallback onDealCompleted;
   final VoidCallback onRoundRevealCompleted;
+  final VoidCallback onRestartGame;
+  final VoidCallback onExitToLobby;
 
   @override
   Widget build(BuildContext context) {
     return switch (status) {
       GameStatus.waiting => const _StatusMessage('게임 시작 대기 중'),
       GameStatus.dealing => CardDealAnimation(
-        key: ValueKey('deal-$roundNumber'),
+        key: ValueKey('deal-$roundNumber-$cardPileVersion'),
         playerCount: playerCount,
         playerSeatIndexes: playerSeatIndexes,
         cardsPerPlayer: cardsPerPlayer,
@@ -55,7 +61,12 @@ class TabletGameLayer extends StatelessWidget {
         tableWidth: 300,
         onCompleted: onRoundRevealCompleted,
       ),
-      GameStatus.result => const Center(child: Result()),
+      GameStatus.result => Center(
+        child: Result(
+          onRestartGame: onRestartGame,
+          onExitToLobby: onExitToLobby,
+        ),
+      ),
       GameStatus.finished => const _StatusMessage('게임이 종료되었습니다.'),
     };
   }

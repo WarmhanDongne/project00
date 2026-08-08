@@ -28,6 +28,14 @@ export {
 } from "./liars-poker/start-game.js";
 
 export {
+  completeLiarsPokerDealing,
+} from "./liars-poker/complete-dealing.js";
+
+export {
+  endLiarsPokerGame,
+} from "./liars-poker/end-game.js";
+
+export {
   submitLiarsPokerCards,
 } from "./liars-poker/submit-card.js";
 

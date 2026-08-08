@@ -11,11 +11,15 @@ class TabletGameOverlay extends StatelessWidget {
     required this.provider,
     required this.status,
     required this.onDebugStatusChanged,
+    required this.onRestartGame,
+    required this.onEndGame,
   });
 
   final RoomProvider provider;
   final GameStatus status;
   final ValueChanged<GameStatus?> onDebugStatusChanged;
+  final VoidCallback onRestartGame;
+  final VoidCallback onEndGame;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +35,15 @@ class TabletGameOverlay extends StatelessWidget {
               onChanged: onDebugStatusChanged,
             ),
           ),
-        Positioned(top: 20, right: 20, child: SideBlock(provider: provider)),
+        Positioned(
+          top: 20,
+          right: 20,
+          child: SideBlock(
+            provider: provider,
+            onRestartGame: onRestartGame,
+            onEndGame: onEndGame,
+          ),
+        ),
       ],
     );
   }

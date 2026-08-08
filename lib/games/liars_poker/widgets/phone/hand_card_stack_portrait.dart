@@ -13,44 +13,61 @@ class HandCardStackPortrait extends StatefulWidget {
   const HandCardStackPortrait({
     super.key,
     this.cards,
+    this.enabled = true,
     this.maxSelection = 3,
     this.onSelectionChanged,
+    this.onCardsSubmitRequested,
     this.onCardsSubmitted,
+    this.onRevealStarted,
     this.onRevealCompleted,
+    this.initiallyRevealed = false,
+    this.cardWidth = 169.0,
+    this.spreadStepX = 35.0,
+    this.spreadStepY = 35.0,
+    this.rightCardOnTop = true,
   }) : assert(maxSelection > 0);
 
   final List<AssetGenImage>? cards;
+  final bool enabled;
   final int maxSelection;
   final ValueChanged<List<int>>? onSelectionChanged;
+  final Future<bool> Function(List<int> indexes)? onCardsSubmitRequested;
   final ValueChanged<List<int>>? onCardsSubmitted;
+  final VoidCallback? onRevealStarted;
   final VoidCallback? onRevealCompleted;
+  final bool initiallyRevealed;
+  final double cardWidth;
+  final double spreadStepX;
+  final double spreadStepY;
+  final bool rightCardOnTop;
 
   @override
   State<HandCardStackPortrait> createState() => _HandCardStackPortrait();
 }
 
 class _HandCardStackPortrait extends State<HandCardStackPortrait> {
-  static const double _cardWidth = 169.0;
-  static const double _spreadStepX = 35.0;
-  static const double _spreadStepY = 35.0;
   static const double _selectedElevation = 20.0;
   static const double _submitThreshold = 82.0;
+  static const double _submitExitOffset = 330.0;
+  static const Duration _submitExitDuration = Duration(milliseconds: 420);
 
   final Set<int> _selectedCardIds = <int>{};
   late List<_HandCardEntry> _renderCards;
 
   int _nextCardId = 0;
-  bool _isDealing = true;
+  late bool _isDealing;
   bool _isDragging = false;
   bool _isSubmitting = false;
   bool _showMaxSelectionMessage = false;
   int? _draggingCardId;
   double _dragOffsetY = 0;
+  List<AssetGenImage>? _pendingCards;
   Timer? _maxSelectionMessageTimer;
 
   @override
   void initState() {
     super.initState();
+    _isDealing = !widget.initiallyRevealed;
     _replaceCards(widget.cards ?? _defaultCards);
   }
 
@@ -59,9 +76,28 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
     super.didUpdateWidget(oldWidget);
 
     if (widget.cards != null && oldWidget.cards != widget.cards) {
-      setState(() {
+      // 제출 중 서버 손패가 먼저 갱신되어도 화면을 즉시 바꾸지 않습니다.
+      // 카드가 화면 밖으로 이동한 다음 새 손패를 반영해야 중간 끊김이 없습니다.
+      if (_isSubmitting) {
+        _pendingCards = List<AssetGenImage>.of(widget.cards!);
+      } else {
         _replaceCards(widget.cards!);
-      });
+        _notifySelectionChanged();
+      }
+    }
+
+    if (!oldWidget.initiallyRevealed && widget.initiallyRevealed) {
+      _isDealing = false;
+    }
+
+    if (oldWidget.enabled &&
+        !widget.enabled &&
+        _selectedCardIds.isNotEmpty &&
+        !_isSubmitting) {
+      _selectedCardIds.clear();
+      _isDragging = false;
+      _draggingCardId = null;
+      _dragOffsetY = 0;
       _notifySelectionChanged();
     }
   }
@@ -96,6 +132,8 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   ];
 
   void _toggleSelection(int cardId) {
+    if (!widget.enabled || _isSubmitting) return;
+
     if (!_selectedCardIds.contains(cardId) &&
         _selectedCardIds.length >= widget.maxSelection) {
       _showSelectionLimitMessage();
@@ -111,6 +149,8 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   void _startDragging(int cardId) {
+    if (!widget.enabled || _isSubmitting) return;
+
     var selectionChanged = false;
 
     if (!_selectedCardIds.contains(cardId)) {
@@ -136,7 +176,12 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   void _updateDrag(DragUpdateDetails details) {
-    if (!_isDragging || _draggingCardId == null || _isSubmitting) return;
+    if (!widget.enabled ||
+        !_isDragging ||
+        _draggingCardId == null ||
+        _isSubmitting) {
+      return;
+    }
 
     final nextOffset = (_dragOffsetY + details.delta.dy).clamp(
       -_submitThreshold - 24,
@@ -145,7 +190,7 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
 
     if (nextOffset <= -_submitThreshold) {
       _dragOffsetY = -_submitThreshold;
-      _submitSelectedCards();
+      unawaited(_submitSelectedCards());
       return;
     }
 
@@ -164,24 +209,71 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
     });
   }
 
-  void _submitSelectedCards() {
+  Future<void> _submitSelectedCards() async {
     if (_selectedCardIds.isEmpty || _isSubmitting) return;
 
-    _isSubmitting = true;
     final submittedIndexes = List<int>.unmodifiable(_selectedIndexes);
     final submittedIds = Set<int>.of(_selectedCardIds);
+    setState(() {
+      _isSubmitting = true;
+      _isDragging = false;
+      _draggingCardId = null;
+      _dragOffsetY = -_submitExitOffset;
+    });
+
+    final submitRequested = widget.onCardsSubmitRequested;
+    var accepted = true;
+
+    // 서버 응답과 카드 이동을 동시에 시작합니다. 서버가 빨라도 애니메이션은
+    // 끝까지 보여주고, 느려도 별도의 로딩 정지 없이 카드가 먼저 움직입니다.
+    await Future.wait<void>([
+      Future<void>(() async {
+        accepted = submitRequested == null
+            ? true
+            : await submitRequested(submittedIndexes);
+      }),
+      Future<void>.delayed(_submitExitDuration),
+    ]);
+    if (!mounted) return;
+
+    if (!accepted) {
+      final pendingCards = _pendingCards;
+      setState(() {
+        // 함수 응답만 실패하고 RTDB에는 제출 결과가 반영된 경우가 있습니다.
+        // 이때는 서버에서 먼저 도착한 손패를 신뢰해 제출 카드가 되살아나지
+        // 않도록 합니다.
+        if (pendingCards != null) {
+          _replaceCards(pendingCards);
+        }
+        _pendingCards = null;
+        _isSubmitting = false;
+        if (pendingCards == null) {
+          _isDragging = false;
+          _draggingCardId = null;
+          _dragOffsetY = 0;
+        }
+      });
+      if (pendingCards != null) {
+        _notifySelectionChanged();
+      }
+      return;
+    }
 
     setState(() {
+      // 기존 카드 ID를 유지해야 남은 카드가 순간 교체되지 않고 중앙으로
+      // 자연스럽게 재배치됩니다. 대기 중인 서버 값은 이미 같은 제출 결과이므로
+      // 여기서는 선택 카드만 로컬 목록에서 제거합니다.
       _renderCards.removeWhere((card) => submittedIds.contains(card.id));
       _selectedCardIds.clear();
       _isDragging = false;
       _draggingCardId = null;
       _dragOffsetY = 0;
+      _pendingCards = null;
+      _isSubmitting = false;
     });
 
     widget.onSelectionChanged?.call(const []);
     widget.onCardsSubmitted?.call(submittedIndexes);
-    _isSubmitting = false;
   }
 
   void _notifySelectionChanged() {
@@ -212,9 +304,10 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         frontCardAssets: _renderCards
             .map((card) => card.asset)
             .toList(growable: false),
-        cardWidth: _cardWidth,
-        spreadStepX: _spreadStepX,
-        spreadStepY: _spreadStepY,
+        cardWidth: widget.cardWidth,
+        spreadStepX: widget.spreadStepX,
+        spreadStepY: widget.spreadStepY,
+        onRevealStarted: widget.onRevealStarted,
         onCompleted: () {
           if (!mounted) return;
 
@@ -235,18 +328,21 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         final centerX = size.width / 2;
         final centerY = size.height / 2;
         const cardAspectRatio = 512 / 350;
-        final cardHeight = _cardWidth * cardAspectRatio;
+        final cardHeight = widget.cardWidth * cardAspectRatio;
         final cardCount = _renderCards.length;
 
         // 선택 여부와 관계없이 원래 손패 순서대로 겹쳐서 그립니다.
-        final indexedCards = _renderCards.asMap().entries;
+        final indexedCards = _renderCards.asMap().entries.toList();
+        final paintOrder = widget.rightCardOnTop
+            ? indexedCards
+            : indexedCards.reversed;
 
         return SizedBox.fromSize(
           size: size,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              for (final indexedCard in indexedCards)
+              for (final indexedCard in paintOrder)
                 _buildCard(
                   card: indexedCard.value,
                   cardIndex: indexedCard.key,
@@ -291,36 +387,42 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }) {
     final centeredIndex = cardIndex - (cardCount - 1) / 2;
     final isSelected = _selectedCardIds.contains(card.id);
-    final baseLeft = centerX + centeredIndex * _spreadStepX - _cardWidth / 2;
-    final baseTop = centerY + centeredIndex * _spreadStepY - cardHeight / 2;
+    final baseLeft =
+        centerX + centeredIndex * widget.spreadStepX - widget.cardWidth / 2;
+    final baseTop =
+        centerY + centeredIndex * widget.spreadStepY - cardHeight / 2;
     final dragOffset = isSelected ? _dragOffsetY : 0.0;
 
     return AnimatedPositioned(
       key: ValueKey(card.id),
-      duration: _isDragging ? Duration.zero : const Duration(milliseconds: 260),
+      duration: _isDragging ? Duration.zero : const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
       left: baseLeft,
       top: isSelected ? baseTop - _selectedElevation : baseTop,
       child: AnimatedContainer(
         duration: _isDragging
             ? Duration.zero
-            : const Duration(milliseconds: 190),
-        curve: Curves.easeOutCubic,
+            : _isSubmitting
+            ? _submitExitDuration
+            : const Duration(milliseconds: 260),
+        curve: _isSubmitting ? Curves.easeInCubic : Curves.easeOutCubic,
         transform: Matrix4.translationValues(0, dragOffset, 0),
         transformAlignment: Alignment.center,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => _toggleSelection(card.id),
-          onVerticalDragStart: (_) => _startDragging(card.id),
-          onVerticalDragUpdate: _updateDrag,
-          onVerticalDragEnd: (_) => _finishDrag(),
-          onVerticalDragCancel: _finishDrag,
+          onTap: widget.enabled ? () => _toggleSelection(card.id) : null,
+          onVerticalDragStart: widget.enabled
+              ? (_) => _startDragging(card.id)
+              : null,
+          onVerticalDragUpdate: widget.enabled ? _updateDrag : null,
+          onVerticalDragEnd: widget.enabled ? (_) => _finishDrag() : null,
+          onVerticalDragCancel: widget.enabled ? _finishDrag : null,
           child: Semantics(
             selected: isSelected,
             label: isSelected ? '선택된 카드' : '선택하지 않은 카드',
             child: _StaticCardFace(
               asset: card.asset,
-              cardWidth: _cardWidth,
+              cardWidth: widget.cardWidth,
               cardHeight: cardHeight,
               isSelected: isSelected,
             ),
