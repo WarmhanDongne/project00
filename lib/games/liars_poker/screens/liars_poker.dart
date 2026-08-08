@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/liars_poker/screens/phone_game_portrait.dart';
+import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/games/liars_poker/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -25,7 +25,7 @@ class LiarsPoker extends StatelessWidget {
       builder: (context, constraints) {
         // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
         if (constraints.maxWidth < 600 || constraints.maxHeight < 900) {
-          return PhoneGamePortrait(
+          return PhoneGame(
             //playerLayout: playerLayout
           );
         } else {
