@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/screens/phone_game.dart';
+import 'package:project00/games/liars_poker/screens/phone_game_portrait.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
@@ -14,7 +14,8 @@ class PhoneHome extends StatefulWidget {
 }
 
 class _PhoneHomeState extends State<PhoneHome> {
-  late final Future<List<GameInfo>> _games; // PhoneGameCard에 들어갈 데이터 보관할 객체
+  late final Future<List<GameInfo>>
+  _games; // PhoneGamePortraitCard에 들어갈 데이터 보관할 객체
   final GameService _gameService = GameService(); // 데이터 fetch할 객체
 
   @override
@@ -71,7 +72,7 @@ class _PhoneHomeState extends State<PhoneHome> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PhoneGame()),
+                  MaterialPageRoute(builder: (context) => PhoneGamePortrait()),
                 );
               },
               child: Text('폰게임으로 가는 길~'),
