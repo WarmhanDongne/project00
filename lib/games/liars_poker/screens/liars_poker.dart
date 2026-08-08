@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/screens/phone_game.dart';
-import 'package:project00/games/liars_poker/screens/tablet_game.dart';
+import 'package:project00/games/liars_poker/screens/tablet/tablet_game.dart';
+import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class LiarsPoker extends StatelessWidget {
@@ -9,11 +10,15 @@ class LiarsPoker extends StatelessWidget {
     super.key,
     required this.playerLayout,
     required this.provider,
+    required this.roomCode,
+    required this.gameService,
   });
 
   final PlayerLayoutModel playerLayout;
   final RoomProvider provider;
-  
+  final String roomCode;
+  final LiarsPokerService gameService;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -22,7 +27,12 @@ class LiarsPoker extends StatelessWidget {
         if (constraints.maxWidth < 600) {
           return PhoneGame(playerLayout: playerLayout);
         } else {
-          return TabletGame(playerLayout: playerLayout, provider: provider);
+          return TabletGame(
+            playerLayout: playerLayout,
+            provider: provider,
+            roomCode: roomCode,
+            gameService: gameService,
+          );
         }
       },
     );

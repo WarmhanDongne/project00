@@ -22,10 +22,6 @@ type RoomCodeData = {
   roomCode?: unknown;
 };
 
-type ReadyData = RoomCodeData & {
-  isReady?: unknown;
-};
-
 type SelectGameData = RoomCodeData & {
   gameId?: unknown;
 };
@@ -127,7 +123,6 @@ function playerData(request: CallableRequest<unknown>, uid: string) {
         emailName || "사용자",
     profileImageUrl: typeof picture === "string" ? picture : "",
     isHost: false,
-    isReady: false,
     role: "player",
     status: "active",
     joinedAt: FieldValue.serverTimestamp(),
@@ -226,12 +221,6 @@ export const joinRoom = onCall<RoomCodeData>(
       if (!roomSnapshot.exists) {
         throw new HttpsError("not-found", "존재하지 않는 방입니다.");
       }
-      // if (roomSnapshot.get("hostUid") === uid) {
-      //   throw new HttpsError(
-      //     "failed-precondition",
-      //     "아이패드 계정은 플레이어로 참가할 수 없습니다.",
-      //   );
-      // }
       if (roomSnapshot.get("status") !== "waiting") {
         throw new HttpsError(
           "failed-precondition",
@@ -280,46 +269,6 @@ export const joinRoom = onCall<RoomCodeData>(
     });
 
     return {roomCode};
-  },
-);
-
-export const setRoomReady = onCall<ReadyData>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    if (typeof request.data?.isReady !== "boolean") {
-      throw new HttpsError(
-        "invalid-argument",
-        "준비 상태를 확인할 수 없습니다.",
-      );
-    }
-
-    const db = getFirestore();
-    const roomRef = db.collection("rooms").doc(roomCode);
-    const playerRef = roomRef.collection("players").doc(uid);
-
-    await db.runTransaction(async (transaction) => {
-      const roomSnapshot = await transaction.get(roomRef);
-      const playerSnapshot = await transaction.get(playerRef);
-
-      if (!roomSnapshot.exists || !playerSnapshot.exists) {
-        throw new HttpsError("not-found", "참가 중인 방이 아닙니다.");
-      }
-      if (roomSnapshot.get("status") !== "waiting") {
-        throw new HttpsError(
-          "failed-precondition",
-          "게임 시작 후에는 준비 상태를 바꿀 수 없습니다.",
-        );
-      }
-
-      transaction.update(playerRef, {
-        isReady: request.data.isReady,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    });
-
-    return {isReady: request.data.isReady};
   },
 );
 
@@ -394,7 +343,7 @@ export const selectRoomGame = onCall<SelectGameData>(
       if (roomSnapshot.get("hostUid") !== uid) {
         throw new HttpsError(
           "permission-denied",
-          "방장만 게임을 선택할 수 있습니다.",
+          "방을 만든 아이패드에서만 게임을 선택할 수 있습니다.",
         );
       }
       if (roomSnapshot.get("status") !== "waiting") {
