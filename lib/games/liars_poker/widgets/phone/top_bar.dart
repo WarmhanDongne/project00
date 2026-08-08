@@ -1,45 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 class TopBar extends StatelessWidget {
-  final Widget leadingWidget; // 부모로부터 주입 받을 위젯 선언
-  final VoidCallback? onTipPressed; // 팁 버튼 클릭 시 동작 함수
-  final VoidCallback? onSettingPressed; // 세팅 버튼 클릭 시 동작 함수
-
   const TopBar({
     super.key,
     required this.leadingWidget,
+    this.entryAnimation,
     this.onTipPressed,
     this.onSettingPressed,
   });
+
+  final Widget leadingWidget;
+  final Animation<double>? entryAnimation;
+  final VoidCallback? onTipPressed;
+  final VoidCallback? onSettingPressed;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 240.w,
-          height: 50.h,
-          child: leadingWidget,
-        ), // 부모로부터 주입 받은 킹, 퀸, 에이스 테이블 표시 이미지
+        _buildEntry(
+          begin: 0,
+          end: 0.76,
+          child: SizedBox(width: 240.w, height: 50.h, child: leadingWidget),
+        ),
         const Spacer(),
-        GestureDetector(
-          onTap: () {},
-          child: Assets.games.liarsPoker.images.phone.bulb.image(
-            width: 60.w,
-            height: 60.h,
+        _buildEntry(
+          begin: 0.06,
+          end: 0.84,
+          child: GestureDetector(
+            onTap: onTipPressed,
+            child: Assets.games.liarsPoker.images.icons.tip.image(
+              width: 40.w,
+              height: 40.h,
+            ),
           ),
         ),
         SizedBox(width: 10.w),
-        GestureDetector(
-          onTap: () {},
-          child: Assets.games.liarsPoker.images.phone.setting.image(
-            width: 32.w,
-            height: 32.h,
+        _buildEntry(
+          begin: 0.12,
+          end: 0.9,
+          child: GestureDetector(
+            onTap: onSettingPressed,
+            child: Assets.games.liarsPoker.images.icons.settingPhone.image(
+              width: 32.w,
+              height: 32.h,
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEntry({
+    required double begin,
+    required double end,
+    required Widget child,
+  }) {
+    final animation = entryAnimation;
+    if (animation == null) return child;
+
+    return PhoneControlEntryAnimation(
+      animation: animation,
+      style: PhoneControlEntryStyle.header,
+      begin: begin,
+      end: end,
+      child: child,
     );
   }
 }

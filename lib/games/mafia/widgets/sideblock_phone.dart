@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
 
 class SideBlock extends StatefulWidget {
@@ -24,8 +25,7 @@ class _SideBlockState extends State<SideBlock> {
                 onPressed: () {
                   null;
                 },
-                icon: Image.asset(
-                  'assets/games/mafia/images/icons/tip.png',
+                icon: Assets.games.mafia.images.icons.tip.image(
                   width: 50,
                   height: 50,
                   fit: BoxFit.contain,
@@ -35,14 +35,11 @@ class _SideBlockState extends State<SideBlock> {
                 onPressed: () {
                   null;
                 },
-                icon: Image.asset(
-                  isMorning
-                      ? 'assets/games/mafia/images/icons/setting_black.png'
-                      : 'assets/games/mafia/images/icons/setting_white.png',
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.contain,
-                ),
+                icon:
+                    (isMorning
+                            ? Assets.games.mafia.images.icons.settingBlack
+                            : Assets.games.mafia.images.icons.settingWhite)
+                        .image(width: 50, height: 50, fit: BoxFit.contain),
               ),
             ],
           ),

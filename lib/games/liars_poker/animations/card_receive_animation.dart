@@ -2,20 +2,15 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 /// 카드 한 장이 위에서 중앙으로 들어와 뒷면에서 앞면으로 뒤집힌 뒤,
 /// 앞서 받은 카드의 오른쪽 아래에 겹쳐 정렬되는 애니메이션입니다.
 class CardReceiveAnimation extends StatefulWidget {
   const CardReceiveAnimation({
     super.key,
-    this.frontCardAssets = const [
-      'assets/games/liars_poker/images/cards/white K.png',
-      'assets/games/liars_poker/images/cards/white Q.png',
-      'assets/games/liars_poker/images/cards/white A.png',
-      'assets/games/liars_poker/images/cards/white A.png',
-      'assets/games/liars_poker/images/cards/white Joker.png',
-    ],
-    this.backCardAsset = 'assets/games/liars_poker/images/cards/white back.png',
+    required this.frontCardAssets,
+    this.backCardAsset,
     this.cardWidth = 145,
     this.cardDuration = const Duration(milliseconds: 1050),
     this.cardStagger = const Duration(milliseconds: 720),
@@ -28,8 +23,8 @@ class CardReceiveAnimation extends StatefulWidget {
        assert(cardStagger >= Duration.zero);
 
   /// 실제로 받은 카드 앞면 에셋을 받은 순서대로 전달합니다.
-  final List<String> frontCardAssets;
-  final String backCardAsset;
+  final List<AssetGenImage> frontCardAssets;
+  final AssetGenImage? backCardAsset;
   final double cardWidth;
 
   /// 카드 한 장의 진입, 뒤집기, 정렬에 걸리는 시간입니다.
@@ -236,7 +231,8 @@ class CardReceiveAnimationState extends State<CardReceiveAnimation>
                 child: _buildCardFace(
                   isFrontVisible
                       ? widget.frontCardAssets[cardIndex]
-                      : widget.backCardAsset,
+                      : widget.backCardAsset ??
+                            Assets.games.liarsPoker.images.cards.whiteBack,
                 ),
               ),
             ),
@@ -246,7 +242,7 @@ class CardReceiveAnimationState extends State<CardReceiveAnimation>
     );
   }
 
-  Widget _buildCardFace(String asset) {
+  Widget _buildCardFace(AssetGenImage asset) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -261,8 +257,7 @@ class CardReceiveAnimationState extends State<CardReceiveAnimation>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.asset(
-          asset,
+        child: asset.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
         ),

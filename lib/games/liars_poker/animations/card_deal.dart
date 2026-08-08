@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 typedef DealCardBuilder =
     Widget Function(BuildContext context, int playerIndex, int cardIndex);
@@ -19,7 +20,7 @@ class CardDealAnimation extends StatefulWidget {
     this.playerSeatIndexes,
     this.playerPositions,
     this.cardsPerPlayer = 5,
-    this.cardAsset = 'assets/games/liars_poker/images/cards/white back.png',
+    this.cardAsset,
     this.cardBuilder,
     this.cardWidth = 168,
     this.duration = const Duration(milliseconds: 2800),
@@ -57,7 +58,7 @@ class CardDealAnimation extends StatefulWidget {
   final int cardsPerPlayer;
 
   /// [cardBuilder]를 지정하지 않았을 때 표시할 카드 뒷면 에셋입니다.
-  final String cardAsset;
+  final AssetGenImage? cardAsset;
 
   /// 게임별 카드 UI를 직접 전달할 때 사용합니다.
   final DealCardBuilder? cardBuilder;
@@ -338,11 +339,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
         borderRadius: BorderRadius.circular(7),
         child:
             customCard ??
-            Image.asset(
-              widget.cardAsset,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
+            (widget.cardAsset ?? Assets.games.liarsPoker.images.cards.whiteBack)
+                .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
       ),
     );
   }

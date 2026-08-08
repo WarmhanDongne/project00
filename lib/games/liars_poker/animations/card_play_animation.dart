@@ -3,6 +3,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 // final playKey = GlobalKey<CardPlayAnimationState>();
 
@@ -10,10 +11,10 @@ import 'package:project00/games/shared/player_layouts/player_slot_positions.dart
 //   key: playKey,
 //   playerCount: 5,
 //   fromPlayerIndex: 2,
-//   frontCardAssets: const [
-//     'assets/games/liars_poker/images/cards/white Q.png',
-//     'assets/games/liars_poker/images/cards/white Q.png',
-//     'assets/games/liars_poker/images/cards/white Joker.png',
+//   frontCardAssets: [
+//     Assets.games.liarsPoker.images.cards.whiteQ,
+//     Assets.games.liarsPoker.images.cards.whiteQ,
+//     Assets.games.liarsPoker.images.cards.whiteJoker,
 //   ],
 //   onCardsPlayed: () {
 //     // 다음 플레이어 차례
@@ -34,12 +35,8 @@ import 'package:project00/games/shared/player_layouts/player_slot_positions.dart
 class CardPlayAnimation extends StatefulWidget {
   const CardPlayAnimation({
     super.key,
-    this.frontCardAssets = const [
-      'assets/games/liars_poker/images/cards/white Q.png',
-      'assets/games/liars_poker/images/cards/white Q.png',
-      'assets/games/liars_poker/images/cards/white Q.png',
-    ],
-    this.backCardAsset = 'assets/games/liars_poker/images/cards/white back.png',
+    required this.frontCardAssets,
+    this.backCardAsset,
     this.playerCount = 5,
     this.playerSeatIndexes,
     this.fromPlayerIndex = 0,
@@ -68,8 +65,8 @@ class CardPlayAnimation extends StatefulWidget {
        assert(revealDuration > Duration.zero);
 
   /// 실제로 낸 카드의 앞면입니다. 던질 때는 [backCardAsset]만 보입니다.
-  final List<String> frontCardAssets;
-  final String backCardAsset;
+  final List<AssetGenImage> frontCardAssets;
+  final AssetGenImage? backCardAsset;
 
   /// 공통 플레이어 배치에서 패를 던지는 플레이어입니다.
   final int playerCount;
@@ -438,7 +435,8 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
               child: _buildCard(
                 isFrontVisible
                     ? widget.frontCardAssets[cardIndex]
-                    : widget.backCardAsset,
+                    : widget.backCardAsset ??
+                          Assets.games.liarsPoker.images.cards.whiteBack,
                 lift: visualLift,
               ),
             ),
@@ -448,7 +446,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     );
   }
 
-  Widget _buildCard(String asset, {required double lift}) {
+  Widget _buildCard(AssetGenImage asset, {required double lift}) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -463,8 +461,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(9),
-        child: Image.asset(
-          asset,
+        child: asset.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
         ),

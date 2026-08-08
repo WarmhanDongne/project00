@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
 import 'package:project00/games/liars_poker/widgets/setting_tablet.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -35,8 +36,7 @@ class _SideBlockState extends State<SideBlock> {
                   },
                 );
               },
-              icon: Image.asset(
-                'assets/games/liars_poker/images/icons/role_icon.png',
+              icon: Assets.games.liarsPoker.images.icons.roleIcon.image(
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,
@@ -58,8 +58,7 @@ class _SideBlockState extends State<SideBlock> {
                   },
                 );
               },
-              icon: Image.asset(
-                'assets/games/liars_poker/images/icons/setting_icon.png',
+              icon: Assets.games.liarsPoker.images.icons.settingIcon.image(
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,
