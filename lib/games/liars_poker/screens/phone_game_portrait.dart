@@ -7,6 +7,7 @@ import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
+import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
@@ -112,6 +113,12 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 leadingWidget: _tableAsset(
                   controller?.table ?? 'K',
                 ).image(height: 24.h, filterQuality: FilterQuality.high),
+                onSettingPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const PhoneSettingsDialog(),
+                  );
+                },
               ),
             ),
           if (controller != null &&
