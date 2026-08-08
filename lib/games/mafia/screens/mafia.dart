@@ -21,16 +21,18 @@ class Mafia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold();
-    // LayoutBuilder(
-    //   builder: (context, constraints) {
-    //     // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
-    //     if (constraints.maxWidth < 600) {
-    //       return PhoneGame(playerLayout: playerLayout);
-    //     } else {
-    //       return TabletGame(
-    //       );
-      //   }
-      // },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
+        if (constraints.maxWidth < 600) {
+          return PhoneGame(
+            //playerLayout: playerLayout
+          );
+        } else {
+          return MafiaTabletGame(
+          );
+        }
+      },
+    );
   }
 }

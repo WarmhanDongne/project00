@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
+import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
@@ -66,13 +67,26 @@ class _PhoneHomeState extends State<PhoneHome> {
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         SizedBox(height: 20),
-        Text(
-          "보유 중인 게임",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+        Row(
+          children: [
+            Text(
+              "보유 중인 게임",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PhoneGame()),
+                );
+              },
+              child: Text('폰게임으로 가는 길~'),
+            ),
+          ],
         ),
         SizedBox(height: 10),
       ],

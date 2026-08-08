@@ -57,6 +57,9 @@ dependencies:
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
   roulette: ^0.3.2
+  dev: ^1.0.0
+  flutter_gen_runner: ^5.15.0
+  flutter_svg: ^2.3.0
   
 dev_dependencies:
   flutter_test:
@@ -68,6 +71,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  build_runner: ^2.15.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -87,6 +91,7 @@ flutter:
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
     - assets/games/liars_poker/images/cards/
+    - assets/games/liars_poker/images/phone/
     - assets/games/liars_poker/images/icons/
     - assets/games/mafia/images/background/
     - assets/games/mafia/images/cards/
@@ -125,3 +130,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_gen: 
+  output: lib/gen/
+  integrations:
+    flutter_svg: true
