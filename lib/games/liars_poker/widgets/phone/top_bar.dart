@@ -18,13 +18,17 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        leadingWidget, // 부모로부터 주입 받은 킹, 퀸, 에이스 테이블 표시 이미지
+        SizedBox(
+          width: 240.w,
+          height: 50.h,
+          child: leadingWidget,
+        ), // 부모로부터 주입 받은 킹, 퀸, 에이스 테이블 표시 이미지
         const Spacer(),
         GestureDetector(
           onTap: () {},
           child: Assets.games.liarsPoker.images.phone.bulb.image(
-            width: 32.w,
-            height: 32.h,
+            width: 60.w,
+            height: 60.h,
           ),
         ),
         SizedBox(width: 10.w),

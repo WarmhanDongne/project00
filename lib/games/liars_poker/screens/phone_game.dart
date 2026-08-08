@@ -31,7 +31,7 @@ class _PhoneGameState extends State<PhoneGame> {
             ),
           ),
           Positioned(
-            top: 50.h,
+            top: 30.h,
             left: 20.w,
             right: 20.w,
             child: TopBar(
@@ -41,9 +41,9 @@ class _PhoneGameState extends State<PhoneGame> {
             ),
           ),
           Positioned(
-            top: 640.h,
+            top: 630.h,
             left: 20.w,
-            right: 0.w,
+            right: 20.w,
             child: LiarAccusation(),
           ),
 
