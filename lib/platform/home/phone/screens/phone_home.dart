@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/screens/phone_game_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -7,6 +6,7 @@ import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
+import 'package:project00/games/liars_poker/screens/phone_game.dart';
 
 class PhoneHome extends StatefulWidget {
   const PhoneHome({super.key});
@@ -82,7 +82,7 @@ class _PhoneHomeState extends State<PhoneHome> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PhoneGamePortrait()),
+                  MaterialPageRoute(builder: (context) => PhoneGame()),
                 );
               },
               child: Text('폰게임으로 가는 길~'),

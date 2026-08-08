@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
+import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
-import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
+import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
@@ -77,7 +77,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             top: 50.h,
             left: 20.w,
             right: 20.w,
-            child: TopBar(
+            child: TopBarPortrait(
               entryAnimation: _controlsEntryController,
               leadingWidget: _tableAsset(
                 controller?.table ?? 'K',
@@ -179,7 +179,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
 
   Widget _buildHand(PhoneGameController? controller) {
     if (controller == null) {
-      return HandCardStack(onRevealCompleted: _showGameControls);
+      return HandCardStackPortrait(onRevealCompleted: _showGameControls);
     }
 
     if (controller.isInitialLoading) {
@@ -203,7 +203,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
       );
     }
 
-    return HandCardStack(
+    return HandCardStackPortrait(
       key: ValueKey('round-${controller.round}'),
       cards: controller.handCardAssets,
       enabled: controller.canSelectCards,

@@ -9,8 +9,8 @@ import 'package:project00/gen/assets.gen.dart';
 /// 최대 3장까지 선택할 수 있으며, 선택된 카드 중 하나를 위로 끌면
 /// 선택 카드가 함께 움직입니다. 제출 높이를 넘는 순간 [onCardsSubmitted]를
 /// 호출하고 남은 카드를 새 개수 기준으로 중앙에 다시 정렬합니다.
-class HandCardStack extends StatefulWidget {
-  const HandCardStack({
+class HandCardStackPortrait extends StatefulWidget {
+  const HandCardStackPortrait({
     super.key,
     this.cards,
     this.enabled = true,
@@ -30,10 +30,10 @@ class HandCardStack extends StatefulWidget {
   final VoidCallback? onRevealCompleted;
 
   @override
-  State<HandCardStack> createState() => _HandCardStackState();
+  State<HandCardStackPortrait> createState() => _HandCardStackPortrait();
 }
 
-class _HandCardStackState extends State<HandCardStack> {
+class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   static const double _cardWidth = 169.0;
   static const double _spreadStepX = 35.0;
   static const double _spreadStepY = 35.0;
@@ -59,7 +59,7 @@ class _HandCardStackState extends State<HandCardStack> {
   }
 
   @override
-  void didUpdateWidget(HandCardStack oldWidget) {
+  void didUpdateWidget(HandCardStackPortrait oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (widget.cards != null && oldWidget.cards != widget.cards) {

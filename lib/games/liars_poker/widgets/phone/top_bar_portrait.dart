@@ -3,8 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-class TopBar extends StatelessWidget {
-  const TopBar({
+class TopBarPortrait extends StatelessWidget {
+  const TopBarPortrait({
     super.key,
     required this.leadingWidget,
     this.entryAnimation,
