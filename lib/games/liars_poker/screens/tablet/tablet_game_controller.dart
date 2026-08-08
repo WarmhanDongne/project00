@@ -36,6 +36,7 @@ class TabletGameController extends ChangeNotifier {
   String table = 'K';
   String serverPhase = 'playing';
   int roundNumber = 1;
+  int cardPileVersion = 0;
   int penaltyAttemptCount = 0;
   int rouletteRetry = 0;
   bool isResolvingPenalty = false;
@@ -92,7 +93,16 @@ class TabletGameController extends ChangeNotifier {
     if (snapshot == null) return;
 
     final isFirstSnapshot = !_hasReceivedPublicGame;
-    final isNewRound = snapshot.round > roundNumber;
+    final wasDealing = serverPhase == 'dealing';
+    final isRoundChanged = snapshot.round != roundNumber;
+    final shouldResetCardPile = isRoundChanged || snapshot.phase == 'dealing';
+
+    // 새 라운드 및 게임 재시작으로 배분 단계에 다시 들어오면 카드 더미
+    // 위젯 자체를 새 인스턴스로 만들어 남아 있던 애니메이션까지 종료합니다.
+    if (snapshot.phase == 'dealing' &&
+        (isFirstSnapshot || !wasDealing || isRoundChanged)) {
+      cardPileVersion += 1;
+    }
     final previousPlays = <String, SubmittedPlay>{
       for (final play in roundPlays) play.eventId: play,
     };
@@ -101,7 +111,10 @@ class TabletGameController extends ChangeNotifier {
     var hasNewReveal = false;
     String? nextActiveAnimationPlayId;
 
-    for (final publicPlay in snapshot.roundPlays) {
+    for (final publicPlay
+        in shouldResetCardPile
+            ? const <PublicLastPlay>[]
+            : snapshot.roundPlays) {
       final playerIndex = playerLayout.players.indexWhere(
         (player) => player.uid == publicPlay.playerUid,
       );
@@ -146,14 +159,19 @@ class TabletGameController extends ChangeNotifier {
     penaltyAttemptCount = snapshot.penaltyAttemptCount;
     isResolvingPenalty = false;
 
-    roundPlays = isNewRound ? const [] : List.unmodifiable(nextRoundPlays);
-    activeAnimationPlayId = isNewRound
+    roundPlays = shouldResetCardPile
+        ? const []
+        : List.unmodifiable(nextRoundPlays);
+    activeAnimationPlayId = shouldResetCardPile
         ? null
         : nextActiveAnimationPlayId ?? activeAnimationPlayId;
 
     // 서버 상태보다 한 번만 실행해야 하는 애니메이션 상태를 우선합니다.
     if (snapshot.status == 'finished') {
       status = GameStatus.result;
+    } else if (snapshot.phase == 'dealing') {
+      // 더미 초기화를 먼저 반영하고 새 라운드 카드 배분만 표시합니다.
+      status = GameStatus.dealing;
     } else if (hasNewReveal) {
       status = GameStatus.cardsRevealing;
     } else if (hasNewSubmission) {
@@ -162,10 +180,7 @@ class TabletGameController extends ChangeNotifier {
     } else if (snapshot.phase == 'penalty' &&
         status != GameStatus.cardsRevealing) {
       status = GameStatus.penalty;
-    } else if (snapshot.phase == 'dealing') {
-      // 새 라운드와 게임 재시작 모두 다시 카드 배분부터 진행합니다.
-      status = GameStatus.dealing;
-    } else if (isNewRound) {
+    } else if (isRoundChanged) {
       // 새 라운드에서도 태블릿 카드 배분 애니메이션을 다시 실행합니다.
       status = GameStatus.roundStarting;
     } else if (isFirstSnapshot && roundPlays.isEmpty) {
@@ -291,6 +306,7 @@ class TabletGameController extends ChangeNotifier {
   void startDealing() {
     roundPlays = const [];
     activeAnimationPlayId = null;
+    cardPileVersion += 1;
     changeStatus(GameStatus.dealing);
   }
 
@@ -311,6 +327,7 @@ class TabletGameController extends ChangeNotifier {
     roundNumber += 1;
     roundPlays = const [];
     activeAnimationPlayId = null;
+    cardPileVersion += 1;
     status = GameStatus.roundStarting;
     notifyListeners();
   }

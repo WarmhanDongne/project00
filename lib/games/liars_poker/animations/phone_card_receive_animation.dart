@@ -18,6 +18,7 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
     this.spreadStepY = 35.0,
     this.totalDuration = const Duration(milliseconds: 2200),
     this.autoplay = true,
+    this.onRevealStarted,
     this.onCompleted,
   }) : assert(frontCardAssets.length > 0),
        assert(cardWidth > 0),
@@ -34,6 +35,7 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
 
   /// true이면 화면이 열릴 때 카드 덱이 자동으로 중앙까지 들어옵니다.
   final bool autoplay;
+  final VoidCallback? onRevealStarted;
   final VoidCallback? onCompleted;
 
   @override
@@ -116,6 +118,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     setState(() {
       _isRevealStarted = true;
     });
+    widget.onRevealStarted?.call();
     _revealController.forward(from: 0);
   }
 
