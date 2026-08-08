@@ -7,7 +7,7 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
     super.key,
     required this.frontCardAssets,
     this.backCardAsset = 'assets/games/liars_poker/images/cards/white back.png',
-    this.cardWidth = 110.0,
+    this.cardWidth = 169.0,
     this.spreadStepX = 35.0, // 대각선 펼침 X축 간격
     this.spreadStepY = 35.0, // 대각선 펼침 Y축 간격
     this.totalDuration = const Duration(milliseconds: 2200),
