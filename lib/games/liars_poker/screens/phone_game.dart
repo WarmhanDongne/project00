@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+// import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 
 class PhoneGame extends StatefulWidget {
-  const PhoneGame({super.key, required this.playerLayout});
+  const PhoneGame({
+    super.key,
+    //required this.playerLayout
+  });
 
-  final PlayerLayoutModel playerLayout;
+  //final PlayerLayoutModel playerLayout;
 
   @override
   State<PhoneGame> createState() => _PhoneGameState();
