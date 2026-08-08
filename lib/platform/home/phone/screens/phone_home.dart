@@ -78,15 +78,6 @@ class _PhoneHomeState extends State<PhoneHome> {
                 color: Colors.black87,
               ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PhoneGame()),
-                );
-              },
-              child: Text('폰게임으로 가는 길~'),
-            ),
           ],
         ),
         SizedBox(height: 10),
