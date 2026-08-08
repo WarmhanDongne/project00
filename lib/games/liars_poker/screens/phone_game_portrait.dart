@@ -26,7 +26,7 @@ class _PhoneGamePortrait extends State<PhoneGamePortrait> {
           // 배경 이미지
           Positioned.fill(
             child: Image.asset(
-              'assets/games/liars_poker/images/background/phone_background.png',
+              'assets/games/liars_poker/images/background/background.png',
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
             ),

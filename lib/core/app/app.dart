@@ -26,6 +26,7 @@ class App extends StatelessWidget {
         : const Size(390, 844); // 핸드폰
 
     return ScreenUtilInit(
+      ensureScreenSize: true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
       designSize: currentDesignSize,
       child: MaterialApp(
             debugShowCheckedModeBanner: false,

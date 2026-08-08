@@ -19,7 +19,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
           // 1. 배경 이미지
           Positioned.fill(
             child: Image.asset(
-              'assets/games/liars_poker/images/background/phone_background.png',
+              'assets/games/liars_poker/images/background/background.png',
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
             ),
@@ -45,7 +45,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
           // 3. 카드 덱 묶음 (좌측 배치)
           Positioned(
             bottom: 30,
-            left: 40,
+            left: 130,
             width: 450,
             height: 250,
             child: HandCardStackLandscape(
@@ -57,8 +57,8 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
 
           // 4. Liar 버튼 (우측 하단 배치)
           Positioned(
-            right: 40,
-            bottom: 60, // 카드 덱의 시각적 중앙과 비슷해지도록 하단 여백 설정
+            right: 30,
+            bottom: 95, // 카드 덱의 시각적 중앙과 비슷해지도록 하단 여백 설정
             child: LiarAccusationLandscape(
               onAccuse: () {
                 debugPrint('LIAR! 버튼 눌림');
