@@ -9,10 +9,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: deprecated_member_use,directives_ordering,implicit_dynamic_list_literal,unnecessary_import
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart' as _svg;
-import 'package:vector_graphics/vector_graphics.dart' as _vg;
 
 class $AssetsGamesGen {
   const $AssetsGamesGen();
@@ -227,33 +224,35 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
 class $AssetsGamesLiarsPokerImagesPhoneGen {
   const $AssetsGamesLiarsPokerImagesPhoneGen();
 
-  /// File path: assets/games/liars_poker/images/phone/ACE TABLE.svg
-  SvgGenImage get aceTable =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/ACE TABLE.svg');
-
-  /// File path: assets/games/liars_poker/images/phone/KING TABLE.svg
-  SvgGenImage get kingTable =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/KING TABLE.svg');
-
-  /// File path: assets/games/liars_poker/images/phone/Liar.svg
-  SvgGenImage get liar =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/Liar.svg');
-
-  /// File path: assets/games/liars_poker/images/phone/QUEEN TABLE.svg
-  SvgGenImage get queenTable => const SvgGenImage(
-    'assets/games/liars_poker/images/phone/QUEEN TABLE.svg',
+  /// File path: assets/games/liars_poker/images/phone/ACE TABLE.png
+  AssetGenImage get aceTable => const AssetGenImage(
+    'assets/games/liars_poker/images/phone/ACE TABLE.png',
   );
 
-  /// File path: assets/games/liars_poker/images/phone/bulb.svg
-  SvgGenImage get bulb =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/bulb.svg');
+  /// File path: assets/games/liars_poker/images/phone/KING TABLE.png
+  AssetGenImage get kingTable => const AssetGenImage(
+    'assets/games/liars_poker/images/phone/KING TABLE.png',
+  );
 
-  /// File path: assets/games/liars_poker/images/phone/setting.svg
-  SvgGenImage get setting =>
-      const SvgGenImage('assets/games/liars_poker/images/phone/setting.svg');
+  /// File path: assets/games/liars_poker/images/phone/Liar.png
+  AssetGenImage get liar =>
+      const AssetGenImage('assets/games/liars_poker/images/phone/Liar.png');
+
+  /// File path: assets/games/liars_poker/images/phone/QUEEN TABLE.png
+  AssetGenImage get queenTable => const AssetGenImage(
+    'assets/games/liars_poker/images/phone/QUEEN TABLE.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/phone/bulb.png
+  AssetGenImage get bulb =>
+      const AssetGenImage('assets/games/liars_poker/images/phone/bulb.png');
+
+  /// File path: assets/games/liars_poker/images/phone/setting.png
+  AssetGenImage get setting =>
+      const AssetGenImage('assets/games/liars_poker/images/phone/setting.png');
 
   /// List of all assets
-  List<SvgGenImage> get values => [
+  List<AssetGenImage> get values => [
     aceTable,
     kingTable,
     liar,
@@ -357,78 +356,4 @@ class AssetGenImageAnimation {
   final bool isAnimation;
   final Duration duration;
   final int frames;
-}
-
-class SvgGenImage {
-  const SvgGenImage(this._assetName, {this.size, this.flavors = const {}})
-    : _isVecFormat = false;
-
-  const SvgGenImage.vec(this._assetName, {this.size, this.flavors = const {}})
-    : _isVecFormat = true;
-
-  final String _assetName;
-  final Size? size;
-  final Set<String> flavors;
-  final bool _isVecFormat;
-
-  _svg.SvgPicture svg({
-    Key? key,
-    bool matchTextDirection = false,
-    AssetBundle? bundle,
-    String? package,
-    double? width,
-    double? height,
-    BoxFit fit = BoxFit.contain,
-    AlignmentGeometry alignment = Alignment.center,
-    bool allowDrawingOutsideViewBox = false,
-    WidgetBuilder? placeholderBuilder,
-    String? semanticsLabel,
-    bool excludeFromSemantics = false,
-    _svg.SvgTheme? theme,
-    _svg.ColorMapper? colorMapper,
-    ColorFilter? colorFilter,
-    Clip clipBehavior = Clip.hardEdge,
-    @deprecated Color? color,
-    @deprecated BlendMode colorBlendMode = BlendMode.srcIn,
-    @deprecated bool cacheColorFilter = false,
-  }) {
-    final _svg.BytesLoader loader;
-    if (_isVecFormat) {
-      loader = _vg.AssetBytesLoader(
-        _assetName,
-        assetBundle: bundle,
-        packageName: package,
-      );
-    } else {
-      loader = _svg.SvgAssetLoader(
-        _assetName,
-        assetBundle: bundle,
-        packageName: package,
-        theme: theme,
-        colorMapper: colorMapper,
-      );
-    }
-    return _svg.SvgPicture(
-      loader,
-      key: key,
-      matchTextDirection: matchTextDirection,
-      width: width,
-      height: height,
-      fit: fit,
-      alignment: alignment,
-      allowDrawingOutsideViewBox: allowDrawingOutsideViewBox,
-      placeholderBuilder: placeholderBuilder,
-      semanticsLabel: semanticsLabel,
-      excludeFromSemantics: excludeFromSemantics,
-      colorFilter:
-          colorFilter ??
-          (color == null ? null : ColorFilter.mode(color, colorBlendMode)),
-      clipBehavior: clipBehavior,
-      cacheColorFilter: cacheColorFilter,
-    );
-  }
-
-  String get path => _assetName;
-
-  String get keyName => _assetName;
 }
