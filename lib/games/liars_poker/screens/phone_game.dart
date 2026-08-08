@@ -50,7 +50,7 @@ class _PhoneGameState extends State<PhoneGame> {
           ),
           // 내 카드 스택 (애니메이션 및 인터랙션 컨테이너 적용)
           Positioned(
-            bottom: 60.h,
+            top: 212.h,
             left: 0,
             right: 0,
             height: 350

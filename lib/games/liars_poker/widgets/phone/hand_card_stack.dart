@@ -19,7 +19,7 @@ class _HandCardStackState extends State<HandCardStack> {
   bool _isDealing = true;
 
   // 렌더링 상수 정의 (PhoneCardReceiveAnimation과 동일한 파라미터 공유)
-  static const double _cardWidth = 110.0;
+  static const double _cardWidth = 169.0;
   static const double _spreadStepX = 35.0;
   static const double _spreadStepY = 35.0;
   static const double _selectedElevation = 20.0;
