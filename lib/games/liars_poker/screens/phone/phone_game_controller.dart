@@ -157,7 +157,8 @@ class PhoneGameController extends ChangeNotifier {
     penaltyTargetUid = _nullableString(data['penaltyTargetUid']);
     round = _integer(data['round']) ?? 1;
     revision = _integer(data['revision']) ?? revision;
-    turnDeadlineAt = _integer(data['turnDeadlineAt']);
+    turnDeadlineAt =
+        DateTime.now().millisecond + 60000; // _integer(data['turnDeadlineAt']);
     players = Map.unmodifiable(_parsePlayers(data['players']));
 
     if (phase == 'dealing' &&
