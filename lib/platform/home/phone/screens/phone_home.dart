@@ -45,7 +45,7 @@ class _PhoneHomeState extends State<PhoneHome> {
 
               child: Column(children: [SizedBox(height: 10), gameListText()]),
             ),
-            OwnGameList(games: _games),
+            PhoneOwnGameList(games: _games),
             Button(
               onPressed: () => Navigator.push(
                 context,

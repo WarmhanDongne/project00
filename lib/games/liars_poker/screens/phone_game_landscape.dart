@@ -5,6 +5,7 @@ import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_landscape.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation_landscape.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_landscape.dart';
+import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Realtime Database 상태와 Cloud Function 명령을 사용하는 가로 게임 화면입니다.
@@ -63,6 +64,12 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                             height: 30,
                             filterQuality: FilterQuality.high,
                           ),
+                          onSettingPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const PhoneSettingsDialog(),
+                            );
+                          },
                         ),
                       ),
                     ),
