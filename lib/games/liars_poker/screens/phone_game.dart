@@ -26,6 +26,7 @@ class PhoneGame extends StatefulWidget {
 class _PhoneGameState extends State<PhoneGame> {
   PhoneGameController? _controller;
   String? _initializationError;
+  bool _hasScheduledGameExit = false;
 
   @override
   void initState() {
@@ -36,16 +37,37 @@ class _PhoneGameState extends State<PhoneGame> {
       return;
     }
 
-    _controller = PhoneGameController(
+    final controller = PhoneGameController(
       roomCode: widget.roomCode,
       uid: uid,
       gameService: widget.gameService,
-    )..initialize();
+    );
+    _controller = controller;
+    controller.addListener(_handleGameStateChanged);
+    controller.initialize();
+  }
+
+  /// 태블릿에서 게임을 종료하면 휴대폰도 게임 화면을 한 번만 닫습니다.
+  void _handleGameStateChanged() {
+    final controller = _controller;
+    if (controller == null ||
+        !controller.isFinished ||
+        _hasScheduledGameExit) {
+      return;
+    }
+
+    _hasScheduledGameExit = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).maybePop();
+    });
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller
+      ?..removeListener(_handleGameStateChanged)
+      ..dispose();
     super.dispose();
   }
 

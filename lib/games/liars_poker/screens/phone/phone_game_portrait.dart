@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/phone_timer.dart';
+import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
@@ -82,6 +82,8 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
   }
 
   Widget _buildGameScreen(PhoneGameController? controller) {
+    final turnPlayer = controller?.players[controller.turnUid];
+
     final isDealing = controller?.phase == 'dealing';
     if (isDealing && !_wasDealing) {
       _wasDealing = true;
@@ -100,10 +102,8 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Assets.games.liarsPoker.images.background.backgroundPhone
-                .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
-          ),
+          //==================================배경화면==================================
+          Positioned.fill(child: _GameBackground()),
           if (showControls)
             Positioned(
               top: 50.h,
@@ -122,6 +122,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 },
               ),
             ),
+          //==================================타이머==================================
           if (controller != null &&
               controller.turnDeadlineAt != null &&
               !controller.isInitialLoading &&
@@ -141,6 +142,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 ),
               ),
             ),
+          //==================================문구==================================
           if (controller != null &&
               !controller.isInitialLoading &&
               controller.phase != 'dealing' &&
@@ -162,17 +164,19 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 ),
               ),
             ),
+          //==================================라이어 버튼==================================
           if (showControls)
             Positioned(
-              top: 640.h,
+              top: 600.h,
               left: 20.w,
               right: 0,
-              child: PhoneControlEntryAnimation(
-                animation: _controlsEntryController,
-                style: PhoneControlEntryStyle.heavyDrop,
-                begin: 0.02,
-                end: 1,
-                child: LiarAccusation(
+              child: TurnActionSwitcher(
+                isRow: false,
+                showLiarButton: controller?.isMyTurn ?? true,
+                turnPlayer: turnPlayer,
+                height: 193.h,
+                alignment: Alignment.topCenter,
+                liarButton: LiarAccusation(
                   enabled: controller?.canCallLiar ?? true,
                   onAccuse: controller == null
                       ? null
@@ -180,6 +184,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 ),
               ),
             ),
+          //==================================한쪽이 카드 나 냈을때==================================
           if (showControls && controller?.phase == 'lastCardChallenge')
             Positioned(
               top: 590.h,
@@ -197,6 +202,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 child: const Text('라이어 아님 · 새 라운드 진행'),
               ),
             ),
+          //==================================손패==================================
           Positioned(
             top: 212.h,
             left: 0,
@@ -204,6 +210,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
             height: 350.h,
             child: _buildHand(controller),
           ),
+          //==================================오류 메시지==================================
           if (controller?.errorMessage != null)
             Positioned(
               top: 155.h,
@@ -249,7 +256,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     if (controller.phase == 'dealing') {
       return const SizedBox.shrink();
     }
-
+    //==================================손패 없을떄==================================
     if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       _showControlsAfterFrame();
       if (!controller.isEliminated) return const SizedBox.shrink();
@@ -273,11 +280,24 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
     );
   }
 
+  //==================================알파벳에 따라 카드 불러오기==================================
   AssetGenImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
       'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
       'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
       _ => Assets.games.liarsPoker.images.table.tableKingWhite,
     };
+  }
+}
+
+class _GameBackground extends StatelessWidget {
+  const _GameBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Assets.games.liarsPoker.images.background.backgroundPhone.image(
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    );
   }
 }
