@@ -161,6 +161,11 @@ class AuthProvider extends ChangeNotifier {
         credential,
       );
 
+      final user = userCredential.user;
+      if (user != null) {
+        await _authService.syncGoogleUserProfile(user);
+      }
+
       notifyListeners();
       return userCredential;
     } on GoogleSignInException {

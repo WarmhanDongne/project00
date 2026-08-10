@@ -10,6 +10,7 @@ export interface GameCard {
 export interface PublicGamePlayer {
   uid: string;
   nickname: string;
+  profileImageUrl: string;
   seatIndex: number;
   status: "alive" | "eliminated";
   penaltyCount: number;

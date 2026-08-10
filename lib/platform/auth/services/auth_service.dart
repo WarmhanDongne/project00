@@ -139,6 +139,24 @@ class FirebaseAuthService {
     });
   }
 
+  /// Google 계정의 닉네임과 프로필 사진을 Cloud Function으로 저장합니다.
+  ///
+  /// Firestore의 users 쓰기는 클라이언트에 허용되지 않으므로 인증된 서버가
+  /// 기존 사용자 문서에 필요한 필드만 병합합니다.
+  Future<void> syncGoogleUserProfile(User user) async {
+    try {
+      await _functions.httpsCallable('syncGoogleUserProfile').call({
+        'nickname': user.displayName,
+        'profileImageUrl': user.photoURL,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw AuthServiceException(
+        error.code,
+        error.message ?? 'Google 프로필을 저장하지 못했습니다.',
+      );
+    }
+  }
+
   //예외 변경해주는
   AuthServiceException _toServiceException(FirebaseAuthException error) {
     return AuthServiceException(

@@ -6,6 +6,7 @@ import {
   getDatabase,
   ServerValue,
 } from "firebase-admin/database";
+import {getFirestore} from "firebase-admin/firestore";
 import {
   HttpsError,
   onCall,
@@ -160,6 +161,29 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       room.maxPlayers : DEFAULT_MAX_PLAYERS;
     const playersRef = roomRef.child("players");
 
+    // Google 로그인 직후 Firestore에 동기화한 프로필을 우선 사용합니다.
+    // 문서가 없거나 일시적으로 읽지 못하면 인증 토큰의 사진을 사용합니다.
+    const tokenProfileImageUrl =
+      typeof request.auth?.token.picture === "string" ?
+        request.auth.token.picture : "";
+    let profileImageUrl = tokenProfileImageUrl;
+    try {
+      const userSnapshot = await getFirestore()
+        .collection("users")
+        .doc(uid)
+        .get();
+      const firestoreProfileImageUrl =
+        userSnapshot.data()?.profileImageUrl;
+      if (
+        typeof firestoreProfileImageUrl === "string" &&
+        firestoreProfileImageUrl.trim().length > 0
+      ) {
+        profileImageUrl = firestoreProfileImageUrl.trim();
+      }
+    } catch (error) {
+      console.warn("joinRealtimeRoom profile lookup failed", error);
+    }
+
     let rejection: HttpsError | null = null;
     let reconnected = false;
     let savedNickname = nickname;
@@ -180,6 +204,9 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
             existingPlayer.nickname : nickname;
           players[uid] = {
             ...existingPlayer,
+            profileImageUrl: profileImageUrl ||
+              (typeof existingPlayer.profileImageUrl === "string" ?
+                existingPlayer.profileImageUrl : ""),
             isConnected: true,
           };
           return players;
@@ -204,9 +231,6 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           return;
         }
 
-        const profileImageUrl =
-          typeof request.auth?.token.picture === "string" ?
-            request.auth.token.picture : "";
         players[uid] = {
           uid,
           nickname,

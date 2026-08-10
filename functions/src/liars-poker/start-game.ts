@@ -3,6 +3,7 @@
 import {randomInt} from "node:crypto";
 
 import {getDatabase} from "firebase-admin/database";
+import {getFirestore} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {createDeck} from "./common/deck.js";
@@ -66,7 +67,7 @@ export const startLiarsPokerGame =
         );
       }
 
-      const players = createPublicPlayers(
+      const players = await createPublicPlayers(
         room.players,
       );
 
@@ -189,9 +190,9 @@ export const startLiarsPokerGame =
 /**
  * 로비 참가자 데이터를 게임 공개 플레이어 데이터로 변환합니다.
  */
-function createPublicPlayers(
+async function createPublicPlayers(
   roomPlayers: RealtimeRoom["players"],
-): Record<string, PublicGamePlayer> {
+): Promise<Record<string, PublicGamePlayer>> {
   if (!roomPlayers) {
     throw new HttpsError(
       "failed-precondition",
@@ -201,6 +202,35 @@ function createPublicPlayers(
 
   const players:
     Record<string, PublicGamePlayer> = {};
+
+  const profileImageUrls = new Map<string, string>();
+  await Promise.all(
+    Object.entries(roomPlayers).map(
+      async ([uid, value]) => {
+        const roomProfileImageUrl =
+          typeof value.profileImageUrl === "string" ?
+            value.profileImageUrl.trim() : "";
+        if (roomProfileImageUrl) {
+          profileImageUrls.set(uid, roomProfileImageUrl);
+          return;
+        }
+
+        try {
+          const userSnapshot = await getFirestore()
+            .collection("users")
+            .doc(uid)
+            .get();
+          const firestoreProfileImageUrl =
+            userSnapshot.data()?.profileImageUrl;
+          if (typeof firestoreProfileImageUrl === "string") {
+            profileImageUrls.set(uid, firestoreProfileImageUrl.trim());
+          }
+        } catch (error) {
+          console.warn("startLiarsPokerGame profile lookup failed", error);
+        }
+      },
+    ),
+  );
 
   for (
     const [uid, value] of
@@ -228,6 +258,7 @@ function createPublicPlayers(
         typeof value.nickname === "string" ?
           value.nickname :
           "Player",
+      profileImageUrl: profileImageUrls.get(uid) ?? "",
       seatIndex: seatIndex as number,
       status: "alive",
       penaltyCount: 0,

@@ -107,8 +107,8 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
   }
 
   void _returnToLobby() {
-    // 새 홈 화면을 만들지 않고 기존 홈으로 돌아가 RoomProvider를 유지합니다.
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    // 현재 게임 화면만 닫아 기존 태블릿 방 화면과 RoomProvider를 유지합니다.
+    Navigator.of(context).maybePop();
   }
 
   @override
