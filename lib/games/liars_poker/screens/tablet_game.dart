@@ -131,6 +131,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   roundNumber: _controller.roundNumber,
                   cardPileVersion: _controller.cardPileVersion,
                   table: _controller.table,
+                  winnerPlayer: _controller.winnerPlayer,
                   remainingCardCounts: _controller.remainingCardCounts,
                   currentTurnPlayerIndex: _controller.currentTurnPlayerIndex,
                   onDealCompleted: _controller.onDealCompleted,

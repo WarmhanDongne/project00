@@ -42,6 +42,8 @@ class TabletGameController extends ChangeNotifier {
   bool isResolvingPenalty = false;
   bool isProcessingMenuCommand = false;
   String? turnUid;
+  String? winnerUid;
+  PlayerLayoutPlayer? winnerPlayer;
   String? penaltyTargetUid;
   List<SubmittedPlay> roundPlays = const [];
   String? activeAnimationPlayId;
@@ -167,6 +169,8 @@ class TabletGameController extends ChangeNotifier {
     roundNumber = snapshot.round;
     remainingCardCounts = snapshot.remainingCardCounts(playerLayout);
     turnUid = snapshot.turnUid;
+    winnerUid = snapshot.winnerUid;
+    winnerPlayer = snapshot.playerByUid(winnerUid, playerLayout);
     penaltyTargetUid = snapshot.penaltyTargetUid;
     penaltyAttemptCount = snapshot.penaltyAttemptCount;
     isResolvingPenalty = false;

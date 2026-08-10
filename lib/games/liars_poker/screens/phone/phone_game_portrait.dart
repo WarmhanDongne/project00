@@ -143,27 +143,27 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
               ),
             ),
           //==================================문구==================================
-          if (controller != null &&
-              !controller.isInitialLoading &&
-              controller.phase != 'dealing' &&
-              controller.handCards.isNotEmpty)
-            Positioned(
-              top: 160.h,
-              left: 24.w,
-              right: 24.w,
-              child: Text(
-                controller.statusMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.sp,
-                  fontWeight: controller.isMyTurn
-                      ? FontWeight.w700
-                      : FontWeight.w500,
-                  shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
-                ),
-              ),
-            ),
+          // if (controller != null &&
+          //     !controller.isInitialLoading &&
+          //     controller.phase != 'dealing' &&
+          //     controller.handCards.isNotEmpty)
+          //   Positioned(
+          //     top: 160.h,
+          //     left: 24.w,
+          //     right: 24.w,
+          //     child: Text(
+          //       controller.statusMessage,
+          //       textAlign: TextAlign.center,
+          //       style: TextStyle(
+          //         color: Colors.white,
+          //         fontSize: 16.sp,
+          //         fontWeight: controller.isMyTurn
+          //             ? FontWeight.w700
+          //             : FontWeight.w500,
+          //         shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
+          //       ),
+          //     ),
+          //   ),
           //==================================라이어 버튼==================================
           if (showControls)
             Positioned(
