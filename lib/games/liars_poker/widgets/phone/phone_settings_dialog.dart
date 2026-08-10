@@ -62,7 +62,7 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
 
   Widget _buildLandscape() {
     return Container(
-      width: 500,
+      width: 600,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -75,9 +75,11 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Left Side: Title
-              const Padding(
-                padding: EdgeInsets.only(top: 24, right: 24, bottom: 24, left: 8),
-                child: Text(
+              Container(
+                height: 120,
+                padding: const EdgeInsets.only(right: 24, left: 8),
+                alignment: Alignment.center,
+                child: const Text(
                   '설정',
                   style: TextStyle(
                     fontSize: 24,
@@ -98,15 +100,9 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildScreenSection(),
-                    ),
+                    Expanded(flex: 1, child: _buildScreenSection()),
                     const SizedBox(width: 16),
-                    Expanded(
-                      flex: 2,
-                      child: _buildSoundSection(),
-                    ),
+                    Expanded(flex: 2, child: _buildSoundSection()),
                   ],
                 ),
               ),
@@ -165,7 +161,11 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
     );
   }
 
-  Widget _buildCheckbox(String label, bool value, ValueChanged<bool?> onChanged) {
+  Widget _buildCheckbox(
+    String label,
+    bool value,
+    ValueChanged<bool?> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -187,7 +187,11 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
     );
   }
 
-  Widget _buildVolumeSlider(String label, double value, ValueChanged<double> onChanged) {
+  Widget _buildVolumeSlider(
+    String label,
+    double value,
+    ValueChanged<double> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
