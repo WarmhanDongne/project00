@@ -59,7 +59,7 @@ class PhoneGameController extends ChangeNotifier {
   int lastPlayCardCount = 0;
   int round = 1;
   int revision = 0;
-  int? turnExpiresAt;
+  int? turnDeadlineAt;
 
   Map<String, PhoneGamePlayer> players = const {};
   List<PhoneHandCard> handCards = const [];
@@ -157,7 +157,7 @@ class PhoneGameController extends ChangeNotifier {
     penaltyTargetUid = _nullableString(data['penaltyTargetUid']);
     round = _integer(data['round']) ?? 1;
     revision = _integer(data['revision']) ?? revision;
-    turnExpiresAt = _integer(data['turnExpiresAt']);
+    turnDeadlineAt = _integer(data['turnDeadlineAt']);
     players = Map.unmodifiable(_parsePlayers(data['players']));
 
     if (phase == 'dealing' &&

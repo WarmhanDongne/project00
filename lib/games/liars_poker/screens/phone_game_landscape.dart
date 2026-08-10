@@ -65,10 +65,10 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                             height: 30,
                             filterQuality: FilterQuality.high,
                           ),
-                          centerWidget: controller.turnExpiresAt != null &&
+                          centerWidget: controller.turnDeadlineAt != null &&
                                   controller.phase != 'dealing'
                               ? PhoneTimer(
-                                  expiresAt: controller.turnExpiresAt!,
+                                  expiresAt: controller.turnDeadlineAt!,
                                   onTimeout: () {
                                     if (controller.isMyTurn &&
                                         controller.canCallLiar) {
