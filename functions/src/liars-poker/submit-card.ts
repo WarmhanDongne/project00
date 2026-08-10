@@ -1,9 +1,10 @@
+/* eslint-disable linebreak-style */
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {processedResult, recordCommand} from "./common/commands.js";
 import {findNextAlivePlayer} from "./common/next-turn.js";
-import {RealtimeRoom} from "./common/types.js";
+import {RealtimeRoom, TURN_DURATION_MS} from "./common/types.js";
 import {
   assertGameStatus,
   assertPlayerAlive,
@@ -96,6 +97,8 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       game.public.phase = remainingCardCount === 0 ?
         "lastCardChallenge" : "playing";
       game.public.turnUid = nextTurnUid;
+      game.public.turnDeadlineAt = now + TURN_DURATION_MS;
+      game.public.isFirstTurnReady = true;
       game.public.lastPlay = lastPlay;
       game.public.roundPlays ??= {};
       game.public.roundPlays[lastPlay.playId] = lastPlay;

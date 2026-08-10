@@ -35,7 +35,7 @@ function optionalProfileUrl(value: unknown): string | undefined {
     const url = new URL(text);
     return url.protocol === "https:" || url.protocol === "http:" ?
       url.toString() : undefined;
-  } catch (_) {
+  } catch {
     return undefined;
   }
 }

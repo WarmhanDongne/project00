@@ -68,15 +68,20 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                             height: 30,
                             filterQuality: FilterQuality.high,
                           ),
-                          centerWidget:
-                              controller.turnDeadlineAt != null &&
-                                  controller.phase != 'dealing'
+                          centerWidget: controller.turnDeadlineAt != null &&
+                                  controller.phase != 'dealing' &&
+                                  controller.isMyTurn
                               ? PhoneTimer(
                                   expiresAt: controller.turnDeadlineAt!,
                                   onTimeout: () {
-                                    if (controller.isMyTurn &&
-                                        controller.canCallLiar) {
-                                      unawaited(controller.callLiar());
+                                    if (controller.isMyTurn) {
+                                      if (controller.canCallLiar) {
+                                        unawaited(controller.callLiar());
+                                      } else {
+                                        unawaited(
+                                          controller.submitCardIndexes([0]),
+                                        );
+                                      }
                                     }
                                   },
                                 )
@@ -89,15 +94,14 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                           },
                         ),
                       ),
-                    ),
-                  //==================================문구==================================
-                  if (showControls)
+                    ),                  //==================================문구==================================
+                  if (showControls && controller.statusMessage != null)
                     Positioned(
                       top: 72,
                       left: 28,
                       right: controlsWidth + 36,
                       child: Text(
-                        controller.statusMessage,
+                        controller.statusMessage!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,

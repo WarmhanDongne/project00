@@ -69,6 +69,14 @@ class LiarsPokerCommandService {
     }, retryTransientFailure: true);
   }
 
+  // 카드를 펼쳐 최초 턴 타이머 시작
+  Future<Map<String, dynamic>> readyTurn({required String roomCode}) {
+    return _call('readyLiarsPokerTurn', {
+      'roomCode': roomCode,
+      'commandId': _commandId('ready'),
+    }, retryTransientFailure: true);
+  }
+
   // 마지막 카드 도전 포기
   Future<Map<String, dynamic>> passLastCardChallenge({
     required String roomCode,
