@@ -238,6 +238,7 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
       key: ValueKey('portrait-deal-${controller.handDealVersion}'),
       cards: controller.handCardAssets,
       enabled: controller.canSelectCards,
+      submissionEnabled: controller.canSubmitCards,
       initiallyRevealed: controller.hasRevealedHand,
       onRevealStarted: _markRevealStarted,
       onRevealCompleted: _handleRevealCompleted,

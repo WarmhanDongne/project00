@@ -84,11 +84,10 @@ class PhoneGameController extends ChangeNotifier {
   bool get canSelectCards =>
       status == 'playing' &&
       phase == 'playing' &&
-      isMyTurn &&
       !isEliminated &&
       handCards.isNotEmpty;
 
-  bool get canSubmitCards => canSelectCards && !isCommandInFlight;
+  bool get canSubmitCards => canSelectCards && isMyTurn && !isCommandInFlight;
 
   bool get canCallLiar =>
       status == 'playing' &&
@@ -307,6 +306,13 @@ class PhoneGameController extends ChangeNotifier {
   }
 
   void _handleSubscriptionError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('firebase_database/unknown') ||
+        message.contains('stacktrace:')) {
+      // RTDB 스트림은 연결 복구 후 최신 값을 다시 전달하므로 게임 화면을
+      // 긴 네이티브 Stacktrace로 덮지 않고 기존 상태를 유지합니다.
+      return;
+    }
     errorMessage = '게임 정보를 불러오지 못했습니다: $error';
     notifyListeners();
   }

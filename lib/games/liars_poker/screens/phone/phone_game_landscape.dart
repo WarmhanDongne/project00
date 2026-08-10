@@ -91,7 +91,13 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                     bottom: 8,
                     left: 16,
                     right: controlsWidth + 24,
-                    child: _buildHand(controller),
+                    child: _buildHand(
+                      controller,
+                      // 손패 영역은 오른쪽 조작부만큼 좁으므로, 최초 덱은
+                      // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
+                      entryCenterOffsetX: controlsWidth / 2 + 4,
+                      entryCenterOffsetY: -32,
+                    ),
                   ),
                   if (showControls)
                     Positioned(
@@ -156,10 +162,15 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
     );
   }
 
-  Widget _buildHand(PhoneGameController controller) {
+  Widget _buildHand(
+    PhoneGameController controller, {
+    required double entryCenterOffsetX,
+    required double entryCenterOffsetY,
+  }) {
     if (controller.isInitialLoading || controller.phase == 'dealing') {
       return const SizedBox.shrink();
     }
+    //카드 없을때
     if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       return controller.isEliminated
           ? const Center(
@@ -170,15 +181,18 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
             )
           : const SizedBox.shrink();
     }
-
+    //카드
     return HandCardStackLandscape(
       key: ValueKey('landscape-deal-${controller.handDealVersion}'),
       cards: controller.handCardAssets,
       enabled: controller.canSelectCards,
+      submissionEnabled: controller.canSubmitCards,
       initiallyRevealed: controller.hasRevealedHand,
       onRevealStarted: _markRevealStarted,
       onRevealCompleted: _handleRevealCompleted,
       onCardsSubmitRequested: controller.submitCardIndexes,
+      entryCenterOffsetX: entryCenterOffsetX,
+      entryCenterOffsetY: entryCenterOffsetY,
     );
   }
 

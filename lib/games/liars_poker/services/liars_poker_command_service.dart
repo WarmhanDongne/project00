@@ -1,6 +1,8 @@
 import 'package:cloud_functions/cloud_functions.dart';
 
 class LiarsPokerCommandService {
+  static const int _maxTransientAttempts = 4;
+
   LiarsPokerCommandService({FirebaseFunctions? functions})
     : _functions =
           functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
@@ -94,7 +96,7 @@ class LiarsPokerCommandService {
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
   }) async {
-    for (var attempt = 0; attempt < 2; attempt += 1) {
+    for (var attempt = 0; attempt < _maxTransientAttempts; attempt += 1) {
       try {
         final result = await _functions.httpsCallable(functionName).call(data);
 
@@ -106,10 +108,13 @@ class LiarsPokerCommandService {
       } on FirebaseFunctionsException catch (error) {
         final shouldRetry =
             retryTransientFailure &&
-            attempt == 0 &&
+            attempt < _maxTransientAttempts - 1 &&
             _isTransientCode(error.code);
         if (shouldRetry) {
-          await Future<void>.delayed(const Duration(milliseconds: 180));
+          // 같은 commandId를 유지해 서버의 멱등 처리 결과를 안전하게 재사용합니다.
+          await Future<void>.delayed(
+            Duration(milliseconds: 220 * (attempt + 1)),
+          );
           continue;
         }
 

@@ -43,7 +43,7 @@ class _SideBlockState extends State<SideBlock> {
                   },
                 );
               },
-              icon: Assets.games.liarsPoker.images.icons.roleIcon.image(
+              icon: Assets.games.liarsPoker.images.icons.iconRole.image(
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,
@@ -69,7 +69,7 @@ class _SideBlockState extends State<SideBlock> {
                   },
                 );
               },
-              icon: Assets.games.liarsPoker.images.icons.settingIcon.image(
+              icon: Assets.games.liarsPoker.images.icons.iconSetting.image(
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,

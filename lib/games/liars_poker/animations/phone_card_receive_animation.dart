@@ -16,6 +16,9 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
     this.cardWidth = 169.0,
     this.spreadStepX = 35.0,
     this.spreadStepY = 35.0,
+    this.spreadToLeft = false,
+    this.entryCenterOffsetX = 0,
+    this.entryCenterOffsetY = 0,
     this.totalDuration = const Duration(milliseconds: 2200),
     this.autoplay = true,
     this.onRevealStarted,
@@ -29,6 +32,13 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
   final double cardWidth;
   final double spreadStepX;
   final double spreadStepY;
+
+  /// 가로 화면에서 덱을 중앙에 받은 뒤 오른쪽을 기준으로 왼쪽에 펼칩니다.
+  final bool spreadToLeft;
+
+  /// 손패 영역과 실제 화면 중앙이 다를 때 최초 덱 위치를 보정합니다.
+  final double entryCenterOffsetX;
+  final double entryCenterOffsetY;
 
   /// 자동 진입과 탭 후 공개 애니메이션을 합친 기준 시간입니다.
   final Duration totalDuration;
@@ -169,10 +179,12 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
   Widget _buildRevealTapTarget(Size size) {
     const cardAspectRatio = 512 / 350;
     final cardHeight = widget.cardWidth * cardAspectRatio;
+    final entryCenterX = size.width / 2 + widget.entryCenterOffsetX;
+    final entryCenterY = size.height / 2 + widget.entryCenterOffsetY;
 
     return Positioned(
-      left: (size.width - widget.cardWidth) / 2,
-      top: (size.height - cardHeight) / 2,
+      left: entryCenterX - widget.cardWidth / 2,
+      top: entryCenterY - cardHeight / 2,
       width: widget.cardWidth,
       height: cardHeight,
       child: Semantics(
@@ -194,13 +206,15 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     final cardHeight = widget.cardWidth * cardAspectRatio;
     final cardCount = widget.frontCardAssets.length;
     final center = Offset(size.width / 2, size.height / 2);
+    final entryCenter =
+        center + Offset(widget.entryCenterOffsetX, widget.entryCenterOffsetY);
     final centeredIndex = cardIndex - (cardCount - 1) / 2;
 
     // 카드 덱 전체가 위에서 내려와 중앙에 묵직하게 멈춥니다.
     final entryProgress = Curves.easeOutCubic.transform(_entryController.value);
-    final entryStart = Offset(center.dx, -cardHeight / 2 - 32);
+    final entryStart = Offset(entryCenter.dx, -cardHeight / 2 - 32);
     final deckOffset = Offset(cardIndex * 0.7, cardIndex * 1.25);
-    final deckPosition = center + deckOffset;
+    final deckPosition = entryCenter + deckOffset;
     final entryPosition = Offset.lerp(
       entryStart + deckOffset,
       deckPosition,
@@ -216,19 +230,22 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     );
     final flipLift = math.sin(flipProgress * math.pi);
 
-    // 2단계: 회전이 완전히 끝난 후 좌상단에서 우하단으로 펼칩니다.
-    final spreadProgress = _intervalProgress(
-      _revealController.value,
-      0.52,
-      1,
-      Curves.easeOutCubic,
-    );
-    final spreadTarget = Offset(
-      center.dx + centeredIndex * widget.spreadStepX,
-      center.dy + centeredIndex * widget.spreadStepY,
-    );
-    var position = Offset.lerp(entryPosition, spreadTarget, spreadProgress)!;
-    position += Offset(0, -cardHeight * 0.07 * flipLift);
+    // 2단계: 회전이 완전히 끝난 후 손패 방향에 맞춰 펼칩니다.
+    final position = widget.spreadToLeft
+        ? _leftSpreadPosition(
+            size: size,
+            center: center,
+            entryPosition: entryPosition,
+            cardIndex: cardIndex,
+            cardCount: cardCount,
+          )
+        : _diagonalSpreadPosition(
+            center: center,
+            entryPosition: entryPosition,
+            centeredIndex: centeredIndex,
+          );
+    var liftedPosition = position;
+    liftedPosition += Offset(0, -cardHeight * 0.07 * flipLift);
 
     final isFrontVisible = flipProgress >= 0.5;
     final yRotation = isFrontVisible
@@ -237,8 +254,8 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     final scale = lerpDouble(0.97, 1, entryProgress)! * (1 + flipLift * 0.025);
 
     return Positioned(
-      left: position.dx - widget.cardWidth / 2,
-      top: position.dy - cardHeight / 2,
+      left: liftedPosition.dx - widget.cardWidth / 2,
+      top: liftedPosition.dy - cardHeight / 2,
       width: widget.cardWidth,
       height: cardHeight,
       child: IgnorePointer(
@@ -263,6 +280,74 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
         ),
       ),
     );
+  }
+
+  Offset _diagonalSpreadPosition({
+    required Offset center,
+    required Offset entryPosition,
+    required double centeredIndex,
+  }) {
+    final spreadProgress = _intervalProgress(
+      _revealController.value,
+      0.52,
+      1,
+      Curves.easeOutCubic,
+    );
+    final spreadTarget = Offset(
+      center.dx + centeredIndex * widget.spreadStepX,
+      center.dy + centeredIndex * widget.spreadStepY,
+    );
+    return Offset.lerp(entryPosition, spreadTarget, spreadProgress)!;
+  }
+
+  /// 중앙의 덱을 오른쪽 기준점으로 옮긴 뒤 가까운 카드부터 왼쪽으로
+  /// 순차적으로 밀어내 한 방향으로 펼쳐지는 인상을 만듭니다.
+  Offset _leftSpreadPosition({
+    required Size size,
+    required Offset center,
+    required Offset entryPosition,
+    required int cardIndex,
+    required int cardCount,
+  }) {
+    final availableSpread = math.max(0.0, size.width - widget.cardWidth - 16);
+    final requestedStep = widget.spreadStepX.abs();
+    final spreadStep = cardCount <= 1
+        ? 0.0
+        : math.min(requestedStep, availableSpread / (cardCount - 1));
+    final totalSpread = spreadStep * math.max(0, cardCount - 1);
+    final maxAnchorX = math.max(
+      widget.cardWidth / 2,
+      size.width - widget.cardWidth / 2 - 8,
+    );
+    final rightAnchorX = math.min(center.dx + totalSpread / 2, maxAnchorX);
+
+    // 회전 완료 직후에는 모든 카드가 한 덱처럼 함께 기준점으로 이동합니다.
+    final anchorProgress = _intervalProgress(
+      _revealController.value,
+      0.50,
+      0.68,
+      Curves.easeInOutCubic,
+    );
+    final anchorPosition = Offset.lerp(
+      entryPosition,
+      Offset(rightAnchorX, center.dy),
+      anchorProgress,
+    )!;
+
+    final distanceFromRight = cardCount - 1 - cardIndex;
+    if (distanceFromRight == 0) return anchorPosition;
+
+    // 오른쪽 카드와 가까운 카드부터 출발해 왼쪽 끝까지 차례로 펼칩니다.
+    final fanBegin = 0.64 + (distanceFromRight - 1) * 0.045;
+    final fanEnd = math.min(1.0, 0.91 + (distanceFromRight - 1) * 0.022);
+    final fanProgress = _intervalProgress(
+      _revealController.value,
+      fanBegin,
+      fanEnd,
+      Curves.easeOutCubic,
+    );
+    return anchorPosition +
+        Offset(-distanceFromRight * spreadStep * fanProgress, 0);
   }
 
   double _intervalProgress(

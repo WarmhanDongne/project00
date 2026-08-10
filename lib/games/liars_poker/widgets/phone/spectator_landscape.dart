@@ -53,12 +53,12 @@ class SpectatorLandscape extends StatelessWidget {
                 // ),
                 Row(
                   children: [
-                    Assets.games.liarsPoker.images.icons.tip.image(
+                    Assets.games.liarsPoker.images.icons.iconTip.image(
                       width: 45,
                       height: 45,
                     ),
                     const SizedBox(width: 15),
-                    Assets.games.liarsPoker.images.icons.settingIcon.image(
+                    Assets.games.liarsPoker.images.icons.iconOut.image(
                       width: 32,
                       height: 32,
                     ),

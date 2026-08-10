@@ -229,13 +229,31 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     'assets/games/liars_poker/images/background/background.png',
   );
 
+  /// File path: assets/games/liars_poker/images/background/background1.png
+  AssetGenImage get background1 => const AssetGenImage(
+    'assets/games/liars_poker/images/background/background1.png',
+  );
+
   /// File path: assets/games/liars_poker/images/background/background_phone.png
   AssetGenImage get backgroundPhone => const AssetGenImage(
     'assets/games/liars_poker/images/background/background_phone.png',
   );
 
+  /// File path: assets/games/liars_poker/images/background/background_phone1.png
+  AssetGenImage get backgroundPhone1 => const AssetGenImage(
+    'assets/games/liars_poker/images/background/background_phone1.png',
+  );
+
   /// List of all assets
-  List<AssetGenImage> get values => [a, k, q, background, backgroundPhone];
+  List<AssetGenImage> get values => [
+    a,
+    k,
+    q,
+    background,
+    background1,
+    backgroundPhone,
+    backgroundPhone1,
+  ];
 }
 
 class $AssetsGamesLiarsPokerImagesButtonGen {
@@ -263,6 +281,11 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
     'assets/games/liars_poker/images/cards/card_count.png',
   );
 
+  /// File path: assets/games/liars_poker/images/cards/finishCard.png
+  AssetGenImage get finishCard => const AssetGenImage(
+    'assets/games/liars_poker/images/cards/finishCard.png',
+  );
+
   /// File path: assets/games/liars_poker/images/cards/white A.png
   AssetGenImage get whiteA =>
       const AssetGenImage('assets/games/liars_poker/images/cards/white A.png');
@@ -288,6 +311,7 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
   /// List of all assets
   List<AssetGenImage> get values => [
     cardCount,
+    finishCard,
     whiteA,
     whiteJoker,
     whiteK,
@@ -299,27 +323,49 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
 class $AssetsGamesLiarsPokerImagesIconsGen {
   const $AssetsGamesLiarsPokerImagesIconsGen();
 
-  /// File path: assets/games/liars_poker/images/icons/role_icon.png
-  AssetGenImage get roleIcon => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/role_icon.png',
+  /// File path: assets/games/liars_poker/images/icons/icon_again_black.png
+  AssetGenImage get iconAgainBlack => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/icon_again_black.png',
   );
 
-  /// File path: assets/games/liars_poker/images/icons/setting_icon.png
-  AssetGenImage get settingIcon => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/setting_icon.png',
+  /// File path: assets/games/liars_poker/images/icons/icon_home_black.png
+  AssetGenImage get iconHomeBlack => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/icon_home_black.png',
   );
 
-  /// File path: assets/games/liars_poker/images/icons/setting_phone.png
-  AssetGenImage get settingPhone => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/setting_phone.png',
+  /// File path: assets/games/liars_poker/images/icons/icon_out.png
+  AssetGenImage get iconOut =>
+      const AssetGenImage('assets/games/liars_poker/images/icons/icon_out.png');
+
+  /// File path: assets/games/liars_poker/images/icons/icon_role.png
+  AssetGenImage get iconRole => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/icon_role.png',
   );
 
-  /// File path: assets/games/liars_poker/images/icons/tip.png
-  AssetGenImage get tip =>
-      const AssetGenImage('assets/games/liars_poker/images/icons/tip.png');
+  /// File path: assets/games/liars_poker/images/icons/icon_setting.png
+  AssetGenImage get iconSetting => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/icon_setting.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/icons/icon_setting_phone.png
+  AssetGenImage get iconSettingPhone => const AssetGenImage(
+    'assets/games/liars_poker/images/icons/icon_setting_phone.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/icons/icon_tip.png
+  AssetGenImage get iconTip =>
+      const AssetGenImage('assets/games/liars_poker/images/icons/icon_tip.png');
 
   /// List of all assets
-  List<AssetGenImage> get values => [roleIcon, settingIcon, settingPhone, tip];
+  List<AssetGenImage> get values => [
+    iconAgainBlack,
+    iconHomeBlack,
+    iconOut,
+    iconRole,
+    iconSetting,
+    iconSettingPhone,
+    iconTip,
+  ];
 }
 
 class $AssetsGamesLiarsPokerImagesTableGen {

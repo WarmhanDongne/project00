@@ -41,6 +41,7 @@ class TabletGameController extends ChangeNotifier {
   int rouletteRetry = 0;
   bool isResolvingPenalty = false;
   bool isProcessingMenuCommand = false;
+  String? turnUid;
   String? penaltyTargetUid;
   List<SubmittedPlay> roundPlays = const [];
   String? activeAnimationPlayId;
@@ -52,6 +53,16 @@ class TabletGameController extends ChangeNotifier {
   int get playerCount => playerLayout.playerCount;
 
   List<int> get seatIndexes => playerLayout.seatIndexes;
+
+  int? get currentTurnPlayerIndex {
+    final currentTurnUid = turnUid;
+    if (currentTurnUid == null) return null;
+
+    final index = playerLayout.players.indexWhere(
+      (player) => player.uid == currentTurnUid,
+    );
+    return index < 0 ? null : index;
+  }
 
   bool get shouldShowSubmittedPlay {
     if (roundPlays.isEmpty) return false;
@@ -155,6 +166,7 @@ class TabletGameController extends ChangeNotifier {
     serverPhase = snapshot.phase;
     roundNumber = snapshot.round;
     remainingCardCounts = snapshot.remainingCardCounts(playerLayout);
+    turnUid = snapshot.turnUid;
     penaltyTargetUid = snapshot.penaltyTargetUid;
     penaltyAttemptCount = snapshot.penaltyAttemptCount;
     isResolvingPenalty = false;

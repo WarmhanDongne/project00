@@ -18,6 +18,7 @@ export interface PublicGamePlayer {
 
 export interface PublicLastPlay {
   playId: string;
+  round: number;
   playerUid: string;
   cardCount: number;
   declaredRank: Exclude<CardRank, "JOKER">;

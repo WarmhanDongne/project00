@@ -121,6 +121,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
           return Stack(
             children: [
               const Positioned.fill(child: _GameBackground()),
+              //기본 세팅
               Positioned.fill(
                 child: TabletGameLayer(
                   status: _controller.status,
@@ -131,12 +132,14 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   cardPileVersion: _controller.cardPileVersion,
                   table: _controller.table,
                   remainingCardCounts: _controller.remainingCardCounts,
+                  currentTurnPlayerIndex: _controller.currentTurnPlayerIndex,
                   onDealCompleted: _controller.onDealCompleted,
                   onRoundRevealCompleted: _controller.onRoundRevealCompleted,
                   onRestartGame: _restartGame,
                   onExitToLobby: _returnToLobby,
                 ),
               ),
+              //제출된 카드 애니메이션
               if (_controller.shouldShowSubmittedPlay)
                 Positioned.fill(
                   child: TabletGameAnimation(
@@ -198,7 +201,7 @@ class _GameBackground extends StatelessWidget {
     return ColoredBox(
       color: Colors.black,
       child: Assets.games.liarsPoker.images.background.background.image(
-        fit: BoxFit.contain,
+        fit: BoxFit.cover,
         alignment: Alignment.center,
       ),
     );
