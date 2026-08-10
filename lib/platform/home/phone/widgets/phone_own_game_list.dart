@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 
-class OwnGameList extends StatelessWidget {
-  const OwnGameList({super.key, required this.games});
+class PhoneOwnGameList extends StatelessWidget {
+  const PhoneOwnGameList({super.key, required this.games});
 
   final Future<List<GameInfo>> games;
 

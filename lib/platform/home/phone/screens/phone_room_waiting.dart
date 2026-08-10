@@ -135,7 +135,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                 SizedBox(height: 10.h),
                 // 경우에 따른 게임 화면 로딩 파트
                 if (selectedGameId == null || selectedGameId.isEmpty)
-                  OwnGameList(games: Future.value(widget.provider.groupGames))
+                  PhoneOwnGameList(
+                    games: Future.value(widget.provider.groupGames),
+                  )
                 else if (selectedGame != null)
                   PhoneGameCard(gameInfo: widget.provider.selectedGame!)
                 else
