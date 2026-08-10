@@ -112,7 +112,7 @@ class SpectatorPortrait extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
