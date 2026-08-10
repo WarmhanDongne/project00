@@ -94,15 +94,14 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                           },
                         ),
                       ),
-                    ),
-                  //==================================문구==================================
-                  if (showControls)
+                    ),                  //==================================문구==================================
+                  if (showControls && controller.statusMessage != null)
                     Positioned(
                       top: 72,
                       left: 28,
                       right: controlsWidth + 36,
                       child: Text(
-                        controller.statusMessage,
+                        controller.statusMessage!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,

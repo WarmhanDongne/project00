@@ -107,7 +107,7 @@ class PhoneGameController extends ChangeNotifier {
 
   String get turnNickname => players[turnUid]?.nickname ?? '다른 플레이어';
 
-  String get statusMessage {
+  String? get statusMessage {
     if (isFinished) {
       final winner = players[winnerUid]?.nickname;
       return winner == null ? '게임이 종료되었습니다' : '$winner님이 승리했습니다';
@@ -120,7 +120,7 @@ class PhoneGameController extends ChangeNotifier {
     if (phase == 'lastCardChallenge') {
       return isMyTurn ? '마지막 카드가 라이어인지 결정하세요' : '$turnNickname님의 결정을 기다리는 중';
     }
-    return isMyTurn ? '내 차례 · 카드 1~3장을 제출하세요' : '$turnNickname님의 차례';
+    return null; 
   }
 
   void initialize() {

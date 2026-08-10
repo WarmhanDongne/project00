@@ -146,18 +146,18 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                   },
                 ),
               ),
-            ),
-          //==================================문구==================================
+            ),          //==================================문구==================================
           if (controller != null &&
               !controller.isInitialLoading &&
               controller.phase != 'dealing' &&
-              controller.handCards.isNotEmpty)
+              controller.handCards.isNotEmpty &&
+              controller.statusMessage != null)
             Positioned(
               top: 160.h,
               left: 24.w,
               right: 24.w,
               child: Text(
-                controller.statusMessage,
+                controller.statusMessage!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
