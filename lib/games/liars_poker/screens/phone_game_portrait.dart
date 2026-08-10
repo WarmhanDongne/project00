@@ -8,6 +8,7 @@ import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack_portra
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_portrait.dart';
 import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
+import 'package:project00/games/liars_poker/widgets/phone/phone_timer.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 휴대폰 세로 게임 화면입니다.
@@ -122,11 +123,30 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
               ),
             ),
           if (controller != null &&
+              controller.turnExpiresAt != null &&
+              !controller.isInitialLoading &&
+              controller.phase != 'dealing')
+            Positioned(
+              top: 105.h,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: PhoneTimer(
+                  expiresAt: controller.turnExpiresAt!,
+                  onTimeout: () {
+                    if (controller.isMyTurn && controller.canCallLiar) {
+                      unawaited(controller.callLiar());
+                    }
+                  },
+                ),
+              ),
+            ),
+          if (controller != null &&
               !controller.isInitialLoading &&
               controller.phase != 'dealing' &&
               controller.handCards.isNotEmpty)
             Positioned(
-              top: 112.h,
+              top: 160.h,
               left: 24.w,
               right: 24.w,
               child: Text(

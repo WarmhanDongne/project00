@@ -22,8 +22,6 @@ class SpectatorPortrait extends StatelessWidget {
             ),
           ),
 
-          // ... (상단 바 생략 - 이전 답변과 동일) ...
-
           // 3. 중앙 관전중 텍스트 및 생존자 카드
           Positioned(
             top: 250.h,

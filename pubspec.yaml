@@ -133,6 +133,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: DigitalTimer
+      fonts:
+        - asset: assets/fonts/DSEG7Classic-Italic.ttf
+
 flutter_gen: 
   output: lib/gen/
   integrations:

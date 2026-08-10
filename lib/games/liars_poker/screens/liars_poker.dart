@@ -23,8 +23,12 @@ class LiarsPoker extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 모바일 브레이크포인트 설정 (일반적으로 600px 기준)
-        if (constraints.maxWidth < 600 || constraints.maxHeight < 900) {
+        // 모바일 브레이크포인트 설정 (단변 기준 600px 미만이면 폰으로 간주)
+        final shortestSide = constraints.maxWidth < constraints.maxHeight
+            ? constraints.maxWidth
+            : constraints.maxHeight;
+        
+        if (shortestSide < 600) {
           return PhoneGame(roomCode: roomCode, gameService: gameService);
         } else {
           return LiarsPokerTabletGame(
