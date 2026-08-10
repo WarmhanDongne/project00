@@ -1,73 +1,156 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
 
+/// 게임 종료 후 우승자와 다음 동작을 보여주는 태블릿 결과 화면입니다.
 class Result extends StatelessWidget {
-  const Result({super.key, this.onRestartGame, this.onExitToLobby});
+  const Result({
+    super.key,
+    this.onRestartGame,
+    this.onExitToLobby,
+    this.winnerPlayer,
+  });
 
+  final VoidCallback? onRestartGame;
+  final VoidCallback? onExitToLobby;
+  final PlayerLayoutPlayer? winnerPlayer;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FittedBox(
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: _ResultLayout.canvasWidth,
+            height: _ResultLayout.canvasHeight,
+            child: _ResultContent(
+              winnerPlayer: winnerPlayer,
+              onRestartGame: onRestartGame,
+              onExitToLobby: onExitToLobby,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 모든 기기에서 같은 비율을 유지하기 위한 결과 화면 기준 크기입니다.
+abstract final class _ResultLayout {
+  static const double canvasWidth = 1194;
+  static const double canvasHeight = 834;
+  static const double cardWidth = 430;
+  static const double cardHeight = 630;
+  static const double cardLeft = (canvasWidth - cardWidth) / 2;
+  static const double cardTop = (canvasHeight - cardHeight) / 2;
+  static const double actionInset = 48;
+  static const double actionBottom = 48;
+}
+
+class _ResultContent extends StatelessWidget {
+  const _ResultContent({
+    required this.winnerPlayer,
+    required this.onRestartGame,
+    required this.onExitToLobby,
+  });
+
+  final PlayerLayoutPlayer? winnerPlayer;
   final VoidCallback? onRestartGame;
   final VoidCallback? onExitToLobby;
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
-    const cardWidth = 467.0;
-    const cardHeight = 684.0;
-
-    final centerLeft = (size.width - cardWidth) / 2;
-    final centerTop = (size.height - cardHeight) / 2;
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Positioned(
-          top: centerTop - 50,
-          left: centerLeft - 120,
-          child: ResultCard(
+          top: _ResultLayout.cardTop - 30,
+          left: _ResultLayout.cardLeft - 120,
+          child: _ResultCard(
             asset: Assets.games.liarsPoker.images.cards.whiteA,
-            angle: -0.3,
-            width: cardWidth,
-            height: cardHeight,
+            angle: -0.24,
           ),
         ),
-
         Positioned(
-          top: centerTop - 130,
-          left: centerLeft - 80,
-          child: ResultCard(
+          top: _ResultLayout.cardTop - 80,
+          left: _ResultLayout.cardLeft - 80,
+          child: _ResultCard(
             asset: Assets.games.liarsPoker.images.cards.whiteK,
             angle: -0.1,
-            width: cardWidth,
-            height: cardHeight,
           ),
         ),
-
         Positioned(
-          top: centerTop - 50,
-          left: centerLeft + 120,
-          child: ResultCard(
+          top: _ResultLayout.cardTop - 30,
+          left: _ResultLayout.cardLeft + 120,
+          child: _ResultCard(
             asset: Assets.games.liarsPoker.images.cards.whiteJoker,
-            angle: 0.3,
-            width: cardWidth,
-            height: cardHeight,
+            angle: 0.24,
           ),
         ),
-
         Positioned(
-          top: centerTop,
-          left: centerLeft,
-          child: ResultCard(
+          top: _ResultLayout.cardTop,
+          left: _ResultLayout.cardLeft,
+          child: _ResultCard(
             asset: Assets.games.liarsPoker.images.cards.finishCard,
-            width: cardWidth,
-            height: cardHeight,
           ),
         ),
-        Positioned.fill(
-          top: 455,
-          child: Center(
-            child: Buttons(
-              onRestartGame: onRestartGame,
-              onExitToLobby: onExitToLobby,
+        if (winnerPlayer != null)
+          Positioned(
+            top: _ResultLayout.cardTop + 310,
+            left: _ResultLayout.cardLeft,
+            width: _ResultLayout.cardWidth,
+            child: _WinnerBadge(player: winnerPlayer!),
+          ),
+        //==============================다시하기 나가기 버튼트==============================
+        Positioned(
+          left: _ResultLayout.actionInset,
+          right: _ResultLayout.actionInset,
+          bottom: _ResultLayout.actionBottom,
+          child: _ResultActions(
+            onRestartGame: onRestartGame,
+            onExitToLobby: onExitToLobby,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WinnerBadge extends StatelessWidget {
+  const _WinnerBadge({required this.player});
+
+  final PlayerLayoutPlayer player;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: SizedBox(
+            width: 132,
+            height: 132,
+            child: _WinnerProfileImage(imageUrl: player.profileImageUrl),
+          ),
+        ),
+        const SizedBox(height: 40),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Text(
+            player.nickname,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Georgia',
+              color: Color.fromARGB(255, 8, 2, 2),
+              fontSize: 34,
+              fontWeight: FontWeight.w200,
+              shadows: [Shadow(color: Color.fromARGB(255, 0, 0, 0), blurRadius: 8)],
             ),
           ),
         ),
@@ -76,8 +159,33 @@ class Result extends StatelessWidget {
   }
 }
 
-class Buttons extends StatelessWidget {
-  const Buttons({super.key, this.onRestartGame, this.onExitToLobby});
+class _WinnerProfileImage extends StatelessWidget {
+  const _WinnerProfileImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) return _buildFallback();
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+      errorBuilder: (_, _, _) => _buildFallback(),
+    );
+  }
+
+  Widget _buildFallback() {
+    return const ColoredBox(
+      color: Color(0xffdedede),
+      child: Icon(Icons.account_circle, size: 112, color: Colors.grey),
+    );
+  }
+}
+
+class _ResultActions extends StatelessWidget {
+  const _ResultActions({this.onRestartGame, this.onExitToLobby});
 
   final VoidCallback? onRestartGame;
   final VoidCallback? onExitToLobby;
@@ -85,18 +193,16 @@ class Buttons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Button(
+        _ResultActionButton(
           action: onRestartGame,
-          word: "다시하기",
+          label: '다시하기',
           asset: Assets.games.liarsPoker.images.icons.iconAgainBlack,
         ),
-        SizedBox(width: 500),
-        Button(
+        _ResultActionButton(
           action: onExitToLobby,
-          word: "나가기",
+          label: '나가기',
           asset: Assets.games.liarsPoker.images.icons.iconHomeBlack,
         ),
       ],
@@ -104,81 +210,84 @@ class Buttons extends StatelessWidget {
   }
 }
 
-class Button extends StatelessWidget {
-  const Button({
-    super.key,
-    this.action,
-    required this.word,
+class _ResultActionButton extends StatelessWidget {
+  const _ResultActionButton({
+    required this.action,
+    required this.label,
     required this.asset,
   });
-  final AssetGenImage asset;
-  final String word;
+
   final VoidCallback? action;
+  final String label;
+  final AssetGenImage asset;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 230,
-      height: 230,
-      decoration: BoxDecoration(
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 30,
-            spreadRadius: 0,
-            offset: Offset(0, 12),
-          ),
-        ],
-        color: const Color.fromARGB(255, 255, 255, 49),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center, // 세로 가운데
-        crossAxisAlignment: CrossAxisAlignment.center, // 가로 가운데
-        children: [
-          SizedBox(
-            width: 120,
-            height: 120,
-            child: asset.image(
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-          ),
-          TextButton(
-            onPressed: action,
-            child: Text(
-              word,
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
+    const borderRadius = BorderRadius.all(Radius.circular(20));
+
+    return Semantics(
+      button: true,
+      enabled: action != null,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          width: 220,
+          height: 220,
+          decoration: const BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 30,
+                offset: Offset(0, 12),
               ),
+            ],
+            color: Color.fromARGB(255, 255, 255, 49),
+            borderRadius: borderRadius,
+          ),
+          child: InkWell(
+            onTap: action,
+            borderRadius: borderRadius,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 112,
+                  height: 112,
+                  child: asset.image(
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class ResultCard extends StatelessWidget {
-  const ResultCard({
-    super.key,
-    required this.asset,
-    this.angle = 0,
-    required this.width,
-    required this.height,
-  });
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({required this.asset, this.angle = 0});
 
   final AssetGenImage asset;
   final double angle;
-  final double width;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
     Widget card = SizedBox(
-      width: width,
-      height: height,
+      width: _ResultLayout.cardWidth,
+      height: _ResultLayout.cardHeight,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: asset.image(

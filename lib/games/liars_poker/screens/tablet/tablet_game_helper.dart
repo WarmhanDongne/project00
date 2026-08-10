@@ -121,6 +121,7 @@ class TabletPublicGameSnapshot {
     required this.round,
     required this.table,
     required this.turnUid,
+    required this.winnerUid,
     required this.penaltyTargetUid,
     required this.players,
     required this.lastPlay,
@@ -132,6 +133,7 @@ class TabletPublicGameSnapshot {
   final int round;
   final String table;
   final String? turnUid;
+  final String? winnerUid;
   final String? penaltyTargetUid;
   final Map<Object?, Object?> players;
   final PublicLastPlay? lastPlay;
@@ -170,12 +172,43 @@ class TabletPublicGameSnapshot {
       round: round,
       table: data['table'] is String ? data['table'] as String : 'K',
       turnUid: data['turnUid'] is String ? data['turnUid'] as String : null,
+      winnerUid: data['winnerUid'] is String
+          ? data['winnerUid'] as String
+          : null,
       penaltyTargetUid: data['penaltyTargetUid'] as String?,
       players: playersValue is Map
           ? Map<Object?, Object?>.from(playersValue)
           : const <Object?, Object?>{},
       lastPlay: lastPlay,
       roundPlays: List.unmodifiable(roundPlays),
+    );
+  }
+
+  /// 공개 게임 데이터에서 플레이어를 찾고 자리 배치 데이터로 빈 값을 보완합니다.
+  PlayerLayoutPlayer? playerByUid(String? uid, PlayerLayoutModel layout) {
+    if (uid == null) return null;
+
+    final layoutPlayer = layout.playerByUid(uid);
+    final playerValue = players[uid];
+    if (playerValue is! Map) return layoutPlayer;
+
+    final nicknameValue = playerValue['nickname'];
+    final profileImageUrlValue = playerValue['profileImageUrl'];
+    final nickname = nicknameValue is String && nicknameValue.trim().isNotEmpty
+        ? nicknameValue.trim()
+        : layoutPlayer?.nickname ?? 'Player';
+    final publicProfileImageUrl = profileImageUrlValue is String
+        ? profileImageUrlValue.trim()
+        : '';
+
+    return PlayerLayoutPlayer(
+      uid: uid,
+      nickname: nickname,
+      profileImageUrl: publicProfileImageUrl.isNotEmpty
+          ? publicProfileImageUrl
+          : layoutPlayer?.profileImageUrl ?? '',
+      seatIndex:
+          _asInt(playerValue['seatIndex']) ?? layoutPlayer?.seatIndex ?? 0,
     );
   }
 

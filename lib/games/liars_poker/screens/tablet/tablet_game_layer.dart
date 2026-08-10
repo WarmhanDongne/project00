@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/animations/card_deal.dart';
 import 'package:project00/games/liars_poker/animations/round_start_reveal.dart';
+import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/liars_poker/widgets/result_tablet.dart';
@@ -22,6 +23,7 @@ class TabletGameLayer extends StatelessWidget {
     required this.onRoundRevealCompleted,
     required this.onRestartGame,
     required this.onExitToLobby,
+    required this.winnerPlayer,
   });
 
   final GameStatus status;
@@ -37,7 +39,7 @@ class TabletGameLayer extends StatelessWidget {
   final VoidCallback onRoundRevealCompleted;
   final VoidCallback onRestartGame;
   final VoidCallback onExitToLobby;
-
+  final PlayerLayoutPlayer? winnerPlayer;
   @override
   Widget build(BuildContext context) {
     return switch (status) {
@@ -64,11 +66,10 @@ class TabletGameLayer extends StatelessWidget {
         tableWidth: 300,
         onCompleted: onRoundRevealCompleted,
       ),
-      GameStatus.result => Center(
-        child: Result(
-          onRestartGame: onRestartGame,
-          onExitToLobby: onExitToLobby,
-        ),
+      GameStatus.result => Result(
+        winnerPlayer: winnerPlayer,
+        onRestartGame: onRestartGame,
+        onExitToLobby: onExitToLobby,
       ),
       GameStatus.finished => const _StatusMessage('게임이 종료되었습니다.'),
     };
