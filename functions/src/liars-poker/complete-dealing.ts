@@ -67,6 +67,8 @@ export const completeLiarsPokerDealing = onCall<CompleteDealingData>(
       game.private = pendingHands;
       delete game.server.pendingHands;
       game.public.phase = "playing";
+      game.public.turnDeadlineAt = null;
+      game.public.isFirstTurnReady = false;
       game.public.revision += 1;
       game.public.updatedAt = now;
 
