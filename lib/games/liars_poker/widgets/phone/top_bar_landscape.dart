@@ -5,14 +5,14 @@ class TopBarLandscape extends StatelessWidget {
   final Widget? leadingWidget;
   final Widget? centerWidget;
   final VoidCallback? onTipPressed;
-  final VoidCallback? onSettingPressed;
+  final VoidCallback? onOutPressed;
 
   const TopBarLandscape({
     super.key,
     this.leadingWidget,
     this.centerWidget,
     this.onTipPressed,
-    this.onSettingPressed,
+    this.onOutPressed, required Null Function() onSettingPressed,
   });
 
   @override
@@ -38,16 +38,16 @@ class TopBarLandscape extends StatelessWidget {
         GestureDetector(
           onTap: onTipPressed,
           behavior: HitTestBehavior.opaque,
-          child: Assets.games.liarsPoker.images.icons.tip.image(
+          child: Assets.games.liarsPoker.images.icons.iconTip.image(
             width: 45, // 가로 모드 공간에 맞게 조절
             height: 45,
           ),
         ),
         const SizedBox(width: 15), // 아이콘 사이 간격
         GestureDetector(
-          onTap: onSettingPressed,
+          onTap: onOutPressed,
           behavior: HitTestBehavior.opaque,
-          child: Assets.games.liarsPoker.images.icons.settingIcon.image(
+          child: Assets.games.liarsPoker.images.icons.iconOut.image(
             width: 32,
             height: 32,
           ),

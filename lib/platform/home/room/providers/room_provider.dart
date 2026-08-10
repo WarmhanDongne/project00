@@ -140,6 +140,15 @@ class RoomProvider extends ChangeNotifier {
   }
 
   void _handleSubscriptionError(Object error) {
+    final message = error.toString().toLowerCase();
+    // Realtime Database 스트림은 네트워크 복구 시 자동으로 다시 연결됩니다.
+    // iOS 플러그인의 native unknown Stacktrace는 화면에 노출하지 않습니다.
+    if (message.contains('firebase_database/unknown') ||
+        message.contains('stacktrace:')) {
+      errorMessage = null;
+      notifyListeners();
+      return;
+    }
     errorMessage = error.toString();
     notifyListeners();
   }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
@@ -14,6 +15,7 @@ class HandCardStackPortrait extends StatefulWidget {
     super.key,
     this.cards,
     this.enabled = true,
+    this.submissionEnabled = true,
     this.maxSelection = 3,
     this.onSelectionChanged,
     this.onCardsSubmitRequested,
@@ -25,10 +27,14 @@ class HandCardStackPortrait extends StatefulWidget {
     this.spreadStepX = 35.0,
     this.spreadStepY = 35.0,
     this.rightCardOnTop = true,
+    this.spreadToLeft = false,
+    this.entryCenterOffsetX = 0,
+    this.entryCenterOffsetY = 0,
   }) : assert(maxSelection > 0);
 
   final List<AssetGenImage>? cards;
   final bool enabled;
+  final bool submissionEnabled;
   final int maxSelection;
   final ValueChanged<List<int>>? onSelectionChanged;
   final Future<bool> Function(List<int> indexes)? onCardsSubmitRequested;
@@ -40,6 +46,9 @@ class HandCardStackPortrait extends StatefulWidget {
   final double spreadStepX;
   final double spreadStepY;
   final bool rightCardOnTop;
+  final bool spreadToLeft;
+  final double entryCenterOffsetX;
+  final double entryCenterOffsetY;
 
   @override
   State<HandCardStackPortrait> createState() => _HandCardStackPortrait();
@@ -100,6 +109,16 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
       _dragOffsetY = 0;
       _notifySelectionChanged();
     }
+
+    // 차례가 넘어가 제출만 비활성화되면 선택은 유지하고 드래그만 취소합니다.
+    if (oldWidget.submissionEnabled &&
+        !widget.submissionEnabled &&
+        _isDragging &&
+        !_isSubmitting) {
+      _isDragging = false;
+      _draggingCardId = null;
+      _dragOffsetY = 0;
+    }
   }
 
   @override
@@ -149,7 +168,7 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   void _startDragging(int cardId) {
-    if (!widget.enabled || _isSubmitting) return;
+    if (!widget.enabled || !widget.submissionEnabled || _isSubmitting) return;
 
     var selectionChanged = false;
 
@@ -177,6 +196,7 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
 
   void _updateDrag(DragUpdateDetails details) {
     if (!widget.enabled ||
+        !widget.submissionEnabled ||
         !_isDragging ||
         _draggingCardId == null ||
         _isSubmitting) {
@@ -210,7 +230,11 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
   }
 
   Future<void> _submitSelectedCards() async {
-    if (_selectedCardIds.isEmpty || _isSubmitting) return;
+    if (_selectedCardIds.isEmpty ||
+        !widget.submissionEnabled ||
+        _isSubmitting) {
+      return;
+    }
 
     final submittedIndexes = List<int>.unmodifiable(_selectedIndexes);
     final submittedIds = Set<int>.of(_selectedCardIds);
@@ -307,6 +331,9 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         cardWidth: widget.cardWidth,
         spreadStepX: widget.spreadStepX,
         spreadStepY: widget.spreadStepY,
+        spreadToLeft: widget.spreadToLeft,
+        entryCenterOffsetX: widget.entryCenterOffsetX,
+        entryCenterOffsetY: widget.entryCenterOffsetY,
         onRevealStarted: widget.onRevealStarted,
         onCompleted: () {
           if (!mounted) return;
@@ -349,6 +376,7 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
                   cardCount: cardCount,
                   centerX: centerX,
                   centerY: centerY,
+                  containerWidth: size.width,
                   cardHeight: cardHeight,
                 ),
               Positioned.fill(
@@ -383,12 +411,20 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
     required int cardCount,
     required double centerX,
     required double centerY,
+    required double containerWidth,
     required double cardHeight,
   }) {
     final centeredIndex = cardIndex - (cardCount - 1) / 2;
     final isSelected = _selectedCardIds.contains(card.id);
-    final baseLeft =
-        centerX + centeredIndex * widget.spreadStepX - widget.cardWidth / 2;
+    final baseCenterX = widget.spreadToLeft
+        ? _leftSpreadCardCenter(
+            centerX: centerX,
+            containerWidth: containerWidth,
+            cardIndex: cardIndex,
+            cardCount: cardCount,
+          )
+        : centerX + centeredIndex * widget.spreadStepX;
+    final baseLeft = baseCenterX - widget.cardWidth / 2;
     final baseTop =
         centerY + centeredIndex * widget.spreadStepY - cardHeight / 2;
     final dragOffset = isSelected ? _dragOffsetY : 0.0;
@@ -411,12 +447,18 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.enabled ? () => _toggleSelection(card.id) : null,
-          onVerticalDragStart: widget.enabled
+          onVerticalDragStart: widget.enabled && widget.submissionEnabled
               ? (_) => _startDragging(card.id)
               : null,
-          onVerticalDragUpdate: widget.enabled ? _updateDrag : null,
-          onVerticalDragEnd: widget.enabled ? (_) => _finishDrag() : null,
-          onVerticalDragCancel: widget.enabled ? _finishDrag : null,
+          onVerticalDragUpdate: widget.enabled && widget.submissionEnabled
+              ? _updateDrag
+              : null,
+          onVerticalDragEnd: widget.enabled && widget.submissionEnabled
+              ? (_) => _finishDrag()
+              : null,
+          onVerticalDragCancel: widget.enabled && widget.submissionEnabled
+              ? _finishDrag
+              : null,
           child: Semantics(
             selected: isSelected,
             label: isSelected ? '선택된 카드' : '선택하지 않은 카드',
@@ -430,6 +472,28 @@ class _HandCardStackPortrait extends State<HandCardStackPortrait> {
         ),
       ),
     );
+  }
+
+  double _leftSpreadCardCenter({
+    required double centerX,
+    required double containerWidth,
+    required int cardIndex,
+    required int cardCount,
+  }) {
+    final availableSpread = math.max(
+      0.0,
+      containerWidth - widget.cardWidth - 16,
+    );
+    final spreadStep = cardCount <= 1
+        ? 0.0
+        : math.min(widget.spreadStepX.abs(), availableSpread / (cardCount - 1));
+    final totalSpread = spreadStep * math.max(0, cardCount - 1);
+    final maxAnchorX = math.max(
+      widget.cardWidth / 2,
+      containerWidth - widget.cardWidth / 2 - 8,
+    );
+    final rightAnchorX = math.min(centerX + totalSpread / 2, maxAnchorX);
+    return rightAnchorX - (cardCount - 1 - cardIndex) * spreadStep;
   }
 }
 

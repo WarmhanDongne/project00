@@ -29,6 +29,11 @@ type SaveSeatIndexesData = {
   seatIndexesByUid?: unknown;
 };
 
+type JoinRealtimeRoomData = {
+  roomCode?: unknown;
+  nickname?: unknown;
+};
+
 /**
  * 중복 가능성이 낮은 5자리 방 코드를 생성합니다.
  */
@@ -102,6 +107,135 @@ export const createRealtimeRoom = onCall(
       "resource-exhausted",
       "사용 가능한 방 코드를 생성하지 못했습니다.",
     );
+  },
+);
+
+/**
+ * 휴대폰 참가와 재접속을 Admin SDK로 처리합니다.
+ * 기존 UID는 좌석과 게임 데이터를 유지하고 연결 상태만 복구합니다.
+ */
+export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
+  {region: REGION},
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "로그인이 필요합니다.",
+      );
+    }
+
+    const rawRoomCode = request.data?.roomCode;
+    const roomCode = typeof rawRoomCode === "string" ?
+      rawRoomCode.trim().toUpperCase() : "";
+    if (!ROOM_CODE_PATTERN.test(roomCode)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "올바른 방 코드가 아닙니다.",
+      );
+    }
+
+    const rawNickname = request.data?.nickname;
+    const nickname = typeof rawNickname === "string" ?
+      rawNickname.trim() : "";
+    if (nickname.length < 1 || nickname.length > 20) {
+      throw new HttpsError(
+        "invalid-argument",
+        "닉네임은 1~20자로 입력해주세요.",
+      );
+    }
+
+    const database = getDatabase();
+    const roomRef = database.ref(`rooms/${roomCode}`);
+    const roomSnapshot = await roomRef.get();
+    if (!roomSnapshot.exists()) {
+      throw new HttpsError(
+        "not-found",
+        "방을 찾을 수 없습니다.",
+      );
+    }
+
+    const room = roomSnapshot.val() as Record<string, unknown>;
+    const maxPlayers = typeof room.maxPlayers === "number" ?
+      room.maxPlayers : DEFAULT_MAX_PLAYERS;
+    const playersRef = roomRef.child("players");
+
+    let rejection: HttpsError | null = null;
+    let reconnected = false;
+    let savedNickname = nickname;
+
+    const transaction = await playersRef.transaction(
+      (currentValue) => {
+        rejection = null;
+        reconnected = false;
+        const players = currentValue !== null &&
+          typeof currentValue === "object" &&
+          !Array.isArray(currentValue) ?
+          currentValue as Record<string, Record<string, unknown>> : {};
+
+        const existingPlayer = players[uid];
+        if (existingPlayer && typeof existingPlayer === "object") {
+          reconnected = true;
+          savedNickname = typeof existingPlayer.nickname === "string" ?
+            existingPlayer.nickname : nickname;
+          players[uid] = {
+            ...existingPlayer,
+            isConnected: true,
+          };
+          return players;
+        }
+
+        if (Object.keys(players).length >= maxPlayers) {
+          rejection = new HttpsError(
+            "resource-exhausted",
+            "방 인원이 초과되었습니다.",
+          );
+          return;
+        }
+
+        const duplicatedNickname = Object.values(players).some(
+          (player) => player?.nickname === nickname,
+        );
+        if (duplicatedNickname) {
+          rejection = new HttpsError(
+            "already-exists",
+            "이미 사용 중인 닉네임입니다.",
+          );
+          return;
+        }
+
+        const profileImageUrl =
+          typeof request.auth?.token.picture === "string" ?
+            request.auth.token.picture : "";
+        players[uid] = {
+          uid,
+          nickname,
+          profileImageUrl,
+          isConnected: true,
+          seatIndex: -1,
+          role: "player",
+          status: "active",
+          penaltyAttemptCount: 0,
+          joinedAt: Date.now(),
+        };
+        return players;
+      },
+    );
+
+    if (!transaction.committed) {
+      if (rejection) throw rejection;
+      throw new HttpsError(
+        "aborted",
+        "방 참가 요청이 충돌했습니다. 다시 시도해주세요.",
+      );
+    }
+
+    return {
+      success: true,
+      roomCode,
+      reconnected,
+      nickname: savedNickname,
+    };
   },
 );
 

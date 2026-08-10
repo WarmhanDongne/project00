@@ -17,6 +17,7 @@ class TabletGameLayer extends StatelessWidget {
     required this.cardPileVersion,
     required this.table,
     required this.remainingCardCounts,
+    required this.currentTurnPlayerIndex,
     required this.onDealCompleted,
     required this.onRoundRevealCompleted,
     required this.onRestartGame,
@@ -31,6 +32,7 @@ class TabletGameLayer extends StatelessWidget {
   final int cardPileVersion;
   final String table;
   final List<int> remainingCardCounts;
+  final int? currentTurnPlayerIndex;
   final VoidCallback onDealCompleted;
   final VoidCallback onRoundRevealCompleted;
   final VoidCallback onRestartGame;
@@ -58,6 +60,7 @@ class TabletGameLayer extends StatelessWidget {
         playerCount: playerCount,
         playerSeatIndexes: playerSeatIndexes,
         remainingCardCounts: remainingCardCounts,
+        activePlayerIndex: currentTurnPlayerIndex,
         tableWidth: 300,
         onCompleted: onRoundRevealCompleted,
       ),

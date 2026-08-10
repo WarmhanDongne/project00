@@ -11,6 +11,7 @@ class RoundStartReveal extends StatefulWidget {
     required this.tableAsset,
     required this.playerCount,
     required this.remainingCardCounts,
+    this.activePlayerIndex,
     this.playerSeatIndexes,
     this.playerPositions,
     this.tableWidth = 200,
@@ -20,6 +21,11 @@ class RoundStartReveal extends StatefulWidget {
     this.onCompleted,
   }) : assert(playerCount > 0),
        assert(remainingCardCounts.length == playerCount),
+       assert(
+         activePlayerIndex == null ||
+             (activePlayerIndex >= 0 && activePlayerIndex < playerCount),
+         'activePlayerIndex는 플레이어 범위 안이어야 합니다.',
+       ),
        assert(
          playerSeatIndexes == null || playerSeatIndexes.length == playerCount,
          'playerSeatIndexes의 개수는 playerCount와 같아야 합니다.',
@@ -33,6 +39,7 @@ class RoundStartReveal extends StatefulWidget {
   final AssetGenImage tableAsset;
   final int playerCount;
   final List<int> remainingCardCounts;
+  final int? activePlayerIndex;
   final List<int>? playerSeatIndexes;
 
   /// `player_layouts`에서 저장한 플레이어 영역의 좌측 상단 정규화 좌표입니다.
@@ -147,6 +154,10 @@ class _RoundStartRevealState extends State<RoundStartReveal>
               final shadowBlur = 7 + (22 * elevation);
               final shadowSpread = 1 + (5 * elevation);
               final shadowOpacity = 0.34 + (0.16 * elevation);
+              final activePlayerIndex = widget.activePlayerIndex;
+              final turnLightCenter = activePlayerIndex == null
+                  ? null
+                  : _playerCenter(size, activePlayerIndex);
 
               return Stack(
                 clipBehavior: Clip.none,
@@ -164,6 +175,23 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                       ),
                     ),
                   ),
+                  if (turnLightCenter != null)
+                    AnimatedPositioned(
+                      key: const ValueKey('moving-turn-light'),
+                      duration: const Duration(milliseconds: 620),
+                      curve: Curves.easeInOutCubic,
+                      left: turnLightCenter.dx - 128,
+                      top: turnLightCenter.dy - 128,
+                      width: 256,
+                      height: 256,
+                      child: Opacity(
+                        opacity: opacity,
+                        child: Transform.scale(
+                          scale: scale,
+                          child: const _TurnCircleLight(),
+                        ),
+                      ),
+                    ),
                   for (
                     var playerIndex = 0;
                     playerIndex < widget.playerCount;
@@ -201,6 +229,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
     final center = Offset(size.width / 2, size.height / 2);
     final playerCenter = _playerCenter(size, playerIndex);
     final direction = playerCenter - center;
+    final isCurrentTurn = widget.activePlayerIndex == playerIndex;
     final angle = direction.distanceSquared == 0
         ? math.pi
         : math.atan2(direction.dy, direction.dx) + math.pi / 2 + math.pi;
@@ -235,6 +264,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                       widget.cardCountAsset ??
                       Assets.games.liarsPoker.images.cards.cardCount,
                   count: widget.remainingCardCounts[playerIndex],
+                  isCurrentTurn: isCurrentTurn,
                 ),
               ],
             ),
@@ -262,6 +292,64 @@ class _RoundStartRevealState extends State<RoundStartReveal>
     );
     final seatIndex = widget.playerSeatIndexes?[playerIndex] ?? playerIndex;
     return centers[seatIndex];
+  }
+}
+
+/// 현재 턴 플레이어 사이를 이동하는 펠트 텍스처 원형 조명입니다.
+class _TurnCircleLight extends StatelessWidget {
+  const _TurnCircleLight();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x704C8664),
+              blurRadius: 31,
+              spreadRadius: 4,
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (bounds) => const RadialGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xE8FFFFFF), Color(0x00FFFFFF)],
+              stops: [0, 0.58, 1],
+            ).createShader(bounds),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Opacity(
+                  opacity: 0.7,
+                  child: Assets.games.liarsPoker.images.background.background
+                      .image(
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        filterQuality: FilterQuality.high,
+                      ),
+                ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        Color(0x805A9670),
+                        Color(0x4D477D5D),
+                        Color(0x00315D48),
+                      ],
+                      stops: [0, 0.56, 1],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -314,10 +402,12 @@ class _RemainingCardCounter extends StatefulWidget {
     super.key,
     required this.asset,
     required this.count,
+    required this.isCurrentTurn,
   });
 
   final AssetGenImage asset;
   final int count;
+  final bool isCurrentTurn;
 
   @override
   State<_RemainingCardCounter> createState() => _RemainingCardCounterState();
@@ -369,43 +459,59 @@ class _RemainingCardCounterState extends State<_RemainingCardCounter>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      alignment: Alignment.center,
-      children: [
-        widget.asset.image(
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-        AnimatedBuilder(
-          animation: _numberController,
-          builder: (context, _) {
-            final progress = Curves.easeOutCubic.transform(
-              _numberController.value,
-            );
-            final isDecreasing = _currentCount < _previousCount;
-            final direction = isDecreasing ? -1.0 : 1.0;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: widget.isCurrentTurn ? 1 : 0),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
+      child: Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
+        children: [
+          widget.asset.image(
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          ),
+          AnimatedBuilder(
+            animation: _numberController,
+            builder: (context, _) {
+              final progress = Curves.easeOutCubic.transform(
+                _numberController.value,
+              );
+              final isDecreasing = _currentCount < _previousCount;
+              final direction = isDecreasing ? -1.0 : 1.0;
 
-            return Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                if (_numberController.isAnimating)
+              return Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  if (_numberController.isAnimating)
+                    _buildNumber(
+                      _previousCount,
+                      opacity: 1 - progress,
+                      offsetY: direction * 14 * progress,
+                    ),
                   _buildNumber(
-                    _previousCount,
-                    opacity: 1 - progress,
-                    offsetY: direction * 14 * progress,
+                    _currentCount,
+                    opacity: progress,
+                    offsetY: -direction * 14 * (1 - progress),
                   ),
-                _buildNumber(
-                  _currentCount,
-                  opacity: progress,
-                  offsetY: -direction * 14 * (1 - progress),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      builder: (context, progress, child) {
+        final brightness = 0.42 + (0.58 * progress);
+        final channel = (255 * brightness).round();
+        return ColorFiltered(
+          colorFilter: ColorFilter.mode(
+            Color.fromARGB(255, channel, channel, channel),
+            BlendMode.modulate,
+          ),
+          child: child,
+        );
+      },
     );
   }
 

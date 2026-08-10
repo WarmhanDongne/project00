@@ -18,6 +18,7 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
   final RoomProvider _roomProvider = RoomProvider();
   late final TextEditingController _roomCodeController;
   late final TextEditingController _nicknameController;
+  bool _didRestoreExistingNickname = false;
 
   @override
   void initState() {
@@ -29,11 +30,31 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
         : user?.email?.split('@').first ?? '사용자';
     _nicknameController = TextEditingController(text: initialNickname);
     _roomProvider.roomCode = widget.roomCode;
+    _roomProvider.addListener(_restoreExistingNickname);
     _roomProvider.listenRoom();
+  }
+
+  /// 같은 Firebase UID의 참가 기록이 있으면 기존 닉네임을 자동 복원합니다.
+  void _restoreExistingNickname() {
+    if (_didRestoreExistingNickname) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    for (final player in _roomProvider.players) {
+      if (player.uid != uid) continue;
+      _didRestoreExistingNickname = true;
+      _nicknameController.text = player.nickname;
+      _nicknameController.selection = TextSelection.collapsed(
+        offset: player.nickname.length,
+      );
+      break;
+    }
   }
 
   @override
   void dispose() {
+    _roomProvider.removeListener(_restoreExistingNickname);
     _roomProvider.dispose();
     _roomCodeController.dispose();
     _nicknameController.dispose();
@@ -45,10 +66,11 @@ class _PhoneRoomNickname extends State<PhoneRoomNickname> {
     // 자동으로 키보드 화면 내리기
     FocusScope.of(context).unfocus();
     final inputNickname = _nicknameController.text.trim();
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     final isDuplicate = _roomProvider.players.any(
       // players 리스트 중 하나라도 nickname이 inputNickname과 같으면 isDuplicate는 true
-      (player) => player.nickname == inputNickname,
+      (player) => player.uid != currentUid && player.nickname == inputNickname,
     );
 
     if (isDuplicate) {

@@ -11,32 +11,42 @@ class HandCardStackLandscape extends StatelessWidget {
     super.key,
     this.cards,
     this.enabled = true,
+    this.submissionEnabled = true,
     this.maxSelection = 3,
     this.initiallyRevealed = false,
     this.onRevealStarted,
     this.onRevealCompleted,
     this.onCardsSubmitRequested,
+    this.entryCenterOffsetX = 0,
+    this.entryCenterOffsetY = 0,
   });
 
   final List<AssetGenImage>? cards;
   final bool enabled;
+  final bool submissionEnabled;
   final int maxSelection;
   final bool initiallyRevealed;
   final VoidCallback? onRevealStarted;
   final VoidCallback? onRevealCompleted;
   final Future<bool> Function(List<int> indexes)? onCardsSubmitRequested;
+  final double entryCenterOffsetX;
+  final double entryCenterOffsetY;
 
   @override
   Widget build(BuildContext context) {
     return HandCardStackPortrait(
       cards: cards,
       enabled: enabled,
+      submissionEnabled: submissionEnabled,
       maxSelection: maxSelection,
       initiallyRevealed: initiallyRevealed,
-      cardWidth: 140,
-      spreadStepX: 72,
+      cardWidth: 140, //카드크기
+      spreadStepX: 110, //카드 펼친 정도
       spreadStepY: 0,
       rightCardOnTop: true,
+      spreadToLeft: true,
+      entryCenterOffsetX: entryCenterOffsetX,
+      entryCenterOffsetY: entryCenterOffsetY,
       onRevealStarted: onRevealStarted,
       onRevealCompleted: onRevealCompleted,
       onCardsSubmitRequested: onCardsSubmitRequested,

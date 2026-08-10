@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/liars_poker/screens/phone_game_portrait.dart';
+import 'package:project00/games/liars_poker/screens/phone/phone_game_portrait.dart';
 import 'package:project00/games/mafia/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';

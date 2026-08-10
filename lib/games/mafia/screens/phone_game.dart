@@ -16,8 +16,8 @@ class MafiaPhoneGame extends StatelessWidget {
         children: [
           const Positioned.fill(child: _GameBackground()),
           Positioned.fill(child: Header()),
-
-          Positioned.fill(child: FreeTalk()),
+          Positioned.fill(child: DeadScreen()),
+          // Positioned.fill(child: FreeTalk()),
           Positioned.fill(
             child: RoleCardRevealAnimation(
               backCardAsset: Assets.games.mafia.images.cards.roleBack,
@@ -118,6 +118,92 @@ class FreeTalk extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class DeadScreen extends StatelessWidget {
+  const DeadScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        // 플레이어 3명이 딱 들어가는 너비
+        width: 250,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "관전자 정보",
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "이제 모든 플레이어의 신분을 확인할 수 있습니다.\n확인한 정보는 게임이 끝날 때까지 비밀로 유지하세요.",
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 20),
+
+            Row(
+              children: const [
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              children: const [
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              children: const [
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+                SizedBox(width: 5),
+                Player(),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class Player extends StatelessWidget {
+  const Player({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
+          child: Assets.games.mafia.images.cards.roleCitizen.image(
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text("맥도날드", style: TextStyle(fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

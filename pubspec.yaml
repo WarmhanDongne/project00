@@ -97,6 +97,8 @@ flutter:
     - assets/games/liars_poker/images/icons/
     - assets/games/liars_poker/images/table/
     - assets/games/mafia/images/background/
+    - assets/games/mafia/images/background/bird/
+    - assets/games/mafia/images/cards/
     - assets/games/mafia/images/icons/
     - assets/games/mafia/images/other/
     - assets/sounds/

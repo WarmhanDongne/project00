@@ -9,13 +9,13 @@ class TopBarPortrait extends StatelessWidget {
     required this.leadingWidget,
     this.entryAnimation,
     this.onTipPressed,
-    this.onSettingPressed,
+    this.onOutPressed, required Null Function() onSettingPressed,
   });
 
   final Widget leadingWidget;
   final Animation<double>? entryAnimation;
   final VoidCallback? onTipPressed;
-  final VoidCallback? onSettingPressed;
+  final VoidCallback? onOutPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class TopBarPortrait extends StatelessWidget {
           end: 0.84,
           child: GestureDetector(
             onTap: onTipPressed,
-            child: Assets.games.liarsPoker.images.icons.tip.image(
+            child: Assets.games.liarsPoker.images.icons.iconTip.image(
               width: 40.w,
               height: 40.h,
             ),
@@ -43,8 +43,8 @@ class TopBarPortrait extends StatelessWidget {
           begin: 0.12,
           end: 0.9,
           child: GestureDetector(
-            onTap: onSettingPressed,
-            child: Assets.games.liarsPoker.images.icons.settingPhone.image(
+            onTap: onOutPressed,
+            child: Assets.games.liarsPoker.images.icons.iconOut.image(
               width: 32.w,
               height: 32.h,
             ),

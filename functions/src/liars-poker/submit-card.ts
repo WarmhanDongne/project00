@@ -84,6 +84,7 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       const now = Date.now();
       const lastPlay = {
         playId: commandId,
+        round: game.public.round,
         playerUid: uid,
         cardCount: submittedCards.length,
         declaredRank: game.public.table,

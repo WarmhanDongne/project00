@@ -65,6 +65,7 @@ class SubmittedPlay {
 class PublicLastPlay {
   const PublicLastPlay({
     required this.playId,
+    required this.round,
     required this.playerUid,
     required this.cardCount,
     required this.declaredRank,
@@ -74,6 +75,7 @@ class PublicLastPlay {
   });
 
   final String playId;
+  final int? round;
   final String playerUid;
   final int cardCount;
   final String declaredRank;
@@ -98,6 +100,7 @@ class PublicLastPlay {
 
     return PublicLastPlay(
       playId: playId,
+      round: _asInt(data['round']),
       playerUid: playerUid,
       cardCount: cardCount,
       declaredRank: data['declaredRank'] is String
@@ -117,6 +120,7 @@ class TabletPublicGameSnapshot {
     required this.phase,
     required this.round,
     required this.table,
+    required this.turnUid,
     required this.penaltyTargetUid,
     required this.players,
     required this.lastPlay,
@@ -127,6 +131,7 @@ class TabletPublicGameSnapshot {
   final String phase;
   final int round;
   final String table;
+  final String? turnUid;
   final String? penaltyTargetUid;
   final Map<Object?, Object?> players;
   final PublicLastPlay? lastPlay;
@@ -138,19 +143,33 @@ class TabletPublicGameSnapshot {
     final data = Map<Object?, Object?>.from(value);
     final playersValue = data['players'];
 
+    final round = _asInt(data['round']) ?? 1;
     final lastPlay = PublicLastPlay.tryParse(data['lastPlay']);
-    final roundPlays = _parseRoundPlays(data['roundPlays']);
+    final roundPlays = _parseRoundPlays(
+      data['roundPlays'],
+    ).where((play) => play.round == round).toList();
 
-    // 기존 방처럼 roundPlays가 없는 상태도 마지막 제출 한 건으로 호환합니다.
-    if (roundPlays.isEmpty && lastPlay != null) {
+    // 배포 전 데이터처럼 round가 없는 제출은 누적 목록 전체를 복원하지 않고,
+    // 현재 lastPlay 한 건만 호환 표시해 이전 라운드 카드가 섞이지 않게 합니다.
+    final canUseLastPlay =
+        lastPlay != null && (lastPlay.round == null || lastPlay.round == round);
+    final containsLastPlay =
+        lastPlay != null &&
+        roundPlays.any((play) => play.playId == lastPlay.playId);
+    if (canUseLastPlay && !containsLastPlay) {
       roundPlays.add(lastPlay);
     }
+    roundPlays.sort((left, right) {
+      final timeOrder = left.submittedAt.compareTo(right.submittedAt);
+      return timeOrder != 0 ? timeOrder : left.playId.compareTo(right.playId);
+    });
 
     return TabletPublicGameSnapshot(
       status: data['status'] is String ? data['status'] as String : 'playing',
       phase: data['phase'] is String ? data['phase'] as String : 'playing',
-      round: _asInt(data['round']) ?? 1,
+      round: round,
       table: data['table'] is String ? data['table'] as String : 'K',
+      turnUid: data['turnUid'] is String ? data['turnUid'] as String : null,
       penaltyTargetUid: data['penaltyTargetUid'] as String?,
       players: playersValue is Map
           ? Map<Object?, Object?>.from(playersValue)
