@@ -39,6 +39,7 @@ export interface PublicGameState {
   table: Exclude<CardRank, "JOKER">;
   turnUid: string | null;
   turnDeadlineAt: number | null;
+  isFirstTurnReady?: boolean;
   lastPlay: PublicLastPlay | null;
   /** 현재 라운드에 제출된 공개 카드 묶음입니다. 실제 랭크는 공개 전까지 없습니다. */
   roundPlays?: Record<string, PublicLastPlay>;

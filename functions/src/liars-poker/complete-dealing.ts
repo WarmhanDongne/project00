@@ -1,7 +1,7 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {RealtimeRoom, TURN_DURATION_MS} from "./common/types.js";
+import {RealtimeRoom} from "./common/types.js";
 import {
   assertController,
   assertGameStatus,
@@ -67,7 +67,8 @@ export const completeLiarsPokerDealing = onCall<CompleteDealingData>(
       game.private = pendingHands;
       delete game.server.pendingHands;
       game.public.phase = "playing";
-      game.public.turnDeadlineAt = now + TURN_DURATION_MS;
+      game.public.turnDeadlineAt = null;
+      game.public.isFirstTurnReady = false;
       game.public.revision += 1;
       game.public.updatedAt = now;
 

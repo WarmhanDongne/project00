@@ -98,6 +98,7 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
         "lastCardChallenge" : "playing";
       game.public.turnUid = nextTurnUid;
       game.public.turnDeadlineAt = now + TURN_DURATION_MS;
+      game.public.isFirstTurnReady = true;
       game.public.lastPlay = lastPlay;
       game.public.roundPlays ??= {};
       game.public.roundPlays[lastPlay.playId] = lastPlay;

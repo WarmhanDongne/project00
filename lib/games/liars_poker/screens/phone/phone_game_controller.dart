@@ -305,6 +305,9 @@ class PhoneGameController extends ChangeNotifier {
   /// 방향 전환 뒤에도 같은 라운드의 공개된 손패 상태를 유지합니다.
   void markHandRevealed() {
     hasRevealedHand = true;
+    if (isMyTurn && phase == 'playing') {
+      unawaited(gameService.command.readyTurn(roomCode: roomCode));
+    }
   }
 
   void _handleSubscriptionError(Object error) {
