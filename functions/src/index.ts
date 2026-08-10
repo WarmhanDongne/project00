@@ -25,6 +25,10 @@ export {
 } from "./auth/register-profile.js";
 
 export {
+  syncGoogleUserProfile,
+} from "./auth/sync-google-profile.js";
+
+export {
   startLiarsPokerGame,
 } from "./liars-poker/start-game.js";
 

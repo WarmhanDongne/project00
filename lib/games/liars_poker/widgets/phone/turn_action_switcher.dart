@@ -114,6 +114,7 @@ class TurnPlayerIndicator extends StatelessWidget {
     final imageUrl = player.profileImageUrl;
 
     return isRow == true
+        //================================가로================================
         ? Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -156,6 +157,7 @@ class TurnPlayerIndicator extends StatelessWidget {
               ),
             ],
           )
+        //================================세로================================
         : Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
