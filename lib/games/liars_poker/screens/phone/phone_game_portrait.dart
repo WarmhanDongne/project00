@@ -126,7 +126,8 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
           if (controller != null &&
               controller.turnDeadlineAt != null &&
               !controller.isInitialLoading &&
-              controller.phase != 'dealing')
+              controller.phase != 'dealing' &&
+              controller.isMyTurn)
             Positioned(
               top: 105.h,
               left: 0,
@@ -135,8 +136,12 @@ class _PhoneGamePortraitState extends State<PhoneGamePortrait>
                 child: PhoneTimer(
                   expiresAt: controller.turnDeadlineAt!,
                   onTimeout: () {
-                    if (controller.isMyTurn && controller.canCallLiar) {
-                      unawaited(controller.callLiar());
+                    if (controller.isMyTurn) {
+                      if (controller.canCallLiar) {
+                        unawaited(controller.callLiar());
+                      } else {
+                        unawaited(controller.submitCardIndexes([0]));
+                      }
                     }
                   },
                 ),

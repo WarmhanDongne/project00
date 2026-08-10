@@ -68,15 +68,20 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                             height: 30,
                             filterQuality: FilterQuality.high,
                           ),
-                          centerWidget:
-                              controller.turnDeadlineAt != null &&
-                                  controller.phase != 'dealing'
+                          centerWidget: controller.turnDeadlineAt != null &&
+                                  controller.phase != 'dealing' &&
+                                  controller.isMyTurn
                               ? PhoneTimer(
                                   expiresAt: controller.turnDeadlineAt!,
                                   onTimeout: () {
-                                    if (controller.isMyTurn &&
-                                        controller.canCallLiar) {
-                                      unawaited(controller.callLiar());
+                                    if (controller.isMyTurn) {
+                                      if (controller.canCallLiar) {
+                                        unawaited(controller.callLiar());
+                                      } else {
+                                        unawaited(
+                                          controller.submitCardIndexes([0]),
+                                        );
+                                      }
                                     }
                                   },
                                 )

@@ -2,6 +2,8 @@ export const CARD_RANKS = ["A", "K", "Q", "JOKER"] as const;
 
 export type CardRank = typeof CARD_RANKS[number];
 
+export const TURN_DURATION_MS = 30000;
+
 export interface GameCard {
   id: string;
   rank: CardRank;
