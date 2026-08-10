@@ -3,14 +3,16 @@ import 'package:project00/gen/assets.gen.dart';
 
 class TopBarLandscape extends StatelessWidget {
   final Widget? leadingWidget;
+  final Widget? centerWidget;
   final VoidCallback? onTipPressed;
   final VoidCallback? onOutPressed;
 
   const TopBarLandscape({
     super.key,
     this.leadingWidget,
+    this.centerWidget,
     this.onTipPressed,
-    this.onOutPressed,
+    this.onOutPressed, required Null Function() onSettingPressed,
   });
 
   @override
@@ -25,8 +27,12 @@ class TopBarLandscape extends StatelessWidget {
               filterQuality: FilterQuality.high,
             ),
 
-        // 중앙: 빈 공간 (추후 이곳에 타이머 위젯이 들어갈 수 있습니다)
-        const Spacer(),
+        // 중앙: 타이머 위젯 등
+        Expanded(
+          child: centerWidget != null
+              ? Center(child: centerWidget)
+              : const SizedBox(),
+        ),
 
         // 오른쪽: 팁(전구) 및 설정 아이콘
         GestureDetector(

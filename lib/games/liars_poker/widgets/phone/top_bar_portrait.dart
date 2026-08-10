@@ -9,7 +9,7 @@ class TopBarPortrait extends StatelessWidget {
     required this.leadingWidget,
     this.entryAnimation,
     this.onTipPressed,
-    this.onOutPressed,
+    this.onOutPressed, required Null Function() onSettingPressed,
   });
 
   final Widget leadingWidget;
