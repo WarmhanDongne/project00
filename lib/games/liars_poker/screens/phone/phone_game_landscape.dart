@@ -7,6 +7,7 @@ import 'package:project00/games/liars_poker/widgets/phone/liar_accusation_landsc
 import 'package:project00/games/liars_poker/widgets/phone/top_bar_landscape.dart';
 import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/phone_timer.dart';
+import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Realtime Database 상태와 Cloud Function 명령을 사용하는 가로 게임 화면입니다.
@@ -35,6 +36,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
       animation: widget.controller,
       builder: (context, _) {
         final controller = widget.controller;
+        final turnPlayer = controller.players[controller.turnUid];
         final showControls =
             controller.hasRevealedHand &&
             controller.phase != 'dealing' &&
@@ -46,6 +48,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
               final controlsWidth = constraints.maxWidth < 720 ? 180.0 : 220.0;
               return Stack(
                 children: [
+                  //==================================배경화면==================================
                   Positioned.fill(
                     child: Assets.games.liarsPoker.images.background.background
                         .image(
@@ -65,7 +68,8 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                             height: 30,
                             filterQuality: FilterQuality.high,
                           ),
-                          centerWidget: controller.turnDeadlineAt != null &&
+                          centerWidget:
+                              controller.turnDeadlineAt != null &&
                                   controller.phase != 'dealing'
                               ? PhoneTimer(
                                   expiresAt: controller.turnDeadlineAt!,
@@ -86,6 +90,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                         ),
                       ),
                     ),
+                  //==================================문구==================================
                   if (showControls)
                     Positioned(
                       top: 72,
@@ -106,6 +111,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                         ),
                       ),
                     ),
+                  //==================================손패==================================
                   Positioned(
                     top: 72,
                     bottom: 8,
@@ -119,16 +125,28 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                       entryCenterOffsetY: -32,
                     ),
                   ),
+                  //=================================라이어 버튼=================================
                   if (showControls)
                     Positioned(
                       right: 50,
                       bottom: 110,
                       width: controlsWidth,
-                      child: LiarAccusationLandscape(
-                        enabled: controller.canCallLiar,
-                        onAccuse: () => unawaited(controller.callLiar()),
+                      child: TurnActionSwitcher(
+                        isRow:true,
+                        showLiarButton: controller.isMyTurn,
+                        turnPlayer: turnPlayer,
+                        height: 140,
+                        alignment: Alignment.bottomCenter,
+                        profileSize: 72,
+                        nicknameFontSize: 22,
+                        spacing: 8,
+                        liarButton: LiarAccusationLandscape(
+                          enabled: controller.canCallLiar,
+                          onAccuse: () => unawaited(controller.callLiar()),
+                        ),
                       ),
                     ),
+                  //==================================한쪽이 카드 나 냈을때==================================
                   if (showControls && controller.phase == 'lastCardChallenge')
                     Positioned(
                       top: 104,
@@ -147,6 +165,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
                         child: const Text('라이어 아님 · 새 라운드'),
                       ),
                     ),
+                  //==================================오류 메시지==================================
                   if (controller.errorMessage != null)
                     Positioned(
                       top: 76,
@@ -190,7 +209,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
     if (controller.isInitialLoading || controller.phase == 'dealing') {
       return const SizedBox.shrink();
     }
-    //카드 없을때
+    //==================================손패 없을때==================================
     if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       return controller.isEliminated
           ? const Center(
@@ -201,7 +220,8 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
             )
           : const SizedBox.shrink();
     }
-    //카드
+
+    //==================================손패==================================
     return HandCardStackLandscape(
       key: ValueKey('landscape-deal-${controller.handDealVersion}'),
       cards: controller.handCardAssets,
@@ -216,6 +236,7 @@ class _PhoneGameLandscapeState extends State<PhoneGameLandscape> {
     );
   }
 
+  //==================================알파벳에 따라 카드 불러오기==================================
   AssetGenImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
       'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
