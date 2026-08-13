@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
+import 'package:project00/games/liars_poker/widgets/tablet/rolebook_tablet.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';

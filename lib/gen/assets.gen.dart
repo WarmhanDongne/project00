@@ -689,6 +689,16 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
 class $AssetsGamesLiarsPokerImagesButtonGen {
   const $AssetsGamesLiarsPokerImagesButtonGen();
 
+  /// File path: assets/games/liars_poker/images/button/button_baseBorder.png
+  AssetGenImage get buttonBaseBorder => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_baseBorder.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/button_border.png
+  AssetGenImage get buttonBorder => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_border.png',
+  );
+
   /// File path: assets/games/liars_poker/images/button/button_home.png
   AssetGenImage get buttonHome => const AssetGenImage(
     'assets/games/liars_poker/images/button/button_home.png',
@@ -719,14 +729,40 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
     'assets/games/liars_poker/images/button/button_submit.png',
   );
 
+  /// File path: assets/games/liars_poker/images/button/liar_button_down.png
+  AssetGenImage get liarButtonDown => const AssetGenImage(
+    'assets/games/liars_poker/images/button/liar_button_down.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/liar_button_up.png
+  AssetGenImage get liarButtonUp => const AssetGenImage(
+    'assets/games/liars_poker/images/button/liar_button_up.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/liar_ring_down.png
+  AssetGenImage get liarRingDown => const AssetGenImage(
+    'assets/games/liars_poker/images/button/liar_ring_down.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/liar_ring_up.png
+  AssetGenImage get liarRingUp => const AssetGenImage(
+    'assets/games/liars_poker/images/button/liar_ring_up.png',
+  );
+
   /// List of all assets
   List<AssetGenImage> get values => [
+    buttonBaseBorder,
+    buttonBorder,
     buttonHome,
     buttonLiar,
     buttonLiarWhite,
     buttonPass,
     buttonRetry,
     buttonSubmit,
+    liarButtonDown,
+    liarButtonUp,
+    liarRingDown,
+    liarRingUp,
   ];
 }
 

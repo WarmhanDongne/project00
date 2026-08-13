@@ -33,8 +33,9 @@ export interface FinalCallRoundResult {
 export interface FinalCallPublicState {
   gameType: "final_call";
   status: "playing" | "finished";
-  phase: "dealing" | "playing" | "finalTurns" | "roundResult" |
-    "finished";
+  finishReason?: "winner" | "manual" | "insufficientPlayers";
+  phase: "dealing" | "playing" | "callerSubmit" | "finalTurns" |
+    "roundResult" | "finished";
   round: number;
   revision: number;
   turnUid: string | null;

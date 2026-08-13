@@ -118,6 +118,7 @@ class _PenaltyInformation extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         SizedBox(
+          //=======================벌칙 결과==============================
           // 결과가 도착하기 전부터 값 영역을 확보해 '결과:'의 위치를 고정합니다.
           width: 154,
           height: 36,

@@ -65,6 +65,7 @@ export {
 } from "./liars-poker/ready-turn.js";
 
 export {startFinalCallGame} from "./final-call/start-game.js";
+export {endFinalCallGame} from "./final-call/end-game.js";
 export {completeFinalCallDealing} from "./final-call/complete-dealing.js";
 export {drawFinalCallCard} from "./final-call/draw-card.js";
 export {completeFinalCallTurn} from "./final-call/complete-turn.js";
@@ -72,3 +73,4 @@ export {callFinalCall} from "./final-call/call.js";
 export {startFinalCallNextRound} from "./final-call/next-round.js";
 export {timeoutFinalCallTurn} from "./final-call/timeout-turn.js";
 export {leaveFinalCallGame} from "./final-call/leave-game.js";
+export {submitFinalCallHand} from "./final-call/submit-final-hand.js";

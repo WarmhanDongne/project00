@@ -5,12 +5,8 @@ class LiarsPokerService {
   LiarsPokerService({
     LiarsPokerCommandService? command,
     LiarsPokerQueryService? query,
-  }) : command =
-            command ??
-            LiarsPokerCommandService(),
-       query =
-            query ??
-            LiarsPokerQueryService();
+  }) : command = command ?? LiarsPokerCommandService(),
+       query = query ?? LiarsPokerQueryService();
 
   final LiarsPokerCommandService command;
   final LiarsPokerQueryService query;

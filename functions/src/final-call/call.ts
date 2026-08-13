@@ -4,7 +4,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
-import {nextFinalCallPlayer, orderedAlivePlayers, resolveFinalCallRound, startTurn} from "./game.js";
+import {orderedAlivePlayers, resolveFinalCallRound, startTurn} from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {assertFinalCallTurn, FINAL_CALL_REGION, finalCallCommandId,
   finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
@@ -24,7 +24,8 @@ export const callFinalCall = onCall<Data>({region: FINAL_CALL_REGION}, async (re
     const previous = finalCallProcessed(game, commandId);
     if (previous) { response = previous; return room; }
     assertFinalCallTurn(game, uid);
-    if (game.public.phase !== "playing" || game.public.pendingDrawUid !== null) {
+    // Realtime Database는 null 필드를 저장하지 않아 읽을 때 undefined가 됩니다.
+    if (game.public.phase !== "playing" || game.public.pendingDrawUid) {
       throw new HttpsError("failed-precondition", "현재 CALL을 선언할 수 없습니다.");
     }
     const pending = orderedAlivePlayers(game.public.players)
@@ -35,8 +36,8 @@ export const callFinalCall = onCall<Data>({region: FINAL_CALL_REGION}, async (re
     if (pending.length === 0) {
       resolveFinalCallRound(game, now, false);
     } else {
-      game.public.phase = "finalTurns";
-      startTurn(game, nextFinalCallPlayer(game.public.players, uid, new Set(pending)), now);
+      game.public.phase = "callerSubmit";
+      startTurn(game, uid, now);
       game.public.revision += 1;
     }
     response = {success: true, type: "called", callerUid: uid,

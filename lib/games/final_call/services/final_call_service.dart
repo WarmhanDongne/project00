@@ -20,6 +20,9 @@ class FinalCallService {
   Future<Map<String, dynamic>> start(String roomCode, {bool restart = false}) =>
       _call('startFinalCallGame', {'roomCode': roomCode, 'restart': restart});
 
+  Future<Map<String, dynamic>> endGame(String roomCode) =>
+      _call('endFinalCallGame', {'roomCode': roomCode});
+
   Future<Map<String, dynamic>> completeDealing(String roomCode) =>
       _call('completeFinalCallDealing', {'roomCode': roomCode});
 
@@ -37,6 +40,15 @@ class FinalCallService {
 
   Future<Map<String, dynamic>> call(String roomCode) =>
       _call('callFinalCall', {'roomCode': roomCode, 'commandId': _id('call')});
+
+  Future<Map<String, dynamic>> submitFinalHand(
+    String roomCode,
+    List<String> cardIds,
+  ) => _call('submitFinalCallHand', {
+    'roomCode': roomCode,
+    'cardIds': cardIds,
+    'commandId': _id('final_hand'),
+  });
 
   Future<Map<String, dynamic>> nextRound(String roomCode) =>
       _call('startFinalCallNextRound', {'roomCode': roomCode});

@@ -89,9 +89,9 @@ class PhoneHandCardStack extends StatefulWidget {
   final double entryCenterOffsetX;
   final double entryCenterOffsetY;
 
-  double get cardWidth => isLandscape ? 140 : 169;
-  double get spreadStepX => isLandscape ? 110 : 35;
-  double get spreadStepY => isLandscape ? 0 : 35;
+  double get preferredCardWidth => isLandscape ? 140 : 169;
+  double get preferredSpreadStepX => isLandscape ? 110 : 35;
+  double get preferredSpreadStepY => isLandscape ? 0 : 35;
   bool get rightCardOnTop => true;
   bool get spreadToLeft => isLandscape;
 
@@ -434,24 +434,29 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   @override
   Widget build(BuildContext context) {
     if (_isDealing) {
-      return PhoneCardReceiveAnimation(
-        frontCardAssets: _renderCards
-            .map((card) => card.asset)
-            .toList(growable: false),
-        cardWidth: widget.cardWidth,
-        spreadStepX: widget.spreadStepX,
-        spreadStepY: widget.spreadStepY,
-        spreadToLeft: widget.spreadToLeft,
-        entryCenterOffsetX: widget.entryCenterOffsetX,
-        entryCenterOffsetY: widget.entryCenterOffsetY,
-        onRevealStarted: widget.onRevealStarted,
-        onCompleted: () {
-          if (!mounted) return;
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final layout = _resolveLayout(constraints);
+          return PhoneCardReceiveAnimation(
+            frontCardAssets: _renderCards
+                .map((card) => card.asset)
+                .toList(growable: false),
+            cardWidth: layout.cardWidth,
+            spreadStepX: layout.spreadStepX,
+            spreadStepY: layout.spreadStepY,
+            spreadToLeft: widget.spreadToLeft,
+            entryCenterOffsetX: widget.entryCenterOffsetX,
+            entryCenterOffsetY: widget.entryCenterOffsetY,
+            onRevealStarted: widget.onRevealStarted,
+            onCompleted: () {
+              if (!mounted) return;
 
-          setState(() {
-            _isDealing = false;
-          });
-          widget.onRevealCompleted?.call();
+              setState(() {
+                _isDealing = false;
+              });
+              widget.onRevealCompleted?.call();
+            },
+          );
         },
       );
     }
@@ -462,10 +467,11 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
           constraints.hasBoundedWidth ? constraints.maxWidth : 400,
           constraints.hasBoundedHeight ? constraints.maxHeight : 600,
         );
+        final layout = _resolveLayout(constraints);
         final centerX = size.width / 2;
         final centerY = size.height / 2;
         const cardAspectRatio = 512 / 350;
-        final cardHeight = widget.cardWidth * cardAspectRatio;
+        final cardHeight = layout.cardWidth * cardAspectRatio;
         final cardCount = _renderCards.length;
 
         // 선택 여부와 관계없이 원래 손패 순서대로 겹쳐서 그립니다.
@@ -487,7 +493,10 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
                   centerX: centerX,
                   centerY: centerY,
                   containerWidth: size.width,
+                  cardWidth: layout.cardWidth,
                   cardHeight: cardHeight,
+                  spreadStepX: layout.spreadStepX,
+                  spreadStepY: layout.spreadStepY,
                 ),
               Positioned.fill(
                 child: IgnorePointer(
@@ -522,7 +531,10 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     required double centerX,
     required double centerY,
     required double containerWidth,
+    required double cardWidth,
     required double cardHeight,
+    required double spreadStepX,
+    required double spreadStepY,
   }) {
     final centeredIndex = cardIndex - (cardCount - 1) / 2;
     final isSelected = _selectedCardIds.contains(card.id);
@@ -532,11 +544,12 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
             containerWidth: containerWidth,
             cardIndex: cardIndex,
             cardCount: cardCount,
+            cardWidth: cardWidth,
+            spreadStepX: spreadStepX,
           )
-        : centerX + centeredIndex * widget.spreadStepX;
-    final baseLeft = baseCenterX - widget.cardWidth / 2;
-    final baseTop =
-        centerY + centeredIndex * widget.spreadStepY - cardHeight / 2;
+        : centerX + centeredIndex * spreadStepX;
+    final baseLeft = baseCenterX - cardWidth / 2;
+    final baseTop = centerY + centeredIndex * spreadStepY - cardHeight / 2;
     final dragOffset = isSelected ? _dragOffsetY : 0.0;
 
     return AnimatedPositioned(
@@ -580,7 +593,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
             label: isSelected ? '선택된 카드' : '선택하지 않은 카드',
             child: _StaticCardFace(
               asset: card.asset,
-              cardWidth: widget.cardWidth,
+              cardWidth: cardWidth,
               cardHeight: cardHeight,
               isSelected: isSelected,
             ),
@@ -595,22 +608,83 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     required double containerWidth,
     required int cardIndex,
     required int cardCount,
+    required double cardWidth,
+    required double spreadStepX,
   }) {
-    final availableSpread = math.max(
-      0.0,
-      containerWidth - widget.cardWidth - 16,
-    );
+    final availableSpread = math.max(0.0, containerWidth - cardWidth - 16);
     final spreadStep = cardCount <= 1
         ? 0.0
-        : math.min(widget.spreadStepX.abs(), availableSpread / (cardCount - 1));
+        : math.min(spreadStepX.abs(), availableSpread / (cardCount - 1));
     final totalSpread = spreadStep * math.max(0, cardCount - 1);
     final maxAnchorX = math.max(
-      widget.cardWidth / 2,
-      containerWidth - widget.cardWidth / 2 - 8,
+      cardWidth / 2,
+      containerWidth - cardWidth / 2 - 8,
     );
     final rightAnchorX = math.min(centerX + totalSpread / 2, maxAnchorX);
     return rightAnchorX - (cardCount - 1 - cardIndex) * spreadStep;
   }
+
+  /// 실제 손패 영역에 맞춰 카드가 잘리거나 다른 조작부를 침범하지 않게 합니다.
+  _HandLayout _resolveLayout(BoxConstraints constraints) {
+    const cardAspectRatio = 512 / 350;
+    final boundedWidth = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : 400.0;
+    final boundedHeight = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : 600.0;
+    final availableWidth = math.max(120.0, boundedWidth - 16);
+    final availableHeight = math.max(150.0, boundedHeight - 16);
+    final cardCount = math.max(1, _renderCards.length);
+
+    final maxByHeight = availableHeight / cardAspectRatio;
+    final portraitStackHeight =
+        cardAspectRatio * widget.preferredCardWidth +
+        math.max(0, cardCount - 1) * widget.preferredSpreadStepY;
+    final portraitScale = widget.isLandscape || portraitStackHeight <= 0
+        ? 1.0
+        : math.min(1.0, availableHeight / portraitStackHeight);
+    final cardWidth = math.min(
+      widget.preferredCardWidth * portraitScale,
+      math.min(maxByHeight, availableWidth),
+    );
+
+    final horizontalCapacity = math.max(0.0, availableWidth - cardWidth);
+    final spreadStepX = cardCount <= 1
+        ? 0.0
+        : math.min(
+            widget.preferredSpreadStepX * portraitScale,
+            horizontalCapacity / (cardCount - 1),
+          );
+    final verticalCapacity = math.max(
+      0.0,
+      availableHeight - cardWidth * cardAspectRatio,
+    );
+    final spreadStepY = widget.isLandscape || cardCount <= 1
+        ? 0.0
+        : math.min(
+            widget.preferredSpreadStepY * portraitScale,
+            verticalCapacity / (cardCount - 1),
+          );
+
+    return _HandLayout(
+      cardWidth: cardWidth,
+      spreadStepX: spreadStepX,
+      spreadStepY: spreadStepY,
+    );
+  }
+}
+
+class _HandLayout {
+  const _HandLayout({
+    required this.cardWidth,
+    required this.spreadStepX,
+    required this.spreadStepY,
+  });
+
+  final double cardWidth;
+  final double spreadStepX;
+  final double spreadStepY;
 }
 
 class _SelectionLimitMessage extends StatelessWidget {

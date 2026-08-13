@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/final_call/screens/phone/final_call_phone_game.dart';
+import 'package:project00/games/final_call/screens/phone_game.dart'
+    as final_call;
 import 'package:project00/games/final_call/services/final_call_service.dart';
-import 'package:project00/games/liars_poker/screens/phone_game.dart';
+import 'package:project00/games/liars_poker/screens/phone_game.dart'
+    as liars_poker;
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
@@ -94,9 +96,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     _isOpeningGame = true;
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => FinalCallPhoneGame(
+        builder: (_) => final_call.PhoneGame(
           roomCode: roomCode,
-          service: service,
+          gameService: service,
           onExitRoom: widget.provider.leaveFinalCallGame,
         ),
       ),
@@ -116,7 +118,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => PhoneGame(
+        builder: (_) => liars_poker.PhoneGame(
           roomCode: roomCode,
           gameService: gameService,
           onExitRoom: widget.provider.leaveLiarsPokerGame,
