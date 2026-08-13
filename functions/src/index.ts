@@ -66,6 +66,7 @@ export {
 
 export {startFinalCallGame} from "./final-call/start-game.js";
 export {endFinalCallGame} from "./final-call/end-game.js";
+export {clearFinalCallGame} from "./final-call/clear-game.js";
 export {completeFinalCallDealing} from "./final-call/complete-dealing.js";
 export {drawFinalCallCard} from "./final-call/draw-card.js";
 export {completeFinalCallTurn} from "./final-call/complete-turn.js";

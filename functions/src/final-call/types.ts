@@ -69,7 +69,7 @@ export interface FinalCallProcessedCommand {
 export interface FinalCallServerState {
   deck: FinalCallCard[];
   pendingHands?: Record<string, FinalCallPrivatePlayer>;
-  processedCommands: Record<string, FinalCallProcessedCommand>;
+  processedCommands?: Record<string, FinalCallProcessedCommand>;
   roundStarterUid: string;
 }
 

@@ -72,7 +72,7 @@ class PhoneSpectator extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    Assets.games.liarsPoker.images.icons.iconTip.image(
+                    Assets.games.liarsPoker.images.icons.iconRole.image(
                       width: 45,
                       height: 45,
                     ),

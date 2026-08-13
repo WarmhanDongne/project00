@@ -108,7 +108,7 @@ class GamePreviewDialog extends StatelessWidget {
             if (game.id == 'final_call') {
               final finalCallService = FinalCallService();
               try {
-                await finalCallService.start(roomCode);
+                await finalCallService.command.startGame(roomCode: roomCode);
               } catch (error) {
                 if (!layoutContext.mounted) return;
                 _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -72,6 +73,8 @@ class PhoneHandCardStack extends StatefulWidget {
     this.initiallyRevealed = false,
     this.entryCenterOffsetX = 0,
     this.entryCenterOffsetY = 0,
+    this.roundNumber = 1,
+    this.tableRank = 'K',
   }) : assert(maxSelection > 0);
 
   final bool isLandscape;
@@ -88,6 +91,8 @@ class PhoneHandCardStack extends StatefulWidget {
   final bool initiallyRevealed;
   final double entryCenterOffsetX;
   final double entryCenterOffsetY;
+  final int roundNumber;
+  final String tableRank;
 
   double get preferredCardWidth => isLandscape ? 140 : 169;
   double get preferredSpreadStepX => isLandscape ? 110 : 35;
@@ -111,6 +116,8 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   int _nextCardId = 0;
   late bool _isDealing;
+  late bool _showRoundIntro;
+  late bool _showTableIntro;
   bool _isDragging = false;
   bool _isSubmitting = false;
   bool _isReturningSubmittedCards = false;
@@ -125,6 +132,10 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     super.initState();
     widget.controller?._attach(this, _submitSelectedCards);
     _isDealing = !widget.initiallyRevealed;
+    _showRoundIntro = _isDealing && widget.roundNumber > 1;
+    // 첫 라운드는 상위 화면의 GAME START가 먼저 끝난 뒤 이 위젯이 생성됩니다.
+    // 따라서 ROUND 문구 없이 바로 테이블을 안내하고 카드팩을 전달합니다.
+    _showTableIntro = _isDealing && widget.roundNumber == 1;
     _replaceCards(widget.cards ?? _defaultCards);
     _notifySelectionChanged();
   }
@@ -437,6 +448,59 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       return LayoutBuilder(
         builder: (context, constraints) {
           final layout = _resolveLayout(constraints);
+          if (_showRoundIntro) {
+            return FadeHoldFade(
+              key: ValueKey('phone-round-${widget.roundNumber}'),
+              onCompleted: () {
+                if (!mounted) return;
+                setState(() {
+                  _showRoundIntro = false;
+                  _showTableIntro = true;
+                });
+              },
+              child: Center(
+                child: Text(
+                  'ROUND ${widget.roundNumber}',
+                  style: TextStyle(
+                    fontFamily: 'BebasNeue',
+                    color: Colors.white,
+                    fontSize: widget.isLandscape ? 38 : 42,
+                    letterSpacing: 2.2,
+                    shadows: const [
+                      Shadow(color: Colors.black87, blurRadius: 14),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          //=======================이번 라운드 테이블 안내==============================
+          // ROUND 안내와 동일한 모션이 끝난 뒤에만 카드팩을 전달합니다.
+          if (_showTableIntro) {
+            return FadeHoldFade(
+              key: ValueKey(
+                'phone-table-${widget.roundNumber}-${widget.tableRank}',
+              ),
+              onCompleted: () {
+                if (!mounted) return;
+                setState(() => _showTableIntro = false);
+              },
+              child: Center(
+                child: Text(
+                  _tableName(widget.tableRank),
+                  style: TextStyle(
+                    fontFamily: 'BebasNeue',
+                    color: Colors.white,
+                    fontSize: widget.isLandscape ? 38 : 42,
+                    letterSpacing: 2.2,
+                    shadows: const [
+                      Shadow(color: Colors.black87, blurRadius: 14),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
           return PhoneCardReceiveAnimation(
             frontCardAssets: _renderCards
                 .map((card) => card.asset)
@@ -522,6 +586,14 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
         );
       },
     );
+  }
+
+  String _tableName(String rank) {
+    return switch (rank.toUpperCase()) {
+      'A' => 'ACE',
+      'Q' => 'QUEEN',
+      _ => 'KING',
+    };
   }
 
   Widget _buildCard({

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/final_call/screens/phone_game.dart'
     as final_call;
@@ -34,9 +35,13 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   @override
   void initState() {
     super.initState();
+    //=======================플랫폼 세로 화면 고정==============================
+    unawaited(_lockPlatformPortrait());
     widget.provider.addListener(_syncGameStatusSubscription);
     _syncGameStatusSubscription();
   }
+
+  Future<void> _lockPlatformPortrait() => AppOrientation.lockPlatformPortrait();
 
   void _syncGameStatusSubscription() {
     final roomCode = widget.provider.roomCode;
@@ -63,14 +68,13 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     _subscribedGameId = selectedGameId;
     if (selectedGameId == 'final_call') {
       final finalCallService = FinalCallService();
-      _gameStatusSubscription = finalCallService.watchPublic(roomCode).listen((
-        event,
-      ) {
-        final value = event.snapshot.value;
-        if (value is Map && value['status'] == 'playing') {
-          unawaited(_openFinalCall(roomCode, finalCallService));
-        }
-      }, onError: _showStatusError);
+      _gameStatusSubscription = finalCallService.query
+          .watchStatus(roomCode)
+          .listen((event) {
+            if (event.snapshot.value == 'playing') {
+              unawaited(_openFinalCall(roomCode, finalCallService));
+            }
+          }, onError: _showStatusError);
       return;
     }
 
@@ -104,6 +108,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       ),
     );
     _isOpeningGame = false;
+    await _lockPlatformPortrait();
+    if (!mounted) return;
     if (leftRoom == true && mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
@@ -127,6 +133,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     );
 
     _isOpeningGame = false;
+    await _lockPlatformPortrait();
+    if (!mounted) return;
     if (leftRoom == true && mounted) {
       // 참여 코드·닉네임·방 대기 경로를 모두 닫아 휴대폰 홈으로 이동합니다.
       Navigator.of(context).popUntil((route) => route.isFirst);

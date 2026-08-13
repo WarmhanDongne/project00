@@ -12,6 +12,7 @@ class LiarAccusation extends StatefulWidget {
     this.enabled = true,
     this.onAccuse,
     this.onSubmit,
+    this.portraitHeight,
   });
 
   final bool isLandscape;
@@ -19,6 +20,7 @@ class LiarAccusation extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onAccuse;
   final VoidCallback? onSubmit;
+  final double? portraitHeight;
 
   @override
   State<LiarAccusation> createState() => _LiarAccusationState();
@@ -125,10 +127,11 @@ class _LiarAccusationState extends State<LiarAccusation>
     }
 
     //=======================세로 버튼==============================
+    final availableHeight = widget.portraitHeight ?? 193.h.clamp(140.0, 193.0);
     return LiarsPokerArcadeButtonSurface(
       label: label,
-      width: 305.w,
-      height: 205.h,
+      width: math.min(305.w, availableHeight * 1.5),
+      height: availableHeight,
       pressed: _isPressed,
     );
   }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 
 /// 게임별 이미지와 색상만 주입하는 공용 휴대폰 퇴장 모달입니다.
 class SharedPhoneExitModal extends StatelessWidget {
@@ -11,6 +12,7 @@ class SharedPhoneExitModal extends StatelessWidget {
     required this.primaryColor,
     required this.titleColor,
     required this.descriptionColor,
+    this.showSurface = true,
   });
 
   final Widget doorImage;
@@ -18,6 +20,7 @@ class SharedPhoneExitModal extends StatelessWidget {
   final Color primaryColor;
   final Color titleColor;
   final Color descriptionColor;
+  final bool showSurface;
 
   static Future<bool?> show(
     BuildContext context, {
@@ -26,16 +29,20 @@ class SharedPhoneExitModal extends StatelessWidget {
     required Color primaryColor,
     required Color titleColor,
     required Color descriptionColor,
+    Offset? origin,
+    bool showSurface = true,
   }) {
-    return showDialog<bool>(
+    final screenSize = MediaQuery.sizeOf(context);
+    return showPhoneRippleDialog<bool>(
       context: context,
-      barrierColor: const Color(0xB8000000),
+      origin: origin ?? Offset(screenSize.width - 28, 28),
       builder: (_) => SharedPhoneExitModal(
         doorImage: doorImage,
         surfaceColor: surfaceColor,
         primaryColor: primaryColor,
         titleColor: titleColor,
         descriptionColor: descriptionColor,
+        showSurface: showSurface,
       ),
     );
   }
@@ -62,9 +69,8 @@ class SharedPhoneExitModal extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 380),
-      child: _ModalSurface(
-        color: surfaceColor,
-        child: SingleChildScrollView(
+      child: _wrapSurface(
+        SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
             child: Column(
@@ -98,9 +104,8 @@ class SharedPhoneExitModal extends StatelessWidget {
 
     return SizedBox(
       width: modalWidth,
-      child: _ModalSurface(
-        color: surfaceColor,
-        child: Padding(
+      child: _wrapSurface(
+        Padding(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -129,6 +134,11 @@ class SharedPhoneExitModal extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _wrapSurface(Widget child) {
+    if (!showSurface) return child;
+    return _ModalSurface(color: surfaceColor, child: child);
   }
 
   Widget _buildTextContent() {

@@ -57,10 +57,12 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     with TickerProviderStateMixin {
   late final AnimationController _entryController;
   late final AnimationController _revealController;
+  late final AnimationController _idleController;
   late final Listenable _animation;
 
   bool _isEntryCompleted = false;
   bool _isRevealStarted = false;
+  double _revealStartIdleOffsetY = 0;
 
   Duration get _entryDuration => Duration(
     milliseconds: math.max(
@@ -89,7 +91,15 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
       vsync: this,
       duration: _revealDuration,
     )..addStatusListener(_handleRevealStatus);
-    _animation = Listenable.merge([_entryController, _revealController]);
+    _idleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _animation = Listenable.merge([
+      _entryController,
+      _revealController,
+      _idleController,
+    ]);
 
     if (widget.autoplay) {
       _entryController.forward();
@@ -116,6 +126,9 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     setState(() {
       _isEntryCompleted = true;
     });
+    //=======================미공개 덱 대기 모션==============================
+    // 카드가 중앙에 도착한 뒤 사용자가 누를 때까지 아주 작게 떠다닙니다.
+    _idleController.repeat();
   }
 
   void _handleRevealStatus(AnimationStatus status) {
@@ -127,6 +140,8 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
   void _revealCards() {
     if (!_canReveal) return;
 
+    _revealStartIdleOffsetY = _currentIdleOffsetY;
+    _idleController.stop();
     setState(() {
       _isRevealStarted = true;
     });
@@ -142,6 +157,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     _revealController
       ..removeStatusListener(_handleRevealStatus)
       ..dispose();
+    _idleController.dispose();
     super.dispose();
   }
 
@@ -186,7 +202,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
 
     return Positioned(
       left: entryCenterX - widget.cardWidth / 2,
-      top: entryCenterY - cardHeight / 2,
+      top: entryCenterY - cardHeight / 2 + _deckIdleOffsetY,
       width: widget.cardWidth,
       height: cardHeight,
       child: Semantics(
@@ -217,11 +233,9 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     final entryStart = Offset(entryCenter.dx, -cardHeight / 2 - 32);
     final deckOffset = Offset(cardIndex * 0.7, cardIndex * 1.25);
     final deckPosition = entryCenter + deckOffset;
-    final entryPosition = Offset.lerp(
-      entryStart + deckOffset,
-      deckPosition,
-      entryProgress,
-    )!;
+    final entryPosition =
+        Offset.lerp(entryStart + deckOffset, deckPosition, entryProgress)! +
+        Offset(0, _deckIdleOffsetY);
 
     // 1단계: 카드가 겹쳐진 상태에서 덱 전체를 먼저 공개합니다.
     final flipProgress = _intervalProgress(
@@ -361,6 +375,21 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
     return curve.transform(progress);
   }
+
+  /// 클릭 전에는 덱이 천천히 위아래로 움직이고, 클릭한 순간의 위치에서
+  /// 공개 회전 초반에 자연스럽게 중앙으로 복귀합니다.
+  double get _deckIdleOffsetY {
+    if (!_isEntryCompleted) return 0;
+    if (!_isRevealStarted) return _currentIdleOffsetY;
+
+    final settleProgress = Curves.easeOutCubic.transform(
+      (_revealController.value / 0.16).clamp(0.0, 1.0),
+    );
+    return _revealStartIdleOffsetY * (1 - settleProgress);
+  }
+
+  double get _currentIdleOffsetY =>
+      math.sin(_idleController.value * math.pi * 2) * 4;
 }
 
 class _CardFace extends StatelessWidget {

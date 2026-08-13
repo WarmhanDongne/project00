@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/liars_poker/widgets/tablet/rolebook_tablet.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -22,6 +25,8 @@ class _PhoneHomeState extends State<PhoneHome> {
   @override
   void initState() {
     super.initState();
+    //=======================플랫폼 세로 화면 고정==============================
+    unawaited(AppOrientation.lockPlatformPortrait());
     _games = _gameService.fetchGames();
   }
 

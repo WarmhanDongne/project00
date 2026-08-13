@@ -14,6 +14,8 @@ class PhoneGameTopBar extends StatelessWidget {
     this.entryAnimation,
     this.onTipPressed,
     this.onOutPressed,
+    this.onTipPressedAt,
+    this.onOutPressedAt,
   });
 
   final bool isLandscape;
@@ -22,6 +24,8 @@ class PhoneGameTopBar extends StatelessWidget {
   final Animation<double>? entryAnimation;
   final VoidCallback? onTipPressed;
   final VoidCallback? onOutPressed;
+  final ValueChanged<Offset>? onTipPressedAt;
+  final ValueChanged<Offset>? onOutPressedAt;
   final VoidCallback onSettingPressed;
 
   @override
@@ -30,7 +34,7 @@ class PhoneGameTopBar extends StatelessWidget {
       isLandscape: isLandscape,
       leading: leadingWidget,
       center: centerWidget,
-      bookIcon: Assets.games.liarsPoker.images.icons.iconRole.image(
+      bookIcon: Assets.games.liarsPoker.images.icons.iconRolePhone.image(
         fit: BoxFit.contain,
       ),
       outIcon: Assets.games.liarsPoker.images.icons.iconOut.image(
@@ -38,6 +42,8 @@ class PhoneGameTopBar extends StatelessWidget {
       ),
       onBookPressed: onTipPressed ?? onSettingPressed,
       onOutPressed: onOutPressed ?? onSettingPressed,
+      onBookPressedAt: onTipPressedAt,
+      onOutPressedAt: onOutPressedAt,
       itemBuilder: _buildEntry,
     );
   }

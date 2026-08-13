@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
@@ -11,6 +12,10 @@ import 'package:provider/provider.dart';
 void main() async {
   // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화 보장
   WidgetsFlutterBinding.ensureInitialized();
+
+  //=======================플랫폼 기본 방향==============================
+  // 게임이 직접 방향을 변경하기 전까지 모든 플랫폼 화면은 세로입니다.
+  await AppOrientation.lockPlatformPortrait();
 
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
