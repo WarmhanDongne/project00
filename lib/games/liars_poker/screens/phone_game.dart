@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/liars_poker/widgets/phone/result.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/widgets/game_loading_screen.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
 class PhoneGame extends StatefulWidget {
@@ -37,6 +43,10 @@ class _PhoneGameState extends State<PhoneGame> {
   @override
   void initState() {
     super.initState();
+    //=======================세로·가로 화면 허용==============================
+    // Final Call에서 사용한 가로 고정이 남아 있더라도 Liar's Poker에
+    // 진입하는 즉시 세로와 가로 회전을 모두 다시 허용합니다.
+    unawaited(AppOrientation.allowLiarsPokerRotation());
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       _initializationError = '게임에 참여하려면 사용자 인증이 필요합니다.';
@@ -154,6 +164,8 @@ class _PhoneGameState extends State<PhoneGame> {
     _controller
       ?..removeListener(_handleGameStateChanged)
       ..dispose();
+    //=======================플랫폼 세로 화면 복원==============================
+    unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
   }
 
@@ -176,7 +188,42 @@ class _PhoneGameState extends State<PhoneGame> {
       );
     }
 
+    //=======================게임 진입 로딩 화면==============================
+    // 서버의 첫 공개 상태와 개인 손패, 게임 이미지를 모두 준비합니다. 데이터가
+    // 먼저 도착해도 공용 로딩 화면은 최소 2초간 유지된 뒤 게임을 표시합니다.
+    return GameLoadingScreen(
+      background: Assets
+          .games
+          .liarsPoker
+          .images
+          .background
+          .backgroundLoadingPhone
+          .provider(),
+      tips: liarsPokerLoadingTips,
+      prepare: (loadingContext) async {
+        await controller.waitForInitialData();
+        if (!loadingContext.mounted) return;
+        await preloadLiarsPokerAssets(
+          loadingContext,
+          isPhone: true,
+          profileImageUrls: controller.players.values.map(
+            (player) => player.profileImageUrl,
+          ),
+        );
+      },
+      gameBuilder: (_) => _buildGameContent(controller),
+    );
+  }
+
+  Widget _buildGameContent(PhoneGameController controller) {
     final isAlive = !controller.isEliminated;
+
+    //=======================휴대폰 결과 배경==============================
+    // 승리 결과를 발표할 때는 게임 중 손패·상단바·턴 정보·관전 요소를 모두
+    // 제거하고 게임 배경 위에 결과 다이얼로그만 표시합니다.
+    if (controller.isNaturalResult && !controller.isPenaltyResultVisible) {
+      return const _PhoneResultBackground();
+    }
 
     // 가드 클로즈: 살아있을 때 (게임 진행 중) 화면 우선 반환
     if (isAlive || controller.showPenaltyHandOverlay) {
@@ -211,6 +258,30 @@ class _PhoneGameState extends State<PhoneGame> {
         .toList();
 
     return PhoneSpectator(players: survivorPlayers);
+  }
+}
+
+/// 결과 다이얼로그 뒤에 다른 게임 요소가 남지 않게 하는 전용 배경입니다.
+class _PhoneResultBackground extends StatelessWidget {
+  const _PhoneResultBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final background = isLandscape
+        ? Assets.games.liarsPoker.images.background.background
+        : Assets.games.liarsPoker.images.background.backgroundPhone;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SizedBox.expand(
+        child: background.image(
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+        ),
+      ),
+    );
   }
 }
 

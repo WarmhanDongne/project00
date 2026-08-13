@@ -65,15 +65,15 @@ class FinalCallController extends ChangeNotifier {
       : errorMessage!;
 
   void initialize() {
-    _publicSubscription = service
-        .watchPublic(roomCode)
+    _publicSubscription = service.query
+        .watchPublicGame(roomCode)
         .listen(
           _handlePublic,
           onError: (Object error) => _setError('게임 연결이 불안정합니다: $error'),
         );
     if (watchPrivateHand) {
-      _privateSubscription = service
-          .watchHand(roomCode, uid)
+      _privateSubscription = service.query
+          .watchPrivatePlayer(roomCode: roomCode, uid: uid)
           .listen(
             _handlePrivate,
             onError: (Object error) => _setError('손패 연결이 불안정합니다: $error'),
@@ -82,6 +82,21 @@ class FinalCallController extends ChangeNotifier {
   }
 
   void _handlePublic(DatabaseEvent event) {
+    //=======================게임 노드 삭제 감지==============================
+    // 태블릿이 홈으로 이동하며 `rooms/{code}/game`을 정리하면 공개 경로도
+    // null이 됩니다. 휴대폰은 이를 수동 종료로 처리해 플랫폼으로 복귀합니다.
+    if (!event.snapshot.exists || event.snapshot.value == null) {
+      loading = false;
+      status = 'finished';
+      finishReason = 'manual';
+      phase = 'finished';
+      turnUid = null;
+      turnDeadlineAt = null;
+      pendingDrawUid = null;
+      pendingDrawSource = null;
+      notifyListeners();
+      return;
+    }
     if (event.snapshot.value is! Map) return;
     final map = Map<Object?, Object?>.from(event.snapshot.value as Map);
     status = map['status']?.toString() ?? status;
@@ -163,19 +178,29 @@ class FinalCallController extends ChangeNotifier {
   }
 
   Future<bool> draw(String source) =>
-      _run(() => service.draw(roomCode, source));
-  Future<bool> completeTurn(String? replaceCardId) =>
-      _run(() => service.completeTurn(roomCode, replaceCardId));
-  Future<bool> call() => _run(() => service.call(roomCode));
-  Future<bool> submitFinalHand(List<String> cardIds) =>
-      _run(() => service.submitFinalHand(roomCode, cardIds));
+      _run(() => service.command.drawCard(roomCode: roomCode, source: source));
+  Future<bool> completeTurn(String? replaceCardId) => _run(
+    () => service.command.completeTurn(
+      roomCode: roomCode,
+      replaceCardId: replaceCardId,
+    ),
+  );
+  Future<bool> call() => _run(() => service.command.call(roomCode: roomCode));
+  Future<bool> submitFinalHand(List<String> cardIds) => _run(
+    () => service.command.submitFinalHand(roomCode: roomCode, cardIds: cardIds),
+  );
   Future<bool> completeDealing() =>
-      _run(() => service.completeDealing(roomCode));
-  Future<bool> nextRound() => _run(() => service.nextRound(roomCode));
+      _run(() => service.command.completeDealing(roomCode: roomCode));
+  Future<bool> nextRound() =>
+      _run(() => service.command.startNextRound(roomCode: roomCode));
   Future<bool> restartGame() =>
-      _run(() => service.start(roomCode, restart: true));
-  Future<bool> endGame() => _run(() => service.endGame(roomCode));
-  Future<bool> timeoutTurn() => _run(() => service.timeoutTurn(roomCode));
+      _run(() => service.command.restartGame(roomCode: roomCode));
+  Future<bool> endGame() =>
+      _run(() => service.command.endGame(roomCode: roomCode));
+  Future<bool> clearGame() =>
+      _run(() => service.command.clearGame(roomCode: roomCode));
+  Future<bool> timeoutTurn() =>
+      _run(() => service.command.timeoutTurn(roomCode: roomCode));
 
   /// 제한 시간이 끝난 턴은 덱에서 한 장을 가져와 그대로 버립니다.
   ///

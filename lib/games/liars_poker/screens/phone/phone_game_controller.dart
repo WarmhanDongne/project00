@@ -60,6 +60,7 @@ class PhoneGameController extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _handSubscription;
   bool _hasPublicSnapshot = false;
   bool _hasHandSnapshot = false;
+  Completer<void> _initialDataCompleter = Completer<void>();
   String? _lastDealtHandSignature;
 
   String status = 'waiting';
@@ -94,6 +95,8 @@ class PhoneGameController extends ChangeNotifier {
   String? errorMessage;
   String? liarVerdictMessage;
   bool liarVerdictIsFalse = false;
+  bool isLiarVerdictPending = false;
+  Timer? _liarVerdictDelayTimer;
   Timer? _liarVerdictTimer;
   PhonePenaltyResult? penaltyResult;
   bool isPenaltyResultVisible = false;
@@ -101,6 +104,21 @@ class PhoneGameController extends ChangeNotifier {
   String? _activePenaltyResultKey;
 
   bool get isInitialLoading => !_hasPublicSnapshot || !_hasHandSnapshot;
+
+  bool get isEntryDataReady {
+    if (isInitialLoading || phase == 'dealing') return false;
+    final publicPlayer = players[uid];
+    return handCards.isNotEmpty ||
+        publicPlayer?.remainingCardCount == 0 ||
+        publicPlayer?.status == 'eliminated' ||
+        isFinished;
+  }
+
+  /// 공개 게임 상태와 내 개인 손패의 첫 스냅샷이 모두 도착할 때까지 기다립니다.
+  Future<void> waitForInitialData() {
+    if (isEntryDataReady) return Future<void>.value();
+    return _initialDataCompleter.future;
+  }
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
   bool get isNaturalResult =>
@@ -188,6 +206,10 @@ class PhoneGameController extends ChangeNotifier {
     _publicSubscription?.cancel();
     _handSubscription?.cancel();
 
+    if (!isEntryDataReady) {
+      _initialDataCompleter = Completer<void>();
+    }
+
     _publicSubscription = gameService.query
         .watchPublicGame(roomCode)
         .listen(_handlePublicGame, onError: _handleSubscriptionError);
@@ -244,16 +266,18 @@ class PhoneGameController extends ChangeNotifier {
     final declarationWasFalse = nextActualRanks.any(
       (rank) => rank != nextTable && rank != 'JOKER',
     );
+    final delayedVerdictMessage = declarationWasFalse ? '허위 선언입니다' : '진실 선언입니다';
     final nextLiarVerdictMessage = didRevealLiarCards
-        ? declarationWasFalse
-              ? '허위 선언입니다'
-              : '진실 선언입니다'
+        ? null
         : nextPhase == 'penalty'
         ? liarVerdictMessage
         : null;
     final nextLiarVerdictIsFalse = didRevealLiarCards
-        ? declarationWasFalse
+        ? false
         : nextPhase == 'penalty' && liarVerdictIsFalse;
+    final nextLiarVerdictPending = didRevealLiarCards
+        ? true
+        : nextPhase == 'penalty' && isLiarVerdictPending;
 
     final shouldResetReveal =
         nextPhase == 'dealing' && (phase != 'dealing' || round != nextRound);
@@ -277,6 +301,7 @@ class PhoneGameController extends ChangeNotifier {
         lastPlayCardCount != nextLastPlayCardCount ||
         liarVerdictMessage != nextLiarVerdictMessage ||
         liarVerdictIsFalse != nextLiarVerdictIsFalse ||
+        isLiarVerdictPending != nextLiarVerdictPending ||
         hasRevealedHand != nextHasRevealedHand ||
         playersChanged ||
         errorMessage != null;
@@ -300,28 +325,43 @@ class PhoneGameController extends ChangeNotifier {
     lastPlayCardCount = nextLastPlayCardCount;
     liarVerdictMessage = nextLiarVerdictMessage;
     liarVerdictIsFalse = nextLiarVerdictIsFalse;
+    isLiarVerdictPending = nextLiarVerdictPending;
     hasRevealedHand = nextHasRevealedHand;
     errorMessage = null;
 
     if (didRevealLiarCards) {
+      _liarVerdictDelayTimer?.cancel();
       _liarVerdictTimer?.cancel();
-      // 태블릿 공개 애니메이션(약 0.9초)과 이후 3초 판정 대기 시간 동안
-      // 휴대폰 카드 영역에 판정 문구를 유지합니다.
-      _liarVerdictTimer = Timer(const Duration(milliseconds: 3900), () {
-        if (phase != 'penalty' || liarVerdictMessage == null) return;
-        liarVerdictMessage = null;
-        liarVerdictIsFalse = false;
+      final verdictPlayId = nextLastPlayId;
+
+      // 태블릿 카드 공개 상태를 받은 뒤 정확히 1초 후 판정 문구를 표시합니다.
+      _liarVerdictDelayTimer = Timer(const Duration(seconds: 1), () {
+        if (phase != 'penalty' || lastPlayId != verdictPlayId) return;
+        isLiarVerdictPending = false;
+        liarVerdictMessage = delayedVerdictMessage;
+        liarVerdictIsFalse = declarationWasFalse;
         notifyListeners();
+
+        _liarVerdictTimer = Timer(const Duration(milliseconds: 2900), () {
+          if (phase != 'penalty' || liarVerdictMessage == null) return;
+          liarVerdictMessage = null;
+          liarVerdictIsFalse = false;
+          notifyListeners();
+        });
       });
     } else if (nextPhase != 'penalty') {
+      _liarVerdictDelayTimer?.cancel();
+      _liarVerdictDelayTimer = null;
       _liarVerdictTimer?.cancel();
       _liarVerdictTimer = null;
+      isLiarVerdictPending = false;
     }
 
     _syncPenaltyResultVisibility(
       nextPenaltyResult,
       showFullDuration: hadPublicSnapshot,
     );
+    _completeInitialDataIfReady();
     if (hasChanged) notifyListeners();
   }
 
@@ -371,7 +411,13 @@ class PhoneGameController extends ChangeNotifier {
     // 연결 복구 과정에서 동일한 snapshot이 다시 도착하면 카드 위젯과 선택
     // 상태를 그대로 유지합니다. 최초 빈 손패 수신은 로딩 종료를 위해 알립니다.
     if (!handChanged && hadHandSnapshot && !dealVersionChanged) return;
+    _completeInitialDataIfReady();
     notifyListeners();
+  }
+
+  void _completeInitialDataIfReady() {
+    if (!isEntryDataReady || _initialDataCompleter.isCompleted) return;
+    _initialDataCompleter.complete();
   }
 
   bool _sameHandCards(List<PhoneHandCard> left, List<PhoneHandCard> right) {
@@ -606,6 +652,9 @@ class PhoneGameController extends ChangeNotifier {
       return;
     }
     errorMessage = '게임 정보를 불러오지 못했습니다: $error';
+    if (!_initialDataCompleter.isCompleted) {
+      _initialDataCompleter.completeError(error);
+    }
     notifyListeners();
   }
 
@@ -641,6 +690,7 @@ class PhoneGameController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _liarVerdictDelayTimer?.cancel();
     _liarVerdictTimer?.cancel();
     _penaltyResultTimer?.cancel();
     _publicSubscription?.cancel();

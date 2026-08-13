@@ -1,90 +1,14 @@
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:project00/firebase/services/realtime_database_service.dart';
+import 'final_call_command_service.dart';
+import 'final_call_query_service.dart';
 
+/// Final Call의 읽기 구독과 서버 명령을 분리해 제공하는 진입 서비스입니다.
 class FinalCallService {
-  FinalCallService({FirebaseFunctions? functions, FirebaseDatabase? database})
-    : _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
-      _database = database ?? RealtimeDatabaseService.instance;
+  FinalCallService({
+    FinalCallCommandService? command,
+    FinalCallQueryService? query,
+  }) : command = command ?? FinalCallCommandService(),
+       query = query ?? FinalCallQueryService();
 
-  final FirebaseFunctions _functions;
-  final FirebaseDatabase _database;
-
-  Stream<DatabaseEvent> watchPublic(String roomCode) =>
-      _database.ref('rooms/$roomCode/game/public').onValue;
-
-  Stream<DatabaseEvent> watchHand(String roomCode, String uid) =>
-      _database.ref('rooms/$roomCode/game/private/$uid').onValue;
-
-  Future<Map<String, dynamic>> start(String roomCode, {bool restart = false}) =>
-      _call('startFinalCallGame', {'roomCode': roomCode, 'restart': restart});
-
-  Future<Map<String, dynamic>> endGame(String roomCode) =>
-      _call('endFinalCallGame', {'roomCode': roomCode});
-
-  Future<Map<String, dynamic>> completeDealing(String roomCode) =>
-      _call('completeFinalCallDealing', {'roomCode': roomCode});
-
-  Future<Map<String, dynamic>> draw(String roomCode, String source) => _call(
-    'drawFinalCallCard',
-    {'roomCode': roomCode, 'source': source, 'commandId': _id('draw')},
-  );
-
-  Future<Map<String, dynamic>> completeTurn(String roomCode, String? cardId) =>
-      _call('completeFinalCallTurn', {
-        'roomCode': roomCode,
-        'replaceCardId': cardId,
-        'commandId': _id('turn'),
-      });
-
-  Future<Map<String, dynamic>> call(String roomCode) =>
-      _call('callFinalCall', {'roomCode': roomCode, 'commandId': _id('call')});
-
-  Future<Map<String, dynamic>> submitFinalHand(
-    String roomCode,
-    List<String> cardIds,
-  ) => _call('submitFinalCallHand', {
-    'roomCode': roomCode,
-    'cardIds': cardIds,
-    'commandId': _id('final_hand'),
-  });
-
-  Future<Map<String, dynamic>> nextRound(String roomCode) =>
-      _call('startFinalCallNextRound', {'roomCode': roomCode});
-
-  Future<Map<String, dynamic>> timeoutTurn(String roomCode) =>
-      _call('timeoutFinalCallTurn', {'roomCode': roomCode});
-
-  Future<Map<String, dynamic>> _call(
-    String name,
-    Map<String, dynamic> data,
-  ) async {
-    FirebaseFunctionsException? lastError;
-    for (var attempt = 0; attempt < 4; attempt++) {
-      try {
-        final response = await _functions.httpsCallable(name).call(data);
-        return response.data is Map
-            ? Map<String, dynamic>.from(response.data as Map)
-            : const {};
-      } on FirebaseFunctionsException catch (error) {
-        lastError = error;
-        if (attempt == 3 ||
-            !const {
-              'not-found',
-              'aborted',
-              'unavailable',
-              'deadline-exceeded',
-              'internal',
-            }.contains(error.code)) {
-          rethrow;
-        }
-        await Future<void>.delayed(Duration(milliseconds: 220 * (attempt + 1)));
-      }
-    }
-    throw lastError ?? Exception('Final Call 요청 실패');
-  }
-
-  String _id(String prefix) =>
-      '${prefix}_${DateTime.now().microsecondsSinceEpoch}';
+  final FinalCallCommandService command;
+  final FinalCallQueryService query;
 }

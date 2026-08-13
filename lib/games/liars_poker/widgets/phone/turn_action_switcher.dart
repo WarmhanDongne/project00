@@ -12,16 +12,26 @@ class TurnActionSwitcher extends StatefulWidget {
     required this.showLiarButton,
     required this.turnPlayer,
     required this.liarButton,
+    this.portraitControlHeight,
   });
   final bool isLandscape;
   final bool showLiarButton;
   final PhoneGamePlayer? turnPlayer;
   final Widget liarButton;
+  final double? portraitControlHeight;
 
-  double get controlHeight => isLandscape ? 170 : 193.h.clamp(168.0, 205.0);
-  double get profileSize => isLandscape ? 72 : 100.w.clamp(78.0, 108.0);
-  double get nicknameFontSize => isLandscape ? 22 : 30.sp.clamp(21.0, 30.0);
-  double get spacing => isLandscape ? 8 : 10.h.clamp(7.0, 11.0);
+  double get controlHeight =>
+      isLandscape ? 170 : portraitControlHeight ?? 193.h.clamp(140.0, 193.0);
+
+  /// 세로 화면은 실제 조작 영역 높이를 기준으로 내부 요소를 계산합니다.
+  /// ScreenUtil의 너비·높이 배율이 서로 다른 긴 화면에서도 Column의 합계가
+  /// 고정 프레임을 넘지 않도록 프로필·간격·텍스트가 같은 기준을 사용합니다.
+  double get profileSize =>
+      isLandscape ? 72 : (controlHeight * 0.52).clamp(76.0, 100.0);
+  double get nicknameFontSize =>
+      isLandscape ? 22 : (controlHeight * 0.15).clamp(20.0, 28.0);
+  double get spacing =>
+      isLandscape ? 8 : (controlHeight * 0.04).clamp(6.0, 9.0);
 
   @override
   State<TurnActionSwitcher> createState() => _TurnActionSwitcherState();
@@ -63,13 +73,21 @@ class TurnActionSwitcher extends StatefulWidget {
 
   /// 서로 크기가 다른 버튼과 턴 정보를 같은 전환 영역으로 맞춥니다.
   Widget _buildControlFrame({required Key key, required Widget child}) {
+    final fittedChild = isLandscape
+        ? Align(alignment: Alignment.center, child: child)
+        : Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Align(
+              alignment: Alignment.center,
+              child: FittedBox(fit: BoxFit.scaleDown, child: child),
+            ),
+          );
+
     return SizedBox(
       key: key,
       width: double.infinity,
       height: controlHeight,
-      child: RepaintBoundary(
-        child: Align(alignment: Alignment.center, child: child),
-      ),
+      child: RepaintBoundary(child: fittedChild),
     );
   }
 }
@@ -235,6 +253,7 @@ class TurnPlayerIndicator extends StatelessWidget {
 
     //=======================세로 턴 정보==============================
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         PhonePlayerProfile(player: player, size: profileSize),

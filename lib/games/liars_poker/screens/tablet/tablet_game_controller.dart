@@ -50,12 +50,20 @@ class TabletGameController extends ChangeNotifier {
   PlayerLayoutPlayer? penaltyPlayer;
   List<SubmittedPlay> roundPlays = const [];
   String? activeAnimationPlayId;
+  List<String> profileImageUrls = const [];
 
   List<int> remainingCardCounts;
 
   bool _hasReceivedPublicGame = false;
+  Completer<void> _initialDataCompleter = Completer<void>();
 
   int get playerCount => playerLayout.playerCount;
+
+  /// 서버에서 공개 게임 상태의 첫 유효 스냅샷을 받을 때까지 기다립니다.
+  Future<void> waitForInitialData() {
+    if (_hasReceivedPublicGame) return Future<void>.value();
+    return _initialDataCompleter.future;
+  }
 
   List<int> get seatIndexes => playerLayout.seatIndexes;
 
@@ -74,14 +82,16 @@ class TabletGameController extends ChangeNotifier {
     return switch (status) {
       GameStatus.playing ||
       GameStatus.cardsPlaying ||
-      GameStatus.cardsRevealing ||
-      GameStatus.penalty => true,
+      GameStatus.cardsRevealing => true,
       _ => false,
     };
   }
 
   void initialize() {
     _publicGameSubscription?.cancel();
+    if (!_hasReceivedPublicGame) {
+      _initialDataCompleter = Completer<void>();
+    }
     unawaited(_warmUpGameplayCommands());
     _publicGameSubscription = gameService.query
         .watchPublicGame(roomCode)
@@ -172,6 +182,9 @@ class TabletGameController extends ChangeNotifier {
     }
 
     _hasReceivedPublicGame = true;
+    if (!_initialDataCompleter.isCompleted) {
+      _initialDataCompleter.complete();
+    }
     table = snapshot.table;
     serverPhase = snapshot.phase;
     roundNumber = snapshot.round;
@@ -181,6 +194,18 @@ class TabletGameController extends ChangeNotifier {
     winnerPlayer = snapshot.playerByUid(winnerUid, playerLayout);
     penaltyTargetUid = snapshot.penaltyTargetUid;
     penaltyPlayer = snapshot.playerByUid(penaltyTargetUid, playerLayout);
+    profileImageUrls = List.unmodifiable(
+      playerLayout.players
+          .map((player) {
+            final publicPlayer = snapshot.players[player.uid];
+            if (publicPlayer is Map) {
+              final url = publicPlayer['profileImageUrl'];
+              if (url is String && url.trim().isNotEmpty) return url.trim();
+            }
+            return player.profileImageUrl.trim();
+          })
+          .where((url) => url.isNotEmpty),
+    );
     penaltyAttemptCount = snapshot.penaltyAttemptCount;
     isResolvingPenalty = false;
     isInsufficientPlayersEnding =
@@ -228,6 +253,9 @@ class TabletGameController extends ChangeNotifier {
   }
 
   void _handlePublicGameError(Object error) {
+    if (!_initialDataCompleter.isCompleted) {
+      _initialDataCompleter.completeError(error);
+    }
     onError('게임 상태를 불러오지 못했습니다.', error);
   }
 

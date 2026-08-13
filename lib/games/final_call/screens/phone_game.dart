@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
@@ -42,12 +42,7 @@ class _PhoneGameState extends State<PhoneGame> {
   void initState() {
     super.initState();
     //=======================가로 화면 고정==============================
-    unawaited(
-      SystemChrome.setPreferredOrientations(const [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]),
-    );
+    unawaited(AppOrientation.lockFinalCallLandscape());
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       initializationError = '게임에 참여하려면 사용자 인증이 필요합니다.';
@@ -117,7 +112,7 @@ class _PhoneGameState extends State<PhoneGame> {
       ?..removeListener(_handleState)
       ..dispose();
     //=======================다른 화면 방향 복원==============================
-    unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
+    unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
   }
 

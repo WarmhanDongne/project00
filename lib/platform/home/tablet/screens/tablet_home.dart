@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
@@ -17,8 +20,15 @@ class TabletHome extends StatefulWidget {
 
 class _TabletHomeState extends State<TabletHome> {
   final RoomProvider roomProvider = RoomProvider();
-  final GameProvider gameProvider=GameProvider();
+  final GameProvider gameProvider = GameProvider();
   String searchWord = '';
+
+  @override
+  void initState() {
+    super.initState();
+    //=======================플랫폼 세로 화면 고정==============================
+    unawaited(AppOrientation.lockPlatformPortrait());
+  }
 
   void searchChanged(String value) {
     setState(() {
@@ -64,7 +74,12 @@ class _TabletHomeState extends State<TabletHome> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: GameList(roomProvider: roomProvider, gameProvider: gameProvider),),
+                  Expanded(
+                    child: GameList(
+                      roomProvider: roomProvider,
+                      gameProvider: gameProvider,
+                    ),
+                  ),
                   const SizedBox(width: 24),
                   TabletRoomPanel(provider: roomProvider),
                 ],

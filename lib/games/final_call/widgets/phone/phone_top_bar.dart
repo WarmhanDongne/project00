@@ -21,39 +21,49 @@ class FinalCallPhoneTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final me = controller.players[controller.uid];
-    return SharedPhoneGameTopBar(
-      isLandscape: isLandscape,
-      center:
-          controller.turnDeadlineAt != null &&
-              controller.isMyTurn &&
-              controller.status == 'playing' &&
-              controller.phase != 'roundResult' &&
-              controller.phase != 'dealing'
-          ? FinalCallTimer(
+    final timerVisible =
+        controller.turnDeadlineAt != null &&
+        controller.isMyTurn &&
+        controller.status == 'playing' &&
+        controller.phase != 'roundResult' &&
+        controller.phase != 'dealing';
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        SharedPhoneGameTopBar(
+          isLandscape: isLandscape,
+          trailingLeading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var index = 0; index < (me?.lives ?? 0); index++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Assets.games.finalCall.images.icons.iconHeart.image(
+                    width: isLandscape ? 18 : 20,
+                  ),
+                ),
+            ],
+          ),
+          bookIcon: Assets.games.finalCall.images.icons.iconRole.image(
+            fit: BoxFit.contain,
+          ),
+          outIcon: Assets.games.finalCall.images.icons.iconOut.image(
+            fit: BoxFit.contain,
+          ),
+          onBookPressed: onBookPressed,
+          onOutPressed: onOutPressed,
+        ),
+        //=======================내 턴 타이머==============================
+        if (timerVisible)
+          Transform.translate(
+            offset: const Offset(62, 0),
+            child: FinalCallTimer(
               key: ValueKey(controller.turnDeadlineAt),
               deadline: controller.turnDeadlineAt!,
-            )
-          : null,
-      trailingLeading: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var index = 0; index < (me?.lives ?? 0); index++)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Assets.games.finalCall.images.icons.iconHeart.image(
-                width: isLandscape ? 18 : 20,
-              ),
             ),
-        ],
-      ),
-      bookIcon: Assets.games.finalCall.images.icons.iconRole.image(
-        fit: BoxFit.contain,
-      ),
-      outIcon: Assets.games.finalCall.images.icons.iconOut.image(
-        fit: BoxFit.contain,
-      ),
-      onBookPressed: onBookPressed,
-      onOutPressed: onOutPressed,
+          ),
+      ],
     );
   }
 }

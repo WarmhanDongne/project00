@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_animation.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_layer.dart';
@@ -39,6 +40,8 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
   @override
   void initState() {
     super.initState();
+    //=======================파이널 콜 가로 화면 고정==============================
+    unawaited(AppOrientation.lockFinalCallLandscape());
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       initializationError = '게임 진행 기기 인증을 확인할 수 없습니다.';
@@ -98,7 +101,15 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
   Future<void> _endGameAndReturnToLobby() async {
     final ended = await controller?.endGame() ?? false;
     if (!mounted || !ended) return;
+    final cleared = await controller?.clearGame() ?? false;
+    if (!mounted || !cleared) return;
     Navigator.of(context).maybePop();
+  }
+
+  Future<void> _returnHomeAfterResult() async {
+    final cleared = await controller?.clearGame() ?? false;
+    if (!mounted || !cleared) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -108,6 +119,8 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
     controller
       ?..removeListener(_handleState)
       ..dispose();
+    //=======================플랫폼 세로 화면 복원==============================
+    unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
   }
 
@@ -148,7 +161,7 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
                 FinalCallResultOverlay(
                   winner: game.players[game.winnerUid],
                   onRestart: () => game.restartGame(),
-                  onHome: () => Navigator.of(context).pop(),
+                  onHome: () => unawaited(_returnHomeAfterResult()),
                 ),
               if (game.commandInFlight)
                 const Positioned(

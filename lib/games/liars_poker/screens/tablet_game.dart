@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_animation.dart';
@@ -11,6 +13,8 @@ import 'package:project00/games/liars_poker/screens/tablet/tablet_game_layer.dar
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_overlay.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_penalty.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/games/shared/animations/mat_unroll_animation.dart';
+import 'package:project00/games/shared/widgets/game_loading_screen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
@@ -34,15 +38,26 @@ class LiarsPokerTabletGame extends StatefulWidget {
   State<LiarsPokerTabletGame> createState() => TabletGameState();
 }
 
-class TabletGameState extends State<LiarsPokerTabletGame> {
+class TabletGameState extends State<LiarsPokerTabletGame>
+    with SingleTickerProviderStateMixin {
   late final TabletGameController _controller;
+  late final AnimationController _exitMatController;
   bool _hasScheduledInsufficientPlayersExit = false;
+  bool _isExitingToLobby = false;
 
   GameStatus get gameStatus => _controller.status;
 
   @override
   void initState() {
     super.initState();
+    //=======================라이어스 포커 세로·가로 허용==============================
+    unawaited(AppOrientation.allowLiarsPokerRotation());
+    _exitMatController = AnimationController(
+      vsync: this,
+      value: 1,
+      duration: const Duration(milliseconds: 900),
+      reverseDuration: const Duration(milliseconds: 820),
+    );
     _controller = TabletGameController(
       playerLayout: widget.playerLayout,
       roomCode: widget.roomCode,
@@ -102,8 +117,21 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
   }
 
   Future<void> _endGameAndReturnToLobby() async {
+    if (_isExitingToLobby) return;
+    _isExitingToLobby = true;
+
     final ended = await _controller.endGame();
-    if (!mounted || !ended) return;
+    if (!mounted) return;
+    if (!ended) {
+      _isExitingToLobby = false;
+      return;
+    }
+
+    //=======================게임 화면 매트 퇴장==============================
+    // 서버의 게임 종료 처리가 완료된 뒤 현재 게임 화면 전체를 위쪽으로 말아
+    // 없애고, 애니메이션이 끝난 시점에 기존 태블릿 방 화면으로 복귀합니다.
+    await _exitMatController.reverse();
+    if (!mounted) return;
     _returnToLobby();
   }
 
@@ -124,6 +152,43 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
 
   @override
   Widget build(BuildContext context) {
+    //=======================게임 진입 로딩 화면==============================
+    // 태블릿 공개 상태와 플레이어 프로필·게임 이미지를 먼저 준비합니다.
+    return AnimatedBuilder(
+      animation: _exitMatController,
+      child: GameLoadingScreen(
+        background: Assets
+            .games
+            .liarsPoker
+            .images
+            .background
+            .backgroundLoadingTablet
+            .provider(),
+        tips: liarsPokerLoadingTips,
+        prepare: (loadingContext) async {
+          await _controller.waitForInitialData();
+          if (!loadingContext.mounted) return;
+          await preloadLiarsPokerAssets(
+            loadingContext,
+            isPhone: false,
+            profileImageUrls: _controller.profileImageUrls,
+          );
+        },
+        gameBuilder: (_) => _buildGameContent(),
+      ),
+      builder: (context, child) {
+        return AbsorbPointer(
+          absorbing: _isExitingToLobby,
+          child: MatUnrollAnimation(
+            progress: _exitMatController.value,
+            child: child!,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameContent() {
     return Scaffold(
       backgroundColor: Colors.black,
       body: AnimatedBuilder(
@@ -203,23 +268,49 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   ),
                 ),
 
-              //=======================벌칙 룰렛==============================
-              if (_controller.status == GameStatus.penalty &&
-                  !_controller.isInsufficientPlayersEnding)
-                Positioned.fill(
-                  child: TabletGamePenalty(
-                    key: ValueKey(
-                      '${_controller.penaltyTargetUid}_'
-                      '${_controller.penaltyAttemptCount}_'
-                      '${_controller.rouletteRetry}',
-                    ),
-                    attemptCount: _controller.penaltyAttemptCount,
-                    profileImageUrl:
-                        _controller.penaltyPlayer?.profileImageUrl ?? '',
-                    isResolving: _controller.isResolvingPenalty,
-                    onResult: _controller.resolveRoulette,
+              //=======================벌칙 룰렛 퇴장==============================
+              // 이 슬롯은 항상 유지합니다. 상태가 dealing으로 바뀌면 아래 기본
+              // 레이어에 다음 카드팩이 먼저 생성되고, 이전 룰렛만 축소·페이드됩니다.
+              Positioned.fill(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 720),
+                  reverseDuration: const Duration(milliseconds: 720),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    fit: StackFit.expand,
+                    children: [...previousChildren, ?currentChild],
                   ),
+                  transitionBuilder: (child, animation) {
+                    final scale = Tween<double>(begin: 0.72, end: 1).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    );
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(scale: scale, child: child),
+                    );
+                  },
+                  child:
+                      _controller.status == GameStatus.penalty &&
+                          !_controller.isInsufficientPlayersEnding
+                      ? TabletGamePenalty(
+                          key: ValueKey(
+                            '${_controller.penaltyTargetUid}_'
+                            '${_controller.penaltyAttemptCount}_'
+                            '${_controller.rouletteRetry}',
+                          ),
+                          attemptCount: _controller.penaltyAttemptCount,
+                          profileImageUrl:
+                              _controller.penaltyPlayer?.profileImageUrl ?? '',
+                          isResolving: _controller.isResolvingPenalty,
+                          onResult: _controller.resolveRoulette,
+                        )
+                      : null,
                 ),
+              ),
               Positioned.fill(
                 child: TabletGameOverlay(
                   provider: widget.provider,
@@ -238,6 +329,9 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
   @override
   void dispose() {
     _controller.dispose();
+    _exitMatController.dispose();
+    //=======================플랫폼 세로 화면 복원==============================
+    unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
   }
 }

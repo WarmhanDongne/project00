@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/liars_poker/animations/phone_game_start_animation.dart';
+import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
@@ -16,6 +17,7 @@ import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
+import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 기기 방향에 따라 가로·세로 배치를 전환하는 휴대폰 게임 화면입니다.
@@ -102,8 +104,8 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     });
   }
 
-  Future<void> _showExitModal() async {
-    final shouldExit = await PhoneExitModal.show(context);
+  Future<void> _showExitModal({Offset? origin}) async {
+    final shouldExit = await PhoneExitModal.show(context, origin: origin);
     if (!mounted || shouldExit != true) return;
 
     final left = await widget.onExitRoom?.call() ?? false;
@@ -140,6 +142,12 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     final showTwoPlayerPassPrompt =
         controller?.showTwoPlayerPassPrompt ?? false;
     final showPenaltyHandOverlay = controller?.showPenaltyHandOverlay ?? false;
+    // 허위 선언 판정 문구를 보여주는 동안에는 기존 요청대로 손패를
+    // 어둡게 유지하고, 실제 벌칙 진행 및 결과 표시 단계에서는 숨깁니다.
+    final hideHandDuringPenalty =
+        showPenaltyHandOverlay &&
+        controller?.liarVerdictMessage == null &&
+        controller?.isLiarVerdictPending != true;
     final isGameStartReady =
         controller == null ||
         (!controller.isInitialLoading &&
@@ -189,6 +197,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
         waitingMessage: waitingMessage,
         showTwoPlayerPassPrompt: showTwoPlayerPassPrompt,
         showPenaltyHandOverlay: showPenaltyHandOverlay,
+        hideHandDuringPenalty: hideHandDuringPenalty,
         showGameStart: showGameStart,
       );
     }
@@ -201,6 +210,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
       waitingMessage: waitingMessage,
       showTwoPlayerPassPrompt: showTwoPlayerPassPrompt,
       showPenaltyHandOverlay: showPenaltyHandOverlay,
+      hideHandDuringPenalty: hideHandDuringPenalty,
       showGameStart: showGameStart,
     );
   }
@@ -214,6 +224,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     required String? waitingMessage,
     required bool showTwoPlayerPassPrompt,
     required bool showPenaltyHandOverlay,
+    required bool hideHandDuringPenalty,
     required bool showGameStart,
   }) {
     return Scaffold(
@@ -221,6 +232,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
         builder: (context, constraints) {
           final layout = _PortraitGameLayout.fromSize(
             Size(constraints.maxWidth, constraints.maxHeight),
+            bottomSafeArea: MediaQuery.paddingOf(context).bottom,
           );
 
           return Stack(
@@ -253,6 +265,9 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     },
                     onTipPressed: _showRules,
                     onOutPressed: () => unawaited(_showExitModal()),
+                    onTipPressedAt: _showRules,
+                    onOutPressedAt: (origin) =>
+                        unawaited(_showExitModal(origin: origin)),
                   ),
                 ),
               //=======================타이머==============================
@@ -319,11 +334,13 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   right: 0,
                   child: TurnActionSwitcher(
                     isLandscape: false,
+                    portraitControlHeight: layout.actionHeight,
                     showLiarButton: controller?.isMyTurn ?? true,
                     turnPlayer: turnPlayer,
                     liarButton: _buildGameActionButton(
                       controller,
                       isLandscape: false,
+                      portraitHeight: layout.actionHeight,
                     ),
                   ),
                 ),
@@ -345,41 +362,29 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   ),
                 ),
               //=======================손패==============================
-              Positioned(
-                key: const ValueKey('portrait-hand-slot'),
-                top: layout.handTop,
-                left: 0,
-                right: 0,
-                height: layout.handHeight,
-                child: RepaintBoundary(
-                  child: _buildHand(
-                    controller,
-                    isLandscape: false,
-                    dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
-                  ),
-                ),
-              ),
-              //=======================라이어 판정·벌칙 문구==============================
-              if (showPenaltyHandOverlay && controller != null)
+              if (!hideHandDuringPenalty)
                 Positioned(
-                  key: const ValueKey('portrait-penalty-message-slot'),
+                  key: const ValueKey('portrait-hand-slot'),
                   top: layout.handTop,
                   left: 0,
                   right: 0,
                   height: layout.handHeight,
-                  child: controller.liarVerdictMessage != null
-                      ? _PenaltyHandOverlay(
-                          message: controller.liarVerdictMessage!,
-                          isFalseDeclaration: controller.liarVerdictIsFalse,
-                        )
-                      : const SizedBox.shrink(),
+                  child: RepaintBoundary(
+                    child: _buildHand(
+                      controller,
+                      isLandscape: false,
+                      dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
+                    ),
+                  ),
                 ),
-              if (showPenaltyHandOverlay &&
-                  controller != null &&
-                  controller.liarVerdictMessage == null)
+              //=======================라이어 판정·벌칙 전환==============================
+              if (showPenaltyHandOverlay && controller != null)
                 Positioned.fill(
-                  key: const ValueKey('portrait-penalty-status-slot'),
-                  child: PhonePenaltyStatus(
+                  key: const ValueKey('portrait-penalty-stage-slot'),
+                  child: _PenaltyStageSwitcher(
+                    verdictMessage: controller.liarVerdictMessage,
+                    verdictIsFalse: controller.liarVerdictIsFalse,
+                    verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
                   ),
@@ -443,6 +448,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     required String? waitingMessage,
     required bool showTwoPlayerPassPrompt,
     required bool showPenaltyHandOverlay,
+    required bool hideHandDuringPenalty,
     required bool showGameStart,
   }) {
     return Scaffold(
@@ -494,6 +500,9 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                       },
                       onTipPressed: _showRules,
                       onOutPressed: () => unawaited(_showExitModal()),
+                      onTipPressedAt: _showRules,
+                      onOutPressedAt: (origin) =>
+                          unawaited(_showExitModal(origin: origin)),
                     ),
                   ),
                 ),
@@ -524,43 +533,33 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   ),
                 ),
               //=======================손패==============================
-              Positioned(
-                key: const ValueKey('landscape-hand-slot'),
-                top: 72,
-                bottom: 8,
-                left: sidePadding,
-                right: controlsWidth + 24,
-                child: RepaintBoundary(
-                  child: _buildHand(
-                    controller,
-                    isLandscape: true,
-                    // 손패 영역은 오른쪽 조작부만큼 좁으므로, 최초 덱은
-                    // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
-                    entryCenterOffsetX: controlsWidth / 2 + 4,
-                    entryCenterOffsetY: -32,
-                    dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
-                  ),
-                ),
-              ),
-              //=======================라이어 판정·벌칙 문구==============================
-              if (showPenaltyHandOverlay &&
-                  controller.liarVerdictMessage != null)
+              if (!hideHandDuringPenalty)
                 Positioned(
-                  key: const ValueKey('landscape-penalty-message-slot'),
+                  key: const ValueKey('landscape-hand-slot'),
                   top: 72,
                   bottom: 8,
                   left: sidePadding,
                   right: controlsWidth + 24,
-                  child: _PenaltyHandOverlay(
-                    message: controller.liarVerdictMessage!,
-                    isFalseDeclaration: controller.liarVerdictIsFalse,
+                  child: RepaintBoundary(
+                    child: _buildHand(
+                      controller,
+                      isLandscape: true,
+                      // 손패 영역은 오른쪽 조작부만큼 좁으므로, 최초 덱은
+                      // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
+                      entryCenterOffsetX: controlsWidth / 2 + 4,
+                      entryCenterOffsetY: -32,
+                      dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
+                    ),
                   ),
                 ),
-              if (showPenaltyHandOverlay &&
-                  controller.liarVerdictMessage == null)
+              //=======================라이어 판정·벌칙 전환==============================
+              if (showPenaltyHandOverlay)
                 Positioned.fill(
-                  key: const ValueKey('landscape-penalty-status-slot'),
-                  child: PhonePenaltyStatus(
+                  key: const ValueKey('landscape-penalty-stage-slot'),
+                  child: _PenaltyStageSwitcher(
+                    verdictMessage: controller.liarVerdictMessage,
+                    verdictIsFalse: controller.liarVerdictIsFalse,
+                    verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
                   ),
@@ -652,9 +651,11 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  void _showRules() {
-    showDialog<void>(
+  void _showRules([Offset? origin]) {
+    final screenSize = MediaQuery.sizeOf(context);
+    showPhoneRippleDialog<void>(
       context: context,
+      origin: origin ?? Offset(screenSize.width - 82, 28),
       builder: (_) => const PhoneGameRuleDialog(
         title: "LIAR'S POKER",
         rules:
@@ -665,6 +666,8 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
             '마지막까지 살아남은 플레이어가 승리합니다.',
         surfaceColor: Color(0xFF142119),
         foregroundColor: Colors.white,
+        showSurface: false,
+        dismissOnAnyTap: true,
       ),
     );
   }
@@ -720,6 +723,8 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
         enabled: controller.canSelectCards,
         submissionEnabled: controller.canSubmitCards,
         initiallyRevealed: controller.hasRevealedHand,
+        roundNumber: controller.round,
+        tableRank: controller.table,
         onRevealStarted: _markRevealStarted,
         onRevealCompleted: _handleRevealCompleted,
         onCardsSubmitRequested: controller.submitCardIndexes,
@@ -807,6 +812,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
   Widget _buildGameActionButton(
     PhoneGameController? controller, {
     required bool isLandscape,
+    double? portraitHeight,
   }) {
     return AnimatedBuilder(
       animation: _handCardStackController,
@@ -820,6 +826,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
         return LiarAccusation(
           isLandscape: isLandscape,
+          portraitHeight: portraitHeight,
           showSubmit: showSubmit,
           enabled: enabled,
           onAccuse: controller == null
@@ -906,16 +913,19 @@ class _CenteredGameMessage extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'BebasNeue',
-              fontSize: isLandscape ? 31 : 30.sp,
-              height: 1.18,
-              letterSpacing: 0.5,
-              color: Colors.white,
-              shadows: const [Shadow(color: Colors.black87, blurRadius: 12)],
+          child: FadeHoldFade(
+            key: ValueKey(message),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'BebasNeue',
+                fontSize: isLandscape ? 31 : 30.sp,
+                height: 1.18,
+                letterSpacing: 0.5,
+                color: Colors.white,
+                shadows: const [Shadow(color: Colors.black87, blurRadius: 12)],
+              ),
             ),
           ),
         ),
@@ -927,6 +937,7 @@ class _CenteredGameMessage extends StatelessWidget {
 /// 라이어 판정 공개와 패널티 진행 상태를 손패 중앙에 표시합니다.
 class _PenaltyHandOverlay extends StatelessWidget {
   const _PenaltyHandOverlay({
+    super.key,
     required this.message,
     required this.isFalseDeclaration,
   });
@@ -941,13 +952,13 @@ class _PenaltyHandOverlay extends StatelessWidget {
 
     return IgnorePointer(
       child: Center(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 280),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
+        child: FadeHoldFade(
+          key: ValueKey(message),
+          duration: const Duration(milliseconds: 2900),
+          beginScale: 0.96,
+          endScale: 0.96,
           child: Text(
             message,
-            key: ValueKey(message),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'BebasNeue',
@@ -961,6 +972,184 @@ class _PenaltyHandOverlay extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 허위 선언 판정에서 벌칙 진행 화면으로 전환합니다.
+///
+/// 판정 문구와 벌칙 프로필 모두 화면 중앙에서 페이드·미세 확대 애니메이션으로
+/// 등장하며, 오른쪽에서 밀려오는 이동은 사용하지 않습니다.
+class _PenaltyStageSwitcher extends StatefulWidget {
+  const _PenaltyStageSwitcher({
+    required this.verdictMessage,
+    required this.verdictIsFalse,
+    required this.verdictPending,
+    required this.player,
+    required this.result,
+  });
+
+  final String? verdictMessage;
+  final bool verdictIsFalse;
+  final bool verdictPending;
+  final PhoneGamePlayer? player;
+  final String? result;
+
+  String get stageId => verdictPending
+      ? 'verdict-pending'
+      : verdictMessage == null
+      ? 'penalty-status'
+      : 'verdict-$verdictMessage';
+
+  Widget buildStage() {
+    if (verdictPending) {
+      return const SizedBox.expand(key: ValueKey('verdict-pending'));
+    }
+    final message = verdictMessage;
+    return message != null
+        ? _PenaltyHandOverlay(
+            key: ValueKey('verdict-$message'),
+            message: message,
+            isFalseDeclaration: verdictIsFalse,
+          )
+        : PhonePenaltyStatus(
+            key: const ValueKey('penalty-status'),
+            player: player,
+            result: result,
+          );
+  }
+
+  @override
+  State<_PenaltyStageSwitcher> createState() => _PenaltyStageSwitcherState();
+}
+
+class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
+    with SingleTickerProviderStateMixin {
+  static const _transitionDuration = Duration(milliseconds: 540);
+
+  late final AnimationController _controller;
+  late String _displayedStageId;
+  late Widget _displayedStage;
+  String? _pendingStageId;
+  Widget? _pendingStage;
+  bool _hasSwappedStage = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedStageId = widget.stageId;
+    _displayedStage = widget.buildStage();
+    _controller =
+        AnimationController(
+            vsync: this,
+            duration: _transitionDuration,
+            value: 1,
+          )
+          ..addListener(_handleAnimationProgress)
+          ..addStatusListener(_handleAnimationStatus);
+  }
+
+  @override
+  void didUpdateWidget(_PenaltyStageSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final nextStageId = widget.stageId;
+    final nextStage = widget.buildStage();
+
+    if (_controller.isAnimating) {
+      if (nextStageId == _pendingStageId) {
+        _pendingStage = nextStage;
+        if (_hasSwappedStage) _displayedStage = nextStage;
+      } else if (nextStageId == _displayedStageId) {
+        _displayedStage = nextStage;
+      }
+      return;
+    }
+
+    if (nextStageId == _displayedStageId) {
+      _displayedStage = nextStage;
+      return;
+    }
+
+    _pendingStageId = nextStageId;
+    _pendingStage = nextStage;
+    _hasSwappedStage = false;
+    _controller.forward(from: 0);
+  }
+
+  void _handleAnimationProgress() {
+    if (_hasSwappedStage || _controller.value < 0.5) return;
+
+    final pendingStageId = _pendingStageId;
+    final pendingStage = _pendingStage;
+    if (pendingStageId == null || pendingStage == null || !mounted) return;
+
+    setState(() {
+      _displayedStageId = pendingStageId;
+      _displayedStage = pendingStage;
+      _hasSwappedStage = true;
+    });
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _pendingStageId = null;
+    _pendingStage = null;
+    _hasSwappedStage = true;
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleAnimationProgress);
+    _controller.removeStatusListener(_handleAnimationStatus);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final travelDistance = constraints.maxWidth;
+
+          return AnimatedBuilder(
+            animation: _controller,
+            child: _displayedStage,
+            builder: (context, child) {
+              final value = _controller.value;
+              final isExitingVerdict =
+                  value < 0.5 && _displayedStageId.startsWith('verdict-');
+              if (isExitingVerdict) {
+                final exitProgress = Curves.easeInCubic.transform(value * 2);
+                return Opacity(
+                  opacity: 1 - exitProgress,
+                  child: Transform.scale(
+                    scale: 1 - (0.04 * exitProgress),
+                    child: child,
+                  ),
+                );
+              }
+
+              final isCenteredEntry =
+                  value >= 0.5 &&
+                  (_displayedStageId == 'penalty-status' ||
+                      _displayedStageId.startsWith('verdict-'));
+              if (isCenteredEntry) return child ?? const SizedBox();
+
+              final offsetX = value < 0.5
+                  ? -travelDistance * Curves.easeInCubic.transform(value * 2)
+                  : travelDistance *
+                        (1 - Curves.easeOutCubic.transform((value - 0.5) * 2));
+
+              return Transform.translate(
+                offset: Offset(offsetX, 0),
+                child: child,
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1026,6 +1215,7 @@ class _PortraitGameLayout {
     required this.handTop,
     required this.handHeight,
     required this.actionTop,
+    required this.actionHeight,
     required this.horizontalPadding,
     required this.messagePadding,
     required this.actionHorizontalPadding,
@@ -1033,21 +1223,37 @@ class _PortraitGameLayout {
     required this.statusFontSize,
   });
 
-  factory _PortraitGameLayout.fromSize(Size size) {
+  factory _PortraitGameLayout.fromSize(
+    Size size, {
+    required double bottomSafeArea,
+  }) {
     final height = size.height;
     final width = size.width;
     final headerTop = (height * 0.059).clamp(32.0, 56.0);
     final timerTop = (height * 0.124).clamp(78.0, 112.0);
     final statusTop = (height * 0.19).clamp(122.0, 166.0);
     final handTop = (height * 0.251).clamp(164.0, 218.0);
-    final actionHeight = (height * 0.229).clamp(168.0, 205.0);
-    final actionBottom = (height * 0.058).clamp(24.0, 52.0);
-    final actionTop = math.max(
-      handTop + 210,
+    // 화면 실제 높이를 기준으로 버튼·턴 정보·배치 영역이 같은 높이를
+    // 사용합니다. ScreenUtil 높이와 LayoutBuilder 높이를 섞으면 작은 기기에서
+    // 1~수 px 차이로 RenderFlex overflow가 발생할 수 있습니다.
+    final actionHeight = (height * 0.225).clamp(140.0, 193.0);
+    final actionBottom = math.max(
+      bottomSafeArea + 4,
+      (height * 0.045).clamp(18.0, 42.0),
+    );
+    final preferredActionTop = math.max(
+      handTop + (height * 0.245).clamp(190.0, 210.0),
       height - actionHeight - actionBottom,
     );
+    // 부동소수점 반올림과 하단 시스템 영역까지 고려해 안전 여백을 둡니다.
+    final actionTop = math.min(
+      preferredActionTop,
+      math.max(handTop, height - actionHeight - actionBottom),
+    );
     final handBottom = actionTop - (height * 0.025).clamp(14.0, 24.0);
-    final handHeight = math.max(210.0, handBottom - handTop);
+    // 작은 화면에서 최소 높이를 강제하지 않습니다. 손패 위젯이 주어진 공간에
+    // 맞춰 카드 크기와 간격을 자체 축소하므로 영역끼리 겹치지 않습니다.
+    final handHeight = math.max(1.0, handBottom - handTop);
 
     return _PortraitGameLayout(
       headerTop: headerTop,
@@ -1056,6 +1262,7 @@ class _PortraitGameLayout {
       handTop: handTop,
       handHeight: handHeight,
       actionTop: actionTop,
+      actionHeight: actionHeight,
       horizontalPadding: (width * 0.051).clamp(16.0, 24.0),
       messagePadding: (width * 0.062).clamp(20.0, 30.0),
       actionHorizontalPadding: (width * 0.18).clamp(54.0, 82.0),
@@ -1070,6 +1277,7 @@ class _PortraitGameLayout {
   final double handTop;
   final double handHeight;
   final double actionTop;
+  final double actionHeight;
   final double horizontalPadding;
   final double messagePadding;
   final double actionHorizontalPadding;

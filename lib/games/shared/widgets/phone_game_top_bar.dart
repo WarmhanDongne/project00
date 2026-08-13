@@ -12,6 +12,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
     required this.outIcon,
     required this.onBookPressed,
     required this.onOutPressed,
+    this.onBookPressedAt,
+    this.onOutPressedAt,
     this.leading,
     this.center,
     this.trailingLeading,
@@ -23,6 +25,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
   final Widget outIcon;
   final VoidCallback onBookPressed;
   final VoidCallback onOutPressed;
+  final ValueChanged<Offset>? onBookPressedAt;
+  final ValueChanged<Offset>? onOutPressedAt;
   final Widget? leading;
   final Widget? center;
   final Widget? trailingLeading;
@@ -36,6 +40,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
       outIcon: outIcon,
       onBookPressed: onBookPressed,
       onOutPressed: onOutPressed,
+      onBookPressedAt: onBookPressedAt,
+      onOutPressedAt: onOutPressedAt,
       itemBuilder: itemBuilder,
     );
 
@@ -78,6 +84,8 @@ class PhoneGameTopBarMenu extends StatelessWidget {
     required this.outIcon,
     required this.onBookPressed,
     required this.onOutPressed,
+    this.onBookPressedAt,
+    this.onOutPressedAt,
     this.itemBuilder,
   });
 
@@ -86,6 +94,8 @@ class PhoneGameTopBarMenu extends StatelessWidget {
   final Widget outIcon;
   final VoidCallback onBookPressed;
   final VoidCallback onOutPressed;
+  final ValueChanged<Offset>? onBookPressedAt;
+  final ValueChanged<Offset>? onOutPressedAt;
   final Widget Function(int index, Widget child)? itemBuilder;
 
   @override
@@ -103,6 +113,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
             visualSize: bookSize,
             icon: bookIcon,
             onPressed: onBookPressed,
+            onPressedAt: onBookPressedAt,
           ),
         ),
         SizedBox(width: isLandscape ? 15 : 10),
@@ -113,6 +124,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
             visualSize: outSize,
             icon: outIcon,
             onPressed: onOutPressed,
+            onPressedAt: onOutPressedAt,
           ),
         ),
       ],
@@ -130,12 +142,14 @@ class _TopBarIconButton extends StatelessWidget {
     required this.visualSize,
     required this.icon,
     required this.onPressed,
+    this.onPressedAt,
   });
 
   final String label;
   final double visualSize;
   final Widget icon;
   final VoidCallback onPressed;
+  final ValueChanged<Offset>? onPressedAt;
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +159,17 @@ class _TopBarIconButton extends StatelessWidget {
       label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
+        onTap: () {
+          final renderBox = context.findRenderObject() as RenderBox?;
+          if (renderBox != null && renderBox.hasSize && onPressedAt != null) {
+            final center = renderBox.localToGlobal(
+              Offset(renderBox.size.width / 2, renderBox.size.height / 2),
+            );
+            onPressedAt!(center);
+            return;
+          }
+          onPressed();
+        },
         child: SizedBox.square(
           dimension: touchSize,
           child: Center(
