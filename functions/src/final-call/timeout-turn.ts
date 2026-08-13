@@ -32,6 +32,21 @@ export const timeoutFinalCallTurn = onCall<Data>(
         response = {success: true, ignored: true};
         return room;
       }
+      if (game.public.phase === "callerSubmit") {
+        if (game.public.callerUid !== turnUid) {
+          throw new HttpsError("data-loss", "CALL 선언자를 확인할 수 없습니다.");
+        }
+        if (game.public.finalTurnPendingUids.length === 0) {
+          resolveFinalCallRound(game, now, false);
+        } else {
+          game.public.phase = "finalTurns";
+          const allowed = new Set(game.public.finalTurnPendingUids);
+          startTurn(game, nextFinalCallPlayer(game.public.players, turnUid, allowed), now);
+          game.public.revision += 1;
+        }
+        response = {success: true, type: "callerHandAutoSubmitted", turnUid: game.public.turnUid};
+        return room;
+      }
       if (game.public.phase !== "playing" && game.public.phase !== "finalTurns") {
         response = {success: true, ignored: true};
         return room;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 
 /// 내 턴의 라이어 버튼과 다른 플레이어의 턴 안내를 같은 자리에서 교체합니다.
@@ -7,25 +8,20 @@ import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.
 class TurnActionSwitcher extends StatefulWidget {
   const TurnActionSwitcher({
     super.key,
-    required this.isRow,
+    required this.isLandscape,
     required this.showLiarButton,
     required this.turnPlayer,
     required this.liarButton,
-    required this.height,
-    this.alignment = Alignment.center,
-    this.profileSize = 100,
-    this.nicknameFontSize = 30,
-    this.spacing = 10,
   });
-  final bool isRow;
+  final bool isLandscape;
   final bool showLiarButton;
   final PhoneGamePlayer? turnPlayer;
   final Widget liarButton;
-  final double height;
-  final AlignmentGeometry alignment;
-  final double profileSize;
-  final double nicknameFontSize;
-  final double spacing;
+
+  double get controlHeight => isLandscape ? 170 : 193.h.clamp(168.0, 205.0);
+  double get profileSize => isLandscape ? 72 : 100.w.clamp(78.0, 108.0);
+  double get nicknameFontSize => isLandscape ? 22 : 30.sp.clamp(21.0, 30.0);
+  double get spacing => isLandscape ? 8 : 10.h.clamp(7.0, 11.0);
 
   @override
   State<TurnActionSwitcher> createState() => _TurnActionSwitcherState();
@@ -56,7 +52,7 @@ class TurnActionSwitcher extends StatefulWidget {
     return _buildControlFrame(
       key: ValueKey('turn-player-${player.uid}'),
       child: TurnPlayerIndicator(
-        isRow: isRow,
+        isLandscape: isLandscape,
         player: player,
         profileSize: profileSize,
         nicknameFontSize: nicknameFontSize,
@@ -70,9 +66,9 @@ class TurnActionSwitcher extends StatefulWidget {
     return SizedBox(
       key: key,
       width: double.infinity,
-      height: height,
+      height: controlHeight,
       child: RepaintBoundary(
-        child: Align(alignment: alignment, child: child),
+        child: Align(alignment: Alignment.center, child: child),
       ),
     );
   }
@@ -169,7 +165,7 @@ class _TurnActionSwitcherState extends State<TurnActionSwitcher>
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: widget.height,
+      height: widget.controlHeight,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final travelDistance = constraints.maxWidth;
@@ -191,9 +187,10 @@ class _TurnActionSwitcherState extends State<TurnActionSwitcher>
             },
           );
 
+          //=======================가로 전환 영역 제한==============================
           // 가로 조작부는 오른쪽에 독립된 영역이 있으므로, 퇴장 요소가
           // 왼쪽 손패 영역까지 침범하지 않도록 해당 영역 안에서만 그립니다.
-          return widget.isRow ? ClipRect(child: transition) : transition;
+          return widget.isLandscape ? ClipRect(child: transition) : transition;
         },
       ),
     );
@@ -204,13 +201,13 @@ class _TurnActionSwitcherState extends State<TurnActionSwitcher>
 class TurnPlayerIndicator extends StatelessWidget {
   const TurnPlayerIndicator({
     super.key,
-    required this.isRow,
+    required this.isLandscape,
     required this.player,
     required this.profileSize,
     required this.nicknameFontSize,
     required this.spacing,
   });
-  final bool isRow;
+  final bool isLandscape;
   final PhoneGamePlayer player;
   final double profileSize;
   final double nicknameFontSize;
@@ -218,48 +215,87 @@ class TurnPlayerIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return isRow == true
-        //================================가로================================
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              PhonePlayerProfile(player: player, size: profileSize),
-              SizedBox(width: spacing),
-              Flexible(
-                child: Text(
-                  '${player.nickname}님\n차례입니다',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: nicknameFontSize,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          )
-        //================================세로================================
-        : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              PhonePlayerProfile(player: player, size: profileSize),
-              SizedBox(width: spacing),
-              Flexible(
-                child: Text(
-                  '${player.nickname}님\n차례입니다',
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: nicknameFontSize,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          );
+    //=======================가로 턴 정보==============================
+    if (isLandscape) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PhonePlayerProfile(player: player, size: profileSize),
+          SizedBox(width: spacing),
+          Expanded(
+            child: _TurnPlayerText(
+              nickname: player.nickname,
+              fontSize: nicknameFontSize,
+              textAlign: TextAlign.left,
+            ),
+          ),
+        ],
+      );
+    }
+
+    //=======================세로 턴 정보==============================
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        PhonePlayerProfile(player: player, size: profileSize),
+        SizedBox(height: spacing),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 250.w.clamp(210.0, 280.0)),
+          child: _TurnPlayerText(
+            nickname: player.nickname,
+            fontSize: nicknameFontSize,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 닉네임만 말줄임하고 고정 안내 문구는 항상 온전히 표시합니다.
+class _TurnPlayerText extends StatelessWidget {
+  const _TurnPlayerText({
+    required this.nickname,
+    required this.fontSize,
+    required this.textAlign,
+  });
+
+  final String nickname;
+  final double fontSize;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final alignment = textAlign == TextAlign.center
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
+    final fittedAlignment = textAlign == TextAlign.center
+        ? Alignment.center
+        : Alignment.centerLeft;
+    final style = TextStyle(
+      fontSize: fontSize,
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: alignment,
+      children: [
+        Text(
+          nickname,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: textAlign,
+          style: style,
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: fittedAlignment,
+          child: Text('님 차례입니다', maxLines: 1, style: style),
+        ),
+      ],
+    );
   }
 }
 

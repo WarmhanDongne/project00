@@ -39,7 +39,8 @@ export const drawFinalCallCard = onCall<Data>(
       if (game.public.phase !== "playing" && game.public.phase !== "finalTurns") {
         throw new HttpsError("failed-precondition", "현재 카드를 가져올 수 없습니다.");
       }
-      if (game.public.pendingDrawUid !== null) {
+      // Realtime Database는 null 필드를 저장하지 않아 읽을 때 undefined가 됩니다.
+      if (game.public.pendingDrawUid) {
         throw new HttpsError("failed-precondition", "이미 가져온 카드를 처리해주세요.");
       }
       const privatePlayer = game.private[uid];
@@ -52,15 +53,6 @@ export const drawFinalCallCard = onCall<Data>(
       }
       const card = source === "deck" ? game.server.deck.pop() : game.public.discardCard;
       if (!card) throw new HttpsError("data-loss", "가져올 카드가 없습니다.");
-      if (source === "deck" && game.server.deck.length === 0) {
-        game.public.discardCard = card;
-        game.public.deckRemainingCount = 0;
-        const now = Date.now();
-        resolveFinalCallRound(game, now, true);
-        response = {success: true, type: "automaticCall"};
-        recordFinalCallCommand(game, commandId, uid, "automaticCall", now, response);
-        return room;
-      }
       privatePlayer.pendingDraw = card;
       game.public.pendingDrawUid = uid;
       game.public.pendingDrawSource = source;

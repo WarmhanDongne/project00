@@ -1,9 +1,8 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
 
 class LiarAccusation extends StatefulWidget {
   const LiarAccusation({
@@ -86,122 +85,51 @@ class _LiarAccusationState extends State<LiarAccusation>
           : null,
       behavior: HitTestBehavior.opaque,
 
-      child: AnimatedSlide(
-        offset: _isPressed ? const Offset(0, 0.045) : Offset.zero,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: AnimatedScale(
-          scale: _isPressed ? 0.91 : 1.0,
-          duration: const Duration(milliseconds: 110),
-          curve: Curves.easeOutCubic,
-          child: AnimatedBuilder(
-            animation: _flipController,
-            builder: (context, _) {
-              final progress = Curves.easeInOutCubic.transform(
-                _flipController.value,
-              );
-              final showsSecondFace = progress >= 0.5;
-              final showSubmit = showsSecondFace
-                  ? _targetShowsSubmit
-                  : _sourceShowsSubmit;
-              final angle = showsSecondFace
-                  ? -math.pi * (1 - progress)
-                  : math.pi * progress;
+      child: AnimatedBuilder(
+        animation: _flipController,
+        builder: (context, _) {
+          final progress = Curves.easeInOutCubic.transform(
+            _flipController.value,
+          );
+          final showsSecondFace = progress >= 0.5;
+          final showSubmit = showsSecondFace
+              ? _targetShowsSubmit
+              : _sourceShowsSubmit;
+          final angle = showsSecondFace
+              ? -math.pi * (1 - progress)
+              : math.pi * progress;
 
-              return Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0012)
-                  ..rotateY(angle),
-                child: _buildButtonImage(showSubmit: showSubmit),
-              );
-            },
-          ),
-        ),
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0012)
+              ..rotateY(angle),
+            child: _buildButtonImage(showSubmit: showSubmit),
+          );
+        },
       ),
     );
   }
 
   Widget _buildButtonImage({required bool showSubmit}) {
-    final asset = showSubmit
-        ? Assets.games.liarsPoker.images.button.buttonSubmit
-        : Assets.games.liarsPoker.images.button.buttonLiar;
+    final label = showSubmit ? '제출' : 'Liar';
 
-    //==================================가로==================================
+    //=======================가로 버튼==============================
     if (widget.isLandscape) {
-      return _ShadowedButtonImage(
-        asset: asset,
+      return LiarsPokerArcadeButtonSurface(
+        label: label,
         width: 195,
         height: 170,
         pressed: _isPressed,
       );
     }
 
-    //==================================세로==================================
-    return _ShadowedButtonImage(
-      asset: asset,
+    //=======================세로 버튼==============================
+    return LiarsPokerArcadeButtonSurface(
+      label: label,
       width: 305.w,
       height: 205.h,
       pressed: _isPressed,
-    );
-  }
-}
-
-/// PNG의 투명 영역을 제외한 실제 버튼 형태에만 그림자를 적용합니다.
-class _ShadowedButtonImage extends StatelessWidget {
-  const _ShadowedButtonImage({
-    required this.asset,
-    required this.width,
-    required this.height,
-    required this.pressed,
-  });
-
-  final AssetGenImage asset;
-  final double width;
-  final double height;
-  final bool pressed;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget image() => asset.image(
-      width: width,
-      height: height,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
-    );
-
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          AnimatedSlide(
-            offset: pressed ? const Offset(0, 0.015) : const Offset(0, 0.065),
-            duration: const Duration(milliseconds: 110),
-            curve: Curves.easeOutCubic,
-            child: AnimatedOpacity(
-              opacity: pressed ? 0.3 : 0.72,
-              duration: const Duration(milliseconds: 110),
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(
-                  sigmaX: pressed ? 3 : 8,
-                  sigmaY: pressed ? 3 : 8,
-                ),
-                child: ColorFiltered(
-                  colorFilter: const ColorFilter.mode(
-                    Colors.black,
-                    BlendMode.srcIn,
-                  ),
-                  child: image(),
-                ),
-              ),
-            ),
-          ),
-          image(),
-        ],
-      ),
     );
   }
 }

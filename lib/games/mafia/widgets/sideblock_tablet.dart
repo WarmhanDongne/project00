@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
-import 'package:project00/games/liars_poker/widgets/rolebook_tablet.dart';
-import 'package:project00/games/liars_poker/widgets/setting_tablet.dart';
+import 'package:project00/games/liars_poker/widgets/tablet/rolebook_tablet.dart';
+import 'package:project00/games/liars_poker/widgets/tablet/setting_tablet.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 class SideBlock extends StatefulWidget {

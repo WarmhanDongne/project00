@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
-import 'package:project00/games/liars_poker/widgets/sideblock_tablet.dart';
+import 'package:project00/games/liars_poker/widgets/tablet/sideblock_tablet.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// 규칙/설정 메뉴와 개발용 상태 선택기를 화면 위에 배치합니다.

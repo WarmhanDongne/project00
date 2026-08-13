@@ -307,9 +307,9 @@ class _TurnCircleLight extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Color(0x704C8664),
-              blurRadius: 31,
-              spreadRadius: 4,
+              color: Color(0x665A2F55),
+              blurRadius: 34,
+              spreadRadius: 5,
             ),
           ],
         ),
@@ -324,7 +324,7 @@ class _TurnCircleLight extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Opacity(
-                  opacity: 0.7,
+                  opacity: 0.82,
                   child: Assets.games.liarsPoker.images.background.background
                       .image(
                         fit: BoxFit.cover,
@@ -336,9 +336,9 @@ class _TurnCircleLight extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
                       colors: [
-                        Color(0x805A9670),
-                        Color(0x4D477D5D),
-                        Color(0x00315D48),
+                        Color(0x7088467C),
+                        Color(0x405F3259),
+                        Color(0x00281927),
                       ],
                       stops: [0, 0.56, 1],
                     ),

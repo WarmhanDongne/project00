@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' as ui;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -14,6 +14,8 @@ import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.
 import 'package:project00/games/liars_poker/widgets/phone/phone_timer.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
+import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
+import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 기기 방향에 따라 가로·세로 배치를 전환하는 휴대폰 게임 화면입니다.
@@ -203,7 +205,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================세로 화면==================================
+  //=======================세로 화면==============================
   Widget _buildPortraitScreen(
     PhoneGameController? controller, {
     required PhoneGamePlayer? turnPlayer,
@@ -215,205 +217,224 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     required bool showGameStart,
   }) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // 조건부 레이어가 추가·삭제되어도 손패 State가 다른 Positioned로
-          // 재사용되지 않도록 모든 레이어에 역할별 고유 key를 유지합니다.
-          //==================================배경화면==================================
-          const Positioned.fill(
-            key: ValueKey('portrait-background-slot'),
-            child: _PortraitGameBackground(),
-          ),
-          if (showHeader)
-            Positioned(
-              key: const ValueKey('portrait-header-slot'),
-              top: 50.h,
-              left: 20.w,
-              right: 20.w,
-              child: PhoneGameTopBar(
-                isLandscape: false,
-                entryAnimation: _controlsEntryController,
-                leadingWidget: _tableAsset(
-                  controller?.table ?? 'K',
-                ).image(height: 24.h, filterQuality: FilterQuality.high),
-                onSettingPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => const PhoneSettingsDialog(),
-                  );
-                },
-                onOutPressed: () => unawaited(_showExitModal()),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final layout = _PortraitGameLayout.fromSize(
+            Size(constraints.maxWidth, constraints.maxHeight),
+          );
+
+          return Stack(
+            children: [
+              // 조건부 레이어가 추가·삭제되어도 손패 State가 다른 Positioned로
+              // 재사용되지 않도록 모든 레이어에 역할별 고유 key를 유지합니다.
+              //=======================배경 화면==============================
+              const Positioned.fill(
+                key: ValueKey('portrait-background-slot'),
+                child: _PhoneGameBackground(isLandscape: false),
               ),
-            ),
-          //==================================타이머==================================
-          if (showHeader &&
-              controller != null &&
-              controller.turnDeadlineAt != null &&
-              !controller.isInitialLoading &&
-              controller.phase != 'dealing' &&
-              controller.phase != 'penalty' &&
-              controller.isMyTurn)
-            Positioned(
-              key: const ValueKey('portrait-timer-slot'),
-              top: 105.h,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: PhoneControlEntryAnimation(
-                  animation: _controlsEntryController,
-                  style: PhoneControlEntryStyle.header,
-                  begin: 0,
-                  end: 0.76,
-                  child: PhoneTimer(
-                    expiresAt: controller.turnDeadlineAt!,
-                    onTimeout: () => _handleTurnTimeout(controller),
+              if (showHeader)
+                Positioned(
+                  key: const ValueKey('portrait-header-slot'),
+                  top: layout.headerTop,
+                  left: layout.horizontalPadding,
+                  right: layout.horizontalPadding,
+                  child: PhoneGameTopBar(
+                    isLandscape: false,
+                    entryAnimation: _controlsEntryController,
+                    leadingWidget: _tableAsset(controller?.table ?? 'K').image(
+                      height: layout.tableHeight,
+                      filterQuality: FilterQuality.high,
+                    ),
+                    onSettingPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const PhoneSettingsDialog(),
+                      );
+                    },
+                    onTipPressed: _showRules,
+                    onOutPressed: () => unawaited(_showExitModal()),
+                  ),
+                ),
+              //=======================타이머==============================
+              if (showHeader &&
+                  controller != null &&
+                  controller.turnDeadlineAt != null &&
+                  !controller.isInitialLoading &&
+                  controller.phase != 'dealing' &&
+                  controller.phase != 'penalty' &&
+                  controller.isMyTurn)
+                Positioned(
+                  key: const ValueKey('portrait-timer-slot'),
+                  top: layout.timerTop,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: PhoneControlEntryAnimation(
+                      animation: _controlsEntryController,
+                      style: PhoneControlEntryStyle.header,
+                      begin: 0,
+                      end: 0.76,
+                      child: PhoneTimer(
+                        expiresAt: controller.turnDeadlineAt!,
+                        onTimeout: () => _handleTurnTimeout(controller),
+                      ),
+                    ),
+                  ),
+                ),
+              //=======================상태 문구==============================
+              if (controller != null &&
+                  !controller.isInitialLoading &&
+                  controller.phase != 'dealing' &&
+                  controller.handCards.isNotEmpty &&
+                  controller.statusMessage != null &&
+                  waitingMessage == null &&
+                  !showPenaltyHandOverlay &&
+                  !showTwoPlayerPassPrompt)
+                Positioned(
+                  key: const ValueKey('portrait-status-slot'),
+                  top: layout.statusTop,
+                  left: layout.messagePadding,
+                  right: layout.messagePadding,
+                  child: Text(
+                    controller.statusMessage!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: layout.statusFontSize,
+                      fontWeight: controller.isMyTurn
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      shadows: const [
+                        Shadow(color: Colors.black87, blurRadius: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              //=======================턴 정보·게임 버튼==============================
+              if (showControls)
+                Positioned(
+                  key: const ValueKey('portrait-turn-action-slot'),
+                  top: layout.actionTop,
+                  left: layout.horizontalPadding,
+                  right: 0,
+                  child: TurnActionSwitcher(
+                    isLandscape: false,
+                    showLiarButton: controller?.isMyTurn ?? true,
+                    turnPlayer: turnPlayer,
+                    liarButton: _buildGameActionButton(
+                      controller,
+                      isLandscape: false,
+                    ),
+                  ),
+                ),
+              //=======================마지막 카드 선택==============================
+              if (showControls &&
+                  controller?.phase == 'lastCardChallenge' &&
+                  !showTwoPlayerPassPrompt)
+                Positioned(
+                  key: const ValueKey('portrait-last-card-slot'),
+                  top: layout.actionTop - 10,
+                  left: layout.actionHorizontalPadding,
+                  right: layout.actionHorizontalPadding,
+                  child: FilledButton(
+                    onPressed: controller!.canPassLastCardChallenge
+                        ? () => unawaited(controller.passLastCardChallenge())
+                        : null,
+                    style: _lastCardButtonStyle(),
+                    child: const Text('라이어 아님 · 새 라운드 진행'),
+                  ),
+                ),
+              //=======================손패==============================
+              Positioned(
+                key: const ValueKey('portrait-hand-slot'),
+                top: layout.handTop,
+                left: 0,
+                right: 0,
+                height: layout.handHeight,
+                child: RepaintBoundary(
+                  child: _buildHand(
+                    controller,
+                    isLandscape: false,
+                    dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
                   ),
                 ),
               ),
-            ),
-          //==================================문구==================================
-          if (controller != null &&
-              !controller.isInitialLoading &&
-              controller.phase != 'dealing' &&
-              controller.handCards.isNotEmpty &&
-              controller.statusMessage != null &&
-              waitingMessage == null &&
-              !showPenaltyHandOverlay &&
-              !showTwoPlayerPassPrompt)
-            Positioned(
-              key: const ValueKey('portrait-status-slot'),
-              top: 160.h,
-              left: 24.w,
-              right: 24.w,
-              child: Text(
-                controller.statusMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.sp,
-                  fontWeight: controller.isMyTurn
-                      ? FontWeight.w700
-                      : FontWeight.w500,
-                  shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
+              //=======================라이어 판정·벌칙 문구==============================
+              if (showPenaltyHandOverlay && controller != null)
+                Positioned(
+                  key: const ValueKey('portrait-penalty-message-slot'),
+                  top: layout.handTop,
+                  left: 0,
+                  right: 0,
+                  height: layout.handHeight,
+                  child: controller.liarVerdictMessage != null
+                      ? _PenaltyHandOverlay(
+                          message: controller.liarVerdictMessage!,
+                          isFalseDeclaration: controller.liarVerdictIsFalse,
+                        )
+                      : const SizedBox.shrink(),
                 ),
-              ),
-            ),
-          //==================================라이어 버튼==================================
-          if (showControls)
-            Positioned(
-              key: const ValueKey('portrait-turn-action-slot'),
-              top: 600.h,
-              left: 20.w,
-              right: 0,
-              child: TurnActionSwitcher(
-                isRow: false,
-                showLiarButton: controller?.isMyTurn ?? true,
-                turnPlayer: turnPlayer,
-                height: 193.h,
-                alignment: Alignment.topCenter,
-                liarButton: _buildGameActionButton(
-                  controller,
-                  isLandscape: false,
+              if (showPenaltyHandOverlay &&
+                  controller != null &&
+                  controller.liarVerdictMessage == null)
+                Positioned.fill(
+                  key: const ValueKey('portrait-penalty-status-slot'),
+                  child: PhonePenaltyStatus(
+                    player: controller.penaltyStatusPlayer,
+                    result: controller.visiblePenaltyResult,
+                  ),
                 ),
-              ),
-            ),
-          //==================================한쪽이 카드 나 냈을때==================================
-          if (showControls &&
-              controller?.phase == 'lastCardChallenge' &&
-              !showTwoPlayerPassPrompt)
-            Positioned(
-              key: const ValueKey('portrait-last-card-slot'),
-              top: 590.h,
-              left: 70.w,
-              right: 70.w,
-              child: FilledButton(
-                onPressed: controller!.canPassLastCardChallenge
-                    ? () => unawaited(controller.passLastCardChallenge())
-                    : null,
-                style: _lastCardButtonStyle(),
-                child: const Text('라이어 아님 · 새 라운드 진행'),
-              ),
-            ),
-          //==================================손패==================================
-          Positioned(
-            key: const ValueKey('portrait-hand-slot'),
-            top: 212.h,
-            left: 0,
-            right: 0,
-            height: 350.h,
-            child: RepaintBoundary(
-              child: _buildPortraitHand(
-                controller,
-                dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
-              ),
-            ),
-          ),
-          //==================================라이어 판정·패널티 문구==================================
-          if (showPenaltyHandOverlay && controller != null)
-            Positioned(
-              key: const ValueKey('portrait-penalty-message-slot'),
-              top: 212.h,
-              left: 0,
-              right: 0,
-              height: 350.h,
-              child: controller.liarVerdictMessage != null
-                  ? _PenaltyHandOverlay(
-                      message: controller.liarVerdictMessage!,
-                      isFalseDeclaration: controller.liarVerdictIsFalse,
-                    )
-                  : PhonePenaltyStatus(
-                      player: controller.penaltyStatusPlayer,
-                      result: controller.visiblePenaltyResult,
+              //=======================2인 PASS 선택==============================
+              if (showTwoPlayerPassPrompt && controller != null)
+                Positioned(
+                  key: const ValueKey('portrait-two-player-pass-slot'),
+                  top: layout.handTop,
+                  left: 0,
+                  right: 0,
+                  height: layout.handHeight,
+                  child: _TwoPlayerPassPrompt(
+                    enabled: controller.canPassLastCardChallenge,
+                    onPressed: () =>
+                        unawaited(controller.passLastCardChallenge()),
+                  ),
+                ),
+              //=======================빈 손패 대기 문구==============================
+              if (waitingMessage != null)
+                Positioned.fill(
+                  key: const ValueKey('portrait-waiting-message-slot'),
+                  child: _CenteredGameMessage(message: waitingMessage),
+                ),
+              //=======================오류 메시지==============================
+              if (controller?.errorMessage != null)
+                Positioned(
+                  key: const ValueKey('portrait-error-slot'),
+                  top: layout.statusTop - 5,
+                  left: layout.messagePadding,
+                  right: layout.messagePadding,
+                  child: _buildErrorMessage(
+                    controller!.errorMessage!,
+                    onTap: controller.clearError,
+                    verticalPadding: 10,
+                  ),
+                ),
+              //=======================게임 시작==============================
+              if (showGameStart)
+                Positioned.fill(
+                  key: const ValueKey('portrait-game-start-slot'),
+                  child: IgnorePointer(
+                    child: PhoneGameStartAnimation(
+                      onCompleted: _handleGameStartCompleted,
                     ),
-            ),
-          //==================================2인 마지막 카드 선택==================================
-          if (showTwoPlayerPassPrompt && controller != null)
-            Positioned(
-              key: const ValueKey('portrait-two-player-pass-slot'),
-              top: 212.h,
-              left: 0,
-              right: 0,
-              height: 350.h,
-              child: _TwoPlayerPassPrompt(
-                enabled: controller.canPassLastCardChallenge,
-                onPressed: () => unawaited(controller.passLastCardChallenge()),
-              ),
-            ),
-          //==================================빈 손패 대기 문구==================================
-          if (waitingMessage != null)
-            Positioned.fill(
-              key: const ValueKey('portrait-waiting-message-slot'),
-              child: _CenteredGameMessage(message: waitingMessage),
-            ),
-          //==================================오류 메시지==================================
-          if (controller?.errorMessage != null)
-            Positioned(
-              key: const ValueKey('portrait-error-slot'),
-              top: 155.h,
-              left: 24.w,
-              right: 24.w,
-              child: _buildErrorMessage(
-                controller!.errorMessage!,
-                onTap: controller.clearError,
-                verticalPadding: 10,
-              ),
-            ),
-          //==================================게임 시작==================================
-          if (showGameStart)
-            Positioned.fill(
-              key: const ValueKey('portrait-game-start-slot'),
-              child: IgnorePointer(
-                child: PhoneGameStartAnimation(
-                  onCompleted: _handleGameStartCompleted,
+                  ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  //==================================가로 화면==================================
+  //=======================가로 화면==============================
   Widget _buildLandscapeScreen(
     PhoneGameController controller, {
     required PhoneGamePlayer? turnPlayer,
@@ -427,27 +448,27 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final controlsWidth = constraints.maxWidth < 720 ? 180.0 : 220.0;
+          final controlsWidth = (constraints.maxWidth * 0.27).clamp(
+            170.0,
+            230.0,
+          );
+          final sidePadding = (constraints.maxWidth * 0.025).clamp(16.0, 28.0);
 
           return Stack(
             children: [
               // 가로 화면도 조건부 레이어의 순서 변화가 손패 State를 교체하지
               // 않도록 모든 Positioned를 역할별 key로 분리합니다.
-              //==================================배경화면==================================
+              //=======================배경 화면==============================
               Positioned.fill(
                 key: const ValueKey('landscape-background-slot'),
-                child: Assets.games.liarsPoker.images.background.background
-                    .image(
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                    ),
+                child: const _PhoneGameBackground(isLandscape: true),
               ),
               if (showHeader)
                 Positioned(
                   key: const ValueKey('landscape-header-slot'),
                   top: 12,
-                  left: 28,
-                  right: 28,
+                  left: sidePadding,
+                  right: sidePadding,
                   child: SafeArea(
                     bottom: false,
                     child: PhoneGameTopBar(
@@ -471,11 +492,12 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                           builder: (_) => const PhoneSettingsDialog(),
                         );
                       },
+                      onTipPressed: _showRules,
                       onOutPressed: () => unawaited(_showExitModal()),
                     ),
                   ),
                 ),
-              //==================================문구==================================
+              //=======================상태 문구==============================
               if (showHeader &&
                   controller.statusMessage != null &&
                   waitingMessage == null &&
@@ -484,7 +506,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                 Positioned(
                   key: const ValueKey('landscape-status-slot'),
                   top: 72,
-                  left: 28,
+                  left: sidePadding,
                   right: controlsWidth + 36,
                   child: Text(
                     controller.statusMessage!,
@@ -501,16 +523,17 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     ),
                   ),
                 ),
-              //==================================손패==================================
+              //=======================손패==============================
               Positioned(
                 key: const ValueKey('landscape-hand-slot'),
                 top: 72,
                 bottom: 8,
-                left: 16,
+                left: sidePadding,
                 right: controlsWidth + 24,
                 child: RepaintBoundary(
-                  child: _buildLandscapeHand(
+                  child: _buildHand(
                     controller,
+                    isLandscape: true,
                     // 손패 영역은 오른쪽 조작부만큼 좁으므로, 최초 덱은
                     // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
                     entryCenterOffsetX: controlsWidth / 2 + 4,
@@ -519,31 +542,36 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   ),
                 ),
               ),
-              //==================================라이어 판정·패널티 문구==================================
-              if (showPenaltyHandOverlay)
+              //=======================라이어 판정·벌칙 문구==============================
+              if (showPenaltyHandOverlay &&
+                  controller.liarVerdictMessage != null)
                 Positioned(
                   key: const ValueKey('landscape-penalty-message-slot'),
                   top: 72,
                   bottom: 8,
-                  left: 16,
+                  left: sidePadding,
                   right: controlsWidth + 24,
-                  child: controller.liarVerdictMessage != null
-                      ? _PenaltyHandOverlay(
-                          message: controller.liarVerdictMessage!,
-                          isFalseDeclaration: controller.liarVerdictIsFalse,
-                        )
-                      : PhonePenaltyStatus(
-                          player: controller.penaltyStatusPlayer,
-                          result: controller.visiblePenaltyResult,
-                        ),
+                  child: _PenaltyHandOverlay(
+                    message: controller.liarVerdictMessage!,
+                    isFalseDeclaration: controller.liarVerdictIsFalse,
+                  ),
                 ),
-              //==================================2인 마지막 카드 선택==================================
+              if (showPenaltyHandOverlay &&
+                  controller.liarVerdictMessage == null)
+                Positioned.fill(
+                  key: const ValueKey('landscape-penalty-status-slot'),
+                  child: PhonePenaltyStatus(
+                    player: controller.penaltyStatusPlayer,
+                    result: controller.visiblePenaltyResult,
+                  ),
+                ),
+              //=======================2인 PASS 선택==============================
               if (showTwoPlayerPassPrompt)
                 Positioned(
                   key: const ValueKey('landscape-two-player-pass-slot'),
                   top: 72,
                   bottom: 8,
-                  left: 16,
+                  left: sidePadding,
                   right: controlsWidth + 24,
                   child: _TwoPlayerPassPrompt(
                     enabled: controller.canPassLastCardChallenge,
@@ -551,42 +579,40 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                         unawaited(controller.passLastCardChallenge()),
                   ),
                 ),
-              //==================================빈 손패 대기 문구==================================
+              //=======================빈 손패 대기 문구==============================
               if (waitingMessage != null)
                 Positioned.fill(
                   key: const ValueKey('landscape-waiting-message-slot'),
                   child: _CenteredGameMessage(message: waitingMessage),
                 ),
-              //=================================라이어 버튼=================================
+              //=======================턴 정보·게임 버튼==============================
               if (showControls)
                 Positioned(
                   key: const ValueKey('landscape-turn-action-slot'),
-                  right: 50,
-                  bottom: 110,
+                  right: sidePadding,
+                  top: 72,
+                  bottom: 8,
                   width: controlsWidth,
-                  child: TurnActionSwitcher(
-                    isRow: true,
-                    showLiarButton: controller.isMyTurn,
-                    turnPlayer: turnPlayer,
-                    height: 140,
-                    alignment: Alignment.bottomCenter,
-                    profileSize: 72,
-                    nicknameFontSize: 22,
-                    spacing: 8,
-                    liarButton: _buildGameActionButton(
-                      controller,
+                  child: Center(
+                    child: TurnActionSwitcher(
                       isLandscape: true,
+                      showLiarButton: controller.isMyTurn,
+                      turnPlayer: turnPlayer,
+                      liarButton: _buildGameActionButton(
+                        controller,
+                        isLandscape: true,
+                      ),
                     ),
                   ),
                 ),
-              //==================================한쪽이 카드 나 냈을때==================================
+              //=======================마지막 카드 선택==============================
               if (showControls &&
                   controller.phase == 'lastCardChallenge' &&
                   !showTwoPlayerPassPrompt)
                 Positioned(
                   key: const ValueKey('landscape-last-card-slot'),
                   top: 104,
-                  right: 18,
+                  right: sidePadding,
                   width: controlsWidth,
                   child: FilledButton(
                     onPressed: controller.canPassLastCardChallenge
@@ -596,20 +622,20 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     child: const Text('라이어 아님 · 새 라운드'),
                   ),
                 ),
-              //==================================오류 메시지==================================
+              //=======================오류 메시지==============================
               if (controller.errorMessage != null)
                 Positioned(
                   key: const ValueKey('landscape-error-slot'),
                   top: 76,
-                  left: 28,
-                  right: 28,
+                  left: sidePadding,
+                  right: sidePadding,
                   child: _buildErrorMessage(
                     controller.errorMessage!,
                     onTap: controller.clearError,
                     verticalPadding: 9,
                   ),
                 ),
-              //==================================게임 시작==================================
+              //=======================게임 시작==============================
               if (showGameStart)
                 Positioned.fill(
                   key: const ValueKey('landscape-game-start-slot'),
@@ -626,19 +652,41 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================세로 손패==================================
-  Widget _buildPortraitHand(
+  void _showRules() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const PhoneGameRuleDialog(
+        title: "LIAR'S POKER",
+        rules:
+            '자신의 차례에는 1~3장의 카드를 선택해 제출합니다. 선언은 '
+            '진실일 수도, 거짓일 수도 있으며 다음 플레이어는 LIAR를 선언할 '
+            '수 있습니다.\n\n카드 공개 결과 선언이 거짓이면 카드를 낸 플레이어가, '
+            '선언이 진실이면 LIAR를 외친 플레이어가 벌칙을 진행합니다. '
+            '마지막까지 살아남은 플레이어가 승리합니다.',
+        surfaceColor: Color(0xFF142119),
+        foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  //=======================가로·세로 공통 손패==============================
+  Widget _buildHand(
     PhoneGameController? controller, {
+    required bool isLandscape,
     required bool dimmed,
+    double entryCenterOffsetX = 0,
+    double entryCenterOffsetY = 0,
   }) {
     if (!_hasCompletedGameStart) return const SizedBox.shrink();
 
     if (controller == null) {
       return _dimHandCards(
         PhoneHandCardStack(
-          isLandscape: false,
+          isLandscape: isLandscape,
           controller: _handCardStackController,
           onRevealCompleted: _showGameControls,
+          entryCenterOffsetX: entryCenterOffsetX,
+          entryCenterOffsetY: entryCenterOffsetY,
         ),
         dimmed: dimmed,
       );
@@ -653,7 +701,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     if (controller.phase == 'dealing') {
       return const SizedBox.shrink();
     }
-    //==================================손패 없을떄==================================
+    //=======================손패 없음==============================
     if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       _showControlsAfterFrame();
       if (!controller.isEliminated) return const SizedBox.shrink();
@@ -662,45 +710,11 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
     return _dimHandCards(
       PhoneHandCardStack(
-        key: ValueKey('portrait-deal-${controller.handDealVersion}'),
-        isLandscape: false,
-        controller: _handCardStackController,
-        cards: controller.handCardAssets,
-        enabled: controller.canSelectCards,
-        submissionEnabled: controller.canSubmitCards,
-        initiallyRevealed: controller.hasRevealedHand,
-        onRevealStarted: _markRevealStarted,
-        onRevealCompleted: _handleRevealCompleted,
-        onCardsSubmitRequested: controller.submitCardIndexes,
-      ),
-      dimmed: dimmed,
-    );
-  }
-
-  //==================================가로 손패==================================
-  Widget _buildLandscapeHand(
-    PhoneGameController controller, {
-    required double entryCenterOffsetX,
-    required double entryCenterOffsetY,
-    required bool dimmed,
-  }) {
-    if (!_hasCompletedGameStart) return const SizedBox.shrink();
-
-    if (controller.isInitialLoading || controller.phase == 'dealing') {
-      return const SizedBox.shrink();
-    }
-    //==================================손패 없을때==================================
-    if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
-      return controller.isEliminated
-          ? _emptyHandMessage()
-          : const SizedBox.shrink();
-    }
-
-    //==================================손패==================================
-    return _dimHandCards(
-      PhoneHandCardStack(
-        key: ValueKey('landscape-deal-${controller.handDealVersion}'),
-        isLandscape: true,
+        key: ValueKey(
+          '${isLandscape ? 'landscape' : 'portrait'}-deal-'
+          '${controller.handDealVersion}',
+        ),
+        isLandscape: isLandscape,
         controller: _handCardStackController,
         cards: controller.handCardAssets,
         enabled: controller.canSelectCards,
@@ -770,7 +784,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================제한시간 종료==================================
+  //=======================제한 시간 종료==============================
   void _handleTurnTimeout(PhoneGameController controller) {
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
@@ -789,7 +803,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     unawaited(controller.submitCardIndexes([0]));
   }
 
-  //==================================LIAR·SUBMIT 버튼==================================
+  //=======================LIAR·SUBMIT 버튼==============================
   Widget _buildGameActionButton(
     PhoneGameController? controller, {
     required bool isLandscape,
@@ -818,7 +832,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================오류 메시지==================================
+  //=======================오류 메시지==============================
   Widget _buildErrorMessage(
     String message, {
     required VoidCallback onTap,
@@ -846,7 +860,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================마지막 카드 버튼==================================
+  //=======================마지막 카드 버튼==============================
   ButtonStyle _lastCardButtonStyle() {
     return FilledButton.styleFrom(
       backgroundColor: const Color(0xFF50675A),
@@ -857,7 +871,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================손패 없음==================================
+  //=======================손패 없음==============================
   Widget _emptyHandMessage() {
     return const Center(
       child: Text(
@@ -867,7 +881,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     );
   }
 
-  //==================================알파벳에 따라 카드 불러오기==================================
+  //=======================테이블 카드 자산==============================
   AssetGenImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
       'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
@@ -964,8 +978,9 @@ class _TwoPlayerPassPrompt extends StatelessWidget {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    final passButton = _PressableAssetButton(
+    final passButton = LiarsPokerPressableAssetButton(
       asset: Assets.games.liarsPoker.images.button.buttonPass,
+      // width: isLandscape ? 190 : 255.w,
       width: isLandscape ? 190 : 255.w,
       enabled: enabled,
       semanticsLabel: '패스하고 패널티 진행',
@@ -1002,112 +1017,78 @@ class _TwoPlayerPassPrompt extends StatelessWidget {
   }
 }
 
-/// 이미지 버튼이 눌린 동안 높이와 그림자가 함께 줄어드는 공통 버튼입니다.
-class _PressableAssetButton extends StatefulWidget {
-  const _PressableAssetButton({
-    required this.asset,
-    required this.width,
-    required this.enabled,
-    required this.semanticsLabel,
-    required this.onPressed,
+/// 세로 화면의 실제 크기를 기준으로 주요 영역을 비례 배치합니다.
+class _PortraitGameLayout {
+  const _PortraitGameLayout({
+    required this.headerTop,
+    required this.timerTop,
+    required this.statusTop,
+    required this.handTop,
+    required this.handHeight,
+    required this.actionTop,
+    required this.horizontalPadding,
+    required this.messagePadding,
+    required this.actionHorizontalPadding,
+    required this.tableHeight,
+    required this.statusFontSize,
   });
 
-  final AssetGenImage asset;
-  final double width;
-  final bool enabled;
-  final String semanticsLabel;
-  final VoidCallback onPressed;
-
-  @override
-  State<_PressableAssetButton> createState() => _PressableAssetButtonState();
-}
-
-class _PressableAssetButtonState extends State<_PressableAssetButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget image() => widget.asset.image(
-      width: widget.width,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
+  factory _PortraitGameLayout.fromSize(Size size) {
+    final height = size.height;
+    final width = size.width;
+    final headerTop = (height * 0.059).clamp(32.0, 56.0);
+    final timerTop = (height * 0.124).clamp(78.0, 112.0);
+    final statusTop = (height * 0.19).clamp(122.0, 166.0);
+    final handTop = (height * 0.251).clamp(164.0, 218.0);
+    final actionHeight = (height * 0.229).clamp(168.0, 205.0);
+    final actionBottom = (height * 0.058).clamp(24.0, 52.0);
+    final actionTop = math.max(
+      handTop + 210,
+      height - actionHeight - actionBottom,
     );
+    final handBottom = actionTop - (height * 0.025).clamp(14.0, 24.0);
+    final handHeight = math.max(210.0, handBottom - handTop);
 
-    return Semantics(
-      button: true,
-      enabled: widget.enabled,
-      label: widget.semanticsLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: widget.enabled
-            ? (_) => setState(() => _isPressed = true)
-            : null,
-        onTapUp: widget.enabled
-            ? (_) {
-                setState(() => _isPressed = false);
-                widget.onPressed();
-              }
-            : null,
-        onTapCancel: widget.enabled
-            ? () => setState(() => _isPressed = false)
-            : null,
-        child: AnimatedOpacity(
-          opacity: widget.enabled ? 1 : 0.5,
-          duration: const Duration(milliseconds: 180),
-          child: AnimatedSlide(
-            offset: _isPressed ? const Offset(0, 0.04) : Offset.zero,
-            duration: const Duration(milliseconds: 110),
-            curve: Curves.easeOutCubic,
-            child: AnimatedScale(
-              scale: _isPressed ? 0.91 : 1,
-              duration: const Duration(milliseconds: 110),
-              curve: Curves.easeOutCubic,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  AnimatedSlide(
-                    offset: _isPressed
-                        ? const Offset(0, 0.015)
-                        : const Offset(0, 0.065),
-                    duration: const Duration(milliseconds: 110),
-                    child: AnimatedOpacity(
-                      opacity: _isPressed ? 0.28 : 0.68,
-                      duration: const Duration(milliseconds: 110),
-                      child: ImageFiltered(
-                        imageFilter: ui.ImageFilter.blur(
-                          sigmaX: _isPressed ? 3 : 8,
-                          sigmaY: _isPressed ? 3 : 8,
-                        ),
-                        child: ColorFiltered(
-                          colorFilter: const ColorFilter.mode(
-                            Colors.black,
-                            BlendMode.srcIn,
-                          ),
-                          child: image(),
-                        ),
-                      ),
-                    ),
-                  ),
-                  image(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return _PortraitGameLayout(
+      headerTop: headerTop,
+      timerTop: timerTop,
+      statusTop: statusTop,
+      handTop: handTop,
+      handHeight: handHeight,
+      actionTop: actionTop,
+      horizontalPadding: (width * 0.051).clamp(16.0, 24.0),
+      messagePadding: (width * 0.062).clamp(20.0, 30.0),
+      actionHorizontalPadding: (width * 0.18).clamp(54.0, 82.0),
+      tableHeight: (height * 0.0285).clamp(20.0, 26.0),
+      statusFontSize: (width * 0.041).clamp(14.0, 17.0),
     );
   }
+
+  final double headerTop;
+  final double timerTop;
+  final double statusTop;
+  final double handTop;
+  final double handHeight;
+  final double actionTop;
+  final double horizontalPadding;
+  final double messagePadding;
+  final double actionHorizontalPadding;
+  final double tableHeight;
+  final double statusFontSize;
 }
 
-class _PortraitGameBackground extends StatelessWidget {
-  const _PortraitGameBackground();
+//=======================가로·세로 공통 배경 위젯==============================
+class _PhoneGameBackground extends StatelessWidget {
+  const _PhoneGameBackground({required this.isLandscape});
+
+  final bool isLandscape;
 
   @override
   Widget build(BuildContext context) {
-    return Assets.games.liarsPoker.images.background.backgroundPhone.image(
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.high,
-    );
+    final asset = isLandscape
+        ? Assets.games.liarsPoker.images.background.background
+        : Assets.games.liarsPoker.images.background.backgroundPhone;
+
+    return asset.image(fit: BoxFit.cover, filterQuality: FilterQuality.high);
   }
 }

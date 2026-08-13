@@ -28,7 +28,7 @@ class LiarsPokerProvider extends ChangeNotifier {
 
   String? errorMessage;
 
-  // ===================== initialize =====================
+  //=======================초기화==============================
 
   Future<void> initialize({
     required String roomCode,
@@ -48,7 +48,7 @@ class LiarsPokerProvider extends ChangeNotifier {
         .listen(_onHandChanged);
   }
 
-  // ===================== listeners =====================
+  //=======================구독 처리==============================
 
   void _onPublicChanged(DatabaseEvent event) {
     final value = event.snapshot.value;
@@ -76,7 +76,7 @@ class LiarsPokerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===================== commands =====================
+  //=======================게임 명령==============================
 
   Future<void> startGame() async {
     if (_roomCode == null) return;
@@ -118,7 +118,7 @@ class LiarsPokerProvider extends ChangeNotifier {
     });
   }
 
-  // ===================== common =====================
+  //=======================공통 처리==============================
 
   Future<void> _runLoading(Future<void> Function() action) async {
     try {

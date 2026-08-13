@@ -73,6 +73,16 @@ export const leaveFinalCallGame = onCall<Data>(
           if (!nextUid) throw new HttpsError("data-loss", "다음 플레이어를 찾을 수 없습니다.");
           startTurn(game, nextUid, now);
         }
+      } else if (wasCurrentTurn && game.public.phase === "callerSubmit") {
+        if (game.public.finalTurnPendingUids.length === 0) {
+          resolveFinalCallRound(game, now, false);
+        } else {
+          game.public.phase = "finalTurns";
+          const nextUid = followingUids.find((playerUid) =>
+            game.public.finalTurnPendingUids.includes(playerUid));
+          if (!nextUid) throw new HttpsError("data-loss", "다음 플레이어를 찾을 수 없습니다.");
+          startTurn(game, nextUid, now);
+        }
       } else if (wasCurrentTurn && game.public.phase === "playing") {
         const nextUid = followingUids[0];
         if (!nextUid) throw new HttpsError("data-loss", "다음 플레이어를 찾을 수 없습니다.");

@@ -136,7 +136,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
           return Stack(
             children: [
               const Positioned.fill(child: _GameBackground()),
-              //기본 세팅
+              //=======================기본 게임 레이어==============================
               Positioned.fill(
                 child: TabletGameLayer(
                   status: _controller.status,
@@ -155,7 +155,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   onExitToLobby: _endGame,
                 ),
               ),
-              //제출된 카드 애니메이션
+              //=======================제출 카드 애니메이션==============================
               if (_controller.shouldShowSubmittedPlay)
                 Positioned.fill(
                   child: ColorFiltered(
@@ -203,7 +203,7 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   ),
                 ),
 
-              //패널티 부분
+              //=======================벌칙 룰렛==============================
               if (_controller.status == GameStatus.penalty &&
                   !_controller.isInsufficientPlayersEnding)
                 Positioned.fill(

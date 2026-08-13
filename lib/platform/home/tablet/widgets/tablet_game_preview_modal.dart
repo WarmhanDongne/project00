@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/screens/tablet/final_call_tablet_game.dart';
+import 'package:project00/games/final_call/screens/tablet_game.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
@@ -117,9 +117,10 @@ class GamePreviewDialog extends StatelessWidget {
               if (!layoutContext.mounted) return;
               Navigator.of(layoutContext).pushReplacement(
                 MaterialPageRoute(
-                  builder: (_) => FinalCallTabletGame(
+                  builder: (_) => FinalCallTabletGameEntry(
                     roomCode: roomCode,
-                    service: finalCallService,
+                    gameService: finalCallService,
+                    provider: roomProvider,
                   ),
                 ),
               );

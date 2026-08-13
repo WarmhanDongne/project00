@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
@@ -24,6 +25,7 @@ class FinalCallController extends ChangeNotifier {
   bool commandInFlight = false;
   String? errorMessage;
   String status = 'playing';
+  String? finishReason;
   String phase = 'dealing';
   int round = 1;
   int revision = 0;
@@ -34,6 +36,7 @@ class FinalCallController extends ChangeNotifier {
   FinalCallCard? discardCard;
   String? pendingDrawUid;
   String? pendingDrawSource;
+  List<String> finalTurnPendingUids = const [];
   String? winnerUid;
   Map<String, FinalCallPlayer> players = const {};
   List<FinalCallCard> hand = const [];
@@ -44,14 +47,22 @@ class FinalCallController extends ChangeNotifier {
   bool get isFinished => status == 'finished';
   bool get canAct =>
       status == 'playing' &&
-      (phase == 'playing' || phase == 'finalTurns') &&
+      (phase == 'playing' ||
+          phase == 'callerSubmit' ||
+          phase == 'finalTurns') &&
       isMyTurn &&
       !commandInFlight;
   bool get canDraw => canAct && pendingDrawUid == null;
   bool get canCompleteTurn =>
       canAct && pendingDrawUid == uid && pendingDraw != null;
   bool get canCall => canAct && phase == 'playing' && pendingDrawUid == null;
+  bool get canSubmitCallerHand =>
+      canAct && phase == 'callerSubmit' && callerUid == uid;
   FinalCallPlayer? get turnPlayer => players[turnUid];
+  String get actionErrorMessage =>
+      errorMessage == null || errorMessage!.trim().isEmpty
+      ? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
+      : errorMessage!;
 
   void initialize() {
     _publicSubscription = service
@@ -74,6 +85,7 @@ class FinalCallController extends ChangeNotifier {
     if (event.snapshot.value is! Map) return;
     final map = Map<Object?, Object?>.from(event.snapshot.value as Map);
     status = map['status']?.toString() ?? status;
+    finishReason = map['finishReason']?.toString();
     phase = map['phase']?.toString() ?? phase;
     round = (map['round'] as num?)?.toInt() ?? round;
     revision = (map['revision'] as num?)?.toInt() ?? revision;
@@ -83,6 +95,18 @@ class FinalCallController extends ChangeNotifier {
     deckRemainingCount = (map['deckRemainingCount'] as num?)?.toInt() ?? 0;
     pendingDrawUid = map['pendingDrawUid']?.toString();
     pendingDrawSource = map['pendingDrawSource']?.toString();
+    final rawFinalTurns = map['finalTurnPendingUids'];
+    if (rawFinalTurns is List) {
+      finalTurnPendingUids = rawFinalTurns.whereType<String>().toList(
+        growable: false,
+      );
+    } else if (rawFinalTurns is Map) {
+      finalTurnPendingUids = rawFinalTurns.values.whereType<String>().toList(
+        growable: false,
+      );
+    } else {
+      finalTurnPendingUids = const [];
+    }
     winnerUid = map['winnerUid']?.toString();
     final rawDiscard = map['discardCard'];
     if (rawDiscard is Map) {
@@ -143,11 +167,14 @@ class FinalCallController extends ChangeNotifier {
   Future<bool> completeTurn(String? replaceCardId) =>
       _run(() => service.completeTurn(roomCode, replaceCardId));
   Future<bool> call() => _run(() => service.call(roomCode));
+  Future<bool> submitFinalHand(List<String> cardIds) =>
+      _run(() => service.submitFinalHand(roomCode, cardIds));
   Future<bool> completeDealing() =>
       _run(() => service.completeDealing(roomCode));
   Future<bool> nextRound() => _run(() => service.nextRound(roomCode));
   Future<bool> restartGame() =>
       _run(() => service.start(roomCode, restart: true));
+  Future<bool> endGame() => _run(() => service.endGame(roomCode));
   Future<bool> timeoutTurn() => _run(() => service.timeoutTurn(roomCode));
 
   /// 제한 시간이 끝난 턴은 덱에서 한 장을 가져와 그대로 버립니다.
@@ -171,7 +198,11 @@ class FinalCallController extends ChangeNotifier {
       await command();
       return true;
     } catch (error) {
-      _setError(error.toString());
+      _setError(
+        error is FirebaseFunctionsException
+            ? (error.message ?? '요청을 처리하지 못했습니다.')
+            : '서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.',
+      );
       return false;
     } finally {
       commandInFlight = false;

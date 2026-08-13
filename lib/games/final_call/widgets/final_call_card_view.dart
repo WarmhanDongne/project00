@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
 
+AssetGenImage finalCallCardAsset(FinalCallCard card) {
+  final suffix = '${card.color}_${card.value}.png';
+  return Assets.games.finalCall.images.cards.values.firstWhere(
+    (asset) => asset.path.endsWith(suffix),
+    orElse: () => Assets.games.finalCall.images.cards.cardBack,
+  );
+}
+
 class FinalCallCardView extends StatelessWidget {
   const FinalCallCardView({
     super.key,
@@ -20,7 +28,7 @@ class FinalCallCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final asset = faceDown || card == null
         ? Assets.games.finalCall.images.cards.cardBack
-        : _asset(card!);
+        : finalCallCardAsset(card!);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       transform: Matrix4.translationValues(0, selected ? -12 : 0, 0),
@@ -39,14 +47,6 @@ class FinalCallCardView extends StatelessWidget {
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
       ),
-    );
-  }
-
-  AssetGenImage _asset(FinalCallCard card) {
-    final suffix = '${card.color}_${card.value}.png';
-    return Assets.games.finalCall.images.cards.values.firstWhere(
-      (asset) => asset.path.endsWith(suffix),
-      orElse: () => Assets.games.finalCall.images.cards.cardBack,
     );
   }
 }
