@@ -96,11 +96,19 @@ flutter:
     - assets/games/liars_poker/images/cards/
     - assets/games/liars_poker/images/icons/
     - assets/games/liars_poker/images/table/
+    - assets/games/liars_poker/images/modal/
+    - assets/games/liars_poker/images/other/
     - assets/games/mafia/images/background/
     - assets/games/mafia/images/background/bird/
     - assets/games/mafia/images/cards/
     - assets/games/mafia/images/icons/
     - assets/games/mafia/images/other/
+    - assets/games/final_call/images/background/
+    - assets/games/final_call/images/button/
+    - assets/games/final_call/images/cards/
+    - assets/games/final_call/images/icons/
+    - assets/games/final_call/images/modal/
+    - assets/games/final_call/images/table/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/
@@ -139,6 +147,9 @@ flutter:
     - family: DigitalTimer
       fonts:
         - asset: assets/fonts/DSEG7Classic-Italic.ttf
+    - family: BebasNeue
+      fonts:
+        - asset: assets/fonts/BebasNeue-Regular.ttf
 
 flutter_gen: 
   output: lib/gen/

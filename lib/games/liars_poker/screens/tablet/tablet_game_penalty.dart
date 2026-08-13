@@ -6,11 +6,13 @@ class TabletGamePenalty extends StatelessWidget {
   const TabletGamePenalty({
     super.key,
     required this.attemptCount,
+    required this.profileImageUrl,
     required this.isResolving,
     required this.onResult,
   });
 
   final int attemptCount;
+  final String profileImageUrl;
   final bool isResolving;
   final ValueChanged<RouletteResult> onResult;
 
@@ -24,6 +26,7 @@ class TabletGamePenalty extends StatelessWidget {
             child: Center(
               child: PenaltyRoulette(
                 attemptCount: attemptCount,
+                centerProfileImageUrl: profileImageUrl,
                 onResult: onResult,
               ),
             ),

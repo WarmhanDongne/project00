@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/final_call/screens/tablet/final_call_tablet_game.dart';
+import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
 import 'package:project00/games/liars_poker/screens/liars_poker.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
@@ -103,6 +105,27 @@ class GamePreviewDialog extends StatelessWidget {
               return;
             }
 
+            if (game.id == 'final_call') {
+              final finalCallService = FinalCallService();
+              try {
+                await finalCallService.start(roomCode);
+              } catch (error) {
+                if (!layoutContext.mounted) return;
+                _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
+                return;
+              }
+              if (!layoutContext.mounted) return;
+              Navigator.of(layoutContext).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => FinalCallTabletGame(
+                    roomCode: roomCode,
+                    service: finalCallService,
+                  ),
+                ),
+              );
+              return;
+            }
+
             final gameService = LiarsPokerService();
             try {
               await gameService.command.startGame(roomCode: roomCode);
@@ -112,7 +135,6 @@ class GamePreviewDialog extends StatelessWidget {
               return;
             }
             if (!layoutContext.mounted) return;
-
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => LiarsPoker(

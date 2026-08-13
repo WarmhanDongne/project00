@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
@@ -110,12 +111,36 @@ class QR extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          color: Colors.grey.shade500,
-          child: Text(
-            '코드 : $roomCode',
-            style: const TextStyle(fontSize: 15, color: Colors.black),
+        Semantics(
+          button: true,
+          label: '방 코드 $roomCode 복사',
+          child: Material(
+            color: Colors.grey.shade500,
+            child: InkWell(
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: roomCode));
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(
+                      content: Text('방 코드가 복사되었습니다.'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                child: Text(
+                  '코드 : $roomCode',
+                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                ),
+              ),
+            ),
           ),
         ),
       ],

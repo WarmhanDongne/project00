@@ -56,10 +56,27 @@ export const passLiarsPokerChallenge = onCall<PassChallengeData>(
       assertPlayerTurn(game.public.turnUid ?? "", uid);
 
       const now = Date.now();
-      restartRound(game, uid, now);
+      const alivePlayerCount = Object.values(game.public.players).filter(
+        (gamePlayer) => gamePlayer.status === "alive",
+      ).length;
+
+      if (alivePlayerCount === 2) {
+        // 1대1 PASS는 상대의 마지막 카드를 인정하는 선택이므로 PASS를
+        // 선택한 현재 플레이어가 벌칙 룰렛을 진행합니다.
+        game.public.phase = "penalty";
+        game.public.turnUid = null;
+        game.public.turnDeadlineAt = null;
+        game.public.penaltyTargetUid = uid;
+        delete game.public.penaltyResult;
+        delete game.server.penaltyCountIncrementedBeforeRoulette;
+        game.public.revision += 1;
+        game.public.updatedAt = now;
+      } else {
+        restartRound(game, uid, now);
+      }
       response = {
         success: true,
-        type: "challengePassed",
+        type: alivePlayerCount === 2 ? "passPenalty" : "challengePassed",
         commandId,
         round: game.public.round,
         turnUid: uid,

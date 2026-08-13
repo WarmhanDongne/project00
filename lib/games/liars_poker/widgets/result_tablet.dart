@@ -150,7 +150,9 @@ class _WinnerBadge extends StatelessWidget {
               color: Color.fromARGB(255, 8, 2, 2),
               fontSize: 34,
               fontWeight: FontWeight.w200,
-              shadows: [Shadow(color: Color.fromARGB(255, 0, 0, 0), blurRadius: 8)],
+              shadows: [
+                Shadow(color: Color.fromARGB(255, 0, 0, 0), blurRadius: 8),
+              ],
             ),
           ),
         ),
@@ -198,19 +200,19 @@ class _ResultActions extends StatelessWidget {
         _ResultActionButton(
           action: onRestartGame,
           label: '다시하기',
-          asset: Assets.games.liarsPoker.images.icons.iconAgainBlack,
+          asset: Assets.games.liarsPoker.images.button.buttonRetry,
         ),
         _ResultActionButton(
           action: onExitToLobby,
           label: '나가기',
-          asset: Assets.games.liarsPoker.images.icons.iconHomeBlack,
+          asset: Assets.games.liarsPoker.images.button.buttonHome,
         ),
       ],
     );
   }
 }
 
-class _ResultActionButton extends StatelessWidget {
+class _ResultActionButton extends StatefulWidget {
   const _ResultActionButton({
     required this.action,
     required this.label,
@@ -222,53 +224,62 @@ class _ResultActionButton extends StatelessWidget {
   final AssetGenImage asset;
 
   @override
-  Widget build(BuildContext context) {
-    const borderRadius = BorderRadius.all(Radius.circular(20));
+  State<_ResultActionButton> createState() => _ResultActionButtonState();
+}
 
+class _ResultActionButtonState extends State<_ResultActionButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      enabled: action != null,
-      label: label,
-      child: Material(
-        color: Colors.transparent,
-        child: Ink(
-          width: 220,
-          height: 220,
-          decoration: const BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 30,
-                offset: Offset(0, 12),
+      enabled: widget.action != null,
+      label: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.action == null
+            ? null
+            : (_) => setState(() => _isPressed = true),
+        onTapUp: widget.action == null
+            ? null
+            : (_) {
+                setState(() => _isPressed = false);
+                widget.action?.call();
+              },
+        onTapCancel: widget.action == null
+            ? null
+            : () => setState(() => _isPressed = false),
+        child: AnimatedSlide(
+          offset: _isPressed ? const Offset(0, 0.045) : Offset.zero,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+          child: AnimatedScale(
+            scale: _isPressed ? 0.9 : 1,
+            duration: const Duration(milliseconds: 110),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              width: 220,
+              height: 220,
+              duration: const Duration(milliseconds: 110),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _isPressed
+                        ? const Color(0x55000000)
+                        : const Color(0x99000000),
+                    blurRadius: _isPressed ? 7 : 24,
+                    spreadRadius: _isPressed ? 0 : 2,
+                    offset: Offset(0, _isPressed ? 3 : 13),
+                  ),
+                ],
               ),
-            ],
-            color: Color.fromARGB(255, 255, 255, 49),
-            borderRadius: borderRadius,
-          ),
-          child: InkWell(
-            onTap: action,
-            borderRadius: borderRadius,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 112,
-                  height: 112,
-                  child: asset.image(
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
+              child: widget.asset.image(
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
             ),
           ),
         ),

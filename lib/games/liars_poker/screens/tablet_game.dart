@@ -36,6 +36,7 @@ class LiarsPokerTabletGame extends StatefulWidget {
 
 class TabletGameState extends State<LiarsPokerTabletGame> {
   late final TabletGameController _controller;
+  bool _hasScheduledInsufficientPlayersExit = false;
 
   GameStatus get gameStatus => _controller.status;
 
@@ -111,6 +112,16 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
     Navigator.of(context).maybePop();
   }
 
+  void _scheduleInsufficientPlayersExit() {
+    if (_hasScheduledInsufficientPlayersExit) return;
+    _hasScheduledInsufficientPlayersExit = true;
+
+    Future<void>.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      _returnToLobby();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,6 +129,10 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
+          if (_controller.isInsufficientPlayersEnding) {
+            _scheduleInsufficientPlayersExit();
+          }
+
           return Stack(
             children: [
               const Positioned.fill(child: _GameBackground()),
@@ -137,28 +152,60 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                   onDealCompleted: _controller.onDealCompleted,
                   onRoundRevealCompleted: _controller.onRoundRevealCompleted,
                   onRestartGame: _restartGame,
-                  onExitToLobby: _returnToLobby,
+                  onExitToLobby: _endGame,
                 ),
               ),
               //제출된 카드 애니메이션
               if (_controller.shouldShowSubmittedPlay)
                 Positioned.fill(
-                  child: TabletGameAnimation(
-                    key: ValueKey(
-                      'card-pile-${_controller.roundNumber}-'
-                      '${_controller.cardPileVersion}',
+                  child: ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      _controller.isInsufficientPlayersEnding
+                          ? const Color(0xA6000000)
+                          : const Color(0x00000000),
+                      BlendMode.srcATop,
                     ),
-                    roundPlays: _controller.roundPlays,
-                    activePlayId: _controller.activeAnimationPlayId,
-                    playerCount: _controller.playerCount,
-                    playerSeatIndexes: _controller.seatIndexes,
-                    onCardsPlayed: _controller.onCardsPlayed,
-                    onCardsRevealed: _controller.onCardsRevealed,
+                    child: TabletGameAnimation(
+                      key: ValueKey(
+                        'card-pile-${_controller.roundNumber}-'
+                        '${_controller.cardPileVersion}',
+                      ),
+                      roundPlays: _controller.roundPlays,
+                      activePlayId: _controller.activeAnimationPlayId,
+                      playerCount: _controller.playerCount,
+                      playerSeatIndexes: _controller.seatIndexes,
+                      onCardsPlayed: _controller.onCardsPlayed,
+                      onCardsRevealed: _controller.onCardsRevealed,
+                    ),
+                  ),
+                ),
+
+              if (_controller.isInsufficientPlayersEnding)
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          '인원 부족으로 게임을 종료합니다',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            shadows: [
+                              Shadow(color: Colors.black, blurRadius: 12),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
 
               //패널티 부분
-              if (_controller.status == GameStatus.penalty)
+              if (_controller.status == GameStatus.penalty &&
+                  !_controller.isInsufficientPlayersEnding)
                 Positioned.fill(
                   child: TabletGamePenalty(
                     key: ValueKey(
@@ -167,6 +214,8 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                       '${_controller.rouletteRetry}',
                     ),
                     attemptCount: _controller.penaltyAttemptCount,
+                    profileImageUrl:
+                        _controller.penaltyPlayer?.profileImageUrl ?? '',
                     isResolving: _controller.isResolvingPenalty,
                     onResult: _controller.resolveRoulette,
                   ),
@@ -175,7 +224,6 @@ class TabletGameState extends State<LiarsPokerTabletGame> {
                 child: TabletGameOverlay(
                   provider: widget.provider,
                   status: _controller.status,
-                  onDebugStatusChanged: _controller.selectDebugStatus,
                   onRestartGame: _restartGame,
                   onEndGame: _endGame,
                 ),

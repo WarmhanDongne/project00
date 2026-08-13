@@ -57,6 +57,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     with TickerProviderStateMixin {
   late final AnimationController _entryController;
   late final AnimationController _revealController;
+  late final Listenable _animation;
 
   bool _isEntryCompleted = false;
   bool _isRevealStarted = false;
@@ -88,6 +89,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
       vsync: this,
       duration: _revealDuration,
     )..addStatusListener(_handleRevealStatus);
+    _animation = Listenable.merge([_entryController, _revealController]);
 
     if (widget.autoplay) {
       _entryController.forward();
@@ -153,7 +155,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
         );
 
         return AnimatedBuilder(
-          animation: Listenable.merge([_entryController, _revealController]),
+          animation: _animation,
           builder: (context, _) {
             return SizedBox.fromSize(
               size: size,

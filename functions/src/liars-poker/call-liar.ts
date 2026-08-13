@@ -77,13 +77,28 @@ export const callLiarsPoker = onCall<CallLiarData>(
         (card) => card.rank === game.public.table || card.rank === "JOKER",
       );
       const penaltyTargetUid = truthful ? uid : lastPlay.playerUid;
+      const alivePlayerCount = Object.values(game.public.players).filter(
+        (player) => player.status === "alive",
+      ).length;
+      const shouldIncreasePenaltyBeforeRoulette =
+        alivePlayerCount === 2 && truthful;
       const now = Date.now();
       const actualRanks = actualCards.map((card) => card.rank);
+
+      // 1대1에서 LIAR 판정에 실패하면 이번 룰렛부터 한 단계 높아진
+      // 탈락 확률을 적용합니다. 생존 후에는 중복 증가하지 않습니다.
+      if (shouldIncreasePenaltyBeforeRoulette) {
+        challenger.penaltyCount += 1;
+        game.server.penaltyCountIncrementedBeforeRoulette = true;
+      } else {
+        delete game.server.penaltyCountIncrementedBeforeRoulette;
+      }
 
       game.public.phase = "penalty";
       game.public.turnUid = null;
       game.public.turnDeadlineAt = null;
       game.public.penaltyTargetUid = penaltyTargetUid;
+      delete game.public.penaltyResult;
       const revealedLastPlay = {
         ...lastPlay,
         revealed: true,
