@@ -36,7 +36,7 @@ class RegisterStepTwo extends StatelessWidget {
           onTap: isLoading ? null : onPickProfileImage,
           child: CircleAvatar(
             radius: 50,
-            backgroundImage: profileImageBytes == null
+            backgroundImage: profileImageBytes != null
                 ? MemoryImage(profileImageBytes!)
                 : (googlePhotoURL != null
                       ? NetworkImage(googlePhotoURL!) as ImageProvider
