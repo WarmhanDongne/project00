@@ -1,7 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore 추가
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
@@ -9,57 +9,78 @@ import 'package:project00/platform/home/home.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
-
   final Stream<User?>? userChanges;
 
   @override
   Widget build(BuildContext context) {
-    // LayoutBuilder 대신 빌드 단계에서 View.of(context)를 사용해 화면 크기를 구합니다.
+    // 화면 크기 구하기
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
-    
-    // shortestSide를 기준으로 태블릿 여부를 판단합니다.
-    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
+    // 테블릿, 폰 분기
+    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
-        ? const Size(834, 1194) // 테블릿
-        : const Size(390, 844); // 핸드폰
+        ? const Size(834, 1194) // 테블릿 기본 사이즈
+        : const Size(390, 844); // 핸드폰 기본 사이즈
 
     return ScreenUtilInit(
-      ensureScreenSize: true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
+      ensureScreenSize: true, // android 환경 등에서 프레임 사이즈가 초기에 0이 되는 걸 방지
       designSize: currentDesignSize,
       child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Project 00',
+        debugShowCheckedModeBanner: false,
+        title: 'Project 00',
+        home: StreamBuilder<User?>(
+          stream: userChanges ?? FirebaseAuth.instance.userChanges(),
+          builder: (context, snapshot) {
+            // 1. Firebase Auth 상태 로딩 중
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-            home: StreamBuilder<User?>(
-              stream: userChanges ?? FirebaseAuth.instance.userChanges(),
-              builder: (context, snapshot) {
-                // Firebase 로그인 상태 확인 중
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
+            // 2. Auth에 로그인된 유저 정보가 있는 경우
+            if (snapshot.hasData && snapshot.data != null) {
+              final user = snapshot.data!;
 
-                // 로그인된 사용자
-                if (snapshot.hasData && snapshot.data != null) {
-                  final user = snapshot.data!;
+              // 🔥 핵심 변경 부분: Firebase Auth 대신 Firestore의 users 컬렉션 확인
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .get(),
+                builder: (context, userDocSnapshot) {
+                  // Firestore 데이터 로딩 중
+                  if (userDocSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
 
-                  // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
-                  if (user.displayName == null) {
+                  // Firestore에 문서가 없거나, 닉네임 데이터가 없으면 닉네임 설정 화면으로 연결
+                  final userData =
+                      userDocSnapshot.data?.data() as Map<String, dynamic>?;
+
+                  if (!userDocSnapshot.hasData ||
+                      !userDocSnapshot.data!.exists ||
+                      userData == null ||
+                      userData['nickname'] == null ||
+                      userData['nickname'].toString().trim().isEmpty) {
                     return const RegisterScreen(isGoogleSignIn: true);
                   }
 
-                  // 로그인 완료 → 홈 화면
+                  // DB에 유저 문서와 닉네임이 모두 존재하면 홈 화면으로 이동
                   return const Home();
-                }
+                },
+              );
+            }
 
-                // 로그인 안 된 경우
-                return const LoginScreen();
-              },
-            ),
-          ),
-        );
+            // 3. 로그인되지 않은 상태
+            return const LoginScreen();
+          },
+        ),
+      ),
+    );
   }
 }

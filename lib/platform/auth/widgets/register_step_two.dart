@@ -9,6 +9,7 @@ class RegisterStepTwo extends StatelessWidget {
     required this.isLoading,
     required this.isCodeSent,
     required this.isPhoneVerified,
+    required this.googlePhotoURL,
     required this.profileImageBytes,
     required this.onPickProfileImage,
     required this.onCheckNickname,
@@ -25,6 +26,8 @@ class RegisterStepTwo extends StatelessWidget {
   final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;
 
+  final String? googlePhotoURL;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -33,10 +36,13 @@ class RegisterStepTwo extends StatelessWidget {
           onTap: isLoading ? null : onPickProfileImage,
           child: CircleAvatar(
             radius: 50,
-            backgroundImage: profileImageBytes == null
-                ? null
-                : MemoryImage(profileImageBytes!),
-            child: profileImageBytes == null
+            backgroundImage: profileImageBytes != null
+                ? MemoryImage(profileImageBytes!)
+                : (googlePhotoURL != null
+                      ? NetworkImage(googlePhotoURL!) as ImageProvider
+                      : null),
+
+            child: profileImageBytes == null && googlePhotoURL == null
                 ? const Text('프로필\n사진', textAlign: TextAlign.center)
                 : null,
           ),
