@@ -11,9 +11,11 @@ class PenaltyRoulette extends StatefulWidget {
     super.key,
     required this.attemptCount,
     required this.onResult,
+    this.centerProfileImageUrl,
   });
   final int attemptCount;
   final ValueChanged<RouletteResult> onResult;
+  final String? centerProfileImageUrl;
 
   @override
   State<PenaltyRoulette> createState() => _PenaltyRouletteState();
@@ -150,6 +152,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
               controller: _controller,
               group: _group,
               leverProgress: _leverController.value,
+              centerProfileImageUrl: widget.centerProfileImageUrl,
             ),
           ),
           Positioned(
@@ -187,6 +190,7 @@ class RouletteWheel extends StatelessWidget {
     required this.controller,
     required this.group,
     required this.leverProgress,
+    required this.centerProfileImageUrl,
   });
 
   static const double _rouletteSize = 700;
@@ -194,6 +198,7 @@ class RouletteWheel extends StatelessWidget {
   final RouletteController controller;
   final RouletteGroup group;
   final double leverProgress;
+  final String? centerProfileImageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -265,6 +270,30 @@ class RouletteWheel extends StatelessWidget {
               ),
             ),
           ),
+
+          // 라이어 포커에서는 중앙 스톤과 같은 지름으로 벌칙 대상 프로필을
+          // 덮어 현재 룰렛 대상이 누구인지 즉시 확인할 수 있게 합니다.
+          if (centerProfileImageUrl != null)
+            Positioned(
+              top: (_rouletteSize - 320) / 2 + 22,
+              left: (_rouletteSize - 270) / 2,
+              child: IgnorePointer(
+                child: SizedBox.square(
+                  dimension: 270,
+                  child: ClipOval(
+                    child: centerProfileImageUrl!.trim().isEmpty
+                        ? const _RouletteProfileFallback()
+                        : Image.network(
+                            centerProfileImageUrl!,
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.high,
+                            errorBuilder: (_, _, _) =>
+                                const _RouletteProfileFallback(),
+                          ),
+                  ),
+                ),
+              ),
+            ),
 
           //포인터
           Positioned.fill(
@@ -369,6 +398,18 @@ class RouletteWheel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RouletteProfileFallback extends StatelessWidget {
+  const _RouletteProfileFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFF171717),
+      child: Icon(Icons.person_rounded, color: Colors.white70, size: 120),
     );
   }
 }

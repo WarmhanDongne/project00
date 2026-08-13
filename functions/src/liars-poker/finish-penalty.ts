@@ -70,7 +70,9 @@ export const resolveLiarsPokerPenalty = onCall<ResolvePenaltyData>(
 
       const now = Date.now();
       if (result === "safe") {
-        target.penaltyCount += 1;
+        if (game.server.penaltyCountIncrementedBeforeRoulette !== true) {
+          target.penaltyCount += 1;
+        }
       } else {
         target.status = "eliminated";
         target.remainingCardCount = 0;
@@ -87,6 +89,14 @@ export const resolveLiarsPokerPenalty = onCall<ResolvePenaltyData>(
           findNextAlivePlayer(game.public.players, targetUid);
         restartRound(game, starterUid, now);
       }
+      // 새 라운드나 승리 상태로 전환된 뒤에도 모든 휴대폰이 룰렛 결과를
+      // 동일하게 표시할 수 있도록 공개 결과를 잠시 보존합니다.
+      game.public.penaltyResult = {
+        targetUid,
+        result,
+        resolvedAt: now,
+      };
+      delete game.server.penaltyCountIncrementedBeforeRoulette;
 
       response = {
         success: true,

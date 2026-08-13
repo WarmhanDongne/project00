@@ -27,9 +27,13 @@ class LiarsPoker extends StatelessWidget {
         final shortestSide = constraints.maxWidth < constraints.maxHeight
             ? constraints.maxWidth
             : constraints.maxHeight;
-        
+
         if (shortestSide < 600) {
-          return PhoneGame(roomCode: roomCode, gameService: gameService);
+          return PhoneGame(
+            roomCode: roomCode,
+            gameService: gameService,
+            onExitRoom: provider.leaveLiarsPokerGame,
+          );
         } else {
           return LiarsPokerTabletGame(
             playerLayout: playerLayout,

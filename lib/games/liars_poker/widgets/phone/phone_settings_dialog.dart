@@ -37,6 +37,14 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 30,
+            spreadRadius: 2,
+            offset: Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -67,6 +75,14 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 30,
+            spreadRadius: 2,
+            offset: Offset(0, 14),
+          ),
+        ],
       ),
       child: Stack(
         children: [
@@ -240,6 +256,8 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1E2E24), // 다크 그린/블랙 색상
           foregroundColor: Colors.white,
+          elevation: 9,
+          shadowColor: const Color(0x99000000),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),

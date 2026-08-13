@@ -187,12 +187,43 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  /// 게임 중 퇴장: 서버가 다음 턴 또는 인원 부족 종료까지 결정합니다.
+  Future<bool> leaveLiarsPokerGame() async {
+    final code = roomCode;
+    if (code == null) return false;
+
+    final result = await _runCommand<bool>(() async {
+      await _service.leaveLiarsPokerGame(code);
+      return true;
+    });
+    if (result == true) {
+      clearRoom();
+    }
+    return result ?? false;
+  }
+
+  Future<bool> leaveFinalCallGame() async {
+    final code = roomCode;
+    if (code == null) return false;
+    final result = await _runCommand<bool>(() async {
+      await _service.leaveFinalCallGame(code);
+      return true;
+    });
+    if (result == true) clearRoom();
+    return result ?? false;
+  }
+
   // 메모리 초기화 leaveRoom에서 사용
   void clearRoom() {
     roomSubscription?.cancel();
+    playerSubscription?.cancel();
+    roomSubscription = null;
+    playerSubscription = null;
     roomCode = null;
     players = [];
     selectedGameId = null;
+    selectedGame = null;
+    groupGames = [];
     notifyListeners();
   }
 

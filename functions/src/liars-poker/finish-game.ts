@@ -9,6 +9,7 @@ export function finishGame(
   now: number,
 ): void {
   game.public.status = "finished";
+  game.public.finishReason = "winner";
   game.public.phase = "finished";
   game.public.turnUid = null;
   game.public.turnDeadlineAt = null;

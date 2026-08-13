@@ -117,6 +117,7 @@ class PublicLastPlay {
 class TabletPublicGameSnapshot {
   const TabletPublicGameSnapshot({
     required this.status,
+    required this.finishReason,
     required this.phase,
     required this.round,
     required this.table,
@@ -129,6 +130,7 @@ class TabletPublicGameSnapshot {
   });
 
   final String status;
+  final String? finishReason;
   final String phase;
   final int round;
   final String table;
@@ -168,6 +170,9 @@ class TabletPublicGameSnapshot {
 
     return TabletPublicGameSnapshot(
       status: data['status'] is String ? data['status'] as String : 'playing',
+      finishReason: data['finishReason'] is String
+          ? data['finishReason'] as String
+          : null,
       phase: data['phase'] is String ? data['phase'] as String : 'playing',
       round: round,
       table: data['table'] is String ? data['table'] as String : 'K',

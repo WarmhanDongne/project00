@@ -31,6 +31,7 @@ class TabletGameController extends ChangeNotifier {
   final TabletGameErrorHandler onError;
 
   StreamSubscription<DatabaseEvent>? _publicGameSubscription;
+  Timer? _penaltyTransitionTimer;
 
   GameStatus status = GameStatus.waiting;
   String table = 'K';
@@ -41,10 +42,12 @@ class TabletGameController extends ChangeNotifier {
   int rouletteRetry = 0;
   bool isResolvingPenalty = false;
   bool isProcessingMenuCommand = false;
+  bool isInsufficientPlayersEnding = false;
   String? turnUid;
   String? winnerUid;
   PlayerLayoutPlayer? winnerPlayer;
   String? penaltyTargetUid;
+  PlayerLayoutPlayer? penaltyPlayer;
   List<SubmittedPlay> roundPlays = const [];
   String? activeAnimationPlayId;
 
@@ -104,6 +107,11 @@ class TabletGameController extends ChangeNotifier {
   void _handlePublicGame(DatabaseEvent event) {
     final snapshot = TabletPublicGameSnapshot.tryParse(event.snapshot.value);
     if (snapshot == null) return;
+
+    if (snapshot.phase != 'penalty') {
+      _penaltyTransitionTimer?.cancel();
+      _penaltyTransitionTimer = null;
+    }
 
     final isFirstSnapshot = !_hasReceivedPublicGame;
     final wasDealing = serverPhase == 'dealing';
@@ -172,8 +180,12 @@ class TabletGameController extends ChangeNotifier {
     winnerUid = snapshot.winnerUid;
     winnerPlayer = snapshot.playerByUid(winnerUid, playerLayout);
     penaltyTargetUid = snapshot.penaltyTargetUid;
+    penaltyPlayer = snapshot.playerByUid(penaltyTargetUid, playerLayout);
     penaltyAttemptCount = snapshot.penaltyAttemptCount;
     isResolvingPenalty = false;
+    isInsufficientPlayersEnding =
+        snapshot.status == 'finished' &&
+        snapshot.finishReason == 'insufficientPlayers';
 
     roundPlays = shouldResetCardPile
         ? const []
@@ -183,7 +195,10 @@ class TabletGameController extends ChangeNotifier {
         : nextActiveAnimationPlayId ?? activeAnimationPlayId;
 
     // 서버 상태보다 한 번만 실행해야 하는 애니메이션 상태를 우선합니다.
-    if (snapshot.status == 'finished') {
+    if (isInsufficientPlayersEnding) {
+      // 태블릿에서 1초간 인원 부족 안내와 카드 더미 암전 상태를 보여준 뒤
+      // 게임 화면만 닫습니다. 현재 표시 상태는 유지해 테이블이 사라지지 않습니다.
+    } else if (snapshot.status == 'finished') {
       status = GameStatus.result;
     } else if (snapshot.phase == 'dealing') {
       // 더미 초기화를 먼저 반영하고 새 라운드 카드 배분만 표시합니다.
@@ -304,9 +319,20 @@ class TabletGameController extends ChangeNotifier {
 
   void onCardsRevealed() {
     if (status != GameStatus.cardsRevealing) return;
-    changeStatus(
-      serverPhase == 'penalty' ? GameStatus.penalty : GameStatus.playing,
-    );
+
+    if (serverPhase != 'penalty') {
+      changeStatus(GameStatus.playing);
+      return;
+    }
+    if (_penaltyTransitionTimer != null) return;
+
+    // 공개된 카드와 판정 결과를 충분히 확인한 뒤 룰렛 화면으로 전환합니다.
+    _penaltyTransitionTimer = Timer(const Duration(seconds: 3), () {
+      _penaltyTransitionTimer = null;
+      if (serverPhase == 'penalty' && status == GameStatus.cardsRevealing) {
+        changeStatus(GameStatus.penalty);
+      }
+    });
   }
 
   void changeStatus(GameStatus nextStatus) {
@@ -489,6 +515,7 @@ class TabletGameController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _penaltyTransitionTimer?.cancel();
     _publicGameSubscription?.cancel();
     super.dispose();
   }

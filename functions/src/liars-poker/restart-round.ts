@@ -49,4 +49,5 @@ export function restartRound(
   game.public.updatedAt = now;
   game.server.lastPlayCards = null;
   game.server.roundStarterUid = starterUid;
+  delete game.server.penaltyCountIncrementedBeforeRoulette;
 }

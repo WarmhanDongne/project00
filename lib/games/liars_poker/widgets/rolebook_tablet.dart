@@ -16,6 +16,14 @@ class RoleBook extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 36,
+            spreadRadius: 3,
+            offset: Offset(0, 18),
+          ),
+        ],
       ),
       child: Padding(
         padding: EdgeInsetsGeometry.all(60),
@@ -249,6 +257,8 @@ class Button extends StatelessWidget {
       style: FilledButton.styleFrom(
         minimumSize: const Size(270, 70),
         backgroundColor: color,
+        elevation: 12,
+        shadowColor: Colors.black54,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       onPressed: onPressed,

@@ -17,6 +17,9 @@ import 'package:vector_graphics/vector_graphics.dart' as _vg;
 class $AssetsGamesGen {
   const $AssetsGamesGen();
 
+  /// Directory path: assets/games/final_call
+  $AssetsGamesFinalCallGen get finalCall => const $AssetsGamesFinalCallGen();
+
   /// Directory path: assets/games/liars_poker
   $AssetsGamesLiarsPokerGen get liarsPoker => const $AssetsGamesLiarsPokerGen();
 
@@ -65,6 +68,14 @@ class $AssetsSoundsGen {
 
   /// List of all assets
   List<String> get values => [aGitkeep];
+}
+
+class $AssetsGamesFinalCallGen {
+  const $AssetsGamesFinalCallGen();
+
+  /// Directory path: assets/games/final_call/images
+  $AssetsGamesFinalCallImagesGen get images =>
+      const $AssetsGamesFinalCallImagesGen();
 }
 
 class $AssetsGamesLiarsPokerGen {
@@ -116,6 +127,34 @@ class $AssetsImagesWidgetsGen {
       const $AssetsImagesWidgetsRouletteGen();
 }
 
+class $AssetsGamesFinalCallImagesGen {
+  const $AssetsGamesFinalCallImagesGen();
+
+  /// Directory path: assets/games/final_call/images/background
+  $AssetsGamesFinalCallImagesBackgroundGen get background =>
+      const $AssetsGamesFinalCallImagesBackgroundGen();
+
+  /// Directory path: assets/games/final_call/images/button
+  $AssetsGamesFinalCallImagesButtonGen get button =>
+      const $AssetsGamesFinalCallImagesButtonGen();
+
+  /// Directory path: assets/games/final_call/images/cards
+  $AssetsGamesFinalCallImagesCardsGen get cards =>
+      const $AssetsGamesFinalCallImagesCardsGen();
+
+  /// Directory path: assets/games/final_call/images/icons
+  $AssetsGamesFinalCallImagesIconsGen get icons =>
+      const $AssetsGamesFinalCallImagesIconsGen();
+
+  /// Directory path: assets/games/final_call/images/modal
+  $AssetsGamesFinalCallImagesModalGen get modal =>
+      const $AssetsGamesFinalCallImagesModalGen();
+
+  /// Directory path: assets/games/final_call/images/table
+  $AssetsGamesFinalCallImagesTableGen get table =>
+      const $AssetsGamesFinalCallImagesTableGen();
+}
+
 class $AssetsGamesLiarsPokerImagesGen {
   const $AssetsGamesLiarsPokerImagesGen();
 
@@ -134,6 +173,14 @@ class $AssetsGamesLiarsPokerImagesGen {
   /// Directory path: assets/games/liars_poker/images/icons
   $AssetsGamesLiarsPokerImagesIconsGen get icons =>
       const $AssetsGamesLiarsPokerImagesIconsGen();
+
+  /// Directory path: assets/games/liars_poker/images/modal
+  $AssetsGamesLiarsPokerImagesModalGen get modal =>
+      const $AssetsGamesLiarsPokerImagesModalGen();
+
+  /// Directory path: assets/games/liars_poker/images/other
+  $AssetsGamesLiarsPokerImagesOtherGen get other =>
+      const $AssetsGamesLiarsPokerImagesOtherGen();
 
   /// Directory path: assets/games/liars_poker/images/table
   $AssetsGamesLiarsPokerImagesTableGen get table =>
@@ -209,6 +256,407 @@ class $AssetsImagesWidgetsRouletteGen {
   ];
 }
 
+class $AssetsGamesFinalCallImagesBackgroundGen {
+  const $AssetsGamesFinalCallImagesBackgroundGen();
+
+  /// File path: assets/games/final_call/images/background/background.png
+  AssetGenImage get background => const AssetGenImage(
+    'assets/games/final_call/images/background/background.png',
+  );
+
+  /// File path: assets/games/final_call/images/background/phone_background.png
+  AssetGenImage get phoneBackground => const AssetGenImage(
+    'assets/games/final_call/images/background/phone_background.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [background, phoneBackground];
+}
+
+class $AssetsGamesFinalCallImagesButtonGen {
+  const $AssetsGamesFinalCallImagesButtonGen();
+
+  /// File path: assets/games/final_call/images/button/button_call.png
+  AssetGenImage get buttonCall => const AssetGenImage(
+    'assets/games/final_call/images/button/button_call.png',
+  );
+
+  /// File path: assets/games/final_call/images/button/button_cardChange.png
+  AssetGenImage get buttonCardChange => const AssetGenImage(
+    'assets/games/final_call/images/button/button_cardChange.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [buttonCall, buttonCardChange];
+}
+
+class $AssetsGamesFinalCallImagesCardsGen {
+  const $AssetsGamesFinalCallImagesCardsGen();
+
+  /// File path: assets/games/final_call/images/cards/card_back.png
+  AssetGenImage get cardBack =>
+      const AssetGenImage('assets/games/final_call/images/cards/card_back.png');
+
+  /// File path: assets/games/final_call/images/cards/card_blue_1.png
+  AssetGenImage get cardBlue1 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_1.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_10.png
+  AssetGenImage get cardBlue10 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_10.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_2.png
+  AssetGenImage get cardBlue2 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_2.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_3.png
+  AssetGenImage get cardBlue3 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_3.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_4.png
+  AssetGenImage get cardBlue4 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_4.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_5.png
+  AssetGenImage get cardBlue5 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_5.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_6.png
+  AssetGenImage get cardBlue6 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_6.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_7.png
+  AssetGenImage get cardBlue7 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_7.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_8.png
+  AssetGenImage get cardBlue8 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_8.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_blue_9.png
+  AssetGenImage get cardBlue9 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_blue_9.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_1.png
+  AssetGenImage get cardGreen1 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_1.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_10.png
+  AssetGenImage get cardGreen10 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_10.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_2.png
+  AssetGenImage get cardGreen2 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_2.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_3.png
+  AssetGenImage get cardGreen3 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_3.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_4.png
+  AssetGenImage get cardGreen4 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_4.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_5.png
+  AssetGenImage get cardGreen5 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_5.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_6.png
+  AssetGenImage get cardGreen6 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_6.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_7.png
+  AssetGenImage get cardGreen7 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_7.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_8.png
+  AssetGenImage get cardGreen8 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_8.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_green_9.png
+  AssetGenImage get cardGreen9 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_green_9.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_1.png
+  AssetGenImage get cardRed1 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_1.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_10.png
+  AssetGenImage get cardRed10 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_10.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_2.png
+  AssetGenImage get cardRed2 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_2.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_3.png
+  AssetGenImage get cardRed3 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_3.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_4.png
+  AssetGenImage get cardRed4 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_4.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_5.png
+  AssetGenImage get cardRed5 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_5.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_6.png
+  AssetGenImage get cardRed6 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_6.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_7.png
+  AssetGenImage get cardRed7 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_7.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_8.png
+  AssetGenImage get cardRed8 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_8.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_red_9.png
+  AssetGenImage get cardRed9 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_red_9.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_1.png
+  AssetGenImage get cardYellow1 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_1.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_10.png
+  AssetGenImage get cardYellow10 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_10.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_2.png
+  AssetGenImage get cardYellow2 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_2.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_3.png
+  AssetGenImage get cardYellow3 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_3.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_4.png
+  AssetGenImage get cardYellow4 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_4.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_5.png
+  AssetGenImage get cardYellow5 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_5.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_6.png
+  AssetGenImage get cardYellow6 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_6.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_7.png
+  AssetGenImage get cardYellow7 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_7.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_8.png
+  AssetGenImage get cardYellow8 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_8.png',
+  );
+
+  /// File path: assets/games/final_call/images/cards/card_yellow_9.png
+  AssetGenImage get cardYellow9 => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_9.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    cardBack,
+    cardBlue1,
+    cardBlue10,
+    cardBlue2,
+    cardBlue3,
+    cardBlue4,
+    cardBlue5,
+    cardBlue6,
+    cardBlue7,
+    cardBlue8,
+    cardBlue9,
+    cardGreen1,
+    cardGreen10,
+    cardGreen2,
+    cardGreen3,
+    cardGreen4,
+    cardGreen5,
+    cardGreen6,
+    cardGreen7,
+    cardGreen8,
+    cardGreen9,
+    cardRed1,
+    cardRed10,
+    cardRed2,
+    cardRed3,
+    cardRed4,
+    cardRed5,
+    cardRed6,
+    cardRed7,
+    cardRed8,
+    cardRed9,
+    cardYellow1,
+    cardYellow10,
+    cardYellow2,
+    cardYellow3,
+    cardYellow4,
+    cardYellow5,
+    cardYellow6,
+    cardYellow7,
+    cardYellow8,
+    cardYellow9,
+  ];
+}
+
+class $AssetsGamesFinalCallImagesIconsGen {
+  const $AssetsGamesFinalCallImagesIconsGen();
+
+  /// File path: assets/games/final_call/images/icons/icon_again_black.png
+  AssetGenImage get iconAgainBlack => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_again_black.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_heart.png
+  AssetGenImage get iconHeart => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_heart.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_home_black.png
+  AssetGenImage get iconHomeBlack => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_home_black.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_out.png
+  AssetGenImage get iconOut =>
+      const AssetGenImage('assets/games/final_call/images/icons/icon_out.png');
+
+  /// File path: assets/games/final_call/images/icons/icon_role.png
+  AssetGenImage get iconRole =>
+      const AssetGenImage('assets/games/final_call/images/icons/icon_role.png');
+
+  /// File path: assets/games/final_call/images/icons/icon_setting.png
+  AssetGenImage get iconSetting => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_setting.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_setting_phone.png
+  AssetGenImage get iconSettingPhone => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_setting_phone.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_tip.png
+  AssetGenImage get iconTip =>
+      const AssetGenImage('assets/games/final_call/images/icons/icon_tip.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    iconAgainBlack,
+    iconHeart,
+    iconHomeBlack,
+    iconOut,
+    iconRole,
+    iconSetting,
+    iconSettingPhone,
+    iconTip,
+  ];
+}
+
+class $AssetsGamesFinalCallImagesModalGen {
+  const $AssetsGamesFinalCallImagesModalGen();
+
+  /// File path: assets/games/final_call/images/modal/modal_image_door.png
+  AssetGenImage get modalImageDoor => const AssetGenImage(
+    'assets/games/final_call/images/modal/modal_image_door.png',
+  );
+
+  /// File path: assets/games/final_call/images/modal/modal_out_row.png
+  AssetGenImage get modalOutRow => const AssetGenImage(
+    'assets/games/final_call/images/modal/modal_out_row.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [modalImageDoor, modalOutRow];
+}
+
+class $AssetsGamesFinalCallImagesTableGen {
+  const $AssetsGamesFinalCallImagesTableGen();
+
+  /// File path: assets/games/final_call/images/table/table_ace_black.svg
+  SvgGenImage get tableAceBlack => const SvgGenImage(
+    'assets/games/final_call/images/table/table_ace_black.svg',
+  );
+
+  /// File path: assets/games/final_call/images/table/table_ace_white.png
+  AssetGenImage get tableAceWhite => const AssetGenImage(
+    'assets/games/final_call/images/table/table_ace_white.png',
+  );
+
+  /// File path: assets/games/final_call/images/table/table_king_black.svg
+  SvgGenImage get tableKingBlack => const SvgGenImage(
+    'assets/games/final_call/images/table/table_king_black.svg',
+  );
+
+  /// File path: assets/games/final_call/images/table/table_king_white.png
+  AssetGenImage get tableKingWhite => const AssetGenImage(
+    'assets/games/final_call/images/table/table_king_white.png',
+  );
+
+  /// File path: assets/games/final_call/images/table/table_queen_black.svg
+  SvgGenImage get tableQueenBlack => const SvgGenImage(
+    'assets/games/final_call/images/table/table_queen_black.svg',
+  );
+
+  /// File path: assets/games/final_call/images/table/table_queen_white.png
+  AssetGenImage get tableQueenWhite => const AssetGenImage(
+    'assets/games/final_call/images/table/table_queen_white.png',
+  );
+
+  /// List of all assets
+  List<dynamic> get values => [
+    tableAceBlack,
+    tableAceWhite,
+    tableKingBlack,
+    tableKingWhite,
+    tableQueenBlack,
+    tableQueenWhite,
+  ];
+}
+
 class $AssetsGamesLiarsPokerImagesBackgroundGen {
   const $AssetsGamesLiarsPokerImagesBackgroundGen();
 
@@ -229,39 +677,26 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
     'assets/games/liars_poker/images/background/background.png',
   );
 
-  /// File path: assets/games/liars_poker/images/background/background1.png
-  AssetGenImage get background1 => const AssetGenImage(
-    'assets/games/liars_poker/images/background/background1.png',
-  );
-
   /// File path: assets/games/liars_poker/images/background/background_phone.png
   AssetGenImage get backgroundPhone => const AssetGenImage(
     'assets/games/liars_poker/images/background/background_phone.png',
   );
 
-  /// File path: assets/games/liars_poker/images/background/background_phone1.png
-  AssetGenImage get backgroundPhone1 => const AssetGenImage(
-    'assets/games/liars_poker/images/background/background_phone1.png',
-  );
-
   /// List of all assets
-  List<AssetGenImage> get values => [
-    a,
-    k,
-    q,
-    background,
-    background1,
-    backgroundPhone,
-    backgroundPhone1,
-  ];
+  List<AssetGenImage> get values => [a, k, q, background, backgroundPhone];
 }
 
 class $AssetsGamesLiarsPokerImagesButtonGen {
   const $AssetsGamesLiarsPokerImagesButtonGen();
 
-  /// File path: assets/games/liars_poker/images/button/button_liar_black.svg
-  SvgGenImage get buttonLiarBlack => const SvgGenImage(
-    'assets/games/liars_poker/images/button/button_liar_black.svg',
+  /// File path: assets/games/liars_poker/images/button/button_home.png
+  AssetGenImage get buttonHome => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_home.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/button_liar.png
+  AssetGenImage get buttonLiar => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_liar.png',
   );
 
   /// File path: assets/games/liars_poker/images/button/button_liar_white.png
@@ -269,8 +704,30 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
     'assets/games/liars_poker/images/button/button_liar_white.png',
   );
 
+  /// File path: assets/games/liars_poker/images/button/button_pass.png
+  AssetGenImage get buttonPass => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_pass.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/button_retry.png
+  AssetGenImage get buttonRetry => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_retry.png',
+  );
+
+  /// File path: assets/games/liars_poker/images/button/button_submit.png
+  AssetGenImage get buttonSubmit => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_submit.png',
+  );
+
   /// List of all assets
-  List<dynamic> get values => [buttonLiarBlack, buttonLiarWhite];
+  List<AssetGenImage> get values => [
+    buttonHome,
+    buttonLiar,
+    buttonLiarWhite,
+    buttonPass,
+    buttonRetry,
+    buttonSubmit,
+  ];
 }
 
 class $AssetsGamesLiarsPokerImagesCardsGen {
@@ -366,6 +823,30 @@ class $AssetsGamesLiarsPokerImagesIconsGen {
     iconSettingPhone,
     iconTip,
   ];
+}
+
+class $AssetsGamesLiarsPokerImagesModalGen {
+  const $AssetsGamesLiarsPokerImagesModalGen();
+
+  /// File path: assets/games/liars_poker/images/modal/modal_image_door.png
+  AssetGenImage get modalImageDoor => const AssetGenImage(
+    'assets/games/liars_poker/images/modal/modal_image_door.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [modalImageDoor];
+}
+
+class $AssetsGamesLiarsPokerImagesOtherGen {
+  const $AssetsGamesLiarsPokerImagesOtherGen();
+
+  /// File path: assets/games/liars_poker/images/other/border_crown.png
+  AssetGenImage get borderCrown => const AssetGenImage(
+    'assets/games/liars_poker/images/other/border_crown.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [borderCrown];
 }
 
 class $AssetsGamesLiarsPokerImagesTableGen {

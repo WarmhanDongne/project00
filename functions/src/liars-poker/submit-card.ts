@@ -4,7 +4,11 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {processedResult, recordCommand} from "./common/commands.js";
 import {findNextAlivePlayer} from "./common/next-turn.js";
-import {RealtimeRoom, TURN_DURATION_MS} from "./common/types.js";
+import {
+  LAST_CARD_CHALLENGE_DURATION_MS,
+  RealtimeRoom,
+  TURN_DURATION_MS,
+} from "./common/types.js";
 import {
   assertGameStatus,
   assertPlayerAlive,
@@ -82,6 +86,11 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       for (const cardId of cardIds) delete hand[cardId];
       const remainingCardCount = Object.keys(hand).length;
       const nextTurnUid = findNextAlivePlayer(game.public.players, uid);
+      const alivePlayerCount = Object.values(game.public.players).filter(
+        (gamePlayer) => gamePlayer.status === "alive",
+      ).length;
+      const isTwoPlayerLastCardChallenge =
+        remainingCardCount === 0 && alivePlayerCount === 2;
       const now = Date.now();
       const lastPlay = {
         playId: commandId,
@@ -97,7 +106,9 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       game.public.phase = remainingCardCount === 0 ?
         "lastCardChallenge" : "playing";
       game.public.turnUid = nextTurnUid;
-      game.public.turnDeadlineAt = now + TURN_DURATION_MS;
+      game.public.turnDeadlineAt = now +
+        (isTwoPlayerLastCardChallenge ?
+          LAST_CARD_CHALLENGE_DURATION_MS : TURN_DURATION_MS);
       game.public.isFirstTurnReady = true;
       game.public.lastPlay = lastPlay;
       game.public.roundPlays ??= {};

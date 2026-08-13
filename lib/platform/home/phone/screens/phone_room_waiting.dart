@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/final_call/screens/phone/final_call_phone_game.dart';
+import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -24,6 +26,7 @@ class PhoneRoomWaiting extends StatefulWidget {
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   StreamSubscription<DatabaseEvent>? _gameStatusSubscription;
   String? _subscribedRoomCode;
+  String? _subscribedGameId;
   bool _isOpeningGame = false;
 
   @override
@@ -35,39 +38,73 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   void _syncGameStatusSubscription() {
     final roomCode = widget.provider.roomCode;
-    final isLiarsPoker = widget.provider.selectedGameId == 'liars_poker';
+    final selectedGameId = widget.provider.selectedGameId;
+    final isSupportedGame =
+        selectedGameId == 'liars_poker' || selectedGameId == 'final_call';
 
-    if (!isLiarsPoker || roomCode == null) {
+    if (!isSupportedGame || roomCode == null) {
       unawaited(_gameStatusSubscription?.cancel());
       _gameStatusSubscription = null;
       _subscribedRoomCode = null;
+      _subscribedGameId = null;
       return;
     }
 
-    if (_subscribedRoomCode == roomCode && _gameStatusSubscription != null) {
+    if (_subscribedRoomCode == roomCode &&
+        _subscribedGameId == selectedGameId &&
+        _gameStatusSubscription != null) {
       return;
     }
 
     unawaited(_gameStatusSubscription?.cancel());
     _subscribedRoomCode = roomCode;
+    _subscribedGameId = selectedGameId;
+    if (selectedGameId == 'final_call') {
+      final finalCallService = FinalCallService();
+      _gameStatusSubscription = finalCallService.watchPublic(roomCode).listen((
+        event,
+      ) {
+        final value = event.snapshot.value;
+        if (value is Map && value['status'] == 'playing') {
+          unawaited(_openFinalCall(roomCode, finalCallService));
+        }
+      }, onError: _showStatusError);
+      return;
+    }
+
     final gameService = LiarsPokerService();
-    _gameStatusSubscription = gameService.query
-        .watchStatus(roomCode)
-        .listen(
-          (event) {
-            if (event.snapshot.value == 'playing') {
-              unawaited(_openLiarsPoker(roomCode, gameService));
-            }
-          },
-          onError: (Object error) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(content: Text('게임 시작 상태를 확인하지 못했습니다: $error')),
-              );
-          },
-        );
+    _gameStatusSubscription = gameService.query.watchStatus(roomCode).listen((
+      event,
+    ) {
+      if (event.snapshot.value == 'playing') {
+        unawaited(_openLiarsPoker(roomCode, gameService));
+      }
+    }, onError: _showStatusError);
+  }
+
+  void _showStatusError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('게임 시작 상태를 확인하지 못했습니다: $error')));
+  }
+
+  Future<void> _openFinalCall(String roomCode, FinalCallService service) async {
+    if (_isOpeningGame || !mounted) return;
+    _isOpeningGame = true;
+    final leftRoom = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FinalCallPhoneGame(
+          roomCode: roomCode,
+          service: service,
+          onExitRoom: widget.provider.leaveFinalCallGame,
+        ),
+      ),
+    );
+    _isOpeningGame = false;
+    if (leftRoom == true && mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   Future<void> _openLiarsPoker(
@@ -77,13 +114,21 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     if (_isOpeningGame || !mounted) return;
     _isOpeningGame = true;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PhoneGame(roomCode: roomCode, gameService: gameService),
+    final leftRoom = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => PhoneGame(
+          roomCode: roomCode,
+          gameService: gameService,
+          onExitRoom: widget.provider.leaveLiarsPokerGame,
+        ),
       ),
     );
 
     _isOpeningGame = false;
+    if (leftRoom == true && mounted) {
+      // 참여 코드·닉네임·방 대기 경로를 모두 닫아 휴대폰 홈으로 이동합니다.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
