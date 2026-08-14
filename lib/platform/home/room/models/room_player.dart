@@ -24,6 +24,8 @@ class RoomPlayer {
       seatIndex: json['seatIndex'] as int? ?? -1,
       role: json['role'] as String? ?? 'player',
       status: json['status'] as String? ?? 'active',
+      joinedAt: _dateTimeFromTimestamp(json['joinedAt']),
+      updatedAt: _dateTimeFromTimestamp(json['updatedAt']),
       penaltyAttemptCount: json['penaltyAttemptCount'] as int? ?? 0,
     );
   }
@@ -42,4 +44,16 @@ class RoomPlayer {
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';
+
+  Duration newBadgeRemainingAt(DateTime now) {
+    final joined = joinedAt;
+    if (joined == null) return Duration.zero;
+    final remaining = const Duration(seconds: 30) - now.difference(joined);
+    return remaining > Duration.zero ? remaining : Duration.zero;
+  }
+}
+
+DateTime? _dateTimeFromTimestamp(Object? value) {
+  if (value is! num) return null;
+  return DateTime.fromMillisecondsSinceEpoch(value.toInt());
 }

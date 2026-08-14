@@ -232,6 +232,7 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
     this.bottom,
     this.showBack = true,
     this.actions = const [],
+    this.onBack,
   });
 
   final String title;
@@ -239,6 +240,7 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
   final Widget? bottom;
   final bool showBack;
   final List<Widget> actions;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +251,7 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
         leading: showBack
             ? IconButton(
                 tooltip: '뒤로',
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: onBack ?? () => Navigator.of(context).maybePop(),
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
               )
             : null,

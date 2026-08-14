@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -16,10 +18,12 @@ class PhoneRoomJoin extends StatefulWidget {
 class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   final TextEditingController _roomCodeController = TextEditingController();
   final FocusNode _codeFocusNode = FocusNode();
+  final RoomProvider _roomProvider = RoomProvider();
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _isOpeningNameInput = false;
+  String? _validationMessage;
 
   @override
   void initState() {
@@ -28,6 +32,8 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   }
 
   void _refreshCode() {
+    _validationMessage = null;
+    _roomProvider.errorMessage = null;
     if (mounted) setState(() {});
   }
 
@@ -37,19 +43,49 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     _scannerController.dispose();
     _roomCodeController.dispose();
     _codeFocusNode.dispose();
+    _roomProvider.dispose();
     super.dispose();
   }
 
   Future<void> _openNameInput() async {
     final roomCode = _roomCodeController.text.trim().toUpperCase();
     if (roomCode.length != 5) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('5자리 참여 코드를 입력해주세요.')));
+      setState(() => _validationMessage = '5자리 참여 코드를 입력해주세요.');
       return;
     }
     if (_isOpeningNameInput) return;
-    _isOpeningNameInput = true;
+    setState(() {
+      _isOpeningNameInput = true;
+      _validationMessage = null;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _isOpeningNameInput = false;
+        _validationMessage = '로그인 정보를 확인할 수 없습니다.';
+      });
+      return;
+    }
+    final baseNickname = user.displayName?.trim().isNotEmpty == true
+        ? user.displayName!.trim()
+        : user.email?.split('@').first ?? '플레이어';
+    final suffix = user.uid.length <= 4 ? user.uid : user.uid.substring(0, 4);
+    final availableLength = 19 - suffix.length;
+    final safeBase = baseNickname.length <= availableLength
+        ? baseNickname
+        : baseNickname.substring(0, availableLength);
+    final temporaryNickname = '$safeBase-$suffix';
+    final joined = await _roomProvider.joinRoom(
+      roomCode,
+      temporaryNickname,
+      accentColor: '#6557D2',
+    );
+    if (!mounted) return;
+    if (!joined) {
+      setState(() => _isOpeningNameInput = false);
+      return;
+    }
 
     try {
       await _scannerController.stop();
@@ -60,7 +96,10 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
 
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => PhoneRoomNickname(roomCode: roomCode)),
+      MaterialPageRoute(
+        builder: (_) =>
+            PhoneRoomNickname(roomCode: roomCode, provider: _roomProvider),
+      ),
     );
 
     if (!mounted) return;
@@ -78,7 +117,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     return PlatformPhoneFlowScaffold(
       title: '그룹 참여하기',
       bottom: PlatformButton(
-        label: _isOpeningNameInput ? '확인 중...' : '입장 완료',
+        label: _isOpeningNameInput ? '접속 중...' : '입장하기',
         onPressed: _isOpeningNameInput ? null : _openNameInput,
       ),
       child: Column(
@@ -156,7 +195,14 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
             focusNode: _codeFocusNode,
             onSubmitted: _openNameInput,
           ),
-          if (_roomCodeController.text.isNotEmpty &&
+          if (_validationMessage != null ||
+              _roomProvider.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            PlatformNotice(
+              message: _validationMessage ?? _roomProvider.errorMessage!,
+              style: PlatformNoticeStyle.danger,
+            ),
+          ] else if (_roomCodeController.text.isNotEmpty &&
               _roomCodeController.text.length < 5) ...[
             const SizedBox(height: 10),
             PlatformNotice(
@@ -196,23 +242,25 @@ class _RoomCodeBoxes extends StatelessWidget {
               return Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(right: index == 4 ? 0 : 8),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    height: 54,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isCurrent ? colors.primary : colors.border,
-                        width: isCurrent ? 1.6 : 1,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isCurrent ? colors.primary : colors.border,
+                          width: isCurrent ? 1.6 : 1,
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      hasValue ? code[index] : '',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
+                      child: Text(
+                        hasValue ? code[index] : '',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),

@@ -131,7 +131,7 @@ class _GameListState extends State<GameList> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          const columns = 5;
+                          const columns = 4;
                           const spacing = 10.0;
                           final tileWidth =
                               (constraints.maxWidth - spacing * (columns - 1)) /

@@ -34,6 +34,7 @@ type JoinRealtimeRoomData = {
   roomCode?: unknown;
   nickname?: unknown;
   accentColor?: unknown;
+  preserveProfile?: unknown;
 };
 
 /**
@@ -151,6 +152,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
     const accentColor = typeof rawAccentColor === "string" &&
       /^#[0-9A-F]{6}$/.test(rawAccentColor.toUpperCase()) ?
       rawAccentColor.toUpperCase() : "#6557D2";
+    const preserveProfile = request.data?.preserveProfile === true;
 
     const database = getDatabase();
     const roomRef = database.ref(`rooms/${roomCode}`);
@@ -204,17 +206,35 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           currentValue as Record<string, Record<string, unknown>> : {};
 
         const existingPlayer = players[uid];
+        const effectiveNickname = preserveProfile &&
+          existingPlayer && typeof existingPlayer.nickname === "string" ?
+          existingPlayer.nickname : nickname;
+        const effectiveAccentColor = preserveProfile &&
+          existingPlayer && typeof existingPlayer.accentColor === "string" ?
+          existingPlayer.accentColor : accentColor;
+        const duplicatedNickname = Object.entries(players).some(
+          ([playerUid, player]) =>
+            playerUid !== uid && player?.nickname === effectiveNickname,
+        );
+        if (duplicatedNickname) {
+          rejection = new HttpsError(
+            "already-exists",
+            "이미 사용 중인 닉네임입니다.",
+          );
+          return;
+        }
+
         if (existingPlayer && typeof existingPlayer === "object") {
           reconnected = true;
-          savedNickname = typeof existingPlayer.nickname === "string" ?
-            existingPlayer.nickname : nickname;
+          savedNickname = effectiveNickname;
           players[uid] = {
             ...existingPlayer,
+            nickname: effectiveNickname,
             profileImageUrl: profileImageUrl ||
               (typeof existingPlayer.profileImageUrl === "string" ?
                 existingPlayer.profileImageUrl : ""),
             isConnected: true,
-            accentColor,
+            accentColor: effectiveAccentColor,
           };
           return players;
         }
@@ -223,17 +243,6 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           rejection = new HttpsError(
             "resource-exhausted",
             "방 인원이 초과되었습니다.",
-          );
-          return;
-        }
-
-        const duplicatedNickname = Object.values(players).some(
-          (player) => player?.nickname === nickname,
-        );
-        if (duplicatedNickname) {
-          rejection = new HttpsError(
-            "already-exists",
-            "이미 사용 중인 닉네임입니다.",
           );
           return;
         }

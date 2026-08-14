@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -187,7 +189,6 @@ class _ActiveRoom extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) => _PlayerTile(
               player: players[index],
-              isNew: index == players.length - 1 && players.length > 1,
               onRemove: () => provider.removePlayer(players[index].uid),
             ),
           ),
@@ -196,28 +197,28 @@ class _ActiveRoom extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Text(
             '최대 ${RoomLimits.defaultMaxPlayers}명 · 아래로 스크롤',
-            style: TextStyle(color: colors.textMuted, fontSize: 11),
+            style: TextStyle(color: colors.textMuted, fontSize: 13),
           ),
         ),
         Divider(height: 1, color: colors.border),
         Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              _QrCard(roomCode: roomCode, size: 64),
-              const SizedBox(width: 12),
+              _QrCard(roomCode: roomCode, size: 92),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '참여 코드',
-                      style: TextStyle(color: colors.textMuted, fontSize: 11),
+                      style: TextStyle(color: colors.textMuted, fontSize: 14),
                     ),
-                    _CopyableRoomCode(roomCode: roomCode, fontSize: 27),
+                    _CopyableRoomCode(roomCode: roomCode, fontSize: 34),
                     Text(
                       '늦게 온 친구도 바로 참여',
-                      style: TextStyle(color: colors.textMuted, fontSize: 10),
+                      style: TextStyle(color: colors.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -230,33 +231,70 @@ class _ActiveRoom extends StatelessWidget {
   }
 }
 
-class _PlayerTile extends StatelessWidget {
-  const _PlayerTile({
-    required this.player,
-    required this.isNew,
-    required this.onRemove,
-  });
+class _PlayerTile extends StatefulWidget {
+  const _PlayerTile({required this.player, required this.onRemove});
 
   final RoomPlayer player;
-  final bool isNew;
   final VoidCallback onRemove;
+
+  @override
+  State<_PlayerTile> createState() => _PlayerTileState();
+}
+
+class _PlayerTileState extends State<_PlayerTile> {
+  Timer? _newBadgeTimer;
+  bool _isNew = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNewBadge();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PlayerTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.player.joinedAt != widget.player.joinedAt) {
+      _scheduleNewBadge();
+    }
+  }
+
+  void _scheduleNewBadge() {
+    _newBadgeTimer?.cancel();
+    final remaining = widget.player.newBadgeRemainingAt(DateTime.now());
+    _isNew = remaining > Duration.zero;
+    if (!_isNew) return;
+    _newBadgeTimer = Timer(remaining, () {
+      if (mounted) setState(() => _isNew = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _newBadgeTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
+    final player = widget.player;
     final accent = _parseAccent(player.accentColor);
     return Container(
-      height: 54,
-      padding: const EdgeInsets.only(left: 8),
+      height: 78,
+      padding: const EdgeInsets.only(left: 12, right: 8),
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: isNew ? colors.warning : colors.border),
+        color: _isNew ? colors.dangerSoft : colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _isNew ? colors.danger : colors.border,
+          width: _isNew ? 1.6 : 1,
+        ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 17,
+            radius: 25,
             backgroundColor: accent.withValues(alpha: 0.13),
             backgroundImage: player.profileImageUrl.isEmpty
                 ? null
@@ -273,29 +311,38 @@ class _PlayerTile extends StatelessWidget {
                   )
                 : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               player.nickname,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
             ),
           ),
-          if (isNew)
+          if (_isNew)
             Text(
               'NEW',
               style: TextStyle(
                 color: colors.danger,
-                fontSize: 8,
+                fontSize: 11,
                 fontWeight: FontWeight.w900,
               ),
             ),
-          IconButton(
-            tooltip: '내보내기',
-            visualDensity: VisualDensity.compact,
-            onPressed: onRemove,
-            icon: Icon(Icons.close, size: 17, color: colors.textMuted),
+          const SizedBox(width: 8),
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border),
+            ),
+            child: IconButton(
+              tooltip: '내보내기',
+              onPressed: widget.onRemove,
+              icon: Icon(Icons.close, size: 25, color: colors.textMuted),
+            ),
           ),
         ],
       ),

@@ -177,6 +177,23 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  Future<bool> updateJoinedPlayerProfile(
+    String nickname, {
+    required String accentColor,
+  }) async {
+    final code = roomCode;
+    if (code == null) return false;
+    final result = await _runCommand<bool>(() async {
+      await _service.updateRoomPlayerProfile(
+        code,
+        nickname,
+        accentColor: accentColor,
+      );
+      return true;
+    });
+    return result ?? false;
+  }
+
   Future<bool> leaveRoom() async {
     final code = roomCode;
     if (code == null) return false;

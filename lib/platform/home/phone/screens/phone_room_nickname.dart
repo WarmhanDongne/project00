@@ -29,20 +29,26 @@ const _playerAccentColors = <Color>[
 
 //=======================닉네임과 참가 색상 설정==============================
 class PhoneRoomNickname extends StatefulWidget {
-  const PhoneRoomNickname({super.key, required this.roomCode});
+  const PhoneRoomNickname({
+    super.key,
+    required this.roomCode,
+    required this.provider,
+  });
 
   final String roomCode;
+  final RoomProvider provider;
 
   @override
   State<PhoneRoomNickname> createState() => _PhoneRoomNicknameState();
 }
 
 class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
-  final RoomProvider _roomProvider = RoomProvider();
   final math.Random _random = math.Random();
   late final TextEditingController _nicknameController;
   bool _didRestoreExistingNickname = false;
   int _selectedColorIndex = 6;
+
+  RoomProvider get _roomProvider => widget.provider;
 
   @override
   void initState() {
@@ -52,9 +58,8 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ?? '사용자';
     _nicknameController = TextEditingController(text: initialNickname);
-    _roomProvider.roomCode = widget.roomCode;
     _roomProvider.addListener(_restoreExistingProfile);
-    _roomProvider.listenRoom();
+    _restoreExistingProfile();
   }
 
   void _restoreExistingProfile() {
@@ -64,10 +69,8 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     for (final player in _roomProvider.players) {
       if (player.uid != uid) continue;
       _didRestoreExistingNickname = true;
-      _nicknameController.text = player.nickname;
-      _nicknameController.selection = TextSelection.collapsed(
-        offset: player.nickname.length,
-      );
+      // 첫 화면에서 사용하는 임시 닉네임을 입력창에 노출하지 않습니다.
+      // 사용자는 계정 닉네임을 기준으로 최종 닉네임을 직접 확정합니다.
       final parsed = _parseHex(player.accentColor);
       final index = _playerAccentColors.indexWhere(
         (color) => color.toARGB32() == parsed.toARGB32(),
@@ -80,12 +83,11 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   @override
   void dispose() {
     _roomProvider.removeListener(_restoreExistingProfile);
-    _roomProvider.dispose();
     _nicknameController.dispose();
     super.dispose();
   }
 
-  Future<void> _joinRoom() async {
+  Future<void> _saveProfileAndContinue() async {
     FocusScope.of(context).unfocus();
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
@@ -101,14 +103,13 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       return;
     }
 
-    final joined = await _roomProvider.joinRoom(
-      widget.roomCode,
+    final updated = await _roomProvider.updateJoinedPlayerProfile(
       nickname,
       accentColor: _toHex(_playerAccentColors[_selectedColorIndex]),
     );
     if (!mounted) return;
-    if (!joined) {
-      _showMessage(_roomProvider.errorMessage ?? '방에 입장하지 못했습니다.');
+    if (!updated) {
+      _showMessage(_roomProvider.errorMessage ?? '참가자 정보를 저장하지 못했습니다.');
       return;
     }
 
@@ -119,8 +120,14 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       ),
     );
     if (!mounted) return;
-    _roomProvider.roomCode = widget.roomCode;
-    _roomProvider.listenRoom();
+    if (!_roomProvider.isInRoom) Navigator.of(context).pop();
+  }
+
+  Future<void> _cancelSetup() async {
+    if (_roomProvider.isLoading) return;
+    final left = await _roomProvider.leaveRoom();
+    if (!mounted || !left) return;
+    Navigator.of(context).pop();
   }
 
   void _showMessage(String message) {
@@ -137,9 +144,10 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       animation: _roomProvider,
       builder: (context, _) => PlatformPhoneFlowScaffold(
         title: '그룹 참여하기',
+        onBack: _cancelSetup,
         bottom: PlatformButton(
-          label: _roomProvider.isLoading ? '입장 중...' : '입장하기',
-          onPressed: _roomProvider.isLoading ? null : _joinRoom,
+          label: _roomProvider.isLoading ? '저장 중...' : '설정 완료',
+          onPressed: _roomProvider.isLoading ? null : _saveProfileAndContinue,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

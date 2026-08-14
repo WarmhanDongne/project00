@@ -146,6 +146,7 @@ class RoomService {
       roomCode: code,
       nickname: nickname,
       accentColor: accentColor,
+      preserveProfile: true,
     );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
@@ -154,10 +155,23 @@ class RoomService {
     await _registerDisconnectPresence(playerRef);
   }
 
+  /// 이미 참가한 플레이어의 닉네임과 UI 색상만 갱신합니다.
+  Future<void> updateRoomPlayerProfile(
+    String roomCode,
+    String nickname, {
+    required String accentColor,
+  }) => _joinRoomWithRetry(
+    roomCode: roomCode.trim().toUpperCase(),
+    nickname: nickname,
+    accentColor: accentColor,
+    preserveProfile: false,
+  );
+
   Future<void> _joinRoomWithRetry({
     required String roomCode,
     required String nickname,
     required String accentColor,
+    required bool preserveProfile,
   }) async {
     FirebaseFunctionsException? lastError;
 
@@ -167,6 +181,7 @@ class RoomService {
           'roomCode': roomCode,
           'nickname': nickname,
           'accentColor': accentColor,
+          'preserveProfile': preserveProfile,
         });
         return;
       } on FirebaseFunctionsException catch (error) {
