@@ -266,8 +266,8 @@ class PhoneGameScreen extends StatelessWidget {
             'CALL을 선언하면 나머지 플레이어가 마지막 교체를 한 번 진행합니다. '
             '가장 낮은 점수의 플레이어는 생명 1개를 잃고, CALL을 선언한 '
             '플레이어가 최하위라면 생명 2개를 잃습니다. 마지막 생존자가 승리합니다.',
-        surfaceColor: Color(0xFFF5F4F1),
-        foregroundColor: Color(0xFF161616),
+        surfaceColor: Color.fromARGB(255, 0, 0, 0),
+        foregroundColor: Color.fromARGB(255, 255, 255, 255),
         showSurface: false,
         dismissOnAnyTap: true,
       ),
