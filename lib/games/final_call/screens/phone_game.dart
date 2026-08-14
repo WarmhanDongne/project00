@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_screen.dart';
@@ -35,7 +36,7 @@ class PhoneGame extends ConsumerStatefulWidget {
 class _PhoneGameState extends ConsumerState<PhoneGame> {
   PhoneGameController? controller;
   FinalCallSessionArgs? sessionArgs;
-  ProviderSubscription<PhoneGameController>? sessionSubscription;
+  ProviderSubscription<FinalCallGameState>? sessionSubscription;
   String? initializationError;
   String? selectedCardId;
   final Set<String> selectedFinalCardIds = <String>{};
@@ -70,11 +71,10 @@ class _PhoneGameState extends ConsumerState<PhoneGame> {
     );
     sessionArgs = args;
     final provider = finalCallSessionProvider(args);
-    controller = ref.read(provider);
-    sessionSubscription = ref.listenManual(provider, (_, next) {
-      controller = next;
+    sessionSubscription = ref.listenManual(provider, (_, _) {
       _handleState();
     });
+    controller = ref.read(provider.notifier);
   }
 
   void _handleState() {
@@ -275,9 +275,10 @@ class _PhoneGameState extends ConsumerState<PhoneGame> {
   @override
   Widget build(BuildContext context) {
     final args = sessionArgs;
+    if (args != null) ref.watch(finalCallSessionProvider(args));
     final game = args == null
         ? null
-        : ref.watch(finalCallSessionProvider(args));
+        : ref.read(finalCallSessionProvider(args).notifier);
     controller = game;
     if (game == null) {
       return Scaffold(

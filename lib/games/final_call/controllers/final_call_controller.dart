@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
+import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 
-class FinalCallController extends ChangeNotifier {
+//=======================Final Call Riverpod 게임 컨트롤러==============================
+/// 서버 상태는 불변 [FinalCallGameState]로 발행하고, 화면 애니메이션 상태는
+/// 위젯에 남깁니다. Provider가 폐기되면 Realtime Database 구독도 종료됩니다.
+class FinalCallController extends Notifier<FinalCallGameState> {
   FinalCallController({
     required this.roomCode,
     required this.uid,
@@ -21,31 +25,58 @@ class FinalCallController extends ChangeNotifier {
 
   StreamSubscription<DatabaseEvent>? _publicSubscription;
   StreamSubscription<DatabaseEvent>? _privateSubscription;
-  bool loading = true;
-  bool commandInFlight = false;
-  String? errorMessage;
-  String status = 'playing';
-  String? finishReason;
-  String phase = 'dealing';
-  int round = 1;
-  int revision = 0;
-  String? turnUid;
-  int? turnDeadlineAt;
-  String? callerUid;
-  int deckRemainingCount = 0;
-  FinalCallCard? discardCard;
-  String? pendingDrawUid;
-  String? pendingDrawSource;
-  List<String> finalTurnPendingUids = const [];
-  String? winnerUid;
-  int? resultRevealCompletedAt;
-  Map<String, FinalCallPlayer> players = const {};
-  List<FinalCallCard> hand = const [];
-  FinalCallCard? pendingDraw;
-  FinalCallRoundResult? roundResult;
-  FinalCallDiscardEvent? discardEvent;
   int _discardEventVersion = 0;
 
+  @override
+  FinalCallGameState build() {
+    final initialState = FinalCallGameState.initial();
+    _publicSubscription = service.query
+        .watchPublicGame(roomCode)
+        .listen(
+          _handlePublic,
+          onError: (Object error) => _setError('게임 연결이 불안정합니다: $error'),
+        );
+    if (watchPrivateHand) {
+      _privateSubscription = service.query
+          .watchPrivatePlayer(roomCode: roomCode, uid: uid)
+          .listen(
+            _handlePrivate,
+            onError: (Object error) => _setError('손패 연결이 불안정합니다: $error'),
+          );
+    }
+    ref.onDispose(() {
+      unawaited(_publicSubscription?.cancel());
+      unawaited(_privateSubscription?.cancel());
+    });
+    return initialState;
+  }
+
+  //=======================화면 호환용 상태 접근자==============================
+  bool get loading => state.loading;
+  bool get commandInFlight => state.commandInFlight;
+  String? get errorMessage => state.errorMessage;
+  String get status => state.status;
+  String? get finishReason => state.finishReason;
+  String get phase => state.phase;
+  int get round => state.round;
+  int get revision => state.revision;
+  String? get turnUid => state.turnUid;
+  int? get turnDeadlineAt => state.turnDeadlineAt;
+  String? get callerUid => state.callerUid;
+  int get deckRemainingCount => state.deckRemainingCount;
+  FinalCallCard? get discardCard => state.discardCard;
+  String? get pendingDrawUid => state.pendingDrawUid;
+  String? get pendingDrawSource => state.pendingDrawSource;
+  List<String> get finalTurnPendingUids => state.finalTurnPendingUids;
+  String? get winnerUid => state.winnerUid;
+  int? get resultRevealCompletedAt => state.resultRevealCompletedAt;
+  Map<String, FinalCallPlayer> get players => state.players;
+  List<FinalCallCard> get hand => state.hand;
+  FinalCallCard? get pendingDraw => state.pendingDraw;
+  FinalCallRoundResult? get roundResult => state.roundResult;
+  FinalCallDiscardEvent? get discardEvent => state.discardEvent;
+
+  //=======================파생 게임 상태==============================
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
   bool get canAct =>
@@ -74,92 +105,53 @@ class FinalCallController extends ChangeNotifier {
       ? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
       : errorMessage!;
 
-  void initialize() {
-    _publicSubscription = service.query
-        .watchPublicGame(roomCode)
-        .listen(
-          _handlePublic,
-          onError: (Object error) => _setError('게임 연결이 불안정합니다: $error'),
-        );
-    if (watchPrivateHand) {
-      _privateSubscription = service.query
-          .watchPrivatePlayer(roomCode: roomCode, uid: uid)
-          .listen(
-            _handlePrivate,
-            onError: (Object error) => _setError('손패 연결이 불안정합니다: $error'),
-          );
-    }
-  }
-
+  //=======================Realtime Database 공개 상태 수신==============================
   void _handlePublic(DatabaseEvent event) {
-    //=======================게임 노드 삭제 감지==============================
-    // 태블릿이 홈으로 이동하며 `rooms/{code}/game`을 정리하면 공개 경로도
-    // null이 됩니다. 휴대폰은 이를 수동 종료로 처리해 플랫폼으로 복귀합니다.
+    if (!ref.mounted) return;
+
+    // 태블릿이 게임 노드를 정리하면 휴대폰도 수동 종료 상태로 전환합니다.
     if (!event.snapshot.exists || event.snapshot.value == null) {
-      loading = false;
-      status = 'finished';
-      finishReason = 'manual';
-      phase = 'finished';
-      turnUid = null;
-      turnDeadlineAt = null;
-      pendingDrawUid = null;
-      pendingDrawSource = null;
-      notifyListeners();
+      state = state.copyWith(
+        loading: false,
+        status: 'finished',
+        finishReason: 'manual',
+        phase: 'finished',
+        turnUid: null,
+        turnDeadlineAt: null,
+        pendingDrawUid: null,
+        pendingDrawSource: null,
+      );
       return;
     }
     if (event.snapshot.value is! Map) return;
+
+    final current = state;
     final map = Map<Object?, Object?>.from(event.snapshot.value as Map);
-    final previousPendingDrawUid = pendingDrawUid;
-    final previousPendingDrawSource = pendingDrawSource;
-    final nextRevision = (map['revision'] as num?)?.toInt() ?? revision;
+    final nextRevision = (map['revision'] as num?)?.toInt() ?? current.revision;
     final nextPendingDrawUid = map['pendingDrawUid']?.toString();
-    final nextPhase = map['phase']?.toString() ?? phase;
+    final nextPhase = map['phase']?.toString() ?? current.phase;
     final rawDiscard = map['discardCard'];
     final nextDiscardCard = rawDiscard is Map
         ? FinalCallCard.fromMap(Map<Object?, Object?>.from(rawDiscard))
-        : discardCard;
+        : current.discardCard;
 
-    status = map['status']?.toString() ?? status;
-    finishReason = map['finishReason']?.toString();
-    phase = nextPhase;
-    round = (map['round'] as num?)?.toInt() ?? round;
-    revision = nextRevision;
-    turnUid = map['turnUid']?.toString();
-    turnDeadlineAt = (map['turnDeadlineAt'] as num?)?.toInt();
-    callerUid = map['callerUid']?.toString();
-    deckRemainingCount = (map['deckRemainingCount'] as num?)?.toInt() ?? 0;
-    pendingDrawUid = nextPendingDrawUid;
-    pendingDrawSource = map['pendingDrawSource']?.toString();
-    final rawFinalTurns = map['finalTurnPendingUids'];
-    if (rawFinalTurns is List) {
-      finalTurnPendingUids = rawFinalTurns.whereType<String>().toList(
-        growable: false,
-      );
-    } else if (rawFinalTurns is Map) {
-      finalTurnPendingUids = rawFinalTurns.values.whereType<String>().toList(
-        growable: false,
-      );
-    } else {
-      finalTurnPendingUids = const [];
-    }
-    winnerUid = map['winnerUid']?.toString();
-    resultRevealCompletedAt = (map['resultRevealCompletedAt'] as num?)?.toInt();
-    if (!loading &&
-        previousPendingDrawUid != null &&
+    var nextDiscardEvent = current.discardEvent;
+    if (!current.loading &&
+        current.pendingDrawUid != null &&
         nextPendingDrawUid == null &&
         nextPhase != 'roundResult' &&
         nextPhase != 'finished' &&
         nextDiscardCard != null) {
       _discardEventVersion += 1;
-      discardEvent = FinalCallDiscardEvent(
+      nextDiscardEvent = FinalCallDiscardEvent(
         version: _discardEventVersion,
-        playerUid: previousPendingDrawUid,
+        playerUid: current.pendingDrawUid!,
         card: nextDiscardCard,
-        previousCard: discardCard,
-        drawSource: previousPendingDrawSource,
+        previousCard: current.discardCard,
+        drawSource: current.pendingDrawSource,
       );
     }
-    discardCard = nextDiscardCard;
+
     final parsedPlayers = <String, FinalCallPlayer>{};
     final rawPlayers = map['players'];
     if (rawPlayers is Map) {
@@ -172,26 +164,48 @@ class FinalCallController extends ChangeNotifier {
         }
       }
     }
-    players = Map.unmodifiable(parsedPlayers);
+
+    final rawFinalTurns = map['finalTurnPendingUids'];
+    final finalTurnUids = rawFinalTurns is List
+        ? rawFinalTurns.whereType<String>().toList(growable: false)
+        : rawFinalTurns is Map
+        ? rawFinalTurns.values.whereType<String>().toList(growable: false)
+        : const <String>[];
     final rawResult = map['roundResult'];
-    roundResult = rawResult is Map
-        ? FinalCallRoundResult.fromMap(Map<Object?, Object?>.from(rawResult))
-        : null;
-    loading = false;
-    errorMessage = null;
-    notifyListeners();
+
+    state = current.copyWith(
+      loading: false,
+      errorMessage: null,
+      status: map['status']?.toString() ?? current.status,
+      finishReason: map['finishReason']?.toString(),
+      phase: nextPhase,
+      round: (map['round'] as num?)?.toInt() ?? current.round,
+      revision: nextRevision,
+      turnUid: map['turnUid']?.toString(),
+      turnDeadlineAt: (map['turnDeadlineAt'] as num?)?.toInt(),
+      callerUid: map['callerUid']?.toString(),
+      deckRemainingCount: (map['deckRemainingCount'] as num?)?.toInt() ?? 0,
+      discardCard: nextDiscardCard,
+      pendingDrawUid: nextPendingDrawUid,
+      pendingDrawSource: map['pendingDrawSource']?.toString(),
+      finalTurnPendingUids: finalTurnUids,
+      winnerUid: map['winnerUid']?.toString(),
+      resultRevealCompletedAt: (map['resultRevealCompletedAt'] as num?)
+          ?.toInt(),
+      players: parsedPlayers,
+      roundResult: rawResult is Map
+          ? FinalCallRoundResult.fromMap(Map<Object?, Object?>.from(rawResult))
+          : null,
+      discardEvent: nextDiscardEvent,
+    );
   }
 
-  void acknowledgeDiscardEvent(int version) {
-    if (discardEvent?.version != version) return;
-    discardEvent = null;
-    notifyListeners();
-  }
-
+  //=======================Realtime Database 개인 손패 수신==============================
   void _handlePrivate(DatabaseEvent event) {
+    if (!ref.mounted) return;
     final value = event.snapshot.value;
     final cards = <FinalCallCard>[];
-    pendingDraw = null;
+    FinalCallCard? nextPendingDraw;
     if (value is Map) {
       final map = Map<Object?, Object?>.from(value);
       final rawHand = map['hand'];
@@ -204,18 +218,19 @@ class FinalCallController extends ChangeNotifier {
       }
       final rawPending = map['pendingDraw'];
       if (rawPending is Map) {
-        pendingDraw = FinalCallCard.fromMap(
+        nextPendingDraw = FinalCallCard.fromMap(
           Map<Object?, Object?>.from(rawPending),
         );
       }
     }
-    hand = List.unmodifiable(_preserveHandSlots(cards));
-    notifyListeners();
+    state = state.copyWith(
+      hand: _preserveHandSlots(cards),
+      pendingDraw: nextPendingDraw,
+    );
   }
 
-  //=======================손패 슬롯 순서 유지==============================
-  // Firebase Map의 키 정렬 순서를 화면 순서로 사용하지 않습니다. 교체 전
-  // 카드가 사라진 자리에 새 카드만 넣고 나머지 카드 위치는 그대로 둡니다.
+  //=======================손패 표시 순서==============================
+  /// 교체된 카드만 기존 슬롯에 넣어 나머지 카드가 임의로 이동하지 않게 합니다.
   List<FinalCallCard> _preserveHandSlots(List<FinalCallCard> incomingCards) {
     if (hand.isEmpty) return incomingCards;
 
@@ -250,10 +265,15 @@ class FinalCallController extends ChangeNotifier {
     final reordered = List<FinalCallCard>.from(hand);
     final draggedCard = reordered.removeAt(fromIndex);
     reordered.insert(targetIndex.clamp(0, reordered.length), draggedCard);
-    hand = List.unmodifiable(reordered);
-    notifyListeners();
+    state = state.copyWith(hand: reordered);
   }
 
+  void acknowledgeDiscardEvent(int version) {
+    if (discardEvent?.version != version) return;
+    state = state.copyWith(discardEvent: null);
+  }
+
+  //=======================Cloud Function 게임 명령==============================
   Future<bool> draw(String source) =>
       _run(() => service.command.drawCard(roomCode: roomCode, source: source));
   Future<bool> completeTurn(String? replaceCardId) => _run(
@@ -282,9 +302,6 @@ class FinalCallController extends ChangeNotifier {
       _run(() => service.command.completeResultReveal(roomCode: roomCode));
 
   /// 제한 시간이 끝난 턴은 덱에서 한 장을 가져와 그대로 버립니다.
-  ///
-  /// 이미 카드를 가져온 상태라면 그 카드만 버립니다. 서버 명령은 멱등 키와
-  /// 재시도를 사용하므로 화면에서 중복으로 호출되어도 한 번만 반영됩니다.
   Future<bool> completeTimedOutTurn() async {
     if (!canAct) return false;
     if (isFinalSubmitPhase) return timeoutTurn();
@@ -296,9 +313,7 @@ class FinalCallController extends ChangeNotifier {
 
   Future<bool> _run(Future<Object?> Function() command) async {
     if (commandInFlight) return false;
-    commandInFlight = true;
-    errorMessage = null;
-    notifyListeners();
+    state = state.copyWith(commandInFlight: true, errorMessage: null);
     try {
       await command();
       return true;
@@ -310,25 +325,18 @@ class FinalCallController extends ChangeNotifier {
       );
       return false;
     } finally {
-      commandInFlight = false;
-      notifyListeners();
+      if (ref.mounted) {
+        state = state.copyWith(commandInFlight: false);
+      }
     }
   }
 
   void _setError(String message) {
-    errorMessage = message;
-    notifyListeners();
+    if (!ref.mounted) return;
+    state = state.copyWith(errorMessage: message);
   }
 
   void clearError() {
-    errorMessage = null;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _publicSubscription?.cancel();
-    _privateSubscription?.cancel();
-    super.dispose();
+    state = state.copyWith(errorMessage: null);
   }
 }

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_animation.dart';
@@ -35,7 +36,7 @@ class FinalCallTabletGame extends ConsumerStatefulWidget {
 class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   PhoneGameController? controller;
   FinalCallSessionArgs? sessionArgs;
-  ProviderSubscription<PhoneGameController>? sessionSubscription;
+  ProviderSubscription<FinalCallGameState>? sessionSubscription;
   String? initializationError;
   String? previousPhase;
   Timer? phaseTimer;
@@ -63,11 +64,10 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     );
     sessionArgs = args;
     final provider = finalCallSessionProvider(args);
-    controller = ref.read(provider);
-    sessionSubscription = ref.listenManual(provider, (_, next) {
-      controller = next;
+    sessionSubscription = ref.listenManual(provider, (_, _) {
       _handleState();
     });
+    controller = ref.read(provider.notifier);
   }
 
   void _handleState() {
@@ -180,97 +180,92 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   @override
   Widget build(BuildContext context) {
     final args = sessionArgs;
+    if (args != null) ref.watch(finalCallSessionProvider(args));
     final game = args == null
         ? null
-        : ref.watch(finalCallSessionProvider(args));
+        : ref.read(finalCallSessionProvider(args).notifier);
     controller = game;
     if (game == null) {
       return Scaffold(
         body: Center(child: Text(initializationError ?? '게임을 열 수 없습니다.')),
       );
     }
-    return AnimatedBuilder(
-      animation: game,
-      builder: (context, _) {
-        return Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              //============================================배경============================================
-              Assets.games.finalCall.images.background.background.image(
-                fit: BoxFit.cover,
-              ),
-              //============================================게임 카드============================================
-              if (!game.loading)
-                FinalCallTabletGameLayer(
-                  controller: game,
-                  onRoundRevealCompleted: _handleRoundRevealCompleted,
-                ),
-              if (!game.loading)
-                FinalCallTabletCallAnimation(
-                  controller: game,
-                  playerCount: game.players.length,
-                ),
-              if (!game.loading &&
-                  game.roundResult == null &&
-                  game.discardEvent != null)
-                FinalCallTabletDiscardAnimation(
-                  key: ValueKey('discard-${game.discardEvent!.version}'),
-                  controller: game,
-                  event: game.discardEvent!,
-                  playerCount: game.players.length,
-                ),
-              //=======================우측 상단 사이드바==============================
-              FinalCallTabletGameOverlay(
-                provider: widget.provider,
-                visible: !game.loading && !game.isFinished,
-                onRestartGame: _restartGame,
-                onEndGame: _endGame,
-              ),
-              if (game.isFinished &&
-                  game.finishReason != 'insufficientPlayers' &&
-                  (game.roundResult == null ||
-                      completedRevealRound == game.round))
-                FinalCallResultOverlay(
-                  winner: game.players[game.winnerUid],
-                  onRestart: () => game.restartGame(),
-                  onHome: () => unawaited(_returnHomeAfterResult()),
-                ),
-              if (game.isFinished && game.finishReason == 'insufficientPlayers')
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: ColoredBox(
-                      color: Color(0x66000000),
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            '인원 부족으로 게임을 종료합니다',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 12),
-                              ],
-                            ),
-                          ),
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          //============================================배경============================================
+          Assets.games.finalCall.images.background.background.image(
+            fit: BoxFit.cover,
+          ),
+          //============================================게임 카드============================================
+          if (!game.loading)
+            FinalCallTabletGameLayer(
+              controller: game,
+              onRoundRevealCompleted: _handleRoundRevealCompleted,
+            ),
+          if (!game.loading)
+            FinalCallTabletCallAnimation(
+              controller: game,
+              playerCount: game.players.length,
+            ),
+          if (!game.loading &&
+              game.roundResult == null &&
+              game.discardEvent != null)
+            FinalCallTabletDiscardAnimation(
+              key: ValueKey('discard-${game.discardEvent!.version}'),
+              controller: game,
+              event: game.discardEvent!,
+              playerCount: game.players.length,
+            ),
+          //=======================우측 상단 사이드바==============================
+          FinalCallTabletGameOverlay(
+            provider: widget.provider,
+            visible: !game.loading && !game.isFinished,
+            onRestartGame: _restartGame,
+            onEndGame: _endGame,
+          ),
+          if (game.isFinished &&
+              game.finishReason != 'insufficientPlayers' &&
+              (game.roundResult == null || completedRevealRound == game.round))
+            FinalCallResultOverlay(
+              winner: game.players[game.winnerUid],
+              onRestart: () => game.restartGame(),
+              onHome: () => unawaited(_returnHomeAfterResult()),
+            ),
+          if (game.isFinished && game.finishReason == 'insufficientPlayers')
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: Color(0x66000000),
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        '인원 부족으로 게임을 종료합니다',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          shadows: [
+                            Shadow(color: Colors.black, blurRadius: 12),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
-              if (game.commandInFlight)
-                const Positioned(
-                  right: 22,
-                  bottom: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-            ],
-          ),
-        );
-      },
+              ),
+            ),
+          if (game.commandInFlight)
+            const Positioned(
+              right: 22,
+              bottom: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ],
+      ),
     );
   }
 }
