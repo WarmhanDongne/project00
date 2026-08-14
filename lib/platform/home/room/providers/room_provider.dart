@@ -154,14 +154,18 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // ============================================== Phone을 위한 메서드 ========================================
-  Future<bool> joinRoom(String roomCode, String nickname) async {
+  Future<bool> joinRoom(
+    String roomCode,
+    String nickname, {
+    String accentColor = '#6557D2',
+  }) async {
     // Room code 받기
     final code = roomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
     // joinRoom 실행
     final result = await _runCommand(() async {
-      await _service.joinRoom(code, nickname); // 서비스에 roomcode와 nickname 전달
+      await _service.joinRoom(code, nickname, accentColor: accentColor);
       return true;
     });
 

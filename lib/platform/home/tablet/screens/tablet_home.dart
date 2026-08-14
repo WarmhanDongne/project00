@@ -107,18 +107,18 @@ class _HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return SizedBox(
-      height: 74,
+      height: 78,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
             SizedBox(
-              width: 150,
+              width: 170,
               child: Text(
                 '모시겜',
                 style: TextStyle(
                   color: colors.primary,
-                  fontSize: 21,
+                  fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -126,13 +126,13 @@ class _HomeHeader extends StatelessWidget {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 390),
+                  constraints: const BoxConstraints(maxWidth: 430),
                   child: GameSearchBar(onChanged: onSearchChanged),
                 ),
               ),
             ),
             SizedBox(
-              width: 150,
+              width: 170,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -140,7 +140,7 @@ class _HomeHeader extends StatelessWidget {
                     onPressed: () => FirebaseAuth.instance.signOut(),
                     child: Text(
                       '로그아웃',
-                      style: TextStyle(color: colors.textMuted, fontSize: 12),
+                      style: TextStyle(color: colors.textMuted, fontSize: 14),
                     ),
                   ),
                   const SizedBox(width: 8),

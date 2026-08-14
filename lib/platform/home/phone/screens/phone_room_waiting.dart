@@ -3,19 +3,18 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/final_call/screens/phone_game.dart'
     as final_call;
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/liars_poker/screens/phone_game.dart'
     as liars_poker;
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
-import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
-import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class PhoneRoomWaiting extends StatefulWidget {
   const PhoneRoomWaiting({super.key, required this.provider});
@@ -150,86 +149,109 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        body: AnimatedBuilder(
-          animation: widget.provider,
-          builder: (context, _) {
-            final selectedGameId = widget.provider.selectedGameId;
-            final selectedGame = widget.provider.selectedGame;
-            final players = widget.provider.players
-                .where((player) => player.isActive)
-                .toList(growable: false);
+    return AnimatedBuilder(
+      animation: widget.provider,
+      builder: (context, _) {
+        final selectedGameId = widget.provider.selectedGameId;
+        final selectedGame = widget.provider.selectedGame;
+        final players = widget.provider.players
+            .where((player) => player.isActive)
+            .toList(growable: false);
+        final colors = context.platformColors;
 
-            return Column(
+        return Scaffold(
+          body: SafeArea(
+            child: Column(
               children: [
                 PhoneHeader(
-                  buttonText: "그룹 나가기",
+                  buttonText: '그룹 나가기',
                   onPressed: () async {
                     final left = await widget.provider.leaveRoom();
                     if (!context.mounted || !left) return;
                     Navigator.of(context).pop();
                   },
                 ),
-                SizedBox(height: 26.h),
-                Text(
-                  '방 코드: ${widget.provider.roomCode ?? ''}',
-                  style: TextStyle(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                    children: [
+                      PlatformNotice(
+                        message: '태블릿에서 게임을 선택하면 자동으로 시작합니다.',
+                        style: PlatformNoticeStyle.warning,
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Text(
+                            '참여 코드',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            widget.provider.roomCode ?? '',
+                            style: TextStyle(
+                              color: colors.primary,
+                              fontSize: 22,
+                              letterSpacing: 1.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      PhoneRoomParticipantList(players: players),
+                      const SizedBox(height: 24),
+                      PlatformSectionTitle(
+                        title: selectedGameId == null || selectedGameId.isEmpty
+                            ? '그룹이 보유 중인 게임'
+                            : '그룹이 선택한 게임',
+                        trailing: Text(
+                          selectedGameId == null || selectedGameId.isEmpty
+                              ? '${widget.provider.groupGames.length}개'
+                              : '시작 대기 중',
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (selectedGameId == null || selectedGameId.isEmpty)
+                        if (widget.provider.groupGames.isEmpty)
+                          PlatformPanel(
+                            child: Text(
+                              '그룹이 보유한 게임이 없습니다.',
+                              style: TextStyle(color: colors.textMuted),
+                            ),
+                          )
+                        else
+                          for (final game in widget.provider.groupGames)
+                            PhoneGameCard(gameInfo: game, inset: false)
+                      else if (selectedGame != null)
+                        PhoneGameCard(gameInfo: selectedGame, inset: false)
+                      else
+                        const Padding(
+                          padding: EdgeInsets.all(28),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      if (widget.provider.errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        PlatformNotice(
+                          message: widget.provider.errorMessage!,
+                          style: PlatformNoticeStyle.danger,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                SizedBox(height: 16.h),
-                PhoneRoomParticipantList(
-                  participantsList: players
-                      .map((player) => player.nickname)
-                      .toList(growable: false),
-                ),
-                SizedBox(height: 36.h),
-                groupGameText(selectedGameId, selectedGame),
-                SizedBox(height: 10.h),
-                // 경우에 따른 게임 화면 로딩 파트
-                if (selectedGameId == null || selectedGameId.isEmpty)
-                  PhoneOwnGameList(
-                    games: Future.value(widget.provider.groupGames),
-                  )
-                else if (selectedGame != null)
-                  PhoneGameCard(gameInfo: widget.provider.selectedGame!)
-                else
-                  const Center(child: CircularProgressIndicator()),
-
-                if (widget.provider.errorMessage != null)
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Text(
-                      widget.provider.errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
               ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Row groupGameText(String? selectedGameId, GameInfo? selectedGame) {
-    return Row(
-      children: [
-        SizedBox(width: 18.w),
-        if (selectedGameId == null || selectedGameId.isEmpty)
-          Text(
-            '그룹이 보유 중인 게임',
-            style: TextStyle(fontSize: 25.sp, fontWeight: FontWeight.w400),
-          )
-        else if (selectedGame != null)
-          Text(
-            '그룹이 선택한 게임',
-            style: TextStyle(fontSize: 25.sp, fontWeight: FontWeight.w400),
+            ),
           ),
-      ],
+        );
+      },
     );
   }
 }

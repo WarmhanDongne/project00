@@ -42,7 +42,7 @@ class PlatformButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.style = PlatformButtonStyle.primary,
-    this.height = 44,
+    this.height = 48,
     this.expand = true,
   });
 
@@ -72,6 +72,7 @@ class PlatformButton extends StatelessWidget {
           foregroundColor: foreground,
           disabledBackgroundColor: colors.surfaceMuted,
           disabledForegroundColor: colors.textMuted,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: style == PlatformButtonStyle.secondary
@@ -80,7 +81,10 @@ class PlatformButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
       ),
     );
     return expand ? SizedBox(width: double.infinity, child: button) : button;
@@ -107,7 +111,7 @@ class PlatformTag extends StatelessWidget {
         label,
         style: TextStyle(
           color: highlighted ? colors.primary : colors.textMuted,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -149,7 +153,7 @@ class PlatformNotice extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: foreground, fontSize: 12),
+              style: TextStyle(color: foreground, fontSize: 13),
             ),
           ),
         ],
@@ -215,6 +219,95 @@ class PlatformAuthShell extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+//=======================모바일 플랫폼 흐름 화면==============================
+class PlatformPhoneFlowScaffold extends StatelessWidget {
+  const PlatformPhoneFlowScaffold({
+    super.key,
+    required this.title,
+    required this.child,
+    this.bottom,
+    this.showBack = true,
+    this.actions = const [],
+  });
+
+  final String title;
+  final Widget child;
+  final Widget? bottom;
+  final bool showBack;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: showBack
+            ? IconButton(
+                tooltip: '뒤로',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+              )
+            : null,
+        titleSpacing: showBack ? 0 : 20,
+        title: Text(title),
+        actions: actions,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: colors.border),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                child: child,
+              ),
+            ),
+            if (bottom != null)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  border: Border(top: BorderSide(color: colors.border)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: bottom,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+//=======================플랫폼 섹션 제목==============================
+class PlatformSectionTitle extends StatelessWidget {
+  const PlatformSectionTitle({super.key, required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+        ),
+        ?trailing,
+      ],
     );
   }
 }

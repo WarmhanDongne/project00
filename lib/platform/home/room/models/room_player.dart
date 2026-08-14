@@ -3,6 +3,7 @@ class RoomPlayer {
     required this.uid,
     required this.nickname,
     required this.profileImageUrl,
+    required this.accentColor,
     required this.isConnected,
     required this.seatIndex,
     required this.role,
@@ -18,6 +19,7 @@ class RoomPlayer {
       uid: key ?? json['uid'] as String? ?? '',
       nickname: json['nickname'] as String? ?? 'Player',
       profileImageUrl: json['profileImageUrl'] as String? ?? '',
+      accentColor: json['accentColor'] as String? ?? '#6557D2',
       isConnected: json['isConnected'] as bool? ?? true,
       seatIndex: json['seatIndex'] as int? ?? -1,
       role: json['role'] as String? ?? 'player',
@@ -29,6 +31,7 @@ class RoomPlayer {
   final String uid;
   final String nickname;
   final String profileImageUrl;
+  final String accentColor;
   final bool isConnected;
   final int seatIndex;
   final String role;

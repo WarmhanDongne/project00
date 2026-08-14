@@ -7,13 +7,15 @@ class PhoneGameCard extends StatelessWidget {
   // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.
 
   final GameInfo gameInfo;
-  const PhoneGameCard({super.key, required this.gameInfo});
+  const PhoneGameCard({super.key, required this.gameInfo, this.inset = true});
+
+  final bool inset;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: EdgeInsets.fromLTRB(inset ? 16 : 0, 0, inset ? 16 : 0, 12),
       child: PlatformPanel(
         padding: const EdgeInsets.all(10),
         child: Row(

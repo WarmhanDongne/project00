@@ -33,6 +33,7 @@ type SaveSeatIndexesData = {
 type JoinRealtimeRoomData = {
   roomCode?: unknown;
   nickname?: unknown;
+  accentColor?: unknown;
 };
 
 /**
@@ -146,6 +147,11 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       );
     }
 
+    const rawAccentColor = request.data?.accentColor;
+    const accentColor = typeof rawAccentColor === "string" &&
+      /^#[0-9A-F]{6}$/.test(rawAccentColor.toUpperCase()) ?
+      rawAccentColor.toUpperCase() : "#6557D2";
+
     const database = getDatabase();
     const roomRef = database.ref(`rooms/${roomCode}`);
     const roomSnapshot = await roomRef.get();
@@ -208,6 +214,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
               (typeof existingPlayer.profileImageUrl === "string" ?
                 existingPlayer.profileImageUrl : ""),
             isConnected: true,
+            accentColor,
           };
           return players;
         }
@@ -235,6 +242,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           uid,
           nickname,
           profileImageUrl,
+          accentColor,
           isConnected: true,
           seatIndex: -1,
           role: "player",

@@ -130,7 +130,11 @@ class RoomService {
 
   // ========================================================== phone ==================================================================
 
-  Future<void> joinRoom(String roomCode, String nickname) async {
+  Future<void> joinRoom(
+    String roomCode,
+    String nickname, {
+    required String accentColor,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const RoomCommandException('인증 정보가 없습니다.');
@@ -138,7 +142,11 @@ class RoomService {
 
     final uid = user.uid;
     final code = roomCode.trim().toUpperCase();
-    await _joinRoomWithRetry(roomCode: code, nickname: nickname);
+    await _joinRoomWithRetry(
+      roomCode: code,
+      nickname: nickname,
+      accentColor: accentColor,
+    );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
     // 기능이므로 클라이언트에서 한 번만 예약하고 실패해도 입장은 유지합니다.
@@ -149,6 +157,7 @@ class RoomService {
   Future<void> _joinRoomWithRetry({
     required String roomCode,
     required String nickname,
+    required String accentColor,
   }) async {
     FirebaseFunctionsException? lastError;
 
@@ -157,6 +166,7 @@ class RoomService {
         await _functions.httpsCallable('joinRealtimeRoom').call({
           'roomCode': roomCode,
           'nickname': nickname,
+          'accentColor': accentColor,
         });
         return;
       } on FirebaseFunctionsException catch (error) {

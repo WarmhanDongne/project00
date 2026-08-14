@@ -78,12 +78,12 @@ class _GameListState extends State<GameList> {
                 children: [
                   const Text(
                     '보유 중인 게임',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(width: 20),
                   Text(
                     '${widget.gameProvider.games.length}',
-                    style: TextStyle(color: colors.textMuted, fontSize: 13),
+                    style: TextStyle(color: colors.textMuted, fontSize: 15),
                   ),
                 ],
               ),
@@ -103,7 +103,7 @@ class _GameListState extends State<GameList> {
                           color: selectedGenre == genre
                               ? colors.primary
                               : colors.textMuted,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: selectedGenre == genre
                               ? FontWeight.w800
                               : FontWeight.w500,
@@ -129,27 +129,41 @@ class _GameListState extends State<GameList> {
                           style: TextStyle(color: colors.textMuted),
                         ),
                       )
-                    : GridView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: games.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 175,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.68,
-                            ),
-                        itemBuilder: (context, index) {
-                          final game = games[index];
-                          return GameCard(
-                            game: game,
-                            onTap: () => showDialog<void>(
-                              context: context,
-                              builder: (_) => GamePreviewDialog(
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          const columns = 5;
+                          const spacing = 10.0;
+                          final tileWidth =
+                              (constraints.maxWidth - spacing * (columns - 1)) /
+                              columns;
+                          final targetHeight =
+                              ((constraints.maxHeight - spacing) / 1.52).clamp(
+                                205.0,
+                                double.infinity,
+                              );
+                          return GridView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: games.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  crossAxisSpacing: spacing,
+                                  mainAxisSpacing: spacing,
+                                  childAspectRatio: tileWidth / targetHeight,
+                                ),
+                            itemBuilder: (context, index) {
+                              final game = games[index];
+                              return GameCard(
                                 game: game,
-                                roomProvider: widget.roomProvider,
-                              ),
-                            ),
+                                onTap: () => showDialog<void>(
+                                  context: context,
+                                  builder: (_) => GamePreviewDialog(
+                                    game: game,
+                                    roomProvider: widget.roomProvider,
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
@@ -192,7 +206,7 @@ class GameCard extends StatelessWidget {
               game.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 5),
             Wrap(
@@ -223,7 +237,7 @@ class GameCard extends StatelessWidget {
               game.description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: colors.textMuted, fontSize: 10),
+              style: TextStyle(color: colors.textMuted, fontSize: 12),
             ),
           ],
         ),

@@ -41,7 +41,7 @@ class _PanelHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
         ),
         ?trailing,
@@ -85,7 +85,7 @@ class _EmptyRoom extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             '아직 아무도 없습니다',
-            style: TextStyle(fontWeight: FontWeight.w900),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
@@ -93,7 +93,7 @@ class _EmptyRoom extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.textMuted,
-              fontSize: 12,
+              fontSize: 13,
               height: 1.45,
             ),
           ),
@@ -127,17 +127,17 @@ class _InvitationRoom extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             '참여 코드',
-            style: TextStyle(color: colors.textMuted, fontSize: 12),
+            style: TextStyle(color: colors.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 4),
-          _CopyableRoomCode(roomCode: roomCode, fontSize: 29),
+          _CopyableRoomCode(roomCode: roomCode, fontSize: 32),
           const SizedBox(height: 12),
           Text(
             '모바일 앱에서 이 코드를 입력하면\n바로 참여합니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.textMuted,
-              fontSize: 11,
+              fontSize: 13,
               height: 1.45,
             ),
           ),
@@ -170,10 +170,10 @@ class _ActiveRoom extends StatelessWidget {
           child: _PanelHeader(
             title: '현 인원  ${players.length}명',
             trailing: SizedBox(
-              width: 72,
+              width: 84,
               child: PlatformButton(
                 label: '초기화',
-                height: 36,
+                height: 40,
                 style: PlatformButtonStyle.secondary,
                 onPressed: provider.isLoading ? null : provider.createRoom,
               ),
@@ -187,7 +187,6 @@ class _ActiveRoom extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) => _PlayerTile(
               player: players[index],
-              isHost: index == 0,
               isNew: index == players.length - 1 && players.length > 1,
               onRemove: () => provider.removePlayer(players[index].uid),
             ),
@@ -197,7 +196,7 @@ class _ActiveRoom extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Text(
             '최대 ${RoomLimits.defaultMaxPlayers}명 · 아래로 스크롤',
-            style: TextStyle(color: colors.textMuted, fontSize: 10),
+            style: TextStyle(color: colors.textMuted, fontSize: 11),
           ),
         ),
         Divider(height: 1, color: colors.border),
@@ -213,12 +212,12 @@ class _ActiveRoom extends StatelessWidget {
                   children: [
                     Text(
                       '참여 코드',
-                      style: TextStyle(color: colors.textMuted, fontSize: 10),
+                      style: TextStyle(color: colors.textMuted, fontSize: 11),
                     ),
-                    _CopyableRoomCode(roomCode: roomCode, fontSize: 24),
+                    _CopyableRoomCode(roomCode: roomCode, fontSize: 27),
                     Text(
                       '늦게 온 친구도 바로 참여',
-                      style: TextStyle(color: colors.textMuted, fontSize: 9),
+                      style: TextStyle(color: colors.textMuted, fontSize: 10),
                     ),
                   ],
                 ),
@@ -234,21 +233,20 @@ class _ActiveRoom extends StatelessWidget {
 class _PlayerTile extends StatelessWidget {
   const _PlayerTile({
     required this.player,
-    required this.isHost,
     required this.isNew,
     required this.onRemove,
   });
 
   final RoomPlayer player;
-  final bool isHost;
   final bool isNew;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
+    final accent = _parseAccent(player.accentColor);
     return Container(
-      height: 50,
+      height: 54,
       padding: const EdgeInsets.only(left: 8),
       decoration: BoxDecoration(
         color: colors.surface,
@@ -258,8 +256,8 @@ class _PlayerTile extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 15,
-            backgroundColor: colors.primarySoft,
+            radius: 17,
+            backgroundColor: accent.withValues(alpha: 0.13),
             backgroundImage: player.profileImageUrl.isEmpty
                 ? null
                 : NetworkImage(player.profileImageUrl),
@@ -268,17 +266,20 @@ class _PlayerTile extends StatelessWidget {
                     player.nickname.isEmpty
                         ? '?'
                         : player.nickname.substring(0, 1),
-                    style: TextStyle(color: colors.primary),
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                    ),
                   )
                 : null,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              isHost ? '방장  ${player.nickname}' : player.nickname,
+              player.nickname,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
             ),
           ),
           if (isNew)
@@ -300,6 +301,11 @@ class _PlayerTile extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _parseAccent(String value) {
+  final parsed = int.tryParse(value.replaceFirst('#', ''), radix: 16);
+  return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }
 
 class _QrCard extends StatelessWidget {

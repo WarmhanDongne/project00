@@ -21,8 +21,8 @@ class PhoneHeader extends StatelessWidget {
     final hasPhoto = photoURL != null && photoURL.isNotEmpty;
 
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border(bottom: BorderSide(color: colors.border)),
@@ -33,31 +33,36 @@ class PhoneHeader extends StatelessWidget {
             '모시겜',
             style: TextStyle(
               color: colors.primary,
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           const Spacer(),
           SizedBox(
-            width: 94,
+            width: 108,
             child: PlatformButton(
               label: buttonText,
-              height: 36,
+              height: 40,
               expand: false,
               onPressed: onPressed,
             ),
           ),
           const SizedBox(width: 8),
           TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: () => FirebaseAuth.instance.signOut(),
             child: Text(
               '로그아웃',
-              style: TextStyle(color: colors.textMuted, fontSize: 11),
+              style: TextStyle(color: colors.textMuted, fontSize: 13),
             ),
           ),
           const SizedBox(width: 6),
           CircleAvatar(
-            radius: 20,
+            radius: 18,
             backgroundColor: colors.surfaceMuted,
             backgroundImage: hasPhoto ? NetworkImage(photoURL) : null,
             child: hasPhoto

@@ -10,13 +10,13 @@ class GameSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return SizedBox(
-      height: 42,
+      height: 46,
       child: TextField(
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: '게임 검색',
-          hintStyle: TextStyle(color: colors.textMuted, fontSize: 13),
-          prefixIcon: Icon(Icons.search, size: 18, color: colors.textMuted),
+          hintStyle: TextStyle(color: colors.textMuted, fontSize: 15),
+          prefixIcon: Icon(Icons.search, size: 20, color: colors.textMuted),
           filled: true,
           fillColor: colors.surfaceMuted,
           border: OutlineInputBorder(

@@ -150,9 +150,11 @@ class PlatformTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.canvas,
       extensions: <ThemeExtension<dynamic>>[colors],
-      textTheme: ThemeData(
-        brightness: brightness,
-      ).textTheme.apply(bodyColor: colors.text, displayColor: colors.text),
+      textTheme: ThemeData(brightness: brightness).textTheme.apply(
+        bodyColor: colors.text,
+        displayColor: colors.text,
+        fontSizeFactor: 1.08,
+      ),
       dividerColor: colors.border,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -172,6 +174,17 @@ class PlatformTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colors.primary),
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: colors.canvas,
+        foregroundColor: colors.text,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: colors.text,
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
