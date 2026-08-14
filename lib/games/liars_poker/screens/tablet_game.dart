@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_tablet_session_provider.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_animation.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_controller.dart';
@@ -20,7 +22,7 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
 /// 상태 처리는 [TabletGameController], 화면 구성은 각 layer 파일이 담당합니다.
-class LiarsPokerTabletGame extends StatefulWidget {
+class LiarsPokerTabletGame extends ConsumerStatefulWidget {
   const LiarsPokerTabletGame({
     super.key,
     required this.playerLayout,
@@ -35,12 +37,13 @@ class LiarsPokerTabletGame extends StatefulWidget {
   final LiarsPokerService gameService;
 
   @override
-  State<LiarsPokerTabletGame> createState() => TabletGameState();
+  ConsumerState<LiarsPokerTabletGame> createState() => TabletGameState();
 }
 
-class TabletGameState extends State<LiarsPokerTabletGame>
+class TabletGameState extends ConsumerState<LiarsPokerTabletGame>
     with SingleTickerProviderStateMixin {
   late final TabletGameController _controller;
+  late final LiarsPokerTabletSessionArgs _sessionArgs;
   late final AnimationController _exitMatController;
   bool _hasScheduledInsufficientPlayersExit = false;
   bool _isExitingToLobby = false;
@@ -58,12 +61,14 @@ class TabletGameState extends State<LiarsPokerTabletGame>
       duration: const Duration(milliseconds: 900),
       reverseDuration: const Duration(milliseconds: 820),
     );
-    _controller = TabletGameController(
+    _sessionArgs = LiarsPokerTabletSessionArgs(
       playerLayout: widget.playerLayout,
       roomCode: widget.roomCode,
-      gameService: widget.gameService,
+      service: widget.gameService,
       onError: _showGameError,
-    )..initialize();
+    );
+    final provider = liarsPokerTabletSessionProvider(_sessionArgs);
+    _controller = ref.read(provider.notifier);
   }
 
   void _showGameError(String message, Object error) {
@@ -152,6 +157,7 @@ class TabletGameState extends State<LiarsPokerTabletGame>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(liarsPokerTabletSessionProvider(_sessionArgs));
     //=======================게임 진입 로딩 화면==============================
     // 태블릿 공개 상태와 플레이어 프로필·게임 이미지를 먼저 준비합니다.
     return AnimatedBuilder(
@@ -191,13 +197,11 @@ class TabletGameState extends State<LiarsPokerTabletGame>
   Widget _buildGameContent() {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
+      body: Builder(
+        builder: (context) {
           if (_controller.isInsufficientPlayersEnding) {
             _scheduleInsufficientPlayersExit();
           }
-
           return Stack(
             children: [
               const Positioned.fill(child: _GameBackground()),
@@ -328,7 +332,6 @@ class TabletGameState extends State<LiarsPokerTabletGame>
 
   @override
   void dispose() {
-    _controller.dispose();
     _exitMatController.dispose();
     //=======================플랫폼 세로 화면 복원==============================
     unawaited(AppOrientation.lockPlatformPortrait());

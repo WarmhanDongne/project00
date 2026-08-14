@@ -1,49 +1,16 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-/// Realtime Database에 저장된 휴대폰 플레이어의 실제 카드입니다.
-class PhoneHandCard {
-  const PhoneHandCard({required this.id, required this.rank});
-
-  final String id;
-  final String rank;
-}
-
-class PhoneGamePlayer {
-  const PhoneGamePlayer({
-    required this.uid,
-    required this.nickname,
-    required this.profileImageUrl,
-    required this.status,
-    required this.remainingCardCount,
-  });
-
-  final String uid;
-  final String nickname;
-  final String profileImageUrl;
-  final String status;
-  final int remainingCardCount;
-}
-
-/// 서버가 공개한 최근 룰렛 결과입니다.
-class PhonePenaltyResult {
-  const PhonePenaltyResult({
-    required this.targetUid,
-    required this.result,
-    required this.resolvedAt,
-  });
-
-  final String targetUid;
-  final String result;
-  final int resolvedAt;
-}
+export 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart'
+    show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult;
 
 /// 휴대폰의 공개 게임 상태와 개인 손패 구독, Cloud Function 명령을 관리합니다.
-class PhoneGameController extends ChangeNotifier {
+class PhoneGameController extends Notifier<LiarsPokerPhoneState> {
   static const int _cardsPerNewHand = 5;
 
   PhoneGameController({
@@ -63,45 +30,107 @@ class PhoneGameController extends ChangeNotifier {
   Completer<void> _initialDataCompleter = Completer<void>();
   String? _lastDealtHandSignature;
 
-  String status = 'waiting';
-  String? finishReason;
-  String phase = 'playing';
-  String table = 'K';
-  String? turnUid;
-  String? winnerUid;
-  String? penaltyTargetUid;
-  String? lastPlayPlayerUid;
-  String? lastPlayId;
-  bool lastPlayRevealed = false;
-  int lastPlayCardCount = 0;
-  int round = 1;
-  int revision = 0;
-  int? turnDeadlineAt;
-
-  Map<String, PhoneGamePlayer> players = const {};
-  List<PhoneHandCard> handCards = const [];
-
-  /// 컨트롤러 알림마다 새 리스트를 만들지 않도록 손패 변경 때만 갱신합니다.
-  List<AssetGenImage> handCardAssets = const [];
-
-  bool isCommandInFlight = false;
-  bool hasRevealedHand = false;
-
   /// 새로운 5장 손패가 실제로 도착할 때마다 증가합니다.
   ///
   /// 라운드 번호가 다시 1부터 시작하는 게임 재시작에서도 손패 위젯을 새로
   /// 만들 수 있도록 화면의 key에는 [round] 대신 이 값을 사용합니다.
-  int handDealVersion = 0;
-  String? errorMessage;
-  String? liarVerdictMessage;
-  bool liarVerdictIsFalse = false;
-  bool isLiarVerdictPending = false;
   Timer? _liarVerdictDelayTimer;
   Timer? _liarVerdictTimer;
-  PhonePenaltyResult? penaltyResult;
-  bool isPenaltyResultVisible = false;
   Timer? _penaltyResultTimer;
   String? _activePenaltyResultKey;
+
+  late LiarsPokerPhoneState _draft;
+
+  @override
+  LiarsPokerPhoneState build() {
+    _draft = LiarsPokerPhoneState.initial();
+    initialize();
+    ref.onDispose(() {
+      _liarVerdictDelayTimer?.cancel();
+      _liarVerdictTimer?.cancel();
+      _penaltyResultTimer?.cancel();
+      unawaited(_publicSubscription?.cancel());
+      unawaited(_handSubscription?.cancel());
+    });
+    return _draft;
+  }
+
+  void _commit() {
+    if (!ref.mounted) return;
+    state = _draft;
+  }
+
+  //=======================불변 상태 호환 접근자==============================
+  String get status => _draft.status;
+  set status(String value) => _draft = _draft.copyWith(status: value);
+  String? get finishReason => _draft.finishReason;
+  set finishReason(String? value) =>
+      _draft = _draft.copyWith(finishReason: value);
+  String get phase => _draft.phase;
+  set phase(String value) => _draft = _draft.copyWith(phase: value);
+  String get table => _draft.table;
+  set table(String value) => _draft = _draft.copyWith(table: value);
+  String? get turnUid => _draft.turnUid;
+  set turnUid(String? value) => _draft = _draft.copyWith(turnUid: value);
+  String? get winnerUid => _draft.winnerUid;
+  set winnerUid(String? value) => _draft = _draft.copyWith(winnerUid: value);
+  String? get penaltyTargetUid => _draft.penaltyTargetUid;
+  set penaltyTargetUid(String? value) =>
+      _draft = _draft.copyWith(penaltyTargetUid: value);
+  String? get lastPlayPlayerUid => _draft.lastPlayPlayerUid;
+  set lastPlayPlayerUid(String? value) =>
+      _draft = _draft.copyWith(lastPlayPlayerUid: value);
+  String? get lastPlayId => _draft.lastPlayId;
+  set lastPlayId(String? value) => _draft = _draft.copyWith(lastPlayId: value);
+  bool get lastPlayRevealed => _draft.lastPlayRevealed;
+  set lastPlayRevealed(bool value) =>
+      _draft = _draft.copyWith(lastPlayRevealed: value);
+  int get lastPlayCardCount => _draft.lastPlayCardCount;
+  set lastPlayCardCount(int value) =>
+      _draft = _draft.copyWith(lastPlayCardCount: value);
+  int get round => _draft.round;
+  set round(int value) => _draft = _draft.copyWith(round: value);
+  int get revision => _draft.revision;
+  set revision(int value) => _draft = _draft.copyWith(revision: value);
+  int? get turnDeadlineAt => _draft.turnDeadlineAt;
+  set turnDeadlineAt(int? value) =>
+      _draft = _draft.copyWith(turnDeadlineAt: value);
+  Map<String, PhoneGamePlayer> get players => _draft.players;
+  set players(Map<String, PhoneGamePlayer> value) =>
+      _draft = _draft.copyWith(players: value);
+  List<PhoneHandCard> get handCards => _draft.handCards;
+  set handCards(List<PhoneHandCard> value) =>
+      _draft = _draft.copyWith(handCards: value);
+  List<AssetGenImage> get handCardAssets => _draft.handCardAssets;
+  set handCardAssets(List<AssetGenImage> value) =>
+      _draft = _draft.copyWith(handCardAssets: value);
+  bool get isCommandInFlight => _draft.isCommandInFlight;
+  set isCommandInFlight(bool value) =>
+      _draft = _draft.copyWith(isCommandInFlight: value);
+  bool get hasRevealedHand => _draft.hasRevealedHand;
+  set hasRevealedHand(bool value) =>
+      _draft = _draft.copyWith(hasRevealedHand: value);
+  int get handDealVersion => _draft.handDealVersion;
+  set handDealVersion(int value) =>
+      _draft = _draft.copyWith(handDealVersion: value);
+  String? get errorMessage => _draft.errorMessage;
+  set errorMessage(String? value) =>
+      _draft = _draft.copyWith(errorMessage: value);
+  String? get liarVerdictMessage => _draft.liarVerdictMessage;
+  set liarVerdictMessage(String? value) =>
+      _draft = _draft.copyWith(liarVerdictMessage: value);
+  bool get liarVerdictIsFalse => _draft.liarVerdictIsFalse;
+  set liarVerdictIsFalse(bool value) =>
+      _draft = _draft.copyWith(liarVerdictIsFalse: value);
+  bool get isLiarVerdictPending => _draft.isLiarVerdictPending;
+  set isLiarVerdictPending(bool value) =>
+      _draft = _draft.copyWith(isLiarVerdictPending: value);
+  PhonePenaltyResult? get penaltyResult => _draft.penaltyResult;
+  set penaltyResult(PhonePenaltyResult? value) =>
+      _draft = _draft.copyWith(penaltyResult: value);
+  bool get isPenaltyResultVisible => _draft.isPenaltyResultVisible;
+  set isPenaltyResultVisible(bool value) =>
+      _draft = _draft.copyWith(isPenaltyResultVisible: value);
 
   bool get isInitialLoading => !_hasPublicSnapshot || !_hasHandSnapshot;
 
@@ -352,13 +381,13 @@ class PhoneGameController extends ChangeNotifier {
         isLiarVerdictPending = false;
         liarVerdictMessage = delayedVerdictMessage;
         liarVerdictIsFalse = declarationWasFalse;
-        notifyListeners();
+        _commit();
 
         _liarVerdictTimer = Timer(const Duration(milliseconds: 2900), () {
           if (phase != 'penalty' || liarVerdictMessage == null) return;
           liarVerdictMessage = null;
           liarVerdictIsFalse = false;
-          notifyListeners();
+          _commit();
         });
       });
     } else if (nextPhase != 'penalty') {
@@ -374,7 +403,7 @@ class PhoneGameController extends ChangeNotifier {
       showFullDuration: hadPublicSnapshot,
     );
     _completeInitialDataIfReady();
-    if (hasChanged) notifyListeners();
+    if (hasChanged) _commit();
   }
 
   void _handleHand(DatabaseEvent event) {
@@ -424,7 +453,7 @@ class PhoneGameController extends ChangeNotifier {
     // 상태를 그대로 유지합니다. 최초 빈 손패 수신은 로딩 종료를 위해 알립니다.
     if (!handChanged && hadHandSnapshot && !dealVersionChanged) return;
     _completeInitialDataIfReady();
-    notifyListeners();
+    _commit();
   }
 
   void _completeInitialDataIfReady() {
@@ -545,7 +574,7 @@ class PhoneGameController extends ChangeNotifier {
       () {
         isPenaltyResultVisible = false;
         _penaltyResultTimer = null;
-        notifyListeners();
+        _commit();
       },
     );
   }
@@ -567,7 +596,7 @@ class PhoneGameController extends ChangeNotifier {
 
     isCommandInFlight = true;
     errorMessage = null;
-    notifyListeners();
+    _commit();
 
     try {
       await gameService.command.submitCards(
@@ -584,7 +613,7 @@ class PhoneGameController extends ChangeNotifier {
       return false;
     } finally {
       isCommandInFlight = false;
-      notifyListeners();
+      _commit();
     }
   }
 
@@ -621,7 +650,7 @@ class PhoneGameController extends ChangeNotifier {
 
     isCommandInFlight = true;
     errorMessage = null;
-    notifyListeners();
+    _commit();
 
     try {
       await command();
@@ -631,25 +660,26 @@ class PhoneGameController extends ChangeNotifier {
       return false;
     } finally {
       isCommandInFlight = false;
-      notifyListeners();
+      _commit();
     }
   }
 
   bool _reject(String message) {
     errorMessage = message;
-    notifyListeners();
+    _commit();
     return false;
   }
 
   void clearError() {
     if (errorMessage == null) return;
     errorMessage = null;
-    notifyListeners();
+    _commit();
   }
 
   /// 방향 전환 뒤에도 같은 라운드의 공개된 손패 상태를 유지합니다.
   void markHandRevealed() {
     hasRevealedHand = true;
+    _commit();
     if (isMyTurn && phase == 'playing') {
       unawaited(gameService.command.readyTurn(roomCode: roomCode));
     }
@@ -667,7 +697,7 @@ class PhoneGameController extends ChangeNotifier {
     if (!_initialDataCompleter.isCompleted) {
       _initialDataCompleter.completeError(error);
     }
-    notifyListeners();
+    _commit();
   }
 
   String _string(Object? value, {required String fallback}) {
@@ -698,15 +728,5 @@ class PhoneGameController extends ChangeNotifier {
       'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker,
       _ => Assets.games.liarsPoker.images.cards.whiteBack,
     };
-  }
-
-  @override
-  void dispose() {
-    _liarVerdictDelayTimer?.cancel();
-    _liarVerdictTimer?.cancel();
-    _penaltyResultTimer?.cancel();
-    _publicSubscription?.cancel();
-    _handSubscription?.cancel();
-    super.dispose();
   }
 }

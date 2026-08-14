@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_phone_session_provider.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/liars_poker/widgets/phone/result.dart';
@@ -14,7 +17,7 @@ import 'package:project00/games/shared/widgets/game_loading_screen.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
-class PhoneGame extends StatefulWidget {
+class PhoneGame extends ConsumerStatefulWidget {
   const PhoneGame({
     super.key,
     required this.roomCode,
@@ -27,11 +30,13 @@ class PhoneGame extends StatefulWidget {
   final Future<bool> Function() onExitRoom;
 
   @override
-  State<PhoneGame> createState() => _PhoneGameState();
+  ConsumerState<PhoneGame> createState() => _PhoneGameState();
 }
 
-class _PhoneGameState extends State<PhoneGame> {
+class _PhoneGameState extends ConsumerState<PhoneGame> {
   PhoneGameController? _controller;
+  LiarsPokerPhoneSessionArgs? _sessionArgs;
+  ProviderSubscription<LiarsPokerPhoneState>? _sessionSubscription;
   String? _initializationError;
   bool _hasScheduledGameExit = false;
   bool _isLeavingRoom = false;
@@ -53,14 +58,17 @@ class _PhoneGameState extends State<PhoneGame> {
       return;
     }
 
-    final controller = PhoneGameController(
+    final args = LiarsPokerPhoneSessionArgs(
       roomCode: widget.roomCode,
       uid: uid,
-      gameService: widget.gameService,
+      service: widget.gameService,
     );
-    _controller = controller;
-    controller.addListener(_handleGameStateChanged);
-    controller.initialize();
+    _sessionArgs = args;
+    final provider = liarsPokerPhoneSessionProvider(args);
+    _sessionSubscription = ref.listenManual(provider, (_, _) {
+      _handleGameStateChanged();
+    });
+    _controller = ref.read(provider.notifier);
   }
 
   /// 컨트롤러 알림은 이 화면 한 곳에서만 수신합니다.
@@ -74,14 +82,12 @@ class _PhoneGameState extends State<PhoneGame> {
     if (!controller.isFinished) {
       _hasScheduledGameExit = false;
       _closeResultDialog();
-      setState(() {});
       return;
     }
 
     // 정상 승리는 화면을 닫지 않고 결과 다이얼로그를 유지합니다. 태블릿의
     // 다시하기 상태를 같은 RTDB 구독으로 받아 즉시 새 게임으로 전환합니다.
     if (controller.isNaturalResult) {
-      setState(() {});
       // 마지막 룰렛으로 승자가 결정된 경우에도 생존/탈락 결과를 먼저
       // 보여준 뒤 우승자 발표 다이얼로그를 엽니다.
       if (!controller.isPenaltyResultVisible) {
@@ -161,9 +167,7 @@ class _PhoneGameState extends State<PhoneGame> {
   @override
   void dispose() {
     _resultDialogGeneration += 1;
-    _controller
-      ?..removeListener(_handleGameStateChanged)
-      ..dispose();
+    _sessionSubscription?.close();
     //=======================플랫폼 세로 화면 복원==============================
     unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
@@ -171,7 +175,12 @@ class _PhoneGameState extends State<PhoneGame> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
+    final args = _sessionArgs;
+    if (args != null) ref.watch(liarsPokerPhoneSessionProvider(args));
+    final controller = args == null
+        ? null
+        : ref.read(liarsPokerPhoneSessionProvider(args).notifier);
+    _controller = controller;
     if (controller == null) {
       return Scaffold(
         backgroundColor: Colors.black,

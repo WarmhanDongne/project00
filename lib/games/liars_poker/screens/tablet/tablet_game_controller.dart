@@ -1,8 +1,9 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_tablet_state.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
@@ -14,16 +15,13 @@ typedef TabletGameErrorHandler = void Function(String message, Object error);
 ///
 /// Cloud Function은 게임 규칙과 데이터 변경을 담당하고, 이 컨트롤러는
 /// `game/public`을 읽어서 태블릿 전용 화면 상태로 변환합니다.
-class TabletGameController extends ChangeNotifier {
+class TabletGameController extends Notifier<LiarsPokerTabletState> {
   TabletGameController({
     required this.playerLayout,
     required this.roomCode,
     required this.gameService,
     required this.onError,
-  }) : remainingCardCounts = List<int>.filled(
-         playerLayout.playerCount,
-         cardsPerPlayer,
-       );
+  });
 
   final PlayerLayoutModel playerLayout;
   final String roomCode;
@@ -33,29 +31,78 @@ class TabletGameController extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _publicGameSubscription;
   Timer? _penaltyTransitionTimer;
 
-  GameStatus status = GameStatus.waiting;
-  String table = 'K';
-  String serverPhase = 'playing';
-  int roundNumber = 1;
-  int cardPileVersion = 0;
-  int penaltyAttemptCount = 0;
-  int rouletteRetry = 0;
-  bool isResolvingPenalty = false;
-  bool isProcessingMenuCommand = false;
-  bool isInsufficientPlayersEnding = false;
-  String? turnUid;
-  String? winnerUid;
-  PlayerLayoutPlayer? winnerPlayer;
-  String? penaltyTargetUid;
-  PlayerLayoutPlayer? penaltyPlayer;
-  List<SubmittedPlay> roundPlays = const [];
-  String? activeAnimationPlayId;
-  List<String> profileImageUrls = const [];
-
-  List<int> remainingCardCounts;
-
   bool _hasReceivedPublicGame = false;
   Completer<void> _initialDataCompleter = Completer<void>();
+  late LiarsPokerTabletState _draft;
+
+  @override
+  LiarsPokerTabletState build() {
+    _draft = LiarsPokerTabletState.initial(playerLayout.playerCount);
+    initialize();
+    ref.onDispose(() {
+      _penaltyTransitionTimer?.cancel();
+      unawaited(_publicGameSubscription?.cancel());
+    });
+    return _draft;
+  }
+
+  void _commit() {
+    if (!ref.mounted) return;
+    state = _draft;
+  }
+
+  //=======================불변 상태 호환 접근자==============================
+  GameStatus get status => _draft.status;
+  set status(GameStatus value) => _draft = _draft.copyWith(status: value);
+  String get table => _draft.table;
+  set table(String value) => _draft = _draft.copyWith(table: value);
+  String get serverPhase => _draft.serverPhase;
+  set serverPhase(String value) => _draft = _draft.copyWith(serverPhase: value);
+  int get roundNumber => _draft.roundNumber;
+  set roundNumber(int value) => _draft = _draft.copyWith(roundNumber: value);
+  int get cardPileVersion => _draft.cardPileVersion;
+  set cardPileVersion(int value) =>
+      _draft = _draft.copyWith(cardPileVersion: value);
+  int get penaltyAttemptCount => _draft.penaltyAttemptCount;
+  set penaltyAttemptCount(int value) =>
+      _draft = _draft.copyWith(penaltyAttemptCount: value);
+  int get rouletteRetry => _draft.rouletteRetry;
+  set rouletteRetry(int value) =>
+      _draft = _draft.copyWith(rouletteRetry: value);
+  bool get isResolvingPenalty => _draft.isResolvingPenalty;
+  set isResolvingPenalty(bool value) =>
+      _draft = _draft.copyWith(isResolvingPenalty: value);
+  bool get isProcessingMenuCommand => _draft.isProcessingMenuCommand;
+  set isProcessingMenuCommand(bool value) =>
+      _draft = _draft.copyWith(isProcessingMenuCommand: value);
+  bool get isInsufficientPlayersEnding => _draft.isInsufficientPlayersEnding;
+  set isInsufficientPlayersEnding(bool value) =>
+      _draft = _draft.copyWith(isInsufficientPlayersEnding: value);
+  String? get turnUid => _draft.turnUid;
+  set turnUid(String? value) => _draft = _draft.copyWith(turnUid: value);
+  String? get winnerUid => _draft.winnerUid;
+  set winnerUid(String? value) => _draft = _draft.copyWith(winnerUid: value);
+  PlayerLayoutPlayer? get winnerPlayer => _draft.winnerPlayer;
+  set winnerPlayer(PlayerLayoutPlayer? value) =>
+      _draft = _draft.copyWith(winnerPlayer: value);
+  String? get penaltyTargetUid => _draft.penaltyTargetUid;
+  set penaltyTargetUid(String? value) =>
+      _draft = _draft.copyWith(penaltyTargetUid: value);
+  PlayerLayoutPlayer? get penaltyPlayer => _draft.penaltyPlayer;
+  set penaltyPlayer(PlayerLayoutPlayer? value) =>
+      _draft = _draft.copyWith(penaltyPlayer: value);
+  List<SubmittedPlay> get roundPlays => _draft.roundPlays;
+  set roundPlays(List<SubmittedPlay> value) =>
+      _draft = _draft.copyWith(roundPlays: value);
+  String? get activeAnimationPlayId => _draft.activeAnimationPlayId;
+  set activeAnimationPlayId(String? value) =>
+      _draft = _draft.copyWith(activeAnimationPlayId: value);
+  List<String> get profileImageUrls => _draft.profileImageUrls;
+  set profileImageUrls(List<String> value) =>
+      _draft = _draft.copyWith(profileImageUrls: value);
+  List<int> get remainingCardCounts => _draft.remainingCardCounts;
+  set remainingCardCounts(List<int> value) =>
+      _draft = _draft.copyWith(remainingCardCounts: value);
 
   int get playerCount => playerLayout.playerCount;
 
@@ -254,7 +301,7 @@ class TabletGameController extends ChangeNotifier {
       _initialDataCompleter.complete();
     }
 
-    notifyListeners();
+    _commit();
   }
 
   void _handlePublicGameError(Object error) {
@@ -269,7 +316,7 @@ class TabletGameController extends ChangeNotifier {
     if (isProcessingMenuCommand) return false;
 
     isProcessingMenuCommand = true;
-    notifyListeners();
+    _commit();
     try {
       await gameService.command.restartGame(roomCode: roomCode);
       return true;
@@ -278,7 +325,7 @@ class TabletGameController extends ChangeNotifier {
       return false;
     } finally {
       isProcessingMenuCommand = false;
-      notifyListeners();
+      _commit();
     }
   }
 
@@ -287,7 +334,7 @@ class TabletGameController extends ChangeNotifier {
     if (isProcessingMenuCommand) return false;
 
     isProcessingMenuCommand = true;
-    notifyListeners();
+    _commit();
     try {
       await gameService.command.endGame(roomCode: roomCode);
       return true;
@@ -296,7 +343,7 @@ class TabletGameController extends ChangeNotifier {
       return false;
     } finally {
       isProcessingMenuCommand = false;
-      notifyListeners();
+      _commit();
     }
   }
 
@@ -306,7 +353,7 @@ class TabletGameController extends ChangeNotifier {
     if (isResolvingPenalty || penaltyTargetUid == null) return;
 
     isResolvingPenalty = true;
-    notifyListeners();
+    _commit();
 
     try {
       await gameService.command.resolvePenalty(
@@ -316,7 +363,7 @@ class TabletGameController extends ChangeNotifier {
     } catch (error) {
       isResolvingPenalty = false;
       rouletteRetry += 1;
-      notifyListeners();
+      _commit();
       onError('룰렛 결과를 반영하지 못했습니다.', error);
     }
   }
@@ -371,7 +418,7 @@ class TabletGameController extends ChangeNotifier {
   void changeStatus(GameStatus nextStatus) {
     if (status == nextStatus) return;
     status = nextStatus;
-    notifyListeners();
+    _commit();
   }
 
   // -------------------------------------------------------------------------
@@ -404,7 +451,7 @@ class TabletGameController extends ChangeNotifier {
     activeAnimationPlayId = null;
     cardPileVersion += 1;
     status = GameStatus.roundStarting;
-    notifyListeners();
+    _commit();
   }
 
   void showSubmittedCards({
@@ -437,7 +484,7 @@ class TabletGameController extends ChangeNotifier {
     roundPlays = List.unmodifiable([...roundPlays, play]);
     activeAnimationPlayId = eventId;
     status = GameStatus.cardsPlaying;
-    notifyListeners();
+    _commit();
   }
 
   void revealSubmittedCards(List<String> actualRanks) {
@@ -464,7 +511,7 @@ class TabletGameController extends ChangeNotifier {
     ]);
     activeAnimationPlayId = currentPlay.eventId;
     status = GameStatus.cardsRevealing;
-    notifyListeners();
+    _commit();
   }
 
   // -------------------------------------------------------------------------
@@ -487,11 +534,11 @@ class TabletGameController extends ChangeNotifier {
         roundPlays = const [];
         activeAnimationPlayId = null;
         status = nextStatus;
-        notifyListeners();
+        _commit();
       case GameStatus.playing:
       case GameStatus.penalty:
         status = nextStatus;
-        notifyListeners();
+        _commit();
     }
   }
 
@@ -508,7 +555,7 @@ class TabletGameController extends ChangeNotifier {
     roundPlays = List.unmodifiable([...roundPlays, play]);
     activeAnimationPlayId = eventId;
     status = GameStatus.cardsPlaying;
-    notifyListeners();
+    _commit();
   }
 
   void _showTestCardRevealAnimation() {
@@ -543,13 +590,6 @@ class TabletGameController extends ChangeNotifier {
           ]);
     activeAnimationPlayId = eventId;
     status = GameStatus.cardsRevealing;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _penaltyTransitionTimer?.cancel();
-    _publicGameSubscription?.cancel();
-    super.dispose();
+    _commit();
   }
 }
