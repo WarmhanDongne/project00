@@ -150,11 +150,7 @@ class PlatformTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.canvas,
       extensions: <ThemeExtension<dynamic>>[colors],
-      textTheme: ThemeData(brightness: brightness).textTheme.apply(
-        bodyColor: colors.text,
-        displayColor: colors.text,
-        fontSizeFactor: 1.08,
-      ),
+      textTheme: _scaledTextTheme(brightness, colors),
       dividerColor: colors.border,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -187,6 +183,43 @@ class PlatformTheme {
           fontWeight: FontWeight.w900,
         ),
       ),
+    );
+  }
+
+  // Flutter 기본 TextTheme에는 fontSize가 null인 스타일이 포함될 수 있습니다.
+  // TextTheme.apply(fontSizeFactor: ...)는 해당 스타일에서 assertion을 일으키므로,
+  // 실제 크기가 있는 스타일만 개별적으로 확대합니다.
+  static TextTheme _scaledTextTheme(
+    Brightness brightness,
+    PlatformColors colors,
+  ) {
+    final base = ThemeData(
+      brightness: brightness,
+    ).textTheme.apply(bodyColor: colors.text, displayColor: colors.text);
+
+    TextStyle? scale(TextStyle? style) {
+      final fontSize = style?.fontSize;
+      return fontSize == null
+          ? style
+          : style!.copyWith(fontSize: fontSize * 1.08);
+    }
+
+    return base.copyWith(
+      displayLarge: scale(base.displayLarge),
+      displayMedium: scale(base.displayMedium),
+      displaySmall: scale(base.displaySmall),
+      headlineLarge: scale(base.headlineLarge),
+      headlineMedium: scale(base.headlineMedium),
+      headlineSmall: scale(base.headlineSmall),
+      titleLarge: scale(base.titleLarge),
+      titleMedium: scale(base.titleMedium),
+      titleSmall: scale(base.titleSmall),
+      bodyLarge: scale(base.bodyLarge),
+      bodyMedium: scale(base.bodyMedium),
+      bodySmall: scale(base.bodySmall),
+      labelLarge: scale(base.labelLarge),
+      labelMedium: scale(base.labelMedium),
+      labelSmall: scale(base.labelSmall),
     );
   }
 }
