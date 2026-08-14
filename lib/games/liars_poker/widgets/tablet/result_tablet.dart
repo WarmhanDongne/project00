@@ -147,10 +147,9 @@ class _WinnerBadge extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontFamily: 'Georgia',
               color: Color.fromARGB(255, 8, 2, 2),
               fontSize: 34,
-              fontWeight: FontWeight.w200,
+              fontWeight: FontWeight.w700,
               shadows: [
                 Shadow(color: Color.fromARGB(255, 0, 0, 0), blurRadius: 8),
               ],

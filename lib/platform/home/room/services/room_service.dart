@@ -260,9 +260,30 @@ class RoomService {
     } catch (_) {
       // 서버 callable이 즉시 참가자를 제거하므로 예약 취소 실패는 무시합니다.
     }
-    await _functions.httpsCallable('leaveFinalCallGame').call({
-      'roomCode': code,
-    });
+
+    FirebaseFunctionsException? lastError;
+    for (var attempt = 0; attempt < _functionOperationAttempts; attempt += 1) {
+      try {
+        await _functions.httpsCallable('leaveFinalCallGame').call({
+          'roomCode': code,
+        });
+        return;
+      } on FirebaseFunctionsException catch (error) {
+        lastError = error;
+        final shouldRetry =
+            attempt < _functionOperationAttempts - 1 &&
+            (error.code == 'aborted' ||
+                error.code == 'internal' ||
+                error.code == 'unavailable' ||
+                error.code == 'deadline-exceeded');
+        if (!shouldRetry) break;
+        await Future<void>.delayed(Duration(milliseconds: 220 * (attempt + 1)));
+      }
+    }
+
+    throw RoomCommandException(
+      lastError?.message ?? '게임에서 퇴장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    );
   }
 
   /// iOS에서 일시적인 native `unknown` 오류가 발생해도 같은 읽기를 재시도합니다.

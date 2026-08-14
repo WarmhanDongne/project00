@@ -4,8 +4,8 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/player_list.dart';
 import 'package:provider/provider.dart';
 
-class Setting extends StatelessWidget {
-  const Setting({
+class FinalCallTabletSetting extends StatelessWidget {
+  const FinalCallTabletSetting({
     super.key,
     required this.provider,
     this.onRestartGame,

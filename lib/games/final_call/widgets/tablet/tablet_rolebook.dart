@@ -4,8 +4,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:video_player/video_player.dart';
 
-class RoleBook extends StatelessWidget {
-  const RoleBook({super.key, required this.provider});
+class FinalCallTabletRoleBook extends StatelessWidget {
+  const FinalCallTabletRoleBook({super.key, required this.provider});
 
   final RoomProvider provider;
   @override

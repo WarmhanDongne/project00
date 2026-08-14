@@ -18,6 +18,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
     this.center,
     this.trailingLeading,
     this.itemBuilder,
+    this.bookSemanticLabel = '게임 규칙 열기',
+    this.outSemanticLabel = '게임 나가기',
   });
 
   final bool isLandscape;
@@ -31,6 +33,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
   final Widget? center;
   final Widget? trailingLeading;
   final Widget Function(int index, Widget child)? itemBuilder;
+  final String bookSemanticLabel;
+  final String outSemanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +47,8 @@ class SharedPhoneGameTopBar extends StatelessWidget {
       onBookPressedAt: onBookPressedAt,
       onOutPressedAt: onOutPressedAt,
       itemBuilder: itemBuilder,
+      bookSemanticLabel: bookSemanticLabel,
+      outSemanticLabel: outSemanticLabel,
     );
 
     return SizedBox(
@@ -87,6 +93,8 @@ class PhoneGameTopBarMenu extends StatelessWidget {
     this.onBookPressedAt,
     this.onOutPressedAt,
     this.itemBuilder,
+    this.bookSemanticLabel = '게임 규칙 열기',
+    this.outSemanticLabel = '게임 나가기',
   });
 
   final bool isLandscape;
@@ -97,6 +105,8 @@ class PhoneGameTopBarMenu extends StatelessWidget {
   final ValueChanged<Offset>? onBookPressedAt;
   final ValueChanged<Offset>? onOutPressedAt;
   final Widget Function(int index, Widget child)? itemBuilder;
+  final String bookSemanticLabel;
+  final String outSemanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +119,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
         _wrapItem(
           3,
           _TopBarIconButton(
-            label: '게임 규칙 열기',
+            label: bookSemanticLabel,
             visualSize: bookSize,
             icon: bookIcon,
             onPressed: onBookPressed,
@@ -120,7 +130,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
         _wrapItem(
           4,
           _TopBarIconButton(
-            label: '게임 나가기',
+            label: outSemanticLabel,
             visualSize: outSize,
             icon: outIcon,
             onPressed: onOutPressed,

@@ -14,8 +14,8 @@ import {
 
 type Data = {roomCode?: unknown};
 
-/** 방과 참가자는 유지하고 현재 Final Call 게임만 수동 종료합니다. */
-export const endFinalCallGame = onCall<Data>(
+/** 태블릿의 최종 공개 연출이 끝난 뒤 휴대폰 결과 화면을 해제합니다. */
+export const completeFinalCallResultReveal = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);
@@ -28,35 +28,31 @@ export const endFinalCallGame = onCall<Data>(
       const room = raw as FinalCallRoom;
       assertFinalCallController(room, uid);
       const game = requireFinalCallGame(room);
-      const now = Date.now();
 
-      game.public.status = "finished";
-      game.public.finishReason = "manual";
-      game.public.phase = "finished";
-      game.public.turnUid = null;
-      game.public.turnDeadlineAt = null;
-      game.public.callerUid = null;
-      game.public.pendingDrawUid = null;
-      game.public.pendingDrawSource = null;
-      game.public.finalTurnPendingUids = [];
-      game.public.winnerUid = null;
+      if (game.public.status !== "finished") {
+        throw new HttpsError(
+          "failed-precondition",
+          "최종 결과 공개를 완료할 상태가 아닙니다.",
+        );
+      }
+      if (game.public.resultRevealCompletedAt) {
+        response = {
+          success: true,
+          completedAt: game.public.resultRevealCompletedAt,
+        };
+        return room;
+      }
+
+      const now = Date.now();
+      game.public.resultRevealCompletedAt = now;
       game.public.revision += 1;
       game.public.updatedAt = now;
-      game.public.finishedAt = now;
-      game.private = {};
-      delete game.server.pendingHands;
-      delete game.server.finalSubmissions;
-
-      response = {
-        success: true,
-        type: "gameEnded",
-        revision: game.public.revision,
-      };
+      response = {success: true, completedAt: now};
       return room;
     });
 
     if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "게임을 종료하지 못했습니다.");
+      throw new HttpsError("aborted", "최종 결과 공개를 완료하지 못했습니다.");
     }
     return response;
   },

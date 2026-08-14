@@ -149,6 +149,10 @@ class $AssetsGamesFinalCallImagesGen {
   /// Directory path: assets/games/final_call/images/modal
   $AssetsGamesFinalCallImagesModalGen get modal =>
       const $AssetsGamesFinalCallImagesModalGen();
+
+  /// Directory path: assets/games/final_call/images/other
+  $AssetsGamesFinalCallImagesOtherGen get other =>
+      const $AssetsGamesFinalCallImagesOtherGen();
 }
 
 class $AssetsGamesLiarsPokerImagesGen {
@@ -277,6 +281,11 @@ class $AssetsGamesFinalCallImagesButtonGen {
     'assets/games/final_call/images/button/button_basic.png',
   );
 
+  /// File path: assets/games/final_call/images/button/button_basic_wide.png
+  AssetGenImage get buttonBasicWide => const AssetGenImage(
+    'assets/games/final_call/images/button/button_basic_wide.png',
+  );
+
   /// File path: assets/games/final_call/images/button/button_call.png
   AssetGenImage get buttonCall => const AssetGenImage(
     'assets/games/final_call/images/button/button_call.png',
@@ -288,7 +297,12 @@ class $AssetsGamesFinalCallImagesButtonGen {
   );
 
   /// List of all assets
-  List<AssetGenImage> get values => [buttonBasic, buttonCall, buttonCardChange];
+  List<AssetGenImage> get values => [
+    buttonBasic,
+    buttonBasicWide,
+    buttonCall,
+    buttonCardChange,
+  ];
 }
 
 class $AssetsGamesFinalCallImagesCardsGen {
@@ -589,6 +603,11 @@ class $AssetsGamesFinalCallImagesIconsGen {
   AssetGenImage get iconTip =>
       const AssetGenImage('assets/games/final_call/images/icons/icon_tip.png');
 
+  /// File path: assets/games/final_call/images/icons/icon_tip_black.png
+  AssetGenImage get iconTipBlack => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_tip_black.png',
+  );
+
   /// List of all assets
   List<AssetGenImage> get values => [
     iconAgainBlack,
@@ -600,6 +619,7 @@ class $AssetsGamesFinalCallImagesIconsGen {
     iconSetting,
     iconSettingPhone,
     iconTip,
+    iconTipBlack,
   ];
 }
 
@@ -611,8 +631,25 @@ class $AssetsGamesFinalCallImagesModalGen {
     'assets/games/final_call/images/modal/modal_image_door.png',
   );
 
+  /// File path: assets/games/final_call/images/modal/modal_message_call.png
+  AssetGenImage get modalMessageCall => const AssetGenImage(
+    'assets/games/final_call/images/modal/modal_message_call.png',
+  );
+
   /// List of all assets
-  List<AssetGenImage> get values => [modalImageDoor];
+  List<AssetGenImage> get values => [modalImageDoor, modalMessageCall];
+}
+
+class $AssetsGamesFinalCallImagesOtherGen {
+  const $AssetsGamesFinalCallImagesOtherGen();
+
+  /// File path: assets/games/final_call/images/other/block_numberHolder.png
+  AssetGenImage get blockNumberHolder => const AssetGenImage(
+    'assets/games/final_call/images/other/block_numberHolder.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [blockNumberHolder];
 }
 
 class $AssetsGamesLiarsPokerImagesBackgroundGen {

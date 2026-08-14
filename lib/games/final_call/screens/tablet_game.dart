@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/screens/tablet/final_call_tablet_game.dart';
+import 'package:project00/games/final_call/screens/tablet/tablet_game_screen.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 

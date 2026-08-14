@@ -38,10 +38,13 @@ class FinalCallController extends ChangeNotifier {
   String? pendingDrawSource;
   List<String> finalTurnPendingUids = const [];
   String? winnerUid;
+  int? resultRevealCompletedAt;
   Map<String, FinalCallPlayer> players = const {};
   List<FinalCallCard> hand = const [];
   FinalCallCard? pendingDraw;
   FinalCallRoundResult? roundResult;
+  FinalCallDiscardEvent? discardEvent;
+  int _discardEventVersion = 0;
 
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
@@ -49,15 +52,22 @@ class FinalCallController extends ChangeNotifier {
       status == 'playing' &&
       (phase == 'playing' ||
           phase == 'callerSubmit' ||
-          phase == 'finalTurns') &&
+          phase == 'finalTurns' ||
+          phase == 'finalSubmit') &&
       isMyTurn &&
       !commandInFlight;
-  bool get canDraw => canAct && pendingDrawUid == null;
+  bool get canDraw =>
+      canAct &&
+      (phase == 'playing' || phase == 'finalTurns') &&
+      pendingDrawUid == null;
   bool get canCompleteTurn =>
       canAct && pendingDrawUid == uid && pendingDraw != null;
   bool get canCall => canAct && phase == 'playing' && pendingDrawUid == null;
-  bool get canSubmitCallerHand =>
-      canAct && phase == 'callerSubmit' && callerUid == uid;
+  bool get isFinalSubmitPhase =>
+      status == 'playing' &&
+      (phase == 'callerSubmit' || phase == 'finalSubmit') &&
+      turnUid == uid;
+  bool get canSubmitFinalHand => isFinalSubmitPhase && !commandInFlight;
   FinalCallPlayer? get turnPlayer => players[turnUid];
   String get actionErrorMessage =>
       errorMessage == null || errorMessage!.trim().isEmpty
@@ -99,16 +109,26 @@ class FinalCallController extends ChangeNotifier {
     }
     if (event.snapshot.value is! Map) return;
     final map = Map<Object?, Object?>.from(event.snapshot.value as Map);
+    final previousPendingDrawUid = pendingDrawUid;
+    final previousPendingDrawSource = pendingDrawSource;
+    final nextRevision = (map['revision'] as num?)?.toInt() ?? revision;
+    final nextPendingDrawUid = map['pendingDrawUid']?.toString();
+    final nextPhase = map['phase']?.toString() ?? phase;
+    final rawDiscard = map['discardCard'];
+    final nextDiscardCard = rawDiscard is Map
+        ? FinalCallCard.fromMap(Map<Object?, Object?>.from(rawDiscard))
+        : discardCard;
+
     status = map['status']?.toString() ?? status;
     finishReason = map['finishReason']?.toString();
-    phase = map['phase']?.toString() ?? phase;
+    phase = nextPhase;
     round = (map['round'] as num?)?.toInt() ?? round;
-    revision = (map['revision'] as num?)?.toInt() ?? revision;
+    revision = nextRevision;
     turnUid = map['turnUid']?.toString();
     turnDeadlineAt = (map['turnDeadlineAt'] as num?)?.toInt();
     callerUid = map['callerUid']?.toString();
     deckRemainingCount = (map['deckRemainingCount'] as num?)?.toInt() ?? 0;
-    pendingDrawUid = map['pendingDrawUid']?.toString();
+    pendingDrawUid = nextPendingDrawUid;
     pendingDrawSource = map['pendingDrawSource']?.toString();
     final rawFinalTurns = map['finalTurnPendingUids'];
     if (rawFinalTurns is List) {
@@ -123,12 +143,23 @@ class FinalCallController extends ChangeNotifier {
       finalTurnPendingUids = const [];
     }
     winnerUid = map['winnerUid']?.toString();
-    final rawDiscard = map['discardCard'];
-    if (rawDiscard is Map) {
-      discardCard = FinalCallCard.fromMap(
-        Map<Object?, Object?>.from(rawDiscard),
+    resultRevealCompletedAt = (map['resultRevealCompletedAt'] as num?)?.toInt();
+    if (!loading &&
+        previousPendingDrawUid != null &&
+        nextPendingDrawUid == null &&
+        nextPhase != 'roundResult' &&
+        nextPhase != 'finished' &&
+        nextDiscardCard != null) {
+      _discardEventVersion += 1;
+      discardEvent = FinalCallDiscardEvent(
+        version: _discardEventVersion,
+        playerUid: previousPendingDrawUid,
+        card: nextDiscardCard,
+        previousCard: discardCard,
+        drawSource: previousPendingDrawSource,
       );
     }
+    discardCard = nextDiscardCard;
     final parsedPlayers = <String, FinalCallPlayer>{};
     final rawPlayers = map['players'];
     if (rawPlayers is Map) {
@@ -148,6 +179,12 @@ class FinalCallController extends ChangeNotifier {
         : null;
     loading = false;
     errorMessage = null;
+    notifyListeners();
+  }
+
+  void acknowledgeDiscardEvent(int version) {
+    if (discardEvent?.version != version) return;
+    discardEvent = null;
     notifyListeners();
   }
 
@@ -172,8 +209,48 @@ class FinalCallController extends ChangeNotifier {
         );
       }
     }
-    cards.sort((a, b) => a.id.compareTo(b.id));
-    hand = List.unmodifiable(cards);
+    hand = List.unmodifiable(_preserveHandSlots(cards));
+    notifyListeners();
+  }
+
+  //=======================손패 슬롯 순서 유지==============================
+  // Firebase Map의 키 정렬 순서를 화면 순서로 사용하지 않습니다. 교체 전
+  // 카드가 사라진 자리에 새 카드만 넣고 나머지 카드 위치는 그대로 둡니다.
+  List<FinalCallCard> _preserveHandSlots(List<FinalCallCard> incomingCards) {
+    if (hand.isEmpty) return incomingCards;
+
+    final incomingById = <String, FinalCallCard>{
+      for (final card in incomingCards) card.id: card,
+    };
+    final newCards = incomingCards
+        .where((card) => !hand.any((current) => current.id == card.id))
+        .toList();
+    final ordered = <FinalCallCard>[];
+
+    for (final current in hand) {
+      final retained = incomingById.remove(current.id);
+      if (retained != null) {
+        ordered.add(retained);
+      } else if (newCards.isNotEmpty) {
+        final replacement = newCards.removeAt(0);
+        incomingById.remove(replacement.id);
+        ordered.add(replacement);
+      }
+    }
+    ordered.addAll(incomingById.values);
+    return ordered;
+  }
+
+  /// 길게 눌러 옮긴 손패 순서를 이후 Firebase 갱신에서도 유지합니다.
+  void reorderHand(String draggedCardId, String targetCardId) {
+    final fromIndex = hand.indexWhere((card) => card.id == draggedCardId);
+    final targetIndex = hand.indexWhere((card) => card.id == targetCardId);
+    if (fromIndex < 0 || targetIndex < 0 || fromIndex == targetIndex) return;
+
+    final reordered = List<FinalCallCard>.from(hand);
+    final draggedCard = reordered.removeAt(fromIndex);
+    reordered.insert(targetIndex.clamp(0, reordered.length), draggedCard);
+    hand = List.unmodifiable(reordered);
     notifyListeners();
   }
 
@@ -201,6 +278,8 @@ class FinalCallController extends ChangeNotifier {
       _run(() => service.command.clearGame(roomCode: roomCode));
   Future<bool> timeoutTurn() =>
       _run(() => service.command.timeoutTurn(roomCode: roomCode));
+  Future<bool> completeResultReveal() =>
+      _run(() => service.command.completeResultReveal(roomCode: roomCode));
 
   /// 제한 시간이 끝난 턴은 덱에서 한 장을 가져와 그대로 버립니다.
   ///
@@ -208,6 +287,7 @@ class FinalCallController extends ChangeNotifier {
   /// 재시도를 사용하므로 화면에서 중복으로 호출되어도 한 번만 반영됩니다.
   Future<bool> completeTimedOutTurn() async {
     if (!canAct) return false;
+    if (isFinalSubmitPhase) return timeoutTurn();
     if (pendingDrawUid == uid) return completeTurn(null);
     final drawn = await draw('deck');
     if (!drawn) return false;

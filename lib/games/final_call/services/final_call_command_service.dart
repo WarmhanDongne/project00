@@ -91,6 +91,15 @@ class FinalCallCommandService {
     }, retryTransientFailure: true);
   }
 
+  /// 태블릿의 최종 카드 공개가 끝난 뒤 휴대폰 결과 화면을 엽니다.
+  Future<Map<String, dynamic>> completeResultReveal({
+    required String roomCode,
+  }) {
+    return _call('completeFinalCallResultReveal', {
+      'roomCode': roomCode,
+    }, retryTransientFailure: true);
+  }
+
   //=======================Callable 공통 처리==============================
   Future<Map<String, dynamic>> _call(
     String functionName,

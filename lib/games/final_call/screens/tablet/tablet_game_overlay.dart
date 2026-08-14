@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/widgets/tablet/rolebook_tablet.dart';
-import 'package:project00/games/final_call/widgets/tablet/setting_tablet.dart';
+import 'package:project00/games/final_call/widgets/tablet/tablet_rolebook.dart';
+import 'package:project00/games/final_call/widgets/tablet/tablet_setting.dart';
 import 'package:project00/games/shared/widgets/tablet_game_side_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -35,8 +35,9 @@ class FinalCallTabletGameOverlay extends StatelessWidget {
             spacing: 12,
             roleIcon: icons.iconRole.image(fit: BoxFit.contain),
             settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
-            roleDialogBuilder: (_) => RoleBook(provider: provider),
-            settingDialogBuilder: (_) => Setting(
+            roleDialogBuilder: (_) =>
+                FinalCallTabletRoleBook(provider: provider),
+            settingDialogBuilder: (_) => FinalCallTabletSetting(
               provider: provider,
               onRestartGame: onRestartGame,
               onEndGame: onEndGame,

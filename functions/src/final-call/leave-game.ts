@@ -48,6 +48,7 @@ export const leaveFinalCallGame = onCall<Data>(
       leavingPlayer.lives = 0;
       delete game.private[uid];
       delete game.server.pendingHands?.[uid];
+      delete game.server.finalSubmissions?.[uid];
       game.public.finalTurnPendingUids = game.public.finalTurnPendingUids
         .filter((playerUid) => playerUid !== uid);
       if (game.public.pendingDrawUid === uid) {
@@ -57,14 +58,30 @@ export const leaveFinalCallGame = onCall<Data>(
       const now = Date.now();
       const alive = orderedAlivePlayers(game.public.players);
 
-      if (alive.length <= 1) {
+      if (alive.length < 2) {
+        // =======================인원 부족 종료==============================
+        // Liar's Poker와 동일하게 승자를 만들지 않고 안내 상태를 남깁니다.
+        // 방 자체는 유지하며 태블릿과 남은 휴대폰이 안내 후 게임 화면만
+        // 닫을 수 있도록 finishReason을 명확히 기록합니다.
         game.public.status = "finished";
+        game.public.finishReason = "insufficientPlayers";
         game.public.phase = "finished";
-        game.public.winnerUid = alive[0]?.uid ?? null;
+        game.public.winnerUid = null;
         game.public.turnUid = null;
         game.public.turnDeadlineAt = null;
+        game.public.callerUid = null;
+        game.public.pendingDrawUid = null;
+        game.public.pendingDrawSource = null;
+        game.public.finalTurnPendingUids = [];
         game.public.finishedAt = now;
-      } else if (wasCurrentTurn && game.public.phase === "finalTurns") {
+        game.private = {};
+        delete game.server.pendingHands;
+        delete game.server.finalSubmissions;
+        delete game.public.roundResult;
+        delete game.public.resultRevealCompletedAt;
+      } else if (wasCurrentTurn &&
+          (game.public.phase === "finalTurns" ||
+           game.public.phase === "finalSubmit")) {
         if (game.public.finalTurnPendingUids.length === 0) {
           resolveFinalCallRound(game, now, false);
         } else {

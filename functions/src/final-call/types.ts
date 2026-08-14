@@ -35,6 +35,7 @@ export interface FinalCallPublicState {
   status: "playing" | "finished";
   finishReason?: "winner" | "manual" | "insufficientPlayers";
   phase: "dealing" | "playing" | "callerSubmit" | "finalTurns" |
+    "finalSubmit" |
     "roundResult" | "finished";
   round: number;
   revision: number;
@@ -48,6 +49,8 @@ export interface FinalCallPublicState {
   finalTurnPendingUids: string[];
   players: Record<string, FinalCallPlayer>;
   roundResult?: FinalCallRoundResult;
+  /** 태블릿의 최종 카드 공개 연출이 모두 끝난 시각입니다. */
+  resultRevealCompletedAt?: number;
   winnerUid: string | null;
   startedAt: number;
   updatedAt: number;
@@ -69,6 +72,7 @@ export interface FinalCallProcessedCommand {
 export interface FinalCallServerState {
   deck: FinalCallCard[];
   pendingHands?: Record<string, FinalCallPrivatePlayer>;
+  finalSubmissions?: Record<string, FinalCallCard[]>;
   processedCommands?: Record<string, FinalCallProcessedCommand>;
   roundStarterUid: string;
 }

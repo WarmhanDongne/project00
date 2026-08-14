@@ -3,7 +3,8 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {nextFinalCallPlayer, resolveFinalCallRound, startTurn} from "./game.js";
+import {nextFinalCallPlayer, resolveFinalCallRound,
+  selectBestFinalCallCombination, startTurn} from "./game.js";
 import {FinalCallCard, FinalCallRoom} from "./types.js";
 import {FINAL_CALL_REGION, finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
 
@@ -36,6 +37,10 @@ export const timeoutFinalCallTurn = onCall<Data>(
         if (game.public.callerUid !== turnUid) {
           throw new HttpsError("data-loss", "CALL 선언자를 확인할 수 없습니다.");
         }
+        game.server.finalSubmissions ??= {};
+        game.server.finalSubmissions[turnUid] = selectBestFinalCallCombination(
+          Object.values(game.private[turnUid]?.hand ?? {}),
+        );
         if (game.public.finalTurnPendingUids.length === 0) {
           resolveFinalCallRound(game, now, false);
         } else {
@@ -45,6 +50,24 @@ export const timeoutFinalCallTurn = onCall<Data>(
           game.public.revision += 1;
         }
         response = {success: true, type: "callerHandAutoSubmitted", turnUid: game.public.turnUid};
+        return room;
+      }
+      if (game.public.phase === "finalSubmit") {
+        game.server.finalSubmissions ??= {};
+        game.server.finalSubmissions[turnUid] = selectBestFinalCallCombination(
+          Object.values(game.private[turnUid]?.hand ?? {}),
+        );
+        game.public.finalTurnPendingUids = game.public.finalTurnPendingUids
+          .filter((uid) => uid !== turnUid);
+        if (game.public.finalTurnPendingUids.length === 0) {
+          resolveFinalCallRound(game, now, false);
+        } else {
+          game.public.phase = "finalTurns";
+          const allowed = new Set(game.public.finalTurnPendingUids);
+          startTurn(game, nextFinalCallPlayer(game.public.players, turnUid, allowed), now);
+          game.public.revision += 1;
+        }
+        response = {success: true, type: "finalHandAutoSubmitted", turnUid: game.public.turnUid};
         return room;
       }
       if (game.public.phase !== "playing" && game.public.phase !== "finalTurns") {
@@ -73,15 +96,12 @@ export const timeoutFinalCallTurn = onCall<Data>(
       if (game.server.deck.length === 0) {
         resolveFinalCallRound(game, now, true);
       } else if (game.public.phase === "finalTurns") {
-        game.public.finalTurnPendingUids = game.public.finalTurnPendingUids
-          .filter((uid) => uid !== turnUid);
-        if (game.public.finalTurnPendingUids.length === 0) {
-          resolveFinalCallRound(game, now, false);
-        } else {
-          const allowed = new Set(game.public.finalTurnPendingUids);
-          startTurn(game, nextFinalCallPlayer(game.public.players, turnUid, allowed), now);
-          game.public.revision += 1;
-        }
+        // 마지막 교체 시간이 끝나도 제출 단계를 생략하지 않습니다.
+        // 자동으로 새 카드를 버린 뒤 같은 플레이어에게 최종 조합을 고를
+        // 별도의 30초를 부여합니다.
+        game.public.phase = "finalSubmit";
+        startTurn(game, turnUid, now);
+        game.public.revision += 1;
       } else {
         startTurn(game, nextFinalCallPlayer(game.public.players, turnUid), now);
         game.public.revision += 1;

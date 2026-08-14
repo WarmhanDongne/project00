@@ -8,11 +8,11 @@ import 'package:project00/games/final_call/screens/tablet/tablet_game_animation.
 import 'package:project00/games/final_call/screens/tablet/tablet_game_layer.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_overlay.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
-import 'package:project00/games/final_call/widgets/final_call_result.dart';
+import 'package:project00/games/final_call/widgets/tablet/tablet_result_overlay.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
-/// Final Call 아이패드 진행 화면의 진입점입니다.
+/// Final Call 태블릿 진행 화면의 진입점입니다.
 class FinalCallTabletGame extends StatefulWidget {
   const FinalCallTabletGame({
     super.key,
@@ -36,6 +36,9 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
   Timer? phaseTimer;
   Timer? turnTimer;
   int? scheduledDeadline;
+  int? completedRevealRound;
+  bool resultRevealSignalInFlight = false;
+  Timer? insufficientPlayersExitTimer;
 
   @override
   void initState() {
@@ -64,6 +67,16 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
     final enteredPhase = previousPhase != game.phase;
     previousPhase = game.phase;
 
+    if (game.isFinished && game.finishReason == 'insufficientPlayers') {
+      turnTimer?.cancel();
+      phaseTimer?.cancel();
+      insufficientPlayersExitTimer ??= Timer(const Duration(seconds: 1), () {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+      setState(() {});
+      return;
+    }
+
     final deadline = game.turnDeadlineAt;
     if (deadline != null && deadline != scheduledDeadline) {
       scheduledDeadline = deadline;
@@ -80,13 +93,45 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
       });
     }
 
-    if (game.phase == 'roundResult' && enteredPhase) {
-      phaseTimer?.cancel();
-      phaseTimer = Timer(const Duration(seconds: 5), () async {
-        if (!mounted || controller?.phase != 'roundResult') return;
-        await controller?.nextRound();
-      });
+    if (enteredPhase && game.phase != 'roundResult') phaseTimer?.cancel();
+
+    // 라운드 공개 없이 승자가 결정된 경우에는 태블릿 결과 화면이 즉시
+    // 준비되므로 같은 시점에 휴대폰 결과 화면도 해제합니다.
+    if (game.isFinished &&
+        game.roundResult == null &&
+        game.resultRevealCompletedAt == null &&
+        !resultRevealSignalInFlight) {
+      resultRevealSignalInFlight = true;
+      unawaited(
+        game.completeResultReveal().whenComplete(() {
+          resultRevealSignalInFlight = false;
+        }),
+      );
     }
+  }
+
+  //=======================공개 연출 완료 후 다음 라운드==============================
+  // 카드 순차 공개와 최하위 생명 소멸이 모두 끝난 뒤에만 다음 라운드를
+  // 시작합니다. 고정 타이머로 연출 중 화면이 바뀌는 문제를 막습니다.
+  void _handleRoundRevealCompleted() {
+    final game = controller;
+    if (game == null ||
+        game.roundResult == null ||
+        completedRevealRound == game.round) {
+      return;
+    }
+    completedRevealRound = game.round;
+    setState(() {});
+    if (game.isFinished) {
+      unawaited(game.completeResultReveal());
+      return;
+    }
+    if (game.phase != 'roundResult') return;
+    phaseTimer?.cancel();
+    phaseTimer = Timer(const Duration(milliseconds: 900), () async {
+      if (!mounted || controller?.phase != 'roundResult') return;
+      await controller?.nextRound();
+    });
   }
 
   //=======================설정 명령==============================
@@ -116,6 +161,7 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
   void dispose() {
     phaseTimer?.cancel();
     turnTimer?.cancel();
+    insufficientPlayersExitTimer?.cancel();
     controller
       ?..removeListener(_handleState)
       ..dispose();
@@ -144,24 +190,65 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
                 fit: BoxFit.cover,
               ),
               //============================================게임 카드============================================
-              if (!game.loading) FinalCallTabletGameLayer(controller: game),
+              if (!game.loading)
+                FinalCallTabletGameLayer(
+                  controller: game,
+                  onRoundRevealCompleted: _handleRoundRevealCompleted,
+                ),
               if (!game.loading)
                 FinalCallTabletCallAnimation(
                   controller: game,
                   playerCount: game.players.length,
                 ),
+              if (!game.loading &&
+                  game.roundResult == null &&
+                  game.discardEvent != null)
+                FinalCallTabletDiscardAnimation(
+                  key: ValueKey('discard-${game.discardEvent!.version}'),
+                  controller: game,
+                  event: game.discardEvent!,
+                  playerCount: game.players.length,
+                ),
               //=======================우측 상단 사이드바==============================
               FinalCallTabletGameOverlay(
                 provider: widget.provider,
-                visible: !game.isFinished,
+                visible: !game.loading && !game.isFinished,
                 onRestartGame: _restartGame,
                 onEndGame: _endGame,
               ),
-              if (game.isFinished)
+              if (game.isFinished &&
+                  game.finishReason != 'insufficientPlayers' &&
+                  (game.roundResult == null ||
+                      completedRevealRound == game.round))
                 FinalCallResultOverlay(
                   winner: game.players[game.winnerUid],
                   onRestart: () => game.restartGame(),
                   onHome: () => unawaited(_returnHomeAfterResult()),
+                ),
+              if (game.isFinished && game.finishReason == 'insufficientPlayers')
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: ColoredBox(
+                      color: Color(0x66000000),
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            '인원 부족으로 게임을 종료합니다',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              shadows: [
+                                Shadow(color: Colors.black, blurRadius: 12),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               if (game.commandInFlight)
                 const Positioned(

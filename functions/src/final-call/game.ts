@@ -112,11 +112,13 @@ export function prepareFinalCallRound(
   game.public.pendingDrawSource = null;
   game.public.finalTurnPendingUids = [];
   delete game.public.roundResult;
+  delete game.public.resultRevealCompletedAt;
   game.public.revision += 1;
   game.public.updatedAt = now;
   game.private = {};
   game.server.deck = deck;
   game.server.pendingHands = pendingHands;
+  game.server.finalSubmissions = {};
   game.server.roundStarterUid = starterUid;
 }
 
@@ -131,6 +133,33 @@ export function calculateFinalCallScore(cards: FinalCallCard[]): number {
   return Math.max(0, ...colorTotals.values(), ...valueTotals.values());
 }
 
+/** 제한 시간 종료 시 자동 제출할 수 있는 가장 높은 점수 조합을 반환합니다. */
+export function selectBestFinalCallCombination(
+  cards: FinalCallCard[],
+): FinalCallCard[] {
+  if (cards.length === 0) return [];
+
+  const candidates: FinalCallCard[][] = [];
+  for (const color of COLORS) {
+    const sameColor = cards.filter((card) => card.color === color);
+    if (sameColor.length > 0) candidates.push(sameColor);
+  }
+
+  const values = [...new Set(cards.map((card) => card.value))]
+    .sort((left, right) => right - left);
+  for (const value of values) {
+    candidates.push(cards.filter((card) => card.value === value));
+  }
+
+  candidates.sort((left, right) => {
+    const scoreDifference = calculateFinalCallScore(right) -
+      calculateFinalCallScore(left);
+    if (scoreDifference !== 0) return scoreDifference;
+    return right.length - left.length;
+  });
+  return candidates[0];
+}
+
 /** 라운드를 판정하고 생명, 탈락, 승리 상태를 갱신합니다. */
 export function resolveFinalCallRound(
   game: FinalCallGameState,
@@ -140,7 +169,14 @@ export function resolveFinalCallRound(
   const revealedHands: Record<string, FinalCallCard[]> = {};
   const scores: Record<string, number> = {};
   for (const player of orderedAlivePlayers(game.public.players)) {
-    const cards = Object.values(game.private[player.uid]?.hand ?? {});
+    const fullHand = Object.values(game.private[player.uid]?.hand ?? {});
+    const submitted = game.server.finalSubmissions?.[player.uid];
+    if (!automaticCall && (!submitted || submitted.length === 0)) {
+      throw new Error(`${player.uid}의 최종 제출 카드를 찾을 수 없습니다.`);
+    }
+    // 자동 CALL은 즉시 전체 손패를 공개합니다. 플레이어가 선언한 CALL은
+    // 각자 최종 제출 단계에서 고른 카드만 태블릿 공개 데이터에 포함합니다.
+    const cards = automaticCall ? fullHand : submitted ?? [];
     revealedHands[player.uid] = cards;
     scores[player.uid] = calculateFinalCallScore(cards);
   }
@@ -165,6 +201,7 @@ export function resolveFinalCallRound(
     automaticCall,
     resolvedAt: now,
   };
+  delete game.public.resultRevealCompletedAt;
   game.public.turnUid = null;
   game.public.turnDeadlineAt = null;
   game.public.pendingDrawUid = null;
@@ -252,6 +289,7 @@ export function createInitialFinalCallGame(
     private: {},
     server: {
       deck: [],
+      finalSubmissions: {},
       processedCommands: {},
       roundStarterUid: starter.uid,
     },

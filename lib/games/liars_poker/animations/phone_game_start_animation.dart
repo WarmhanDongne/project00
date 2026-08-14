@@ -5,9 +5,14 @@ import 'package:flutter/material.dart';
 /// 애니메이션이 완전히 사라진 다음에만 [onCompleted]를 호출하므로 손패 진입
 /// 애니메이션과 동시에 실행되지 않습니다.
 class PhoneGameStartAnimation extends StatefulWidget {
-  const PhoneGameStartAnimation({super.key, required this.onCompleted});
+  const PhoneGameStartAnimation({
+    super.key,
+    required this.onCompleted,
+    this.textColor = Colors.white,
+  });
 
   final VoidCallback onCompleted;
+  final Color textColor;
 
   @override
   State<PhoneGameStartAnimation> createState() =>
@@ -66,12 +71,12 @@ class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
               opacity: textOpacity.clamp(0.0, 1.0),
               child: Transform.scale(
                 scale: scale,
-                child: const Text(
+                child: Text(
                   'GAME START',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'BebasNeue',
-                    color: Colors.white,
+                    color: widget.textColor,
                     fontSize: 58,
                     height: 1,
                     letterSpacing: 5,

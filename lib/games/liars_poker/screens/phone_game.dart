@@ -227,17 +227,8 @@ class _PhoneGameState extends State<PhoneGame> {
 
     // 가드 클로즈: 살아있을 때 (게임 진행 중) 화면 우선 반환
     if (isAlive || controller.showPenaltyHandOverlay) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          RepaintBoundary(
-            child: PhoneGameScreen(
-              controller: controller,
-              onExitRoom: _leaveRoom,
-            ),
-          ),
-          if (controller.isCommandInFlight) const _CommandLoadingIndicator(),
-        ],
+      return RepaintBoundary(
+        child: PhoneGameScreen(controller: controller, onExitRoom: _leaveRoom),
       );
     }
 
@@ -279,57 +270,6 @@ class _PhoneResultBackground extends StatelessWidget {
         child: background.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
-        ),
-      ),
-    );
-  }
-}
-
-/// 서버 재요청 중 게임 화면을 가리지 않고 연결 상태만 작게 표시합니다.
-class _CommandLoadingIndicator extends StatelessWidget {
-  const _CommandLoadingIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SafeArea(
-        child: IgnorePointer(
-          child: RepaintBoundary(
-            child: Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xB818211C),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x338CA695)),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.cloud_sync_outlined,
-                        size: 15,
-                        color: Color(0xFFD8E2DB),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        '연결 확인 중',
-                        style: TextStyle(
-                          color: Color(0xFFD8E2DB),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );

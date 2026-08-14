@@ -181,10 +181,6 @@ class TabletGameController extends ChangeNotifier {
       }
     }
 
-    _hasReceivedPublicGame = true;
-    if (!_initialDataCompleter.isCompleted) {
-      _initialDataCompleter.complete();
-    }
     table = snapshot.table;
     serverPhase = snapshot.phase;
     roundNumber = snapshot.round;
@@ -247,6 +243,15 @@ class TabletGameController extends ChangeNotifier {
       status = snapshot.phase == 'penalty'
           ? GameStatus.penalty
           : GameStatus.playing;
+    }
+
+    //=======================최초 진입 데이터 준비 완료==============================
+    // 프로필 URL을 포함한 모든 공개 상태를 먼저 저장한 뒤 로딩 화면을
+    // 종료합니다. 완료 신호가 먼저 전달되면 프로필 캐시가 빈 목록으로
+    // 실행되어 게임 화면에서 네트워크 이미지를 다시 기다리게 됩니다.
+    _hasReceivedPublicGame = true;
+    if (!_initialDataCompleter.isCompleted) {
+      _initialDataCompleter.complete();
     }
 
     notifyListeners();

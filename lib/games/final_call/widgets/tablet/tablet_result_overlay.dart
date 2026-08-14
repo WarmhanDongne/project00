@@ -3,7 +3,7 @@ import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-/// Liar's Poker 가로 결과 화면처럼 중앙에 우승자, 양쪽에 액션을 배치합니다.
+/// Liar's Poker 가로 결과 화면처럼 태블릿 중앙에 우승자를 배치합니다.
 class FinalCallResultOverlay extends StatelessWidget {
   const FinalCallResultOverlay({
     super.key,

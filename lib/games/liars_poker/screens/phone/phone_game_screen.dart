@@ -383,7 +383,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   key: const ValueKey('portrait-penalty-stage-slot'),
                   child: _PenaltyStageSwitcher(
                     verdictMessage: controller.liarVerdictMessage,
-                    verdictIsFalse: controller.liarVerdictIsFalse,
                     verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
@@ -515,20 +514,23 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                 Positioned(
                   key: const ValueKey('landscape-status-slot'),
                   top: 72,
+                  bottom: 8,
                   left: sidePadding,
-                  right: controlsWidth + 36,
-                  child: Text(
-                    controller.statusMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: controller.isMyTurn
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      shadows: const [
-                        Shadow(color: Colors.black87, blurRadius: 8),
-                      ],
+                  right: controlsWidth + 24,
+                  child: Center(
+                    child: Text(
+                      controller.statusMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: controller.isMyTurn
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        shadows: const [
+                          Shadow(color: Colors.black87, blurRadius: 8),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -558,7 +560,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                   key: const ValueKey('landscape-penalty-stage-slot'),
                   child: _PenaltyStageSwitcher(
                     verdictMessage: controller.liarVerdictMessage,
-                    verdictIsFalse: controller.liarVerdictIsFalse,
                     verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
@@ -936,14 +937,22 @@ class _CenteredGameMessage extends StatelessWidget {
 
 /// 라이어 판정 공개와 패널티 진행 상태를 손패 중앙에 표시합니다.
 class _PenaltyHandOverlay extends StatelessWidget {
-  const _PenaltyHandOverlay({
-    super.key,
-    required this.message,
-    required this.isFalseDeclaration,
-  });
+  const _PenaltyHandOverlay({super.key, required this.message});
 
   final String message;
-  final bool isFalseDeclaration;
+
+  Color get _messageColor {
+    switch (message) {
+      case '진실이 증명되었습니다.':
+      case '간파 성공!':
+        return const Color(0xFF34C759);
+      case '거짓이 밝혀졌습니다.':
+      case '간파 실패!':
+        return const Color(0xFFFF3B30);
+      default:
+        return Colors.white;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -965,9 +974,7 @@ class _PenaltyHandOverlay extends StatelessWidget {
               fontSize: isLandscape ? 34 : 32.sp,
               height: 1.15,
               letterSpacing: 0.7,
-              color: isFalseDeclaration
-                  ? const Color(0xFFFF3B30)
-                  : Colors.white,
+              color: _messageColor,
               shadows: const [Shadow(color: Colors.black, blurRadius: 14)],
             ),
           ),
@@ -984,14 +991,12 @@ class _PenaltyHandOverlay extends StatelessWidget {
 class _PenaltyStageSwitcher extends StatefulWidget {
   const _PenaltyStageSwitcher({
     required this.verdictMessage,
-    required this.verdictIsFalse,
     required this.verdictPending,
     required this.player,
     required this.result,
   });
 
   final String? verdictMessage;
-  final bool verdictIsFalse;
   final bool verdictPending;
   final PhoneGamePlayer? player;
   final String? result;
@@ -1011,7 +1016,6 @@ class _PenaltyStageSwitcher extends StatefulWidget {
         ? _PenaltyHandOverlay(
             key: ValueKey('verdict-$message'),
             message: message,
-            isFalseDeclaration: verdictIsFalse,
           )
         : PhonePenaltyStatus(
             key: const ValueKey('penalty-status'),

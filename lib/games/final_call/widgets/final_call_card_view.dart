@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
 
+/// Final Call 앞면 카드 원본(700 × 1026)의 높이/너비 비율입니다.
+const double finalCallCardHeightRatio = 1026 / 700;
+
 AssetGenImage finalCallCardAsset(FinalCallCard card) {
   final suffix = '${card.color}_${card.value}.png';
   return Assets.games.finalCall.images.cards.values.firstWhere(

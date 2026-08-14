@@ -19,6 +19,8 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
     this.spreadToLeft = false,
     this.entryCenterOffsetX = 0,
     this.entryCenterOffsetY = 0,
+    this.spreadCenterOffsetX = 0,
+    this.spreadCenterOffsetY = 0,
     this.totalDuration = const Duration(milliseconds: 2200),
     this.autoplay = true,
     this.onRevealStarted,
@@ -39,6 +41,10 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
   /// 손패 영역과 실제 화면 중앙이 다를 때 최초 덱 위치를 보정합니다.
   final double entryCenterOffsetX;
   final double entryCenterOffsetY;
+
+  /// 펼침이 끝나는 손패 영역의 중심을 화면 중앙에서 보정합니다.
+  final double spreadCenterOffsetX;
+  final double spreadCenterOffsetY;
 
   /// 자동 진입과 탭 후 공개 애니메이션을 합친 기준 시간입니다.
   final Duration totalDuration;
@@ -335,7 +341,12 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
       widget.cardWidth / 2,
       size.width - widget.cardWidth / 2 - 8,
     );
-    final rightAnchorX = math.min(center.dx + totalSpread / 2, maxAnchorX);
+    final spreadCenter =
+        center + Offset(widget.spreadCenterOffsetX, widget.spreadCenterOffsetY);
+    final rightAnchorX = math
+        .min(spreadCenter.dx + totalSpread / 2, maxAnchorX)
+        .clamp(widget.cardWidth / 2, maxAnchorX)
+        .toDouble();
 
     // 회전 완료 직후에는 모든 카드가 한 덱처럼 함께 기준점으로 이동합니다.
     final anchorProgress = _intervalProgress(
@@ -346,7 +357,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     );
     final anchorPosition = Offset.lerp(
       entryPosition,
-      Offset(rightAnchorX, center.dy),
+      Offset(rightAnchorX, spreadCenter.dy),
       anchorProgress,
     )!;
 

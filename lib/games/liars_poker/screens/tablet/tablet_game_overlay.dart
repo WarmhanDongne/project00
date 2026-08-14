@@ -39,47 +39,18 @@ class TabletGameOverlay extends StatelessWidget {
         Positioned(
           top: 20,
           right: 20,
-          child: _SideBarEntryAnimation(
-            child: TabletGameSideBar(
-              roleIcon: icons.iconRole.image(fit: BoxFit.contain),
-              settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
-              roleDialogBuilder: (_) => RoleBook(provider: provider),
-              settingDialogBuilder: (_) => Setting(
-                provider: provider,
-                onRestartGame: onRestartGame,
-                onEndGame: onEndGame,
-              ),
+          child: TabletGameSideBar(
+            roleIcon: icons.iconRole.image(fit: BoxFit.contain),
+            settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
+            roleDialogBuilder: (_) => RoleBook(provider: provider),
+            settingDialogBuilder: (_) => Setting(
+              provider: provider,
+              onRestartGame: onRestartGame,
+              onEndGame: onEndGame,
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-/// 테이블과 잔여 카드가 올라오는 시간에 맞춰 사이드바도 함께 등장합니다.
-class _SideBarEntryAnimation extends StatelessWidget {
-  const _SideBarEntryAnimation({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 980),
-      curve: Curves.easeOutCubic,
-      child: child,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.scale(
-            scale: 0.78 + (0.22 * value),
-            alignment: Alignment.topRight,
-            child: child,
-          ),
-        );
-      },
     );
   }
 }

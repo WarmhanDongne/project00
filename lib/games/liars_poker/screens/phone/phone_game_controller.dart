@@ -119,6 +119,7 @@ class PhoneGameController extends ChangeNotifier {
     if (isEntryDataReady) return Future<void>.value();
     return _initialDataCompleter.future;
   }
+
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
   bool get isNaturalResult =>
@@ -266,7 +267,18 @@ class PhoneGameController extends ChangeNotifier {
     final declarationWasFalse = nextActualRanks.any(
       (rank) => rank != nextTable && rank != 'JOKER',
     );
-    final delayedVerdictMessage = declarationWasFalse ? '허위 선언입니다' : '진실 선언입니다';
+    //=======================플레이어별 판정 문구==============================
+    // penalty 전환 직전의 turnUid는 LIAR를 외친 플레이어이고,
+    // lastPlay.playerUid는 패를 내서 의심받은 플레이어입니다.
+    final isChallengedPlayer = uid == nextLastPlayPlayerUid;
+    final isChallenger = uid == turnUid;
+    final delayedVerdictMessage = isChallenger && !isChallengedPlayer
+        ? declarationWasFalse
+              ? '간파 성공!'
+              : '간파 실패!'
+        : declarationWasFalse
+        ? '거짓이 밝혀졌습니다.'
+        : '진실이 증명되었습니다.';
     final nextLiarVerdictMessage = didRevealLiarCards
         ? null
         : nextPhase == 'penalty'
