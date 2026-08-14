@@ -27,7 +27,7 @@ class App extends StatelessWidget {
     return ScreenUtilInit(
       ensureScreenSize: true, // android 환경 등에서 프레임 사이즈가 초기에 0이 되는 걸 방지
       designSize: currentDesignSize,
-      child: const ProviderScope(
+      child: ProviderScope(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Project 00',
