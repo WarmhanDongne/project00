@@ -37,11 +37,31 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     super.initState();
     //=======================플랫폼 세로 화면 고정==============================
     unawaited(_lockPlatformPortrait());
-    widget.provider.addListener(_syncGameStatusSubscription);
-    _syncGameStatusSubscription();
+    widget.provider.addListener(_onRoomProviderChanged);
+    _onRoomProviderChanged();
   }
 
   Future<void> _lockPlatformPortrait() => AppOrientation.lockPlatformPortrait();
+
+  void _onRoomProviderChanged() {
+    _syncGameStatusSubscription();
+    if (widget.provider.wasKicked) {
+      widget.provider.wasKicked = false;
+      if (!mounted) return;
+      // 방 대기 화면에서만 추방을 감지하고 게임 중(isOpeningGame)일 때는 무시합니다.
+      if (_isOpeningGame || ModalRoute.of(context)?.isCurrent != true) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('방에서 추방되었습니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
 
   void _syncGameStatusSubscription() {
     final roomCode = widget.provider.roomCode;
@@ -143,7 +163,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   void dispose() {
-    widget.provider.removeListener(_syncGameStatusSubscription);
+    widget.provider.removeListener(_onRoomProviderChanged);
     _gameStatusSubscription?.cancel();
     super.dispose();
   }
@@ -168,7 +188,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                   onPressed: () async {
                     final left = await widget.provider.leaveRoom();
                     if (!context.mounted || !left) return;
-                    Navigator.of(context).pop();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                 ),
                 SizedBox(height: 26.h),

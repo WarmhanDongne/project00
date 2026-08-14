@@ -32,3 +32,6 @@ android/app/release/
 ios/Flutter/.last_build_id
 # DevTools settings
 devtools_options.yaml
+
+# Antigravity / AI IDE Local Settings
+.antigravity/
