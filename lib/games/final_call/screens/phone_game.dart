@@ -186,7 +186,7 @@ class _PhoneGameState extends ConsumerState<PhoneGame> {
       titleColor: const Color(0xFF171717),
       descriptionColor: const Color(0xFF5E5E5E),
       showSurface: false,
-      showText: false,
+      showText: true,
     );
     if (leave != true || !mounted) return;
     if (_isLeavingRoom) return;

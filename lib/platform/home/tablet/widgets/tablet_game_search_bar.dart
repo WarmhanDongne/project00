@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 class GameSearchBar extends StatelessWidget {
   const GameSearchBar({super.key, required this.onChanged});
@@ -7,20 +8,22 @@ class GameSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return SizedBox(
-      height: 48,
+      height: 42,
       child: TextField(
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: '게임 검색',
-          prefixIcon: const Icon(Icons.search),
+          hintStyle: TextStyle(color: colors.textMuted, fontSize: 13),
+          prefixIcon: Icon(Icons.search, size: 18, color: colors.textMuted),
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: colors.surfaceMuted,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.border),
           ),
-          contentPadding: EdgeInsets.zero,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
         ),
       ),
     );

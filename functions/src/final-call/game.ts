@@ -170,13 +170,16 @@ export function resolveFinalCallRound(
   const scores: Record<string, number> = {};
   for (const player of orderedAlivePlayers(game.public.players)) {
     const fullHand = Object.values(game.private[player.uid]?.hand ?? {});
-    const submitted = game.server.finalSubmissions?.[player.uid];
-    if (!automaticCall && (!submitted || submitted.length === 0)) {
+    const submitted = automaticCall ?
+      selectBestFinalCallCombination(fullHand) :
+      game.server.finalSubmissions?.[player.uid];
+    if (!submitted || submitted.length === 0) {
       throw new Error(`${player.uid}의 최종 제출 카드를 찾을 수 없습니다.`);
     }
-    // 자동 CALL은 즉시 전체 손패를 공개합니다. 플레이어가 선언한 CALL은
-    // 각자 최종 제출 단계에서 고른 카드만 태블릿 공개 데이터에 포함합니다.
-    const cards = automaticCall ? fullHand : submitted ?? [];
+    // 일반 CALL은 플레이어가 직접 고른 카드만, 덱 소진 자동 CALL은 서버가
+    // 고른 최고 조합만 공개합니다. 제출하지 않은 손패는 공개 데이터에 넣지
+    // 않으므로 태블릿에서도 계속 비공개 상태로 유지됩니다.
+    const cards = submitted;
     revealedHands[player.uid] = cards;
     scores[player.uid] = calculateFinalCallScore(cards);
   }

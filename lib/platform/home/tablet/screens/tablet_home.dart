@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
+//=======================태블릿 플랫폼 홈==============================
 class TabletHome extends StatefulWidget {
   const TabletHome({super.key});
 
@@ -26,62 +27,124 @@ class _TabletHomeState extends State<TabletHome> {
   @override
   void initState() {
     super.initState();
-    //=======================플랫폼 세로 화면 고정==============================
     unawaited(AppOrientation.lockPlatformPortrait());
-  }
-
-  void searchChanged(String value) {
-    setState(() {
-      searchWord = value;
-    });
   }
 
   @override
   void dispose() {
     roomProvider.dispose();
+    gameProvider.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(25),
-        child: Column(
-          children: [
-            Row(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.border),
+            ),
+            child: Column(
               children: [
-                const AppButton(
-                  text: '상점',
-                  width: 160,
-                  backgroundColor: Colors.blue,
-                  onPressed: null,
+                _HomeHeader(
+                  onSearchChanged: (value) {
+                    setState(() => searchWord = value);
+                  },
                 ),
-                const SizedBox(width: 300),
-                Expanded(child: GameSearchBar(onChanged: searchChanged)),
-                const SizedBox(width: 300),
-                AppButton(
-                  text: 'Logout',
-                  width: 160,
-                  backgroundColor: Colors.blue,
-                  onPressed: logout,
+                Divider(height: 1, color: colors.border),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final panelWidth = (constraints.maxWidth * 0.25).clamp(
+                        220.0,
+                        310.0,
+                      );
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: GameList(
+                              roomProvider: roomProvider,
+                              gameProvider: gameProvider,
+                              searchQuery: searchWord,
+                            ),
+                          ),
+                          VerticalDivider(
+                            width: 1,
+                            thickness: 1,
+                            color: colors.border,
+                          ),
+                          SizedBox(
+                            width: panelWidth,
+                            child: TabletRoomPanel(provider: roomProvider),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-                const Profile(),
               ],
             ),
-            const SizedBox(height: 24),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({required this.onSearchChanged});
+
+  final ValueChanged<String> onSearchChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return SizedBox(
+      height: 74,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 150,
+              child: Text(
+                '모시겜',
+                style: TextStyle(
+                  color: colors.primary,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 390),
+                  child: GameSearchBar(onChanged: onSearchChanged),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 150,
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: GameList(
-                      roomProvider: roomProvider,
-                      gameProvider: gameProvider,
+                  TextButton(
+                    onPressed: () => FirebaseAuth.instance.signOut(),
+                    child: Text(
+                      '로그아웃',
+                      style: TextStyle(color: colors.textMuted, fontSize: 12),
                     ),
                   ),
-                  const SizedBox(width: 24),
-                  TabletRoomPanel(provider: roomProvider),
+                  const SizedBox(width: 8),
+                  const Profile(),
                 ],
               ),
             ),
@@ -90,8 +153,4 @@ class _TabletHomeState extends State<TabletHome> {
       ),
     );
   }
-}
-
-Future<void> logout() async {
-  await FirebaseAuth.instance.signOut();
 }

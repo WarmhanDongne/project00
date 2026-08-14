@@ -6,6 +6,7 @@ import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/platform/home/home.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
@@ -17,7 +18,7 @@ class App extends StatelessWidget {
     // LayoutBuilder 대신 빌드 단계에서 View.of(context)를 사용해 화면 크기를 구합니다.
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
-    
+
     // shortestSide를 기준으로 태블릿 여부를 판단합니다.
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
@@ -26,40 +27,44 @@ class App extends StatelessWidget {
         : const Size(390, 844); // 핸드폰
 
     return ScreenUtilInit(
-      ensureScreenSize: true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
+      ensureScreenSize:
+          true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
       designSize: currentDesignSize,
       child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Project 00',
+        debugShowCheckedModeBanner: false,
+        title: 'Project 00',
+        theme: PlatformTheme.light(),
+        darkTheme: PlatformTheme.dark(),
+        themeMode: ThemeMode.light,
 
-            home: StreamBuilder<User?>(
-              stream: userChanges ?? FirebaseAuth.instance.userChanges(),
-              builder: (context, snapshot) {
-                // Firebase 로그인 상태 확인 중
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
+        home: StreamBuilder<User?>(
+          stream: userChanges ?? FirebaseAuth.instance.userChanges(),
+          builder: (context, snapshot) {
+            // Firebase 로그인 상태 확인 중
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-                // 로그인된 사용자
-                if (snapshot.hasData && snapshot.data != null) {
-                  final user = snapshot.data!;
+            // 로그인된 사용자
+            if (snapshot.hasData && snapshot.data != null) {
+              final user = snapshot.data!;
 
-                  // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
-                  if (user.displayName == null) {
-                    return const RegisterScreen(isGoogleSignIn: true);
-                  }
+              // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
+              if (user.displayName == null) {
+                return const RegisterScreen(isGoogleSignIn: true);
+              }
 
-                  // 로그인 완료 → 홈 화면
-                  return const Home();
-                }
+              // 로그인 완료 → 홈 화면
+              return const Home();
+            }
 
-                // 로그인 안 된 경우
-                return const LoginScreen();
-              },
-            ),
-          ),
-        );
+            // 로그인 안 된 경우
+            return const LoginScreen();
+          },
+        ),
+      ),
+    );
   }
 }
