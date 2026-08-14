@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
-enum PlatformButtonStyle { primary, secondary, danger }
+enum PlatformButtonStyle { primary, secondary, danger, dangerSoft }
 
 enum PlatformNoticeStyle { success, warning, danger }
 
@@ -59,10 +59,13 @@ class PlatformButton extends StatelessWidget {
       PlatformButtonStyle.primary => colors.primary,
       PlatformButtonStyle.secondary => colors.surface,
       PlatformButtonStyle.danger => colors.danger,
+      PlatformButtonStyle.dangerSoft => colors.dangerSoft,
     };
-    final foreground = style == PlatformButtonStyle.secondary
-        ? colors.text
-        : Colors.white;
+    final foreground = switch (style) {
+      PlatformButtonStyle.secondary => colors.text,
+      PlatformButtonStyle.dangerSoft => colors.danger,
+      _ => Colors.white,
+    };
     final button = SizedBox(
       height: height,
       child: FilledButton(

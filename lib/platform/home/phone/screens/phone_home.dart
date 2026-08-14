@@ -32,9 +32,10 @@ class _PhoneHomeState extends State<PhoneHome> {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    return SafeArea(
-      child: Scaffold(
-        body: Column(
+    return Scaffold(
+      backgroundColor: colors.canvas,
+      body: SafeArea(
+        child: Column(
           children: [
             PhoneHeader(
               buttonText: "그룹 참여",

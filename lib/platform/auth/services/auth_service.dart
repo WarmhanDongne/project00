@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,17 +16,14 @@ class FirebaseAuthService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
-    FirebaseFirestore? firestore,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _functions =
            functions ??
            FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
-       _storage = storage ?? FirebaseStorage.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+       _storage = storage ?? FirebaseStorage.instance;
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
-  final FirebaseFirestore _firestore;
 
   //이메일 중복확인
   Future<bool> isEmailDuplicate(String email) async {
@@ -121,7 +117,7 @@ class FirebaseAuthService {
     }
   }
 
-  //프로필사진+닉네임+UID 묶어서 firestore에 저장하기
+  //=======================프로필 정보를 Firestore에 동기화==============================
   Future<void> createUserDocument() async {
     final user = _auth.currentUser;
 
@@ -129,17 +125,10 @@ class FirebaseAuthService {
       throw const AuthServiceException('user-not-found', '로그인된 사용자가 없습니다.');
     }
 
-    //유저 구조
-    await _firestore.collection('users').doc(user.uid).set({
-      'uid': user.uid,
-      'email': user.email,
-      'nickname': user.displayName,
-      'profileImageUrl': user.photoURL,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await syncGoogleUserProfile(user);
   }
 
-  /// Google 계정의 닉네임과 프로필 사진을 Cloud Function으로 저장합니다.
+  /// 현재 계정의 닉네임과 프로필 사진을 Cloud Function으로 저장합니다.
   ///
   /// Firestore의 users 쓰기는 클라이언트에 허용되지 않으므로 인증된 서버가
   /// 기존 사용자 문서에 필요한 필드만 병합합니다.

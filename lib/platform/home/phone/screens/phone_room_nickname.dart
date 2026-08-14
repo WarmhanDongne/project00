@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,6 +47,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   final math.Random _random = math.Random();
   late final TextEditingController _nicknameController;
   bool _didRestoreExistingNickname = false;
+  bool _isOpeningWaitingRoom = false;
   int _selectedColorIndex = 6;
 
   RoomProvider get _roomProvider => widget.provider;
@@ -103,15 +105,17 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       return;
     }
 
-    final updated = await _roomProvider.updateJoinedPlayerProfile(
-      nickname,
-      accentColor: _toHex(_playerAccentColors[_selectedColorIndex]),
+    if (_isOpeningWaitingRoom) return;
+    setState(() => _isOpeningWaitingRoom = true);
+
+    // 참가자 설정 저장은 대기 화면 진입을 막지 않습니다. 색상 저장 여부와
+    // 관계없이 먼저 입장시키고, 닉네임·색상은 백그라운드에서 반영합니다.
+    unawaited(
+      _roomProvider.updateJoinedPlayerProfile(
+        nickname,
+        accentColor: _toHex(_playerAccentColors[_selectedColorIndex]),
+      ),
     );
-    if (!mounted) return;
-    if (!updated) {
-      _showMessage(_roomProvider.errorMessage ?? '참가자 정보를 저장하지 못했습니다.');
-      return;
-    }
 
     await Navigator.push(
       context,
@@ -120,6 +124,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       ),
     );
     if (!mounted) return;
+    setState(() => _isOpeningWaitingRoom = false);
     if (!_roomProvider.isInRoom) Navigator.of(context).pop();
   }
 
@@ -146,8 +151,8 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
         title: '그룹 참여하기',
         onBack: _cancelSetup,
         bottom: PlatformButton(
-          label: _roomProvider.isLoading ? '저장 중...' : '설정 완료',
-          onPressed: _roomProvider.isLoading ? null : _saveProfileAndContinue,
+          label: _isOpeningWaitingRoom ? '입장 중...' : '설정 완료',
+          onPressed: _isOpeningWaitingRoom ? null : _saveProfileAndContinue,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

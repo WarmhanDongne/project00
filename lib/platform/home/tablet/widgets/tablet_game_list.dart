@@ -131,15 +131,17 @@ class _GameListState extends State<GameList> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          const columns = 4;
+                          const columns = 5;
                           const spacing = 10.0;
                           final tileWidth =
                               (constraints.maxWidth - spacing * (columns - 1)) /
                               columns;
+                          // 첫 줄 전체와 다음 줄 일부가 보이도록 최신 홈 시안의
+                          // 카드 비율을 유지합니다.
                           final targetHeight =
                               ((constraints.maxHeight - spacing) / 1.52).clamp(
-                                205.0,
-                                double.infinity,
+                                190.0,
+                                280.0,
                               );
                           return GridView.builder(
                             padding: EdgeInsets.zero,

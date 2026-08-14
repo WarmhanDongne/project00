@@ -41,7 +41,7 @@ function optionalProfileUrl(value: unknown): string | undefined {
 }
 
 /**
- * Google 로그인 사용자의 닉네임과 프로필 사진을 Firestore에 병합합니다.
+ * 로그인 사용자의 닉네임과 프로필 사진을 Firestore에 병합합니다.
  * 기존 사용자의 다른 필드는 유지하고, 최초 저장일은 새 문서에만 기록합니다.
  */
 export const syncGoogleUserProfile = onCall<SyncGoogleProfileData>(
@@ -54,10 +54,11 @@ export const syncGoogleUserProfile = onCall<SyncGoogleProfileData>(
 
     const uid = auth.uid;
     const token = auth.token;
-    const nickname = optionalText(token.name) ??
-      optionalText(request.data?.nickname);
-    const profileImageUrl = optionalProfileUrl(token.picture) ??
-      optionalProfileUrl(request.data?.profileImageUrl);
+    // 프로필 수정 화면의 새 값을 토큰의 이전 값보다 우선합니다.
+    const nickname = optionalText(request.data?.nickname) ??
+      optionalText(token.name);
+    const profileImageUrl = optionalProfileUrl(request.data?.profileImageUrl) ??
+      optionalProfileUrl(token.picture);
     const email = optionalText(token.email);
 
     const userRef = getFirestore().collection("users").doc(uid);
