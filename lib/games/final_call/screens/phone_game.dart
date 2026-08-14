@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
@@ -14,7 +16,7 @@ import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Final Call 휴대폰 화면의 진입점입니다.
-class PhoneGame extends StatefulWidget {
+class PhoneGame extends ConsumerStatefulWidget {
   const PhoneGame({
     super.key,
     required this.roomCode,
@@ -27,11 +29,13 @@ class PhoneGame extends StatefulWidget {
   final Future<bool> Function() onExitRoom;
 
   @override
-  State<PhoneGame> createState() => _PhoneGameState();
+  ConsumerState<PhoneGame> createState() => _PhoneGameState();
 }
 
-class _PhoneGameState extends State<PhoneGame> {
+class _PhoneGameState extends ConsumerState<PhoneGame> {
   PhoneGameController? controller;
+  FinalCallSessionArgs? sessionArgs;
+  ProviderSubscription<PhoneGameController>? sessionSubscription;
   String? initializationError;
   String? selectedCardId;
   final Set<String> selectedFinalCardIds = <String>{};
@@ -58,14 +62,19 @@ class _PhoneGameState extends State<PhoneGame> {
       initializationError = '게임에 참여하려면 사용자 인증이 필요합니다.';
       return;
     }
-    controller =
-        PhoneGameController(
-            roomCode: widget.roomCode,
-            uid: uid,
-            gameService: widget.gameService,
-          )
-          ..addListener(_handleState)
-          ..initialize();
+    final args = FinalCallSessionArgs(
+      roomCode: widget.roomCode,
+      uid: uid,
+      service: widget.gameService,
+      watchPrivateHand: true,
+    );
+    sessionArgs = args;
+    final provider = finalCallSessionProvider(args);
+    controller = ref.read(provider);
+    sessionSubscription = ref.listenManual(provider, (_, next) {
+      controller = next;
+      _handleState();
+    });
   }
 
   void _handleState() {
@@ -257,9 +266,7 @@ class _PhoneGameState extends State<PhoneGame> {
   @override
   void dispose() {
     callNoticeTimer?.cancel();
-    controller
-      ?..removeListener(_handleState)
-      ..dispose();
+    sessionSubscription?.close();
     //=======================다른 화면 방향 복원==============================
     unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
@@ -267,7 +274,11 @@ class _PhoneGameState extends State<PhoneGame> {
 
   @override
   Widget build(BuildContext context) {
-    final game = controller;
+    final args = sessionArgs;
+    final game = args == null
+        ? null
+        : ref.watch(finalCallSessionProvider(args));
+    controller = game;
     if (game == null) {
       return Scaffold(
         body: Center(child: Text(initializationError ?? '게임을 열 수 없습니다.')),

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_animation.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_layer.dart';
@@ -13,7 +15,7 @@ import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// Final Call 태블릿 진행 화면의 진입점입니다.
-class FinalCallTabletGame extends StatefulWidget {
+class FinalCallTabletGame extends ConsumerStatefulWidget {
   const FinalCallTabletGame({
     super.key,
     required this.roomCode,
@@ -26,11 +28,14 @@ class FinalCallTabletGame extends StatefulWidget {
   final RoomProvider provider;
 
   @override
-  State<FinalCallTabletGame> createState() => _FinalCallTabletGameState();
+  ConsumerState<FinalCallTabletGame> createState() =>
+      _FinalCallTabletGameState();
 }
 
-class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
+class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   PhoneGameController? controller;
+  FinalCallSessionArgs? sessionArgs;
+  ProviderSubscription<PhoneGameController>? sessionSubscription;
   String? initializationError;
   String? previousPhase;
   Timer? phaseTimer;
@@ -50,15 +55,19 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
       initializationError = '게임 진행 기기 인증을 확인할 수 없습니다.';
       return;
     }
-    controller =
-        PhoneGameController(
-            roomCode: widget.roomCode,
-            uid: uid,
-            gameService: widget.service,
-            watchPrivateHand: false,
-          )
-          ..addListener(_handleState)
-          ..initialize();
+    final args = FinalCallSessionArgs(
+      roomCode: widget.roomCode,
+      uid: uid,
+      service: widget.service,
+      watchPrivateHand: false,
+    );
+    sessionArgs = args;
+    final provider = finalCallSessionProvider(args);
+    controller = ref.read(provider);
+    sessionSubscription = ref.listenManual(provider, (_, next) {
+      controller = next;
+      _handleState();
+    });
   }
 
   void _handleState() {
@@ -162,9 +171,7 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
     phaseTimer?.cancel();
     turnTimer?.cancel();
     insufficientPlayersExitTimer?.cancel();
-    controller
-      ?..removeListener(_handleState)
-      ..dispose();
+    sessionSubscription?.close();
     //=======================플랫폼 세로 화면 복원==============================
     unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
@@ -172,7 +179,11 @@ class _FinalCallTabletGameState extends State<FinalCallTabletGame> {
 
   @override
   Widget build(BuildContext context) {
-    final game = controller;
+    final args = sessionArgs;
+    final game = args == null
+        ? null
+        : ref.watch(finalCallSessionProvider(args));
+    controller = game;
     if (game == null) {
       return Scaffold(
         body: Center(child: Text(initializationError ?? '게임을 열 수 없습니다.')),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
 import 'package:project00/core/sound/provider.dart/sound_provider.dart';
@@ -28,7 +29,12 @@ void main() async {
 
   final soundProvider = SoundProvider();
   runApp(
-    ChangeNotifierProvider.value(value: soundProvider, child: const App()),
+    ProviderScope(
+      child: ChangeNotifierProvider.value(
+        value: soundProvider,
+        child: const App(),
+      ),
+    ),
   );
 
   // 네이티브 오디오 플러그인이 첫 화면 렌더링을 막지 않도록
