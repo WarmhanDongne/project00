@@ -35,3 +35,4 @@ devtools_options.yaml
 
 # Antigravity / AI IDE Local Settings
 .antigravity/
+.agents/
