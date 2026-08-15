@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/screens/tablet_game.dart';
-import 'package:project00/games/final_call/services/final_call_service.dart';
-import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
-import 'package:project00/games/liars_poker/screens/liars_poker.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -106,31 +103,14 @@ class GamePreviewDialog extends StatelessWidget {
               return;
             }
 
-            if (game.id == 'final_call') {
-              final finalCallService = FinalCallService();
-              try {
-                await finalCallService.command.startGame(roomCode: roomCode);
-              } catch (error) {
-                if (!layoutContext.mounted) return;
-                _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
-                return;
-              }
-              if (!layoutContext.mounted) return;
-              Navigator.of(layoutContext).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => FinalCallTabletGameEntry(
-                    roomCode: roomCode,
-                    gameService: finalCallService,
-                    provider: roomProvider,
-                  ),
-                ),
-              );
+            final templateGame = GameRegistry.find(game.id);
+            if (templateGame == null) {
+              _showMessage(layoutContext, '게임 정보를 확인할 수 없습니다.');
               return;
             }
 
-            final gameService = LiarsPokerService();
             try {
-              await gameService.command.startGame(roomCode: roomCode);
+              await templateGame.startGame(roomCode);
             } catch (error) {
               if (!layoutContext.mounted) return;
               _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
@@ -139,11 +119,10 @@ class GamePreviewDialog extends StatelessWidget {
             if (!layoutContext.mounted) return;
             Navigator.of(layoutContext).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => LiarsPoker(
+                builder: (_) => templateGame.buildTabletScreen(
                   playerLayout: completedLayout,
                   provider: roomProvider,
                   roomCode: roomCode,
-                  gameService: gameService,
                 ),
               ),
             );

@@ -77,6 +77,17 @@ class RoomService {
     return realtime.ref('rooms/$roomCode/selectedGame').onValue;
   }
 
+  /// 게임 종류와 관계없이 플랫폼 대기실이 확인하는 공통 시작 상태입니다.
+  ///
+  /// 게임 선택 알림보다 게임 노드가 먼저 생성되어도 현재 값을 다시 받을 수 있도록
+  /// `onValue`를 사용합니다.
+  Stream<String?> watchGameStatus(String roomCode) {
+    return realtime
+        .ref('rooms/$roomCode/game/public/status')
+        .onValue
+        .map((event) => event.snapshot.value?.toString());
+  }
+
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
         .ref('rooms/$roomCode/players')
@@ -229,11 +240,15 @@ class RoomService {
     await _writeWithRetry(playerRef.remove);
   }
 
-  /// 진행 중인 Liar's Poker에서 퇴장합니다.
+  /// 진행 중인 게임에서 퇴장합니다.
   ///
-  /// 플레이어 삭제와 다음 턴 결정은 Cloud Function 트랜잭션이 함께 처리하며,
-  /// 클라이언트는 기존 연결 종료 예약만 먼저 취소합니다.
-  Future<void> leaveLiarsPokerGame(String roomCode) async {
+  /// 플레이어 삭제와 다음 턴 결정은 [cloudFunctionName]으로 지정한 게임별 Cloud
+  /// Function 트랜잭션이 함께 처리하며, 클라이언트는 기존 연결 종료 예약만 먼저
+  /// 취소합니다.
+  Future<void> leaveGame({
+    required String cloudFunctionName,
+    required String roomCode,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const RoomCommandException('인증 정보가 없습니다.');
@@ -250,46 +265,7 @@ class RoomService {
     FirebaseFunctionsException? lastError;
     for (var attempt = 0; attempt < _functionOperationAttempts; attempt += 1) {
       try {
-        await _functions.httpsCallable('leaveLiarsPokerGame').call({
-          'roomCode': code,
-        });
-        return;
-      } on FirebaseFunctionsException catch (error) {
-        lastError = error;
-        final shouldRetry =
-            attempt < _functionOperationAttempts - 1 &&
-            (error.code == 'aborted' ||
-                error.code == 'internal' ||
-                error.code == 'unavailable' ||
-                error.code == 'deadline-exceeded');
-        if (!shouldRetry) break;
-        await Future<void>.delayed(Duration(milliseconds: 220 * (attempt + 1)));
-      }
-    }
-
-    throw RoomCommandException(
-      lastError?.message ?? '게임에서 퇴장하지 못했습니다. 잠시 후 다시 시도해주세요.',
-    );
-  }
-
-  /// 진행 중인 Final Call에서 퇴장하고 서버가 다음 턴을 결정하게 합니다.
-  Future<void> leaveFinalCallGame(String roomCode) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const RoomCommandException('인증 정보가 없습니다.');
-    }
-    final code = roomCode.trim().toUpperCase();
-    final playerRef = realtime.ref('rooms/$code/players/${user.uid}');
-    try {
-      await playerRef.onDisconnect().cancel();
-    } catch (_) {
-      // 서버 callable이 즉시 참가자를 제거하므로 예약 취소 실패는 무시합니다.
-    }
-
-    FirebaseFunctionsException? lastError;
-    for (var attempt = 0; attempt < _functionOperationAttempts; attempt += 1) {
-      try {
-        await _functions.httpsCallable('leaveFinalCallGame').call({
+        await _functions.httpsCallable(cloudFunctionName).call({
           'roomCode': code,
         });
         return;

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
-import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 게임 종료 후 우승자와 다음 동작을 보여주는 태블릿 결과 화면입니다.
@@ -105,7 +104,7 @@ class _ResultContent extends StatelessWidget {
             width: _ResultLayout.cardWidth,
             child: _WinnerBadge(player: winnerPlayer!),
           ),
-        //=======================다시하기·나가기 버튼==============================
+        //==============================다시하기 나가기 버튼트==============================
         Positioned(
           left: _ResultLayout.actionInset,
           right: _ResultLayout.actionInset,
@@ -147,9 +146,10 @@ class _WinnerBadge extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
+              fontFamily: 'Georgia',
               color: Color.fromARGB(255, 8, 2, 2),
               fontSize: 34,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w200,
               shadows: [
                 Shadow(color: Color.fromARGB(255, 0, 0, 0), blurRadius: 8),
               ],
@@ -212,7 +212,7 @@ class _ResultActions extends StatelessWidget {
   }
 }
 
-class _ResultActionButton extends StatelessWidget {
+class _ResultActionButton extends StatefulWidget {
   const _ResultActionButton({
     required this.action,
     required this.label,
@@ -224,14 +224,66 @@ class _ResultActionButton extends StatelessWidget {
   final AssetGenImage asset;
 
   @override
+  State<_ResultActionButton> createState() => _ResultActionButtonState();
+}
+
+class _ResultActionButtonState extends State<_ResultActionButton> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return LiarsPokerPressableAssetButton(
-      asset: asset,
-      width: 220,
-      height: 220,
-      enabled: action != null,
-      semanticsLabel: label,
-      onPressed: () => action?.call(),
+    return Semantics(
+      button: true,
+      enabled: widget.action != null,
+      label: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.action == null
+            ? null
+            : (_) => setState(() => _isPressed = true),
+        onTapUp: widget.action == null
+            ? null
+            : (_) {
+                setState(() => _isPressed = false);
+                widget.action?.call();
+              },
+        onTapCancel: widget.action == null
+            ? null
+            : () => setState(() => _isPressed = false),
+        child: AnimatedSlide(
+          offset: _isPressed ? const Offset(0, 0.045) : Offset.zero,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+          child: AnimatedScale(
+            scale: _isPressed ? 0.9 : 1,
+            duration: const Duration(milliseconds: 110),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              width: 220,
+              height: 220,
+              duration: const Duration(milliseconds: 110),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _isPressed
+                        ? const Color(0x55000000)
+                        : const Color(0x99000000),
+                    blurRadius: _isPressed ? 7 : 24,
+                    spreadRadius: _isPressed ? 0 : 2,
+                    offset: Offset(0, _isPressed ? 3 : 13),
+                  ),
+                ],
+              ),
+              child: widget.asset.image(
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

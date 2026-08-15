@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
+import 'package:project00/games/shared/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 

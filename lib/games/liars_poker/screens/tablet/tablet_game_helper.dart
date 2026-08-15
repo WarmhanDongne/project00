@@ -1,4 +1,4 @@
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 const int cardsPerPlayer = 5;

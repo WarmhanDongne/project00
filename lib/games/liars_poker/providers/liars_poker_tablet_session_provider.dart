@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_tablet_state.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_controller.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';

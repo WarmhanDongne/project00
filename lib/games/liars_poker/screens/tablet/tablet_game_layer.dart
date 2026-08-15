@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/card_deal.dart';
-import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
+import 'package:project00/games/shared/animations/card_deal.dart';
+import 'package:project00/games/shared/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/animations/round_start_reveal.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/liars_poker/widgets/tablet/result_tablet.dart';

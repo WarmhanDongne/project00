@@ -10,9 +10,9 @@ import 'package:project00/games/final_call/screens/phone/phone_game_controller.d
 import 'package:project00/games/final_call/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/final_call/widgets/phone/phone_card_change_dialog.dart';
-import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/animations/phone_game_start_animation.dart';
-import 'package:project00/games/liars_poker/widgets/phone/result.dart';
+import 'package:project00/games/shared/animations/fade_hold_fade.dart';
+import 'package:project00/games/shared/animations/phone_game_start_animation.dart';
+import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/gen/assets.gen.dart';
 

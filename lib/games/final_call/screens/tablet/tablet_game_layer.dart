@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/card_deal.dart';
+import 'package:project00/games/shared/animations/card_deal.dart';
 import 'package:project00/games/final_call/animations/tablet_center_card_reveal.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';

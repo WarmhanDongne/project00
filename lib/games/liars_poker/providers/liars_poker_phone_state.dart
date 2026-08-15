@@ -10,6 +10,17 @@ class PhoneHandCard {
 
   final String id;
   final String rank;
+
+  /// RTDB `hand/<cardKey>` 항목을 파싱합니다. rank가 없으면 null입니다.
+  static PhoneHandCard? fromMap(String key, Map<Object?, Object?> map) {
+    final id = map['id']?.toString();
+    final rank = map['rank']?.toString();
+    if (rank == null || rank.isEmpty) return null;
+    return PhoneHandCard(
+      id: (id == null || id.isEmpty) ? key : id,
+      rank: rank.toUpperCase(),
+    );
+  }
 }
 
 @immutable
@@ -27,6 +38,17 @@ class PhoneGamePlayer {
   final String profileImageUrl;
   final String status;
   final int remainingCardCount;
+
+  factory PhoneGamePlayer.fromMap(String key, Map<Object?, Object?> map) {
+    final uid = map['uid']?.toString();
+    return PhoneGamePlayer(
+      uid: (uid == null || uid.isEmpty) ? key : uid,
+      nickname: map['nickname']?.toString() ?? 'Player',
+      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
+      status: map['status']?.toString() ?? 'alive',
+      remainingCardCount: (map['remainingCardCount'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 @immutable
@@ -40,6 +62,26 @@ class PhonePenaltyResult {
   final String targetUid;
   final String result;
   final int resolvedAt;
+
+  /// RTDB `penaltyResult`를 파싱합니다. 필수 값이 없거나 결과 값이 유효하지
+  /// 않으면 null입니다.
+  static PhonePenaltyResult? fromMap(Map<Object?, Object?> map) {
+    final targetUid = map['targetUid']?.toString();
+    final result = map['result']?.toString();
+    final resolvedAt = (map['resolvedAt'] as num?)?.toInt();
+    if (targetUid == null ||
+        targetUid.isEmpty ||
+        result == null ||
+        (result != 'safe' && result != 'eliminated') ||
+        resolvedAt == null) {
+      return null;
+    }
+    return PhonePenaltyResult(
+      targetUid: targetUid,
+      result: result,
+      resolvedAt: resolvedAt,
+    );
+  }
 }
 
 //=======================Liar's Poker 휴대폰 불변 상태==============================

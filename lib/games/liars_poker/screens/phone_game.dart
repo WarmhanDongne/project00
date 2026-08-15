@@ -9,10 +9,10 @@ import 'package:project00/games/liars_poker/providers/liars_poker_phone_session_
 import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
-import 'package:project00/games/liars_poker/widgets/phone/result.dart';
+import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/widgets/game_loading_screen.dart';
 import 'package:project00/gen/assets.gen.dart';
 

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_tablet_session_provider.dart';
 import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_animation.dart';

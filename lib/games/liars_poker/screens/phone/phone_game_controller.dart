@@ -415,11 +415,11 @@ class PhoneGameController extends Notifier<LiarsPokerPhoneState> {
     if (value is Map) {
       for (final entry in value.entries) {
         if (entry.value is! Map) continue;
-        final cardData = Map<Object?, Object?>.from(entry.value as Map);
-        final id = _nullableString(cardData['id']) ?? entry.key.toString();
-        final rank = _nullableString(cardData['rank']);
-        if (id.isEmpty || rank == null || rank.isEmpty) continue;
-        parsedCards.add(PhoneHandCard(id: id, rank: rank.toUpperCase()));
+        final card = PhoneHandCard.fromMap(
+          entry.key.toString(),
+          Map<Object?, Object?>.from(entry.value as Map),
+        );
+        if (card != null) parsedCards.add(card);
       }
     }
 
@@ -502,36 +502,18 @@ class PhoneGameController extends Notifier<LiarsPokerPhoneState> {
     final result = <String, PhoneGamePlayer>{};
     for (final entry in value.entries) {
       if (entry.value is! Map) continue;
-      final data = Map<Object?, Object?>.from(entry.value as Map);
-      final uid = _nullableString(data['uid']) ?? entry.key.toString();
-      result[uid] = PhoneGamePlayer(
-        uid: uid,
-        nickname: _string(data['nickname'], fallback: 'Player'),
-        profileImageUrl: _string(data['profileImageUrl'], fallback: ''),
-        status: _string(data['status'], fallback: 'alive'),
-        remainingCardCount: _integer(data['remainingCardCount']) ?? 0,
+      final player = PhoneGamePlayer.fromMap(
+        entry.key.toString(),
+        Map<Object?, Object?>.from(entry.value as Map),
       );
+      result[player.uid] = player;
     }
     return result;
   }
 
   PhonePenaltyResult? _parsePenaltyResult(Object? value) {
     if (value is! Map) return null;
-    final data = Map<Object?, Object?>.from(value);
-    final targetUid = _nullableString(data['targetUid']);
-    final result = _nullableString(data['result']);
-    final resolvedAt = _integer(data['resolvedAt']);
-    if (targetUid == null ||
-        result == null ||
-        (result != 'safe' && result != 'eliminated') ||
-        resolvedAt == null) {
-      return null;
-    }
-    return PhonePenaltyResult(
-      targetUid: targetUid,
-      result: result,
-      resolvedAt: resolvedAt,
-    );
+    return PhonePenaltyResult.fromMap(Map<Object?, Object?>.from(value));
   }
 
   bool _samePenaltyResult(PhonePenaltyResult? left, PhonePenaltyResult? right) {

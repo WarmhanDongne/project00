@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
@@ -76,6 +77,10 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  /// 휴대폰 대기실에서 게임 종류와 무관하게 시작 상태를 한 번만 구독합니다.
+  Stream<String?> watchGameStatus(String code) =>
+      _service.watchGameStatus(code.trim().toUpperCase());
+
   Future<bool> removePlayer(String userUid) async {
     final result = await _runCommand<bool>(() async {
       await _service.removePlayer(roomCode!, userUid);
@@ -109,20 +114,19 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
 
-    roomSubscription = _service.watchRoom(roomCode!).listen((event) async {
+    roomSubscription = _service.watchRoom(roomCode!).listen((event) {
       final gameId = event.snapshot.value as String?;
 
       if (gameId != selectedGameId) {
         selectedGameId = gameId;
+        selectedGame = null;
+        // 게임 시작 판단에 필요한 ID는 Firestore 메타데이터보다 먼저 전달합니다.
+        notifyListeners();
 
         if (gameId != null) {
-          selectedGame = await _gameService.getGame(gameId);
-        } else {
-          selectedGame = null;
+          unawaited(_loadSelectedGame(gameId));
         }
       }
-
-      notifyListeners();
     }, onError: _handleSubscriptionError);
     playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomPlayer,
@@ -137,6 +141,20 @@ class RoomProvider extends ChangeNotifier {
       groupGames = await _gameService.fetchGroupGames(activeUids);
       notifyListeners();
     }, onError: _handleSubscriptionError);
+  }
+
+  /// 썸네일·설명 같은 화면용 Firestore 정보는 게임 시작 신호와 분리해 불러옵니다.
+  /// 조회가 늦거나 실패해도 Realtime Database의 게임 시작 처리는 계속됩니다.
+  Future<void> _loadSelectedGame(String gameId) async {
+    try {
+      final game = await _gameService.getGame(gameId);
+      if (selectedGameId != gameId) return;
+      selectedGame = game;
+      notifyListeners();
+    } catch (_) {
+      // 게임 ID와 RTDB 상태만으로 게임 화면을 열 수 있으므로 메타데이터 실패는
+      // 대기실의 시작 흐름을 중단하지 않습니다.
+    }
   }
 
   void _handleSubscriptionError(Object error) {
@@ -155,12 +173,12 @@ class RoomProvider extends ChangeNotifier {
 
   // ============================================== Phone을 위한 메서드 ========================================
   Future<bool> joinRoom(
-    String roomCode,
+    String rawRoomCode,
     String nickname, {
     String accentColor = '#6557D2',
   }) async {
     // Room code 받기
-    final code = roomCode.trim().toUpperCase();
+    final code = rawRoomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
     // joinRoom 실행
@@ -209,28 +227,21 @@ class RoomProvider extends ChangeNotifier {
   }
 
   /// 게임 중 퇴장: 서버가 다음 턴 또는 인원 부족 종료까지 결정합니다.
-  Future<bool> leaveLiarsPokerGame() async {
+  Future<bool> leaveGame(String gameId) async {
     final code = roomCode;
-    if (code == null) return false;
+    final game = GameRegistry.find(gameId);
+    if (code == null || game == null) return false;
 
     final result = await _runCommand<bool>(() async {
-      await _service.leaveLiarsPokerGame(code);
+      await _service.leaveGame(
+        cloudFunctionName: game.leaveFunctionName,
+        roomCode: code,
+      );
       return true;
     });
     if (result == true) {
       clearRoom();
     }
-    return result ?? false;
-  }
-
-  Future<bool> leaveFinalCallGame() async {
-    final code = roomCode;
-    if (code == null) return false;
-    final result = await _runCommand<bool>(() async {
-      await _service.leaveFinalCallGame(code);
-      return true;
-    });
-    if (result == true) clearRoom();
     return result ?? false;
   }
 
