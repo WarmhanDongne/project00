@@ -16,15 +16,15 @@ class YutnoriQueryService {
     return teamVictoryPieces.every((p) => p.currentNodeId == YutBoardMap.outNodeId);
   }
 
-  /// 특정 말이 윷 결과에 따라 도달할 최종 노드 ID 계산
-  /// 이동 불가(예: 대기실에서 백도)인 경우 null 반환
-  static int? getDestinationNodeId(PieceModel piece, YutResult result) {
+  /// 특정 말이 윷 결과에 따라 도달할 최종 노드 ID 목록 계산 (다중 경로 지원)
+  /// 이동 불가(예: 대기실에서 백도)인 경우 빈 리스트 반환
+  static List<int> getDestinationNodeIds(PieceModel piece, YutResult result) {
     int? current = piece.currentNodeId;
 
     // 대기실에 있는 경우
     if (current == null) {
       if (result == YutResult.backDo) {
-        return null; // 대기실에서는 뒷도 사용 불가
+        return []; // 대기실에서는 뒷도 사용 불가
       }
       current = 0; // 시작점 진입
       return _moveForward(current, result.steps - 1); 
@@ -32,31 +32,45 @@ class YutnoriQueryService {
 
     // 윷판 위에 있는 경우
     if (result == YutResult.backDo) {
-      return _moveBackward(current);
+      int backwardDest = _moveBackward(current);
+      return [backwardDest];
     } else {
       return _moveForward(current, result.steps);
     }
   }
 
-  // 앞방향으로 steps 칸 만큼 이동
-  static int _moveForward(int startNodeId, int steps) {
-    int currentId = startNodeId;
+  // 앞방향으로 steps 칸 만큼 이동하여 가능한 도착지 리스트 반환
+  static List<int> _moveForward(int startNodeId, int steps) {
+    // 이동 경로 탐색을 위한 BFS 큐
+    List<int> currentNodes = [startNodeId];
     
     for (int i = 0; i < steps; i++) {
-      if (currentId == YutBoardMap.outNodeId) break;
-
-      final node = YutBoardMap.nodes[currentId]!;
+      List<int> nextNodes = [];
       
-      // 방금 출발한 칸이 모서리(교차로)인 경우 지름길로 진입
-      if (i == 0 && node.shortcutNodeId != null) {
-        currentId = node.shortcutNodeId!;
-      } else {
-        // 중앙(방) 특수 처리 로직 (원래는 진입 경로에 따라 달라져야 함)
-        // 여기서는 MVP 버전으로 기본 직진 경로로 고정 처리 (22 -> 23)
-        currentId = node.nextNodeId;
+      for (int currentId in currentNodes) {
+        if (currentId == YutBoardMap.outNodeId) {
+          if (!nextNodes.contains(YutBoardMap.outNodeId)) {
+            nextNodes.add(YutBoardMap.outNodeId);
+          }
+          continue;
+        }
+
+        final node = YutBoardMap.nodes[currentId]!;
+        
+        // 방금 출발한 칸이 모서리(교차로)인 경우 지름길과 직진길 모두 탐색 (첫 스텝에서만 분기)
+        if (i == 0 && node.shortcutNodeId != null) {
+          nextNodes.add(node.shortcutNodeId!);
+          nextNodes.add(node.nextNodeId);
+        } else {
+          // 모서리가 아니거나, 이미 이동 중이라면 직진
+          nextNodes.add(node.nextNodeId);
+        }
       }
+      currentNodes = nextNodes;
     }
-    return currentId;
+    
+    // 중복 제거 후 반환
+    return currentNodes.toSet().toList();
   }
 
   // 뒤방향(백도)으로 1칸 이동

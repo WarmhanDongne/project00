@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/board_node_model.dart';
+import '../models/piece_model.dart';
+import '../models/yutnori_state.dart';
 import '../providers/yutnori_provider.dart';
+import '../services/yutnori_query_service.dart';
 import 'board_painter.dart';
 import 'piece_widget.dart';
 
-class BoardWidget extends ConsumerWidget {
+class BoardWidget extends ConsumerStatefulWidget {
   const BoardWidget({super.key});
+
+  @override
+  ConsumerState<BoardWidget> createState() => _BoardWidgetState();
+}
+
+class _BoardWidgetState extends ConsumerState<BoardWidget> {
+  // 현재 선택된 말의 ID
+  String? _selectedPieceId;
 
   // 0.0 ~ 1.0 비율로 29개 노드의 좌표 정의
   static const Map<int, Offset> _nodeOffsets = {
@@ -28,65 +39,124 @@ class BoardWidget extends ConsumerWidget {
     25: Offset(1/6, 1/6), 26: Offset(2/6, 2/6), 
     // 22번은 공유됨
     27: Offset(4/6, 4/6), 28: Offset(5/6, 5/6),
+    
+    // 완주(OUT) 가상 노드 (시작점 0번의 우측 바깥쪽)
+    YutBoardMap.outNodeId: Offset(1.15, 1.0),
   };
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // 게임 상태 구독
+  Widget build(BuildContext context) {
     final state = ref.watch(yutnoriProvider);
+    final currentTeamId = state.currentTurnTeamId;
     
+    // 선택된 말이 현재 갈 수 있는 도착지 계산
+    Map<int, YutResult> highlightedNodes = {};
+    if (_selectedPieceId != null && state.availableMoves.isNotEmpty) {
+      final pieceIndex = state.pieces.indexWhere((p) => p.id == _selectedPieceId);
+      if (pieceIndex != -1) {
+        final piece = state.pieces[pieceIndex];
+        // 내 팀의 말일 경우에만 하이라이트 계산
+        if (piece.teamId == currentTeamId) {
+          for (var result in state.availableMoves) {
+            final destNodeIds = YutnoriQueryService.getDestinationNodeIds(piece, result);
+            for (var destNodeId in destNodeIds) {
+              highlightedNodes[destNodeId] = result;
+            }
+          }
+        }
+      }
+    }
+
     return AspectRatio(
-      aspectRatio: 1.0, // 윷판은 항상 정사각형
+      aspectRatio: 1.15, // 가로 여백을 주어 OUT 노드 터치(hit test)가 가능하도록 함
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final size = constraints.maxWidth;
-          // 위젯이 위치할 때 중심점이 맞춰지도록 패딩/오프셋 계산용 반지름
+          final width = constraints.maxWidth;
+          final size = constraints.maxHeight; // 윷판은 정사각형을 유지하므로 height 기준
           final nodeRadius = size * 0.035; 
           final pieceRadius = size * 0.05;
+          final boardSize = size - pieceRadius * 4; // 상하좌우 여백(pieceRadius*2)을 뺀 실제 보드 크기
 
-          return Padding(
-            // 윷판 외곽선이 잘리지 않도록 화면 가장자리에 여백 확보
-            padding: EdgeInsets.all(pieceRadius),
+          final paddingOffset = pieceRadius * 2;
+
+          return SizedBox(
+            width: width,
+            height: size,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 1. 바닥선 그리기 (CustomPaint)
-                SizedBox.expand(
-                  child: CustomPaint(
-                    painter: BoardPainter(),
-                  ),
+                // 1. 바닥선 그리기
+                Positioned(
+                  left: paddingOffset,
+                  top: paddingOffset,
+                  width: boardSize,
+                  height: boardSize,
+                  child: CustomPaint(painter: BoardPainter()),
                 ),
 
-                // 2. 29개의 노드(빈 칸) 그리기
-                ...YutBoardMap.nodes.keys.map((id) {
+                // 2. 모든 노드(빈 칸 + OUT 노드) + 하이라이트 렌더링
+                ...(YutBoardMap.nodes.keys.toList()..add(YutBoardMap.outNodeId)).map((id) {
                   final offset = _nodeOffsets[id]!;
-                  final x = offset.dx * (size - pieceRadius * 2);
-                  final y = offset.dy * (size - pieceRadius * 2);
+                  final x = paddingOffset + offset.dx * boardSize;
+                  final y = paddingOffset + offset.dy * boardSize;
                   
-                  // 모서리(0, 5, 10, 15)와 중앙(22)은 크고 짙게 표현
                   final isMajorNode = [0, 5, 10, 15, 22].contains(id);
+                  final isOutNode = id == YutBoardMap.outNodeId;
+                  final isHighlighted = highlightedNodes.containsKey(id);
+                  
+                  // OUT 노드는 크기를 3배로
+                  final currentRadius = isOutNode ? nodeRadius * 2.5 : nodeRadius;
 
                   return Positioned(
-                    left: x - nodeRadius,
-                    top: y - nodeRadius,
-                    child: Container(
-                      width: nodeRadius * 2,
-                      height: nodeRadius * 2,
-                      decoration: BoxDecoration(
-                        color: isMajorNode ? Colors.grey.shade800 : Colors.grey.shade300,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isMajorNode ? Colors.black : Colors.grey.shade500, 
-                          width: 2.0
+                    left: x - currentRadius,
+                    top: y - currentRadius,
+                    child: GestureDetector(
+                      onTap: () {
+                        // 하이라이트된 칸을 누르면 이동 처리 (다중 도착지 중 선택한 곳 전달)
+                        if (isHighlighted && _selectedPieceId != null) {
+                          ref.read(yutnoriProvider.notifier).movePiece(_selectedPieceId!, highlightedNodes[id]!, id);
+                          setState(() { _selectedPieceId = null; });
+                        }
+                      },
+                      child: Container(
+                        width: currentRadius * 2,
+                        height: currentRadius * 2,
+                        decoration: BoxDecoration(
+                          color: isHighlighted 
+                              ? Colors.amber.shade300 
+                              : (isOutNode ? Colors.transparent : (isMajorNode ? Colors.grey.shade800 : Colors.grey.shade300)),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isHighlighted ? Colors.redAccent : (isOutNode ? Colors.grey.shade400 : (isMajorNode ? Colors.black : Colors.grey.shade500)), 
+                            width: isHighlighted ? 3.0 : 2.0
+                          ),
+                          boxShadow: isHighlighted 
+                              ? [const BoxShadow(color: Colors.amber, blurRadius: 10, spreadRadius: 2)] 
+                              : null,
                         ),
+                        child: isHighlighted || isOutNode
+                            ? Center(
+                                child: Text(
+                                  isOutNode ? 'OUT' : _getYutName(highlightedNodes[id]!),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900, 
+                                    fontSize: isOutNode ? 14 : 11, 
+                                    color: isOutNode && !isHighlighted ? Colors.grey.shade600 : Colors.black
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
                     ),
                   );
                 }),
 
-                // 3. 윷판 위에 올라와 있는 말(Piece)들 그리기
-                // 위치가 같은 말들을 묶어서(그룹핑) 배지(badge) 형태의 UI로 렌더링
-                ..._buildPiecesOnBoard(state.pieces, size - pieceRadius * 2, pieceRadius),
+                // 3. 윷판 위에 올라와 있는 말들 렌더링
+                ..._buildPiecesOnBoard(state.pieces, boardSize, pieceRadius, paddingOffset, currentTeamId, highlightedNodes),
+
+                // 4. 대기실 영역 렌더링 (보드 바깥 모서리)
+                ..._buildWaitingRoom(state.pieces, boardSize, pieceRadius, paddingOffset, currentTeamId, 'A'),
+                ..._buildWaitingRoom(state.pieces, boardSize, pieceRadius, paddingOffset, currentTeamId, 'B'),
               ],
             ),
           );
@@ -95,13 +165,20 @@ class BoardWidget extends ConsumerWidget {
     );
   }
 
-  /// 윷판 위의 말들을 렌더링하고 위치가 겹치는 경우 badgeCount로 합쳐주는 헬퍼 메서드
-  List<Widget> _buildPiecesOnBoard(List pieces, double boardSize, double pieceRadius) {
-    // 윷판 위에 있는 말만 필터링 (currentNodeId != null && != 99)
+  String _getYutName(YutResult result) {
+    switch (result) {
+      case YutResult.backDo: return '도';
+      case YutResult.gae: return '개';
+      case YutResult.geol: return '걸';
+      case YutResult.yut: return '윷';
+      case YutResult.mo: return '모';
+    }
+  }
+
+  List<Widget> _buildPiecesOnBoard(List<PieceModel> pieces, double boardSize, double pieceRadius, double paddingOffset, String currentTeamId, Map<int, YutResult> highlightedNodes) {
     final activePieces = pieces.where((p) => p.currentNodeId != null && p.currentNodeId != YutBoardMap.outNodeId).toList();
+    final groupedPieces = <String, List<PieceModel>>{};
     
-    // 위치(currentNodeId)와 팀(teamId)을 기준으로 그룹핑
-    final groupedPieces = <String, List>{};
     for (var piece in activePieces) {
       final key = '${piece.currentNodeId}_${piece.teamId}';
       if (!groupedPieces.containsKey(key)) groupedPieces[key] = [];
@@ -111,26 +188,114 @@ class BoardWidget extends ConsumerWidget {
     final widgets = <Widget>[];
 
     for (var group in groupedPieces.values) {
-      final representativePiece = group.first; // 그룹의 대표 말 하나만 그림
-      final badgeCount = group.length - 1; // 업힌 말의 개수
+      final representativePiece = group.first; 
+      final badgeCount = group.length - 1; 
       
       final nodeId = representativePiece.currentNodeId!;
       final offset = _nodeOffsets[nodeId]!;
       
-      final x = offset.dx * boardSize;
-      final y = offset.dy * boardSize;
+      final x = paddingOffset + offset.dx * boardSize;
+      final y = paddingOffset + offset.dy * boardSize;
 
-      // 만약 서로 다른 팀의 말이 같은 칸에 있다면? (규칙상 발생 불가, 잡기 처리됨)
-      // 그래도 시각적으로 겹치지 않게 하기 위해 약간의 오프셋을 줄 수 있으나 현재는 무시
+      final isSelected = _selectedPieceId == representativePiece.id;
+      final isSelectable = representativePiece.teamId == currentTeamId;
+      final isHighlightedNode = highlightedNodes.containsKey(nodeId);
 
       widgets.add(
         Positioned(
           left: x - pieceRadius,
           top: y - pieceRadius,
-          child: PieceWidget(
-            piece: representativePiece,
-            size: pieceRadius * 2,
-            badgeCount: badgeCount, // 인터뷰에서 결정한 대로 '+N' 배지로 표시
+          child: GestureDetector(
+            onTap: () {
+              if (isHighlightedNode && _selectedPieceId != null) {
+                // 말이 있는 칸이 하이라이트된 목적지라면, 말 선택 대신 이동 처리 수행 (잡기/업기)
+                ref.read(yutnoriProvider.notifier).movePiece(_selectedPieceId!, highlightedNodes[nodeId]!, nodeId);
+                setState(() { _selectedPieceId = null; });
+              } else if (isSelectable) {
+                // 내 턴의 내 말이라면 평범하게 선택/해제 처리
+                setState(() {
+                  _selectedPieceId = isSelected ? null : representativePiece.id;
+                });
+              }
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                if (isSelected)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.amberAccent, blurRadius: 12, spreadRadius: 6)],
+                      ),
+                    ),
+                  ),
+                PieceWidget(
+                  piece: representativePiece,
+                  size: pieceRadius * 2,
+                  badgeCount: badgeCount,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  /// 대기실의 말들을 보드 바깥에 그립니다.
+  List<Widget> _buildWaitingRoom(List<PieceModel> pieces, double boardSize, double pieceRadius, double paddingOffset, String currentTeamId, String targetTeamId) {
+    // 대기실에 있는 해당 팀의 말들
+    final waitingPieces = pieces.where((p) => p.teamId == targetTeamId && p.currentNodeId == null).toList();
+    if (waitingPieces.isEmpty) return [];
+
+    // 팀 A는 좌측 하단 바깥쪽, 팀 B는 우측 상단 바깥쪽으로 배치
+    final isTeamA = targetTeamId == 'A';
+    final baseX = paddingOffset + (isTeamA ? -pieceRadius * 1.5 : boardSize + pieceRadius * 0.5);
+    final baseY = paddingOffset + (isTeamA ? boardSize + pieceRadius * 1.5 : -pieceRadius * 1.5);
+
+    final widgets = <Widget>[];
+    
+    // 승리말과 지원말을 시각적으로 구분해서 가로로 나열
+    for (int i = 0; i < waitingPieces.length; i++) {
+      final piece = waitingPieces[i];
+      final isSelected = _selectedPieceId == piece.id;
+      final isSelectable = piece.teamId == currentTeamId;
+
+      widgets.add(
+        Positioned(
+          left: baseX + (i * pieceRadius * 1.5), // 가로로 조금씩 띄워서 배치
+          top: baseY,
+          child: GestureDetector(
+            onTap: () {
+              if (isSelectable) {
+                setState(() {
+                  _selectedPieceId = isSelected ? null : piece.id;
+                });
+              }
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                if (isSelected)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.amberAccent, blurRadius: 12, spreadRadius: 6)],
+                      ),
+                    ),
+                  ),
+                PieceWidget(
+                  piece: piece,
+                  size: pieceRadius * 1.5, // 대기실 말은 약간 작게
+                ),
+              ],
+            ),
           ),
         ),
       );

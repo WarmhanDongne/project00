@@ -22,15 +22,19 @@ void main() {
 
     test('대기실의 말은 백도를 사용할 수 없다 (이동 불가)', () {
       final state = YutnoriCommandService.throwYut(initialState, YutResult.backDo);
-      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.backDo);
       
-      expect(newState.pieces[0].currentNodeId, isNull); // 변화 없음
+      // throwYut 내부 로직에 의해 유효한 이동이 없으면 턴이 바로 넘어감.
+      // 따라서 movePiece를 호출하지 않거나, 호출할 수 없는 상황임.
+      // 테스트 목적상 movePiece를 호출한다고 가정할 때, UI는 빈 도착지를 전달받게 됨.
+      final destIds = YutnoriQueryService.getDestinationNodeIds(initialState.pieces[0], YutResult.backDo);
+      expect(destIds, isEmpty);
     });
 
     test('대기실에서 "걸(3칸)"이 나오면 2번 노드로 이동해야 한다', () {
       // 0(시작점)부터 시작해서 걸(3)이면 0 -> 1 -> 2
       final state = YutnoriCommandService.throwYut(initialState, YutResult.geol);
-      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.geol);
+      final destIds = YutnoriQueryService.getDestinationNodeIds(state.pieces[0], YutResult.geol);
+      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.geol, destIds.first);
       
       expect(newState.pieces[0].currentNodeId, 2);
     });
@@ -46,7 +50,8 @@ void main() {
 
       // A1이 걸(3)을 던져 2번 노드로 이동
       state = YutnoriCommandService.throwYut(state, YutResult.geol);
-      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.geol);
+      final destIds = YutnoriQueryService.getDestinationNodeIds(state.pieces[0], YutResult.geol);
+      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.geol, destIds.first);
       
       // A1은 2번 칸에, B1은 잡혀서 대기실(null)로
       expect(newState.pieces[0].currentNodeId, 2);
@@ -66,7 +71,8 @@ void main() {
       );
 
       state = YutnoriCommandService.throwYut(state, YutResult.backDo);
-      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.backDo);
+      final destIds = YutnoriQueryService.getDestinationNodeIds(state.pieces[0], YutResult.backDo);
+      final newState = YutnoriCommandService.movePiece(state, 'A1', YutResult.backDo, destIds.first);
       
       // 백도로 0번 칸을 뒤로 넘어갔으므로 즉시 완주 처리 (99)
       expect(newState.pieces[0].currentNodeId, YutBoardMap.outNodeId);

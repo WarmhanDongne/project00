@@ -34,14 +34,15 @@ class YutnoriNotifier extends Notifier<YutnoriState> {
 
   /// 윷 던지기 액션 (View에서 호출)
   void throwYut(YutResult result) {
-    if (state.phase != GamePhase.throwing) return;
+    if (state.remainingThrows <= 0) return;
+    
     state = YutnoriCommandService.throwYut(state, result);
   }
 
   /// 말 이동 액션 (View에서 호출)
-  void movePiece(String pieceId, YutResult result) {
-    if (state.phase != GamePhase.moving) return;
-    state = YutnoriCommandService.movePiece(state, pieceId, result);
+  void movePiece(String pieceId, YutResult result, int destNodeId) {
+    if (state.availableMoves.isEmpty) return;
+    state = YutnoriCommandService.movePiece(state, pieceId, result, destNodeId);
   }
 }
 

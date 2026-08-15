@@ -46,6 +46,9 @@ class YutnoriState {
   // 승리한 팀 ID (게임이 끝나지 않았으면 null)
   final String? winnerTeamId;
 
+  // 이번 턴에 남은 윷 던지기 횟수 (기본 1회, 윷/모/잡기 시 증가)
+  final int remainingThrows;
+
   const YutnoriState({
     this.phase = GamePhase.setup,
     this.currentTurnTeamId = 'A',
@@ -53,6 +56,7 @@ class YutnoriState {
     this.pieces = const [],
     this.players = const [],
     this.winnerTeamId,
+    this.remainingThrows = 1,
   });
 
   YutnoriState copyWith({
@@ -62,6 +66,7 @@ class YutnoriState {
     List<PieceModel>? pieces,
     List<PlayerModel>? players,
     String? winnerTeamId,
+    int? remainingThrows,
   }) {
     return YutnoriState(
       phase: phase ?? this.phase,
@@ -70,6 +75,7 @@ class YutnoriState {
       pieces: pieces ?? this.pieces,
       players: players ?? this.players,
       winnerTeamId: winnerTeamId ?? this.winnerTeamId,
+      remainingThrows: remainingThrows ?? this.remainingThrows,
     );
   }
 }
