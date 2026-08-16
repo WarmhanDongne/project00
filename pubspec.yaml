@@ -96,6 +96,7 @@ flutter:
     - assets/games/liars_poker/images/button/
     - assets/games/liars_poker/images/cards/
     - assets/games/liars_poker/images/icons/
+    - assets/games/liars_poker/images/layout/
     - assets/games/liars_poker/images/table/
     - assets/games/liars_poker/images/modal/
     - assets/games/liars_poker/images/other/
@@ -108,6 +109,7 @@ flutter:
     - assets/games/final_call/images/button/
     - assets/games/final_call/images/cards/
     - assets/games/final_call/images/icons/
+    - assets/games/final_call/images/layout/
     - assets/games/final_call/images/modal/
     - assets/games/final_call/images/other/
     - assets/sounds/

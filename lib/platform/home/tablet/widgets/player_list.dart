@@ -23,12 +23,24 @@ class PlayerListView extends StatelessWidget {
         return ListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            radius: 16,
-            backgroundImage: hasProfileImage
-                ? NetworkImage(player.profileImageUrl)
-                : null,
-            child: hasProfileImage ? null : const Icon(Icons.person, size: 18),
+          //=======================연결 상태==============================
+          // 서버와 연결이 살아 있으면 초록, 끊기면 빨강으로 표시해 어느
+          // 플레이어 때문에 진행이 멈췄는지 바로 알 수 있게 합니다.
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ConnectionDot(isConnected: player.isConnected),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 16,
+                backgroundImage: hasProfileImage
+                    ? NetworkImage(player.profileImageUrl)
+                    : null,
+                child: hasProfileImage
+                    ? null
+                    : const Icon(Icons.person, size: 18),
+              ),
+            ],
           ),
           title: Text(
             player.nickname,
@@ -49,6 +61,34 @@ class PlayerListView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 플레이어의 서버 연결 상태를 나타내는 표시등입니다.
+class _ConnectionDot extends StatelessWidget {
+  const _ConnectionDot({required this.isConnected});
+
+  final bool isConnected;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isConnected
+        ? const Color(0xFF34C759)
+        : const Color(0xFFFF3B30);
+    return Semantics(
+      label: isConnected ? '연결됨' : '연결 끊김',
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 4),
+          ],
+        ),
+      ),
     );
   }
 }

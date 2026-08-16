@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 
 //=======================Liar's Poker 휴대폰 세션 식별자==============================
@@ -32,13 +32,13 @@ class LiarsPokerPhoneSessionArgs {
 //=======================Liar's Poker 휴대폰 세션 Provider==============================
 final liarsPokerPhoneSessionProvider = NotifierProvider.autoDispose
     .family<
-      PhoneGameController,
+      LiarsPokerPhoneController,
       LiarsPokerPhoneState,
       LiarsPokerPhoneSessionArgs
     >((args) {
-      return PhoneGameController(
+      return LiarsPokerPhoneController(
         roomCode: args.roomCode,
         uid: args.uid,
-        gameService: args.service,
+        service: args.service,
       );
     });

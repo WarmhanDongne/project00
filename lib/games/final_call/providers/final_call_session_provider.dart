@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
-import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 
 //=======================Final Call 세션 식별자==============================
@@ -39,13 +39,13 @@ class FinalCallSessionArgs {
 /// 상태는 매 갱신마다 새로운 [FinalCallGameState]로 발행됩니다. 화면이
 /// 사라지면 autoDispose가 공개 상태와 개인 손패 구독을 함께 정리합니다.
 final finalCallSessionProvider = NotifierProvider.autoDispose
-    .family<PhoneGameController, FinalCallGameState, FinalCallSessionArgs>((
+    .family<FinalCallController, FinalCallGameState, FinalCallSessionArgs>((
       args,
     ) {
-      return PhoneGameController(
+      return FinalCallController(
         roomCode: args.roomCode,
         uid: args.uid,
-        gameService: args.service,
+        service: args.service,
         watchPrivateHand: args.watchPrivateHand,
       );
     });

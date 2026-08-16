@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
@@ -69,10 +72,22 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
+    final templateGame = GameRegistry.find(game.id);
+    if (templateGame == null) {
+      _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      return;
+    }
+
     final selected = await roomProvider.selectGame(game.id);
     if (!context.mounted) return;
     if (!selected) {
       _showMessage(context, roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.');
+      return;
+    }
+
+    final roomCode = roomProvider.roomCode;
+    if (roomCode == null) {
+      _showMessage(context, '방 정보를 확인할 수 없습니다.');
       return;
     }
 
@@ -82,44 +97,48 @@ class GamePreviewDialog extends StatelessWidget {
       MaterialPageRoute(
         builder: (layoutContext) => PlayerLayoutEditor(
           initialLayout: initialLayout,
-          onComplete: (completedLayout) async {
+          tableColor: templateGame.tableColor,
+          tableBackgroundImage: templateGame.tableBackgroundImage,
+          tableImage: templateGame.layoutTableImage,
+          chairImage: templateGame.layoutChairImage,
+          onPrepare: (completedLayout) async {
             //자리 realtime database에 저장
             final saved = await roomProvider.savePlayerSeatIndexes({
               for (final player in completedLayout.players)
                 player.uid: player.seatIndex,
             });
-            if (!layoutContext.mounted) return;
+            if (!layoutContext.mounted) return false;
             if (!saved) {
               _showMessage(
                 layoutContext,
                 roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
               );
-              return;
-            }
-
-            final roomCode = roomProvider.roomCode;
-            if (roomCode == null) {
-              _showMessage(layoutContext, '방 정보를 확인할 수 없습니다.');
-              return;
-            }
-
-            final templateGame = GameRegistry.find(game.id);
-            if (templateGame == null) {
-              _showMessage(layoutContext, '게임 정보를 확인할 수 없습니다.');
-              return;
+              return false;
             }
 
             try {
               await templateGame.startGame(roomCode);
             } catch (error) {
-              if (!layoutContext.mounted) return;
+              if (!layoutContext.mounted) return false;
               _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
-              return;
+              return false;
             }
+            return layoutContext.mounted;
+          },
+          onComplete: (completedLayout) {
             if (!layoutContext.mounted) return;
+            //=======================태블릿 게임 방향 불변 조건==============================
+            // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
+            unawaited(AppOrientation.lockTabletGameLandscape());
+            // 자리 배치 연출이 화면을 게임 배경색으로 가득 채운 채로 끝나므로,
+            // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
+            // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
+            // 바꿔서 하나의 연출처럼 이어지게 합니다.
             Navigator.of(layoutContext).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => templateGame.buildTabletScreen(
+              PageRouteBuilder<void>(
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+                pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
                   playerLayout: completedLayout,
                   provider: roomProvider,
                   roomCode: roomCode,

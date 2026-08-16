@@ -30,7 +30,7 @@ export const endLiarsPokerGame = onCall<EndGameData>(
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       assertController(room, uid);
-      const game = requireGame(room);
+      const game = requireGame(room, {allowInterruption: true});
 
       if (game.public.status === "finished") {
         // 결과 화면에서 '나가기'를 누른 경우 휴대폰도 결과 다이얼로그를
@@ -43,6 +43,8 @@ export const endLiarsPokerGame = onCall<EndGameData>(
           game.public.updatedAt = now;
           game.private = {};
           delete game.server.pendingHands;
+          delete game.server.interruption;
+          delete game.public.interruption;
         }
         response = {
           success: true,
@@ -66,6 +68,8 @@ export const endLiarsPokerGame = onCall<EndGameData>(
       game.private = {};
       game.server.lastPlayCards = null;
       delete game.server.pendingHands;
+      delete game.server.interruption;
+      delete game.public.interruption;
 
       response = {
         success: true,

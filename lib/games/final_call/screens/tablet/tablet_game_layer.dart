@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/board_element_entrance.dart';
 import 'package:project00/games/shared/animations/card_deal.dart';
+import 'package:project00/games/shared/animations/one_shot_timeline.dart';
 import 'package:project00/games/final_call/animations/tablet_center_card_reveal.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
-import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/final_call/controllers/final_call_controller.dart';
+import 'package:project00/games/final_call/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
@@ -15,60 +18,77 @@ class FinalCallTabletGameLayer extends StatelessWidget {
   const FinalCallTabletGameLayer({
     super.key,
     required this.controller,
+    required this.stage,
     required this.onRoundRevealCompleted,
   });
 
-  final PhoneGameController controller;
+  final FinalCallController controller;
+  final FinalCallTabletStage stage;
   final VoidCallback onRoundRevealCompleted;
 
   @override
   Widget build(BuildContext context) {
-    if (controller.phase == 'dealing') {
-      final players =
-          controller.players.values
-              .where((player) => player.status == 'alive')
-              .toList()
-            ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
-      if (players.isEmpty) return const SizedBox.shrink();
+    return switch (stage) {
+      FinalCallTabletStage.connecting ||
+      FinalCallTabletStage.result ||
+      FinalCallTabletStage.closing => const SizedBox.shrink(),
+      FinalCallTabletStage.dealing => _buildDealing(context),
+      FinalCallTabletStage.playing => _buildPlayingTable(),
+      FinalCallTabletStage.roundResult => _buildRoundResult(),
+    };
+  }
 
-      //=======================태블릿 카드 배분==============================
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final allSeatPositions = normalizedPlayerSlotTopLeftPositions(
-            playerCount: controller.players.length,
-            boardSize: constraints.biggest,
-          );
-          return CardDealAnimation(
-            key: ValueKey('final-call-deal-${controller.round}'),
-            playerCount: players.length,
-            playerPositions: players
-                .map((player) => allSeatPositions[player.seatIndex])
-                .toList(growable: false),
-            cardsPerPlayer: 4,
-            cardAsset: Assets.games.finalCall.images.cards.cardBack,
-            cardWidth: 146,
-            duration: const Duration(milliseconds: 2800),
-            onCompleted: () => controller.completeDealing(),
-          );
-        },
-      );
-    }
+  Widget _buildDealing(BuildContext context) {
+    final players =
+        controller.players.values
+            .where((player) => player.status == 'alive')
+            .toList()
+          ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
+    if (players.isEmpty) return const SizedBox.shrink();
 
+    //=======================태블릿 카드 배분==============================
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final allSeatPositions = normalizedPlayerSlotTopLeftPositions(
+          playerCount: controller.players.length,
+          boardSize: constraints.biggest,
+        );
+        return CardDealAnimation(
+          key: ValueKey('final-call-deal-${controller.round}'),
+          playerCount: players.length,
+          playerPositions: players
+              .map((player) => allSeatPositions[player.seatIndex])
+              .toList(growable: false),
+          cardsPerPlayer: 4,
+          cardAsset: Assets.games.finalCall.images.cards.cardBack,
+          cardWidth: 146,
+          duration: const Duration(milliseconds: 2800),
+          onCompleted: () => controller.completeDealing(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlayingTable() {
     final players = controller.players.values.toList(growable: false)
       ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
-    final result = controller.roundResult;
-    if (result == null) {
-      final visibleDiscard =
-          controller.discardEvent?.previousCard ?? controller.discardCard;
-      final hideDiscardWhileTaken =
-          controller.pendingDrawUid != null &&
-          controller.pendingDrawSource == 'discard';
-      final hideDiscardDuringThrow =
-          controller.discardEvent?.drawSource == 'discard';
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Center(
+    final visibleDiscard =
+        controller.discardEvent?.previousCard ?? controller.discardCard;
+    final hideDiscardWhileTaken =
+        controller.pendingDrawUid != null &&
+        controller.pendingDrawSource == 'discard';
+    final hideDiscardDuringThrow =
+        controller.discardEvent?.drawSource == 'discard';
+    //=======================보드 요소 등장==============================
+    // 카드 분배가 끝난 뒤 중앙 카드와 생명(하트)이 Liar's Poker의 잔여 카드
+    // 등장 연출과 같은 곡선으로 바닥에서 솟아오릅니다. 라운드가 바뀔 때만
+    // 다시 재생되도록 라운드를 key로 씁니다.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: BoardElementEntrance(
+            key: ValueKey('center-card-entrance-${controller.round}'),
             child: FinalCallCenterCardReveal(
               key: ValueKey('center-card-${controller.round}'),
               card: visibleDiscard,
@@ -77,11 +97,18 @@ class FinalCallTabletGameLayer extends StatelessWidget {
                   !hideDiscardWhileTaken && !hideDiscardDuringThrow,
             ),
           ),
-          _FinalCallLivesLayer(players: players),
-        ],
-      );
-    }
+        ),
+        BoardElementEntrance(
+          key: ValueKey('lives-entrance-${controller.round}'),
+          child: _FinalCallLivesLayer(players: players),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildRoundResult() {
+    final result = controller.roundResult;
+    if (result == null) return const SizedBox.shrink();
     return _RevealedTable(
       key: ValueKey('round-result-${controller.round}'),
       controller: controller,
@@ -100,7 +127,7 @@ class _RevealedTable extends StatefulWidget {
     required this.onCompleted,
   });
 
-  final PhoneGameController controller;
+  final FinalCallController controller;
   final FinalCallRoundResult result;
   final VoidCallback onCompleted;
 
@@ -108,8 +135,7 @@ class _RevealedTable extends StatefulWidget {
   State<_RevealedTable> createState() => _RevealedTableState();
 }
 
-class _RevealedTableState extends State<_RevealedTable>
-    with SingleTickerProviderStateMixin {
+class _RevealedTableState extends State<_RevealedTable> {
   static const int _initialHoldMs = 900;
   static const int _focusMs = 520;
   static const int _cardStepMs = 900;
@@ -121,7 +147,6 @@ class _RevealedTableState extends State<_RevealedTable>
   late final List<int> _playerStarts;
   late final int _heartStart;
   late final int _totalDurationMs;
-  late final AnimationController _controller;
 
   @override
   void initState() {
@@ -143,26 +168,6 @@ class _RevealedTableState extends State<_RevealedTable>
     }
     _heartStart = cursor;
     _totalDurationMs = _heartStart + _heartMs;
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: _totalDurationMs),
-    )..addStatusListener(_handleStatus);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  void _handleStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed) widget.onCompleted();
-  }
-
-  @override
-  void dispose() {
-    _controller
-      ..removeStatusListener(_handleStatus)
-      ..dispose();
-    super.dispose();
   }
 
   @override
@@ -184,10 +189,11 @@ class _RevealedTableState extends State<_RevealedTable>
           playerCount: seatCount,
           boardSize: boardSize,
         );
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            final elapsed = _controller.value * _totalDurationMs;
+        return OneShotTimeline(
+          duration: Duration(milliseconds: _totalDurationMs),
+          onCompleted: widget.onCompleted,
+          builder: (context, progress) {
+            final elapsed = progress * _totalDurationMs;
             final heartProgress = ((elapsed - _heartStart) / _heartMs).clamp(
               0.0,
               1.0,
@@ -195,15 +201,6 @@ class _RevealedTableState extends State<_RevealedTable>
             return Stack(
               fit: StackFit.expand,
               children: [
-                Center(
-                  child: FinalCallCenterCardReveal(
-                    key: ValueKey(
-                      'result-center-card-${widget.controller.round}',
-                    ),
-                    card: widget.controller.discardCard,
-                    cardWidth: 128,
-                  ),
-                ),
                 for (var index = 0; index < _players.length; index++)
                   _buildPositionedHand(
                     player: _players[index],
@@ -211,6 +208,9 @@ class _RevealedTableState extends State<_RevealedTable>
                     boardSize: boardSize,
                     cardWidth: cardWidth,
                     elapsedMs: elapsed - _playerStarts[index],
+                    // 뒷면 카드가 좌석 쪽에서 밀려 나오는 최초 배치 연출은
+                    // 모든 자리가 같은 시점(전체 경과 시간)을 기준으로 합니다.
+                    entryElapsedMs: elapsed,
                     heartProgress: heartProgress,
                   ),
               ],
@@ -227,6 +227,7 @@ class _RevealedTableState extends State<_RevealedTable>
     required Size boardSize,
     required double cardWidth,
     required double elapsedMs,
+    required double entryElapsedMs,
     required double heartProgress,
   }) {
     final cards = widget.result.revealedHands[player.uid] ?? const [];
@@ -241,8 +242,10 @@ class _RevealedTableState extends State<_RevealedTable>
       center: desiredCenter,
       boardSize: boardSize,
     );
-    final rowWidth = cards.length * (cardWidth + 8);
-    final contentHeight = cardWidth * finalCallCardHeightRatio + 110;
+    // 카드 위의 점수 표시(약 58px + 여백)까지 포함해 화면 밖으로 나가지
+    // 않도록 세로 크기를 잡습니다. 카드가 한 장뿐이면 점수 상자가 더 넓습니다.
+    final rowWidth = math.max(86.0, cards.length * (cardWidth + 8));
+    final contentHeight = cardWidth * finalCallCardHeightRatio + 66 + 80;
     final center = _keepRevealedHandInside(
       desiredCenter: desiredCenter,
       boardSize: boardSize,
@@ -262,6 +265,7 @@ class _RevealedTableState extends State<_RevealedTable>
             finalScore: widget.result.scores[player.uid] ?? 0,
             cardWidth: cardWidth,
             elapsedMs: elapsedMs,
+            entryElapsedMs: entryElapsedMs,
             focusMs: _focusMs,
             cardStepMs: _cardStepMs,
             cardFlipMs: _cardFlipMs,
@@ -313,6 +317,7 @@ class _SequencedRevealedHand extends StatelessWidget {
     required this.finalScore,
     required this.cardWidth,
     required this.elapsedMs,
+    required this.entryElapsedMs,
     required this.focusMs,
     required this.cardStepMs,
     required this.cardFlipMs,
@@ -326,6 +331,10 @@ class _SequencedRevealedHand extends StatelessWidget {
   final int finalScore;
   final double cardWidth;
   final double elapsedMs;
+
+  /// 공개 시작부터의 전체 경과 시간입니다. 뒷면 카드가 좌석 쪽에서 밀려
+  /// 나오는 최초 등장에만 씁니다.
+  final double entryElapsedMs;
   final int focusMs;
   final int cardStepMs;
   final int cardFlipMs;
@@ -364,18 +373,25 @@ class _SequencedRevealedHand extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          //=======================점수·제출 카드==============================
+          // 변화하는 합계는 제출 카드 위에 둡니다.
+          _AnimatedScoreCounter(score: score),
+          const SizedBox(height: 8),
           Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               for (var index = 0; index < cards.length; index++)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _buildRevealingCard(cards[index], progresses[index]),
+                  child: _buildRevealingCard(
+                    cards[index],
+                    progresses[index],
+                    index,
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 9),
-          _AnimatedScoreCounter(score: score),
           const SizedBox(height: 12),
           _FinalCallLifeRow(
             player: player,
@@ -387,18 +403,39 @@ class _SequencedRevealedHand extends StatelessWidget {
     );
   }
 
-  Widget _buildRevealingCard(FinalCallCard card, double progress) {
+  Widget _buildRevealingCard(FinalCallCard card, double progress, int index) {
     final showFront = progress >= 0.5;
     final rotationY = showFront ? (progress - 1) * math.pi : progress * math.pi;
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.0015)
-        ..rotateY(rotationY),
-      child: FinalCallCardView(
-        card: card,
-        faceDown: !showFront,
-        width: cardWidth,
+
+    //=======================좌석에서 밀려 나오는 등장==============================
+    // 이 손패는 좌석이 테이블을 바라보도록 회전된 좌표계 안에 있으므로,
+    // 로컬 +Y는 항상 테이블 반대쪽(플레이어 자리 쪽)입니다. 뒷면 카드를 그
+    // 방향에서 한 장씩 밀어 넣어 좌석에서 제출한 느낌을 줍니다.
+    const entryDurationMs = 420.0;
+    const entryStaggerMs = 90.0;
+    final entryProgress = Curves.easeOutCubic.transform(
+      ((entryElapsedMs - index * entryStaggerMs) / entryDurationMs).clamp(
+        0.0,
+        1.0,
+      ),
+    );
+    final entryOffsetY = (1 - entryProgress) * cardWidth * 1.7;
+
+    return Opacity(
+      opacity: entryProgress,
+      child: Transform.translate(
+        offset: Offset(0, entryOffsetY),
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.0015)
+            ..rotateY(rotationY),
+          child: FinalCallCardView(
+            card: card,
+            faceDown: !showFront,
+            width: cardWidth,
+          ),
+        ),
       ),
     );
   }
@@ -432,13 +469,21 @@ class _AnimatedScoreCounter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 멀리서도 읽히도록 숫자와 상자를 크게 잡습니다.
     return Container(
-      constraints: const BoxConstraints(minWidth: 48),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      constraints: const BoxConstraints(minWidth: 86, minHeight: 58),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)],
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x59000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 320),
@@ -451,8 +496,9 @@ class _AnimatedScoreCounter extends StatelessWidget {
           key: ValueKey(score),
           style: TextStyle(
             color: score <= 10 ? Colors.red : const Color(0xFF244EB8),
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
+            fontSize: 40,
+            height: 1,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),

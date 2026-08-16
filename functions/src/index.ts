@@ -78,3 +78,9 @@ export {submitFinalCallHand} from "./final-call/submit-final-hand.js";
 export {
   completeFinalCallResultReveal,
 } from "./final-call/complete-result-reveal.js";
+
+export {
+  expireInterruptedGame,
+  handleGamePlayerConnectionChanged,
+  voteToContinueInterruptedGame,
+} from "./game-interruption/functions.js";

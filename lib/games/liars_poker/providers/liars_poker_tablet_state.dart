@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
-import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
+import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 const Object _notProvided = Object();
 
@@ -9,7 +10,7 @@ const Object _notProvided = Object();
 @immutable
 class LiarsPokerTabletState {
   const LiarsPokerTabletState({
-    required this.status,
+    required this.stage,
     required this.table,
     required this.serverPhase,
     required this.roundNumber,
@@ -19,6 +20,7 @@ class LiarsPokerTabletState {
     required this.isResolvingPenalty,
     required this.isProcessingMenuCommand,
     required this.isInsufficientPlayersEnding,
+    required this.endingMessage,
     required this.turnUid,
     required this.winnerUid,
     required this.winnerPlayer,
@@ -28,11 +30,12 @@ class LiarsPokerTabletState {
     required this.activeAnimationPlayId,
     required this.profileImageUrls,
     required this.remainingCardCounts,
+    required this.interruption,
   });
 
   factory LiarsPokerTabletState.initial(int playerCount) =>
       LiarsPokerTabletState(
-        status: GameStatus.waiting,
+        stage: LiarsPokerTabletStage.waiting,
         table: 'K',
         serverPhase: 'playing',
         roundNumber: 1,
@@ -42,6 +45,7 @@ class LiarsPokerTabletState {
         isResolvingPenalty: false,
         isProcessingMenuCommand: false,
         isInsufficientPlayersEnding: false,
+        endingMessage: null,
         turnUid: null,
         winnerUid: null,
         winnerPlayer: null,
@@ -51,9 +55,10 @@ class LiarsPokerTabletState {
         activeAnimationPlayId: null,
         profileImageUrls: const <String>[],
         remainingCardCounts: List<int>.filled(playerCount, cardsPerPlayer),
+        interruption: null,
       );
 
-  final GameStatus status;
+  final LiarsPokerTabletStage stage;
   final String table;
   final String serverPhase;
   final int roundNumber;
@@ -63,6 +68,7 @@ class LiarsPokerTabletState {
   final bool isResolvingPenalty;
   final bool isProcessingMenuCommand;
   final bool isInsufficientPlayersEnding;
+  final String? endingMessage;
   final String? turnUid;
   final String? winnerUid;
   final PlayerLayoutPlayer? winnerPlayer;
@@ -72,9 +78,10 @@ class LiarsPokerTabletState {
   final String? activeAnimationPlayId;
   final List<String> profileImageUrls;
   final List<int> remainingCardCounts;
+  final GameInterruption? interruption;
 
   LiarsPokerTabletState copyWith({
-    GameStatus? status,
+    LiarsPokerTabletStage? stage,
     String? table,
     String? serverPhase,
     int? roundNumber,
@@ -84,6 +91,7 @@ class LiarsPokerTabletState {
     bool? isResolvingPenalty,
     bool? isProcessingMenuCommand,
     bool? isInsufficientPlayersEnding,
+    Object? endingMessage = _notProvided,
     Object? turnUid = _notProvided,
     Object? winnerUid = _notProvided,
     Object? winnerPlayer = _notProvided,
@@ -93,9 +101,10 @@ class LiarsPokerTabletState {
     Object? activeAnimationPlayId = _notProvided,
     List<String>? profileImageUrls,
     List<int>? remainingCardCounts,
+    Object? interruption = _notProvided,
   }) {
     return LiarsPokerTabletState(
-      status: status ?? this.status,
+      stage: stage ?? this.stage,
       table: table ?? this.table,
       serverPhase: serverPhase ?? this.serverPhase,
       roundNumber: roundNumber ?? this.roundNumber,
@@ -107,6 +116,9 @@ class LiarsPokerTabletState {
           isProcessingMenuCommand ?? this.isProcessingMenuCommand,
       isInsufficientPlayersEnding:
           isInsufficientPlayersEnding ?? this.isInsufficientPlayersEnding,
+      endingMessage: identical(endingMessage, _notProvided)
+          ? this.endingMessage
+          : endingMessage as String?,
       turnUid: identical(turnUid, _notProvided)
           ? this.turnUid
           : turnUid as String?,
@@ -132,6 +144,9 @@ class LiarsPokerTabletState {
       remainingCardCounts: List.unmodifiable(
         remainingCardCounts ?? this.remainingCardCounts,
       ),
+      interruption: identical(interruption, _notProvided)
+          ? this.interruption
+          : interruption as GameInterruption?,
     );
   }
 }

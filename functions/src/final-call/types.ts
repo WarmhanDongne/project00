@@ -1,5 +1,7 @@
 /* eslint-disable max-len */
 
+import {PublicGameInterruption, ServerGameInterruption} from "../game-interruption/types.js";
+
 export const FINAL_CALL_TURN_MS = 30000;
 export const FINAL_CALL_CARDS_PER_PLAYER = 4;
 
@@ -33,7 +35,7 @@ export interface FinalCallRoundResult {
 export interface FinalCallPublicState {
   gameType: "final_call";
   status: "playing" | "finished";
-  finishReason?: "winner" | "manual" | "insufficientPlayers";
+  finishReason?: "winner" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
   phase: "dealing" | "playing" | "callerSubmit" | "finalTurns" |
     "finalSubmit" |
     "roundResult" | "finished";
@@ -55,6 +57,7 @@ export interface FinalCallPublicState {
   startedAt: number;
   updatedAt: number;
   finishedAt?: number;
+  interruption?: PublicGameInterruption;
 }
 
 export interface FinalCallPrivatePlayer {
@@ -75,6 +78,7 @@ export interface FinalCallServerState {
   finalSubmissions?: Record<string, FinalCallCard[]>;
   processedCommands?: Record<string, FinalCallProcessedCommand>;
   roundStarterUid: string;
+  interruption?: ServerGameInterruption;
 }
 
 export interface FinalCallGameState {

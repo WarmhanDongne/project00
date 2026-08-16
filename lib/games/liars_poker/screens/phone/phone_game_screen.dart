@@ -1,40 +1,48 @@
 import 'dart:async';
+import 'package:project00/games/shared/game_feedback.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
-import 'package:project00/games/shared/animations/phone_game_start_animation.dart';
-import 'package:project00/games/shared/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/liars_poker_copy.dart';
+import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
+import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/penalty_status.dart';
-import 'package:project00/games/liars_poker/widgets/phone/phone_exit_modal.dart';
-import 'package:project00/games/liars_poker/widgets/phone/phone_settings_dialog.dart';
-import 'package:project00/games/liars_poker/widgets/phone/phone_timer.dart';
+import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
+import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
+import 'package:project00/games/liars_poker/widgets/phone/turn_timer.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
+import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 기기 방향에 따라 가로·세로 배치를 전환하는 휴대폰 게임 화면입니다.
 ///
 /// Firebase 구독, 손패 공개 상태, 헤더 진입 상태는 방향이 바뀌어도
 /// 하나의 [State]에서 계속 유지합니다.
-class PhoneGameScreen extends StatefulWidget {
-  const PhoneGameScreen({super.key, this.controller, this.onExitRoom});
+class LiarsPokerPhoneGameScreen extends StatefulWidget {
+  const LiarsPokerPhoneGameScreen({
+    super.key,
+    this.controller,
+    this.onExitRoom,
+  });
 
-  final PhoneGameController? controller;
+  final LiarsPokerPhoneController? controller;
   final Future<bool> Function()? onExitRoom;
 
   @override
-  State<PhoneGameScreen> createState() => _PhoneGameScreenState();
+  State<LiarsPokerPhoneGameScreen> createState() =>
+      _LiarsPokerPhoneGameScreenState();
 }
 
-class _PhoneGameScreenState extends State<PhoneGameScreen>
+class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controlsEntryController;
   final PhoneHandCardStackController _handCardStackController =
@@ -79,6 +87,83 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     _controlsEntryController.forward();
   }
 
+  GameAnnouncement? _resolveAnnouncement(
+    LiarsPokerPhoneController? controller, {
+    required bool showGameStart,
+    required bool showStatusMessage,
+    required String? waitingMessage,
+    required bool showPenaltyHandOverlay,
+  }) {
+    if (showGameStart) return const GameAnnouncement.gameStart();
+
+    final verdict = controller?.liarVerdictMessage;
+    if (showPenaltyHandOverlay && verdict != null) {
+      return GameAnnouncement.transient(
+        id: 'verdict-${controller?.lastPlayId}-$verdict',
+        text: verdict,
+        tone: LiarsPokerCopy.verdictTone(verdict),
+        duration: const Duration(milliseconds: 2900),
+        blocksInteraction: true,
+      );
+    }
+
+    if (waitingMessage != null) {
+      return GameAnnouncement.transient(
+        id: 'waiting-${controller?.round}-${controller?.lastPlayId}-$waitingMessage',
+        text: waitingMessage,
+      );
+    }
+
+    final statusMessage = controller?.statusMessage;
+    if (showStatusMessage && statusMessage != null) {
+      return GameAnnouncement.persistent(
+        id: 'status-${controller?.phase}-$statusMessage',
+        text: statusMessage,
+      );
+    }
+
+    return null;
+  }
+
+  GameAnnouncementStyle _announcementStyle(
+    GameAnnouncement? announcement, {
+    required bool isLandscape,
+    double? statusFontSize,
+    bool isMyTurn = false,
+  }) {
+    if (announcement?.kind == GameAnnouncementKind.persistent) {
+      return GameAnnouncementStyle(
+        fontFamily: null,
+        fontSize: statusFontSize ?? (isLandscape ? 15 : 17),
+        gameStartFontSize: 58,
+        fontWeight: isMyTurn ? FontWeight.w700 : FontWeight.w500,
+        height: 1.2,
+        letterSpacing: 0,
+        shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
+      );
+    }
+
+    if (announcement?.tone != GameAnnouncementTone.neutral) {
+      return GameAnnouncementStyle(
+        fontSize: isLandscape ? 34 : 32.sp,
+        gameStartFontSize: 58,
+        height: 1.15,
+        letterSpacing: 0.7,
+        shadows: const [Shadow(color: Colors.black, blurRadius: 14)],
+        beginScale: 0.96,
+        endScale: 0.96,
+      );
+    }
+
+    return GameAnnouncementStyle(
+      fontSize: isLandscape ? 31 : 30.sp,
+      gameStartFontSize: 58,
+      height: 1.18,
+      letterSpacing: 0.5,
+      shadows: const [Shadow(color: Colors.black87, blurRadius: 12)],
+    );
+  }
+
   void _showControlsAfterFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _showGameControls();
@@ -90,7 +175,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     setState(() => _hasCompletedGameStart = true);
   }
 
-  void _precacheInitialHand(PhoneGameController? controller) {
+  void _precacheInitialHand(LiarsPokerPhoneController? controller) {
     if (_hasPrecachedInitialHand || controller == null) return;
     _hasPrecachedInitialHand = true;
 
@@ -108,16 +193,15 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     final shouldExit = await PhoneExitModal.show(context, origin: origin);
     if (!mounted || shouldExit != true) return;
 
+    // 퇴장에 성공하면 화면 방향 복원과 화면 전환은 라우트를 가진 상위
+    // PhoneGame이 처리합니다. 이 화면은 퇴장 도중 관전·배경 화면으로 교체될 수
+    // 있어 여기서 pop을 맡으면 홈으로 돌아가지 못하는 경우가 있습니다.
     final left = await widget.onExitRoom?.call() ?? false;
-    if (!mounted) return;
-    if (left) {
-      Navigator.of(context).pop(true);
-      return;
-    }
+    if (!mounted || left) return;
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('게임에서 퇴장하지 못했습니다.')));
+      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
   }
 
   @override
@@ -134,7 +218,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
     return _buildGameScreen(widget.controller);
   }
 
-  Widget _buildGameScreen(PhoneGameController? controller) {
+  Widget _buildGameScreen(LiarsPokerPhoneController? controller) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final turnPlayer = controller?.players[controller.turnUid];
@@ -217,7 +301,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
   //=======================세로 화면==============================
   Widget _buildPortraitScreen(
-    PhoneGameController? controller, {
+    LiarsPokerPhoneController? controller, {
     required PhoneGamePlayer? turnPlayer,
     required bool showHeader,
     required bool showControls,
@@ -234,6 +318,23 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
             Size(constraints.maxWidth, constraints.maxHeight),
             bottomSafeArea: MediaQuery.paddingOf(context).bottom,
           );
+          final showStatusMessage =
+              controller != null &&
+              !controller.isInitialLoading &&
+              controller.phase != 'dealing' &&
+              controller.handCards.isNotEmpty &&
+              waitingMessage == null &&
+              !showPenaltyHandOverlay &&
+              !showTwoPlayerPassPrompt;
+          final announcement = _resolveAnnouncement(
+            controller,
+            showGameStart: showGameStart,
+            showStatusMessage: showStatusMessage,
+            waitingMessage: waitingMessage,
+            showPenaltyHandOverlay: showPenaltyHandOverlay,
+          );
+          final isPersistent =
+              announcement?.kind == GameAnnouncementKind.persistent;
 
           return Stack(
             children: [
@@ -296,35 +397,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================상태 문구==============================
-              if (controller != null &&
-                  !controller.isInitialLoading &&
-                  controller.phase != 'dealing' &&
-                  controller.handCards.isNotEmpty &&
-                  controller.statusMessage != null &&
-                  waitingMessage == null &&
-                  !showPenaltyHandOverlay &&
-                  !showTwoPlayerPassPrompt)
-                Positioned(
-                  key: const ValueKey('portrait-status-slot'),
-                  top: layout.statusTop,
-                  left: layout.messagePadding,
-                  right: layout.messagePadding,
-                  child: Text(
-                    controller.statusMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: layout.statusFontSize,
-                      fontWeight: controller.isMyTurn
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      shadows: const [
-                        Shadow(color: Colors.black87, blurRadius: 8),
-                      ],
-                    ),
-                  ),
-                ),
               //=======================턴 정보·게임 버튼==============================
               if (showControls)
                 Positioned(
@@ -358,7 +430,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                         ? () => unawaited(controller.passLastCardChallenge())
                         : null,
                     style: _lastCardButtonStyle(),
-                    child: const Text('라이어 아님 · 새 라운드 진행'),
+                    child: const Text(LiarsPokerCopy.passAndNextRound),
                   ),
                 ),
               //=======================손패==============================
@@ -402,12 +474,35 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                         unawaited(controller.passLastCardChallenge()),
                   ),
                 ),
-              //=======================빈 손패 대기 문구==============================
-              if (waitingMessage != null)
-                Positioned.fill(
-                  key: const ValueKey('portrait-waiting-message-slot'),
-                  child: _CenteredGameMessage(message: waitingMessage),
+              //=======================공용 문구 고정 슬롯==============================
+              Positioned.fill(
+                key: const ValueKey('portrait-announcement-slot'),
+                child: GameAnnouncementLayer(
+                  announcement: announcement,
+                  alignment: isPersistent
+                      ? Alignment.topCenter
+                      : Alignment.center,
+                  padding: isPersistent
+                      ? EdgeInsets.fromLTRB(
+                          layout.messagePadding,
+                          layout.statusTop,
+                          layout.messagePadding,
+                          0,
+                        )
+                      : const EdgeInsets.symmetric(horizontal: 32),
+                  style: _announcementStyle(
+                    announcement,
+                    isLandscape: false,
+                    statusFontSize: layout.statusFontSize,
+                    isMyTurn: controller?.isMyTurn ?? false,
+                  ),
+                  onCompleted: (completed) {
+                    if (completed.kind == GameAnnouncementKind.gameStart) {
+                      _handleGameStartCompleted();
+                    }
+                  },
                 ),
+              ),
               //=======================오류 메시지==============================
               if (controller?.errorMessage != null)
                 Positioned(
@@ -421,16 +516,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     verticalPadding: 10,
                   ),
                 ),
-              //=======================게임 시작==============================
-              if (showGameStart)
-                Positioned.fill(
-                  key: const ValueKey('portrait-game-start-slot'),
-                  child: IgnorePointer(
-                    child: PhoneGameStartAnimation(
-                      onCompleted: _handleGameStartCompleted,
-                    ),
-                  ),
-                ),
             ],
           );
         },
@@ -440,7 +525,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
   //=======================가로 화면==============================
   Widget _buildLandscapeScreen(
-    PhoneGameController controller, {
+    LiarsPokerPhoneController controller, {
     required PhoneGamePlayer? turnPlayer,
     required bool showHeader,
     required bool showControls,
@@ -458,6 +543,21 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
             230.0,
           );
           final sidePadding = (constraints.maxWidth * 0.025).clamp(16.0, 28.0);
+          final showStatusMessage =
+              showHeader &&
+              controller.statusMessage != null &&
+              waitingMessage == null &&
+              !showPenaltyHandOverlay &&
+              !showTwoPlayerPassPrompt;
+          final announcement = _resolveAnnouncement(
+            controller,
+            showGameStart: showGameStart,
+            showStatusMessage: showStatusMessage,
+            waitingMessage: waitingMessage,
+            showPenaltyHandOverlay: showPenaltyHandOverlay,
+          );
+          final isPersistent =
+              announcement?.kind == GameAnnouncementKind.persistent;
 
           return Stack(
             children: [
@@ -502,35 +602,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                       onTipPressedAt: _showRules,
                       onOutPressedAt: (origin) =>
                           unawaited(_showExitModal(origin: origin)),
-                    ),
-                  ),
-                ),
-              //=======================상태 문구==============================
-              if (showHeader &&
-                  controller.statusMessage != null &&
-                  waitingMessage == null &&
-                  !showPenaltyHandOverlay &&
-                  !showTwoPlayerPassPrompt)
-                Positioned(
-                  key: const ValueKey('landscape-status-slot'),
-                  top: 72,
-                  bottom: 8,
-                  left: sidePadding,
-                  right: controlsWidth + 24,
-                  child: Center(
-                    child: Text(
-                      controller.statusMessage!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: controller.isMyTurn
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        shadows: const [
-                          Shadow(color: Colors.black87, blurRadius: 8),
-                        ],
-                      ),
                     ),
                   ),
                 ),
@@ -579,12 +650,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                         unawaited(controller.passLastCardChallenge()),
                   ),
                 ),
-              //=======================빈 손패 대기 문구==============================
-              if (waitingMessage != null)
-                Positioned.fill(
-                  key: const ValueKey('landscape-waiting-message-slot'),
-                  child: _CenteredGameMessage(message: waitingMessage),
-                ),
               //=======================턴 정보·게임 버튼==============================
               if (showControls)
                 Positioned(
@@ -619,9 +684,37 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                         ? () => unawaited(controller.passLastCardChallenge())
                         : null,
                     style: _lastCardButtonStyle(),
-                    child: const Text('라이어 아님 · 새 라운드'),
+                    child: const Text(LiarsPokerCopy.passAndNextRoundShort),
                   ),
                 ),
+              //=======================공용 문구 고정 슬롯==============================
+              Positioned.fill(
+                key: const ValueKey('landscape-announcement-slot'),
+                child: GameAnnouncementLayer(
+                  announcement: announcement,
+                  alignment: Alignment.center,
+                  padding: isPersistent
+                      ? EdgeInsets.fromLTRB(
+                          sidePadding,
+                          72,
+                          controlsWidth + 24,
+                          8,
+                        )
+                      : const EdgeInsets.symmetric(horizontal: 32),
+                  offset: Offset.zero,
+                  style: _announcementStyle(
+                    announcement,
+                    isLandscape: true,
+                    statusFontSize: 15,
+                    isMyTurn: controller.isMyTurn,
+                  ),
+                  onCompleted: (completed) {
+                    if (completed.kind == GameAnnouncementKind.gameStart) {
+                      _handleGameStartCompleted();
+                    }
+                  },
+                ),
+              ),
               //=======================오류 메시지==============================
               if (controller.errorMessage != null)
                 Positioned(
@@ -633,16 +726,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
                     controller.errorMessage!,
                     onTap: controller.clearError,
                     verticalPadding: 9,
-                  ),
-                ),
-              //=======================게임 시작==============================
-              if (showGameStart)
-                Positioned.fill(
-                  key: const ValueKey('landscape-game-start-slot'),
-                  child: IgnorePointer(
-                    child: PhoneGameStartAnimation(
-                      onCompleted: _handleGameStartCompleted,
-                    ),
                   ),
                 ),
             ],
@@ -675,7 +758,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
   //=======================가로·세로 공통 손패==============================
   Widget _buildHand(
-    PhoneGameController? controller, {
+    LiarsPokerPhoneController? controller, {
     required bool isLandscape,
     required bool dimmed,
     double entryCenterOffsetX = 0,
@@ -791,7 +874,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
   }
 
   //=======================제한 시간 종료==============================
-  void _handleTurnTimeout(PhoneGameController controller) {
+  void _handleTurnTimeout(LiarsPokerPhoneController controller) {
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
     // 1대1 마지막 카드 선택에서 응답하지 않으면 상대를 의심하지 않고
@@ -811,7 +894,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
 
   //=======================LIAR·SUBMIT 버튼==============================
   Widget _buildGameActionButton(
-    PhoneGameController? controller, {
+    LiarsPokerPhoneController? controller, {
     required bool isLandscape,
     double? portraitHeight,
   }) {
@@ -832,9 +915,16 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
           enabled: enabled,
           onAccuse: controller == null
               ? null
-              : () => unawaited(controller.callLiar()),
-          onSubmit: () =>
-              unawaited(_handCardStackController.submitSelectedCards()),
+              : () {
+                  // 판을 뒤집는 선언이므로 강한 진동으로 확정감을 줍니다.
+                  GameFeedback.declare();
+                  unawaited(controller.callLiar());
+                },
+          onSubmit: () {
+            // 되돌릴 수 없는 확정 동작이므로 진동으로 알립니다.
+            GameFeedback.commit();
+            unawaited(_handCardStackController.submitSelectedCards());
+          },
         );
       },
     );
@@ -883,7 +973,7 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
   Widget _emptyHandMessage() {
     return const Center(
       child: Text(
-        '내 손패 없음',
+        LiarsPokerCopy.noCards,
         style: TextStyle(color: Colors.white70, fontSize: 17),
       ),
     );
@@ -896,91 +986,6 @@ class _PhoneGameScreenState extends State<PhoneGameScreen>
       'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
       _ => Assets.games.liarsPoker.images.table.tableKingWhite,
     };
-  }
-}
-
-/// 손패를 모두 낸 플레이어가 서버의 다음 결정을 기다릴 때 표시합니다.
-class _CenteredGameMessage extends StatelessWidget {
-  const _CenteredGameMessage({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-
-    return IgnorePointer(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: FadeHoldFade(
-            key: ValueKey(message),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: isLandscape ? 31 : 30.sp,
-                height: 1.18,
-                letterSpacing: 0.5,
-                color: Colors.white,
-                shadows: const [Shadow(color: Colors.black87, blurRadius: 12)],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 라이어 판정 공개와 패널티 진행 상태를 손패 중앙에 표시합니다.
-class _PenaltyHandOverlay extends StatelessWidget {
-  const _PenaltyHandOverlay({super.key, required this.message});
-
-  final String message;
-
-  Color get _messageColor {
-    switch (message) {
-      case '진실이 증명되었습니다.':
-      case '간파 성공!':
-        return const Color(0xFF34C759);
-      case '거짓이 밝혀졌습니다.':
-      case '간파 실패!':
-        return const Color(0xFFFF3B30);
-      default:
-        return Colors.white;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-
-    return IgnorePointer(
-      child: Center(
-        child: FadeHoldFade(
-          key: ValueKey(message),
-          duration: const Duration(milliseconds: 2900),
-          beginScale: 0.96,
-          endScale: 0.96,
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'BebasNeue',
-              fontSize: isLandscape ? 34 : 32.sp,
-              height: 1.15,
-              letterSpacing: 0.7,
-              color: _messageColor,
-              shadows: const [Shadow(color: Colors.black, blurRadius: 14)],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -1013,10 +1018,7 @@ class _PenaltyStageSwitcher extends StatefulWidget {
     }
     final message = verdictMessage;
     return message != null
-        ? _PenaltyHandOverlay(
-            key: ValueKey('verdict-$message'),
-            message: message,
-          )
+        ? SizedBox.expand(key: ValueKey('verdict-$message'))
         : PhonePenaltyStatus(
             key: const ValueKey('penalty-status'),
             player: player,

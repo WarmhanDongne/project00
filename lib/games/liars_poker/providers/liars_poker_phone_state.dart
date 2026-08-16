@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 const Object _notProvided = Object();
 
@@ -114,6 +115,7 @@ class LiarsPokerPhoneState {
     required this.isLiarVerdictPending,
     required this.penaltyResult,
     required this.isPenaltyResultVisible,
+    required this.interruption,
   });
 
   factory LiarsPokerPhoneState.initial() => const LiarsPokerPhoneState(
@@ -143,6 +145,7 @@ class LiarsPokerPhoneState {
     isLiarVerdictPending: false,
     penaltyResult: null,
     isPenaltyResultVisible: false,
+    interruption: null,
   );
 
   final String status;
@@ -171,6 +174,7 @@ class LiarsPokerPhoneState {
   final bool isLiarVerdictPending;
   final PhonePenaltyResult? penaltyResult;
   final bool isPenaltyResultVisible;
+  final GameInterruption? interruption;
 
   LiarsPokerPhoneState copyWith({
     String? status,
@@ -199,6 +203,7 @@ class LiarsPokerPhoneState {
     bool? isLiarVerdictPending,
     Object? penaltyResult = _notProvided,
     bool? isPenaltyResultVisible,
+    Object? interruption = _notProvided,
   }) {
     return LiarsPokerPhoneState(
       status: status ?? this.status,
@@ -248,6 +253,9 @@ class LiarsPokerPhoneState {
           : penaltyResult as PhonePenaltyResult?,
       isPenaltyResultVisible:
           isPenaltyResultVisible ?? this.isPenaltyResultVisible,
+      interruption: identical(interruption, _notProvided)
+          ? this.interruption
+          : interruption as GameInterruption?,
     );
   }
 }

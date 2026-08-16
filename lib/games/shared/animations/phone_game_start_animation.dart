@@ -9,10 +9,16 @@ class PhoneGameStartAnimation extends StatefulWidget {
     super.key,
     required this.onCompleted,
     this.textColor = Colors.white,
+    this.text = 'GAME START',
+    this.textStyle,
+    this.duration = const Duration(milliseconds: 1700),
   });
 
   final VoidCallback onCompleted;
   final Color textColor;
+  final String text;
+  final TextStyle? textStyle;
+  final Duration duration;
 
   @override
   State<PhoneGameStartAnimation> createState() =>
@@ -21,16 +27,22 @@ class PhoneGameStartAnimation extends StatefulWidget {
 
 class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
     with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 1700);
-
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: _duration)
+    _controller = AnimationController(vsync: this, duration: widget.duration)
       ..addStatusListener(_handleStatus)
       ..forward();
+  }
+
+  @override
+  void didUpdateWidget(PhoneGameStartAnimation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      _controller.duration = widget.duration;
+    }
   }
 
   void _handleStatus(AnimationStatus status) {
@@ -72,7 +84,7 @@ class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
               child: Transform.scale(
                 scale: scale,
                 child: Text(
-                  'GAME START',
+                  widget.text,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'BebasNeue',
@@ -80,8 +92,10 @@ class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
                     fontSize: 58,
                     height: 1,
                     letterSpacing: 5,
-                    shadows: [Shadow(color: Colors.black87, blurRadius: 12)],
-                  ),
+                    shadows: const [
+                      Shadow(color: Colors.black87, blurRadius: 12),
+                    ],
+                  ).merge(widget.textStyle),
                 ),
               ),
             ),

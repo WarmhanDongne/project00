@@ -1,22 +1,24 @@
 import 'dart:math' as math;
+import 'package:project00/games/shared/game_feedback.dart';
+import 'package:project00/core/time/server_clock.dart';
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
-import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/final_call/final_call_copy.dart';
+import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
-import 'package:project00/games/final_call/widgets/phone/phone_card_change_dialog.dart';
-import 'package:project00/games/final_call/widgets/phone/phone_game_actions.dart';
-import 'package:project00/games/final_call/widgets/phone/phone_hand_card_stack.dart';
-import 'package:project00/games/final_call/widgets/phone/phone_turn_action_switcher.dart';
-import 'package:project00/games/final_call/widgets/phone/phone_turn_timer.dart';
-import 'package:project00/games/shared/widgets/phone_game_top_bar.dart';
-import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
-import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
+import 'package:project00/games/final_call/widgets/phone/card_change_dialog.dart';
+import 'package:project00/games/final_call/widgets/phone/game_actions.dart';
+import 'package:project00/games/final_call/widgets/phone/hand_card_stack.dart';
+import 'package:project00/games/final_call/widgets/phone/top_bar.dart';
+import 'package:project00/games/final_call/widgets/phone/turn_action_switcher.dart';
+import 'package:project00/games/final_call/widgets/phone/turn_timer.dart';
+import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 휴대폰의 손패와 조작부를 분리된 두 영역으로 표시합니다.
-class PhoneGameScreen extends StatelessWidget {
-  const PhoneGameScreen({
+class FinalCallPhoneGameScreen extends StatefulWidget {
+  const FinalCallPhoneGameScreen({
     super.key,
     required this.controller,
     required this.handRevealed,
@@ -33,7 +35,7 @@ class PhoneGameScreen extends StatelessWidget {
     required this.onExitRoom,
   });
 
-  final PhoneGameController controller;
+  final FinalCallController controller;
   final bool handRevealed;
   final String? selectedCardId;
   final Set<String> selectedFinalCardIds;
@@ -46,6 +48,76 @@ class PhoneGameScreen extends StatelessWidget {
   final String? replacingCardId;
   final bool replacementInProgress;
   final VoidCallback onExitRoom;
+
+  @override
+  State<FinalCallPhoneGameScreen> createState() =>
+      _FinalCallPhoneGameScreenState();
+}
+
+class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
+    with SingleTickerProviderStateMixin {
+  //=======================조작부 등장==============================
+  // Liar's Poker와 동일한 컨트롤러·연출(PhoneControlEntryAnimation)을 그대로
+  // 사용합니다. 손패 펼치기가 끝나는 순간 상단바·타이머·조작부가 같은
+  // 컨트롤러로 함께 등장합니다.
+  late final AnimationController _controlsEntryController;
+  int? _revealedRoundForEntry;
+
+  FinalCallController get controller => widget.controller;
+  bool get handRevealed => widget.handRevealed;
+  String? get selectedCardId => widget.selectedCardId;
+  Set<String> get selectedFinalCardIds => widget.selectedFinalCardIds;
+  String? get visibleCallerUid => widget.visibleCallerUid;
+  VoidCallback get onRevealStarted => widget.onRevealStarted;
+  ValueChanged<String?> get onSelectedCardChanged =>
+      widget.onSelectedCardChanged;
+  ValueChanged<String> get onFinalCardSelected => widget.onFinalCardSelected;
+  Future<void> Function(String?) get onCompleteTurn => widget.onCompleteTurn;
+  String? get replacingCardId => widget.replacingCardId;
+  bool get replacementInProgress => widget.replacementInProgress;
+  VoidCallback get onExitRoom => widget.onExitRoom;
+
+  @override
+  void initState() {
+    super.initState();
+    _controlsEntryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 920),
+    );
+    if (widget.handRevealed) {
+      _controlsEntryController.value = 1;
+      _revealedRoundForEntry = widget.controller.round;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controlsEntryController.dispose();
+    super.dispose();
+  }
+
+  /// 손패 펼치기가 끝나면 상단바를 포함한 UI가 한 번에 등장합니다.
+  void _handleRevealCompleted() {
+    widget.onRevealCompleted();
+    _revealedRoundForEntry = widget.controller.round;
+    if (!_controlsEntryController.isAnimating &&
+        !_controlsEntryController.isCompleted) {
+      _controlsEntryController.forward();
+    }
+  }
+
+  /// 새 라운드 카드가 다시 배분되면 다음 공개까지 UI를 감춥니다.
+  ///
+  /// build 도중에 컨트롤러를 되돌리면 리스너가 즉시 setState를 호출해 오류가
+  /// 나므로, Liar's Poker와 같이 프레임이 끝난 뒤에 되돌립니다.
+  void _resetEntryForNewRound() {
+    if (_revealedRoundForEntry == null) return;
+    _revealedRoundForEntry = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.controller.phase != 'dealing') return;
+      _controlsEntryController.reset();
+    });
+  }
 
   Future<void> _openCardChange(BuildContext context) async {
     final discard = controller.discardCard;
@@ -87,10 +159,12 @@ class PhoneGameScreen extends StatelessWidget {
   }
 
   bool _deadlinePassed(int? deadline) =>
-      deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline;
+      deadline != null && ServerClock.hasPassed(deadline);
 
   Future<void> _call(BuildContext context) async {
     if (!controller.canCall) return;
+    // 판을 뒤집는 선언이므로 강한 진동으로 확정감을 줍니다.
+    GameFeedback.declare();
     onSelectedCardChanged(null);
     final completed = await controller.call();
     if (!completed && context.mounted) {
@@ -112,6 +186,9 @@ class PhoneGameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 새 라운드 배분이 시작되면 다음 공개까지 상단바·조작부를 다시 감춥니다.
+    if (controller.phase == 'dealing') _resetEntryForNewRound();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final timerVisible =
@@ -125,21 +202,11 @@ class PhoneGameScreen extends StatelessWidget {
           children: [
             Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 4, 16, 0),
-                  child: SharedPhoneGameTopBar(
-                    isLandscape: true,
-                    trailingLeading: _buildLives(),
-                    bookIcon: Assets.games.finalCall.images.icons.iconTipBlack
-                        .image(fit: BoxFit.contain),
-                    outIcon: Assets.games.finalCall.images.icons.iconOut.image(
-                      fit: BoxFit.contain,
-                    ),
-                    onOutPressed: onExitRoom,
-                    onBookPressed: () => _showRules(context),
-                    onBookPressedAt: (origin) => _showRules(context, origin),
-                  ),
-                ),
+                //=======================상단바 자리==============================
+                // 상단바 자체는 공용 셸(PhoneGameShell)이 이 자리 위에 겹쳐
+                // 그립니다. 셸이 표시 시점과 퇴장 접근을 보장하며, 여기서는
+                // 카드 위치가 달라지지 않도록 같은 높이만 비워 둡니다.
+                const SizedBox(height: finalCallPhoneTopBarHeight),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, contentConstraints) {
@@ -197,7 +264,16 @@ class PhoneGameScreen extends StatelessWidget {
                               ),
                               Expanded(
                                 flex: 3,
-                                child: _buildControl(context, cardHeight),
+                                //=======================조작부·턴 정보 등장==============================
+                                // 상단바보다 살짝 늦게, 큰 버튼답게 떨어지는
+                                // Liar's Poker의 heavyDrop 연출을 씁니다.
+                                child: PhoneControlEntryAnimation(
+                                  animation: _controlsEntryController,
+                                  style: PhoneControlEntryStyle.heavyDrop,
+                                  begin: 0.12,
+                                  end: 1,
+                                  child: _buildControl(context, cardHeight),
+                                ),
                               ),
                             ],
                           ),
@@ -208,9 +284,15 @@ class PhoneGameScreen extends StatelessWidget {
                               left: 18,
                               right: controlAreaWidth + 12,
                               child: Center(
-                                child: FinalCallTimer(
-                                  key: ValueKey(controller.turnDeadlineAt),
-                                  deadline: controller.turnDeadlineAt!,
+                                child: PhoneControlEntryAnimation(
+                                  animation: _controlsEntryController,
+                                  style: PhoneControlEntryStyle.header,
+                                  begin: 0,
+                                  end: 0.76,
+                                  child: FinalCallTimer(
+                                    key: ValueKey(controller.turnDeadlineAt),
+                                    deadline: controller.turnDeadlineAt!,
+                                  ),
                                 ),
                               ),
                             ),
@@ -240,7 +322,7 @@ class PhoneGameScreen extends StatelessWidget {
                       selectedCardId: null,
                       selectedCardIds: const {},
                       onRevealStarted: onRevealStarted,
-                      onRevealCompleted: onRevealCompleted,
+                      onRevealCompleted: _handleRevealCompleted,
                       onCardSelected: (_) {},
                       onCardsReordered: controller.reorderHand,
                     )
@@ -249,45 +331,6 @@ class PhoneGameScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  void _showRules(BuildContext context, [Offset? origin]) {
-    final screenSize = MediaQuery.sizeOf(context);
-    showPhoneRippleDialog<void>(
-      context: context,
-      origin: origin ?? Offset(screenSize.width - 82, 28),
-      builder: (_) => const PhoneGameRuleDialog(
-        title: 'FINAL CALL',
-        rules:
-            '같은 숫자 카드의 합과 같은 색 카드의 합 중 더 높은 값이 '
-            '최종 점수입니다. 자신의 턴에는 공개 카드 또는 카드 더미에서 '
-            '한 장을 가져와 손패와 교체하거나 버릴 수 있습니다.\n\n'
-            'CALL을 선언하면 나머지 플레이어가 마지막 교체를 한 번 진행합니다. '
-            '가장 낮은 점수의 플레이어는 생명 1개를 잃고, CALL을 선언한 '
-            '플레이어가 최하위라면 생명 2개를 잃습니다. 마지막 생존자가 승리합니다.',
-        surfaceColor: Color.fromARGB(255, 0, 0, 0),
-        foregroundColor: Color.fromARGB(255, 255, 255, 255),
-        showSurface: false,
-        dismissOnAnyTap: true,
-      ),
-    );
-  }
-
-  Widget _buildLives() {
-    final lives = controller.players[controller.uid]?.lives ?? 0;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var index = 0; index < lives; index++)
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Assets.games.finalCall.images.icons.iconHeart.image(
-              width: 38,
-              fit: BoxFit.contain,
-            ),
-          ),
-      ],
     );
   }
 
@@ -307,7 +350,7 @@ class PhoneGameScreen extends StatelessWidget {
         selectionEnabled:
             controller.canCompleteTurn || controller.isFinalSubmitPhase,
         onRevealStarted: onRevealStarted,
-        onRevealCompleted: onRevealCompleted,
+        onRevealCompleted: _handleRevealCompleted,
         onCardSelected: controller.isFinalSubmitPhase
             ? onFinalCardSelected
             : (id) {
@@ -361,7 +404,7 @@ class _FinalSubmitAction extends StatelessWidget {
     required this.selectedCardIds,
     required this.scoreBlockHeight,
   });
-  final PhoneGameController controller;
+  final FinalCallController controller;
   final Set<String> selectedCardIds;
   final double scoreBlockHeight;
 
@@ -388,7 +431,7 @@ class _FinalSubmitAction extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
-          '최종 조합을 선택하세요',
+          FinalCallCopy.selectFinalCombination,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
@@ -449,7 +492,7 @@ class _FinalSubmitAction extends StatelessWidget {
               ],
             ),
             child: Text(
-              canSubmit ? '제출' : '카드 선택',
+              canSubmit ? FinalCallCopy.submit : FinalCallCopy.selectCards,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
           ),

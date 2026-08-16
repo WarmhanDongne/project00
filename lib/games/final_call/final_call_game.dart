@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:project00/games/_game_template/template_game.dart';
+import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/games/final_call/screens/phone_game.dart';
 import 'package:project00/games/final_call/screens/tablet_game.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
@@ -15,6 +17,20 @@ class FinalCallGame extends TemplateGame {
   String get title => 'Final Call';
   @override
   String get leaveFunctionName => 'leaveFinalCallGame';
+  @override
+  PhoneGameOrientation get phoneOrientation =>
+      PhoneGameOrientation.landscapeOnly;
+  @override
+  Color get tableColor => const Color(0xFFF2F0EB);
+  @override
+  ImageProvider get tableBackgroundImage =>
+      Assets.games.finalCall.images.background.background.provider();
+  @override
+  ImageProvider get layoutTableImage =>
+      Assets.games.finalCall.images.layout.layoutTable.provider();
+  @override
+  ImageProvider get layoutChairImage =>
+      Assets.games.finalCall.images.layout.layoutChair.provider();
 
   @override
   Future<void> startGame(String roomCode) =>
@@ -30,7 +46,7 @@ class FinalCallGame extends TemplateGame {
     required String roomCode,
     required Future<bool> Function() onExitRoom,
   }) {
-    return PhoneGame(
+    return FinalCallPhoneGame(
       roomCode: roomCode,
       gameService: FinalCallService(),
       onExitRoom: onExitRoom,
@@ -44,7 +60,7 @@ class FinalCallGame extends TemplateGame {
     required String roomCode,
   }) {
     // Final Call 태블릿 화면은 좌석 배치를 쓰지 않아 playerLayout을 사용하지 않습니다.
-    return FinalCallTabletGameEntry(
+    return FinalCallTabletGame(
       roomCode: roomCode,
       gameService: FinalCallService(),
       provider: provider,

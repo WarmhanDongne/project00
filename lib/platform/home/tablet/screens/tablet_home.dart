@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
@@ -24,14 +23,31 @@ class _TabletHomeState extends State<TabletHome> {
   final GameProvider gameProvider = GameProvider();
   String searchWord = '';
 
+  String? _presenceRoomCode;
+
   @override
   void initState() {
     super.initState();
-    unawaited(AppOrientation.lockPlatformPortrait());
+    //=======================초기 화면 방향 요청 금지==============================
+    // 앱 첫 실행에서는 이 initState가 iOS scene 연결보다 먼저 호출될 수 있습니다.
+    // 초기 태블릿 가로 고정은 main.dart가 lifecycle resumed 이후 한 번만 적용합니다.
+    // 게임 종료 후 복원은 각 태블릿 게임 화면의 dispose가 담당합니다.
+    //=======================진행 기기 접속 표시==============================
+    // 방이 생기면 태블릿이 방을 열고 있다고 표시합니다. 태블릿이 사라지면
+    // 서버가 자동으로 해제해 휴대폰들이 무한 대기하지 않습니다.
+    roomProvider.addListener(_syncControllerPresence);
+  }
+
+  void _syncControllerPresence() {
+    final code = roomProvider.roomCode;
+    if (code == null || code == _presenceRoomCode) return;
+    _presenceRoomCode = code;
+    unawaited(roomProvider.markControllerConnected());
   }
 
   @override
   void dispose() {
+    roomProvider.removeListener(_syncControllerPresence);
     roomProvider.dispose();
     gameProvider.dispose();
     super.dispose();

@@ -1,4 +1,4 @@
-import 'package:project00/games/_game_template/template_game.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/games/final_call/final_call_game.dart';
 import 'package:project00/games/liars_poker/liars_poker_game.dart';
 

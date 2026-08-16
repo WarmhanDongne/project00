@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
-import 'package:project00/games/_game_template/template_game.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -22,9 +22,11 @@ class PhoneRoomWaiting extends StatefulWidget {
 
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   StreamSubscription<String?>? _gameStatusSubscription;
+  StreamSubscription<bool?>? _controllerSubscription;
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
+  bool _isLeavingAfterControllerLost = false;
 
   @override
   void initState() {
@@ -42,7 +44,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     if (roomCode == null) {
       unawaited(_gameStatusSubscription?.cancel());
+      unawaited(_controllerSubscription?.cancel());
       _gameStatusSubscription = null;
+      _controllerSubscription = null;
       _subscribedRoomCode = null;
       _latestGameStatus = null;
       return;
@@ -54,6 +58,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     }
 
     unawaited(_gameStatusSubscription?.cancel());
+    unawaited(_controllerSubscription?.cancel());
     _subscribedRoomCode = roomCode;
     _latestGameStatus = null;
     _gameStatusSubscription = widget.provider.watchGameStatus(roomCode).listen((
@@ -62,6 +67,29 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       _latestGameStatus = status;
       _openGameIfReady(roomCode);
     }, onError: _showStatusError);
+
+    //=======================진행 기기 이탈 감지==============================
+    // 태블릿이 방을 닫으면 게임이 시작될 일이 없습니다. 안내 문구만 보며
+    // 무한 대기하지 않도록 방에서 나와 휴대폰 홈으로 돌아갑니다.
+    _controllerSubscription = widget.provider
+        .watchControllerConnected(roomCode)
+        .listen((connected) {
+          if (connected == false) _handleControllerLost();
+        }, onError: (_) {});
+  }
+
+  Future<void> _handleControllerLost() async {
+    // 게임 화면이 열려 있는 중이면 그 화면의 종료 흐름을 방해하지 않습니다.
+    if (_isLeavingAfterControllerLost || _isOpeningGame || !mounted) return;
+    _isLeavingAfterControllerLost = true;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('태블릿이 방을 닫아 홈으로 돌아갑니다.')));
+
+    await widget.provider.leaveRoom();
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   /// `selectedGame`과 `game/public/status`는 서로 다른 RTDB 경로이므로 도착
@@ -87,6 +115,10 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     if (_isOpeningGame || !mounted) return;
     _isOpeningGame = true;
 
+    // 휴대폰 방향은 게임 등록 정보가 단일 기준입니다. 새 게임에서 화면마다
+    // 임의로 방향을 정하지 말고 TemplateGame.phoneOrientation을 선언하세요.
+    unawaited(AppOrientation.applyPhoneGame(game.phoneOrientation));
+
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => game.buildPhoneScreen(
@@ -97,18 +129,21 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     );
 
     _isOpeningGame = false;
-    await _lockPlatformPortrait();
     if (!mounted) return;
-    if (leftRoom == true && mounted) {
+    if (leftRoom == true) {
       // 참여 코드·닉네임·방 대기 경로를 모두 닫아 휴대폰 홈으로 이동합니다.
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
+    // 화면 전환을 회전 응답보다 먼저 끝내 퇴장 성공 후 이전 화면에 갇히지
+    // 않게 합니다. 방향 복원은 플랫폼 채널 응답을 기다리지 않습니다.
+    unawaited(_lockPlatformPortrait());
   }
 
   @override
   void dispose() {
     widget.provider.removeListener(_syncGameStatusSubscription);
     _gameStatusSubscription?.cancel();
+    _controllerSubscription?.cancel();
     super.dispose();
   }
 

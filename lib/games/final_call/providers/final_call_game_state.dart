@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 const Object _notProvided = Object();
 
@@ -32,6 +33,7 @@ class FinalCallGameState {
     required this.pendingDraw,
     required this.roundResult,
     required this.discardEvent,
+    required this.interruption,
   });
 
   factory FinalCallGameState.initial() => const FinalCallGameState(
@@ -58,6 +60,7 @@ class FinalCallGameState {
     pendingDraw: null,
     roundResult: null,
     discardEvent: null,
+    interruption: null,
   );
 
   final bool loading;
@@ -83,6 +86,7 @@ class FinalCallGameState {
   final FinalCallCard? pendingDraw;
   final FinalCallRoundResult? roundResult;
   final FinalCallDiscardEvent? discardEvent;
+  final GameInterruption? interruption;
 
   FinalCallGameState copyWith({
     bool? loading,
@@ -108,6 +112,7 @@ class FinalCallGameState {
     Object? pendingDraw = _notProvided,
     Object? roundResult = _notProvided,
     Object? discardEvent = _notProvided,
+    Object? interruption = _notProvided,
   }) {
     return FinalCallGameState(
       loading: loading ?? this.loading,
@@ -161,6 +166,9 @@ class FinalCallGameState {
       discardEvent: identical(discardEvent, _notProvided)
           ? this.discardEvent
           : discardEvent as FinalCallDiscardEvent?,
+      interruption: identical(interruption, _notProvided)
+          ? this.interruption
+          : interruption as GameInterruption?,
     );
   }
 }

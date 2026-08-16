@@ -1,4 +1,5 @@
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 const int cardsPerPlayer = 5;
@@ -127,6 +128,7 @@ class TabletPublicGameSnapshot {
     required this.players,
     required this.lastPlay,
     required this.roundPlays,
+    required this.interruption,
   });
 
   final String status;
@@ -140,6 +142,7 @@ class TabletPublicGameSnapshot {
   final Map<Object?, Object?> players;
   final PublicLastPlay? lastPlay;
   final List<PublicLastPlay> roundPlays;
+  final GameInterruption? interruption;
 
   static TabletPublicGameSnapshot? tryParse(Object? value) {
     if (value is! Map) return null;
@@ -186,6 +189,11 @@ class TabletPublicGameSnapshot {
           : const <Object?, Object?>{},
       lastPlay: lastPlay,
       roundPlays: List.unmodifiable(roundPlays),
+      interruption: data['interruption'] is Map
+          ? GameInterruption.fromMap(
+              Map<Object?, Object?>.from(data['interruption'] as Map),
+            )
+          : null,
     );
   }
 

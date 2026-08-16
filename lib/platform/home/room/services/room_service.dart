@@ -88,6 +88,41 @@ class RoomService {
         .map((event) => event.snapshot.value?.toString());
   }
 
+  //=======================태블릿(진행 기기) 접속 표시==============================
+  // 태블릿은 players에 들어가지 않아 접속 여부를 알 수 없습니다. 태블릿이
+  // 방을 열고 있는 동안에만 true로 두고, 앱이 꺼지거나 연결이 끊기면 서버가
+  // 자동으로 false로 바꿉니다. 휴대폰은 이 값을 보고 무한 대기를 피합니다.
+  Future<void> markControllerConnected(String roomCode) async {
+    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
+    try {
+      await ref.onDisconnect().set(false);
+    } catch (_) {
+      // 연결 종료 예약 실패는 접속 표시 자체를 막지 않습니다.
+    }
+    await _writeWithRetry(() => ref.set(true));
+  }
+
+  Future<void> markControllerDisconnected(String roomCode) async {
+    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
+    try {
+      await ref.onDisconnect().cancel();
+    } catch (_) {
+      // 예약 취소 실패는 무시합니다.
+    }
+    await _writeWithRetry(() => ref.set(false));
+  }
+
+  /// 태블릿이 방을 열고 있는지 여부입니다. 값이 없으면 아직 알 수 없으므로
+  /// null을 흘려보내 휴대폰이 성급하게 나가지 않게 합니다.
+  Stream<bool?> watchControllerConnected(String roomCode) {
+    return realtime.ref('rooms/$roomCode/controllerConnected').onValue.map((
+      event,
+    ) {
+      final value = event.snapshot.value;
+      return value is bool ? value : null;
+    });
+  }
+
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
         .ref('rooms/$roomCode/players')

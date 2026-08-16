@@ -248,6 +248,17 @@ export function orderedAlivePlayers(
     .sort((left, right) => left.seatIndex - right.seatIndex);
 }
 
+/**
+ * RTDB는 빈 배열을 저장하면 해당 경로를 제거할 수 있으므로, 누락된 최종 턴
+ * 대기 목록도 빈 목록으로 취급합니다.
+ */
+export function removeFinalTurnPendingPlayer(
+  pendingUids: readonly string[] | undefined,
+  uid: string,
+): string[] {
+  return (pendingUids ?? []).filter((playerUid) => playerUid !== uid);
+}
+
 function assertValidSeats(players: Record<string, FinalCallPlayer>): void {
   const seats = Object.values(players).map((player) => player.seatIndex);
   const valid = seats.length >= 2 && seats.length <= 4 &&

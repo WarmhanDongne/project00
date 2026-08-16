@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class CardDealAnimation extends StatefulWidget {
     this.cardBuilder,
     this.cardWidth = 168,
     this.duration = const Duration(milliseconds: 2800),
+    this.deckEntryDuration = const Duration(milliseconds: 620),
     this.autoplay = false,
     this.tapToStart = true,
     this.loop = false,
@@ -69,6 +71,9 @@ class CardDealAnimation extends StatefulWidget {
   /// 등장, 분배, 잠시 대기, 퇴장을 모두 포함한 전체 재생 시간입니다.
   final Duration duration;
 
+  /// 분배 전에 카드 더미가 화면 위에서 중앙으로 내려오는 시간입니다.
+  final Duration deckEntryDuration;
+
   /// 위젯이 화면에 나타나면 바로 재생할지 여부입니다.
   final bool autoplay;
 
@@ -87,18 +92,29 @@ class CardDealAnimation extends StatefulWidget {
 }
 
 class CardDealAnimationState extends State<CardDealAnimation>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
+
+  /// 분배가 시작되기 전에 카드 더미가 화면 위에서 중앙으로 내려오는 연출입니다.
+  late final AnimationController _deckEntryController;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration)
       ..addStatusListener(_onStatusChanged);
+    _deckEntryController = AnimationController(
+      vsync: this,
+      duration: widget.deckEntryDuration,
+    );
 
-    if (widget.autoplay) {
+    // 카드 더미가 자리를 잡은 뒤에 분배가 시작되도록 순서를 지킵니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _deckEntryController.forward();
+      if (!mounted || !widget.autoplay) return;
       _controller.forward();
-    }
+    });
   }
 
   @override
@@ -131,7 +147,21 @@ class CardDealAnimationState extends State<CardDealAnimation>
   }
 
   /// 현재 위치부터 재생합니다. [restart]가 true면 처음부터 다시 시작합니다.
+  ///
+  /// 카드 더미가 아직 내려오는 중이면 도착을 기다린 뒤 분배를 시작합니다.
   void play({bool restart = false}) {
+    if (!_deckEntryController.isCompleted) {
+      unawaited(
+        _deckEntryController.forward().then((_) {
+          if (mounted) _startDeal(restart: restart);
+        }),
+      );
+      return;
+    }
+    _startDeal(restart: restart);
+  }
+
+  void _startDeal({required bool restart}) {
     if (restart || _controller.isCompleted) {
       _controller.forward(from: 0);
     } else {
@@ -148,6 +178,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
     _controller
       ..removeStatusListener(_onStatusChanged)
       ..dispose();
+    _deckEntryController.dispose();
     super.dispose();
   }
 
@@ -162,7 +193,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
           );
 
           return AnimatedBuilder(
-            animation: _controller,
+            animation: Listenable.merge([_controller, _deckEntryController]),
             builder: (context, _) => _buildScene(context, size),
           );
         },
@@ -268,7 +299,18 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
     // 시작 화면에서 여러 장의 아래쪽 테두리가 보여 카드 더미처럼 느껴집니다.
     final deckLayer = math.min(dealIndex, 7);
-    final deckPosition = center + Offset(0, deckLayer * 1.15);
+    var deckPosition = center + Offset(0, deckLayer * 1.15);
+
+    // 분배 전에는 카드 더미가 화면 위에서 중앙으로 내려옵니다. 모든 카드가
+    // 같은 진행도를 쓰기 때문에 낱장이 흩어지지 않고 하나의 더미로 들어옵니다.
+    final entryProgress = Curves.easeOutCubic.transform(
+      _deckEntryController.value,
+    );
+    if (entryProgress < 1) {
+      final dropDistance = size.height / 2 + cardHeight;
+      deckPosition += Offset(0, -dropDistance * (1 - entryProgress));
+    }
+
     var position = Offset.lerp(deckPosition, target, dealProgress)!;
 
     // 직선보다 생동감 있게 보이도록 이동 중 바깥 방향으로 살짝 휘게 합니다.
@@ -281,8 +323,9 @@ class CardDealAnimationState extends State<CardDealAnimation>
         direction.dx * 0.025 * cardIndex * dealProgress;
 
     // 분배 구간에는 현재 회전된 카드의 외곽 크기를 기준으로 화면 안에 유지합니다.
-    // 퇴장 구간에는 보정을 해제해야 카드 묶음이 정상적으로 밖으로 빠집니다.
-    if (exitProgress == 0) {
+    // 등장·퇴장 구간에는 보정을 해제해야 카드 더미가 화면 위에서 내려오고,
+    // 분배된 묶음이 정상적으로 밖으로 빠집니다.
+    if (exitProgress == 0 && entryProgress >= 1) {
       position = _keepCardInside(
         size: size,
         position: position,

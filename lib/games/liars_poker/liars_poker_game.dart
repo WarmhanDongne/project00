@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:project00/games/_game_template/template_game.dart';
+import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/games/liars_poker/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
@@ -15,6 +17,20 @@ class LiarsPokerGame extends TemplateGame {
   String get title => "Liar's Poker";
   @override
   String get leaveFunctionName => 'leaveLiarsPokerGame';
+  @override
+  PhoneGameOrientation get phoneOrientation =>
+      PhoneGameOrientation.portraitAndLandscape;
+  @override
+  Color get tableColor => const Color(0xFF6E2A82);
+  @override
+  ImageProvider get tableBackgroundImage =>
+      Assets.games.liarsPoker.images.background.background.provider();
+  @override
+  ImageProvider get layoutTableImage =>
+      Assets.games.liarsPoker.images.layout.layoutTable.provider();
+  @override
+  ImageProvider get layoutChairImage =>
+      Assets.games.liarsPoker.images.layout.layoutChair.provider();
 
   @override
   Future<void> startGame(String roomCode) =>
@@ -30,7 +46,7 @@ class LiarsPokerGame extends TemplateGame {
     required String roomCode,
     required Future<bool> Function() onExitRoom,
   }) {
-    return PhoneGame(
+    return LiarsPokerPhoneGame(
       roomCode: roomCode,
       gameService: LiarsPokerService(),
       onExitRoom: onExitRoom,

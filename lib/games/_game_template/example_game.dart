@@ -1,8 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/_game_template/screens/phone_game.dart';
 import 'package:project00/games/_game_template/screens/tablet_game.dart';
 import 'package:project00/games/_game_template/services/template_service.dart';
-import 'package:project00/games/_game_template/template_game.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -21,6 +22,15 @@ class TemplateExampleGame extends TemplateGame {
   String get title => 'Template Example';
   @override
   String get leaveFunctionName => 'leaveTemplateExampleGame';
+  @override
+  // 새 게임의 휴대폰 UI가 실제로 지원하는 방향으로 반드시 변경하세요.
+  // 태블릿 게임은 이 값과 관계없이 공용 정책에서 항상 가로 고정됩니다.
+  PhoneGameOrientation get phoneOrientation =>
+      PhoneGameOrientation.portraitOnly;
+  @override
+  Color get tableColor => const Color(0xFF808080);
+  @override
+  ImageProvider? get tableBackgroundImage => null;
 
   @override
   Future<void> startGame(String roomCode) =>

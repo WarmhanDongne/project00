@@ -125,6 +125,13 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     );
     if (!mounted) return;
     setState(() => _isOpeningWaitingRoom = false);
+
+    // 게임에서 나가면 대기 화면이 popUntil로 홈까지 한 번에 닫습니다. 그때는 이
+    // 화면도 이미 스택에서 제거되는 중이라 여기서 또 pop하면 홈 화면까지 닫혀
+    // 네비게이터 스택이 비고 검은 화면만 남습니다. 이 화면이 실제로 다시
+    // 보이는 경우(대기 화면만 정상적으로 닫힌 경우)에만 뒤로 이동합니다.
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent) return;
     if (!_roomProvider.isInRoom) Navigator.of(context).pop();
   }
 

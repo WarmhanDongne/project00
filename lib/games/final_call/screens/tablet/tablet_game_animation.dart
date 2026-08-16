@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
-import 'package:project00/games/final_call/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
@@ -15,7 +15,7 @@ class FinalCallTabletCallAnimation extends StatelessWidget {
     required this.controller,
     required this.playerCount,
   });
-  final PhoneGameController controller;
+  final FinalCallController controller;
   final int playerCount;
 
   @override
@@ -80,7 +80,7 @@ class FinalCallTabletDiscardAnimation extends StatefulWidget {
     required this.playerCount,
   });
 
-  final PhoneGameController controller;
+  final FinalCallController controller;
   final FinalCallDiscardEvent event;
   final int playerCount;
 

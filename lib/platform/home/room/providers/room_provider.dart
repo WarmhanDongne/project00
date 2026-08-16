@@ -25,6 +25,15 @@ class RoomProvider extends ChangeNotifier {
   String? selectedGameId;
   GameInfo? selectedGame;
 
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
     // 로딩 시작 및 이전 에러 초기화
@@ -80,6 +89,22 @@ class RoomProvider extends ChangeNotifier {
   /// 휴대폰 대기실에서 게임 종류와 무관하게 시작 상태를 한 번만 구독합니다.
   Stream<String?> watchGameStatus(String code) =>
       _service.watchGameStatus(code.trim().toUpperCase());
+
+  /// 태블릿이 방을 열고 있는지 구독합니다. 휴대폰이 무한 대기하지 않도록
+  /// 태블릿이 사라지면 알려 줍니다.
+  Stream<bool?> watchControllerConnected(String code) =>
+      _service.watchControllerConnected(code.trim().toUpperCase());
+
+  /// 태블릿이 방 화면을 열고 있는 동안 접속 표시를 유지합니다.
+  Future<void> markControllerConnected() async {
+    final code = roomCode;
+    if (code == null) return;
+    try {
+      await _service.markControllerConnected(code);
+    } catch (_) {
+      // 접속 표시 실패가 방 진행을 막지 않습니다.
+    }
+  }
 
   Future<bool> removePlayer(String userUid) async {
     final result = await _runCommand<bool>(() async {
@@ -261,6 +286,7 @@ class RoomProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     super.dispose();

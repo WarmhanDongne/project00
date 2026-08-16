@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_tablet_state.dart';
-import 'package:project00/games/liars_poker/screens/tablet/tablet_game_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_tablet_controller.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 
 //=======================Liar's Poker 태블릿 세션 식별자==============================
@@ -18,7 +18,7 @@ class LiarsPokerTabletSessionArgs {
   final PlayerLayoutModel playerLayout;
   final String roomCode;
   final LiarsPokerService service;
-  final TabletGameErrorHandler onError;
+  final LiarsPokerTabletErrorHandler onError;
 
   @override
   bool operator ==(Object other) =>
@@ -41,14 +41,14 @@ class LiarsPokerTabletSessionArgs {
 //=======================Liar's Poker 태블릿 세션 Provider==============================
 final liarsPokerTabletSessionProvider = NotifierProvider.autoDispose
     .family<
-      TabletGameController,
+      LiarsPokerTabletController,
       LiarsPokerTabletState,
       LiarsPokerTabletSessionArgs
     >((args) {
-      return TabletGameController(
+      return LiarsPokerTabletController(
         playerLayout: args.playerLayout,
         roomCode: args.roomCode,
-        gameService: args.service,
+        service: args.service,
         onError: args.onError,
       );
     });

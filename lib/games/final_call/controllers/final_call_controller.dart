@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 //=======================Final Call Riverpod 게임 컨트롤러==============================
 /// 서버 상태는 불변 [FinalCallGameState]로 발행하고, 화면 애니메이션 상태는
@@ -75,12 +76,14 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   FinalCallCard? get pendingDraw => state.pendingDraw;
   FinalCallRoundResult? get roundResult => state.roundResult;
   FinalCallDiscardEvent? get discardEvent => state.discardEvent;
+  GameInterruption? get interruption => state.interruption;
 
   //=======================파생 게임 상태==============================
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
   bool get canAct =>
       status == 'playing' &&
+      interruption == null &&
       (phase == 'playing' ||
           phase == 'callerSubmit' ||
           phase == 'finalTurns' ||
@@ -172,6 +175,7 @@ class FinalCallController extends Notifier<FinalCallGameState> {
         ? rawFinalTurns.values.whereType<String>().toList(growable: false)
         : const <String>[];
     final rawResult = map['roundResult'];
+    final rawInterruption = map['interruption'];
 
     state = current.copyWith(
       loading: false,
@@ -197,6 +201,11 @@ class FinalCallController extends Notifier<FinalCallGameState> {
           ? FinalCallRoundResult.fromMap(Map<Object?, Object?>.from(rawResult))
           : null,
       discardEvent: nextDiscardEvent,
+      interruption: rawInterruption is Map
+          ? GameInterruption.fromMap(
+              Map<Object?, Object?>.from(rawInterruption),
+            )
+          : null,
     );
   }
 
@@ -300,6 +309,27 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       _run(() => service.command.timeoutTurn(roomCode: roomCode));
   Future<bool> completeResultReveal() =>
       _run(() => service.command.completeResultReveal(roomCode: roomCode));
+  Future<bool> voteToContinueInterruption() {
+    final current = interruption;
+    if (current == null) return Future.value(false);
+    return _run(
+      () => service.interruption.voteToContinue(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
+  Future<bool> expireInterruption() {
+    final current = interruption;
+    if (current == null) return Future.value(false);
+    return _run(
+      () => service.interruption.expire(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
 
   /// 제한 시간이 끝난 턴은 덱에서 한 장을 가져와 그대로 버립니다.
   Future<bool> completeTimedOutTurn() async {

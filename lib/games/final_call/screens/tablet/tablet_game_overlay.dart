@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/widgets/tablet/tablet_rolebook.dart';
-import 'package:project00/games/final_call/widgets/tablet/tablet_setting.dart';
+import 'package:project00/games/final_call/widgets/tablet/rolebook.dart';
+import 'package:project00/games/final_call/widgets/tablet/settings.dart';
 import 'package:project00/games/shared/widgets/tablet_game_side_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';

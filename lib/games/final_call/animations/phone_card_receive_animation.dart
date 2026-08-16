@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
-import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
+import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker와 같은 진입 → 탭 → 좌우 회전 → 펼침 순서를 사용합니다.

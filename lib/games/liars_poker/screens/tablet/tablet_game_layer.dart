@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/card_deal.dart';
-import 'package:project00/games/shared/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/animations/round_start_reveal.dart';
+import 'package:project00/games/liars_poker/animations/tablet_round_start_reveal.dart';
+import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
-import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
+import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
+import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
-import 'package:project00/games/liars_poker/widgets/tablet/result_tablet.dart';
+import 'package:project00/games/liars_poker/widgets/tablet/result.dart';
 
 /// 대기, 카드 배분, 라운드, 결과 등 상태별 기본 화면을 그립니다.
-class TabletGameLayer extends StatelessWidget {
-  const TabletGameLayer({
+class LiarsPokerTabletGameLayer extends StatelessWidget {
+  const LiarsPokerTabletGameLayer({
     super.key,
-    required this.status,
+    required this.stage,
     required this.playerCount,
     required this.playerSeatIndexes,
     required this.cardsPerPlayer,
@@ -27,7 +29,7 @@ class TabletGameLayer extends StatelessWidget {
     required this.winnerPlayer,
   });
 
-  final GameStatus status;
+  final LiarsPokerTabletStage stage;
   final int playerCount;
   final List<int> playerSeatIndexes;
   final int cardsPerPlayer;
@@ -43,9 +45,17 @@ class TabletGameLayer extends StatelessWidget {
   final PlayerLayoutPlayer? winnerPlayer;
   @override
   Widget build(BuildContext context) {
-    return switch (status) {
-      GameStatus.waiting => const _StatusMessage('게임 시작 대기 중'),
-      GameStatus.dealing => _RoundDealLayer(
+    return switch (stage) {
+      // 첫 RTDB 상태가 늦어져도 검은 화면으로 오해하지 않도록 배경 위에 준비
+      // 상태를 명확히 표시합니다. 공개 상태가 도착하면 dealing으로 교체됩니다.
+      LiarsPokerTabletStage.waiting => GameAnnouncementLayer(
+        announcement: GameAnnouncement.persistent(
+          id: 'liars-poker-preparing',
+          text: GameFlowCopy.preparingGame,
+        ),
+        style: const GameAnnouncementStyle.tablet(),
+      ),
+      LiarsPokerTabletStage.dealing => _RoundDealLayer(
         key: ValueKey('deal-$roundNumber-$cardPileVersion'),
         roundNumber: roundNumber,
         playerCount: playerCount,
@@ -53,10 +63,10 @@ class TabletGameLayer extends StatelessWidget {
         cardsPerPlayer: cardsPerPlayer,
         onCompleted: onDealCompleted,
       ),
-      GameStatus.roundStarting ||
-      GameStatus.playing ||
-      GameStatus.cardsPlaying ||
-      GameStatus.cardsRevealing => RoundStartReveal(
+      LiarsPokerTabletStage.roundStarting ||
+      LiarsPokerTabletStage.playing ||
+      LiarsPokerTabletStage.cardsPlaying ||
+      LiarsPokerTabletStage.cardsRevealing => RoundStartReveal(
         key: ValueKey('round-$roundNumber'),
         tableAsset: tableAssetForRank(table),
         playerCount: playerCount,
@@ -68,14 +78,20 @@ class TabletGameLayer extends StatelessWidget {
       ),
       //=======================벌칙 배경 정리==============================
       // 룰렛 진행 중에는 배경 위에 룰렛만 남기고 테이블과 잔여 카드는
-      // 그리지 않습니다. 룰렛은 상위 TabletGamePenalty 레이어가 담당합니다.
-      GameStatus.penalty => const SizedBox.shrink(),
-      GameStatus.result => Result(
+      // 그리지 않습니다. 룰렛은 상위 LiarsPokerTabletGamePenalty 레이어가 담당합니다.
+      LiarsPokerTabletStage.penalty => const SizedBox.shrink(),
+      LiarsPokerTabletStage.result => Result(
         winnerPlayer: winnerPlayer,
         onRestartGame: onRestartGame,
         onExitToLobby: onExitToLobby,
       ),
-      GameStatus.finished => const _StatusMessage('게임이 종료되었습니다.'),
+      LiarsPokerTabletStage.finished => GameAnnouncementLayer(
+        announcement: GameAnnouncement.persistent(
+          id: 'game-finished',
+          text: GameFlowCopy.gameFinished,
+        ),
+        style: const GameAnnouncementStyle.tablet(),
+      ),
     };
   }
 }
@@ -121,51 +137,22 @@ class _RoundDealLayerState extends State<_RoundDealLayer> {
             onCompleted: widget.onCompleted,
           ),
         ),
-        if (_showRoundIntro)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: FadeHoldFade(
-                key: ValueKey('tablet-round-${widget.roundNumber}'),
-                onCompleted: () {
-                  if (!mounted) return;
-                  setState(() => _introCompleted = true);
-                },
-                child: Center(
-                  child: Text(
-                    'ROUND ${widget.roundNumber}',
-                    style: const TextStyle(
-                      fontFamily: 'BebasNeue',
-                      color: Colors.white,
-                      fontSize: 58,
-                      letterSpacing: 3.2,
-                      shadows: [Shadow(color: Colors.black87, blurRadius: 18)],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+        Positioned.fill(
+          child: GameAnnouncementLayer(
+            announcement: _showRoundIntro
+                ? GameAnnouncement.round(
+                    widget.roundNumber,
+                    id: 'tablet-round-${widget.roundNumber}',
+                  )
+                : null,
+            style: const GameAnnouncementStyle.tablet(),
+            onCompleted: (_) {
+              if (!mounted) return;
+              setState(() => _introCompleted = true);
+            },
           ),
-      ],
-    );
-  }
-}
-
-class _StatusMessage extends StatelessWidget {
-  const _StatusMessage(this.message);
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
         ),
-      ),
+      ],
     );
   }
 }

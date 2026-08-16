@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  removeFinalTurnPendingPlayer,
   resolveFinalCallRound,
 } from "../lib/final-call/game.js";
 
@@ -90,5 +91,13 @@ test("덱 소진 자동 CALL도 전체 손패 대신 최고 조합만 공개한�
   assert.deepEqual(
     game.public.roundResult.revealedHands.uid2.map((value) => value.id),
     ["red6", "red5"],
+  );
+});
+
+test("RTDB에서 빈 최종 턴 목록이 생략되어도 플레이어 퇴장을 처리한다", () => {
+  assert.deepEqual(removeFinalTurnPendingPlayer(undefined, "uid1"), []);
+  assert.deepEqual(
+    removeFinalTurnPendingPlayer(["uid1", "uid2"], "uid1"),
+    ["uid2"],
   );
 });
