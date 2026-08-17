@@ -54,7 +54,10 @@ class PhoneHeader extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            onPressed: () {
+              FirebaseAuth.instance.signOut();
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
             child: Text(
               '로그아웃',
               style: TextStyle(color: colors.textMuted, fontSize: 13),

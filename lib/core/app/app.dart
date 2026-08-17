@@ -71,9 +71,16 @@ class App extends StatelessWidget {
                     );
                   }
 
+                  final doc = userDocSnapshot.data!;
+                  // 캐시 데이터만 있고 해당 문서가 존재하지 않는 경우 서버 응답을 대기하여 화면 깜빡임(Flash) 방지
+                  if (doc.metadata.isFromCache && !doc.exists) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
                   // Firestore에 문서가 없거나, 닉네임 데이터가 없으면 닉네임 설정 화면으로 연결
-                  final userData =
-                      userDocSnapshot.data?.data() as Map<String, dynamic>?;
+                  final userData = doc.data() as Map<String, dynamic>?;
 
                   if (!userDocSnapshot.hasData ||
                       !userDocSnapshot.data!.exists ||
