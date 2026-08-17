@@ -47,10 +47,11 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      await credential.user?.sendEmailVerification();
     } on FirebaseAuthException catch (error) {
       throw _toServiceException(error);
     }

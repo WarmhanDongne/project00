@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -20,6 +21,7 @@ class App extends StatelessWidget {
 
 
     // 테블릿, 폰 분기
+    final bool isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
         ? const Size(834, 1194) // 테블릿 기본 사이즈
         : const Size(390, 844); // 핸드폰 기본 사이즈

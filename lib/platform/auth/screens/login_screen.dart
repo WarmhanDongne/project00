@@ -20,9 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   //이메일+비밀번호 불러오기
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final customDomainController = TextEditingController();
 
   bool isLoading = false;
+  bool isCustomDomain = false;
   String emailDomain = 'gmail.com';
+  DateTime? _lastMessageTime;
 
   @override
   void dispose() {
@@ -30,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _authProvider.dispose();
     emailController.dispose();
     passwordController.dispose();
+    customDomainController.dispose();
     super.dispose();
   }
 
@@ -37,9 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     //아이디+비밀번호 .text처리
     //trim()? 공백 제거
     final localEmail = emailController.text.trim();
+    final domain = isCustomDomain ? customDomainController.text.trim() : emailDomain;
     final email = localEmail.contains('@')
         ? localEmail
-        : '$localEmail@$emailDomain';
+        : '$localEmail@$domain';
     final password = passwordController.text;
 
     //비여있는지 확인
@@ -93,9 +98,35 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    final now = DateTime.now();
+    if (_lastMessageTime != null && now.difference(_lastMessageTime!) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastMessageTime = now;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: const Color(0xFF404150),
+          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
@@ -133,31 +164,62 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: 8),
               Expanded(
                 flex: 2,
-                child: DropdownButtonFormField<String>(
-                  initialValue: emailDomain,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'gmail.com',
-                      child: Text('gmail.com', overflow: TextOverflow.ellipsis),
-                    ),
-                    DropdownMenuItem(
-                      value: 'naver.com',
-                      child: Text('naver.com', overflow: TextOverflow.ellipsis),
-                    ),
-                    DropdownMenuItem(
-                      value: 'handong.ac.kr',
-                      child: Text(
-                        'handong.ac.kr',
-                        overflow: TextOverflow.ellipsis,
+                child: isCustomDomain
+                    ? TextField(
+                        controller: customDomainController,
+                        decoration: InputDecoration(
+                          hintText: '직접 입력',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.arrow_drop_down, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                isCustomDomain = false;
+                                emailDomain = 'gmail.com';
+                              });
+                            },
+                          ),
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: emailDomain == 'custom' ? 'gmail.com' : emailDomain,
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'gmail.com',
+                            child: Text('gmail.com', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'naver.com',
+                            child: Text('naver.com', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'daum.net',
+                            child: Text('daum.net', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'hanmail.net',
+                            child: Text('hanmail.net', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'custom',
+                            child: Text('직접 입력', overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == 'custom') {
+                            setState(() {
+                              isCustomDomain = true;
+                              customDomainController.clear();
+                            });
+                          } else {
+                            setState(() => emailDomain = value ?? emailDomain);
+                          }
+                        },
                       ),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => emailDomain = value ?? emailDomain),
-                ),
               ),
             ],
           ),

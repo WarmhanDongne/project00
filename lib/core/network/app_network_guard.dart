@@ -132,6 +132,12 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
             child: NetworkUnavailableModal(
               isRetrying: _isRetrying,
               onRetry: () => unawaited(_retry()),
+              onBypass: () {
+                setState(() {
+                  _isModalVisible = false;
+                  _isConnected = true; // 강제로 true로 설정해 타이머 방지
+                });
+              },
             ),
           ),
       ],

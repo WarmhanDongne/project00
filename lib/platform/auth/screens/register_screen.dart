@@ -25,14 +25,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  final phoneController = TextEditingController();
-  final verificationCodeController = TextEditingController();
   final nicknameController = TextEditingController();
 
   bool isLoading = false;
   bool isEmailChecked = false;
-  bool isCodeSent = false;
-  bool isPhoneVerified = false;
+  bool isEmailVerificationSent = false;
 
   late int pageNumber; // late로 선언해 나중에 초기화
   String? verificationId;
@@ -112,8 +109,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
-      setState(() => pageNumber = 1);
-      showMessage('이메일 계정이 생성되었습니다. 휴대폰 인증을 진행해주세요.');
+      setState(() => isEmailVerificationSent = true);
+      showMessage('이메일 인증 링크가 발송되었습니다. 메일함을 확인해주세요.');
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       final message = switch (error.code) {
@@ -122,6 +119,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _ => error.message,
       };
       showMessage(message);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  //이메일 인증 확인
+  Future<void> checkEmailVerification() async {
+    setState(() => isLoading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      await user?.reload();
+      if (!mounted) return;
+      if (user?.emailVerified == true) {
+        setState(() => pageNumber = 1);
+        showMessage('이메일 인증이 완료되었습니다. 휴대폰 인증을 진행해주세요.');
+      } else {
+        showMessage('아직 이메일 인증이 완료되지 않았습니다. 메일함의 링크를 클릭해주세요.');
+      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -204,8 +219,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
-    phoneController.dispose();
-    verificationCodeController.dispose();
     nicknameController.dispose();
     super.dispose();
   }
@@ -241,13 +254,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             )
           else
             RegisterStepTwo(
-              googlePhotoURL: null,
               nicknameController: nicknameController,
-              phoneController: phoneController,
-              verificationCodeController: verificationCodeController,
               isLoading: isLoading,
-              isCodeSent: isCodeSent,
-              isPhoneVerified: isPhoneVerified,
               profileImageBytes: profileImageBytes,
               googlePhotoURL: googlePhotoURL,
               onPickProfileImage: pickProfileImage,
@@ -258,12 +266,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             label: isLoading
                 ? '처리 중...'
                 : pageNumber == 0
-                ? '다음'
+                ? (isEmailVerificationSent ? '인증 완료 확인' : '다음')
                 : '가입 완료',
             onPressed: isLoading
                 ? null
                 : pageNumber == 0
-                ? createEmailAccount
+                ? (isEmailVerificationSent ? checkEmailVerification : createEmailAccount)
                 : completeRegistration,
           ),
         ],

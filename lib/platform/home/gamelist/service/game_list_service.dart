@@ -13,6 +13,7 @@ class GameService {
   /// 전체 게임 목록을 불러오고 현재 사용자의 보유 여부를 함께 반환
   Future<List<GameInfo>> fetchGames() async {
     final user = _auth.currentUser;
+    if (user == null) return [];
 
     // 전체 게임 목록
     final gameSnapshot = await _firestore.collection('games').get();

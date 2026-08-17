@@ -7,11 +7,7 @@ import 'package:project00/platform/widgets/platform_components.dart';
 class RegisterStepTwo extends StatelessWidget {
   const RegisterStepTwo({
     required this.nicknameController,
-    required this.phoneController,
-    required this.verificationCodeController,
     required this.isLoading,
-    required this.isCodeSent,
-    required this.isPhoneVerified,
     required this.googlePhotoURL,
     required this.profileImageBytes,
     required this.onPickProfileImage,
@@ -20,11 +16,7 @@ class RegisterStepTwo extends StatelessWidget {
   });
 
   final TextEditingController nicknameController;
-  final TextEditingController phoneController;
-  final TextEditingController verificationCodeController;
   final bool isLoading;
-  final bool isCodeSent;
-  final bool isPhoneVerified;
   final Uint8List? profileImageBytes;
   final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;

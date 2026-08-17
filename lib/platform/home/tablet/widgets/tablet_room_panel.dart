@@ -394,12 +394,16 @@ class _CopyableRoomCode extends StatelessWidget {
           ..hideCurrentSnackBar()
           ..showSnackBar(const SnackBar(content: Text('방 코드가 복사되었습니다.')));
       },
-      child: Text(
-        roomCode,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          roomCode,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
         ),
       ),
     );
