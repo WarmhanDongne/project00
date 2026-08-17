@@ -124,10 +124,16 @@ class PlatformTag extends StatelessWidget {
 
 //=======================공용 상태 안내==============================
 class PlatformNotice extends StatelessWidget {
-  const PlatformNotice({super.key, required this.message, required this.style});
+  const PlatformNotice({
+    super.key,
+    required this.message,
+    required this.style,
+    this.leading,
+  });
 
   final String message;
   final PlatformNoticeStyle style;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +157,15 @@ class PlatformNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_rounded, size: 16, color: foreground),
+          leading ?? Icon(
+            switch (style) {
+              PlatformNoticeStyle.success => Icons.check_circle_rounded,
+              PlatformNoticeStyle.danger => Icons.error_rounded,
+              PlatformNoticeStyle.warning => Icons.warning_rounded,
+            },
+            size: 16,
+            color: foreground,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

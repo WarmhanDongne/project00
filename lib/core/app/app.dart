@@ -43,7 +43,7 @@ class App extends StatelessWidget {
             AppNetworkGuard(child: child ?? const SizedBox.shrink()),
 
         home: StreamBuilder<User?>(
-          stream: userChanges ?? FirebaseAuth.instance.userChanges(),
+          stream: userChanges ?? FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
             // 1. Firebase Auth 상태 로딩 중
             if (snapshot.connectionState == ConnectionState.waiting) {

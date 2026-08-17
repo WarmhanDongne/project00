@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,17 +20,27 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+enum VerificationState {
+  initial,
+  waiting,
+  verified,
+}
+
+class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObserver {
   final authService = FirebaseAuthService();
   final imagePicker = ImagePicker();
   final emailController = TextEditingController();
+  final customDomainController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
   final nicknameController = TextEditingController();
 
   bool isLoading = false;
-  bool isEmailChecked = false;
-  bool isEmailVerificationSent = false;
+  String emailDomain = 'gmail.com';
+  bool isCustomDomain = false;
+  String? errorMessage;
+  VerificationState verificationState = VerificationState.initial;
+  Timer? _pollingTimer;
 
   late int pageNumber; // late로 선언해 나중에 초기화
   String? verificationId;
@@ -41,6 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     pageNumber = widget.isGoogleSignIn ? 1 : 0; // 구글 로그인 여부 설정
 
     // 구글 로그인 객체 바탕으로 기본 정보 채우기
@@ -57,88 +69,150 @@ class _RegisterScreenState extends State<RegisterScreen> {
     googlePhotoURL = user.photoURL;
   }
 
-  //이메일 중복확인
-  Future<void> checkEmailDuplicate() async {
-    final email = emailController.text.trim();
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollingTimer?.cancel();
+    emailController.dispose();
+    customDomainController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    nicknameController.dispose();
+    super.dispose();
+  }
 
-    if (email.isEmpty) {
-      showMessage('이메일을 입력해주세요.');
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        verificationState == VerificationState.waiting) {
+      checkEmailVerification(silent: true);
+    }
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (verificationState == VerificationState.waiting) {
+        checkEmailVerification(silent: true);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String get fullEmail {
+    final localPart = emailController.text.trim();
+    if (localPart.isEmpty) return '';
+    final domain = isCustomDomain ? customDomainController.text.trim() : emailDomain;
+    return '$localPart@$domain';
+  }
+
+  //회원가입 원스텝 (중복확인 -> 계정가생성 -> 메일발송)
+  Future<void> processRegistration() async {
+    final email = fullEmail;
+
+    if (emailController.text.trim().isEmpty || (isCustomDomain && customDomainController.text.trim().isEmpty)) {
+      setState(() => errorMessage = '이메일을 완전히 입력해주세요.');
       return;
     }
     if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-      showMessage('이메일 형식이 올바르지 않습니다.');
-      return;
-    }
-    try {
-      final isDuplicate = await authService.isEmailDuplicate(email);
-
-      if (!mounted) return;
-      if (isDuplicate) {
-        showMessage('이미 사용 중인 이메일입니다.');
-        return;
-      }
-      setState(() => isEmailChecked = true);
-      showMessage('사용 가능한 이메일입니다.');
-    } on AuthServiceException catch (error) {
-      if (!mounted) return;
-      showMessage(error.message);
-    } finally {}
-  }
-
-  //회원가입
-  Future<void> createEmailAccount() async {
-    if (!isEmailChecked) {
-      showMessage('이메일 중복확인을 완료해주세요.');
+      setState(() => errorMessage = '이메일 형식이 올바르지 않습니다.');
       return;
     }
 
     final password = passwordController.text;
     if (password.isEmpty) {
-      showMessage('비밀번호를 입력해주세요.');
+      setState(() => errorMessage = '비밀번호를 입력해주세요.');
       return;
     }
     if (password != confirmPasswordController.text) {
-      showMessage('비밀번호가 일치하지 않습니다.');
+      setState(() => errorMessage = '비밀번호가 일치하지 않습니다.');
       return;
     }
-    setState(() => isLoading = true);
+
+    setState(() {
+      isLoading = true;
+      errorMessage = null; // 에러 초기화
+    });
+
     try {
+      // 1. 중복 확인
+      final isDuplicate = await authService.isEmailDuplicate(email);
+      if (!mounted) return;
+      if (isDuplicate) {
+        setState(() => errorMessage = '이미 사용 중인 이메일입니다.');
+        return;
+      }
+
+      // 2. 계정 생성
       await authService.createEmailAccount(
-        email: emailController.text.trim(),
+        email: email,
         password: password,
       );
-
       if (!mounted) return;
-      setState(() => isEmailVerificationSent = true);
-      showMessage('이메일 인증 링크가 발송되었습니다. 메일함을 확인해주세요.');
+
+      // 3. 인증 메일 발송
+      await authService.sendEmailVerification();
+      if (!mounted) return;
+
+      setState(() {
+        verificationState = VerificationState.waiting;
+        errorMessage = null;
+      });
+      _startPolling();
+
     } on AuthServiceException catch (error) {
       if (!mounted) return;
-      final message = switch (error.code) {
-        'email-already-in-use' => '방금 다른 사용자가 가입한 이메일입니다.',
+      final msg = switch (error.code) {
         'weak-password' => '비밀번호는 6자 이상 입력해주세요.',
         _ => error.message,
       };
-      showMessage(message);
+      setState(() => errorMessage = msg);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => errorMessage = '네트워크 통신 중 오류가 발생했습니다.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  //재전송
+  Future<void> resendVerificationEmail() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+    try {
+      await authService.sendEmailVerification();
+      if (!mounted) return;
+      setState(() => verificationState = VerificationState.waiting);
+      showMessage('인증 메일이 재발송되었습니다. 메일함을 확인해주세요.');
+      _startPolling();
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      setState(() => errorMessage = error.message);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
   //이메일 인증 확인
-  Future<void> checkEmailVerification() async {
-    setState(() => isLoading = true);
+  Future<void> checkEmailVerification({bool silent = false}) async {
+    if (isLoading && !silent) return;
+    if (!silent) setState(() => isLoading = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
       await user?.reload();
       if (!mounted) return;
       if (user?.emailVerified == true) {
-        setState(() => pageNumber = 1);
-        showMessage('이메일 인증이 완료되었습니다. 휴대폰 인증을 진행해주세요.');
-      } else {
+        _pollingTimer?.cancel();
+        setState(() => verificationState = VerificationState.verified);
+        showMessage('이메일 인증이 완료되었습니다. 하단의 다음 버튼을 눌러주세요.');
+      } else if (!silent) {
         showMessage('아직 이메일 인증이 완료되지 않았습니다. 메일함의 링크를 클릭해주세요.');
       }
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted && !silent) setState(() => isLoading = false);
     }
   }
 
@@ -208,20 +282,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   //메시지 보여주기
   void showMessage(String message) {
+    if (message.isEmpty) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  //객체 정리
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    nicknameController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,10 +313,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (pageNumber == 0)
             RegisterStepOne(
               emailController: emailController,
+              customDomainController: customDomainController,
               passwordController: passwordController,
               confirmPasswordController: confirmPasswordController,
-              isEmailChecked: isEmailChecked,
-              onCheckEmail: checkEmailDuplicate,
+              emailDomain: emailDomain,
+              isCustomDomain: isCustomDomain,
+              isLoading: isLoading,
+              errorMessage: errorMessage,
+              verificationState: verificationState,
+              onDomainChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    emailDomain = val;
+                    isCustomDomain = val == '직접 입력';
+                  });
+                }
+              },
+              onProcessRegistration: processRegistration,
+              onResendVerification: resendVerificationEmail,
             )
           else
             RegisterStepTwo(
@@ -263,16 +343,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           const SizedBox(height: 20),
           PlatformButton(
-            label: isLoading
-                ? '처리 중...'
-                : pageNumber == 0
-                ? (isEmailVerificationSent ? '인증 완료 확인' : '다음')
-                : '가입 완료',
-            onPressed: isLoading
-                ? null
-                : pageNumber == 0
-                ? (isEmailVerificationSent ? checkEmailVerification : createEmailAccount)
-                : completeRegistration,
+            label: pageNumber == 0
+                ? (verificationState == VerificationState.waiting
+                    ? (isLoading ? '확인 중...' : '인증 확인')
+                    : '다음')
+                : (isLoading ? '처리 중...' : '가입 완료'),
+            onPressed: pageNumber == 0
+                ? (verificationState == VerificationState.waiting
+                    ? (isLoading ? null : checkEmailVerification)
+                    : (verificationState == VerificationState.verified
+                        ? () => setState(() => pageNumber = 1)
+                        : null)) // initial 상태에서는 다음 버튼 비활성화 (전송하기로 진행)
+                : (isLoading ? null : completeRegistration),
           ),
         ],
       ),

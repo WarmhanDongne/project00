@@ -47,11 +47,19 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      final credential = await _auth.createUserWithEmailAndPassword(
+      await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      await credential.user?.sendEmailVerification();
+    } on FirebaseAuthException catch (error) {
+      throw _toServiceException(error);
+    }
+  }
+
+  //인증 메일 발송
+  Future<void> sendEmailVerification() async {
+    try {
+      await _auth.currentUser?.sendEmailVerification();
     } on FirebaseAuthException catch (error) {
       throw _toServiceException(error);
     }
