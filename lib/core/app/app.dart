@@ -23,7 +23,6 @@ class App extends StatelessWidget {
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
     // 테블릿, 폰 분기
-    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
         ? const Size(834, 1194) // 테블릿 기본 사이즈
         : const Size(390, 844); // 핸드폰 기본 사이즈
