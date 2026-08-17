@@ -6,6 +6,8 @@ import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/platform/home/home.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
   final Stream<User?>? userChanges;
@@ -15,6 +17,7 @@ class App extends StatelessWidget {
     // 화면 크기 구하기
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
+
 
     // 테블릿, 폰 분기
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
@@ -29,6 +32,10 @@ class App extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Project 00',
+        theme: PlatformTheme.light(),
+        darkTheme: PlatformTheme.dark(),
+        themeMode: ThemeMode.light,
+
         home: StreamBuilder<User?>(
           stream: userChanges ?? FirebaseAuth.instance.userChanges(),
           builder: (context, snapshot) {

@@ -280,7 +280,6 @@ class RoomProvider extends ChangeNotifier {
     final game = GameRegistry.find(gameId);
     if (code == null || game == null) return false;
 
-    _isLeaving = true;
     final result = await _runCommand<bool>(() async {
       await _service.leaveGame(
         cloudFunctionName: game.leaveFunctionName,
@@ -294,21 +293,6 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
-  Future<bool> leaveFinalCallGame() async {
-    final code = roomCode;
-    if (code == null) return false;
-
-    _isLeaving = true;
-    final result = await _runCommand<bool>(() async {
-      await _service.leaveGame(
-        cloudFunctionName: 'leaveFinalCallGame',
-        roomCode: code,
-      );
-      return true;
-    });
-    if (result == true) clearRoom();
-    return result ?? false;
-  }
 
   // 메모리 초기화 leaveRoom에서 사용
   void clearRoom() {
