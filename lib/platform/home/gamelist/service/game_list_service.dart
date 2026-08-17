@@ -21,17 +21,15 @@ class GameService {
     // 내가 보유한 게임 ID
     Set<String> ownedGameIds = {};
 
-    if (user != null) {
-      final userSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+    final userSnapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
-      final ownedGames = userSnapshot.data()?['ownedGames'];
+    final ownedGames = userSnapshot.data()?['ownedGames'];
 
-      if (ownedGames is List) {
-        ownedGameIds = ownedGames.whereType<String>().toSet();
-      }
+    if (ownedGames is List) {
+      ownedGameIds = ownedGames.whereType<String>().toSet();
     }
 
     final games = gameSnapshot.docs
