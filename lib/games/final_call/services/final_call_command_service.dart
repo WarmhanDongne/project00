@@ -1,13 +1,17 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:project00/games/shared/services/callable_retry_policy.dart';
 
 /// Final Call Cloud Functions 명령 전용 서비스입니다.
 class FinalCallCommandService {
-  FinalCallCommandService({FirebaseFunctions? functions})
-    : _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+  FinalCallCommandService({
+    FirebaseFunctions? functions,
+    this.retryPolicy = const CallableRetryPolicy(),
+  }) : _functions =
+           functions ??
+           FirebaseFunctions.instanceFor(region: 'asia-northeast3');
 
-  static const int _maxTransientAttempts = 4;
   final FirebaseFunctions _functions;
+  final CallableRetryPolicy retryPolicy;
 
   //=======================게임 수명주기==============================
   Future<Map<String, dynamic>> startGame({required String roomCode}) {
@@ -91,38 +95,27 @@ class FinalCallCommandService {
     }, retryTransientFailure: true);
   }
 
+  /// 태블릿의 최종 카드 공개가 끝난 뒤 휴대폰 결과 화면을 엽니다.
+  Future<Map<String, dynamic>> completeResultReveal({
+    required String roomCode,
+  }) {
+    return _call('completeFinalCallResultReveal', {
+      'roomCode': roomCode,
+    }, retryTransientFailure: true);
+  }
+
   //=======================Callable 공통 처리==============================
   Future<Map<String, dynamic>> _call(
     String functionName,
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
   }) async {
-    FirebaseFunctionsException? lastError;
-    for (var attempt = 0; attempt < _maxTransientAttempts; attempt += 1) {
-      try {
-        final response = await _functions
-            .httpsCallable(functionName)
-            .call(data);
-        return response.data is Map
-            ? Map<String, dynamic>.from(response.data as Map)
-            : const {};
-      } on FirebaseFunctionsException catch (error) {
-        lastError = error;
-        final shouldRetry =
-            retryTransientFailure &&
-            attempt < _maxTransientAttempts - 1 &&
-            const {
-              'not-found',
-              'aborted',
-              'unavailable',
-              'deadline-exceeded',
-              'internal',
-            }.contains(error.code);
-        if (!shouldRetry) rethrow;
-        await Future<void>.delayed(Duration(milliseconds: 220 * (attempt + 1)));
-      }
-    }
-    throw lastError ?? Exception('Final Call 요청 실패');
+    return retryPolicy.run(() async {
+      final response = await _functions.httpsCallable(functionName).call(data);
+      return response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : const {};
+    }, enabled: retryTransientFailure);
   }
 
   String _commandId(String prefix) {

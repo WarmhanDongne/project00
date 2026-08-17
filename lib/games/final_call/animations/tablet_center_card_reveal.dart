@@ -18,6 +18,7 @@ class FinalCallCenterCardReveal extends StatefulWidget {
     this.gap = 10,
     this.startDelay = const Duration(milliseconds: 400),
     this.duration = const Duration(milliseconds: 680),
+    this.showRevealedCard = true,
   });
 
   final FinalCallCard? card;
@@ -25,6 +26,7 @@ class FinalCallCenterCardReveal extends StatefulWidget {
   final double gap;
   final Duration startDelay;
   final Duration duration;
+  final bool showRevealedCard;
 
   @override
   State<FinalCallCenterCardReveal> createState() =>
@@ -69,33 +71,37 @@ class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
           Positioned(
             left: 0,
             top: 0,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: started ? 1 : 0),
-              duration: widget.duration,
-              curve: Curves.easeInOutCubic,
-              builder: (context, progress, _) {
-                final showFront = progress >= 0.5;
+            child: AnimatedOpacity(
+              opacity: widget.showRevealedCard ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: started ? 1 : 0),
+                duration: widget.duration,
+                curve: Curves.easeInOutCubic,
+                builder: (context, progress, _) {
+                  final showFront = progress >= 0.5;
 
-                // 앞뒷면이 바뀌는 90도 지점을 기준으로 각도를 다시 펴 줍니다.
-                final rotationY = showFront
-                    ? (progress - 1) * math.pi
-                    : progress * math.pi;
+                  // 앞뒷면이 바뀌는 90도 지점을 기준으로 각도를 다시 펴 줍니다.
+                  final rotationY = showFront
+                      ? (progress - 1) * math.pi
+                      : progress * math.pi;
 
-                return Transform.translate(
-                  offset: Offset(travelDistance * progress, 0),
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.0016)
-                      ..rotateY(rotationY),
-                    child: FinalCallCardView(
-                      card: widget.card,
-                      faceDown: !showFront,
-                      width: widget.cardWidth,
+                  return Transform.translate(
+                    offset: Offset(travelDistance * progress, 0),
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.0016)
+                        ..rotateY(rotationY),
+                      child: FinalCallCardView(
+                        card: widget.card,
+                        faceDown: !showFront,
+                        width: widget.cardWidth,
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],

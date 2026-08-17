@@ -2,8 +2,9 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/liars_poker_copy.dart';
+import 'package:project00/games/shared/animations/fade_hold_fade.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -166,7 +167,10 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
         ),
         child: const FadeHoldFade(
           duration: Duration(milliseconds: 2500),
-          child: Text('벌칙 진행 중', style: _PenaltyTextStyle.title),
+          child: Text(
+            LiarsPokerCopy.penaltyTitle,
+            style: _PenaltyTextStyle.title,
+          ),
         ),
       ),
     );

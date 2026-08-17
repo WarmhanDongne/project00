@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class RegisterStepOne extends StatelessWidget {
   const RegisterStepOne({
@@ -19,7 +20,13 @@ class RegisterStepOne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          '이메일',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -27,75 +34,52 @@ class RegisterStepOne extends StatelessWidget {
                 controller: emailController,
                 enabled: !isEmailChecked,
                 keyboardType: TextInputType.emailAddress,
-
-                decoration: const InputDecoration(
-                  hintText: 'ID/EMAIL:',
-                  filled: true,
-                  fillColor: Color(0xFFD4D4D4),
-                ),
+                decoration: const InputDecoration(hintText: 'mosi@gmail.com'),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             SizedBox(
-              width: 110,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  shape: const RoundedRectangleBorder(),
-                ),
+              width: 82,
+              child: PlatformButton(
+                label: isEmailChecked ? '완료' : '중복확인',
+                style: isEmailChecked
+                    ? PlatformButtonStyle.secondary
+                    : PlatformButtonStyle.primary,
                 onPressed: isEmailChecked ? null : onCheckEmail,
-                child: isEmailChecked
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(isEmailChecked ? '확인완료' : '중복확인'),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                children: [
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      hintText: 'PW',
-                      filled: true,
-                      fillColor: Color(0xFFD4D4D4),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: confirmPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      hintText: 'PW 재입력',
-                      filled: true,
-                      fillColor: Color(0xFFD4D4D4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              width: 110,
-              height: 110,
-              color: Colors.grey,
-              alignment: Alignment.center,
-              child: const Text(
-                '영문 / 숫자로\n구성된 6자\n이상의 PW',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
+        const SizedBox(height: 8),
+        PlatformNotice(
+          message: isEmailChecked
+              ? '사용 가능한 이메일입니다.'
+              : '중복 확인 후 다음 단계로 이동할 수 있습니다.',
+          style: isEmailChecked
+              ? PlatformNoticeStyle.success
+              : PlatformNoticeStyle.warning,
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          '비밀번호',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: passwordController,
+          obscureText: true,
+          decoration: const InputDecoration(hintText: '••••••••'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          '비밀번호 재입력',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: confirmPasswordController,
+          obscureText: true,
+          decoration: const InputDecoration(hintText: '••••••••'),
         ),
       ],
     );

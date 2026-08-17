@@ -6,6 +6,7 @@ import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/platform/home/home.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
@@ -17,6 +18,9 @@ class App extends StatelessWidget {
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
 
+    // shortestSide를 기준으로 태블릿 여부를 판단합니다.
+    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
+
     // 테블릿, 폰 분기
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
@@ -24,7 +28,8 @@ class App extends StatelessWidget {
         : const Size(390, 844); // 핸드폰 기본 사이즈
 
     return ScreenUtilInit(
-      ensureScreenSize: true, // android 환경 등에서 프레임 사이즈가 초기에 0이 되는 걸 방지
+      ensureScreenSize:
+          true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
       designSize: currentDesignSize,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

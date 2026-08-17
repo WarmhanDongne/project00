@@ -16,6 +16,91 @@ class FinalCallCard {
   );
 }
 
+enum FinalCallCombinationType { color, sameNumber }
+
+class FinalCallScoreResult {
+  const FinalCallScoreResult({
+    required this.value,
+    required this.type,
+    this.color,
+  });
+
+  final int value;
+  final FinalCallCombinationType type;
+  final String? color;
+}
+
+/// 선택된 카드로 만든 최고 점수와 그 점수를 만든 조합 종류를 반환합니다.
+FinalCallScoreResult calculateFinalCallScoreResult(
+  Iterable<FinalCallCard> cards,
+) {
+  final colorTotals = <String, int>{};
+  final valueTotals = <int, int>{};
+  final valueCounts = <int, int>{};
+  for (final card in cards) {
+    colorTotals.update(
+      card.color,
+      (total) => total + card.value,
+      ifAbsent: () => card.value,
+    );
+    valueTotals.update(
+      card.value,
+      (total) => total + card.value,
+      ifAbsent: () => card.value,
+    );
+    valueCounts.update(card.value, (count) => count + 1, ifAbsent: () => 1);
+  }
+
+  var bestColor = '';
+  var bestColorScore = 0;
+  for (final entry in colorTotals.entries) {
+    if (entry.value > bestColorScore) {
+      bestColor = entry.key;
+      bestColorScore = entry.value;
+    }
+  }
+
+  var bestNumberScore = 0;
+  for (final entry in valueTotals.entries) {
+    if ((valueCounts[entry.key] ?? 0) >= 2 && entry.value > bestNumberScore) {
+      bestNumberScore = entry.value;
+    }
+  }
+
+  if (bestNumberScore >= bestColorScore && bestNumberScore > 0) {
+    return FinalCallScoreResult(
+      value: bestNumberScore,
+      type: FinalCallCombinationType.sameNumber,
+    );
+  }
+  return FinalCallScoreResult(
+    value: bestColorScore,
+    type: FinalCallCombinationType.color,
+    color: bestColor.isEmpty ? null : bestColor,
+  );
+}
+
+/// 기존 점수 계산 호출부에서 사용하는 숫자 전용 편의 함수입니다.
+int calculateFinalCallScore(Iterable<FinalCallCard> cards) =>
+    calculateFinalCallScoreResult(cards).value;
+
+/// 한 턴이 끝난 뒤 태블릿 중앙으로 던져질 버린 카드 이벤트입니다.
+class FinalCallDiscardEvent {
+  const FinalCallDiscardEvent({
+    required this.version,
+    required this.playerUid,
+    required this.card,
+    required this.previousCard,
+    required this.drawSource,
+  });
+
+  final int version;
+  final String playerUid;
+  final FinalCallCard card;
+  final FinalCallCard? previousCard;
+  final String? drawSource;
+}
+
 class FinalCallPlayer {
   const FinalCallPlayer({
     required this.uid,

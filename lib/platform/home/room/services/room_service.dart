@@ -77,6 +77,52 @@ class RoomService {
     return realtime.ref('rooms/$roomCode/selectedGame').onValue;
   }
 
+  /// 게임 종류와 관계없이 플랫폼 대기실이 확인하는 공통 시작 상태입니다.
+  ///
+  /// 게임 선택 알림보다 게임 노드가 먼저 생성되어도 현재 값을 다시 받을 수 있도록
+  /// `onValue`를 사용합니다.
+  Stream<String?> watchGameStatus(String roomCode) {
+    return realtime
+        .ref('rooms/$roomCode/game/public/status')
+        .onValue
+        .map((event) => event.snapshot.value?.toString());
+  }
+
+  //=======================태블릿(진행 기기) 접속 표시==============================
+  // 태블릿은 players에 들어가지 않아 접속 여부를 알 수 없습니다. 태블릿이
+  // 방을 열고 있는 동안에만 true로 두고, 앱이 꺼지거나 연결이 끊기면 서버가
+  // 자동으로 false로 바꿉니다. 휴대폰은 이 값을 보고 무한 대기를 피합니다.
+  Future<void> markControllerConnected(String roomCode) async {
+    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
+    try {
+      await ref.onDisconnect().set(false);
+    } catch (_) {
+      // 연결 종료 예약 실패는 접속 표시 자체를 막지 않습니다.
+    }
+    await _writeWithRetry(() => ref.set(true));
+  }
+
+  Future<void> markControllerDisconnected(String roomCode) async {
+    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
+    try {
+      await ref.onDisconnect().cancel();
+    } catch (_) {
+      // 예약 취소 실패는 무시합니다.
+    }
+    await _writeWithRetry(() => ref.set(false));
+  }
+
+  /// 태블릿이 방을 열고 있는지 여부입니다. 값이 없으면 아직 알 수 없으므로
+  /// null을 흘려보내 휴대폰이 성급하게 나가지 않게 합니다.
+  Stream<bool?> watchControllerConnected(String roomCode) {
+    return realtime.ref('rooms/$roomCode/controllerConnected').onValue.map((
+      event,
+    ) {
+      final value = event.snapshot.value;
+      return value is bool ? value : null;
+    });
+  }
+
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
         .ref('rooms/$roomCode/players')
@@ -130,7 +176,11 @@ class RoomService {
 
   // ========================================================== phone ==================================================================
 
-  Future<void> joinRoom(String roomCode, String nickname) async {
+  Future<void> joinRoom(
+    String roomCode,
+    String nickname, {
+    required String accentColor,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const RoomCommandException('인증 정보가 없습니다.');
@@ -138,7 +188,12 @@ class RoomService {
 
     final uid = user.uid;
     final code = roomCode.trim().toUpperCase();
-    await _joinRoomWithRetry(roomCode: code, nickname: nickname);
+    await _joinRoomWithRetry(
+      roomCode: code,
+      nickname: nickname,
+      accentColor: accentColor,
+      preserveProfile: true,
+    );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
     // 기능이므로 클라이언트에서 한 번만 예약하고 실패해도 입장은 유지합니다.
@@ -146,9 +201,23 @@ class RoomService {
     await _registerDisconnectPresence(playerRef);
   }
 
+  /// 이미 참가한 플레이어의 닉네임과 UI 색상만 갱신합니다.
+  Future<void> updateRoomPlayerProfile(
+    String roomCode,
+    String nickname, {
+    required String accentColor,
+  }) => _joinRoomWithRetry(
+    roomCode: roomCode.trim().toUpperCase(),
+    nickname: nickname,
+    accentColor: accentColor,
+    preserveProfile: false,
+  );
+
   Future<void> _joinRoomWithRetry({
     required String roomCode,
     required String nickname,
+    required String accentColor,
+    required bool preserveProfile,
   }) async {
     FirebaseFunctionsException? lastError;
 
@@ -157,6 +226,8 @@ class RoomService {
         await _functions.httpsCallable('joinRealtimeRoom').call({
           'roomCode': roomCode,
           'nickname': nickname,
+          'accentColor': accentColor,
+          'preserveProfile': preserveProfile,
         });
         return;
       } on FirebaseFunctionsException catch (error) {
@@ -204,11 +275,15 @@ class RoomService {
     await _writeWithRetry(playerRef.remove);
   }
 
-  /// 진행 중인 Liar's Poker에서 퇴장합니다.
+  /// 진행 중인 게임에서 퇴장합니다.
   ///
-  /// 플레이어 삭제와 다음 턴 결정은 Cloud Function 트랜잭션이 함께 처리하며,
-  /// 클라이언트는 기존 연결 종료 예약만 먼저 취소합니다.
-  Future<void> leaveLiarsPokerGame(String roomCode) async {
+  /// 플레이어 삭제와 다음 턴 결정은 [cloudFunctionName]으로 지정한 게임별 Cloud
+  /// Function 트랜잭션이 함께 처리하며, 클라이언트는 기존 연결 종료 예약만 먼저
+  /// 취소합니다.
+  Future<void> leaveGame({
+    required String cloudFunctionName,
+    required String roomCode,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const RoomCommandException('인증 정보가 없습니다.');
@@ -225,7 +300,7 @@ class RoomService {
     FirebaseFunctionsException? lastError;
     for (var attempt = 0; attempt < _functionOperationAttempts; attempt += 1) {
       try {
-        await _functions.httpsCallable('leaveLiarsPokerGame').call({
+        await _functions.httpsCallable(cloudFunctionName).call({
           'roomCode': code,
         });
         return;
@@ -245,24 +320,6 @@ class RoomService {
     throw RoomCommandException(
       lastError?.message ?? '게임에서 퇴장하지 못했습니다. 잠시 후 다시 시도해주세요.',
     );
-  }
-
-  /// 진행 중인 Final Call에서 퇴장하고 서버가 다음 턴을 결정하게 합니다.
-  Future<void> leaveFinalCallGame(String roomCode) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const RoomCommandException('인증 정보가 없습니다.');
-    }
-    final code = roomCode.trim().toUpperCase();
-    final playerRef = realtime.ref('rooms/$code/players/${user.uid}');
-    try {
-      await playerRef.onDisconnect().cancel();
-    } catch (_) {
-      // 서버 callable이 즉시 참가자를 제거하므로 예약 취소 실패는 무시합니다.
-    }
-    await _functions.httpsCallable('leaveFinalCallGame').call({
-      'roomCode': code,
-    });
   }
 
   /// iOS에서 일시적인 native `unknown` 오류가 발생해도 같은 읽기를 재시도합니다.

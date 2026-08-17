@@ -1,15 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/card_play_animation.dart';
+import 'package:project00/games/liars_poker/animations/tablet_card_play_animation.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
 
 /// 현재 라운드에 제출된 모든 카드 묶음을 중앙 더미에 쌓습니다.
 ///
 /// 새 제출만 플레이어 자리에서 중앙으로 이동하고, 라이어 선언으로
 /// `isRevealed`가 바뀐 마지막 묶음만 앞면 공개 애니메이션을 실행합니다.
-class TabletGameAnimation extends StatelessWidget {
-  const TabletGameAnimation({
+class LiarsPokerTabletGameAnimation extends StatelessWidget {
+  const LiarsPokerTabletGameAnimation({
     super.key,
     required this.roundPlays,
     required this.activePlayId,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/mafia/animations/role_card_reveal_animation.dart';
-import 'package:project00/games/mafia/widgets/sideblock_phone.dart';
+import 'package:project00/games/mafia/widgets/phone_top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 final bool isMorning = true;
@@ -60,7 +60,7 @@ class Header extends StatefulWidget {
 class _HeaderState extends State<Header> {
   @override
   Widget build(BuildContext context) {
-    return SideBlock(isMorning: isMorning);
+    return MafiaPhoneTopBar(isMorning: isMorning);
   }
 }
 

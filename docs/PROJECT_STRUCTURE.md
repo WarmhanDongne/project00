@@ -1,8 +1,12 @@
 # 프로젝트 구조 설명서
 
-이 문서는 새 개발자가 파일의 위치와 책임을 빠르게 파악하기 위한 안내서입니다. 현재 파일 중 상당수는 구조를 잡기 위한 최소 골격이며, 서비스 인터페이스는 실제 Firebase 구현체가 아닙니다.
+> 이 문서는 프로젝트 초기에 작성된 일반 구조 설명입니다. 현재 게임 상태 머신,
+> Riverpod, Cloud Functions, 애니메이션과 새 게임 추가 기준은
+> [`AI_GAME_DEVELOPMENT_GUIDE.md`](AI_GAME_DEVELOPMENT_GUIDE.md)를 우선해서 읽으세요.
 
-> UI 관련 `screens`, `widgets`, `router`, `theme` 폴더는 팀에서 처음부터 설계할 수 있도록 현재 비어 있습니다. 아래에 적힌 UI 파일명은 앞으로 만들 수 있는 위치와 역할의 예시이며, 구현 완료를 의미하지 않습니다.
+이 문서는 새 개발자가 파일의 위치와 책임을 빠르게 파악하기 위한 안내서입니다.
+현재 게임 코드는 Firebase와 연결된 실제 구현이며, 아래 경로는 예시 이름이 아니라
+현재 적용하는 배치 규칙입니다.
 
 ## 폴더를 나눈 의도
 
@@ -202,16 +206,15 @@ lib/main.dart
 | 파일/경로 | 의미 |
 |---|---|
 | `game_registry.dart` | 앱에서 제공하는 게임 목록 등록 |
-| `_game_template/template_game.dart` | 모든 게임이 제공해야 할 기본 정보 계약 |
-| `_game_template/widgets/` | 새 게임 생성 시 참고할 위젯 위치 |
-| `liars_poker/liars_poker_game.dart` | Liar's Poker 식별자와 표시 이름 |
-| `liars_poker/models/liars_poker_state.dart` | 게임 단계와 현재 턴 상태 |
-| `liars_poker/providers/liars_poker_provider.dart` | 게임 화면 상태 골격 |
-| `liars_poker/repositories/liars_poker_repository.dart` | 게임 데이터 통신 계약 |
-| `liars_poker/screens/liars_poker_room_screen.dart` | 게임 대기실 |
-| `liars_poker/screens/liars_poker_game_screen.dart` | 실제 플레이 화면 |
-| `liars_poker/screens/liars_poker_result_screen.dart` | 결과 화면 |
-| `liars_poker/widgets/` | 탄창, 카드 패, Liar 호출 버튼, 좌석 등 전용 UI |
+| `template_game.dart` | 모든 게임이 구현하는 플랫폼 연결 계약 |
+| `_game_template/` | 새 게임용 화면·서비스 스캐폴드와 상세 가이드 |
+| `<game>/<game>_game.dart` | 게임 식별자, 시작/구독, 휴대폰·태블릿 화면 생성 |
+| `<game>/controllers/` | 서버 상태 구독, 파생 상태, 명령 조정 |
+| `<game>/providers/` | 불변 상태와 autoDispose family 세션 |
+| `<game>/screens/` | 휴대폰·태블릿 진입 화면과 기기별 화면 레이어 |
+| `<game>/widgets/{phone,tablet}/` | 기기별 게임 전용 UI |
+| `<game>/animations/` | 한 게임에서만 쓰는 애니메이션 |
+| `shared/` | 두 게임 이상에서 재사용하는 흐름·애니메이션·위젯 |
 
 ## 새 게임 추가 방법
 
@@ -219,8 +222,8 @@ lib/main.dart
 2. `assets/games/<game_id>`에 게임 전용 에셋 폴더를 만듭니다.
 3. 게임 정보 클래스를 `TemplateGame` 기반으로 작성합니다.
 4. `game_registry.dart`에 새 게임을 등록합니다.
-5. 필요한 화면 경로를 `route_names.dart`와 `app_router.dart`에 추가합니다.
-6. 다른 게임도 재사용할 코드가 생기면 `shared/game_kit`으로 이동합니다.
+5. 게임별 화면 경로 분기는 추가하지 않습니다. 플랫폼은 `TemplateGame`을 통해 화면을 엽니다.
+6. 다른 게임도 재사용할 코드가 생기면 `lib/games/shared/`로 이동합니다.
 
 ## 파일 배치 판단 기준
 

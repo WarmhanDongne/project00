@@ -1,3 +1,7 @@
+/* eslint-disable max-len */
+
+import {PublicGameInterruption, ServerGameInterruption} from "../../game-interruption/types.js";
+
 export const CARD_RANKS = ["A", "K", "Q", "JOKER"] as const;
 
 export type CardRank = typeof CARD_RANKS[number];
@@ -39,7 +43,7 @@ export interface PublicPenaltyResult {
 
 export interface PublicGameState {
   status: "playing" | "finished";
-  finishReason?: "winner" | "manual" | "insufficientPlayers";
+  finishReason?: "winner" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
   phase: "dealing" | "playing" | "lastCardChallenge" | "penalty" |
     "finished";
   round: number;
@@ -58,6 +62,7 @@ export interface PublicGameState {
   startedAt: number;
   updatedAt: number;
   finishedAt?: number;
+  interruption?: PublicGameInterruption;
 }
 
 export interface PrivatePlayerState {
@@ -79,6 +84,7 @@ export interface ServerGameState {
   penaltyCountIncrementedBeforeRoulette?: boolean;
   /** 태블릿 배분 연출이 끝나기 전까지 클라이언트에 공개하지 않는 손패입니다. */
   pendingHands?: Record<string, PrivatePlayerState>;
+  interruption?: ServerGameInterruption;
 }
 
 export interface LiarsPokerGameState {

@@ -58,9 +58,18 @@ export function parseCardIds(value: unknown): string[] {
 }
 
 /** 진행 중인 게임 상태를 반환합니다. */
-export function requireGame(room: RealtimeRoom): LiarsPokerGameState {
+export function requireGame(
+  room: RealtimeRoom,
+  options: {allowInterruption?: boolean} = {},
+): LiarsPokerGameState {
   if (!room.game) {
     throw new HttpsError("failed-precondition", "진행 중인 게임이 없습니다.");
+  }
+  if (room.game.public.interruption && !options.allowInterruption) {
+    throw new HttpsError(
+      "failed-precondition",
+      "플레이어 연결 확인 중에는 게임을 진행할 수 없습니다.",
+    );
   }
   return room.game;
 }

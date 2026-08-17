@@ -1,13 +1,13 @@
-/*
-그룹 참여하기 - 방 입장화면. 
-카메라를 통한 큐알 스캔 또는 참여 코드로 그룹에 입장하는 단계의 페이지.
-*/
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
+//=======================그룹 참여 코드 화면==============================
 class PhoneRoomJoin extends StatefulWidget {
   const PhoneRoomJoin({super.key});
 
@@ -17,44 +17,100 @@ class PhoneRoomJoin extends StatefulWidget {
 
 class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   final TextEditingController _roomCodeController = TextEditingController();
+  final FocusNode _codeFocusNode = FocusNode();
+  final RoomProvider _roomProvider = RoomProvider();
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _isOpeningNameInput = false;
+  String? _validationMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _roomCodeController.addListener(_refreshCode);
+  }
+
+  void _refreshCode() {
+    _validationMessage = null;
+    _roomProvider.errorMessage = null;
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _roomCodeController.removeListener(_refreshCode);
     _scannerController.dispose();
     _roomCodeController.dispose();
+    _codeFocusNode.dispose();
+    _roomProvider.dispose();
     super.dispose();
   }
 
   Future<void> _openNameInput() async {
     final roomCode = _roomCodeController.text.trim().toUpperCase();
     if (roomCode.length != 5) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('5자리 참여 코드를 입력해주세요.')));
+      setState(() => _validationMessage = '5자리 참여 코드를 입력해주세요.');
       return;
     }
-
     if (_isOpeningNameInput) return;
-    _isOpeningNameInput = true;
+    setState(() {
+      _isOpeningNameInput = true;
+      _validationMessage = null;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _isOpeningNameInput = false;
+        _validationMessage = '로그인 정보를 확인할 수 없습니다.';
+      });
+      return;
+    }
+    final baseNickname = user.displayName?.trim().isNotEmpty == true
+        ? user.displayName!.trim()
+        : user.email?.split('@').first ?? '플레이어';
+    final safeBase = baseNickname.length <= 20
+        ? baseNickname
+        : baseNickname.substring(0, 20);
+
+    // 다음 화면에서 실제 닉네임을 정하기 전까지 잠깐 쓰이는 임시 값입니다.
+    // 같은 방에 동일한 닉네임이 이미 있으면 입장 자체가 막히므로,
+    // 그 경우에만 뒤에 작은 번호를 붙여 재시도합니다.
+    var joined = await _roomProvider.joinRoom(
+      roomCode,
+      safeBase,
+      accentColor: '#6557D2',
+    );
+    var attempt = 2;
+    while (!joined &&
+        _roomProvider.errorMessage == '이미 사용 중인 닉네임입니다.' &&
+        attempt <= 9) {
+      joined = await _roomProvider.joinRoom(
+        roomCode,
+        '$safeBase$attempt',
+        accentColor: '#6557D2',
+      );
+      attempt += 1;
+    }
+    if (!mounted) return;
+    if (!joined) {
+      setState(() => _isOpeningNameInput = false);
+      return;
+    }
 
     try {
       await _scannerController.stop();
     } on MobileScannerException {
-      // 카메라 사용이 불가능해도 참여 코드를 직접 입력해 입장할 수 있습니다.
+      // 카메라가 없어도 참여 코드를 직접 입력할 수 있습니다.
     }
-
     if (!mounted) return;
 
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhoneRoomNickname(
-          roomCode: roomCode,
-        ), // 입력 완료 버튼 클릭 후 받고 처리한 roomCode를 파라미터로 주고 PhoneRoomInput로 이동
+        builder: (_) =>
+            PhoneRoomNickname(roomCode: roomCode, provider: _roomProvider),
       ),
     );
 
@@ -63,133 +119,237 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     try {
       await _scannerController.start();
     } on MobileScannerException {
-      // 권한이 거부된 경우에도 수동 코드 입력 기능은 계속 사용할 수 있습니다.
+      // 권한이 거부된 경우에도 수동 입력은 유지합니다.
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(centerTitle: true, title: Text("그룹 참여하기")),
-        body: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: Column(
-            children: [
-              SizedBox(height: 4.h),
-              Padding(
-                padding: EdgeInsetsGeometry.symmetric(horizontal: 23.w),
-                child: joinGuidance(),
+    final colors = context.platformColors;
+    return PlatformPhoneFlowScaffold(
+      title: '그룹 참여하기',
+      bottom: PlatformButton(
+        label: _isOpeningNameInput ? '접속 중...' : '입장하기',
+        onPressed: _isOpeningNameInput ? null : _openNameInput,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '태블릿에 표시된 QR 코드를 스캔하거나,\n참여 코드를 입력해 주세요.',
+            style: TextStyle(
+              color: colors.textMuted,
+              fontSize: 14,
+              height: 1.55,
+            ),
+          ),
+          const SizedBox(height: 18),
+          AspectRatio(
+            aspectRatio: 1.36,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: const Color(0xFF232129),
+                    child: MobileScanner(
+                      controller: _scannerController,
+                      onDetect: (capture) {
+                        if (_isOpeningNameInput) return;
+                        for (final barcode in capture.barcodes) {
+                          final value = barcode.rawValue?.trim().toUpperCase();
+                          if (value != null && value.length == 5) {
+                            _roomCodeController.text = value;
+                            _openNameInput();
+                            break;
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const _ScannerFrame(),
+                  Center(
+                    child: Text(
+                      'camera view',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.26),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 26.h),
-              cameraSection(),
-              SizedBox(height: 36.h),
-              Divider(color: Colors.grey, thickness: 1.0, height: 20.h),
-              enterJoinCode(),
-              enterJoinCodeSection(),
-              SizedBox(height: 36.h),
-              submitButton(),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(child: Divider(color: colors.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  'OR',
+                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+                ),
+              ),
+              Expanded(child: Divider(color: colors.border)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Container cameraSection() {
-    return Container(
-      height: 310.h,
-      width: 310.w,
-      color: Colors.grey,
-      child: MobileScanner(
-        controller: _scannerController,
-        onDetect: (capture) {
-          if (_isOpeningNameInput) return;
-
-          final List<Barcode> barcodes = capture.barcodes;
-          for (final barcode in barcodes) {
-            if (barcode.rawValue != null) {
-              final scannedCode = barcode.rawValue!.trim().toUpperCase();
-              if (scannedCode.length == 5) {
-                _roomCodeController.text = scannedCode;
-                // 스캔 성공 시 닉네임 수정으로 이동
-                _openNameInput();
-                break;
-              }
-            }
-          }
-        },
-      ),
-    );
-  }
-
-  SizedBox enterJoinCodeSection() {
-    return SizedBox(
-      width: 342.w,
-      child: TextField(
-        controller: _roomCodeController,
-        maxLength: 5,
-        textAlign: TextAlign.center,
-        textCapitalization: TextCapitalization.characters,
-        style: TextStyle(
-          fontSize: 32.sp,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 10,
-        ),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+          const SizedBox(height: 18),
+          const Text(
+            '참여 코드 입력',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          _RoomCodeBoxes(
+            controller: _roomCodeController,
+            focusNode: _codeFocusNode,
+            onSubmitted: _openNameInput,
+          ),
+          if (_validationMessage != null ||
+              _roomProvider.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            PlatformNotice(
+              message: _validationMessage ?? _roomProvider.errorMessage!,
+              style: PlatformNoticeStyle.danger,
+            ),
+          ] else if (_roomCodeController.text.isNotEmpty &&
+              _roomCodeController.text.length < 5) ...[
+            const SizedBox(height: 10),
+            PlatformNotice(
+              message: '태블릿에 표시된 5자리 코드를 입력해 주세요.',
+              style: PlatformNoticeStyle.warning,
+            ),
+          ],
         ],
-        decoration: const InputDecoration(
-          hintText: 'ABCDE',
-          counterText: '',
-          border: OutlineInputBorder(),
-        ),
-        onSubmitted: (_) => _openNameInput(),
       ),
     );
   }
+}
 
-  SizedBox submitButton() {
-    return SizedBox(
-      width: 164.w,
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.black,
-          backgroundColor: Colors.grey,
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5.0.r),
+class _RoomCodeBoxes extends StatelessWidget {
+  const _RoomCodeBoxes({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    final code = controller.text.toUpperCase();
+    return GestureDetector(
+      onTap: focusNode.requestFocus,
+      child: Stack(
+        children: [
+          Row(
+            children: List.generate(5, (index) {
+              final hasValue = index < code.length;
+              final isCurrent = index == code.length.clamp(0, 4);
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index == 4 ? 0 : 8),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isCurrent ? colors.primary : colors.border,
+                          width: isCurrent ? 1.6 : 1,
+                        ),
+                      ),
+                      child: Text(
+                        hasValue ? code[index] : '',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
-        ),
-
-        onPressed: _openNameInput,
-        child: Text('입력 완료'),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.01,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                maxLength: 5,
+                textCapitalization: TextCapitalization.characters,
+                keyboardType: TextInputType.visiblePassword,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                  TextInputFormatter.withFunction(
+                    (oldValue, newValue) =>
+                        newValue.copyWith(text: newValue.text.toUpperCase()),
+                  ),
+                ],
+                decoration: const InputDecoration(counterText: ''),
+                onSubmitted: (_) => onSubmitted(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Column enterJoinCode() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsetsGeometry.only(left: 30.w),
-          child: Text(
-            "참여 코드 입력",
-            style: TextStyle(fontSize: 25.sp, fontWeight: FontWeight.w400),
-          ),
-        ),
-        SizedBox(height: 20.h),
-      ],
+class _ScannerFrame extends StatelessWidget {
+  const _ScannerFrame();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: CustomPaint(painter: _ScannerFramePainter()),
     );
   }
+}
 
-  Text joinGuidance() {
-    return Text(
-      "테블릿에 표시된 QR 코드를 스캔, 혹은 참여 코드를 입력해 주세요. ",
-      textAlign: TextAlign.center,
-      style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25.sp),
-    );
+class _ScannerFramePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    const line = 28.0;
+    final paths = <Path>[
+      Path()
+        ..moveTo(0, line)
+        ..lineTo(0, 0)
+        ..lineTo(line, 0),
+      Path()
+        ..moveTo(size.width - line, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, line),
+      Path()
+        ..moveTo(0, size.height - line)
+        ..lineTo(0, size.height)
+        ..lineTo(line, size.height),
+      Path()
+        ..moveTo(size.width - line, size.height)
+        ..lineTo(size.width, size.height)
+        ..lineTo(size.width, size.height - line),
+    ];
+    for (final path in paths) {
+      canvas.drawPath(path, paint);
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

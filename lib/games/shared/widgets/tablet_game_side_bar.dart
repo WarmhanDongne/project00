@@ -14,6 +14,7 @@ class TabletGameSideBar extends StatelessWidget {
     this.iconSize = 100,
     this.spacing = 0,
     this.dialogAlignment = const Alignment(0, 0.7),
+    this.animateEntry = true,
   });
 
   final Widget roleIcon;
@@ -23,6 +24,7 @@ class TabletGameSideBar extends StatelessWidget {
   final double iconSize;
   final double spacing;
   final Alignment dialogAlignment;
+  final bool animateEntry;
 
   Future<void> _showGameDialog(BuildContext context, WidgetBuilder builder) {
     return showDialog<void>(
@@ -40,7 +42,7 @@ class TabletGameSideBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         //=======================룰북 버튼==============================
@@ -59,6 +61,24 @@ class TabletGameSideBar extends StatelessWidget {
           onPressed: () => _showGameDialog(context, settingDialogBuilder),
         ),
       ],
+    );
+
+    if (!animateEntry) return content;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 980),
+      curve: Curves.easeOutCubic,
+      child: content,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.78 + (0.22 * value),
+            alignment: Alignment.topRight,
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

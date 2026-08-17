@@ -1,13 +1,16 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:project00/games/shared/services/callable_retry_policy.dart';
 
 class LiarsPokerCommandService {
-  static const int _maxTransientAttempts = 4;
-
-  LiarsPokerCommandService({FirebaseFunctions? functions})
-    : _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+  LiarsPokerCommandService({
+    FirebaseFunctions? functions,
+    this.retryPolicy = const CallableRetryPolicy(),
+  }) : _functions =
+           functions ??
+           FirebaseFunctions.instanceFor(region: 'asia-northeast3');
 
   final FirebaseFunctions _functions;
+  final CallableRetryPolicy retryPolicy;
 
   /// 태블릿 딜링 중 첫 카드 제출과 라이어 함수의 콜드 스타트를 미리 끝냅니다.
   Future<void> warmUpGameplayCommands() async {
@@ -104,8 +107,8 @@ class LiarsPokerCommandService {
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
   }) async {
-    for (var attempt = 0; attempt < _maxTransientAttempts; attempt += 1) {
-      try {
+    try {
+      return await retryPolicy.run(() async {
         final result = await _functions.httpsCallable(functionName).call(data);
 
         if (result.data is! Map) {
@@ -113,37 +116,14 @@ class LiarsPokerCommandService {
         }
 
         return Map<String, dynamic>.from(result.data as Map);
-      } on FirebaseFunctionsException catch (error) {
-        final shouldRetry =
-            retryTransientFailure &&
-            attempt < _maxTransientAttempts - 1 &&
-            _isTransientCode(error.code);
-        if (shouldRetry) {
-          // 같은 commandId를 유지해 서버의 멱등 처리 결과를 안전하게 재사용합니다.
-          await Future<void>.delayed(
-            Duration(milliseconds: 220 * (attempt + 1)),
-          );
-          continue;
-        }
-
-        throw LiarsPokerCommandException(
-          code: error.code,
-          message: error.message ?? '게임 요청을 처리하지 못했습니다.',
-        );
-      }
+      }, enabled: retryTransientFailure);
+    } on FirebaseFunctionsException catch (error) {
+      throw LiarsPokerCommandException(
+        code: error.code,
+        message: error.message ?? '게임 요청을 처리하지 못했습니다.',
+      );
     }
-
-    throw const LiarsPokerCommandException(
-      code: 'aborted',
-      message: '게임 요청을 처리하지 못했습니다.',
-    );
   }
-
-  bool _isTransientCode(String code) =>
-      code == 'not-found' ||
-      code == 'aborted' ||
-      code == 'unavailable' ||
-      code == 'deadline-exceeded';
 
   String _commandId(String prefix) {
     return '${prefix}_${DateTime.now().microsecondsSinceEpoch}';

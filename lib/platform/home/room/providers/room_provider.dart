@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
@@ -28,6 +29,15 @@ class RoomProvider extends ChangeNotifier {
   String? errorMessage;
   String? selectedGameId;
   GameInfo? selectedGame;
+
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
@@ -81,6 +91,26 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  /// 휴대폰 대기실에서 게임 종류와 무관하게 시작 상태를 한 번만 구독합니다.
+  Stream<String?> watchGameStatus(String code) =>
+      _service.watchGameStatus(code.trim().toUpperCase());
+
+  /// 태블릿이 방을 열고 있는지 구독합니다. 휴대폰이 무한 대기하지 않도록
+  /// 태블릿이 사라지면 알려 줍니다.
+  Stream<bool?> watchControllerConnected(String code) =>
+      _service.watchControllerConnected(code.trim().toUpperCase());
+
+  /// 태블릿이 방 화면을 열고 있는 동안 접속 표시를 유지합니다.
+  Future<void> markControllerConnected() async {
+    final code = roomCode;
+    if (code == null) return;
+    try {
+      await _service.markControllerConnected(code);
+    } catch (_) {
+      // 접속 표시 실패가 방 진행을 막지 않습니다.
+    }
+  }
+
   Future<bool> removePlayer(String userUid) async {
     final result = await _runCommand<bool>(() async {
       await _service.removePlayer(roomCode!, userUid);
@@ -114,20 +144,19 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
 
-    roomSubscription = _service.watchRoom(roomCode!).listen((event) async {
+    roomSubscription = _service.watchRoom(roomCode!).listen((event) {
       final gameId = event.snapshot.value as String?;
 
       if (gameId != selectedGameId) {
         selectedGameId = gameId;
+        selectedGame = null;
+        // 게임 시작 판단에 필요한 ID는 Firestore 메타데이터보다 먼저 전달합니다.
+        notifyListeners();
 
         if (gameId != null) {
-          selectedGame = await _gameService.getGame(gameId);
-        } else {
-          selectedGame = null;
+          unawaited(_loadSelectedGame(gameId));
         }
       }
-
-      notifyListeners();
     }, onError: _handleSubscriptionError);
     playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomPlayer,
@@ -159,6 +188,20 @@ class RoomProvider extends ChangeNotifier {
     }, onError: _handleSubscriptionError);
   }
 
+  /// 썸네일·설명 같은 화면용 Firestore 정보는 게임 시작 신호와 분리해 불러옵니다.
+  /// 조회가 늦거나 실패해도 Realtime Database의 게임 시작 처리는 계속됩니다.
+  Future<void> _loadSelectedGame(String gameId) async {
+    try {
+      final game = await _gameService.getGame(gameId);
+      if (selectedGameId != gameId) return;
+      selectedGame = game;
+      notifyListeners();
+    } catch (_) {
+      // 게임 ID와 RTDB 상태만으로 게임 화면을 열 수 있으므로 메타데이터 실패는
+      // 대기실의 시작 흐름을 중단하지 않습니다.
+    }
+  }
+
   void _handleSubscriptionError(Object error) {
     final message = error.toString().toLowerCase();
     // Realtime Database 스트림은 네트워크 복구 시 자동으로 다시 연결됩니다.
@@ -174,14 +217,18 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // ============================================== Phone을 위한 메서드 ========================================
-  Future<bool> joinRoom(String roomCode, String nickname) async {
+  Future<bool> joinRoom(
+    String rawRoomCode,
+    String nickname, {
+    String accentColor = '#6557D2',
+  }) async {
     // Room code 받기
-    final code = roomCode.trim().toUpperCase();
+    final code = rawRoomCode.trim().toUpperCase();
     if (code.isEmpty) return false;
 
     // joinRoom 실행
     final result = await _runCommand(() async {
-      await _service.joinRoom(code, nickname); // 서비스에 roomcode와 nickname 전달
+      await _service.joinRoom(code, nickname, accentColor: accentColor);
       return true;
     });
 
@@ -192,6 +239,23 @@ class RoomProvider extends ChangeNotifier {
       this.roomCode = code;
       listenRoom();
     }
+    return result ?? false;
+  }
+
+  Future<bool> updateJoinedPlayerProfile(
+    String nickname, {
+    required String accentColor,
+  }) async {
+    final code = roomCode;
+    if (code == null) return false;
+    final result = await _runCommand<bool>(() async {
+      await _service.updateRoomPlayerProfile(
+        code,
+        nickname,
+        accentColor: accentColor,
+      );
+      return true;
+    });
     return result ?? false;
   }
 
@@ -211,13 +275,17 @@ class RoomProvider extends ChangeNotifier {
   }
 
   /// 게임 중 퇴장: 서버가 다음 턴 또는 인원 부족 종료까지 결정합니다.
-  Future<bool> leaveLiarsPokerGame() async {
+  Future<bool> leaveGame(String gameId) async {
     final code = roomCode;
-    if (code == null) return false;
+    final game = GameRegistry.find(gameId);
+    if (code == null || game == null) return false;
 
     _isLeaving = true;
     final result = await _runCommand<bool>(() async {
-      await _service.leaveLiarsPokerGame(code);
+      await _service.leaveGame(
+        cloudFunctionName: game.leaveFunctionName,
+        roomCode: code,
+      );
       return true;
     });
     if (result == true) {
@@ -257,6 +325,7 @@ class RoomProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     super.dispose();

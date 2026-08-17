@@ -28,3 +28,14 @@ double finalCallSeatRotation(int index, int count) {
   if (alignment == Alignment.centerRight) return -math.pi / 2;
   return 0;
 }
+
+/// 실제 원형 레이아웃 좌표에서 플레이어가 보드 중심을 바라보는 각도입니다.
+double finalCallSeatRotationForCenter({
+  required Offset center,
+  required Size boardSize,
+}) {
+  final boardCenter = boardSize.center(Offset.zero);
+  final direction = center - boardCenter;
+  if (direction.distanceSquared == 0) return 0;
+  return math.atan2(direction.dy, direction.dx) - math.pi / 2;
+}

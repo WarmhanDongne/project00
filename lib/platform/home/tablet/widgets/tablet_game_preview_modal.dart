@@ -1,14 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:project00/games/final_call/screens/tablet_game.dart';
-import 'package:project00/games/final_call/services/final_call_service.dart';
-import 'package:project00/games/liars_poker/models/player_layout_factory.dart';
-import 'package:project00/games/liars_poker/screens/liars_poker.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/tablet/widgets/tablet_button.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class GamePreviewDialog extends StatelessWidget {
   const GamePreviewDialog({
@@ -71,10 +72,22 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
+    final templateGame = GameRegistry.find(game.id);
+    if (templateGame == null) {
+      _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      return;
+    }
+
     final selected = await roomProvider.selectGame(game.id);
     if (!context.mounted) return;
     if (!selected) {
       _showMessage(context, roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.');
+      return;
+    }
+
+    final roomCode = roomProvider.roomCode;
+    if (roomCode == null) {
+      _showMessage(context, '방 정보를 확인할 수 없습니다.');
       return;
     }
 
@@ -84,65 +97,51 @@ class GamePreviewDialog extends StatelessWidget {
       MaterialPageRoute(
         builder: (layoutContext) => PlayerLayoutEditor(
           initialLayout: initialLayout,
-          onComplete: (completedLayout) async {
+          tableColor: templateGame.tableColor,
+          tableBackgroundImage: templateGame.tableBackgroundImage,
+          tableImage: templateGame.layoutTableImage,
+          chairImage: templateGame.layoutChairImage,
+          onPrepare: (completedLayout) async {
             //자리 realtime database에 저장
             final saved = await roomProvider.savePlayerSeatIndexes({
               for (final player in completedLayout.players)
                 player.uid: player.seatIndex,
             });
-            if (!layoutContext.mounted) return;
+            if (!layoutContext.mounted) return false;
             if (!saved) {
               _showMessage(
                 layoutContext,
                 roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
               );
-              return;
+              return false;
             }
 
-            final roomCode = roomProvider.roomCode;
-            if (roomCode == null) {
-              _showMessage(layoutContext, '방 정보를 확인할 수 없습니다.');
-              return;
-            }
-
-            if (game.id == 'final_call') {
-              final finalCallService = FinalCallService();
-              try {
-                await finalCallService.command.startGame(roomCode: roomCode);
-              } catch (error) {
-                if (!layoutContext.mounted) return;
-                _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
-                return;
-              }
-              if (!layoutContext.mounted) return;
-              Navigator.of(layoutContext).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => FinalCallTabletGameEntry(
-                    roomCode: roomCode,
-                    gameService: finalCallService,
-                    provider: roomProvider,
-                  ),
-                ),
-              );
-              return;
-            }
-
-            final gameService = LiarsPokerService();
             try {
-              await gameService.command.startGame(roomCode: roomCode);
+              await templateGame.startGame(roomCode);
             } catch (error) {
-              if (!layoutContext.mounted) return;
+              if (!layoutContext.mounted) return false;
               _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
-              return;
+              return false;
             }
+            return layoutContext.mounted;
+          },
+          onComplete: (completedLayout) {
             if (!layoutContext.mounted) return;
+            //=======================태블릿 게임 방향 불변 조건==============================
+            // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
+            unawaited(AppOrientation.lockTabletGameLandscape());
+            // 자리 배치 연출이 화면을 게임 배경색으로 가득 채운 채로 끝나므로,
+            // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
+            // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
+            // 바꿔서 하나의 연출처럼 이어지게 합니다.
             Navigator.of(layoutContext).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => LiarsPoker(
+              PageRouteBuilder<void>(
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+                pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
                   playerLayout: completedLayout,
                   provider: roomProvider,
                   roomCode: roomCode,
-                  gameService: gameService,
                 ),
               ),
             );
@@ -154,106 +153,118 @@ class GamePreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     final informationTexts = <String>[
-      if (game.playTime > 0) '플레이 시간 ${game.playTime}분',
+      if (game.playTime > 0) '${game.playTime}분',
       if (_playerCountText().isNotEmpty) _playerCountText(),
-      if (game.genresText.isNotEmpty) game.genresText,
     ];
+    final activePlayerCount = roomProvider.players
+        .where((player) => player.isActive && player.isPlayer)
+        .length;
+    final hasEnoughPlayers = activePlayerCount >= game.minPlayers;
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(30),
+      insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 520),
+        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 500),
         child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: const BoxDecoration(color: Color(0xff969696)),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 30,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
           child: Stack(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 230,
+                    width: 240,
                     child: _PosterImage(imageUrl: game.imageUrl),
                   ),
-                  const SizedBox(width: 28),
+                  const SizedBox(width: 22),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 42),
+                          child: Text(
                             game.name.isEmpty ? '게임 이름' : game.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 33,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              fontSize: 27,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          if (informationTexts.isNotEmpty)
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 7,
-                              children: [
-                                for (final text in informationTexts)
-                                  _GameInformationChip(text: text),
-                              ],
-                            ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Text(
-                                game.description.isEmpty
-                                    ? '게임 설명이 없습니다.'
-                                    : game.description,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.5,
-                                  color: Colors.black,
-                                ),
-                              ),
+                        ),
+                        const SizedBox(height: 9),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final text in informationTexts)
+                              PlatformTag(label: text),
+                            for (final genre in game.genres.take(3))
+                              PlatformTag(label: genre, highlighted: true),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          game.description.isEmpty
+                              ? '게임 설명이 없습니다.'
+                              : game.description,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 13,
+                            height: 1.55,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: _RuleVideoArea(videoUrl: game.ruleVideoUrl),
+                        ),
+                        const SizedBox(height: 10),
+                        if (!hasEnoughPlayers)
+                          PlatformNotice(
+                            message:
+                                '현재 인원 $activePlayerCount명은 권장 인원 ${game.minPlayers}~${game.maxPlayers}명보다 적습니다.',
+                            style: PlatformNoticeStyle.warning,
+                          ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: SizedBox(
+                            width: 140,
+                            child: PlatformButton(
+                              label: '시작하기',
+                              onPressed: () => _startGame(context),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          _RuleVideoArea(videoUrl: game.ruleVideoUrl),
-                          const SizedBox(height: 14),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: AppButton(
-                              text: '시작하기',
-                              // text: isOwned ? '시작하기' : '구매 필요',
-                              width: 140,
-                              height: 48,
-                              backgroundColor: Colors.grey.shade200,
-                              foregroundColor: Colors.black,
-                              onPressed: () {
-                                _startGame(context);
-                              },
-                              // onPressed: isOwned
-                              // ? () => _startGame(context)
-                              // : null,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
               Positioned(
-                right: -14,
-                top: -14,
-                child: IconButton(
+                right: 0,
+                top: 0,
+                child: IconButton.filledTonal(
                   tooltip: '닫기',
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  icon: const Icon(Icons.close, size: 30, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, size: 20),
                 ),
               ),
             ],
@@ -271,66 +282,26 @@ class _PosterImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.grey.shade200),
-      clipBehavior: Clip.antiAlias,
-      child: imageUrl.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.image_outlined, size: 52, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('준비중'),
-                ],
+    final colors = context.platformColors;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: ColoredBox(
+        color: colors.surfaceMuted,
+        child: imageUrl.isEmpty
+            ? Center(
+                child: Text(
+                  'poster 320×468',
+                  style: TextStyle(color: colors.textMuted, fontSize: 10),
+                ),
+              )
+            : Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) =>
+                    progress == null ? child : const SizedBox.shrink(),
+                errorBuilder: (_, _, _) =>
+                    Icon(Icons.broken_image_outlined, color: colors.textMuted),
               ),
-            )
-          : Image.network(
-              imageUrl,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) {
-                  return child;
-                }
-
-                return const Center(child: CircularProgressIndicator());
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.broken_image_outlined,
-                        size: 52,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(height: 8),
-                      Text('이미지를 불러올 수 없습니다.', textAlign: TextAlign.center),
-                    ],
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-class _GameInformationChip extends StatelessWidget {
-  const _GameInformationChip({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      color: Colors.grey.shade300,
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 13, color: Colors.black),
       ),
     );
   }
@@ -343,33 +314,40 @@ class _RuleVideoArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return InkWell(
       onTap: videoUrl.isEmpty
           ? null
           : () {
-              debugPrint('룰 설명 영상 URL: $videoUrl');
-
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
                 ..showSnackBar(SnackBar(content: Text('룰 영상 주소: $videoUrl')));
             },
+      borderRadius: BorderRadius.circular(9),
       child: Container(
         width: double.infinity,
-        height: 125,
-        color: Colors.grey.shade200,
+        constraints: const BoxConstraints(minHeight: 90),
+        decoration: BoxDecoration(
+          color: colors.surfaceMuted,
+          borderRadius: BorderRadius.circular(9),
+        ),
         alignment: Alignment.center,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              videoUrl.isEmpty
-                  ? Icons.videocam_off_outlined
-                  : Icons.play_circle_outline,
-              size: 42,
-              color: Colors.grey.shade700,
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: colors.surface,
+              child: Icon(
+                videoUrl.isEmpty ? Icons.videocam_off : Icons.play_arrow,
+                color: colors.text,
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(videoUrl.isEmpty ? '등록된 룰 설명 영상이 없습니다.' : '룰 설명 영상'),
+            const SizedBox(height: 8),
+            Text(
+              videoUrl.isEmpty ? '등록된 룰 설명 영상이 없습니다.' : '룰 설명 영상',
+              style: TextStyle(color: colors.textMuted, fontSize: 11),
+            ),
           ],
         ),
       ),

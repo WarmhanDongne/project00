@@ -27,7 +27,7 @@ export const endFinalCallGame = onCall<Data>(
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       assertFinalCallController(room, uid);
-      const game = requireFinalCallGame(room);
+      const game = requireFinalCallGame(room, {allowInterruption: true});
       const now = Date.now();
 
       game.public.status = "finished";
@@ -45,6 +45,9 @@ export const endFinalCallGame = onCall<Data>(
       game.public.finishedAt = now;
       game.private = {};
       delete game.server.pendingHands;
+      delete game.server.finalSubmissions;
+      delete game.server.interruption;
+      delete game.public.interruption;
 
       response = {
         success: true,

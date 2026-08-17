@@ -75,3 +75,12 @@ export {startFinalCallNextRound} from "./final-call/next-round.js";
 export {timeoutFinalCallTurn} from "./final-call/timeout-turn.js";
 export {leaveFinalCallGame} from "./final-call/leave-game.js";
 export {submitFinalCallHand} from "./final-call/submit-final-hand.js";
+export {
+  completeFinalCallResultReveal,
+} from "./final-call/complete-result-reveal.js";
+
+export {
+  expireInterruptedGame,
+  handleGamePlayerConnectionChanged,
+  voteToContinueInterruptedGame,
+} from "./game-interruption/functions.js";

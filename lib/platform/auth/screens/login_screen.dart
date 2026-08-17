@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool isLoading = false;
+  String emailDomain = 'gmail.com';
 
   @override
   void dispose() {
@@ -34,7 +36,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> signIn() async {
     //아이디+비밀번호 .text처리
     //trim()? 공백 제거
-    final email = emailController.text.trim();
+    final localEmail = emailController.text.trim();
+    final email = localEmail.contains('@')
+        ? localEmail
+        : '$localEmail@$emailDomain';
     final password = passwordController.text;
 
     //비여있는지 확인
@@ -95,113 +100,146 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            // color: const Color.fromARGB(255, 255, 255, 255),
-            borderRadius: BorderRadius.circular(16),
+    final colors = context.platformColors;
+    return PlatformAuthShell(
+      maxWidth: 360,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '모시겜',
+            style: TextStyle(
+              color: colors.primary,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          const SizedBox(height: 4),
+          Text(
+            '모이면 시작되는 게임',
+            style: TextStyle(color: colors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 24),
+          Row(
             children: [
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  hintText: 'ID/EMAIL:',
-                  filled: true,
-                  fillColor: Color(0xFFD4D4D4),
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(hintText: '이메일'),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  hintText: 'PW:',
-                  filled: true,
-                  fillColor: Color(0xFFD4D4D4),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(0),
-                          ),
-                        ),
-                        onPressed: gotoRegister,
-                        child: Text('회원가입'),
-                      ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  initialValue: emailDomain,
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'gmail.com',
+                      child: Text('gmail.com', overflow: TextOverflow.ellipsis),
                     ),
-                    SizedBox(width: 20),
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(0),
-                          ),
-                        ),
-                        onPressed: isLoading ? null : signIn,
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('로그인'),
+                    DropdownMenuItem(
+                      value: 'naver.com',
+                      child: Text('naver.com', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'handong.ac.kr',
+                      child: Text(
+                        'handong.ac.kr',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
-                ),
-              ),
-              SizedBox(height: 16),
-              GestureDetector(
-                onTap: () async {
-                  // 로딩 중이 아닐 때만 실행되도록 처리
-                  if (isLoading) return;
-
-                  // 상태를 로딩 중으로 변경
-                  setState(() {
-                    isLoading = true;
-                  });
-
-                  // AuthProvider의 구글 로그인 로직 호출
-                  final credential = await _authProvider.signInWithGoogle();
-
-                  if (!mounted) return;
-
-                  setState(() {
-                    isLoading = false;
-                  });
-
-                  if (credential != null) {
-                    showMessage('구글 로그인에 성공했습니다.');
-                  } else {
-                    showMessage('구글 로그인에 실패했습니다.');
-                  }
-                },
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Assets.images.button.googleLoginButton.image(
-                    fit: BoxFit.fitWidth,
-                  ),
+                  onChanged: (value) =>
+                      setState(() => emailDomain = value ?? emailDomain),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(hintText: '비밀번호'),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: PlatformButton(
+                  label: '회원가입',
+                  style: PlatformButtonStyle.secondary,
+                  onPressed: isLoading ? null : gotoRegister,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: PlatformButton(
+                  label: isLoading ? '로그인 중...' : '로그인',
+                  onPressed: isLoading ? null : signIn,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: Divider(color: colors.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  '또는',
+                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+                ),
+              ),
+              Expanded(child: Divider(color: colors.border)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: isLoading
+                ? null
+                : () async {
+                    setState(() => isLoading = true);
+                    final credential = await _authProvider.signInWithGoogle();
+                    if (!mounted) return;
+                    setState(() => isLoading = false);
+                    showMessage(
+                      credential == null
+                          ? '구글 로그인에 실패했습니다.'
+                          : '구글 로그인에 성공했습니다.',
+                    );
+                  },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                border: Border.all(color: colors.border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.circle_outlined, size: 17),
+                  const SizedBox(width: 8),
+                  Text(
+                    '구글로 로그인',
+                    style: TextStyle(
+                      color: colors.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
