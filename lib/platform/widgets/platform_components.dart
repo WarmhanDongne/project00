@@ -185,11 +185,13 @@ class PlatformAuthShell extends StatelessWidget {
     super.key,
     required this.child,
     this.showBack = false,
+    this.onBackPressed,
     this.maxWidth = 420,
   });
 
   final Widget child;
   final bool showBack;
+  final VoidCallback? onBackPressed;
   final double maxWidth;
 
   @override
@@ -216,7 +218,7 @@ class PlatformAuthShell extends StatelessWidget {
                 top: 16,
                 child: IconButton.filledTonal(
                   visualDensity: VisualDensity.compact,
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed: onBackPressed ?? () => Navigator.of(context).maybePop(),
                   icon: const Icon(Icons.arrow_back, size: 18),
                 ),
               ),

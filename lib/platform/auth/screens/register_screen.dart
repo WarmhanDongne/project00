@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
-import 'package:project00/platform/home/home.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -20,13 +19,10 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-enum VerificationState {
-  initial,
-  waiting,
-  verified,
-}
+enum VerificationState { initial, waiting, verified }
 
-class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObserver {
+class _RegisterScreenState extends State<RegisterScreen>
+    with WidgetsBindingObserver {
   final authService = FirebaseAuthService();
   final imagePicker = ImagePicker();
   final emailController = TextEditingController();
@@ -41,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
   String? errorMessage;
   VerificationState verificationState = VerificationState.initial;
   Timer? _pollingTimer;
+  bool _canPop = false;
 
   late int pageNumber; // late로 선언해 나중에 초기화
   String? verificationId;
@@ -64,9 +61,57 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
 
     if (user == null) return; // 실패
 
+    final isEmailProvider = user.providerData.any(
+      (p) => p.providerId == 'password',
+    );
+    if (isEmailProvider && !user.emailVerified) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showUnverifiedDialog(user);
+      });
+      return;
+    }
+
     // 성공 시 닉네임과 photoURL 갱신
     nicknameController.text = user.displayName ?? '';
     googlePhotoURL = user.photoURL;
+  }
+
+  void _showUnverifiedDialog(User user) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            '이메일 인증 필요',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            '이메일 인증이 완료되지 않았습니다.\n메일함을 확인하시거나 인증 메일을 다시 보내주세요.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('확인', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('재전송'),
+            ),
+          ],
+        );
+      },
+    ).then((shouldResend) async {
+      if (shouldResend == true) {
+        try {
+          await user.sendEmailVerification();
+          if (mounted) showMessage('인증 메일이 재발송되었습니다.');
+        } catch (e) {
+          if (mounted) showMessage('메일 재발송 중 오류가 발생했습니다.');
+        }
+      }
+      await FirebaseAuth.instance.signOut();
+    });
   }
 
   @override
@@ -81,6 +126,58 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
     super.dispose();
   }
 
+  void _handleBack() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      setState(() => _canPop = true);
+      Future.microtask(() {
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      });
+      return;
+    }
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          '가입 취소',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('아직 가입이 완료되지 않았습니다.\n정말 가입을 취소하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('계속 진행', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('가입 취소', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel == true) {
+      setState(() => _canPop = true);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await user.reload();
+          if (!user.emailVerified) {
+            await user.delete(); // 인증 안 된 임시 계정 삭제
+          } else {
+            await FirebaseAuth.instance.signOut();
+          }
+        } catch (_) {
+          await FirebaseAuth.instance.signOut();
+        }
+      }
+      Future.microtask(() {
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      });
+    }
+  }
+
+  //회원가입 프로세스
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed &&
@@ -103,7 +200,9 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
   String get fullEmail {
     final localPart = emailController.text.trim();
     if (localPart.isEmpty) return '';
-    final domain = isCustomDomain ? customDomainController.text.trim() : emailDomain;
+    final domain = isCustomDomain
+        ? customDomainController.text.trim()
+        : emailDomain;
     return '$localPart@$domain';
   }
 
@@ -111,7 +210,8 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
   Future<void> processRegistration() async {
     final email = fullEmail;
 
-    if (emailController.text.trim().isEmpty || (isCustomDomain && customDomainController.text.trim().isEmpty)) {
+    if (emailController.text.trim().isEmpty ||
+        (isCustomDomain && customDomainController.text.trim().isEmpty)) {
       setState(() => errorMessage = '이메일을 완전히 입력해주세요.');
       return;
     }
@@ -140,15 +240,12 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
       final isDuplicate = await authService.isEmailDuplicate(email);
       if (!mounted) return;
       if (isDuplicate) {
-        setState(() => errorMessage = '이미 사용 중인 이메일입니다.');
+        setState(() => errorMessage = '이미 가입된 이메일입니다. 뒤로 가기를 눌러 로그인 화면에서 진행해주세요.');
         return;
       }
 
       // 2. 계정 생성
-      await authService.createEmailAccount(
-        email: email,
-        password: password,
-      );
+      await authService.createEmailAccount(email: email, password: password);
       if (!mounted) return;
 
       // 3. 인증 메일 발송
@@ -160,7 +257,6 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
         errorMessage = null;
       });
       _startPolling();
-
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       final msg = switch (error.code) {
@@ -211,6 +307,12 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
       } else if (!silent) {
         showMessage('아직 이메일 인증이 완료되지 않았습니다. 메일함의 링크를 클릭해주세요.');
       }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        _pollingTimer?.cancel();
+      }
+    } catch (e) {
+      // 기타 에러 무시 (백그라운드 폴링 중 발생할 수 있음)
     } finally {
       if (mounted && !silent) setState(() => isLoading = false);
     }
@@ -268,7 +370,9 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
       //(프로필 이미지+ 닉네임)을 계정정보를 firestore에 저장
       await authService.createUserDocument();
       if (!mounted) return;
+      _canPop = true;
       showMessage('가입이 완료되었습니다.');
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       showMessage(error.message);
@@ -285,75 +389,87 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    return PlatformAuthShell(
-      showBack: true,
-      maxWidth: pageNumber == 0 ? 440 : 400,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            pageNumber == 0 ? '회원가입' : '프로필 설정',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 5),
-          if (pageNumber == 0)
+    return PopScope(
+      canPop: _canPop,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: PlatformAuthShell(
+        showBack: true,
+        onBackPressed: _handleBack,
+        maxWidth: pageNumber == 0 ? 440 : 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              '사용할 이메일과 비밀번호를 입력해 주세요.',
-              style: TextStyle(color: colors.textMuted, fontSize: 11),
+              pageNumber == 0 ? '회원가입' : '프로필 설정',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
             ),
-          const SizedBox(height: 20),
-          if (pageNumber == 0)
-            RegisterStepOne(
-              emailController: emailController,
-              customDomainController: customDomainController,
-              passwordController: passwordController,
-              confirmPasswordController: confirmPasswordController,
-              emailDomain: emailDomain,
-              isCustomDomain: isCustomDomain,
-              isLoading: isLoading,
-              errorMessage: errorMessage,
-              verificationState: verificationState,
-              onDomainChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    emailDomain = val;
-                    isCustomDomain = val == '직접 입력';
-                  });
-                }
-              },
-              onProcessRegistration: processRegistration,
-              onResendVerification: resendVerificationEmail,
-            )
-          else
-            RegisterStepTwo(
-              nicknameController: nicknameController,
-              isLoading: isLoading,
-              profileImageBytes: profileImageBytes,
-              googlePhotoURL: googlePhotoURL,
-              onPickProfileImage: pickProfileImage,
-              onCheckNickname: checkNickname,
+            const SizedBox(height: 5),
+            if (pageNumber == 0)
+              Text(
+                '사용할 이메일과 비밀번호를 입력해 주세요.',
+                style: TextStyle(color: colors.textMuted, fontSize: 11),
+              ),
+            const SizedBox(height: 20),
+            if (pageNumber == 0)
+              RegisterStepOne(
+                emailController: emailController,
+                customDomainController: customDomainController,
+                passwordController: passwordController,
+                confirmPasswordController: confirmPasswordController,
+                emailDomain: emailDomain,
+                isCustomDomain: isCustomDomain,
+                isLoading: isLoading,
+                errorMessage: errorMessage,
+                verificationState: verificationState,
+                onDomainChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      if (val == 'custom') {
+                        isCustomDomain = true;
+                        customDomainController.clear();
+                      } else {
+                        emailDomain = val;
+                        isCustomDomain = false;
+                      }
+                    });
+                  }
+                },
+                onProcessRegistration: processRegistration,
+                onResendVerification: resendVerificationEmail,
+              )
+            else
+              RegisterStepTwo(
+                nicknameController: nicknameController,
+                isLoading: isLoading,
+                profileImageBytes: profileImageBytes,
+                googlePhotoURL: googlePhotoURL,
+                onPickProfileImage: pickProfileImage,
+                onCheckNickname: checkNickname,
+              ),
+            const SizedBox(height: 20),
+            PlatformButton(
+              label: pageNumber == 0
+                  ? (verificationState == VerificationState.waiting
+                        ? (isLoading ? '확인 중...' : '인증 확인')
+                        : '다음')
+                  : (isLoading ? '처리 중...' : '가입 완료'),
+              onPressed: pageNumber == 0
+                  ? (verificationState == VerificationState.waiting
+                        ? (isLoading ? null : checkEmailVerification)
+                        : (verificationState == VerificationState.verified
+                              ? () => setState(() => pageNumber = 1)
+                              : null)) // initial 상태에서는 다음 버튼 비활성화 (전송하기로 진행)
+                  : (isLoading ? null : completeRegistration),
             ),
-          const SizedBox(height: 20),
-          PlatformButton(
-            label: pageNumber == 0
-                ? (verificationState == VerificationState.waiting
-                    ? (isLoading ? '확인 중...' : '인증 확인')
-                    : '다음')
-                : (isLoading ? '처리 중...' : '가입 완료'),
-            onPressed: pageNumber == 0
-                ? (verificationState == VerificationState.waiting
-                    ? (isLoading ? null : checkEmailVerification)
-                    : (verificationState == VerificationState.verified
-                        ? () => setState(() => pageNumber = 1)
-                        : null)) // initial 상태에서는 다음 버튼 비활성화 (전송하기로 진행)
-                : (isLoading ? null : completeRegistration),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

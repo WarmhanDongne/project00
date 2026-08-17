@@ -55,6 +55,12 @@ class App extends StatelessWidget {
             // 2. Auth에 로그인된 유저 정보가 있는 경우
             if (snapshot.hasData && snapshot.data != null) {
               final user = snapshot.data!;
+              
+              // 이메일 유저인데 인증이 완료되지 않았다면 로그인 화면에 머물게 함
+              final isEmailProvider = user.providerData.any((p) => p.providerId == 'password');
+              if (isEmailProvider && !user.emailVerified) {
+                return const LoginScreen();
+              }
 
               // 🔥 핵심 변경 부분: Firebase Auth 대신 Firestore의 users 컬렉션 확인
               return StreamBuilder<DocumentSnapshot>(

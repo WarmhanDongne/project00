@@ -135,7 +135,7 @@ class RegisterStepOne extends StatelessWidget {
                           )
                         : DropdownButtonFormField<String>(
                             isExpanded: true,
-                            value: emailDomain == 'custom' ? 'gmail.com' : emailDomain,
+                            initialValue: emailDomain == 'custom' ? 'gmail.com' : emailDomain,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 10),
                             ),
