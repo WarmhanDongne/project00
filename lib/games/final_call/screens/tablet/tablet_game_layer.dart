@@ -574,6 +574,9 @@ class _FinalCallLifeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final previousLives = (player.lives + loss).clamp(0, 3);
+    final heart = player.team == FinalCallTeam.blue
+        ? Assets.games.finalCall.images.icons.iconHeartBlue
+        : Assets.games.finalCall.images.icons.iconHeartRed;
     var rowScale = 1.0;
     if (loss > 0 && lossProgress < 0.45) {
       rowScale = 1 + 0.42 * Curves.easeOutBack.transform(lossProgress / 0.45);
@@ -599,13 +602,19 @@ class _FinalCallLifeRow extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: index < player.lives
-                      ? Assets.games.finalCall.images.icons.iconHeart.image(
+                      ? heart.image(
+                          key: ValueKey(
+                            'final-call-${player.team.name}-heart-$index',
+                          ),
                           width: 31,
                           height: 31,
                           fit: BoxFit.contain,
                           filterQuality: FilterQuality.high,
                         )
-                      : _BreakingHeart(progress: lossProgress),
+                      : _BreakingHeart(
+                          progress: lossProgress,
+                          team: player.team,
+                        ),
                 ),
             ],
           ),
@@ -617,9 +626,10 @@ class _FinalCallLifeRow extends StatelessWidget {
 
 /// 잃은 하트를 네 조각으로 갈라 바깥으로 흩어지게 합니다.
 class _BreakingHeart extends StatelessWidget {
-  const _BreakingHeart({required this.progress});
+  const _BreakingHeart({required this.progress, required this.team});
 
   final double progress;
+  final FinalCallTeam team;
 
   @override
   Widget build(BuildContext context) {
@@ -634,6 +644,9 @@ class _BreakingHeart extends StatelessWidget {
       Offset(0.85, 1.1),
     ];
     const rotations = <double>[-0.48, 0.42, -0.7, 0.62];
+    final heart = team == FinalCallTeam.blue
+        ? Assets.games.finalCall.images.icons.iconHeartBlue
+        : Assets.games.finalCall.images.icons.iconHeartRed;
     return SizedBox.square(
       dimension: 31,
       child: Stack(
@@ -650,7 +663,7 @@ class _BreakingHeart extends StatelessWidget {
                   angle: rotations[index] * breakProgress,
                   child: ClipPath(
                     clipper: _HeartShardClipper(index),
-                    child: Assets.games.finalCall.images.icons.iconHeart.image(
+                    child: heart.image(
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                     ),

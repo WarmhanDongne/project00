@@ -15,11 +15,10 @@ import {
   requireGame,
   requireUid,
 } from "./common/validator.js";
-import {restartRound} from "./restart-round.js";
 
 type PassChallengeData = {roomCode?: unknown; commandId?: unknown};
 
-/** 마지막 카드를 낸 플레이어를 의심하지 않고 새 라운드로 진행합니다. */
+/** 마지막 카드를 의심하지 않고(FOLD) 대신 자신이 벌칙 룰렛을 받습니다. */
 export const passLiarsPokerChallenge = onCall<PassChallengeData>(
   {region: REGION},
   async (request) => {
@@ -56,27 +55,26 @@ export const passLiarsPokerChallenge = onCall<PassChallengeData>(
       assertPlayerTurn(game.public.turnUid ?? "", uid);
 
       const now = Date.now();
-      const alivePlayerCount = Object.values(game.public.players).filter(
-        (gamePlayer) => gamePlayer.status === "alive",
-      ).length;
 
-      if (alivePlayerCount === 2) {
-        // 1대1 PASS는 상대의 마지막 카드를 인정하는 선택이므로 PASS를
-        // 선택한 현재 플레이어가 벌칙 룰렛을 진행합니다.
-        game.public.phase = "penalty";
-        game.public.turnUid = null;
-        game.public.turnDeadlineAt = null;
-        game.public.penaltyTargetUid = uid;
-        delete game.public.penaltyResult;
-        delete game.server.penaltyCountIncrementedBeforeRoulette;
-        game.public.revision += 1;
-        game.public.updatedAt = now;
-      } else {
-        restartRound(game, uid, now);
-      }
+      // FOLD는 상대의 마지막 카드를 인정하는 선택이므로 FOLD를 고른 현재
+      // 플레이어가 벌칙 룰렛을 진행합니다.
+      //
+      // 이 단계는 카드를 가진 사람이 둘만 남았을 때만 열립니다. 먼저 손패를 다
+      // 낸 플레이어들은 이 벌칙 대상에서 빠집니다. 예전에는 살아 있는 인원이
+      // 3명 이상이면 벌칙 없이 새 라운드로 넘어갔는데, 그러면 FOLD를 골라도
+      // 아무 대가가 없었습니다.
+      game.public.phase = "penalty";
+      game.public.turnUid = null;
+      game.public.turnDeadlineAt = null;
+      game.public.penaltyTargetUid = uid;
+      delete game.public.penaltyResult;
+      delete game.server.penaltyCountIncrementedBeforeRoulette;
+      game.public.revision += 1;
+      game.public.updatedAt = now;
+
       response = {
         success: true,
-        type: alivePlayerCount === 2 ? "passPenalty" : "challengePassed",
+        type: "passPenalty",
         commandId,
         round: game.public.round,
         turnUid: uid,

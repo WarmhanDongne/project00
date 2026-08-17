@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/controllers/final_call_controller.dart';
+import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/shared/widgets/phone_game_top_bar.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
@@ -47,14 +48,21 @@ class FinalCallPhoneTopBar extends StatelessWidget {
   }
 
   Widget _buildLives() {
-    final lives = controller.players[controller.uid]?.lives ?? 0;
+    final player = controller.players[controller.uid];
+    final lives = player?.lives ?? 0;
+    final heart = player?.team == FinalCallTeam.blue
+        ? Assets.games.finalCall.images.icons.iconHeartBlue
+        : Assets.games.finalCall.images.icons.iconHeartRed;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var index = 0; index < lives; index++)
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: Assets.games.finalCall.images.icons.iconHeart.image(
+            child: heart.image(
+              key: ValueKey(
+                'final-call-${player?.team.name ?? 'red'}-heart-$index',
+              ),
               width: 38,
               fit: BoxFit.contain,
             ),
@@ -73,12 +81,16 @@ void showFinalCallRules(BuildContext context, [Offset? origin]) {
     builder: (_) => const PhoneGameRuleDialog(
       title: 'FINAL CALL',
       rules:
+          'Final Call은 정확히 4명이 플레이하는 2대2 팀전입니다. '
+          '마주 보는 플레이어가 같은 팀이며, 빨간 하트 팀과 파란 하트 팀으로 '
+          '자동 지정됩니다. 팀원 중 한 명이라도 하트 3개를 모두 잃으면 '
+          '그 팀 전체가 패배합니다.\n\n'
           '같은 숫자 카드의 합과 같은 색 카드의 합 중 더 높은 값이 '
           '최종 점수입니다. 자신의 턴에는 공개 카드 또는 카드 더미에서 '
           '한 장을 가져와 손패와 교체하거나 버릴 수 있습니다.\n\n'
           'CALL을 선언하면 나머지 플레이어가 마지막 교체를 한 번 진행합니다. '
           '가장 낮은 점수의 플레이어는 생명 1개를 잃고, CALL을 선언한 '
-          '플레이어가 최하위라면 생명 2개를 잃습니다. 마지막 생존자가 승리합니다.',
+          '플레이어가 최하위라면 보유한 범위에서 생명 2개를 잃습니다.',
       surfaceColor: Color.fromARGB(255, 0, 0, 0),
       foregroundColor: Color.fromARGB(255, 255, 255, 255),
       showSurface: false,

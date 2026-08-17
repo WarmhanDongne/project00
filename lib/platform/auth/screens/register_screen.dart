@@ -241,6 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             )
           else
             RegisterStepTwo(
+              googlePhotoURL: null,
               nicknameController: nicknameController,
               phoneController: phoneController,
               verificationCodeController: verificationCodeController,

@@ -70,13 +70,22 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> createRoom() async {
+    final previousRoomCode = roomCode;
+    var previousRoomDeleted = false;
     final code = await _runCommand<String>(() async {
+      // `초기화`로 새 코드를 만들 때 기존 방을 남기지 않습니다.
+      if (previousRoomCode != null) {
+        await _service.deleteControllerRoom(previousRoomCode);
+        previousRoomDeleted = true;
+      }
       return await _service.createRoom();
     });
 
     if (code != null) {
       roomCode = code;
       listenRoom();
+    } else if (previousRoomDeleted) {
+      clearRoom();
     }
   }
 
@@ -108,6 +117,19 @@ class RoomProvider extends ChangeNotifier {
       await _service.markControllerConnected(code);
     } catch (_) {
       // 접속 표시 실패가 방 진행을 막지 않습니다.
+    }
+  }
+
+  /// 태블릿이 로그아웃하거나 홈 위젯이 제거될 때 방을 즉시 지웁니다.
+  /// 앱 강제 종료·네트워크 단절은 등록된 RTDB onDisconnect가 담당합니다.
+  Future<void> deleteControllerRoom() async {
+    final code = roomCode;
+    if (code == null) return;
+    try {
+      await _service.deleteControllerRoom(code);
+    } catch (_) {
+      // 정상 삭제가 실패해도 연결이 끊기면 onDisconnect 예약이
+      // 남은 방을 삭제하므로 dispose를 막지 않습니다.
     }
   }
 

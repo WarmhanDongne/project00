@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:project00/games/shared/widgets/connection_banner.dart';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -329,15 +328,15 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                   onEndGame: _endGame,
                 ),
               ),
-              // 연결이 끊기면 화면이 멈춘 것처럼 보이므로 맨 위에 안내합니다.
-              const Positioned.fill(child: ConnectionBanner()),
               GameInterruptionLayer(
                 interruption: _controller.interruption,
                 currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+                presentation: GameInterruptionPresentation.tabletController,
                 isSubmitting: _controller.isProcessingMenuCommand,
-                onExpired: () async {
-                  await _controller.expireInterruption();
+                onContinue: () async {
+                  await _controller.excludeInterruptedPlayerAndContinue();
                 },
+                onExpired: _controller.expireInterruption,
               ),
             ],
           );

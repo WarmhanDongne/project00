@@ -4,7 +4,7 @@
     ".write": false,
     "rooms": {
       "$roomCode": {
-        ".write": "auth != null && !data.exists() && newData.child('controllerUid').val() == auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('controllerUid').val() == auth.uid) || (data.exists() && !newData.exists() && (data.child('controllerUid').val() == auth.uid || data.child('hostUid').val() == auth.uid)))",
         "roomCode": {
           ".read": "auth != null"
         },

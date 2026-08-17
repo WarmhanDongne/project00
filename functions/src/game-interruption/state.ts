@@ -21,7 +21,7 @@ export function beginGameInterruption(
   playerUid: string,
   reason: GameInterruptionReason,
   now: number,
-  options: {durationMs?: number} = {},
+  options: {durationMs?: number; minimumPlayerCount?: number} = {},
 ): PublicGameInterruption | null {
   const game = room.game;
   if (!game || game.public.status !== "playing") return null;
@@ -37,7 +37,8 @@ export function beginGameInterruption(
     const roomPlayer = room.players?.[uid];
     return roomPlayer && roomPlayer.isConnected !== false;
   });
-  const canContinue = remainingAliveUids.length >= 2;
+  const minimumPlayerCount = Math.max(1, options.minimumPlayerCount ?? 2);
+  const canContinue = remainingAliveUids.length >= minimumPlayerCount;
   const requiredVotes = canContinue ? Math.floor(eligibleVoterUids.length / 2) + 1 : 0;
   const roomPlayer = room.players?.[playerUid];
   const publicPlayer = game.public.players[playerUid] as Record<string, unknown>;
@@ -53,6 +54,8 @@ export function beginGameInterruption(
     deadlineAt: now + (options.durationMs ?? GAME_INTERRUPTION_VOTE_MS),
     eligibleVoterUids,
     requiredVotes,
+    remainingPlayerCount: remainingAliveUids.length,
+    minimumPlayerCount,
     canContinue,
   };
 

@@ -2,7 +2,6 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {beginGameInterruption} from "../game-interruption/state.js";
-import {orderedAlivePlayers} from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {
   FINAL_CALL_REGION,
@@ -29,8 +28,8 @@ export const leaveFinalCallGame = onCall<Data>(
         response = {success: true, alreadyLeft: true};
         return room;
       }
-      delete room.players?.[uid];
       if (!room.game || room.game.public.gameType !== "final_call") {
+        delete room.players?.[uid];
         response = {success: true};
         return room;
       }
@@ -39,20 +38,15 @@ export const leaveFinalCallGame = onCall<Data>(
       const leavingPlayer = game.public.players[uid];
       if (!leavingPlayer || leavingPlayer.status !== "alive" ||
           game.public.status === "finished") {
+        delete room.players?.[uid];
         response = {success: true};
         return room;
       }
 
       const now = Date.now();
-      const remainingCount = orderedAlivePlayers(game.public.players)
-        .filter((player) => player.uid !== uid).length;
-      beginGameInterruption(
-        room,
-        uid,
-        "left",
-        now,
-        remainingCount < 2 ? {durationMs: 4000} : {},
-      );
+      // 실제 제외가 확정되기 전에는 프로필과 seatIndex를 유지합니다.
+      if (room.players?.[uid]) room.players[uid].isConnected = false;
+      beginGameInterruption(room, uid, "left", now, {minimumPlayerCount: 4});
       response = {
         success: true,
         status: game.public.status,

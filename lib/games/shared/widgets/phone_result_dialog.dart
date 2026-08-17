@@ -2,45 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 휴대폰에서 게임 우승자를 중앙에 표시하는 결과 다이얼로그입니다.
+///
+/// 이 위젯은 그리기만 합니다. 뒤로 가기를 막아야 한다면 [showDialog]로 띄우는
+/// 쪽에서 `PopScope`로 감싸세요. 예전에는 여기에 `PopScope(canPop: false)`가
+/// 들어 있었는데, 파이널콜처럼 별도 라우트 없이 게임 화면 안에 그대로 그리면
+/// 그 설정이 **게임 라우트**에 걸려서 태블릿이 게임을 끝내도 휴대폰이
+/// `Navigator.maybePop()`으로 나가지 못했습니다.
 class PhoneResultDialog extends StatelessWidget {
   const PhoneResultDialog({
     super.key,
     required this.nickname,
     required this.profileImageUrl,
+    this.resultLabel = 'WINNER',
   });
 
   final String nickname;
   final String profileImageUrl;
+  final String resultLabel;
 
   @override
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    return PopScope(
-      canPop: false,
-      child: Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: isLandscape ? 72 : 24,
-          vertical: isLandscape ? 12 : 24,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isLandscape ? 360 : 320),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _CrownedWinnerProfile(
-                  imageUrl: profileImageUrl,
-                  size: isLandscape ? 128 : 166,
-                ),
-                SizedBox(height: isLandscape ? 8 : 14),
-                _WinnerText(nickname: nickname, isLandscape: isLandscape),
-              ],
-            ),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isLandscape ? 72 : 24,
+        vertical: isLandscape ? 12 : 24,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isLandscape ? 360 : 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CrownedWinnerProfile(
+                imageUrl: profileImageUrl,
+                size: isLandscape ? 128 : 166,
+              ),
+              SizedBox(height: isLandscape ? 8 : 14),
+              _WinnerText(
+                nickname: nickname,
+                resultLabel: resultLabel,
+                isLandscape: isLandscape,
+              ),
+            ],
           ),
         ),
       ),
@@ -123,9 +132,14 @@ class _WinnerProfile extends StatelessWidget {
 }
 
 class _WinnerText extends StatelessWidget {
-  const _WinnerText({required this.nickname, required this.isLandscape});
+  const _WinnerText({
+    required this.nickname,
+    required this.resultLabel,
+    required this.isLandscape,
+  });
 
   final String nickname;
+  final String resultLabel;
   final bool isLandscape;
 
   @override
@@ -147,7 +161,7 @@ class _WinnerText extends StatelessWidget {
         ),
         SizedBox(height: isLandscape ? 4 : 7),
         Text(
-          'WINNER',
+          resultLabel,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'BebasNeue',

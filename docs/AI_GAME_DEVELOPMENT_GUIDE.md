@@ -134,6 +134,14 @@ displayName 없음 -> RegisterScreen
 로그인 완료  -> Home
 ```
 
+`MaterialApp.builder`는 `core/network/AppNetworkGuard`로 Navigator 전체를 감싼다.
+이 레이어가 RTDB `.info/connected`를 앱에서 한 번만 구독하고, 2초 이상 실제 서버
+연결이 끊기면 로그인·플랫폼·게임·dialog보다 위에 같은 `NetworkUnavailableModal`을
+표시한다. 재연결되면 즉시 닫히고 `재시도`는 RTDB 연결을 다시 온라인으로 요청한다.
+개별 게임이나 플랫폼 화면에 별도 연결 배너·구독을 추가하지 않는다. 모달은
+`DeviceLayout.tabletBreakpoint`와 사용 가능한 높이를 함께 확인해 휴대폰 세로,
+휴대폰 가로, 태블릿에서 크기를 조정한다.
+
 `Home`은 `DeviceLayout.tabletBreakpoint == 600`을 기준으로 `PhoneHome` 또는
 `TabletHome`을 선택한다.
 
@@ -201,6 +209,14 @@ iOS 태블릿에서 회전 상태 충돌로 검은 화면이 생기는 것을 �
 `selectedGame`과 `game/public/status`는 다른 RTDB 경로라 도착 순서가 보장되지 않는다.
 `PhoneRoomWaiting`은 두 값을 따로 기억하고 둘 다 준비된 순간 한 번만 화면을 연다.
 Firestore의 썸네일/설명 조회가 느려도 게임 시작을 막지 않는다.
+
+태블릿이 방을 만들면 방 코드를 UI에 노출하기 전에
+`rooms/{roomCode}` 전체에 `onDisconnect().remove()`를 등록한다.
+태블릿 앱 종료나 네트워크 단절은 RTDB 서버가 방 전체를 삭제하며,
+휴대폰은 `controllerConnected` 경로의 삭제도 연결 종료로 해석해 홈으로
+돌아간다. `초기화`로 새 방을 만들 때는 기존 방을 즉시 삭제한 뒤 새
+방의 연결 종료 예약을 등록한다. 방 전체 삭제 권한은 `controllerUid`에게만
+허용하며, 휴대폰 클라이언트는 방 전체를 지울 수 없다.
 
 ### 3.4 플랫폼과 게임의 유일한 연결 계약
 
@@ -437,8 +453,33 @@ playing   게임 진행 중
 finished  승자 확정, 수동 종료, 인원 부족 종료
 ```
 
-`finishReason`은 `winner | manual | insufficientPlayers`다. UI는 `finished`만 보지
-말고 종료 이유도 확인해야 한다.
+`finishReason`은 `winner | manual | insufficientPlayers | interruptionVoteExpired`다.
+UI는 `finished`만 보지 말고 종료 이유도 확인해야 한다.
+
+두 게임 서버가 함께 지키는 불변 조건이 하나 있다.
+
+> **승부가 나지 않은 모든 종료는 `winnerUid`를 null로 만들고 `finishReason`을 남긴다.**
+
+| 종료 경로 | finishReason | winnerUid |
+|---|---|---|
+| 마지막 생존자 확정 | 없음 또는 `winner` | 생존자 uid |
+| 태블릿 수동 종료(설정·결과 HOME) | `manual` | null |
+| 인원 부족 | `insufficientPlayers` | null |
+| 계속 진행 투표 만료 | `interruptionVoteExpired` | null |
+
+그래서 휴대폰이 "게임 화면을 닫아야 하는가"를 판단할 때 **사유를 나열하지 않는다.**
+
+```dart
+// 금지: 서버에 사유가 하나만 늘어도 휴대폰이 결과 화면에 갇힌다
+final shouldClose = game.isFinished &&
+    (game.finishReason == 'manual' || game.finishReason == 'insufficientPlayers');
+
+// 표준: shared/game_flow/game_finish.dart
+final shouldClose = game.isFinished && !game.isNaturalResult;
+```
+
+새 게임의 Cloud Functions도 위 불변 조건을 지켜야 `isNaturalGameResult()`를 그대로
+쓸 수 있다.
 
 ### 6.2 서버 `phase`: 게임 규칙의 세부 단계
 
@@ -1120,6 +1161,27 @@ Rules가 읽기를 막아도 잘못된 경로 설계다. private/server로 분�
 썸네일 조회 지연 때문에 시작을 놓친다. RTDB `selectedGame` ID와 public status가
 시작 신호다.
 
+### 금지: 공용 위젯이 자기를 감싼 화면의 레이아웃·라우트를 잠그는 것
+
+같은 공용 위젯을 게임마다 다른 방식으로 붙이기 때문에, 위젯이 호스트에 부작용을
+남기면 한 게임에서만 조용히 깨진다. 실제로 두 번 발생했다.
+
+| 위젯 | 잘못된 형태 | 증상 |
+|---|---|---|
+| `GameInterruptionLayer` | 중단이 없을 때 `Positioned`가 아닌 `SizedBox.shrink()` 반환 | 느슨한 `Stack`의 유일한 non-positioned 자식이 되어 **게임 화면 전체가 0×0**. 배경까지 안 그려져 태블릿이 검은 화면이 되었다 |
+| `PhoneResultDialog` | 위젯 안에 `PopScope(canPop: false)` | 파이널콜처럼 라우트 없이 화면에 직접 그리면 그 설정이 **게임 라우트**에 걸려, 태블릿이 게임을 끝내도 휴대폰이 `Navigator.maybePop()`으로 못 나갔다 |
+
+규칙은 두 가지다.
+
+- `Stack`에 놓이는 전체 화면 레이어는 **빈 상태에서도 `Positioned`를 반환**한다.
+  화면 루트 `Stack`에는 `fit: StackFit.expand`를 명시한다.
+- 뒤로 가기 차단(`PopScope`)은 위젯이 아니라 **띄우는 쪽**이 정한다.
+
+두 규칙 모두 회귀 테스트가 있다: `test/game_interruption_layer_test.dart`,
+`test/phone_result_dialog_test.dart`. `Navigator.maybePop()`은 `PopScope`가 막아도
+"처리했다"는 뜻으로 `true`를 반환하므로, **반환값 검사로는 이 버그를 잡을 수 없다.**
+화면에 무엇이 남았는지로 검증한다.
+
 ### 주의: RTDB null
 
 Realtime Database는 null 필드를 저장하지 않고 키를 제거한다. 파서는 `null`과
@@ -1130,6 +1192,14 @@ Realtime Database는 null 필드를 저장하지 않고 키를 제거한다. 파
 
 재접속 identity는 닉네임이 아니라 Firebase UID다. 기존 UID 참가자는 seat와 game
 private 상태를 유지해야 한다. `joinRealtimeRoom`의 existing player merge를 보존한다.
+
+게임 중 연결 끊김·직접 퇴장은 `game/public/interruption`으로 턴을 일시 정지하고
+60초 동안 재접속을 기다린다. 같은 UID가 돌아오면 저장한 턴 잔여 시간을 복원한다.
+돌아오지 않으면 게임별 최소 인원을 확인해 해당 플레이어를 제외하고 계속하거나
+`insufficientPlayers`로 종료한다. 태블릿의 공용 `GameInterruptionLayer`는 프로필,
+닉네임, 사유, 남은 시간과 `제외하고 계속하기` 버튼을 표시하며, 버튼 활성 여부는
+서버의 `canContinue`만 따른다. 새 게임은 중앙 연결 감지의 최소 인원 매핑과 게임별
+제외 어댑터를 함께 등록한다.
 
 ### 주의: 프로필 이미지
 
@@ -1218,9 +1288,11 @@ player로 복사한다. 게임 화면에서 매 프레임 Firestore를 다시 �
 
 - `lib/games/shared/game_flow/game_screen_phase.dart`
 - `lib/games/shared/game_flow/phone_game_shell.dart`
+- `lib/games/shared/game_flow/game_finish.dart` — 종료 시 휴대폰이 나갈지 남을지 판단하는 공용 규칙
 - `lib/games/shared/animations/`
 - `lib/games/shared/widgets/`
 - `lib/games/shared/player_layouts/`
+- `tool/README.md` — 진입 연출용 테이블·의자 이미지를 게임 배경으로 채워 만드는 도구
 
 ### Liar's Poker 기준
 

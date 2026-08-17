@@ -6,6 +6,26 @@ import 'package:project00/games/shared/player_layouts/player_layout_editor.dart'
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 
 void main() {
+  test('의자는 좌석 순서대로 시간차를 두고 진입한다', () {
+    expect(
+      chairEntranceProgress(timeline: 0.56, seatIndex: 0, seatCount: 4),
+      greaterThan(0),
+    );
+    expect(
+      chairEntranceProgress(timeline: 0.56, seatIndex: 1, seatCount: 4),
+      0,
+    );
+    expect(
+      chairEntranceProgress(timeline: 0.72, seatIndex: 2, seatCount: 4),
+      greaterThan(0),
+    );
+    expect(
+      chairEntranceProgress(timeline: 0.72, seatIndex: 3, seatCount: 4),
+      0,
+    );
+    expect(chairEntranceProgress(timeline: 1, seatIndex: 3, seatCount: 4), 1);
+  });
+
   testWidgets('서버 준비 중에는 Scrim 없이 테이블 화면을 유지한다', (tester) async {
     final preparation = Completer<bool>();
     final navigatorKey = GlobalKey<NavigatorState>();
@@ -50,7 +70,7 @@ void main() {
 
     await tester.tap(find.text('설정 완료'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1601));
+    await tester.pump(const Duration(milliseconds: 2301));
     await tester.pump(const Duration(milliseconds: 1001));
     await tester.pump();
 

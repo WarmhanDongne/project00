@@ -27,6 +27,8 @@ class FinalCallGameState {
     required this.pendingDrawSource,
     required this.finalTurnPendingUids,
     required this.winnerUid,
+    required this.winnerUids,
+    required this.winningTeam,
     required this.resultRevealCompletedAt,
     required this.players,
     required this.hand,
@@ -54,6 +56,8 @@ class FinalCallGameState {
     pendingDrawSource: null,
     finalTurnPendingUids: <String>[],
     winnerUid: null,
+    winnerUids: <String>[],
+    winningTeam: null,
     resultRevealCompletedAt: null,
     players: <String, FinalCallPlayer>{},
     hand: <FinalCallCard>[],
@@ -80,6 +84,8 @@ class FinalCallGameState {
   final String? pendingDrawSource;
   final List<String> finalTurnPendingUids;
   final String? winnerUid;
+  final List<String> winnerUids;
+  final FinalCallTeam? winningTeam;
   final int? resultRevealCompletedAt;
   final Map<String, FinalCallPlayer> players;
   final List<FinalCallCard> hand;
@@ -106,6 +112,8 @@ class FinalCallGameState {
     Object? pendingDrawSource = _notProvided,
     List<String>? finalTurnPendingUids,
     Object? winnerUid = _notProvided,
+    List<String>? winnerUids,
+    Object? winningTeam = _notProvided,
     Object? resultRevealCompletedAt = _notProvided,
     Map<String, FinalCallPlayer>? players,
     List<FinalCallCard>? hand,
@@ -152,6 +160,10 @@ class FinalCallGameState {
       winnerUid: identical(winnerUid, _notProvided)
           ? this.winnerUid
           : winnerUid as String?,
+      winnerUids: List.unmodifiable(winnerUids ?? this.winnerUids),
+      winningTeam: identical(winningTeam, _notProvided)
+          ? this.winningTeam
+          : winningTeam as FinalCallTeam?,
       resultRevealCompletedAt: identical(resultRevealCompletedAt, _notProvided)
           ? this.resultRevealCompletedAt
           : resultRevealCompletedAt as int?,
