@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
+import 'package:project00/core/network/app_network_guard.dart';
 import 'package:project00/platform/home/home.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -37,6 +38,11 @@ class App extends StatelessWidget {
         theme: PlatformTheme.light(),
         darkTheme: PlatformTheme.dark(),
         themeMode: ThemeMode.light,
+        //=======================앱 전체 네트워크 모달==============================
+        // Navigator보다 바깥에서 한 번만 연결 상태를 구독하므로 로그인·플랫폼·
+        // 모든 게임과 그 위에 열린 dialog까지 같은 반응형 모달이 덮습니다.
+        builder: (context, child) =>
+            AppNetworkGuard(child: child ?? const SizedBox.shrink()),
 
         home: StreamBuilder<User?>(
           stream: userChanges ?? FirebaseAuth.instance.userChanges(),

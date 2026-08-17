@@ -35,4 +35,18 @@ class GameInterruptionCommandService {
       enabled: true,
     );
   }
+
+  /// 방을 만든 태블릿 진행자가 중단된 플레이어를 제외하고 즉시 계속합니다.
+  Future<void> excludeAndContinue({
+    required String roomCode,
+    required String interruptionId,
+  }) async {
+    final data = {'roomCode': roomCode, 'interruptionId': interruptionId};
+    await retryPolicy.run(
+      () => _functions
+          .httpsCallable('excludeInterruptedPlayerAndContinue')
+          .call(data),
+      enabled: true,
+    );
+  }
 }

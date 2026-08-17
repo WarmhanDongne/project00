@@ -15,6 +15,8 @@ void main() {
     eligibleVoterUids: ['me', 'other'],
     requiredVotes: 2,
     voterUids: {},
+    remainingPlayerCount: 2,
+    minimumPlayerCount: 2,
     canContinue: true,
   );
 
@@ -46,10 +48,82 @@ void main() {
   testWidgets('전체 화면을 어둡게 하고 프로필·투표 정보를 표시한다', (tester) async {
     await tester.pumpWidget(buildLayer(onGamePressed: () {}));
 
-    expect(find.text('민수님의 연결이 끊어졌습니다'), findsOneWidget);
-    expect(find.text('민수님을 제외하고 게임을 계속할까요?'), findsOneWidget);
+    expect(find.text('민수와의 연결이 끊어졌습니다'), findsOneWidget);
+    expect(find.text('해당 플레이어를 제외하고 게임을 계속할까요?'), findsOneWidget);
     expect(find.text('동의 0 / 2'), findsOneWidget);
     expect(find.text('제외하고 계속하기'), findsOneWidget);
+  });
+
+  testWidgets('태블릿은 진행 가능할 때 제외 버튼을 활성화한다', (tester) async {
+    var continues = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              GameInterruptionLayer(
+                interruption: interruption,
+                currentUid: 'controller',
+                presentation: GameInterruptionPresentation.tabletController,
+                onContinue: () async {
+                  continues += 1;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('동의 0 / 2'), findsNothing);
+    await tester.tap(find.text('제외하고 계속하기'));
+    expect(continues, 1);
+  });
+
+  testWidgets('최소 인원이 부족하면 태블릿 제외 버튼을 비활성화한다', (tester) async {
+    var continues = 0;
+    const insufficient = GameInterruption(
+      id: 'player-1-1001',
+      playerUid: 'player-1',
+      playerNickname: '민수',
+      playerProfileImageUrl: '',
+      reason: GameInterruptionReason.left,
+      startedAt: 1000,
+      deadlineAt: 9999999999999,
+      eligibleVoterUids: ['other'],
+      requiredVotes: 0,
+      voterUids: {},
+      remainingPlayerCount: 1,
+      minimumPlayerCount: 2,
+      canContinue: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              GameInterruptionLayer(
+                interruption: insufficient,
+                currentUid: 'controller',
+                presentation: GameInterruptionPresentation.tabletController,
+                onContinue: () async {
+                  continues += 1;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('민수가 게임에서 나갔습니다.'), findsOneWidget);
+    expect(find.text('남은 인원이 부족해 게임을 계속할 수 없습니다.'), findsOneWidget);
+    expect(find.text('제외하고 계속하기'), findsOneWidget);
+    await tester.tap(find.text('제외하고 계속하기'), warnIfMissed: false);
+    expect(continues, 0);
   });
 
   testWidgets('게임 조작은 막고 투표 버튼만 입력받는다', (tester) async {
@@ -66,6 +140,50 @@ void main() {
     await tester.tap(find.text('제외하고 계속하기'));
     expect(gamePresses, 0);
     expect(votes, 1);
+  });
+
+  testWidgets('60초 만료 명령이 최종 실패해도 다음 tick에서 다시 시도한다', (tester) async {
+    var attempts = 0;
+    const expired = GameInterruption(
+      id: 'player-1-expired',
+      playerUid: 'player-1',
+      playerNickname: '민수',
+      playerProfileImageUrl: '',
+      reason: GameInterruptionReason.disconnected,
+      startedAt: 0,
+      deadlineAt: 0,
+      eligibleVoterUids: ['me'],
+      requiredVotes: 1,
+      voterUids: {},
+      remainingPlayerCount: 2,
+      minimumPlayerCount: 2,
+      canContinue: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              GameInterruptionLayer(
+                interruption: expired,
+                currentUid: 'me',
+                onExpired: () async {
+                  attempts += 1;
+                  return false;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+
+    expect(attempts, greaterThanOrEqualTo(2));
   });
 
   //=======================Stack 붕괴 방지==============================

@@ -287,7 +287,7 @@ class _LiarsPokerPressableAssetButtonState
   }
 }
 
-/// 결과·PASS처럼 기존 이미지 버튼에 사용하는 공통 눌림 표면입니다.
+/// 결과·FOLD처럼 기존 이미지 버튼에 사용하는 공통 눌림 표면입니다.
 class LiarsPokerButtonSurface extends StatelessWidget {
   const LiarsPokerButtonSurface({
     super.key,

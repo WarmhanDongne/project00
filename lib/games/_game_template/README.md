@@ -49,6 +49,11 @@ lib/games/<my_game>/
 
 에셋도 같은 규칙을 따릅니다: `assets/games/<my_game>/{animations,images,sounds}`.
 
+진입 연출에 쓰는 `images/layout/layout_table.png`, `layout_chair.png`는 손으로
+칠하지 말고 [`tool/README.md`](../../../tool/README.md)의 프롬프트를 쓰세요. 가운데가
+투명한 템플릿을 넘기면 그 게임의 `background.png`로 채워 저장합니다. 이 면이
+배경과 어긋나면 테이블 줌인이 끝나는 순간 화면이 바뀐 느낌이 납니다.
+
 ## 2. Provider / Service 연결 구조
 
 ### Command/Query 서비스 분리
@@ -113,6 +118,25 @@ GameScreenPhase _resolvePhase(MyController game) {
 > 없으면 `contentReady: false`를 넘기면 됩니다 — 셸이 배경만 그리면서
 > **상단바(퇴장)는 유지**합니다.
 
+#### 게임이 끝났을 때 나갈지 남을지
+
+태블릿이 게임을 끝내면 휴대폰도 게임 화면을 닫아야 합니다. 이 판단은
+`shared/game_flow/game_finish.dart`의 `isNaturalGameResult()`로 하세요.
+
+```dart
+final shouldCloseGame = game.isFinished && !game.isNaturalResult;
+```
+
+**나가야 하는 사유를 나열하지 마세요.** `finishReason == 'manual' || ...` 식으로
+쓰면 서버에 종료 사유가 하나만 늘어도 휴대폰이 결과 화면에 갇힙니다. 파이널콜이
+실제로 이 문제를 겪었습니다. 대신 서버가 지키는 불변 조건을 그대로 씁니다.
+
+> **승부가 나지 않은 모든 종료는 `winnerUid`를 null로 만들고 `finishReason`을 남긴다.**
+
+새 게임의 Cloud Functions도 이 불변 조건을 지켜야 합니다. 마지막 생존자를 확정할
+때만 `winnerUid`를 채우고, 수동 종료·인원 부족·투표 만료에서는 반드시 null로
+비우세요.
+
 ### 3.2 셸에 넘기는 것
 
 ```dart
@@ -175,7 +199,7 @@ PhoneGameShell(
 | `shared/animations/phone_card_receive_animation.dart` | `PhoneCardReceiveAnimation` | 휴대폰 손패 수신 | 게임별 설정 | 카드팩 진입·탭·공개·펼치기 |
 | `shared/animations/phone_control_entry_animation.dart` | `PhoneControlEntryAnimation` | 손패 공개 완료 후 | 920ms | 상단바·조작부 순차 등장 |
 | `shared/widgets/game_announcement_layer.dart` | `GameAnnouncementLayer` | 모든 문구 단계 | 모델별 | GAME START·ROUND·상태·판정의 고정 슬롯 |
-| `shared/widgets/game_interruption_layer.dart` | `GameInterruptionLayer` | 플레이어 연결 끊김·퇴장 | 60초 | 전체 화면 암전·프로필·계속 진행 투표 |
+| `shared/widgets/game_interruption_layer.dart` | `GameInterruptionLayer` | 플레이어 연결 끊김·퇴장 | 60초 | 전체 화면 암전·프로필·재접속 대기·제외 진행 |
 | `shared/animations/one_shot_timeline.dart` | `OneShotTimeline` | 복합 일회성 연출 | 주입 | controller 시작·완료·dispose 공통 수명주기 |
 
 > **참고**: `CardDealAnimation`의 기본 카드 뒷면 에셋과 `PhoneResultDialog`의 왕관 테두리 에셋은 여전히 `Assets.games.liarsPoker...` 경로를 참조합니다(코드 위치만 옮겼고 에셋 파일 자체와 `assets.gen.dart` 생성 결과는 건드리지 않았습니다). `CardDealAnimation`은 `cardAsset` 파라미터로 다른 게임의 카드 뒷면을 넘길 수 있지만, `PhoneResultDialog`의 왕관 이미지는 아직 파라미터화되어 있지 않아 모든 게임의 결과 화면에 라이어스포커 왕관이 그대로 노출됩니다. 다른 게임 전용 왕관 이미지가 필요해지면 이 위젯에 이미지 파라미터를 추가하세요.
@@ -206,13 +230,19 @@ PhoneGameShell(
 이 경우에도 포인터는 항상 게임 UI로 통과합니다. 연결 끊김처럼 게임을 멈추고 투표를
 받아야 하는 상태는 별도 공용 모델 `GameInterruption`과
 `GameInterruptionLayer`를 사용합니다. 새 게임은 `game/public/interruption`을 세션
-컨트롤러에서 파싱하고 `GameInterruptionCommandService`로만 투표·만료 명령을
+컨트롤러에서 파싱하고 `GameInterruptionCommandService`로만 투표·제외·만료 명령을
 보냅니다. 화면 위젯에서 RTDB를 별도로 구독하거나 게임 상태를 직접 쓰지 마세요.
+
+태블릿은 `GameInterruptionPresentation.tabletController`를 사용합니다. 서버는
+중단 시 턴 타이머를 멈추고 60초 동안 같은 UID의 재접속을 기다립니다. 재접속하면
+남은 턴 시간을 복원하고, 만료되면 해당 게임의 최소 인원을 확인해 플레이어를 제외한
+뒤 계속하거나 `insufficientPlayers`로 종료합니다. `제외하고 계속하기` 버튼은
+`canContinue`일 때만 활성화합니다.
 
 - **톤**: 기본은 존댓말 평서형(`~습니다/~해주세요/~하세요`). 3인칭 대상은 `~님` 존칭(`'$turnNickname님의 결정을 기다리는 중'`, `'$winner님이 승리했습니다'`).
 - **판정처럼 게임적 임팩트가 필요한 순간만 예외**: 짧은 영문 라벨(`'SURVIVED'`/`'FAIL'`) 또는 느낌표(`'간파 성공!'`/`'간파 실패!'`) — 단, 같은 판정이라도 당사자에게는 서술형 마침표(`'거짓이 밝혀졌습니다.'`)를 씁니다. 청중(도전자 vs 당사자)에 따라 톤이 갈리는 걸 참고하세요.
 - **연출용 영문 대문자 텍스트**(`'GAME START'`, `'ROUND N'`, `'WINNER'`, `'FINAL CALL'`)는 BebasNeue 폰트로 한글 문구와 분리해서 순수 연출용으로만 사용합니다.
-- **버튼 라벨**: 2~4자 한글 동사형(`'제출'`, `'교체'`, `'다시하기'`, `'나가기'`, `'닫기'`) 또는 게임 고유 영문 명령(`'CALL'`, `'PASS'`).
+- **버튼 라벨**: 2~4자 한글 동사형(`'제출'`, `'교체'`, `'다시하기'`, `'나가기'`, `'닫기'`) 또는 게임 고유 영문 명령(`'CALL'`, `'FOLD'`).
 - **에러/토스트**: 정중한 완료형 문장(`'게임에서 퇴장하지 못했습니다.'`, `'게임 정보를 불러오지 못했습니다: $error'`).
 - **규칙 설명(룰북)**: 격식체(`~합니다/~됩니다`), 굵게 강조는 마크다운 스타일(`**CALL**`, `**3개**`).
 

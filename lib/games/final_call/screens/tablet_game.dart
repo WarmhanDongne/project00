@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:project00/games/shared/widgets/connection_banner.dart';
 import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -187,9 +186,25 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   }
 
   Future<void> _returnHomeAfterResult() async {
-    // 결과 화면의 홈 버튼도 정리 실패로 막히지 않아야 합니다.
-    await controller?.clearGame();
+    if (isEndingGame) return;
+    setState(() => isEndingGame = true);
+
+    //=======================결과 화면 HOME 동기화==============================
+    // game 노드를 바로 지우고 태블릿만 나가면, clearGame이 실패했을 때
+    // 휴대폰에는 종료 신호가 전파되지 않아 결과 화면에 남게 됩니다.
+    // 설정 종료와 같게 먼저 manual finished를 서버에 확정하고,
+    // 이 명령이 성공한 경우에만 태블릿 화면을 닫습니다. 새 게임 시작은
+    // 기존 finished game을 교체하므로 여기서 즉시 삭제하지 않습니다.
+    final ended = await controller?.endGame() ?? false;
     if (!mounted) return;
+    if (!ended) {
+      setState(() => isEndingGame = false);
+      final message = controller?.actionErrorMessage;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message ?? '게임을 종료하지 못했습니다.')));
+      return;
+    }
     Navigator.of(context).maybePop();
   }
 
@@ -309,14 +324,15 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
               ),
             ),
           ),
-          const ConnectionBanner(),
           GameInterruptionLayer(
             interruption: game.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            presentation: GameInterruptionPresentation.tabletController,
             isSubmitting: game.commandInFlight,
-            onExpired: () async {
-              await game.expireInterruption();
+            onContinue: () async {
+              await game.excludeInterruptedPlayerAndContinue();
             },
+            onExpired: game.expireInterruption,
           ),
           if (game.commandInFlight)
             const Positioned(

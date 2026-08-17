@@ -80,8 +80,13 @@ export const callLiarsPoker = onCall<CallLiarData>(
       const alivePlayerCount = Object.values(game.public.players).filter(
         (player) => player.status === "alive",
       ).length;
+      // 카드를 가진 사람이 둘만 남은 1대1 상황에서 LIAR 판정에 실패하면 이번
+      // 룰렛부터 한 단계 높은 탈락 확률을 적용합니다. FOLD 안내 문구가 이
+      // 규칙을 그대로 알리고 있으므로, lastCardChallenge 단계에서도 동일하게
+      // 적용해야 안내와 실제 동작이 어긋나지 않습니다.
       const shouldIncreasePenaltyBeforeRoulette =
-        alivePlayerCount === 2 && truthful;
+        (alivePlayerCount === 2 ||
+          game.public.phase === "lastCardChallenge") && truthful;
       const now = Date.now();
       const actualRanks = actualCards.map((card) => card.rank);
 

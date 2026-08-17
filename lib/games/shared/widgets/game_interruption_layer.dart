@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
+enum GameInterruptionPresentation { player, tabletController }
+
 /// 연결 끊김·퇴장 시 모든 게임이 공유하는 전체 화면 중단 및 투표 레이어입니다.
 ///
 /// 문구 전용 [GameAnnouncementLayer]와 달리 이 레이어는 게임 조작을 멈추고
-/// 투표 버튼만 입력받습니다.
+/// 휴대폰 투표 또는 태블릿의 제외 진행 버튼만 입력받습니다.
 class GameInterruptionLayer extends StatefulWidget {
   const GameInterruptionLayer({
     super.key,
     required this.interruption,
     required this.currentUid,
+    this.presentation = GameInterruptionPresentation.player,
     this.onVote,
+    this.onContinue,
     this.onExpired,
     this.isSubmitting = false,
     this.scrimColor = const Color(0xE8000000),
@@ -21,8 +25,10 @@ class GameInterruptionLayer extends StatefulWidget {
 
   final GameInterruption? interruption;
   final String currentUid;
+  final GameInterruptionPresentation presentation;
   final Future<void> Function()? onVote;
-  final Future<void> Function()? onExpired;
+  final Future<void> Function()? onContinue;
+  final Future<bool> Function()? onExpired;
   final bool isSubmitting;
   final Color scrimColor;
 
@@ -77,7 +83,21 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
         _expiredInterruptionId != interruption.id &&
         widget.onExpired != null) {
       _expiredInterruptionId = interruption.id;
-      unawaited(widget.onExpired!());
+      unawaited(_expire(interruption.id));
+    }
+  }
+
+  Future<void> _expire(String interruptionId) async {
+    var succeeded = false;
+    try {
+      succeeded = await widget.onExpired?.call() ?? false;
+    } catch (_) {
+      succeeded = false;
+    }
+    if (!succeeded && mounted && widget.interruption?.id == interruptionId) {
+      // callable 자체의 재전송까지 모두 실패한 경우에도 다음 timer tick에서
+      // 다시 시도해 0초 화면에 영구 정지하지 않게 합니다.
+      _expiredInterruptionId = null;
     }
   }
 
@@ -99,13 +119,15 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
     }
     final canVote = interruption.canVote(widget.currentUid);
     final hasVoted = interruption.hasVoted(widget.currentUid);
+    final isTabletController =
+        widget.presentation == GameInterruptionPresentation.tabletController;
     final isDisconnected =
         interruption.reason == GameInterruptionReason.disconnected;
     final title = isDisconnected
-        ? '${interruption.playerNickname}님의 연결이 끊어졌습니다'
-        : '${interruption.playerNickname}님이 게임에서 나갔습니다';
+        ? '${interruption.playerNickname}와의 연결이 끊어졌습니다'
+        : '${interruption.playerNickname}가 게임에서 나갔습니다.';
     final description = interruption.canContinue
-        ? '${interruption.playerNickname}님을 제외하고 게임을 계속할까요?'
+        ? '해당 플레이어를 제외하고 게임을 계속할까요?'
         : '남은 인원이 부족해 게임을 계속할 수 없습니다.';
 
     return Positioned.fill(
@@ -123,6 +145,7 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                     _PlayerAvatar(
                       imageUrl: interruption.playerProfileImageUrl,
                       nickname: interruption.playerNickname,
+                      size: isTabletController ? 116 : 96,
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -135,7 +158,16 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                         height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 22),
+                    Text(
+                      '$_remainingSeconds초',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       description,
                       textAlign: TextAlign.center,
@@ -146,16 +178,33 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                         height: 1.45,
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    Text(
-                      '$_remainingSeconds초',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
+                    if (isTabletController) ...[
+                      const SizedBox(height: 26),
+                      FilledButton(
+                        onPressed:
+                            interruption.canContinue &&
+                                !widget.isSubmitting &&
+                                widget.onContinue != null
+                            ? () => unawaited(widget.onContinue!())
+                            : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor: const Color(0xFF777777),
+                          disabledForegroundColor: const Color(0xFFBBBBBB),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 14,
+                          ),
+                          elevation: interruption.canContinue ? 8 : 0,
+                          shadowColor: Colors.black,
+                        ),
+                        child: const Text(
+                          '제외하고 계속하기',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
                       ),
-                    ),
-                    if (interruption.canContinue) ...[
+                    ] else if (interruption.canContinue) ...[
                       const SizedBox(height: 8),
                       Text(
                         '동의 ${interruption.voteCount} / ${interruption.requiredVotes}',
@@ -168,9 +217,12 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                       const SizedBox(height: 26),
                       if (canVote)
                         FilledButton(
-                          onPressed: hasVoted || widget.isSubmitting
+                          onPressed:
+                              hasVoted ||
+                                  widget.isSubmitting ||
+                                  widget.onVote == null
                               ? null
-                              : () => unawaited(widget.onVote?.call()),
+                              : () => unawaited(widget.onVote!()),
                           style: FilledButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.black,
@@ -205,10 +257,15 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
 }
 
 class _PlayerAvatar extends StatelessWidget {
-  const _PlayerAvatar({required this.imageUrl, required this.nickname});
+  const _PlayerAvatar({
+    required this.imageUrl,
+    required this.nickname,
+    required this.size,
+  });
 
   final String imageUrl;
   final String nickname;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +283,8 @@ class _PlayerAvatar extends StatelessWidget {
       ),
     );
     return Container(
-      width: 96,
-      height: 96,
+      width: size,
+      height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),

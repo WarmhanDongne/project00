@@ -223,8 +223,8 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final turnPlayer = controller?.players[controller.turnUid];
     final waitingMessage = controller?.emptyHandWaitingMessage;
-    final showTwoPlayerPassPrompt =
-        controller?.showTwoPlayerPassPrompt ?? false;
+    final showFoldPrompt =
+        controller?.showFoldPrompt ?? false;
     final showPenaltyHandOverlay = controller?.showPenaltyHandOverlay ?? false;
     // 허위 선언 판정 문구를 보여주는 동안에는 기존 요청대로 손패를
     // 어둡게 유지하고, 실제 벌칙 진행 및 결과 표시 단계에서는 숨깁니다.
@@ -279,7 +279,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         showHeader: showHeader,
         showControls: showControls,
         waitingMessage: waitingMessage,
-        showTwoPlayerPassPrompt: showTwoPlayerPassPrompt,
+        showFoldPrompt: showFoldPrompt,
         showPenaltyHandOverlay: showPenaltyHandOverlay,
         hideHandDuringPenalty: hideHandDuringPenalty,
         showGameStart: showGameStart,
@@ -292,7 +292,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
       showHeader: showHeader,
       showControls: showControls,
       waitingMessage: waitingMessage,
-      showTwoPlayerPassPrompt: showTwoPlayerPassPrompt,
+      showFoldPrompt: showFoldPrompt,
       showPenaltyHandOverlay: showPenaltyHandOverlay,
       hideHandDuringPenalty: hideHandDuringPenalty,
       showGameStart: showGameStart,
@@ -306,7 +306,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     required bool showHeader,
     required bool showControls,
     required String? waitingMessage,
-    required bool showTwoPlayerPassPrompt,
+    required bool showFoldPrompt,
     required bool showPenaltyHandOverlay,
     required bool hideHandDuringPenalty,
     required bool showGameStart,
@@ -325,7 +325,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
               controller.handCards.isNotEmpty &&
               waitingMessage == null &&
               !showPenaltyHandOverlay &&
-              !showTwoPlayerPassPrompt;
+              !showFoldPrompt;
           final announcement = _resolveAnnouncement(
             controller,
             showGameStart: showGameStart,
@@ -416,23 +416,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================마지막 카드 선택==============================
-              if (showControls &&
-                  controller?.phase == 'lastCardChallenge' &&
-                  !showTwoPlayerPassPrompt)
-                Positioned(
-                  key: const ValueKey('portrait-last-card-slot'),
-                  top: layout.actionTop - 10,
-                  left: layout.actionHorizontalPadding,
-                  right: layout.actionHorizontalPadding,
-                  child: FilledButton(
-                    onPressed: controller!.canPassLastCardChallenge
-                        ? () => unawaited(controller.passLastCardChallenge())
-                        : null,
-                    style: _lastCardButtonStyle(),
-                    child: const Text(LiarsPokerCopy.passAndNextRound),
-                  ),
-                ),
               //=======================손패==============================
               if (!hideHandDuringPenalty)
                 Positioned(
@@ -445,7 +428,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     child: _buildHand(
                       controller,
                       isLandscape: false,
-                      dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
+                      dimmed: showFoldPrompt || showPenaltyHandOverlay,
                     ),
                   ),
                 ),
@@ -460,18 +443,18 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================2인 PASS 선택==============================
-              if (showTwoPlayerPassPrompt && controller != null)
+              //=======================2인 FOLD 선택==============================
+              if (showFoldPrompt && controller != null)
                 Positioned(
                   key: const ValueKey('portrait-two-player-pass-slot'),
                   top: layout.handTop,
                   left: 0,
                   right: 0,
                   height: layout.handHeight,
-                  child: _TwoPlayerPassPrompt(
-                    enabled: controller.canPassLastCardChallenge,
+                  child: _FoldPrompt(
+                    enabled: controller.canFoldLastCardChallenge,
                     onPressed: () =>
-                        unawaited(controller.passLastCardChallenge()),
+                        unawaited(controller.foldLastCardChallenge()),
                   ),
                 ),
               //=======================공용 문구 고정 슬롯==============================
@@ -530,7 +513,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     required bool showHeader,
     required bool showControls,
     required String? waitingMessage,
-    required bool showTwoPlayerPassPrompt,
+    required bool showFoldPrompt,
     required bool showPenaltyHandOverlay,
     required bool hideHandDuringPenalty,
     required bool showGameStart,
@@ -548,7 +531,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
               controller.statusMessage != null &&
               waitingMessage == null &&
               !showPenaltyHandOverlay &&
-              !showTwoPlayerPassPrompt;
+              !showFoldPrompt;
           final announcement = _resolveAnnouncement(
             controller,
             showGameStart: showGameStart,
@@ -621,7 +604,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                       // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
                       entryCenterOffsetX: controlsWidth / 2 + 4,
                       entryCenterOffsetY: -32,
-                      dimmed: showTwoPlayerPassPrompt || showPenaltyHandOverlay,
+                      dimmed: showFoldPrompt || showPenaltyHandOverlay,
                     ),
                   ),
                 ),
@@ -636,18 +619,18 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================2인 PASS 선택==============================
-              if (showTwoPlayerPassPrompt)
+              //=======================2인 FOLD 선택==============================
+              if (showFoldPrompt)
                 Positioned(
                   key: const ValueKey('landscape-two-player-pass-slot'),
                   top: 72,
                   bottom: 8,
                   left: sidePadding,
                   right: controlsWidth + 24,
-                  child: _TwoPlayerPassPrompt(
-                    enabled: controller.canPassLastCardChallenge,
+                  child: _FoldPrompt(
+                    enabled: controller.canFoldLastCardChallenge,
                     onPressed: () =>
-                        unawaited(controller.passLastCardChallenge()),
+                        unawaited(controller.foldLastCardChallenge()),
                   ),
                 ),
               //=======================턴 정보·게임 버튼==============================
@@ -668,23 +651,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                         isLandscape: true,
                       ),
                     ),
-                  ),
-                ),
-              //=======================마지막 카드 선택==============================
-              if (showControls &&
-                  controller.phase == 'lastCardChallenge' &&
-                  !showTwoPlayerPassPrompt)
-                Positioned(
-                  key: const ValueKey('landscape-last-card-slot'),
-                  top: 104,
-                  right: sidePadding,
-                  width: controlsWidth,
-                  child: FilledButton(
-                    onPressed: controller.canPassLastCardChallenge
-                        ? () => unawaited(controller.passLastCardChallenge())
-                        : null,
-                    style: _lastCardButtonStyle(),
-                    child: const Text(LiarsPokerCopy.passAndNextRoundShort),
                   ),
                 ),
               //=======================공용 문구 고정 슬롯==============================
@@ -878,10 +844,10 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
     // 1대1 마지막 카드 선택에서 응답하지 않으면 상대를 의심하지 않고
-    // PASS 처리해 새 라운드로 진행합니다.
-    if (controller.showTwoPlayerPassPrompt &&
-        controller.canPassLastCardChallenge) {
-      unawaited(controller.passLastCardChallenge());
+    // FOLD 처리해 새 라운드로 진행합니다.
+    if (controller.showFoldPrompt &&
+        controller.canFoldLastCardChallenge) {
+      unawaited(controller.foldLastCardChallenge());
       return;
     }
 
@@ -955,17 +921,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
           ),
         ),
       ),
-    );
-  }
-
-  //=======================마지막 카드 버튼==============================
-  ButtonStyle _lastCardButtonStyle() {
-    return FilledButton.styleFrom(
-      backgroundColor: const Color(0xFF50675A),
-      foregroundColor: Colors.white,
-      disabledBackgroundColor: const Color(0x6650675A),
-      elevation: 9,
-      shadowColor: const Color(0x99000000),
     );
   }
 
@@ -1162,8 +1117,8 @@ class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
 }
 
 /// 2인 상황에서 남은 플레이어의 손패를 잠그고 새 라운드 진행을 선택합니다.
-class _TwoPlayerPassPrompt extends StatelessWidget {
-  const _TwoPlayerPassPrompt({required this.enabled, required this.onPressed});
+class _FoldPrompt extends StatelessWidget {
+  const _FoldPrompt({required this.enabled, required this.onPressed});
 
   final bool enabled;
   final VoidCallback onPressed;
@@ -1173,12 +1128,12 @@ class _TwoPlayerPassPrompt extends StatelessWidget {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    final passButton = LiarsPokerPressableAssetButton(
-      asset: Assets.games.liarsPoker.images.button.buttonPass,
+    final foldButton = LiarsPokerPressableAssetButton(
+      asset: Assets.games.liarsPoker.images.button.buttonFold,
       // width: isLandscape ? 190 : 255.w,
       width: isLandscape ? 190 : 255.w,
       enabled: enabled,
-      semanticsLabel: '패스하고 패널티 진행',
+      semanticsLabel: 'FOLD하고 패널티 진행',
       onPressed: onPressed,
     );
 
@@ -1190,10 +1145,10 @@ class _TwoPlayerPassPrompt extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              passButton,
+              foldButton,
               SizedBox(height: isLandscape ? 8 : 12.h),
               Text(
-                'PASS를 선택하면 내가 패널티를 진행합니다.\n'
+                'FOLD를 선택하면 내가 패널티를 진행합니다.\n'
                 'LIAR 판정에 실패하면 이번 패널티 확률이 증가합니다',
                 textAlign: TextAlign.center,
                 style: TextStyle(

@@ -384,6 +384,28 @@ class LiarsPokerTabletController extends Notifier<LiarsPokerTabletState> {
     }
   }
 
+  Future<bool> excludeInterruptedPlayerAndContinue() async {
+    final current = interruption;
+    if (current == null || !current.canContinue || isProcessingMenuCommand) {
+      return false;
+    }
+    isProcessingMenuCommand = true;
+    _commit();
+    try {
+      await service.interruption.excludeAndContinue(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      );
+      return true;
+    } catch (error) {
+      onError('플레이어를 제외하고 게임을 계속하지 못했습니다.', error);
+      return false;
+    } finally {
+      isProcessingMenuCommand = false;
+      _commit();
+    }
+  }
+
   /// 룰렛 결과만 Cloud Function에 전달합니다.
   /// 실제 탈락 및 새 라운드 처리는 서버가 결정합니다.
   Future<void> resolveRoulette(RouletteResult result) async {

@@ -57,16 +57,6 @@ class GamePreviewDialog extends StatelessWidget {
     final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
     final maxPlayers = game.maxPlayers > 0 ? game.maxPlayers : 6;
 
-    if (currentPlayerCount < minPlayers) {
-      _showMessage(context, '이 게임을 시작하려면 최소 $minPlayers명이 필요합니다.');
-      return;
-    }
-
-    if (currentPlayerCount > maxPlayers) {
-      _showMessage(context, '이 게임은 최대 $maxPlayers명까지 플레이할 수 있습니다.');
-      return;
-    }
-
     if (game.id.isEmpty) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
       return;
@@ -75,6 +65,21 @@ class GamePreviewDialog extends StatelessWidget {
     final templateGame = GameRegistry.find(game.id);
     if (templateGame == null) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      return;
+    }
+    final fixedPlayerCount = templateGame.fixedPlayerCount;
+    if (fixedPlayerCount != null && currentPlayerCount != fixedPlayerCount) {
+      _showMessage(context, '이 게임은 정확히 $fixedPlayerCount명이 필요합니다.');
+      return;
+    }
+
+    if (currentPlayerCount < minPlayers) {
+      _showMessage(context, '이 게임을 시작하려면 최소 $minPlayers명이 필요합니다.');
+      return;
+    }
+
+    if (currentPlayerCount > maxPlayers) {
+      _showMessage(context, '이 게임은 최대 $maxPlayers명까지 플레이할 수 있습니다.');
       return;
     }
 

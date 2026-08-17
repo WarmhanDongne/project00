@@ -1,6 +1,9 @@
 /* eslint-disable valid-jsdoc, require-jsdoc */
 
-import {findNextAlivePlayer} from "./common/next-turn.js";
+import {
+  findNextAlivePlayer,
+  findNextPlayerWithCards,
+} from "./common/next-turn.js";
 import {
   LiarsPokerGameState,
   TURN_DURATION_MS,
@@ -40,7 +43,17 @@ export function excludeLiarsPokerPlayer(
     restartRound(game, nextAliveUid, now);
   } else {
     if (game.public.turnUid === uid) {
-      game.public.turnUid = nextAliveUid;
+      // 카드가 없는 자리로는 턴을 넘기지 않습니다.
+      // 진행 중인 라운드에서는 손패가 남은 사람에게만 턴이 갑니다. 나간 사람이
+      // 마지막 카드 보유자였다면 이어갈 사람이 없으므로 라운드를 새로 엽니다.
+      const nextTurnUid = game.public.phase === "playing" ?
+        findNextPlayerWithCards(game.public.players, uid) :
+        nextAliveUid;
+      if (nextTurnUid === null) {
+        restartRound(game, nextAliveUid, now);
+        return;
+      }
+      game.public.turnUid = nextTurnUid;
       const timerHasStarted = game.public.isFirstTurnReady === true;
       game.public.turnDeadlineAt =
         game.public.phase === "dealing" || !timerHasStarted ?

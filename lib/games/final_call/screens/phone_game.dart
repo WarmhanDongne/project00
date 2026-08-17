@@ -94,11 +94,11 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       revealedRound = 0;
     }
     previousStatus = game.status;
-    final shouldCloseGame =
-        game.isFinished &&
-        (game.finishReason == 'manual' ||
-            game.finishReason == 'insufficientPlayers' ||
-            game.finishReason == 'interruptionVoteExpired');
+    //=======================승부가 나지 않은 종료는 모두 퇴장==============================
+    // 나가야 할 종료 사유를 나열하지 않고, '정상 결과가 아니면 나간다'로 뒤집어
+    // 판단합니다. 사유 목록 방식은 서버에 종료 사유가 하나만 늘어도 휴대폰이
+    // 결과 화면에 갇힙니다. 라이어스포커와 같은 규칙입니다.
+    final shouldCloseGame = game.isFinished && !game.isNaturalResult;
     if (shouldCloseGame) {
       if (_isLeavingRoom) return;
       if (hasScheduledManualExit) return;
@@ -407,9 +407,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           onVote: () async {
             await game.voteToContinueInterruption();
           },
-          onExpired: () async {
-            await game.expireInterruption();
-          },
+          onExpired: game.expireInterruption,
         ),
       ],
     );

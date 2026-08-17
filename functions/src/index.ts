@@ -80,6 +80,7 @@ export {
 } from "./final-call/complete-result-reveal.js";
 
 export {
+  excludeInterruptedPlayerAndContinue,
   expireInterruptedGame,
   handleGamePlayerConnectionChanged,
   voteToContinueInterruptedGame,

@@ -3,7 +3,12 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {processedResult, recordCommand} from "./common/commands.js";
-import {findNextAlivePlayer} from "./common/next-turn.js";
+import {
+  countPlayersWithCards,
+  findNextAlivePlayer,
+  findNextPlayerWithCards,
+} from "./common/next-turn.js";
+import {restartRound} from "./restart-round.js";
 import {
   LAST_CARD_CHALLENGE_DURATION_MS,
   RealtimeRoom,
@@ -85,13 +90,20 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
 
       for (const cardId of cardIds) delete hand[cardId];
       const remainingCardCount = Object.keys(hand).length;
-      const nextTurnUid = findNextAlivePlayer(game.public.players, uid);
-      const alivePlayerCount = Object.values(game.public.players).filter(
-        (gamePlayer) => gamePlayer.status === "alive",
-      ).length;
-      const isTwoPlayerLastCardChallenge =
-        remainingCardCount === 0 && alivePlayerCount === 2;
       const now = Date.now();
+      player.remainingCardCount = remainingCardCount;
+
+      // 카드를 다 쓴 플레이어는 턴에서 빼고 남은 사람들끼리 라운드를 이어갑니다.
+      // FOLD 판단은 카드를 가진 사람이 둘만 남았을 때, 그중 한 명이 손패를
+      // 모두 냈을 때 나옵니다. 마지막 한 명은 낼 카드가 없으므로 LIAR을
+      // 외치거나 FOLD를 선택하는 판단만 남습니다.
+      //
+      // 기준은 '살아 있는 인원'이 아니라 '카드를 가진 인원'입니다. 3인 이상이어도
+      // 다른 사람들이 이미 손패를 다 냈다면 남은 두 명의 1대1 상황이며, 먼저
+      // 손패를 비운 사람들은 이 벌칙에서 빠집니다.
+      const isLastCardChallenge = remainingCardCount === 0 &&
+        countPlayersWithCards(game.public.players) === 1;
+      const nextTurnUid = findNextPlayerWithCards(game.public.players, uid);
       const lastPlay = {
         playId: commandId,
         round: game.public.round,
@@ -102,26 +114,34 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
         submittedAt: now,
       };
 
-      player.remainingCardCount = remainingCardCount;
-      game.public.phase = remainingCardCount === 0 ?
-        "lastCardChallenge" : "playing";
-      game.public.turnUid = nextTurnUid;
-      game.public.turnDeadlineAt = now +
-        (isTwoPlayerLastCardChallenge ?
-          LAST_CARD_CHALLENGE_DURATION_MS : TURN_DURATION_MS);
-      game.public.isFirstTurnReady = true;
       game.public.lastPlay = lastPlay;
       game.public.roundPlays ??= {};
       game.public.roundPlays[lastPlay.playId] = lastPlay;
-      game.public.revision += 1;
-      game.public.updatedAt = now;
       game.server.lastPlayCards = submittedCards;
+
+      if (nextTurnUid === null) {
+        // 이어서 낼 사람이 아무도 없습니다. 카드를 가진 사람이 한 명 남으면
+        // 위에서 FOLD 단계로 가므로 정상 진행에서는 나오지 않고, 플레이어가
+        // 도중에 나가 손패가 사라진 경우에 대비한 처리입니다. 다음 자리부터
+        // 새 라운드를 엽니다(restartRound가 phase를 dealing으로 되돌립니다).
+        restartRound(game, findNextAlivePlayer(game.public.players, uid), now);
+      } else {
+        game.public.phase = isLastCardChallenge ?
+          "lastCardChallenge" : "playing";
+        game.public.turnUid = nextTurnUid;
+        game.public.turnDeadlineAt = now +
+          (isLastCardChallenge ?
+            LAST_CARD_CHALLENGE_DURATION_MS : TURN_DURATION_MS);
+        game.public.isFirstTurnReady = true;
+        game.public.revision += 1;
+        game.public.updatedAt = now;
+      }
 
       response = {
         success: true,
         type: "cardsSubmitted",
         commandId,
-        nextTurnUid,
+        nextTurnUid: game.public.turnUid,
         remainingCardCount,
         phase: game.public.phase,
         revision: game.public.revision,

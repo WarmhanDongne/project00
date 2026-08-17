@@ -24,6 +24,11 @@ abstract class TemplateGame {
 
   String get title;
 
+  /// 정확한 참가 인원이 필요한 게임의 고정 인원입니다.
+  ///
+  /// null이면 플랫폼의 게임 메타데이터에 있는 최소/최대 인원을 사용합니다.
+  int? get fixedPlayerCount => null;
+
   /// 게임 도중 퇴장할 때 [RoomService.leaveGame]이 호출할 Cloud Function 이름입니다.
   String get leaveFunctionName;
 

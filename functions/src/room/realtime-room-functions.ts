@@ -91,6 +91,10 @@ export const createRealtimeRoom = onCall(
           return {
             roomCode,
             controllerUid,
+            // 클라이언트는 방 전체 onDisconnect 삭제를 예약한 뒤에만
+            // true로 바꿉니다. 따라서 휴대폰이 예약 없는 방에
+            // 입장하는 경우를 막을 수 있습니다.
+            controllerConnected: false,
             maxPlayers: DEFAULT_MAX_PLAYERS,
             selectedGame: null,
             createdAt: ServerValue.TIMESTAMP,

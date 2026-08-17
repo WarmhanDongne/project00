@@ -6,6 +6,7 @@ export const FINAL_CALL_TURN_MS = 30000;
 export const FINAL_CALL_CARDS_PER_PLAYER = 4;
 
 export type FinalCallColor = "red" | "blue" | "yellow" | "green";
+export type FinalCallTeam = "red" | "blue";
 
 export interface FinalCallCard {
   id: string;
@@ -18,6 +19,7 @@ export interface FinalCallPlayer {
   nickname: string;
   profileImageUrl: string;
   seatIndex: number;
+  team: FinalCallTeam;
   status: "alive" | "eliminated";
   lives: number;
 }
@@ -35,7 +37,7 @@ export interface FinalCallRoundResult {
 export interface FinalCallPublicState {
   gameType: "final_call";
   status: "playing" | "finished";
-  finishReason?: "winner" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
+  finishReason?: "winner" | "draw" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
   phase: "dealing" | "playing" | "callerSubmit" | "finalTurns" |
     "finalSubmit" |
     "roundResult" | "finished";
@@ -54,6 +56,8 @@ export interface FinalCallPublicState {
   /** 태블릿의 최종 카드 공개 연출이 모두 끝난 시각입니다. */
   resultRevealCompletedAt?: number;
   winnerUid: string | null;
+  winnerUids: string[];
+  winningTeam: FinalCallTeam | null;
   startedAt: number;
   updatedAt: number;
   finishedAt?: number;

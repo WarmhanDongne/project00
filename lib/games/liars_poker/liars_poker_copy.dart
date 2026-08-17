@@ -13,8 +13,6 @@ abstract final class LiarsPokerCopy {
   static const lieRevealed = '거짓이 밝혀졌습니다.';
   static const challengeSucceeded = '간파 성공!';
   static const challengeFailed = '간파 실패!';
-  static const passAndNextRound = '라이어 아님 · 새 라운드 진행';
-  static const passAndNextRoundShort = '라이어 아님 · 새 라운드';
   static const noCards = '내 손패 없음';
   static const penaltyTitle = '벌칙 진행 중';
 

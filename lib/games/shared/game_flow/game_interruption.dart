@@ -16,6 +16,8 @@ class GameInterruption {
     required this.eligibleVoterUids,
     required this.requiredVotes,
     required this.voterUids,
+    required this.remainingPlayerCount,
+    required this.minimumPlayerCount,
     required this.canContinue,
   });
 
@@ -33,6 +35,8 @@ class GameInterruption {
       eligibleVoterUids: _stringValues(map['eligibleVoterUids']),
       requiredVotes: (map['requiredVotes'] as num?)?.toInt() ?? 0,
       voterUids: _mapKeys(map['votes']),
+      remainingPlayerCount: (map['remainingPlayerCount'] as num?)?.toInt() ?? 0,
+      minimumPlayerCount: (map['minimumPlayerCount'] as num?)?.toInt() ?? 2,
       canContinue: map['canContinue'] == true,
     );
   }
@@ -47,6 +51,8 @@ class GameInterruption {
   final List<String> eligibleVoterUids;
   final int requiredVotes;
   final Set<String> voterUids;
+  final int remainingPlayerCount;
+  final int minimumPlayerCount;
   final bool canContinue;
 
   int get voteCount => voterUids.length;

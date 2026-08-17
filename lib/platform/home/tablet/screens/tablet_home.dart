@@ -24,6 +24,7 @@ class _TabletHomeState extends State<TabletHome> {
   String searchWord = '';
 
   String? _presenceRoomCode;
+  StreamSubscription<bool?>? _controllerRoomSubscription;
 
   @override
   void initState() {
@@ -34,20 +35,41 @@ class _TabletHomeState extends State<TabletHome> {
     // 게임 종료 후 복원은 각 태블릿 게임 화면의 dispose가 담당합니다.
     //=======================진행 기기 접속 표시==============================
     // 방이 생기면 태블릿이 방을 열고 있다고 표시합니다. 태블릿이 사라지면
-    // 서버가 자동으로 해제해 휴대폰들이 무한 대기하지 않습니다.
+    // 서버가 방 전체를 삭제해 고아 방과 휴대폰의 무한 대기를 막습니다.
     roomProvider.addListener(_syncControllerPresence);
   }
 
   void _syncControllerPresence() {
     final code = roomProvider.roomCode;
-    if (code == null || code == _presenceRoomCode) return;
+    if (code == null) {
+      _presenceRoomCode = null;
+      unawaited(_controllerRoomSubscription?.cancel());
+      _controllerRoomSubscription = null;
+      return;
+    }
+    if (code == _presenceRoomCode) return;
     _presenceRoomCode = code;
     unawaited(roomProvider.markControllerConnected());
+    unawaited(_controllerRoomSubscription?.cancel());
+    _controllerRoomSubscription = roomProvider
+        .watchControllerConnected(code)
+        .listen((connected) {
+          // 오프라인 중 RTDB 서버가 방을 삭제했다면, 재연결 후
+          // 아이패드에 존재하지 않는 방 코드를 계속 표시하지 않습니다.
+          if (connected == false && roomProvider.roomCode == code) {
+            roomProvider.clearRoom();
+          }
+        }, onError: (_) {});
   }
 
   @override
   void dispose() {
     roomProvider.removeListener(_syncControllerPresence);
+    //=======================태블릿 정상 종료==============================
+    // 로그아웃·화면 종료 시에는 onDisconnect 타임아웃을 기다리지 않고
+    // 방을 즉시 삭제합니다. 앱 강제 종료는 서버 예약이 담당합니다.
+    unawaited(roomProvider.deleteControllerRoom());
+    unawaited(_controllerRoomSubscription?.cancel());
     roomProvider.dispose();
     gameProvider.dispose();
     super.dispose();

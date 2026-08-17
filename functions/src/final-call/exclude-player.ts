@@ -41,7 +41,8 @@ export function excludeFinalCallPlayer(
   }
   const alive = orderedAlivePlayers(game.public.players);
 
-  if (alive.length < 2) {
+  // Final Call은 4인 2대2 고정 게임이므로 한 명이라도 제외되면 진행할 수 없습니다.
+  if (alive.length < 4) {
     finishFinalCallForInsufficientPlayers(game, now);
   } else if (wasCurrentTurn &&
       (game.public.phase === "finalTurns" ||
@@ -83,6 +84,8 @@ export function finishFinalCallForInsufficientPlayers(
   game.public.finishReason = "insufficientPlayers";
   game.public.phase = "finished";
   game.public.winnerUid = null;
+  game.public.winnerUids = [];
+  game.public.winningTeam = null;
   game.public.turnUid = null;
   game.public.turnDeadlineAt = null;
   game.public.callerUid = null;

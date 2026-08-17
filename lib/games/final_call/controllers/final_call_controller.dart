@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
+import 'package:project00/games/shared/game_flow/game_finish.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 //=======================Final Call Riverpod 게임 컨트롤러==============================
@@ -70,6 +71,8 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   String? get pendingDrawSource => state.pendingDrawSource;
   List<String> get finalTurnPendingUids => state.finalTurnPendingUids;
   String? get winnerUid => state.winnerUid;
+  List<String> get winnerUids => state.winnerUids;
+  FinalCallTeam? get winningTeam => state.winningTeam;
   int? get resultRevealCompletedAt => state.resultRevealCompletedAt;
   Map<String, FinalCallPlayer> get players => state.players;
   List<FinalCallCard> get hand => state.hand;
@@ -81,6 +84,27 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   //=======================파생 게임 상태==============================
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
+
+  /// 마지막 생존자가 정해져 정상적으로 끝났는지 여부입니다.
+  ///
+  /// 휴대폰은 이 값이 false인 종료를 모두 '나가야 하는 종료'로 봅니다.
+  /// 자세한 근거는 [isNaturalGameResult] 문서를 보세요.
+  bool get isNaturalResult =>
+      (isFinished && finishReason == 'draw') ||
+      isNaturalGameResult(
+        isFinished: isFinished,
+        winnerUid: winnerUid,
+        finishReason: finishReason,
+      );
+  List<FinalCallPlayer> get winners => (winnerUids.isNotEmpty
+          ? winnerUids
+          : winnerUid == null
+          ? const <String>[]
+          : <String>[winnerUid!])
+      .map((winningUid) => players[winningUid])
+      .whereType<FinalCallPlayer>()
+      .toList(growable: false);
+  FinalCallTeam? get myTeam => players[uid]?.team;
   bool get canAct =>
       status == 'playing' &&
       interruption == null &&
@@ -176,6 +200,18 @@ class FinalCallController extends Notifier<FinalCallGameState> {
         : const <String>[];
     final rawResult = map['roundResult'];
     final rawInterruption = map['interruption'];
+    final rawWinnerUids = map['winnerUids'];
+    final winnerUids = rawWinnerUids is List
+        ? rawWinnerUids.map((value) => value.toString()).toList(growable: false)
+        : rawWinnerUids is Map
+        ? rawWinnerUids.values
+              .map((value) => value.toString())
+              .toList(growable: false)
+        : const <String>[];
+    final winningTeamValue = map['winningTeam'];
+    final winningTeam = winningTeamValue == null
+        ? null
+        : FinalCallTeam.fromWire(winningTeamValue, seatIndex: 0);
 
     state = current.copyWith(
       loading: false,
@@ -194,6 +230,8 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       pendingDrawSource: map['pendingDrawSource']?.toString(),
       finalTurnPendingUids: finalTurnUids,
       winnerUid: map['winnerUid']?.toString(),
+      winnerUids: winnerUids,
+      winningTeam: winningTeam,
       resultRevealCompletedAt: (map['resultRevealCompletedAt'] as num?)
           ?.toInt(),
       players: parsedPlayers,
@@ -325,6 +363,17 @@ class FinalCallController extends Notifier<FinalCallGameState> {
     if (current == null) return Future.value(false);
     return _run(
       () => service.interruption.expire(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
+  Future<bool> excludeInterruptedPlayerAndContinue() {
+    final current = interruption;
+    if (current == null || !current.canContinue) return Future.value(false);
+    return _run(
+      () => service.interruption.excludeAndContinue(
         roomCode: roomCode,
         interruptionId: current.id,
       ),

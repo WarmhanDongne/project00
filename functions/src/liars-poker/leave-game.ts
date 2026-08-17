@@ -33,24 +33,21 @@ export const leaveLiarsPokerGame = onCall<LeaveGameData>(
         response = {success: true, type: "alreadyLeft", gameEnded: false};
         return room;
       }
-      delete room.players?.[uid];
       if (!gamePlayer || gamePlayer.status !== "alive" ||
           game.public.status === "finished") {
+        delete room.players?.[uid];
         response = {success: true, type: "playerLeft", gameEnded: true};
         return room;
       }
 
       const now = Date.now();
+      // 60초 안에 같은 UID가 돌아오면 프로필과 seatIndex를 복구할 수 있도록
+      // 제외가 확정되기 전까지 room player는 연결 끊김 상태로 보존합니다.
+      if (room.players?.[uid]) room.players[uid].isConnected = false;
       const remainingCount = Object.entries(game.public.players).filter(
         ([playerUid, player]) => playerUid !== uid && player.status === "alive",
       ).length;
-      beginGameInterruption(
-        room,
-        uid,
-        "left",
-        now,
-        remainingCount < 2 ? {durationMs: 4000} : {},
-      );
+      beginGameInterruption(room, uid, "left", now, {minimumPlayerCount: 2});
       response = {
         success: true,
         type: "playerLeft",

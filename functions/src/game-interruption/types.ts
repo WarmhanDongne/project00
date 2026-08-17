@@ -11,6 +11,8 @@ export interface PublicGameInterruption {
   eligibleVoterUids: string[];
   requiredVotes: number;
   votes?: Record<string, true>;
+  remainingPlayerCount: number;
+  minimumPlayerCount: number;
   canContinue: boolean;
 }
 
@@ -36,4 +38,3 @@ export interface InterruptibleGameState {
   public: InterruptiblePublicGameState;
   server: InterruptibleServerGameState;
 }
-
