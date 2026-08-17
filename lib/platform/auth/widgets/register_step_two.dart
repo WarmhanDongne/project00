@@ -12,6 +12,7 @@ class RegisterStepTwo extends StatelessWidget {
     required this.isLoading,
     required this.isCodeSent,
     required this.isPhoneVerified,
+    required this.googlePhotoURL,
     required this.profileImageBytes,
     required this.onPickProfileImage,
     required this.onCheckNickname,
@@ -27,6 +28,8 @@ class RegisterStepTwo extends StatelessWidget {
   final Uint8List? profileImageBytes;
   final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;
+
+  final String? googlePhotoURL;
 
   @override
   Widget build(BuildContext context) {

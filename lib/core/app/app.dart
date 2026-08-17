@@ -1,7 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore 추가
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
@@ -10,21 +10,22 @@ import 'package:project00/platform/theme/platform_theme.dart';
 
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
-
   final Stream<User?>? userChanges;
 
   @override
   Widget build(BuildContext context) {
-    // LayoutBuilder 대신 빌드 단계에서 View.of(context)를 사용해 화면 크기를 구합니다.
+    // 화면 크기 구하기
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
 
     // shortestSide를 기준으로 태블릿 여부를 판단합니다.
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
+    // 테블릿, 폰 분기
+    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
-        ? const Size(834, 1194) // 테블릿
-        : const Size(390, 844); // 핸드폰
+        ? const Size(834, 1194) // 테블릿 기본 사이즈
+        : const Size(390, 844); // 핸드폰 기본 사이즈
 
     return ScreenUtilInit(
       ensureScreenSize:

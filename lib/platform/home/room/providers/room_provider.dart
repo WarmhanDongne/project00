@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/games/game_registry.dart';
@@ -20,6 +21,10 @@ class RoomProvider extends ChangeNotifier {
   List<GameInfo> groupGames = [];
   bool isLoading = false;
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
+
+  bool wasKicked = false;
+  bool _hasJoined = false;
+  bool _isLeaving = false;
 
   String? errorMessage;
   String? selectedGameId;
@@ -157,6 +162,21 @@ class RoomProvider extends ChangeNotifier {
       roomPlayer,
     ) async {
       players = roomPlayer;
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && roomCode != null) {
+        final myUid = currentUser.uid;
+        final isMeInPlayers = roomPlayer.any((p) => p.uid == myUid && p.isActive);
+        if (isMeInPlayers) {
+          _hasJoined = true;
+        } else if (_hasJoined && !_isLeaving) {
+          _hasJoined = false;
+          wasKicked = true;
+          clearRoom();
+          return;
+        }
+      }
+
       // 활성화된 유저의 uids 추출
       final activeUids = players
           .where((p) => p.isActive)
@@ -214,7 +234,9 @@ class RoomProvider extends ChangeNotifier {
 
     // return 분기
     if (result == true) {
-      roomCode = code;
+      wasKicked = false;
+      _hasJoined = false;
+      this.roomCode = code;
       listenRoom();
     }
     return result ?? false;
@@ -241,6 +263,7 @@ class RoomProvider extends ChangeNotifier {
     final code = roomCode;
     if (code == null) return false;
 
+    _isLeaving = true;
     final result = await _runCommand<bool>(() async {
       await _service.leaveRoom(code);
       return true;
@@ -281,6 +304,8 @@ class RoomProvider extends ChangeNotifier {
     selectedGameId = null;
     selectedGame = null;
     groupGames = [];
+    _hasJoined = false;
+    _isLeaving = false;
     notifyListeners();
   }
 

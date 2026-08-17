@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
@@ -35,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   late int pageNumber; // late로 선언해 나중에 초기화
   String? verificationId;
+  String? googlePhotoURL;
   int? resendToken;
   XFile? profileImage;
   Uint8List? profileImageBytes;
@@ -43,6 +45,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     pageNumber = widget.isGoogleSignIn ? 1 : 0; // 구글 로그인 여부 설정
+
+    // 구글 로그인 객체 바탕으로 기본 정보 채우기
+    // 구글 로그인으로 접근이 아닌 경우 종료
+    if (!widget.isGoogleSignIn) return;
+
+    // 구글 로그인 계정 객체 생성
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return; // 실패
+
+    // 성공 시 닉네임과 photoURL 갱신
+    nicknameController.text = user.displayName ?? '';
+    googlePhotoURL = user.photoURL;
   }
 
   //이메일 중복확인
