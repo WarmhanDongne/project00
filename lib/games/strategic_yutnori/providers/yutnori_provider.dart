@@ -44,6 +44,11 @@ class YutnoriNotifier extends Notifier<YutnoriState> {
     if (state.availableMoves.isEmpty) return;
     state = YutnoriCommandService.movePiece(state, pieceId, result, destNodeId);
   }
+
+  /// 게임 초기화
+  void resetGame() {
+    state = build();
+  }
 }
 
 // 전역으로 접근 가능한 Provider 생성

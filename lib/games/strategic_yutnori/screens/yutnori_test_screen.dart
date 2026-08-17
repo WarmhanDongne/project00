@@ -15,6 +15,51 @@ class YutnoriTestScreen extends ConsumerWidget {
     final currentTeamId = ref.watch(yutnoriProvider.select((state) => state.currentTurnTeamId));
     final currentPhase = ref.watch(yutnoriProvider.select((state) => state.phase));
 
+    // 이벤트(스낵바) 및 게임 종료 다이얼로그 리스너
+    ref.listen<YutnoriState>(yutnoriProvider, (previous, next) {
+      if (previous == null) return;
+
+      // 1. 이벤트 알림 (스낵바)
+      if (next.lastEvent != previous.lastEvent && next.lastEvent != null) {
+        final event = next.lastEvent!;
+        Color bgColor = Colors.black87;
+        if (event.type == YutnoriEventType.capture) bgColor = Colors.redAccent;
+        if (event.type == YutnoriEventType.extraTurn) bgColor = Colors.green;
+        
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(event.message, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            backgroundColor: bgColor,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      // 2. 게임 종료 다이얼로그
+      if (previous.phase != GamePhase.finished && next.phase == GamePhase.finished) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: Text('🎉 ${next.winnerTeamId == "A" ? "파란색" : "빨간색"} 팀 승리! 🎉', textAlign: TextAlign.center),
+            content: const Text('축하합니다! 모든 승리말이 완주했습니다.', textAlign: TextAlign.center),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(yutnoriProvider.notifier).resetGame();
+                  Navigator.of(context).pop();
+                },
+                child: const Text('다시하기'),
+              )
+            ]
+          )
+        );
+      }
+    });
+
     // 턴 표시용 변수
     final isTeamA = currentTeamId == 'A';
     final teamColor = isTeamA ? Colors.blue.shade600 : Colors.red.shade600;

@@ -1,4 +1,5 @@
 import '../models/yutnori_state.dart';
+import '../models/board_node_model.dart';
 import '../models/piece_model.dart';
 import 'yutnori_query_service.dart';
 
@@ -15,6 +16,8 @@ class YutnoriCommandService {
     
     GamePhase nextPhase = newRemainingThrows > 0 ? GamePhase.throwing : GamePhase.moving;
     String nextTurnTeamId = state.currentTurnTeamId;
+    
+    YutnoriEvent? newEvent;
     
     // 만약 이동 페이즈로 넘어갔는데, 어떤 말로도 이동할 수 없는 상황(예: 판에 말이 없는데 빽도만 나옴)이면 턴 강제 종료
     if (nextPhase == GamePhase.moving) {
@@ -36,7 +39,13 @@ class YutnoriCommandService {
         nextPhase = GamePhase.throwing;
         nextTurnTeamId = state.currentTurnTeamId == 'A' ? 'B' : 'A';
         newRemainingThrows = 1;
+        newEvent = YutnoriEvent('이동할 수 있는 말이 없어 턴이 넘어갑니다.', type: YutnoriEventType.info);
       }
+    }
+
+    // 윷이나 모가 나왔고, 턴이 강제로 넘어가지 않은 경우
+    if (newEvent == null && (result == YutResult.yut || result == YutResult.mo)) {
+      newEvent = YutnoriEvent('${result == YutResult.yut ? "윷" : "모"}! 한 번 더 던지세요!', type: YutnoriEventType.extraTurn);
     }
     
     return state.copyWith(
@@ -44,6 +53,7 @@ class YutnoriCommandService {
       phase: nextPhase,
       remainingThrows: newRemainingThrows,
       currentTurnTeamId: nextTurnTeamId,
+      lastEvent: newEvent,
     );
   }
 
@@ -109,11 +119,20 @@ class YutnoriCommandService {
 
     // 6. 승리 조건 체크
     String? winnerId = state.winnerTeamId;
+    YutnoriEvent? newEvent;
+
+    if (isCaptured) {
+      newEvent = YutnoriEvent('상대 말을 잡았습니다! 한 번 더 던지세요!', type: YutnoriEventType.capture);
+    } else if (destNodeId == YutBoardMap.outNodeId) {
+      newEvent = YutnoriEvent('말이 완주했습니다!', type: YutnoriEventType.info);
+    }
+
     // 임시로 상태를 만들어서 쿼리 서비스에 전달
     final tempState = state.copyWith(pieces: newPieces);
     if (YutnoriQueryService.checkWinCondition(tempState, teamId)) {
       nextPhase = GamePhase.finished;
       winnerId = teamId;
+      newEvent = YutnoriEvent('${teamId == "A" ? "파란색" : "빨간색"} 팀 승리!', type: YutnoriEventType.finish);
     }
 
     return state.copyWith(
@@ -123,6 +142,7 @@ class YutnoriCommandService {
       currentTurnTeamId: nextTurnTeamId,
       winnerTeamId: winnerId,
       remainingThrows: newRemainingThrows,
+      lastEvent: newEvent,
     );
   }
 }

@@ -28,6 +28,22 @@ extension YutResultExtension on YutResult {
   }
 }
 
+enum YutnoriEventType {
+  info,
+  capture,
+  extraTurn,
+  finish,
+}
+
+class YutnoriEvent {
+  final String message;
+  final YutnoriEventType type;
+  final DateTime timestamp;
+
+  YutnoriEvent(this.message, {this.type = YutnoriEventType.info})
+      : timestamp = DateTime.now();
+}
+
 class YutnoriState {
   final GamePhase phase;
   
@@ -49,6 +65,9 @@ class YutnoriState {
   // 이번 턴에 남은 윷 던지기 횟수 (기본 1회, 윷/모/잡기 시 증가)
   final int remainingThrows;
 
+  // UI에 보여줄 알림 이벤트 (스낵바 출력용)
+  final YutnoriEvent? lastEvent;
+
   const YutnoriState({
     this.phase = GamePhase.setup,
     this.currentTurnTeamId = 'A',
@@ -57,6 +76,7 @@ class YutnoriState {
     this.players = const [],
     this.winnerTeamId,
     this.remainingThrows = 1,
+    this.lastEvent,
   });
 
   YutnoriState copyWith({
@@ -67,6 +87,7 @@ class YutnoriState {
     List<PlayerModel>? players,
     String? winnerTeamId,
     int? remainingThrows,
+    YutnoriEvent? lastEvent,
   }) {
     return YutnoriState(
       phase: phase ?? this.phase,
@@ -76,6 +97,7 @@ class YutnoriState {
       players: players ?? this.players,
       winnerTeamId: winnerTeamId ?? this.winnerTeamId,
       remainingThrows: remainingThrows ?? this.remainingThrows,
+      lastEvent: lastEvent ?? this.lastEvent,
     );
   }
 }
