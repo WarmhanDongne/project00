@@ -22,6 +22,8 @@ class GamePreviewDialog extends StatelessWidget {
   final RoomProvider roomProvider;
 
   String _playerCountText() {
+    final fixedPlayerCount = GameRegistry.find(game.id)?.fixedPlayerCount;
+    if (fixedPlayerCount != null) return '플레이 인원 $fixedPlayerCount명';
     if (game.minPlayers > 0 && game.maxPlayers > 0) {
       return '플레이 인원 ${game.minPlayers}~${game.maxPlayers}명';
     }
@@ -166,7 +168,10 @@ class GamePreviewDialog extends StatelessWidget {
     final activePlayerCount = roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .length;
-    final hasEnoughPlayers = activePlayerCount >= game.minPlayers;
+    final fixedPlayerCount = GameRegistry.find(game.id)?.fixedPlayerCount;
+    final hasEnoughPlayers = fixedPlayerCount == null
+        ? activePlayerCount >= game.minPlayers
+        : activePlayerCount == fixedPlayerCount;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -243,8 +248,9 @@ class GamePreviewDialog extends StatelessWidget {
                         const SizedBox(height: 10),
                         if (!hasEnoughPlayers)
                           PlatformNotice(
-                            message:
-                                '현재 인원 $activePlayerCount명은 권장 인원 ${game.minPlayers}~${game.maxPlayers}명보다 적습니다.',
+                            message: fixedPlayerCount == null
+                                ? '현재 인원 $activePlayerCount명은 권장 인원 ${game.minPlayers}~${game.maxPlayers}명보다 적습니다.'
+                                : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
                             style: PlatformNoticeStyle.warning,
                           ),
                         const SizedBox(height: 10),

@@ -293,7 +293,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
           ),
           if (!isEndingGame && stage == FinalCallTabletStage.result)
             FinalCallResultOverlay(
-              winner: game.players[game.winnerUid],
+              winners: game.winners,
+              winningTeam: game.winningTeam,
+              isDraw: game.finishReason == 'draw',
               onRestart: () => game.restartGame(),
               onHome: () => unawaited(_returnHomeAfterResult()),
             ),

@@ -4,18 +4,22 @@ import 'package:project00/gen/assets.gen.dart';
 
 /// Final Call 태블릿에서 최종 승리자를 발표하는 결과 화면입니다.
 ///
-/// 서버의 [winner]를 그대로 표시하고, 버튼 동작은 태블릿 게임
+/// 서버의 [winners]를 그대로 표시하고, 버튼 동작은 태블릿 게임
 /// 진입점에서 주입한 재시작·홈 콜백을 사용합니다.
 class FinalCallResultOverlay extends StatelessWidget {
   const FinalCallResultOverlay({
     super.key,
-    required this.winner,
+    required this.winners,
+    required this.winningTeam,
+    this.isDraw = false,
     this.onRestart,
     this.onHome,
     this.showActions = true,
   });
 
-  final FinalCallPlayer? winner;
+  final List<FinalCallPlayer> winners;
+  final FinalCallTeam? winningTeam;
+  final bool isDraw;
   final VoidCallback? onRestart;
   final VoidCallback? onHome;
   final bool showActions;
@@ -45,7 +49,9 @@ class FinalCallResultOverlay extends StatelessWidget {
                   width: _ResultLayout.width,
                   height: _ResultLayout.height,
                   child: _ResultContent(
-                    winner: winner,
+                    winners: winners,
+                    winningTeam: winningTeam,
+                    isDraw: isDraw,
                     onRestart: onRestart,
                     onHome: onHome,
                     showActions: showActions,
@@ -77,13 +83,17 @@ abstract final class _ResultColors {
 
 class _ResultContent extends StatelessWidget {
   const _ResultContent({
-    required this.winner,
+    required this.winners,
+    required this.winningTeam,
+    required this.isDraw,
     required this.onRestart,
     required this.onHome,
     required this.showActions,
   });
 
-  final FinalCallPlayer? winner;
+  final List<FinalCallPlayer> winners;
+  final FinalCallTeam? winningTeam;
+  final bool isDraw;
   final VoidCallback? onRestart;
   final VoidCallback? onHome;
   final bool showActions;
@@ -98,7 +108,11 @@ class _ResultContent extends StatelessWidget {
           right: 94,
           top: 316,
           height: 352,
-          child: _WinnerPresentation(winner: winner),
+          child: _WinnerPresentation(
+            winners: winners,
+            winningTeam: winningTeam,
+            isDraw: isDraw,
+          ),
         ),
         if (showActions)
           Positioned(
@@ -178,13 +192,30 @@ class _ResultTitle extends StatelessWidget {
 }
 
 class _WinnerPresentation extends StatelessWidget {
-  const _WinnerPresentation({required this.winner});
+  const _WinnerPresentation({
+    required this.winners,
+    required this.winningTeam,
+    required this.isDraw,
+  });
 
-  final FinalCallPlayer? winner;
+  final List<FinalCallPlayer> winners;
+  final FinalCallTeam? winningTeam;
+  final bool isDraw;
 
   @override
   Widget build(BuildContext context) {
-    final nickname = winner?.nickname.trim();
+    final nickname = isDraw
+        ? '무승부'
+        : winners
+              .map((winner) => winner.nickname.trim())
+              .where((nickname) => nickname.isNotEmpty)
+              .join('  ·  ');
+    final accentColor = winningTeam == FinalCallTeam.blue
+        ? const Color(0xFF1686E8)
+        : _ResultColors.red;
+    final resultLabel = isDraw
+        ? 'FINAL CALL DRAW'
+        : '${winningTeam?.name.toUpperCase() ?? ''} TEAM WINNER'.trim();
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -202,7 +233,7 @@ class _WinnerPresentation extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                nickname == null || nickname.isEmpty ? 'WINNER' : nickname,
+                nickname.isEmpty ? 'WINNER' : nickname,
                 key: const Key('final-call-winner-nickname'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -223,11 +254,11 @@ class _WinnerPresentation extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 27),
-              const _WinnerDivider(),
+              _WinnerDivider(color: accentColor),
               const SizedBox(height: 16),
-              const Text(
-                'FINAL CALL WINNER',
-                style: TextStyle(
+              Text(
+                resultLabel,
+                style: const TextStyle(
                   color: Color(0xFFC7D0D8),
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -237,40 +268,43 @@ class _WinnerPresentation extends StatelessWidget {
             ],
           ),
         ),
-        Positioned(
-          left: 62,
-          top: 34,
-          width: 310,
-          height: 310,
-          child: _WinnerProfile(
-            key: const Key('final-call-winner-profile'),
-            imageUrl: winner?.profileImageUrl ?? '',
+        if (!isDraw)
+          for (var index = 0; index < winners.take(2).length; index++)
+            Positioned(
+              left: winners.length > 1 ? 12 + index * 178 : 62,
+              top: winners.length > 1 ? 68 : 34,
+              width: winners.length > 1 ? 232 : 310,
+              height: winners.length > 1 ? 232 : 310,
+              child: _WinnerProfile(
+                key: ValueKey('final-call-winner-profile-$index'),
+                imageUrl: winners[index].profileImageUrl,
+                accentColor: accentColor,
+              ),
+            ),
+        if (!isDraw)
+          const Positioned(
+            left: 118,
+            top: -32,
+            width: 196,
+            height: 134,
+            child: IgnorePointer(child: CustomPaint(painter: _CrownPainter())),
           ),
-        ),
-        const Positioned(
-          left: 118,
-          top: -32,
-          width: 196,
-          height: 134,
-          child: IgnorePointer(child: CustomPaint(painter: _CrownPainter())),
-        ),
       ],
     );
   }
 }
 
 class _WinnerDivider extends StatelessWidget {
-  const _WinnerDivider();
+  const _WinnerDivider({required this.color});
+
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(
-          child: SizedBox(
-            height: 2,
-            child: ColoredBox(color: _ResultColors.red),
-          ),
+        Expanded(
+          child: SizedBox(height: 2, child: ColoredBox(color: color)),
         ),
         const SizedBox(width: 13),
         Transform.rotate(
@@ -280,16 +314,13 @@ class _WinnerDivider extends StatelessWidget {
             height: 13,
             decoration: BoxDecoration(
               color: _ResultColors.navy,
-              border: Border.all(color: _ResultColors.red, width: 3),
+              border: Border.all(color: color, width: 3),
             ),
           ),
         ),
         const SizedBox(width: 13),
-        const Expanded(
-          child: SizedBox(
-            height: 2,
-            child: ColoredBox(color: _ResultColors.red),
-          ),
+        Expanded(
+          child: SizedBox(height: 2, child: ColoredBox(color: color)),
         ),
       ],
     );
@@ -297,9 +328,14 @@ class _WinnerDivider extends StatelessWidget {
 }
 
 class _WinnerProfile extends StatelessWidget {
-  const _WinnerProfile({super.key, required this.imageUrl});
+  const _WinnerProfile({
+    super.key,
+    required this.imageUrl,
+    required this.accentColor,
+  });
 
   final String imageUrl;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +356,7 @@ class _WinnerProfile extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: _ResultColors.red, width: 10),
+            border: Border.all(color: accentColor, width: 10),
           ),
           child: Padding(
             padding: const EdgeInsets.all(9),

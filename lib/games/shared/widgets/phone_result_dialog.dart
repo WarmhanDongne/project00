@@ -13,10 +13,12 @@ class PhoneResultDialog extends StatelessWidget {
     super.key,
     required this.nickname,
     required this.profileImageUrl,
+    this.resultLabel = 'WINNER',
   });
 
   final String nickname;
   final String profileImageUrl;
+  final String resultLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +44,11 @@ class PhoneResultDialog extends StatelessWidget {
                 size: isLandscape ? 128 : 166,
               ),
               SizedBox(height: isLandscape ? 8 : 14),
-              _WinnerText(nickname: nickname, isLandscape: isLandscape),
+              _WinnerText(
+                nickname: nickname,
+                resultLabel: resultLabel,
+                isLandscape: isLandscape,
+              ),
             ],
           ),
         ),
@@ -126,9 +132,14 @@ class _WinnerProfile extends StatelessWidget {
 }
 
 class _WinnerText extends StatelessWidget {
-  const _WinnerText({required this.nickname, required this.isLandscape});
+  const _WinnerText({
+    required this.nickname,
+    required this.resultLabel,
+    required this.isLandscape,
+  });
 
   final String nickname;
+  final String resultLabel;
   final bool isLandscape;
 
   @override
@@ -150,7 +161,7 @@ class _WinnerText extends StatelessWidget {
         ),
         SizedBox(height: isLandscape ? 4 : 7),
         Text(
-          'WINNER',
+          resultLabel,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'BebasNeue',

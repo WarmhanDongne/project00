@@ -96,14 +96,15 @@ class FinalCallController extends Notifier<FinalCallGameState> {
         winnerUid: winnerUid,
         finishReason: finishReason,
       );
-  List<FinalCallPlayer> get winners => (winnerUids.isNotEmpty
-          ? winnerUids
-          : winnerUid == null
-          ? const <String>[]
-          : <String>[winnerUid!])
-      .map((winningUid) => players[winningUid])
-      .whereType<FinalCallPlayer>()
-      .toList(growable: false);
+  List<FinalCallPlayer> get winners =>
+      (winnerUids.isNotEmpty
+              ? winnerUids
+              : winnerUid == null
+              ? const <String>[]
+              : <String>[winnerUid!])
+          .map((winningUid) => players[winningUid])
+          .whereType<FinalCallPlayer>()
+          .toList(growable: false);
   FinalCallTeam? get myTeam => players[uid]?.team;
   bool get canAct =>
       status == 'playing' &&

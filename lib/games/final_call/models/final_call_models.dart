@@ -123,14 +123,14 @@ class FinalCallPlayer {
   factory FinalCallPlayer.fromMap(String key, Map<Object?, Object?> map) {
     final seatIndex = (map['seatIndex'] as num?)?.toInt() ?? 0;
     return FinalCallPlayer(
-        uid: map['uid']?.toString() ?? key,
-        nickname: map['nickname']?.toString() ?? 'Player',
-        profileImageUrl: map['profileImageUrl']?.toString() ?? '',
-        seatIndex: seatIndex,
-        team: FinalCallTeam.fromWire(map['team'], seatIndex: seatIndex),
-        status: map['status']?.toString() ?? 'alive',
-        lives: (map['lives'] as num?)?.toInt() ?? 3,
-      );
+      uid: map['uid']?.toString() ?? key,
+      nickname: map['nickname']?.toString() ?? 'Player',
+      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
+      seatIndex: seatIndex,
+      team: FinalCallTeam.fromWire(map['team'], seatIndex: seatIndex),
+      status: map['status']?.toString() ?? 'alive',
+      lives: (map['lives'] as num?)?.toInt() ?? 3,
+    );
   }
 }
 

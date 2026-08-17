@@ -332,7 +332,14 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     }
 
     final phase = _resolvePhase(game);
-    final winner = game.players[game.winnerUid];
+    final winners = game.winners;
+    final resultNickname = game.finishReason == 'draw'
+        ? '무승부'
+        : winners.map((winner) => winner.nickname).join(' · ');
+    final resultProfile = winners.isEmpty ? null : winners.first;
+    final resultLabel = game.finishReason == 'draw'
+        ? 'DRAW'
+        : '${game.winningTeam?.name.toUpperCase() ?? ''} TEAM WINNER'.trim();
 
     return Stack(
       fit: StackFit.expand,
@@ -358,8 +365,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
             onRulesPressed: (origin) => showFinalCallRules(context, origin),
           ),
           result: PhoneResultDialog(
-            nickname: winner?.nickname ?? 'WINNER',
-            profileImageUrl: winner?.profileImageUrl ?? '',
+            nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
+            profileImageUrl: resultProfile?.profileImageUrl ?? '',
+            resultLabel: resultLabel,
           ),
           content: Stack(
             fit: StackFit.expand,
