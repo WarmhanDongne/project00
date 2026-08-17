@@ -155,19 +155,18 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         _automaticCardChangeKey = null;
         return;
       }
-      final source = await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => FinalCallCardChangeDialog(
-          discardCard: discard,
-          canSelectDeck: game.deckRemainingCount > 0,
-          deadlineAt: game.turnDeadlineAt,
-        ),
+      final source = await FinalCallCardChangeDialog.show(
+        context,
+        // CALL 이후 자동으로 열린 창도 바깥을 눌러 잠시 닫을 수 있습니다.
+        // 닫은 뒤에는 조작부의 '새 카드' 버튼으로 같은 창을 다시 엽니다.
+        discardCard: discard,
+        canSelectDeck: game.deckRemainingCount > 0,
+        deadlineAt: game.turnDeadlineAt,
       );
       if (!mounted) return;
       if (source == null) {
-        _automaticCardChangeKey = null;
-        _scheduleAutomaticFinalTurnCardChange(game);
+        // 같은 턴에서는 자동으로 다시 띄우지 않습니다. 키를 유지해야 다음
+        // 상태 갱신에서도 모달이 즉시 재등장하지 않습니다.
         return;
       }
       if (!game.canDraw) return;

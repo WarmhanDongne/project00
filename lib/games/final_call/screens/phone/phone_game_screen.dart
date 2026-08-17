@@ -128,13 +128,11 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
         _deadlinePassed(expectedDeadline)) {
       return;
     }
-    final source = await showDialog<String>(
-      context: context,
-      barrierColor: Colors.black38,
-      builder: (_) => FinalCallCardChangeDialog(
-        discardCard: discard,
-        canSelectDeck: controller.deckRemainingCount > 0,
-      ),
+    final source = await FinalCallCardChangeDialog.show(
+      context,
+      discardCard: discard,
+      canSelectDeck: controller.deckRemainingCount > 0,
+      deadlineAt: expectedDeadline,
     );
     if (source == null || !context.mounted) return;
 

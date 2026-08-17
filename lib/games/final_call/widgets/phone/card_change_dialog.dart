@@ -21,6 +21,28 @@ class FinalCallCardChangeDialog extends StatefulWidget {
   /// 턴 마감 시각(밀리초)입니다. 이 시각이 지나면 선택하지 않아도 창을 닫습니다.
   final int? deadlineAt;
 
+  /// 카드 교환 모달을 여는 공용 진입점입니다.
+  ///
+  /// 자동으로 열린 경우와 '새 카드' 버튼으로 다시 연 경우 모두 바깥 영역을
+  /// 탭해 닫을 수 있어야 하므로 dismiss 정책을 이곳에서 하나로 유지합니다.
+  static Future<String?> show(
+    BuildContext context, {
+    required FinalCallCard discardCard,
+    required bool canSelectDeck,
+    int? deadlineAt,
+  }) {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black38,
+      builder: (_) => FinalCallCardChangeDialog(
+        discardCard: discardCard,
+        canSelectDeck: canSelectDeck,
+        deadlineAt: deadlineAt,
+      ),
+    );
+  }
+
   @override
   State<FinalCallCardChangeDialog> createState() =>
       _FinalCallCardChangeDialogState();

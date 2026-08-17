@@ -36,7 +36,14 @@ class FinalCallPhoneActions extends StatelessWidget {
       );
     }
     if (controller.phase == 'finalTurns') {
-      return const SizedBox.shrink();
+      // CALL 이후 자동 카드 선택창을 바깥 탭으로 닫아도 다시 열 수 있어야
+      // 하므로 마지막 교체 턴에서는 새 카드 버튼을 계속 유지합니다.
+      return _PressableImageButton(
+        enabled: controller.canDraw,
+        asset: Assets.games.finalCall.images.button.buttonBasicWide,
+        labelOverride: FinalCallCopy.newCard,
+        onTap: onOpenCardChange,
+      );
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
