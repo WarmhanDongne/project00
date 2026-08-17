@@ -6,8 +6,6 @@ import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/platform/home/home.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-
 class App extends StatelessWidget {
   const App({super.key, this.userChanges});
   final Stream<User?>? userChanges;
@@ -17,9 +15,6 @@ class App extends StatelessWidget {
     // 화면 크기 구하기
     final view = View.of(context);
     final size = view.physicalSize / view.devicePixelRatio;
-
-    // shortestSide를 기준으로 태블릿 여부를 판단합니다.
-    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
     // 테블릿, 폰 분기
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;

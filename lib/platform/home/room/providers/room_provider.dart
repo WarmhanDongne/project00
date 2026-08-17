@@ -236,7 +236,7 @@ class RoomProvider extends ChangeNotifier {
     if (result == true) {
       wasKicked = false;
       _hasJoined = false;
-      this.roomCode = code;
+      roomCode = code;
       listenRoom();
     }
     return result ?? false;
@@ -300,7 +300,10 @@ class RoomProvider extends ChangeNotifier {
 
     _isLeaving = true;
     final result = await _runCommand<bool>(() async {
-      await _service.leaveFinalCallGame(code);
+      await _service.leaveGame(
+        cloudFunctionName: 'leaveFinalCallGame',
+        roomCode: code,
+      );
       return true;
     });
     if (result == true) clearRoom();
