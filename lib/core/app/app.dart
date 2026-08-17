@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +17,9 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 화면 크기 구하기
-    final view = View.of(context);
-    final size = view.physicalSize / view.devicePixelRatio;
+    final view = PlatformDispatcher.instance.implicitView ??
+        PlatformDispatcher.instance.views.firstOrNull;
+    final size = view != null ? (view.physicalSize / view.devicePixelRatio) : const Size(390, 844);
 
 
     // 테블릿, 폰 분기
@@ -27,8 +29,6 @@ class App extends StatelessWidget {
         : const Size(390, 844); // 핸드폰 기본 사이즈
 
     return ScreenUtilInit(
-      ensureScreenSize:
-          true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
       designSize: currentDesignSize,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
