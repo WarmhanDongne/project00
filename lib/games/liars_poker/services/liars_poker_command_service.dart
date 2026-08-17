@@ -80,13 +80,16 @@ class LiarsPokerCommandService {
     }, retryTransientFailure: true);
   }
 
-  // 마지막 카드 도전 포기
-  Future<Map<String, dynamic>> passLastCardChallenge({
+  // 마지막 카드 도전 포기(FOLD)
+  //
+  // Cloud Function 이름 `passLiarsPokerChallenge`는 그대로 둡니다. 배포된
+  // callable 이름을 바꾸면 구버전 앱이 함수를 찾지 못합니다.
+  Future<Map<String, dynamic>> foldLastCardChallenge({
     required String roomCode,
   }) {
     return _call('passLiarsPokerChallenge', {
       'roomCode': roomCode,
-      'commandId': _commandId('pass'),
+      'commandId': _commandId('fold'),
     }, retryTransientFailure: true);
   }
 

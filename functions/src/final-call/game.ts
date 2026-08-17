@@ -14,6 +14,7 @@ import {
   FinalCallPlayer,
   FinalCallPrivatePlayer,
   FinalCallRoom,
+  FinalCallTeam,
 } from "./types.js";
 
 const COLORS: FinalCallColor[] = ["red", "blue", "yellow", "green"];
@@ -72,6 +73,7 @@ export async function createFinalCallPlayers(
       nickname: typeof value.nickname === "string" ? value.nickname : "Player",
       profileImageUrl: profileUrls.get(uid) ?? "",
       seatIndex: value.seatIndex as number,
+      team: finalCallTeamForSeat(value.seatIndex as number),
       status: "alive",
       lives: 3,
     };
@@ -188,10 +190,12 @@ export function resolveFinalCallRound(
   const lowestUids = Object.keys(scores).filter((uid) => scores[uid] === lowestScore);
   const lifeLosses: Record<string, number> = {};
   for (const uid of lowestUids) {
-    const loss = !automaticCall && game.public.callerUid === uid ? 2 : 1;
-    lifeLosses[uid] = loss;
     const player = game.public.players[uid];
-    player.lives = Math.max(0, player.lives - loss);
+    const requestedLoss = !automaticCall && game.public.callerUid === uid ? 2 : 1;
+    // 하트 파괴 연출과 서버 상태가 어긋나지 않도록 실제 보유한 수만 손실로 기록합니다.
+    const actualLoss = Math.min(player.lives, requestedLoss);
+    lifeLosses[uid] = actualLoss;
+    player.lives -= actualLoss;
     if (player.lives === 0) player.status = "eliminated";
   }
 
@@ -213,11 +217,33 @@ export function resolveFinalCallRound(
   game.public.revision += 1;
   game.public.updatedAt = now;
 
-  const alive = orderedAlivePlayers(game.public.players);
-  if (alive.length === 1) {
+  const defeatedTeams = new Set<FinalCallTeam>(
+    Object.values(game.public.players)
+      .filter((player) => player.lives === 0)
+      .map((player) => player.team),
+  );
+  if (defeatedTeams.size > 0) {
     game.public.status = "finished";
     game.public.phase = "finished";
-    game.public.winnerUid = alive[0].uid;
+    if (defeatedTeams.size === 1) {
+      const defeatedTeam = [...defeatedTeams][0];
+      const winningTeam: FinalCallTeam = defeatedTeam === "red" ? "blue" : "red";
+      const winners = orderedPlayers(game.public.players)
+        .filter((player) => player.team === winningTeam);
+      game.public.finishReason = "winner";
+      game.public.winningTeam = winningTeam;
+      game.public.winnerUids = winners.map((player) => player.uid);
+      // 구버전 클라이언트가 결과 화면을 열 수 있도록 첫 팀원을 함께 유지합니다.
+      game.public.winnerUid = winners[0]?.uid ?? null;
+      for (const player of Object.values(game.public.players)) {
+        if (player.team === defeatedTeam) player.status = "eliminated";
+      }
+    } else {
+      game.public.finishReason = "draw";
+      game.public.winningTeam = null;
+      game.public.winnerUids = [];
+      game.public.winnerUid = null;
+    }
     game.public.finishedAt = now;
   } else {
     game.public.phase = "roundResult";
@@ -248,6 +274,18 @@ export function orderedAlivePlayers(
     .sort((left, right) => left.seatIndex - right.seatIndex);
 }
 
+export function orderedPlayers(
+  players: Record<string, FinalCallPlayer>,
+): FinalCallPlayer[] {
+  return Object.values(players)
+    .sort((left, right) => left.seatIndex - right.seatIndex);
+}
+
+/** 4인 테이블에서 마주 보는 좌석(0·2, 1·3)을 같은 팀으로 지정합니다. */
+export function finalCallTeamForSeat(seatIndex: number): FinalCallTeam {
+  return seatIndex % 2 === 0 ? "red" : "blue";
+}
+
 /**
  * RTDB는 빈 배열을 저장하면 해당 경로를 제거할 수 있으므로, 누락된 최종 턴
  * 대기 목록도 빈 목록으로 취급합니다.
@@ -261,13 +299,13 @@ export function removeFinalTurnPendingPlayer(
 
 function assertValidSeats(players: Record<string, FinalCallPlayer>): void {
   const seats = Object.values(players).map((player) => player.seatIndex);
-  const valid = seats.length >= 2 && seats.length <= 4 &&
+  const valid = seats.length === 4 &&
     new Set(seats).size === seats.length &&
-    seats.every((seat) => seat >= 0 && seat < seats.length);
+    seats.every((seat) => seat >= 0 && seat < 4);
   if (!valid) {
     throw new HttpsError(
       "failed-precondition",
-      "Final Call은 2~4명의 자리를 중복 없이 지정해야 합니다.",
+      "Final Call은 정확히 4명의 자리를 중복 없이 지정해야 합니다.",
     );
   }
 }
@@ -297,6 +335,8 @@ export function createInitialFinalCallGame(
       finalTurnPendingUids: [],
       players,
       winnerUid: null,
+      winnerUids: [],
+      winningTeam: null,
       startedAt: now,
       updatedAt: now,
     },

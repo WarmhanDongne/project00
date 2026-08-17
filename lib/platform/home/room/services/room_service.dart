@@ -55,6 +55,23 @@ class RoomService {
         throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
 
+      //=======================태블릿 방 수명 주기==============================
+      // 방 코드를 UI에 노출하기 전에 방 전체 삭제를 onDisconnect에
+      // 예약합니다. 이 예약은 클라이언트가 다시 접속하지 못해도 RTDB
+      // 서버가 실행하므로 앱 종료·네트워크 단절 모두를 처리합니다.
+      try {
+        await markControllerConnected(roomCode);
+      } catch (error) {
+        // 연결 종료 예약 없이 생성된 방을 반환하면 앱 종료 후
+        // 고아 방이 남습니다. 예약 등록이 실패하면 가능한 한 방을
+        // 바로 정리하고 생성 실패로 처리합니다.
+        try {
+          await deleteControllerRoom(roomCode);
+        } catch (_) {
+          // 네트워크 단절 중이면 즉시 정리도 실패할 수 있습니다.
+        }
+        throw RoomCommandException('방 종료 처리를 준비하지 못했습니다: $error');
+      }
       return roomCode;
     } on FirebaseFunctionsException catch (error) {
       throw RoomCommandException(error.message ?? '방을 생성하지 못했습니다.');
@@ -88,38 +105,37 @@ class RoomService {
         .map((event) => event.snapshot.value?.toString());
   }
 
-  //=======================태블릿(진행 기기) 접속 표시==============================
-  // 태블릿은 players에 들어가지 않아 접속 여부를 알 수 없습니다. 태블릿이
-  // 방을 열고 있는 동안에만 true로 두고, 앱이 꺼지거나 연결이 끊기면 서버가
-  // 자동으로 false로 바꿉니다. 휴대폰은 이 값을 보고 무한 대기를 피합니다.
+  //=======================태블릿(진행 기기) 방 수명 주기==============================
+  // 태블릿은 players에 들어가지 않으므로 방 전체에 연결 종료 예약을
+  // 등록합니다. 앱이 종료되거나 인터넷이 끊기면 RTDB 서버가
+  // `rooms/{roomCode}`를 삭제하여 고아 방이 남지 않게 합니다.
   Future<void> markControllerConnected(String roomCode) async {
-    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
-    try {
-      await ref.onDisconnect().set(false);
-    } catch (_) {
-      // 연결 종료 예약 실패는 접속 표시 자체를 막지 않습니다.
-    }
-    await _writeWithRetry(() => ref.set(true));
+    final roomRef = realtime.ref('rooms/$roomCode');
+    // 이 예약이 실패하면 방을 표시하지 않아야 고아 방을 막을 수
+    // 있으므로 예외를 숨기지 않습니다.
+    await roomRef.onDisconnect().remove();
+    await _writeWithRetry(() => roomRef.child('controllerConnected').set(true));
   }
 
-  Future<void> markControllerDisconnected(String roomCode) async {
-    final ref = realtime.ref('rooms/$roomCode/controllerConnected');
+  /// 초기화·로그아웃 같은 정상 흐름에서는 서버의 연결 단절 감지를
+  /// 기다리지 않고 방을 즉시 삭제합니다.
+  Future<void> deleteControllerRoom(String roomCode) async {
+    final roomRef = realtime.ref('rooms/$roomCode');
     try {
-      await ref.onDisconnect().cancel();
+      await roomRef.onDisconnect().cancel();
     } catch (_) {
-      // 예약 취소 실패는 무시합니다.
+      // 아래 remove가 성공하면 기존 예약의 대상도 사라지므로 계속합니다.
     }
-    await _writeWithRetry(() => ref.set(false));
+    await _writeWithRetry(roomRef.remove);
   }
 
-  /// 태블릿이 방을 열고 있는지 여부입니다. 값이 없으면 아직 알 수 없으므로
-  /// null을 흘려보내 휴대폰이 성급하게 나가지 않게 합니다.
+  /// `false`는 태블릿의 명시적 종료와 방 전체 삭제를 모두 의미합니다.
   Stream<bool?> watchControllerConnected(String roomCode) {
     return realtime.ref('rooms/$roomCode/controllerConnected').onValue.map((
       event,
     ) {
       final value = event.snapshot.value;
-      return value is bool ? value : null;
+      return value is bool ? value : false;
     });
   }
 

@@ -8,6 +8,29 @@ typedef PlayerLayoutPrepared =
     Future<bool> Function(PlayerLayoutModel playerLayout);
 typedef PlayerLayoutCompleted = void Function(PlayerLayoutModel playerLayout);
 
+/// 자리 배치 완료 연출에서 의자가 좌석 순서대로 진입하도록 만든 진행률입니다.
+///
+/// 각 의자는 전체 타임라인의 24% 동안 이동하고, 남은 의자 구간을 좌석 수에
+/// 맞춰 시작 시간차로 나눕니다. 마지막 의자는 타임라인 1.0에 도착합니다.
+double chairEntranceProgress({
+  required double timeline,
+  required int seatIndex,
+  required int seatCount,
+}) {
+  if (seatCount <= 0 || seatIndex < 0 || seatIndex >= seatCount) return 0;
+  const sequenceStart = 0.52;
+  const moveDuration = 0.24;
+  final stagger = seatCount == 1
+      ? 0.0
+      : (1 - sequenceStart - moveDuration) / (seatCount - 1);
+  final start = sequenceStart + stagger * seatIndex;
+  return Interval(
+    start,
+    start + moveDuration,
+    curve: Curves.easeOutCubic,
+  ).transform(timeline.clamp(0.0, 1.0));
+}
+
 /// 2~6명의 플레이어 자리를 하나의 화면에서 배치하는 편집기입니다.
 class PlayerLayoutEditor extends StatefulWidget {
   PlayerLayoutEditor({
@@ -72,12 +95,6 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     0.62,
     curve: Curves.easeOutBack,
   );
-  static const Interval _chairInterval = Interval(
-    0.52,
-    1,
-    curve: Curves.easeOutCubic,
-  );
-
   late List<int> _playerSlotIndexes;
   List<Offset> _slotPositions = const [];
   final Map<int, Offset> _draggingPositions = {};
@@ -96,7 +113,8 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     _playerSlotIndexes = List<int>.from(widget.initialLayout.seatIndexes);
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      // 테이블 뒤에 의자가 좌석 순서대로 충분한 시간차를 두고 들어옵니다.
+      duration: const Duration(milliseconds: 2300),
     );
     _zoomController = AnimationController(
       vsync: this,
@@ -507,7 +525,11 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     required Size boardSize,
     required double t,
   }) {
-    final chairT = _chairInterval.transform(t);
+    final chairT = chairEntranceProgress(
+      timeline: t,
+      seatIndex: seatIndex,
+      seatCount: _playerCount,
+    );
     final seatCenter = _slotCenterPixel(seatIndex, boardSize);
     final center = Offset.lerp(
       _offscreenCenterPixel(seatIndex, boardSize),

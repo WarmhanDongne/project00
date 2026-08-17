@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:project00/games/shared/widgets/connection_banner.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -153,9 +152,15 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
         barrierColor: const Color(0xC7000000),
         builder: (dialogContext) {
           _resultDialogContext = dialogContext;
-          return PhoneResultDialog(
-            nickname: winner.nickname,
-            profileImageUrl: winner.profileImageUrl,
+          // 우승자 발표는 뒤로 가기로 닫지 않습니다. 이 제한은 다이얼로그
+          // 라우트에만 걸어야 합니다. PhoneResultDialog 안에 두면 파이널콜처럼
+          // 화면에 직접 그리는 게임에서 게임 라우트가 잠겨 버립니다.
+          return PopScope(
+            canPop: false,
+            child: PhoneResultDialog(
+              nickname: winner.nickname,
+              profileImageUrl: winner.profileImageUrl,
+            ),
           );
         },
       );
@@ -248,8 +253,6 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           _hasEnteredGame
               ? _buildGameContent(controller)
               : const _PhoneGameBackground(),
-          // 연결이 끊기면 화면이 멈춘 것처럼 보이므로 안내를 띄웁니다.
-          const ConnectionBanner(),
           GameInterruptionLayer(
             interruption: controller.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -257,9 +260,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             onVote: () async {
               await controller.voteToContinueInterruption();
             },
-            onExpired: () async {
-              await controller.expireInterruption();
-            },
+            onExpired: controller.expireInterruption,
           ),
         ],
       ),

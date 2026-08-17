@@ -111,8 +111,12 @@ class $AssetsImagesOthersGen {
   AssetGenImage get codeExample =>
       const AssetGenImage('assets/images/others/codeExample.png');
 
+  /// File path: assets/images/others/network_unavailable.png
+  AssetGenImage get networkUnavailable =>
+      const AssetGenImage('assets/images/others/network_unavailable.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [codeExample];
+  List<AssetGenImage> get values => [codeExample, networkUnavailable];
 }
 
 class $AssetsImagesWidgetsGen {
@@ -574,9 +578,14 @@ class $AssetsGamesFinalCallImagesIconsGen {
     'assets/games/final_call/images/icons/icon_again_black.png',
   );
 
-  /// File path: assets/games/final_call/images/icons/icon_heart.png
-  AssetGenImage get iconHeart => const AssetGenImage(
-    'assets/games/final_call/images/icons/icon_heart.png',
+  /// File path: assets/games/final_call/images/icons/icon_heart_blue.png
+  AssetGenImage get iconHeartBlue => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_heart_blue.png',
+  );
+
+  /// File path: assets/games/final_call/images/icons/icon_heart_red.png
+  AssetGenImage get iconHeartRed => const AssetGenImage(
+    'assets/games/final_call/images/icons/icon_heart_red.png',
   );
 
   /// File path: assets/games/final_call/images/icons/icon_home_black.png
@@ -619,7 +628,8 @@ class $AssetsGamesFinalCallImagesIconsGen {
   /// List of all assets
   List<AssetGenImage> get values => [
     iconAgainBlack,
-    iconHeart,
+    iconHeartBlue,
+    iconHeartRed,
     iconHomeBlack,
     iconOut,
     iconRole,
@@ -709,14 +719,9 @@ class $AssetsGamesLiarsPokerImagesBackgroundGen {
 class $AssetsGamesLiarsPokerImagesButtonGen {
   const $AssetsGamesLiarsPokerImagesButtonGen();
 
-  /// File path: assets/games/liars_poker/images/button/button_baseBorder.png
-  AssetGenImage get buttonBaseBorder => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_baseBorder.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/button_border.png
-  AssetGenImage get buttonBorder => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_border.png',
+  /// File path: assets/games/liars_poker/images/button/button_fold.png
+  AssetGenImage get buttonFold => const AssetGenImage(
+    'assets/games/liars_poker/images/button/button_fold.png',
   );
 
   /// File path: assets/games/liars_poker/images/button/button_home.png
@@ -727,16 +732,6 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
   /// File path: assets/games/liars_poker/images/button/button_liar.png
   AssetGenImage get buttonLiar => const AssetGenImage(
     'assets/games/liars_poker/images/button/button_liar.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/button_liar_white.png
-  AssetGenImage get buttonLiarWhite => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_liar_white.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/button_pass.png
-  AssetGenImage get buttonPass => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_pass.png',
   );
 
   /// File path: assets/games/liars_poker/images/button/button_retry.png
@@ -759,11 +754,6 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
     'assets/games/liars_poker/images/button/liar_button_up.png',
   );
 
-  /// File path: assets/games/liars_poker/images/button/liar_ring_down.png
-  AssetGenImage get liarRingDown => const AssetGenImage(
-    'assets/games/liars_poker/images/button/liar_ring_down.png',
-  );
-
   /// File path: assets/games/liars_poker/images/button/liar_ring_up.png
   AssetGenImage get liarRingUp => const AssetGenImage(
     'assets/games/liars_poker/images/button/liar_ring_up.png',
@@ -771,17 +761,13 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [
-    buttonBaseBorder,
-    buttonBorder,
+    buttonFold,
     buttonHome,
     buttonLiar,
-    buttonLiarWhite,
-    buttonPass,
     buttonRetry,
     buttonSubmit,
     liarButtonDown,
     liarButtonUp,
-    liarRingDown,
     liarRingUp,
   ];
 }

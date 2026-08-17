@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/games/shared/game_flow/game_finish.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -159,10 +160,11 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
 
   bool get isMyTurn => turnUid == uid;
   bool get isFinished => status == 'finished';
-  bool get isNaturalResult =>
-      isFinished &&
-      winnerUid != null &&
-      (finishReason == null || finishReason == 'winner');
+  bool get isNaturalResult => isNaturalGameResult(
+    isFinished: isFinished,
+    winnerUid: winnerUid,
+    finishReason: finishReason,
+  );
   bool get isEliminated => players[uid]?.status == 'eliminated';
   int get alivePlayerCount =>
       players.values.where((player) => player.status == 'alive').length;
@@ -193,9 +195,13 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
         : LiarsPokerCopy.waitingForNextRound;
   }
 
-  /// 2명만 남은 마지막 카드 선택 단계에서 남은 플레이어가 보는 안내입니다.
-  bool get showTwoPlayerPassPrompt =>
-      alivePlayerCount == 2 &&
+  /// 마지막 남은 한 명에게 FOLD 선택지를 보여줄지 여부입니다.
+  ///
+  /// 서버가 `lastCardChallenge` 단계를 여는 조건 자체가 "카드를 가진 사람이
+  /// 둘만 남았고 그중 한 명이 손패를 모두 냈을 때"이므로, 여기서 인원 수를 다시
+  /// 확인하지 않습니다. 살아 있는 인원으로 판단하면 3인 이상 게임에서 다른
+  /// 사람들이 이미 패를 다 낸 1대1 상황을 놓칩니다.
+  bool get showFoldPrompt =>
       phase == 'lastCardChallenge' &&
       isMyTurn &&
       lastPlayPlayerUid != null &&
@@ -219,7 +225,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
       lastPlayPlayerUid != null &&
       !isCommandInFlight;
 
-  bool get canPassLastCardChallenge =>
+  bool get canFoldLastCardChallenge =>
       status == 'playing' &&
       interruption == null &&
       phase == 'lastCardChallenge' &&
@@ -638,12 +644,12 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     return _runCommand(() => service.command.callLiar(roomCode: roomCode));
   }
 
-  Future<bool> passLastCardChallenge() {
-    if (!canPassLastCardChallenge) {
+  Future<bool> foldLastCardChallenge() {
+    if (!canFoldLastCardChallenge) {
       return Future.value(_reject('현재 마지막 카드 도전을 통과할 수 없습니다.'));
     }
     return _runCommand(
-      () => service.command.passLastCardChallenge(roomCode: roomCode),
+      () => service.command.foldLastCardChallenge(roomCode: roomCode),
     );
   }
 

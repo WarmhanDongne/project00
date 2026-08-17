@@ -107,6 +107,7 @@ class FinalCallPlayer {
     required this.nickname,
     required this.profileImageUrl,
     required this.seatIndex,
+    required this.team,
     required this.status,
     required this.lives,
   });
@@ -115,18 +116,37 @@ class FinalCallPlayer {
   final String nickname;
   final String profileImageUrl;
   final int seatIndex;
+  final FinalCallTeam team;
   final String status;
   final int lives;
 
-  factory FinalCallPlayer.fromMap(String key, Map<Object?, Object?> map) =>
-      FinalCallPlayer(
-        uid: map['uid']?.toString() ?? key,
-        nickname: map['nickname']?.toString() ?? 'Player',
-        profileImageUrl: map['profileImageUrl']?.toString() ?? '',
-        seatIndex: (map['seatIndex'] as num?)?.toInt() ?? 0,
-        status: map['status']?.toString() ?? 'alive',
-        lives: (map['lives'] as num?)?.toInt() ?? 3,
-      );
+  factory FinalCallPlayer.fromMap(String key, Map<Object?, Object?> map) {
+    final seatIndex = (map['seatIndex'] as num?)?.toInt() ?? 0;
+    return FinalCallPlayer(
+      uid: map['uid']?.toString() ?? key,
+      nickname: map['nickname']?.toString() ?? 'Player',
+      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
+      seatIndex: seatIndex,
+      team: FinalCallTeam.fromWire(map['team'], seatIndex: seatIndex),
+      status: map['status']?.toString() ?? 'alive',
+      lives: (map['lives'] as num?)?.toInt() ?? 3,
+    );
+  }
+}
+
+/// 반대 좌석끼리 묶이는 Final Call의 고정 2대2 팀입니다.
+enum FinalCallTeam {
+  red,
+  blue;
+
+  static FinalCallTeam fromWire(Object? value, {required int seatIndex}) {
+    return switch (value?.toString()) {
+      'blue' => FinalCallTeam.blue,
+      'red' => FinalCallTeam.red,
+      // 이전 서버 상태를 읽더라도 반대 좌석(0·2 / 1·3)이 같은 팀이 됩니다.
+      _ => seatIndex.isEven ? FinalCallTeam.red : FinalCallTeam.blue,
+    };
+  }
 }
 
 class FinalCallRoundResult {

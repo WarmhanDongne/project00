@@ -49,8 +49,29 @@ test("연결 중단은 턴 시간을 멈추고 남은 접속자의 과반 투표
   assert.equal(interruption.deadlineAt, 61000);
   assert.deepEqual(interruption.eligibleVoterUids, ["a", "b", "c"]);
   assert.equal(interruption.requiredVotes, 2);
+  assert.equal(interruption.remainingPlayerCount, 3);
+  assert.equal(interruption.minimumPlayerCount, 2);
+  assert.equal(interruption.canContinue, true);
   assert.equal(value.game.public.turnDeadlineAt, null);
   assert.equal(value.game.server.interruption.previousTurnRemainingMs, 50000);
+});
+
+test("남은 인원이 게임 최소 인원보다 적으면 계속할 수 없다", () => {
+  const value = room();
+  value.game.public.players.b.status = "eliminated";
+  value.game.public.players.c.status = "eliminated";
+  const interruption = beginGameInterruption(
+    value,
+    "leaving",
+    "left",
+    1000,
+    {minimumPlayerCount: 2},
+  );
+
+  assert.equal(interruption.remainingPlayerCount, 1);
+  assert.equal(interruption.minimumPlayerCount, 2);
+  assert.equal(interruption.requiredVotes, 0);
+  assert.equal(interruption.canContinue, false);
 });
 
 test("연결이 복구되면 중단 상태를 없애고 남은 턴 시간을 복원한다", () => {
@@ -67,4 +88,3 @@ test("연결이 복구되면 중단 상태를 없애고 남은 턴 시간을 복
   assert.equal(value.game.server.interruption, undefined);
   assert.equal(value.game.public.turnDeadlineAt, 54000);
 });
-

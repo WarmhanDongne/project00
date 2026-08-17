@@ -23,9 +23,22 @@ import {
 import {InterruptibleGameState} from "./types.js";
 
 const REGION = "asia-northeast3";
+
+// Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수 있습니다.
+// 이 프로젝트의 기본 인스턴스는 asia-southeast1에 있습니다
+// (project0000-ec01e-default-rtdb.asia-southeast1.firebasedatabase.app).
+// asia-northeast3로 배포하면 트리거 생성 단계에서 다음 오류로 실패합니다.
+//   cannot create a trigger in region asia-northeast3 (not yet revealed)
+// callable 함수는 HTTPS라 이 제약이 없으므로 REGION을 그대로 씁니다.
+const DATABASE_TRIGGER_REGION = "asia-southeast1";
 const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
 
 type Data = {roomCode?: unknown; interruptionId?: unknown};
+
+const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
+  final_call: 4,
+  liars_poker: 2,
+};
 
 interface GameRoom extends InterruptibleRoom {
   controllerUid?: string;
@@ -83,7 +96,48 @@ export const voteToContinueInterruptedGame = onCall<Data>(
   },
 );
 
-/** 60초 안에 투표가 통과되지 않았을 때 서버가 게임을 종료합니다. */
+/** 태블릿 진행자가 중단된 플레이어를 제외하고 즉시 게임을 계속합니다. */
+export const excludeInterruptedPlayerAndContinue = onCall<Data>(
+  {region: REGION},
+  async (request) => {
+    const uid = requireUid(request.auth?.uid);
+    const roomCode = parseRoomCode(request.data?.roomCode);
+    const interruptionId = parseInterruptionId(request.data?.interruptionId);
+    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+    let response: Record<string, unknown> | null = null;
+
+    const transaction = await roomRef.transaction((raw) => {
+      if (raw === null) return raw;
+      const room = raw as GameRoom;
+      if (uid !== room.controllerUid && uid !== room.hostUid) {
+        throw new HttpsError("permission-denied", "태블릿 진행자만 게임을 계속할 수 있습니다.");
+      }
+      const game = room.game;
+      const interruption = game?.public.interruption;
+      if (!game || !interruption || interruption.id !== interruptionId) {
+        response = {success: true, alreadyResolved: true};
+        return room;
+      }
+      if (!interruption.canContinue) {
+        throw new HttpsError("failed-precondition", "남은 인원이 최소 인원보다 적습니다.");
+      }
+
+      const now = Date.now();
+      completeGameInterruption(game, interruption.id, now);
+      delete room.players?.[interruption.playerUid];
+      excludePlayer(room, interruption.playerUid, now);
+      response = {success: true, continued: true};
+      return room;
+    });
+
+    if (!transaction.committed || !response) {
+      throw new HttpsError("aborted", "플레이어를 제외하고 게임을 계속하지 못했습니다.");
+    }
+    return response;
+  },
+);
+
+/** 60초 동안 재접속하지 않으면 제외 후 계속하거나 인원 부족으로 종료합니다. */
 export const expireInterruptedGame = onCall<Data>(
   {region: REGION},
   async (request) => {
@@ -113,8 +167,13 @@ export const expireInterruptedGame = onCall<Data>(
       }
       const canContinue = interruption.canContinue;
       completeGameInterruption(game, interruption.id, now);
-      finishForExpiredVote(room, now, canContinue);
-      response = {success: true, expired: true};
+      delete room.players?.[interruption.playerUid];
+      if (canContinue) {
+        excludePlayer(room, interruption.playerUid, now);
+      } else {
+        finishForInsufficientPlayers(room, now);
+      }
+      response = {success: true, expired: true, continued: canContinue};
       return room;
     });
 
@@ -127,7 +186,10 @@ export const expireInterruptedGame = onCall<Data>(
 
 /** RTDB onDisconnect가 바꾼 플레이어 접속 상태를 공용 게임 중단 상태로 승격합니다. */
 export const handleGamePlayerConnectionChanged = onValueWritten(
-  {ref: "/rooms/{roomCode}/players/{uid}/isConnected", region: REGION},
+  {
+    ref: "/rooms/{roomCode}/players/{uid}/isConnected",
+    region: DATABASE_TRIGGER_REGION,
+  },
   async (event) => {
     const roomCode = event.params.roomCode;
     const uid = event.params.uid;
@@ -144,11 +206,13 @@ export const handleGamePlayerConnectionChanged = onValueWritten(
       const now = Date.now();
       if (isConnected) {
         const interruption = game.public.interruption;
-        if (interruption?.playerUid === uid && interruption.reason === "disconnected") {
+        if (interruption?.playerUid === uid) {
           cancelGameInterruption(game, interruption.id, now);
         }
       } else if (wasConnected) {
-        beginGameInterruption(room, uid, "disconnected", now);
+        beginGameInterruption(room, uid, "disconnected", now, {
+          minimumPlayerCount: minimumPlayerCount(room.selectedGame),
+        });
       }
       return room;
     });
@@ -165,24 +229,20 @@ function excludePlayer(room: GameRoom, uid: string, now: number): void {
   }
 }
 
-function finishForExpiredVote(
-  room: GameRoom,
-  now: number,
-  hadEnoughPlayers: boolean,
-): void {
+function finishForInsufficientPlayers(room: GameRoom, now: number): void {
   if (room.selectedGame === "final_call") {
     const game = room.game as unknown as FinalCallGameState;
     finishFinalCallForInsufficientPlayers(game, now);
-    game.public.finishReason = hadEnoughPlayers ?
-      "interruptionVoteExpired" : "insufficientPlayers";
     return;
   }
   if (room.selectedGame === "liars_poker") {
     const game = room.game as unknown as LiarsPokerGameState;
     finishLiarsPokerForInsufficientPlayers(game, now);
-    game.public.finishReason = hadEnoughPlayers ?
-      "interruptionVoteExpired" : "insufficientPlayers";
   }
+}
+
+function minimumPlayerCount(selectedGame: string | undefined): number {
+  return selectedGame ? MINIMUM_PLAYER_COUNTS[selectedGame] ?? 2 : 2;
 }
 
 function requireUid(uid: string | undefined): string {

@@ -4,7 +4,6 @@ import 'package:project00/games/shared/animations/phone_control_entry_animation.
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
-import 'package:project00/games/shared/widgets/connection_banner.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 
 /// 휴대폰 게임 화면의 공통 골격입니다.
@@ -158,10 +157,6 @@ class _PhoneGameShellState extends State<PhoneGameShell>
                 onCompleted: _handleAnnouncementCompleted,
               ),
             ),
-            //=======================연결 끊김 안내==============================
-            // 어떤 단계에서도 연결이 끊기면 화면이 멈춘 것처럼 보이므로
-            // 항상 마지막 레이어로 안내를 띄웁니다.
-            const ConnectionBanner(),
           ],
         ),
       ),
