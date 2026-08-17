@@ -75,6 +75,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- iPadOS 26은 scene 기반 앱에 모든 방향 선언을 요구합니다. 실제 태블릿
+	     화면은 scene이 resumed 된 뒤 Flutter AppOrientation에서 가로로 고정합니다. -->
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

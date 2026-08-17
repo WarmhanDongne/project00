@@ -1,5 +1,7 @@
 /* eslint-disable max-len */
 
+import {PublicGameInterruption, ServerGameInterruption} from "../game-interruption/types.js";
+
 export const FINAL_CALL_TURN_MS = 30000;
 export const FINAL_CALL_CARDS_PER_PLAYER = 4;
 
@@ -33,8 +35,9 @@ export interface FinalCallRoundResult {
 export interface FinalCallPublicState {
   gameType: "final_call";
   status: "playing" | "finished";
-  finishReason?: "winner" | "manual" | "insufficientPlayers";
+  finishReason?: "winner" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
   phase: "dealing" | "playing" | "callerSubmit" | "finalTurns" |
+    "finalSubmit" |
     "roundResult" | "finished";
   round: number;
   revision: number;
@@ -48,10 +51,13 @@ export interface FinalCallPublicState {
   finalTurnPendingUids: string[];
   players: Record<string, FinalCallPlayer>;
   roundResult?: FinalCallRoundResult;
+  /** 태블릿의 최종 카드 공개 연출이 모두 끝난 시각입니다. */
+  resultRevealCompletedAt?: number;
   winnerUid: string | null;
   startedAt: number;
   updatedAt: number;
   finishedAt?: number;
+  interruption?: PublicGameInterruption;
 }
 
 export interface FinalCallPrivatePlayer {
@@ -69,8 +75,10 @@ export interface FinalCallProcessedCommand {
 export interface FinalCallServerState {
   deck: FinalCallCard[];
   pendingHands?: Record<string, FinalCallPrivatePlayer>;
+  finalSubmissions?: Record<string, FinalCallCard[]>;
   processedCommands?: Record<string, FinalCallProcessedCommand>;
   roundStarterUid: string;
+  interruption?: ServerGameInterruption;
 }
 
 export interface FinalCallGameState {

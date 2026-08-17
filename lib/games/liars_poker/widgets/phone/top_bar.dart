@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/phone_control_entry_animation.dart';
+import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/widgets/phone_game_top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
 

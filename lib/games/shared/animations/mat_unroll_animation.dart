@@ -71,7 +71,8 @@ class _MatRevealClipper extends CustomClipper<Rect> {
   final double progress;
 
   @override
-  Rect getClip(Size size) => Rect.fromLTWH(0, 0, size.width, size.height * progress);
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width, size.height * progress);
 
   @override
   bool shouldReclip(_MatRevealClipper oldClipper) =>

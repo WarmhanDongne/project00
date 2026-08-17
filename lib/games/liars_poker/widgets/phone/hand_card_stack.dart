@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/games/liars_poker/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/animations/phone_card_receive_animation.dart';
+import 'package:project00/games/liars_poker/liars_poker_copy.dart';
+import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
+import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 손패 선택 상태를 버튼에 전달하고 외부 SUBMIT 버튼으로 제출을 시작합니다.
@@ -448,78 +450,64 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       return LayoutBuilder(
         builder: (context, constraints) {
           final layout = _resolveLayout(constraints);
-          if (_showRoundIntro) {
-            return FadeHoldFade(
-              key: ValueKey('phone-round-${widget.roundNumber}'),
-              onCompleted: () {
-                if (!mounted) return;
-                setState(() {
-                  _showRoundIntro = false;
-                  _showTableIntro = true;
-                });
-              },
-              child: Center(
-                child: Text(
-                  'ROUND ${widget.roundNumber}',
-                  style: TextStyle(
-                    fontFamily: 'BebasNeue',
-                    color: Colors.white,
-                    fontSize: widget.isLandscape ? 38 : 42,
-                    letterSpacing: 2.2,
-                    shadows: const [
-                      Shadow(color: Colors.black87, blurRadius: 14),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-          //=======================이번 라운드 테이블 안내==============================
-          // ROUND 안내와 동일한 모션이 끝난 뒤에만 카드팩을 전달합니다.
-          if (_showTableIntro) {
-            return FadeHoldFade(
-              key: ValueKey(
-                'phone-table-${widget.roundNumber}-${widget.tableRank}',
-              ),
-              onCompleted: () {
-                if (!mounted) return;
-                setState(() => _showTableIntro = false);
-              },
-              child: Center(
-                child: Text(
-                  _tableName(widget.tableRank),
-                  style: TextStyle(
-                    fontFamily: 'BebasNeue',
-                    color: Colors.white,
-                    fontSize: widget.isLandscape ? 38 : 42,
-                    letterSpacing: 2.2,
-                    shadows: const [
-                      Shadow(color: Colors.black87, blurRadius: 14),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-          return PhoneCardReceiveAnimation(
-            frontCardAssets: _renderCards
-                .map((card) => card.asset)
-                .toList(growable: false),
-            cardWidth: layout.cardWidth,
-            spreadStepX: layout.spreadStepX,
-            spreadStepY: layout.spreadStepY,
-            spreadToLeft: widget.spreadToLeft,
-            entryCenterOffsetX: widget.entryCenterOffsetX,
-            entryCenterOffsetY: widget.entryCenterOffsetY,
-            onRevealStarted: widget.onRevealStarted,
-            onCompleted: () {
-              if (!mounted) return;
+          final announcement = _showRoundIntro
+              ? GameAnnouncement.round(
+                  widget.roundNumber,
+                  id: 'phone-round-${widget.roundNumber}',
+                )
+              : _showTableIntro
+              ? GameAnnouncement.transient(
+                  id: 'phone-table-${widget.roundNumber}-${widget.tableRank}',
+                  text: LiarsPokerCopy.table(widget.tableRank),
+                  blocksInteraction: true,
+                )
+              : null;
 
-              setState(() {
-                _isDealing = false;
-              });
-              widget.onRevealCompleted?.call();
-            },
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              if (announcement == null)
+                PhoneCardReceiveAnimation(
+                  frontCardAssets: _renderCards
+                      .map((card) => card.asset)
+                      .toList(growable: false),
+                  cardWidth: layout.cardWidth,
+                  spreadStepX: layout.spreadStepX,
+                  spreadStepY: layout.spreadStepY,
+                  spreadToLeft: widget.spreadToLeft,
+                  entryCenterOffsetX: widget.entryCenterOffsetX,
+                  entryCenterOffsetY: widget.entryCenterOffsetY,
+                  onRevealStarted: widget.onRevealStarted,
+                  onCompleted: () {
+                    if (!mounted) return;
+
+                    setState(() => _isDealing = false);
+                    widget.onRevealCompleted?.call();
+                  },
+                ),
+              Positioned.fill(
+                child: GameAnnouncementLayer(
+                  announcement: announcement,
+                  offset: Offset(widget.entryCenterOffsetX, 0),
+                  style: GameAnnouncementStyle(
+                    fontSize: widget.isLandscape ? 38 : 42,
+                    gameStartFontSize: widget.isLandscape ? 38 : 42,
+                    letterSpacing: 2.2,
+                  ),
+                  onCompleted: (_) {
+                    if (!mounted) return;
+                    setState(() {
+                      if (_showRoundIntro) {
+                        _showRoundIntro = false;
+                        _showTableIntro = true;
+                      } else {
+                        _showTableIntro = false;
+                      }
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         },
       );
@@ -586,14 +574,6 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
         );
       },
     );
-  }
-
-  String _tableName(String rank) {
-    return switch (rank.toUpperCase()) {
-      'A' => 'ACE',
-      'Q' => 'QUEEN',
-      _ => 'KING',
-    };
   }
 
   Widget _buildCard({
@@ -782,7 +762,7 @@ class _SelectionLimitMessage extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
         child: Text(
-          '최대 $maxSelection장만 선택할 수 있습니다',
+          LiarsPokerCopy.selectionLimit(maxSelection),
           style: const TextStyle(
             color: Color(0xFFD8E2DB),
             fontSize: 14,

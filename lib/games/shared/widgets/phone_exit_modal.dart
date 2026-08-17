@@ -13,6 +13,7 @@ class SharedPhoneExitModal extends StatelessWidget {
     required this.titleColor,
     required this.descriptionColor,
     this.showSurface = true,
+    this.showText = true,
   });
 
   final Widget doorImage;
@@ -21,6 +22,7 @@ class SharedPhoneExitModal extends StatelessWidget {
   final Color titleColor;
   final Color descriptionColor;
   final bool showSurface;
+  final bool showText;
 
   static Future<bool?> show(
     BuildContext context, {
@@ -31,6 +33,7 @@ class SharedPhoneExitModal extends StatelessWidget {
     required Color descriptionColor,
     Offset? origin,
     bool showSurface = true,
+    bool showText = true,
   }) {
     final screenSize = MediaQuery.sizeOf(context);
     return showPhoneRippleDialog<bool>(
@@ -43,6 +46,7 @@ class SharedPhoneExitModal extends StatelessWidget {
         titleColor: titleColor,
         descriptionColor: descriptionColor,
         showSurface: showSurface,
+        showText: showText,
       ),
     );
   }
@@ -78,8 +82,10 @@ class SharedPhoneExitModal extends StatelessWidget {
               children: [
                 SizedBox(height: imageHeight, child: doorImage),
                 const SizedBox(height: 8),
-                _buildTextContent(),
-                const SizedBox(height: 24),
+                if (showText) ...[
+                  _buildTextContent(),
+                  const SizedBox(height: 24),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: _buildContinueButton(context),
@@ -117,8 +123,10 @@ class SharedPhoneExitModal extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTextContent(),
-                    const SizedBox(height: 24),
+                    if (showText) ...[
+                      _buildTextContent(),
+                      const SizedBox(height: 24),
+                    ],
                     Row(
                       children: [
                         Expanded(child: _buildContinueButton(context)),

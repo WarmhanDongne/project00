@@ -3,6 +3,7 @@ class RoomPlayer {
     required this.uid,
     required this.nickname,
     required this.profileImageUrl,
+    required this.accentColor,
     required this.isConnected,
     required this.seatIndex,
     required this.role,
@@ -18,10 +19,13 @@ class RoomPlayer {
       uid: key ?? json['uid'] as String? ?? '',
       nickname: json['nickname'] as String? ?? 'Player',
       profileImageUrl: json['profileImageUrl'] as String? ?? '',
+      accentColor: json['accentColor'] as String? ?? '#6557D2',
       isConnected: json['isConnected'] as bool? ?? true,
       seatIndex: json['seatIndex'] as int? ?? -1,
       role: json['role'] as String? ?? 'player',
       status: json['status'] as String? ?? 'active',
+      joinedAt: _dateTimeFromTimestamp(json['joinedAt']),
+      updatedAt: _dateTimeFromTimestamp(json['updatedAt']),
       penaltyAttemptCount: json['penaltyAttemptCount'] as int? ?? 0,
     );
   }
@@ -29,6 +33,7 @@ class RoomPlayer {
   final String uid;
   final String nickname;
   final String profileImageUrl;
+  final String accentColor;
   final bool isConnected;
   final int seatIndex;
   final String role;
@@ -39,4 +44,16 @@ class RoomPlayer {
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';
+
+  Duration newBadgeRemainingAt(DateTime now) {
+    final joined = joinedAt;
+    if (joined == null) return Duration.zero;
+    final remaining = const Duration(seconds: 30) - now.difference(joined);
+    return remaining > Duration.zero ? remaining : Duration.zero;
+  }
+}
+
+DateTime? _dateTimeFromTimestamp(Object? value) {
+  if (value is! num) return null;
+  return DateTime.fromMillisecondsSinceEpoch(value.toInt());
 }

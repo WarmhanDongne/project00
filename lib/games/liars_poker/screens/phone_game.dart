@@ -1,21 +1,27 @@
 import 'dart:async';
+import 'package:project00/games/shared/widgets/connection_banner.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_phone_session_provider.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
-import 'package:project00/games/liars_poker/widgets/phone/result.dart';
+import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/shared/widgets/game_loading_screen.dart';
+import 'package:project00/games/shared/animations/game_entry_unroll.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
-class PhoneGame extends StatefulWidget {
-  const PhoneGame({
+class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
+  const LiarsPokerPhoneGame({
     super.key,
     required this.roomCode,
     required this.gameService,
@@ -27,14 +33,18 @@ class PhoneGame extends StatefulWidget {
   final Future<bool> Function() onExitRoom;
 
   @override
-  State<PhoneGame> createState() => _PhoneGameState();
+  ConsumerState<LiarsPokerPhoneGame> createState() =>
+      _LiarsPokerPhoneGameState();
 }
 
-class _PhoneGameState extends State<PhoneGame> {
-  PhoneGameController? _controller;
+class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
+  LiarsPokerPhoneController? _controller;
+  LiarsPokerPhoneSessionArgs? _sessionArgs;
+  ProviderSubscription<LiarsPokerPhoneState>? _sessionSubscription;
   String? _initializationError;
   bool _hasScheduledGameExit = false;
   bool _isLeavingRoom = false;
+  bool _hasEnteredGame = false;
   bool _isResultDialogOpen = false;
   String? _shownWinnerUid;
   BuildContext? _resultDialogContext;
@@ -43,24 +53,46 @@ class _PhoneGameState extends State<PhoneGame> {
   @override
   void initState() {
     super.initState();
-    //=======================세로·가로 화면 허용==============================
-    // Final Call에서 사용한 가로 고정이 남아 있더라도 Liar's Poker에
-    // 진입하는 즉시 세로와 가로 회전을 모두 다시 허용합니다.
-    unawaited(AppOrientation.allowLiarsPokerRotation());
+    //=======================휴대폰 게임 방향 정책==============================
+    // Liar's Poker 휴대폰은 세로와 양쪽 가로를 모두 지원합니다.
+    // 태블릿에는 이 정책을 적용하지 마세요. 모든 태블릿 게임은 가로 고정입니다.
+    unawaited(
+      AppOrientation.applyPhoneGame(PhoneGameOrientation.portraitAndLandscape),
+    );
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      _initializationError = '게임에 참여하려면 사용자 인증이 필요합니다.';
+      _initializationError = GameFlowCopy.authenticationRequired;
       return;
     }
 
-    final controller = PhoneGameController(
+    final args = LiarsPokerPhoneSessionArgs(
       roomCode: widget.roomCode,
       uid: uid,
-      gameService: widget.gameService,
+      service: widget.gameService,
     );
-    _controller = controller;
-    controller.addListener(_handleGameStateChanged);
-    controller.initialize();
+    _sessionArgs = args;
+    final provider = liarsPokerPhoneSessionProvider(args);
+    _sessionSubscription = ref.listenManual(provider, (_, _) {
+      _handleGameStateChanged();
+    });
+    _controller = ref.read(provider.notifier);
+    unawaited(_warmUpAssets());
+  }
+
+  /// 매트가 풀리는 배경 위에서 조용히 이미지를 준비합니다. 별도 로딩 화면을
+  /// 보여주지 않으므로 실패해도 게임 진행을 막지 않습니다.
+  Future<void> _warmUpAssets() async {
+    final controller = _controller;
+    if (controller == null) return;
+    await controller.waitForInitialData();
+    if (!mounted) return;
+    await preloadLiarsPokerAssets(
+      context,
+      isPhone: true,
+      profileImageUrls: controller.players.values.map(
+        (player) => player.profileImageUrl,
+      ),
+    );
   }
 
   /// 컨트롤러 알림은 이 화면 한 곳에서만 수신합니다.
@@ -74,14 +106,12 @@ class _PhoneGameState extends State<PhoneGame> {
     if (!controller.isFinished) {
       _hasScheduledGameExit = false;
       _closeResultDialog();
-      setState(() {});
       return;
     }
 
     // 정상 승리는 화면을 닫지 않고 결과 다이얼로그를 유지합니다. 태블릿의
     // 다시하기 상태를 같은 RTDB 구독으로 받아 즉시 새 게임으로 전환합니다.
     if (controller.isNaturalResult) {
-      setState(() {});
       // 마지막 룰렛으로 승자가 결정된 경우에도 생존/탈락 결과를 먼저
       // 보여준 뒤 우승자 발표 다이얼로그를 엽니다.
       if (!controller.isPenaltyResultVisible) {
@@ -104,7 +134,7 @@ class _PhoneGameState extends State<PhoneGame> {
     });
   }
 
-  void _showResultDialog(PhoneGameController controller) {
+  void _showResultDialog(LiarsPokerPhoneController controller) {
     final winnerUid = controller.winnerUid;
     final winner = controller.players[winnerUid];
     if (winnerUid == null || winner == null) return;
@@ -154,16 +184,24 @@ class _PhoneGameState extends State<PhoneGame> {
     if (_isLeavingRoom) return false;
     _isLeavingRoom = true;
     final left = await widget.onExitRoom();
-    if (!left) _isLeavingRoom = false;
-    return left;
+    if (!left) {
+      _isLeavingRoom = false;
+      return false;
+    }
+
+    //=======================퇴장 후 화면 전환==============================
+    // 서버 퇴장이 끝나면 게임 라우트를 먼저 닫습니다. 화면 방향 복원을 먼저
+    // 기다리면 iOS의 회전 Future가 지연될 때 이미 퇴장한 게임 화면에 갇힐 수
+    // 있습니다. 세로 복원은 dispose와 상위 대기 화면이 비동기로 처리합니다.
+    if (!mounted) return true;
+    Navigator.of(context).pop(true);
+    return true;
   }
 
   @override
   void dispose() {
     _resultDialogGeneration += 1;
-    _controller
-      ?..removeListener(_handleGameStateChanged)
-      ..dispose();
+    _sessionSubscription?.close();
     //=======================플랫폼 세로 화면 복원==============================
     unawaited(AppOrientation.lockPlatformPortrait());
     super.dispose();
@@ -171,7 +209,12 @@ class _PhoneGameState extends State<PhoneGame> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
+    final args = _sessionArgs;
+    if (args != null) ref.watch(liarsPokerPhoneSessionProvider(args));
+    final controller = args == null
+        ? null
+        : ref.read(liarsPokerPhoneSessionProvider(args).notifier);
+    _controller = controller;
     if (controller == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -179,7 +222,7 @@ class _PhoneGameState extends State<PhoneGame> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              _initializationError ?? '게임을 초기화하지 못했습니다.',
+              _initializationError ?? GameFlowCopy.gameOpenFailed,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 17),
             ),
@@ -188,56 +231,64 @@ class _PhoneGameState extends State<PhoneGame> {
       );
     }
 
-    //=======================게임 진입 로딩 화면==============================
-    // 서버의 첫 공개 상태와 개인 손패, 게임 이미지를 모두 준비합니다. 데이터가
-    // 먼저 도착해도 공용 로딩 화면은 최소 2초간 유지된 뒤 게임을 표시합니다.
-    return GameLoadingScreen(
-      background: Assets
-          .games
-          .liarsPoker
-          .images
-          .background
-          .backgroundLoadingPhone
-          .provider(),
-      tips: liarsPokerLoadingTips,
-      prepare: (loadingContext) async {
-        await controller.waitForInitialData();
-        if (!loadingContext.mounted) return;
-        await preloadLiarsPokerAssets(
-          loadingContext,
-          isPhone: true,
-          profileImageUrls: controller.players.values.map(
-            (player) => player.profileImageUrl,
+    //=======================게임 진입==============================
+    // 별도 로딩 화면 없이, 태블릿에서 테이블이 확대되는 순간과 맞춰 매트가
+    // 풀리며 게임 배경이 드러납니다. 서버 데이터는 그 뒤에서 채워지고,
+    // 준비되기 전까지는 배경만 보여 연출이 끊기지 않습니다.
+    //
+    // 첫 진입에만 적용하는 빗장입니다. isEntryDataReady는 라운드마다 분배
+    // 단계에서 다시 false가 되므로, 그대로 쓰면 게임 도중에도 화면이 배경만
+    // 남고 하위 화면이 사라집니다.
+    _hasEnteredGame |= controller.isEntryDataReady;
+
+    return GameEntryUnroll(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _hasEnteredGame
+              ? _buildGameContent(controller)
+              : const _PhoneGameBackground(),
+          // 연결이 끊기면 화면이 멈춘 것처럼 보이므로 안내를 띄웁니다.
+          const ConnectionBanner(),
+          GameInterruptionLayer(
+            interruption: controller.interruption,
+            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            isSubmitting: controller.isCommandInFlight,
+            onVote: () async {
+              await controller.voteToContinueInterruption();
+            },
+            onExpired: () async {
+              await controller.expireInterruption();
+            },
           ),
-        );
-      },
-      gameBuilder: (_) => _buildGameContent(controller),
+        ],
+      ),
     );
   }
 
-  Widget _buildGameContent(PhoneGameController controller) {
+  Widget _buildGameContent(LiarsPokerPhoneController controller) {
     final isAlive = !controller.isEliminated;
 
     //=======================휴대폰 결과 배경==============================
     // 승리 결과를 발표할 때는 게임 중 손패·상단바·턴 정보·관전 요소를 모두
     // 제거하고 게임 배경 위에 결과 다이얼로그만 표시합니다.
     if (controller.isNaturalResult && !controller.isPenaltyResultVisible) {
-      return const _PhoneResultBackground();
+      return const _PhoneGameBackground();
     }
 
     // 가드 클로즈: 살아있을 때 (게임 진행 중) 화면 우선 반환
-    if (isAlive || controller.showPenaltyHandOverlay) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          RepaintBoundary(
-            child: PhoneGameScreen(
-              controller: controller,
-              onExitRoom: _leaveRoom,
-            ),
-          ),
-          if (controller.isCommandInFlight) const _CommandLoadingIndicator(),
-        ],
+    //
+    // 나가기 처리 중(_isLeavingRoom)에는 서버가 플레이어 상태를 'eliminated'로
+    // 바꾸더라도 관전 화면으로 전환하지 않습니다. 그렇지 않으면 이 화면이
+    // PhoneSpectator로 바뀌면서 나가기 모달·pop 로직을 쥐고 있던
+    // LiarsPokerPhoneGameScreen이 사라져, 실제로는 방을 나갔는데도 화면 전환 없이
+    // 관전 화면에 머무르는 문제가 있었습니다.
+    if (isAlive || controller.showPenaltyHandOverlay || _isLeavingRoom) {
+      return RepaintBoundary(
+        child: LiarsPokerPhoneGameScreen(
+          controller: controller,
+          onExitRoom: _leaveRoom,
+        ),
       );
     }
 
@@ -262,8 +313,8 @@ class _PhoneGameState extends State<PhoneGame> {
 }
 
 /// 결과 다이얼로그 뒤에 다른 게임 요소가 남지 않게 하는 전용 배경입니다.
-class _PhoneResultBackground extends StatelessWidget {
-  const _PhoneResultBackground();
+class _PhoneGameBackground extends StatelessWidget {
+  const _PhoneGameBackground();
 
   @override
   Widget build(BuildContext context) {
@@ -279,57 +330,6 @@ class _PhoneResultBackground extends StatelessWidget {
         child: background.image(
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
-        ),
-      ),
-    );
-  }
-}
-
-/// 서버 재요청 중 게임 화면을 가리지 않고 연결 상태만 작게 표시합니다.
-class _CommandLoadingIndicator extends StatelessWidget {
-  const _CommandLoadingIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SafeArea(
-        child: IgnorePointer(
-          child: RepaintBoundary(
-            child: Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xB818211C),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x338CA695)),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.cloud_sync_outlined,
-                        size: 15,
-                        color: Color(0xFFD8E2DB),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        '연결 확인 중',
-                        style: TextStyle(
-                          color: Color(0xFFD8E2DB),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );

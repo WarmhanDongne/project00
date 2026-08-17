@@ -30,9 +30,15 @@ export function finalCallCommandId(value: unknown): string {
   return id;
 }
 
-export function requireFinalCallGame(room: FinalCallRoom): FinalCallGameState {
+export function requireFinalCallGame(
+  room: FinalCallRoom,
+  options: {allowInterruption?: boolean} = {},
+): FinalCallGameState {
   if (!room.game || room.game.public?.gameType !== "final_call") {
     throw new HttpsError("failed-precondition", "Final Call 게임이 없습니다.");
+  }
+  if (room.game.public.interruption && !options.allowInterruption) {
+    throw new HttpsError("failed-precondition", "플레이어 연결 확인 중에는 게임을 진행할 수 없습니다.");
   }
   return room.game;
 }

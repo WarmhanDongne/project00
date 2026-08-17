@@ -7,6 +7,8 @@ import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
 import 'package:project00/platform/home/home.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.isGoogleSignIn = false});
@@ -210,59 +212,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Container(
-            width: 500,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (pageNumber == 0)
-                  RegisterStepOne(
-                    emailController: emailController,
-                    passwordController: passwordController,
-                    confirmPasswordController: confirmPasswordController,
-                    isEmailChecked: isEmailChecked,
-                    onCheckEmail: checkEmailDuplicate,
-                  )
-                else
-                  RegisterStepTwo(
-                    nicknameController: nicknameController,
-                    phoneController: phoneController,
-                    verificationCodeController: verificationCodeController,
-                    isLoading: isLoading,
-                    isCodeSent: isCodeSent,
-                    isPhoneVerified: isPhoneVerified,
-                    profileImageBytes: profileImageBytes,
-                    googlePhotoURL: googlePhotoURL,
-                    onPickProfileImage: pickProfileImage,
-                    onCheckNickname: checkNickname,
-                  ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: const RoundedRectangleBorder(),
-                  ),
-                  onPressed: isLoading
-                      ? null
-                      : pageNumber == 0
-                      ? createEmailAccount
-                      : completeRegistration,
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(pageNumber == 0 ? '다음' : '가입 완료'),
-                ),
-              ],
-            ),
+    final colors = context.platformColors;
+    return PlatformAuthShell(
+      showBack: true,
+      maxWidth: pageNumber == 0 ? 440 : 400,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            pageNumber == 0 ? '회원가입' : '프로필 설정',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
-        ),
+          const SizedBox(height: 5),
+          if (pageNumber == 0)
+            Text(
+              '사용할 이메일과 비밀번호를 입력해 주세요.',
+              style: TextStyle(color: colors.textMuted, fontSize: 11),
+            ),
+          const SizedBox(height: 20),
+          if (pageNumber == 0)
+            RegisterStepOne(
+              emailController: emailController,
+              passwordController: passwordController,
+              confirmPasswordController: confirmPasswordController,
+              isEmailChecked: isEmailChecked,
+              onCheckEmail: checkEmailDuplicate,
+            )
+          else
+            RegisterStepTwo(
+              nicknameController: nicknameController,
+              phoneController: phoneController,
+              verificationCodeController: verificationCodeController,
+              isLoading: isLoading,
+              isCodeSent: isCodeSent,
+              isPhoneVerified: isPhoneVerified,
+              profileImageBytes: profileImageBytes,
+              onPickProfileImage: pickProfileImage,
+              onCheckNickname: checkNickname,
+            ),
+          const SizedBox(height: 20),
+          PlatformButton(
+            label: isLoading
+                ? '처리 중...'
+                : pageNumber == 0
+                ? '다음'
+                : '가입 완료',
+            onPressed: isLoading
+                ? null
+                : pageNumber == 0
+                ? createEmailAccount
+                : completeRegistration,
+          ),
+        ],
       ),
     );
   }

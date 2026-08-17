@@ -1,26 +1,33 @@
 import 'dart:async';
+import 'package:project00/games/shared/widgets/connection_banner.dart';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
-import 'package:project00/games/liars_poker/models/player_layout_model.dart';
-import 'package:project00/games/liars_poker/screens/tablet/game_status.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_tablet_session_provider.dart';
+import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_animation.dart';
-import 'package:project00/games/liars_poker/screens/tablet/tablet_game_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_tablet_controller.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_layer.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_overlay.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_penalty.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/animations/mat_unroll_animation.dart';
-import 'package:project00/games/shared/widgets/game_loading_screen.dart';
+import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
+import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
-/// 상태 처리는 [TabletGameController], 화면 구성은 각 layer 파일이 담당합니다.
-class LiarsPokerTabletGame extends StatefulWidget {
+/// 상태 처리는 [LiarsPokerTabletController], 화면 구성은 각 layer 파일이 담당합니다.
+class LiarsPokerTabletGame extends ConsumerStatefulWidget {
   const LiarsPokerTabletGame({
     super.key,
     required this.playerLayout,
@@ -35,35 +42,54 @@ class LiarsPokerTabletGame extends StatefulWidget {
   final LiarsPokerService gameService;
 
   @override
-  State<LiarsPokerTabletGame> createState() => TabletGameState();
+  ConsumerState<LiarsPokerTabletGame> createState() =>
+      _LiarsPokerTabletGameState();
 }
 
-class TabletGameState extends State<LiarsPokerTabletGame>
+class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     with SingleTickerProviderStateMixin {
-  late final TabletGameController _controller;
+  late final LiarsPokerTabletController _controller;
+  late final LiarsPokerTabletSessionArgs _sessionArgs;
   late final AnimationController _exitMatController;
   bool _hasScheduledInsufficientPlayersExit = false;
   bool _isExitingToLobby = false;
 
-  GameStatus get gameStatus => _controller.status;
+  LiarsPokerTabletStage get stage => _controller.stage;
 
   @override
   void initState() {
     super.initState();
-    //=======================라이어스 포커 세로·가로 허용==============================
-    unawaited(AppOrientation.allowLiarsPokerRotation());
+    //=======================태블릿 게임 방향 불변 조건==============================
+    // 게임 종류와 관계없이 모든 태블릿 게임은 항상 가로 고정입니다.
+    // Liar's Poker 휴대폰의 세로·가로 허용 정책을 이 화면에 적용하지 마세요.
+    unawaited(AppOrientation.lockTabletGameLandscape());
     _exitMatController = AnimationController(
       vsync: this,
       value: 1,
       duration: const Duration(milliseconds: 900),
       reverseDuration: const Duration(milliseconds: 820),
     );
-    _controller = TabletGameController(
+    _sessionArgs = LiarsPokerTabletSessionArgs(
       playerLayout: widget.playerLayout,
       roomCode: widget.roomCode,
-      gameService: widget.gameService,
+      service: widget.gameService,
       onError: _showGameError,
-    )..initialize();
+    );
+    final provider = liarsPokerTabletSessionProvider(_sessionArgs);
+    _controller = ref.read(provider.notifier);
+    unawaited(_warmUpAssets());
+  }
+
+  /// 자리 배치 연출에서 이어지는 배경 위에서 조용히 이미지를 준비합니다.
+  /// 별도 로딩 화면을 보여주지 않으므로 실패해도 게임 진행을 막지 않습니다.
+  Future<void> _warmUpAssets() async {
+    await _controller.waitForInitialData();
+    if (!mounted) return;
+    await preloadLiarsPokerAssets(
+      context,
+      isPhone: false,
+      profileImageUrls: _controller.profileImageUrls,
+    );
   }
 
   void _showGameError(String message, Object error) {
@@ -102,11 +128,11 @@ class TabletGameState extends State<LiarsPokerTabletGame>
     _controller.revealSubmittedCards(actualRanks);
   }
 
-  void showPenalty() => _controller.changeStatus(GameStatus.penalty);
+  void showPenalty() => _controller.changeStage(LiarsPokerTabletStage.penalty);
 
-  void showResult() => _controller.changeStatus(GameStatus.result);
+  void showResult() => _controller.changeStage(LiarsPokerTabletStage.result);
 
-  void finishGame() => _controller.changeStatus(GameStatus.finished);
+  void finishGame() => _controller.changeStage(LiarsPokerTabletStage.finished);
 
   void _restartGame() {
     unawaited(_controller.restartGame());
@@ -152,30 +178,14 @@ class TabletGameState extends State<LiarsPokerTabletGame>
 
   @override
   Widget build(BuildContext context) {
-    //=======================게임 진입 로딩 화면==============================
-    // 태블릿 공개 상태와 플레이어 프로필·게임 이미지를 먼저 준비합니다.
+    ref.watch(liarsPokerTabletSessionProvider(_sessionArgs));
+    //=======================게임 진입==============================
+    // 자리 배치 연출의 테이블과 같은 배경 이미지를 곧바로 보여주고, 서버
+    // 데이터는 그 위에서 조용히 채워집니다. 별도 로딩 화면 없이 자연스럽게
+    // 이어지도록 합니다.
     return AnimatedBuilder(
       animation: _exitMatController,
-      child: GameLoadingScreen(
-        background: Assets
-            .games
-            .liarsPoker
-            .images
-            .background
-            .backgroundLoadingTablet
-            .provider(),
-        tips: liarsPokerLoadingTips,
-        prepare: (loadingContext) async {
-          await _controller.waitForInitialData();
-          if (!loadingContext.mounted) return;
-          await preloadLiarsPokerAssets(
-            loadingContext,
-            isPhone: false,
-            profileImageUrls: _controller.profileImageUrls,
-          );
-        },
-        gameBuilder: (_) => _buildGameContent(),
-      ),
+      child: _buildGameContent(),
       builder: (context, child) {
         return AbsorbPointer(
           absorbing: _isExitingToLobby,
@@ -191,20 +201,21 @@ class TabletGameState extends State<LiarsPokerTabletGame>
   Widget _buildGameContent() {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
+      body: Builder(
+        builder: (context) {
           if (_controller.isInsufficientPlayersEnding) {
             _scheduleInsufficientPlayersExit();
           }
-
+          // 다른 게임 화면과 동일하게 expand로 둡니다. 느슨한 Stack은 크기가
+          // 0인 non-positioned 자식 하나만 있어도 통째로 0×0이 됩니다.
           return Stack(
+            fit: StackFit.expand,
             children: [
               const Positioned.fill(child: _GameBackground()),
               //=======================기본 게임 레이어==============================
               Positioned.fill(
-                child: TabletGameLayer(
-                  status: _controller.status,
+                child: LiarsPokerTabletGameLayer(
+                  stage: _controller.stage,
                   playerCount: _controller.playerCount,
                   playerSeatIndexes: _controller.seatIndexes,
                   cardsPerPlayer: cardsPerPlayer,
@@ -230,7 +241,7 @@ class TabletGameState extends State<LiarsPokerTabletGame>
                           : const Color(0x00000000),
                       BlendMode.srcATop,
                     ),
-                    child: TabletGameAnimation(
+                    child: LiarsPokerTabletGameAnimation(
                       key: ValueKey(
                         'card-pile-${_controller.roundNumber}-'
                         '${_controller.cardPileVersion}',
@@ -246,24 +257,23 @@ class TabletGameState extends State<LiarsPokerTabletGame>
                 ),
 
               if (_controller.isInsufficientPlayersEnding)
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          '인원 부족으로 게임을 종료합니다',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            shadows: [
-                              Shadow(color: Colors.black, blurRadius: 12),
-                            ],
-                          ),
-                        ),
-                      ),
+                Positioned.fill(
+                  child: GameAnnouncementLayer(
+                    announcement: GameAnnouncement.persistent(
+                      id: 'insufficient-players',
+                      text:
+                          _controller.endingMessage ??
+                          GameFlowCopy.insufficientPlayers,
+                      blocksInteraction: true,
+                      showScrim: true,
+                    ),
+                    style: const GameAnnouncementStyle(
+                      fontFamily: null,
+                      fontSize: 28,
+                      gameStartFontSize: 58,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 12)],
                     ),
                   ),
                 ),
@@ -294,9 +304,9 @@ class TabletGameState extends State<LiarsPokerTabletGame>
                     );
                   },
                   child:
-                      _controller.status == GameStatus.penalty &&
+                      _controller.stage == LiarsPokerTabletStage.penalty &&
                           !_controller.isInsufficientPlayersEnding
-                      ? TabletGamePenalty(
+                      ? LiarsPokerTabletGamePenalty(
                           key: ValueKey(
                             '${_controller.penaltyTargetUid}_'
                             '${_controller.penaltyAttemptCount}_'
@@ -312,12 +322,22 @@ class TabletGameState extends State<LiarsPokerTabletGame>
                 ),
               ),
               Positioned.fill(
-                child: TabletGameOverlay(
+                child: LiarsPokerTabletGameOverlay(
                   provider: widget.provider,
-                  status: _controller.status,
+                  stage: _controller.stage,
                   onRestartGame: _restartGame,
                   onEndGame: _endGame,
                 ),
+              ),
+              // 연결이 끊기면 화면이 멈춘 것처럼 보이므로 맨 위에 안내합니다.
+              const Positioned.fill(child: ConnectionBanner()),
+              GameInterruptionLayer(
+                interruption: _controller.interruption,
+                currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+                isSubmitting: _controller.isProcessingMenuCommand,
+                onExpired: () async {
+                  await _controller.expireInterruption();
+                },
               ),
             ],
           );
@@ -328,10 +348,9 @@ class TabletGameState extends State<LiarsPokerTabletGame>
 
   @override
   void dispose() {
-    _controller.dispose();
     _exitMatController.dispose();
-    //=======================플랫폼 세로 화면 복원==============================
-    unawaited(AppOrientation.lockPlatformPortrait());
+    //=======================플랫폼 가로 화면 복원==============================
+    unawaited(AppOrientation.lockPlatformLandscape());
     super.dispose();
   }
 }

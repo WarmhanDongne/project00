@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 
 /// 내 턴의 라이어 버튼과 다른 플레이어의 턴 안내를 같은 자리에서 교체합니다.
 ///

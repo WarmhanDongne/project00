@@ -58,15 +58,13 @@ export const completeFinalCallTurn = onCall<Data>(
       if (game.server.deck.length === 0) {
         resolveFinalCallRound(game, now, true);
       } else if (game.public.phase === "finalTurns") {
-        game.public.finalTurnPendingUids = game.public.finalTurnPendingUids
-          .filter((playerUid) => playerUid !== uid);
-        if (game.public.finalTurnPendingUids.length === 0) {
-          resolveFinalCallRound(game, now, false);
-        } else {
-          const allowed = new Set(game.public.finalTurnPendingUids);
-          startTurn(game, nextFinalCallPlayer(game.public.players, uid, allowed), now);
-          game.public.revision += 1;
-        }
+        // =======================마지막 교체 후 최종 조합 선택==============================
+        // CALL하지 않은 플레이어도 마지막 교체를 마친 뒤 같은 턴에서 최종
+        // 점수 조합을 직접 선택합니다. 제출이 끝나기 전에는 다음 플레이어로
+        // 넘기지 않습니다.
+        game.public.phase = "finalSubmit";
+        startTurn(game, uid, now);
+        game.public.revision += 1;
       } else {
         startTurn(game, nextFinalCallPlayer(game.public.players, uid), now);
         game.public.revision += 1;

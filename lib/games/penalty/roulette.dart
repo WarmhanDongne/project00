@@ -87,8 +87,8 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
         // 총 15칸 → 탈락 5 : 생존 10 (1 : 2)
         return List.generate(15, (index) => index % 3 == 0);
       default:
-        // 총 12칸 → 전부 탈락
-        return List<bool>.filled(12, true);
+        // 총 12칸 → 탈락 11 : 생존 1
+        return List<bool>.generate(12, (index) => index != 0);
     }
   }
 

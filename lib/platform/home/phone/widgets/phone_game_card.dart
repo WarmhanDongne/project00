@@ -1,81 +1,95 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class PhoneGameCard extends StatelessWidget {
   // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.
 
   final GameInfo gameInfo;
-  const PhoneGameCard({super.key, required this.gameInfo});
+  const PhoneGameCard({super.key, required this.gameInfo, this.inset = true});
+
+  final bool inset;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
+    final colors = context.platformColors;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(inset ? 16 : 0, 0, inset ? 16 : 0, 12),
+      child: PlatformPanel(
+        padding: const EdgeInsets.all(10),
+        child: Row(
           children: [
-            SizedBox(width: 16.w),
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
               child: gameInfo.imageUrl.isEmpty
                   ? Container(
-                      width: 115,
-                      height: 150,
-                      color: Colors.grey.shade300,
+                      width: 90,
+                      height: 118,
+                      color: colors.surfaceMuted,
                       alignment: Alignment.center,
                       child: const Icon(Icons.image_outlined),
                     )
                   : Image.network(
                       gameInfo.imageUrl,
-                      width: 115,
-                      height: 150,
+                      width: 90,
+                      height: 118,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          width: 115,
-                          height: 150,
-                          color: Colors.grey.shade300,
+                          width: 90,
+                          height: 118,
+                          color: colors.surfaceMuted,
                           alignment: Alignment.center,
                           child: const Icon(Icons.broken_image_outlined),
                         );
                       },
                     ),
             ),
-            SizedBox(width: 20),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    gameInfo.name, // 텍스트 대신 DTO로 받은 데이터를 디스플레이
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
-                    textScaler: TextScaler.noScaling,
+                    gameInfo.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                  Text(
-                    '${gameInfo.playTime}m',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      PlatformTag(label: '${gameInfo.playTime}분'),
+                      PlatformTag(
+                        label: '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
+                      ),
+                      for (final genre in gameInfo.genres.take(2))
+                        PlatformTag(label: genre, highlighted: true),
+                    ],
                   ),
-                  Text(
-                    '${gameInfo.minPlayers} ~ ${gameInfo.maxPlayers}인',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
-                  ),
-                  Text(
-                    gameInfo.genres.join(', '),
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
-                  ),
+                  const SizedBox(height: 8),
                   Text(
                     gameInfo.description,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight(400)),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textMuted,
+                      fontSize: 11,
+                      height: 1.45,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        SizedBox(height: 10),
-      ],
+      ),
     );
   }
 }
