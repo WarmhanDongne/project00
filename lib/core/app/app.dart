@@ -57,11 +57,11 @@ class App extends StatelessWidget {
               final user = snapshot.data!;
 
               // 🔥 핵심 변경 부분: Firebase Auth 대신 Firestore의 users 컬렉션 확인
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
+              return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
-                    .get(),
+                    .snapshots(),
                 builder: (context, userDocSnapshot) {
                   // Firestore 데이터 로딩 중
                   if (userDocSnapshot.connectionState ==

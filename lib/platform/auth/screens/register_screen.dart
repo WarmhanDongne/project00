@@ -269,9 +269,6 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
       await authService.createUserDocument();
       if (!mounted) return;
       showMessage('가입이 완료되었습니다.');
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const Home()));
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       showMessage(error.message);
