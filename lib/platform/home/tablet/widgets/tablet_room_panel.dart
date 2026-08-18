@@ -195,10 +195,19 @@ class _InvitationRoom extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (provider.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                provider.errorMessage!,
+                style: const TextStyle(color: Colors.red, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
           PlatformButton(
-            label: '초기화',
+            label: provider.isLoading ? '초기화 중...' : '초기화',
             style: PlatformButtonStyle.secondary,
-            onPressed: provider.isLoading ? null : provider.createRoom,
+            onPressed: provider.isLoading ? null : provider.closeRoom,
           ),
         ],
       ),
