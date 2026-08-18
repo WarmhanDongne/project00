@@ -201,27 +201,28 @@ class GameCard extends StatelessWidget {
                 child: SizedBox.expand(child: _GameImage(url: game.imageUrl)),
               ),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 12),
             Text(
               game.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 10),
             Wrap(
-              spacing: 4,
-              runSpacing: 4,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 if (game.playTime > 0) PlatformTag(label: '${game.playTime}분'),
                 if (game.minPlayers > 0)
                   PlatformTag(label: '${game.minPlayers}~${game.maxPlayers}인'),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             if (game.genres.isNotEmpty)
               Wrap(
-                spacing: 4,
+                spacing: 6,
+                runSpacing: 6,
                 children: game.genres
                     .take(2)
                     .map(
