@@ -2,6 +2,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {processedResult, recordCommand} from "./common/commands.js";
+import {countPlayersWithCards} from "./common/next-turn.js";
 import {RealtimeRoom} from "./common/types.js";
 import {
   assertGameStatus,
@@ -53,16 +54,24 @@ export const passLiarsPokerChallenge = onCall<PassChallengeData>(
       assertPlayerExists(player);
       assertPlayerAlive(player.status);
       assertPlayerTurn(game.public.turnUid ?? "", uid);
+      if (
+        player.remainingCardCount <= 0 ||
+        countPlayersWithCards(game.public.players) !== 1
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "마지막 미제출 플레이어만 FOLD를 선택할 수 있습니다.",
+        );
+      }
 
       const now = Date.now();
 
       // FOLD는 상대의 마지막 카드를 인정하는 선택이므로 FOLD를 고른 현재
       // 플레이어가 벌칙 룰렛을 진행합니다.
       //
-      // 이 단계는 카드를 가진 사람이 둘만 남았을 때만 열립니다. 먼저 손패를 다
-      // 낸 플레이어들은 이 벌칙 대상에서 빠집니다. 예전에는 살아 있는 인원이
-      // 3명 이상이면 벌칙 없이 새 라운드로 넘어갔는데, 그러면 FOLD를 골라도
-      // 아무 대가가 없었습니다.
+      // 이 단계는 전체 인원과 무관하게 카드 미제출자가 현재 플레이어 한 명만
+      // 남았을 때 열립니다. 먼저 손패를 다 낸 플레이어들은 이 벌칙 대상에서
+      // 빠집니다.
       game.public.phase = "penalty";
       game.public.turnUid = null;
       game.public.turnDeadlineAt = null;

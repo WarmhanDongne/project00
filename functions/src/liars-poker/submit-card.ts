@@ -74,6 +74,15 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       assertPlayerExists(player);
       assertPlayerAlive(player.status);
       assertPlayerTurn(game.public.turnUid ?? "", uid);
+      if (
+        player.remainingCardCount > 0 &&
+        countPlayersWithCards(game.public.players) === 1
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "마지막 미제출 플레이어는 카드를 제출할 수 없습니다. LIAR 또는 FOLD를 선택해주세요.",
+        );
+      }
 
       const privatePlayer = game.private[uid];
       const hand = privatePlayer?.hand;
@@ -94,13 +103,13 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       player.remainingCardCount = remainingCardCount;
 
       // 카드를 다 쓴 플레이어는 턴에서 빼고 남은 사람들끼리 라운드를 이어갑니다.
-      // FOLD 판단은 카드를 가진 사람이 둘만 남았을 때, 그중 한 명이 손패를
-      // 모두 냈을 때 나옵니다. 마지막 한 명은 낼 카드가 없으므로 LIAR을
-      // 외치거나 FOLD를 선택하는 판단만 남습니다.
+      // FOLD 판단은 이번 제출로 카드 미제출자가 한 명만 남았을 때 나옵니다.
+      // 마지막 한 명은 손패가 남아 있어도 더 제출할 수 없고 LIAR 또는 FOLD만
+      // 선택할 수 있습니다.
       //
       // 기준은 '살아 있는 인원'이 아니라 '카드를 가진 인원'입니다. 3인 이상이어도
-      // 다른 사람들이 이미 손패를 다 냈다면 남은 두 명의 1대1 상황이며, 먼저
-      // 손패를 비운 사람들은 이 벌칙에서 빠집니다.
+      // 다른 사람들이 이미 손패를 다 냈다면 마지막 미제출자 한 명만 판단하며,
+      // 먼저 손패를 비운 사람들은 이 벌칙에서 빠집니다.
       const isLastCardChallenge = remainingCardCount === 0 &&
         countPlayersWithCards(game.public.players) === 1;
       const nextTurnUid = findNextPlayerWithCards(game.public.players, uid);

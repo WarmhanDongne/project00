@@ -93,6 +93,7 @@ export interface FinalCallGameState {
 
 export interface FinalCallRoom {
   controllerUid?: string;
+  controllerSessionId?: string;
   hostUid?: string;
   selectedGame?: string;
   players?: Record<string, Record<string, unknown>>;

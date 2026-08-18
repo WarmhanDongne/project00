@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
+import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 /// 게임 종류와 무관한 연결 중단 투표 명령입니다.
 class GameInterruptionCommandService {
@@ -17,7 +18,9 @@ class GameInterruptionCommandService {
     required String roomCode,
     required String interruptionId,
   }) async {
-    final data = {'roomCode': roomCode, 'interruptionId': interruptionId};
+    final data = controllerCommandData(roomCode, {
+      'interruptionId': interruptionId,
+    });
     await retryPolicy.run(
       () =>
           _functions.httpsCallable('voteToContinueInterruptedGame').call(data),
@@ -29,7 +32,9 @@ class GameInterruptionCommandService {
     required String roomCode,
     required String interruptionId,
   }) async {
-    final data = {'roomCode': roomCode, 'interruptionId': interruptionId};
+    final data = controllerCommandData(roomCode, {
+      'interruptionId': interruptionId,
+    });
     await retryPolicy.run(
       () => _functions.httpsCallable('expireInterruptedGame').call(data),
       enabled: true,
@@ -41,7 +46,9 @@ class GameInterruptionCommandService {
     required String roomCode,
     required String interruptionId,
   }) async {
-    final data = {'roomCode': roomCode, 'interruptionId': interruptionId};
+    final data = controllerCommandData(roomCode, {
+      'interruptionId': interruptionId,
+    });
     await retryPolicy.run(
       () => _functions
           .httpsCallable('excludeInterruptedPlayerAndContinue')

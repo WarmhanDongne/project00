@@ -210,13 +210,18 @@ iOS 태블릿에서 회전 상태 충돌로 검은 화면이 생기는 것을 �
 `PhoneRoomWaiting`은 두 값을 따로 기억하고 둘 다 준비된 순간 한 번만 화면을 연다.
 Firestore의 썸네일/설명 조회가 느려도 게임 시작을 막지 않는다.
 
-태블릿이 방을 만들면 방 코드를 UI에 노출하기 전에
-`rooms/{roomCode}` 전체에 `onDisconnect().remove()`를 등록한다.
-태블릿 앱 종료나 네트워크 단절은 RTDB 서버가 방 전체를 삭제하며,
-휴대폰은 `controllerConnected` 경로의 삭제도 연결 종료로 해석해 홈으로
-돌아간다. `초기화`로 새 방을 만들 때는 기존 방을 즉시 삭제한 뒤 새
-방의 연결 종료 예약을 등록한다. 방 전체 삭제 권한은 `controllerUid`에게만
-허용하며, 휴대폰 클라이언트는 방 전체를 지울 수 없다.
+태블릿이 방을 만들면 Cloud Function이 `controllerUid`와
+`controllerSessionId`를 함께 발급한다. 태블릿은 세션을 로컬에 보존하고 10초마다
+`controllerPresence.lastSeen` heartbeat를 갱신한다. `onDisconnect`는 방 전체를
+삭제하지 않고 presence의 `connected=false`만 기록한다. 순간 단절이나 background는
+방 종료가 아니며, 앱이 다시 열리면 저장된 세션으로 `resumeRealtimeControllerRoom`을
+호출해 방, 좌석, 진행 중 게임 상태를 복구한다.
+
+방 생성·게임 선택·강퇴·명시적 퇴장·방 종료는 callable Function만 변경할 수 있다.
+controller 명령은 UID와 session을 모두 검사한다. `dispose()`와 lifecycle에서는
+heartbeat만 정리하며 방을 삭제하지 않는다. 명시적인 종료만 `closeRoom`을
+사용하고, 장시간 heartbeat가 없거나 finished 보존 시간이 지난 방은 5분 주기의
+`cleanupStaleRealtimeRooms`가 트랜잭션으로 다시 확인한 뒤 삭제한다.
 
 ### 3.4 플랫폼과 게임의 유일한 연결 계약
 
@@ -274,6 +279,11 @@ createdAt, updatedAt
 rooms/{ROOM_CODE}
 ├── roomCode
 ├── controllerUid                 # 방을 만든 태블릿 UID
+├── controllerSessionId           # 클라이언트 읽기 금지, 오래된 태블릿 요청 차단
+├── status                        # waiting/playing/finished/closed
+├── controllerPresence
+│   ├── connected
+│   └── lastSeen
 ├── maxPlayers
 ├── selectedGame                  # Registry/Firestore game id
 ├── createdAt
@@ -283,6 +293,7 @@ rooms/{ROOM_CODE}
 │   ├── profileImageUrl
 │   ├── accentColor
 │   ├── isConnected
+│   ├── lastSeen
 │   ├── seatIndex
 │   ├── role                      # player
 │   ├── status                    # active
@@ -295,7 +306,8 @@ rooms/{ROOM_CODE}
 
 게임을 시작하거나 재시작할 때 `game`을 새 초기 상태로 교체한다. 방, 참가자,
 좌석은 유지한다. 게임 종료와 홈 복귀 시 게임별 정책에 따라 `status=finished`를 먼저
-전파한 뒤 `game`만 정리할 수 있다. 휴대폰이 종료를 인식하기 전에 노드를 지우지 않는다.
+전파하고 방은 기본 15분 동안 유지한다. 휴대폰이 종료를 인식하기 전에 노드를 지우지
+않으며, 방의 최종 삭제는 서버 cleanup만 담당한다.
 
 ### 4.3 public/private/server 보안 경계
 
@@ -319,6 +331,7 @@ Flutter 게임 서비스는 RTDB를 읽기만 하고, 변경은 callable functio
 2. 방 코드 정규화/검증
 3. 방과 게임 존재 확인
 4. controller/현재 턴/생존 여부/phase 검증
+   - controller 명령은 `controllerUid + controllerSessionId`를 함께 검증
 5. `commandId` 중복 확인
 6. 카드와 상태를 원자적으로 변경
 7. `revision`/`updatedAt` 증가
@@ -1192,6 +1205,11 @@ Realtime Database는 null 필드를 저장하지 않고 키를 제거한다. 파
 
 재접속 identity는 닉네임이 아니라 Firebase UID다. 기존 UID 참가자는 seat와 game
 private 상태를 유지해야 한다. `joinRealtimeRoom`의 existing player merge를 보존한다.
+휴대폰은 마지막 방 코드·UID·닉네임·색상을 `PlayerRoomSessionStore`에 보존하고 앱
+재실행 시 실제 참가자 노드가 남아 있는지 먼저 확인한 뒤 `joinRealtimeRoom`으로
+presence와 중단 상태를 복원한다. 직접 퇴장·강퇴·방 종료 때는 저장 세션을 지워
+자동 재입장을 막는다. 저장 정보만 믿고 참가자 노드가 없는 방에 새 플레이어를 만들지
+않는다.
 
 게임 중 연결 끊김·직접 퇴장은 `game/public/interruption`으로 턴을 일시 정지하고
 60초 동안 재접속을 기다린다. 같은 UID가 돌아오면 저장한 턴 잔여 시간을 복원한다.

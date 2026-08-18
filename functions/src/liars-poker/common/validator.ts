@@ -5,6 +5,7 @@ import {
   HttpsError,
 } from "firebase-functions/v2/https";
 
+import {assertControllerSession} from "../../room/controller-session.js";
 import {LiarsPokerGameState, RealtimeRoom} from "./types.js";
 
 export const REGION = "asia-northeast3";
@@ -75,15 +76,12 @@ export function requireGame(
 }
 
 /** 현재 기기가 이 방을 만든 아이패드 컨트롤러인지 확인합니다. */
-export function assertController(room: RealtimeRoom, uid: string): void {
-  // hostUid는 기존 생성 방을 한 번만 호환하기 위한 값입니다.
-  const controllerUid = room.controllerUid ?? room.hostUid;
-  if (controllerUid !== uid) {
-    throw new HttpsError(
-      "permission-denied",
-      "이 게임은 방을 만든 아이패드에서만 진행할 수 있습니다.",
-    );
-  }
+export function assertController(
+  room: RealtimeRoom,
+  uid: string,
+  controllerSessionId: unknown,
+): void {
+  assertControllerSession(room, uid, controllerSessionId);
 }
 
 export function assertRoomExists(room: unknown): void {

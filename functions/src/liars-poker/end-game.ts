@@ -13,6 +13,7 @@ import {
 
 type EndGameData = {
   roomCode?: unknown;
+  controllerSessionId?: unknown;
 };
 
 /** 방은 유지하고 현재 Liar's Poker 게임만 종료합니다. */
@@ -29,7 +30,7 @@ export const endLiarsPokerGame = onCall<EndGameData>(
 
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
-      assertController(room, uid);
+      assertController(room, uid, request.data?.controllerSessionId);
       const game = requireGame(room, {allowInterruption: true});
 
       if (game.public.status === "finished") {

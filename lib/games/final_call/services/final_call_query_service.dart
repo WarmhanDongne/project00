@@ -13,6 +13,14 @@ class FinalCallQueryService {
     return _database.ref('rooms/$roomCode/game/public').onValue;
   }
 
+  /// 공개 게임 노드가 실제로 삭제됐는지 재확인합니다.
+  ///
+  /// 재연결 직후 스트림이 잠깐 null을 전달한 경우와 태블릿이 게임을 실제로
+  /// 정리한 경우를 구분할 때 사용합니다.
+  Future<DataSnapshot> readPublicGame(String roomCode) {
+    return _database.ref('rooms/$roomCode/game/public').get();
+  }
+
   /// 한 플레이어만 읽는 손패와 현재 가져온 카드입니다.
   Stream<DatabaseEvent> watchPrivatePlayer({
     required String roomCode,

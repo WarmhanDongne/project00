@@ -204,18 +204,18 @@ class _WinnerPresentation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nickname = isDraw
-        ? '무승부'
-        : winners
-              .map((winner) => winner.nickname.trim())
-              .where((nickname) => nickname.isNotEmpty)
-              .join('  ·  ');
+    final nickname = winners
+        .map((winner) => winner.nickname.trim())
+        .where((nickname) => nickname.isNotEmpty)
+        .join('  ·  ');
     final accentColor = winningTeam == FinalCallTeam.blue
         ? const Color(0xFF1686E8)
         : _ResultColors.red;
-    final resultLabel = isDraw
-        ? 'FINAL CALL DRAW'
-        : '${winningTeam?.name.toUpperCase() ?? ''} TEAM WINNER'.trim();
+    final victoryLabel = isDraw
+        ? '무승부'
+        : winningTeam == FinalCallTeam.blue
+        ? '블루팀 승리'
+        : '레드팀 승리';
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -233,8 +233,8 @@ class _WinnerPresentation extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                nickname.isEmpty ? 'WINNER' : nickname,
-                key: const Key('final-call-winner-nickname'),
+                victoryLabel,
+                key: const Key('final-call-winning-team-label'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -253,12 +253,36 @@ class _WinnerPresentation extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 27),
+              if (nickname.isNotEmpty) ...[
+                const SizedBox(height: 15),
+                Text(
+                  nickname,
+                  key: const Key('final-call-winner-nickname'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFFE4E9ED),
+                    fontSize: 34,
+                    height: 1,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    shadows: [
+                      Shadow(
+                        color: Color(0x99000000),
+                        blurRadius: 5,
+                        offset: Offset(2, 3),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
               _WinnerDivider(color: accentColor),
-              const SizedBox(height: 16),
-              Text(
-                resultLabel,
-                style: const TextStyle(
+              const SizedBox(height: 13),
+              const Text(
+                'FINAL CALL WINNER',
+                style: TextStyle(
                   color: Color(0xFFC7D0D8),
                   fontSize: 18,
                   fontWeight: FontWeight.w700,

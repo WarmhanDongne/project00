@@ -13,7 +13,7 @@ import {
   requireFinalCallGame,
 } from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 export const completeFinalCallDealing = onCall<Data>(
   {region: FINAL_CALL_REGION},
@@ -25,7 +25,7 @@ export const completeFinalCallDealing = onCall<Data>(
     const transaction = await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
-      assertFinalCallController(room, uid);
+      assertFinalCallController(room, uid, request.data?.controllerSessionId);
       const game = requireFinalCallGame(room);
       if (game.public.phase !== "dealing") {
         response = {success: true, phase: game.public.phase};

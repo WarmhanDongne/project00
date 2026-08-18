@@ -23,6 +23,7 @@ import {restartRound} from "./restart-round.js";
 
 type ResolvePenaltyData = {
   roomCode?: unknown;
+  controllerSessionId?: unknown;
   commandId?: unknown;
   result?: unknown;
 };
@@ -45,7 +46,7 @@ export const resolveLiarsPokerPenalty = onCall<ResolvePenaltyData>(
 
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
-      assertController(room, uid);
+      assertController(room, uid, request.data?.controllerSessionId);
       const game = requireGame(room);
       const previousResult = processedResult(game, commandId);
       if (previousResult) {

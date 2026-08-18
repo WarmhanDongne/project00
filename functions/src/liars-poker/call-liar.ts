@@ -2,6 +2,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {processedResult, recordCommand} from "./common/commands.js";
+import {countPlayersWithCards} from "./common/next-turn.js";
 import {RealtimeRoom} from "./common/types.js";
 import {
   assertGameStatus,
@@ -63,6 +64,16 @@ export const callLiarsPoker = onCall<CallLiarData>(
       assertPlayerExists(challenger);
       assertPlayerAlive(challenger.status);
       assertPlayerTurn(game.public.turnUid ?? "", uid);
+      if (
+        game.public.phase === "lastCardChallenge" &&
+        (challenger.remainingCardCount <= 0 ||
+          countPlayersWithCards(game.public.players) !== 1)
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "마지막 미제출 플레이어만 이 선택을 할 수 있습니다.",
+        );
+      }
 
       const lastPlay = game.public.lastPlay;
       const actualCards = game.server.lastPlayCards;

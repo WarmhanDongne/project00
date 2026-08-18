@@ -2,6 +2,7 @@
 
 import {CallableRequest, HttpsError} from "firebase-functions/v2/https";
 
+import {assertControllerSession} from "../room/controller-session.js";
 import {FinalCallGameState, FinalCallRoom} from "./types.js";
 
 export const FINAL_CALL_REGION = "asia-northeast3";
@@ -43,10 +44,12 @@ export function requireFinalCallGame(
   return room.game;
 }
 
-export function assertFinalCallController(room: FinalCallRoom, uid: string): void {
-  if ((room.controllerUid ?? room.hostUid) !== uid) {
-    throw new HttpsError("permission-denied", "방을 만든 아이패드만 진행할 수 있습니다.");
-  }
+export function assertFinalCallController(
+  room: FinalCallRoom,
+  uid: string,
+  controllerSessionId: unknown,
+): void {
+  assertControllerSession(room, uid, controllerSessionId);
 }
 
 export function assertFinalCallTurn(game: FinalCallGameState, uid: string): void {
