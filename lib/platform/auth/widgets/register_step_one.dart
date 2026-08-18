@@ -1,21 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
 class RegisterStepOne extends StatelessWidget {
   const RegisterStepOne({
     required this.emailController,
+    required this.customDomainController,
+    required this.customDomainFocusNode,
     required this.passwordController,
     required this.confirmPasswordController,
-    required this.isEmailChecked,
-    required this.onCheckEmail,
+    required this.emailDomain,
+    required this.isCustomDomain,
+    required this.isLoading,
+    this.errorMessage,
+    required this.verificationState,
+    required this.onDomainChanged,
+    required this.onProcessRegistration,
+    required this.onResendVerification,
     super.key,
   });
 
   final TextEditingController emailController;
+  final TextEditingController customDomainController;
+  final FocusNode customDomainFocusNode;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
-  final bool isEmailChecked;
-  final VoidCallback onCheckEmail;
+  final String emailDomain;
+  final bool isCustomDomain;
+  final bool isLoading;
+  final String? errorMessage;
+  final VerificationState verificationState;
+  final ValueChanged<String?> onDomainChanged;
+  final VoidCallback onProcessRegistration;
+  final VoidCallback onResendVerification;
+
+  bool get isFieldsEnabled => verificationState == VerificationState.initial;
+
+  String get buttonLabel {
+    if (isLoading && verificationState == VerificationState.initial) {
+      return '확인 중...';
+    }
+    switch (verificationState) {
+      case VerificationState.initial:
+        return '인증하기';
+      case VerificationState.waiting:
+        return '재전송';
+      case VerificationState.verified:
+        return '완료';
+    }
+  }
+
+  VoidCallback? get onButtonPressed {
+    if (isLoading) return null;
+    switch (verificationState) {
+      case VerificationState.initial:
+        return onProcessRegistration;
+      case VerificationState.waiting:
+        return onResendVerification;
+      case VerificationState.verified:
+        return null;
+    }
+  }
+
+  PlatformButtonStyle get buttonStyle {
+    if (verificationState == VerificationState.verified) {
+      return PlatformButtonStyle.secondary;
+    }
+    return PlatformButtonStyle.primary;
+  }
+
+  String get noticeMessage {
+    if (errorMessage != null) return errorMessage!;
+    switch (verificationState) {
+      case VerificationState.initial:
+        return '';
+      case VerificationState.waiting:
+        return '인증 메일을 보냈습니다. 메일함을 확인해 주세요.';
+      case VerificationState.verified:
+        return '인증이 완료되었습니다.';
+    }
+  }
+
+  PlatformNoticeStyle get noticeStyle {
+    if (errorMessage != null) return PlatformNoticeStyle.danger;
+    switch (verificationState) {
+      case VerificationState.initial:
+        return PlatformNoticeStyle.warning;
+      case VerificationState.waiting:
+        return PlatformNoticeStyle.warning;
+      case VerificationState.verified:
+        return PlatformNoticeStyle.success;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,34 +107,100 @@ class RegisterStepOne extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: emailController,
-                enabled: !isEmailChecked,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(hintText: 'mosi@gmail.com'),
+              flex: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: emailController,
+                      enabled: isFieldsEnabled,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(hintText: '이메일을 입력하세요'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: isCustomDomain
+                        ? TextField(
+                            controller: customDomainController,
+                            focusNode: customDomainFocusNode,
+                            enabled: isFieldsEnabled,
+                            decoration: InputDecoration(
+                              hintText: '직접 입력',
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                              suffixIcon: isFieldsEnabled ? IconButton(
+                                icon: const Icon(Icons.arrow_drop_down, size: 20),
+                                onPressed: () => onDomainChanged('gmail.com'),
+                              ) : null,
+                            ),
+                          )
+                        : DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            initialValue: emailDomain == 'custom' ? 'gmail.com' : emailDomain,
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'gmail.com',
+                                child: Text('gmail.com', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'naver.com',
+                                child: Text('naver.com', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'daum.net',
+                                child: Text('daum.net', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'hanmail.net',
+                                child: Text('hanmail.net', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'custom',
+                                child: Text('직접 입력', overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                            onChanged: isFieldsEnabled ? onDomainChanged : null,
+                          ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 82,
+              width: 96,
               child: PlatformButton(
-                label: isEmailChecked ? '완료' : '중복확인',
-                style: isEmailChecked
-                    ? PlatformButtonStyle.secondary
-                    : PlatformButtonStyle.primary,
-                onPressed: isEmailChecked ? null : onCheckEmail,
+                label: buttonLabel,
+                style: buttonStyle,
+                onPressed: onButtonPressed,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        PlatformNotice(
-          message: isEmailChecked
-              ? '사용 가능한 이메일입니다.'
-              : '중복 확인 후 다음 단계로 이동할 수 있습니다.',
-          style: isEmailChecked
-              ? PlatformNoticeStyle.success
-              : PlatformNoticeStyle.warning,
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          child: (verificationState == VerificationState.initial && errorMessage == null)
+              ? const SizedBox.shrink()
+              : PlatformNotice(
+                  message: noticeMessage,
+                  style: noticeStyle,
+                  leading: (verificationState == VerificationState.waiting && errorMessage == null)
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.platformColors.warning,
+                          ),
+                        )
+                      : null,
+                ),
         ),
         const SizedBox(height: 14),
         const Text(
@@ -67,8 +210,9 @@ class RegisterStepOne extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: passwordController,
+          enabled: isFieldsEnabled,
           obscureText: true,
-          decoration: const InputDecoration(hintText: '••••••••'),
+          decoration: const InputDecoration(hintText: ''),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -78,8 +222,9 @@ class RegisterStepOne extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: confirmPasswordController,
+          enabled: isFieldsEnabled,
           obscureText: true,
-          decoration: const InputDecoration(hintText: '••••••••'),
+          decoration: const InputDecoration(hintText: ''),
         ),
       ],
     );

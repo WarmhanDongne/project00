@@ -243,7 +243,10 @@ class _HomeHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => FirebaseAuth.instance.signOut(),
+                    onPressed: () {
+                      FirebaseAuth.instance.signOut();
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
                     child: Text(
                       '로그아웃',
                       style: TextStyle(color: colors.textMuted, fontSize: 14),

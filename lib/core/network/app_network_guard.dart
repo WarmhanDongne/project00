@@ -36,6 +36,10 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
   bool _isConnected = true;
   bool _isModalVisible = false;
   bool _isRetrying = false;
+  // 앱 시작 시 .info/connected는 항상 false를 먼저 방출합니다(Firebase SDK 스펙).
+  // 한 번도 연결된 적 없는 초기화 단계의 false 이벤트와 실제 연결 끊김을
+  // 구분하기 위해 최초 연결 여부를 추적합니다.
+  bool _everConnected = false;
 
   FirebaseDatabase get _database =>
       widget.database ?? FirebaseDatabase.instance;
@@ -74,6 +78,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
   void _handleConnectionChanged(bool isConnected) {
     _isConnected = isConnected;
     if (isConnected) {
+      _everConnected = true; // 최초 연결 성공 기록
       _showTimer?.cancel();
       _showTimer = null;
       if (mounted && (_isModalVisible || _isRetrying)) {
@@ -84,6 +89,10 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
       }
       return;
     }
+
+    // 한 번도 연결된 적 없으면(앱 시작 초기화 중) false 이벤트 무시.
+    // Firebase SDK는 첫 서버 연결 수립 전 항상 false를 먼저 방출합니다.
+    if (!_everConnected) return;
 
     if (_isModalVisible || _showTimer != null) return;
     _showTimer = Timer(widget.showDelay, () {
@@ -130,6 +139,12 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
             child: NetworkUnavailableModal(
               isRetrying: _isRetrying,
               onRetry: () => unawaited(_retry()),
+              onBypass: () {
+                setState(() {
+                  _isModalVisible = false;
+                  _isConnected = true; // 강제로 true로 설정해 타이머 방지
+                });
+              },
             ),
           ),
       ],

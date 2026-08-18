@@ -22,11 +22,9 @@ void main() async {
   // 태블릿에서 가로입니다.
   //
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
-  // 아직 UISceneActivationStateUnattached일 수 있어 회전 요청이 실제 창에
-  // 반영되지 않습니다. 아래 _InitialOrientationApplier가 앱 lifecycle이 resumed가
-  // 된 뒤에만 요청합니다.
-  final view = PlatformDispatcher.instance.views.first;
-  final physicalSize = view.physicalSize / view.devicePixelRatio;
+  final view = PlatformDispatcher.instance.implicitView ??
+      PlatformDispatcher.instance.views.firstOrNull;
+  final physicalSize = view != null ? (view.physicalSize / view.devicePixelRatio) : const Size(390, 844);
   final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

@@ -13,6 +13,7 @@ class GameService {
   /// 전체 게임 목록을 불러오고 현재 사용자의 보유 여부를 함께 반환
   Future<List<GameInfo>> fetchGames() async {
     final user = _auth.currentUser;
+    if (user == null) return [];
 
     // 전체 게임 목록
     final gameSnapshot = await _firestore.collection('games').get();
@@ -20,17 +21,15 @@ class GameService {
     // 내가 보유한 게임 ID
     Set<String> ownedGameIds = {};
 
-    if (user != null) {
-      final userSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+    final userSnapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
-      final ownedGames = userSnapshot.data()?['ownedGames'];
+    final ownedGames = userSnapshot.data()?['ownedGames'];
 
-      if (ownedGames is List) {
-        ownedGameIds = ownedGames.whereType<String>().toSet();
-      }
+    if (ownedGames is List) {
+      ownedGameIds = ownedGames.whereType<String>().toSet();
     }
 
     final games = gameSnapshot.docs

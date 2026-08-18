@@ -7,11 +7,7 @@ import 'package:project00/platform/widgets/platform_components.dart';
 class RegisterStepTwo extends StatelessWidget {
   const RegisterStepTwo({
     required this.nicknameController,
-    required this.phoneController,
-    required this.verificationCodeController,
     required this.isLoading,
-    required this.isCodeSent,
-    required this.isPhoneVerified,
     required this.googlePhotoURL,
     required this.profileImageBytes,
     required this.onPickProfileImage,
@@ -20,11 +16,7 @@ class RegisterStepTwo extends StatelessWidget {
   });
 
   final TextEditingController nicknameController;
-  final TextEditingController phoneController;
-  final TextEditingController verificationCodeController;
   final bool isLoading;
-  final bool isCodeSent;
-  final bool isPhoneVerified;
   final Uint8List? profileImageBytes;
   final VoidCallback onPickProfileImage;
   final VoidCallback onCheckNickname;
@@ -46,10 +38,12 @@ class RegisterStepTwo extends StatelessWidget {
               child: CircleAvatar(
                 radius: 38,
                 backgroundColor: colors.surfaceMuted,
-                backgroundImage: profileImageBytes == null
-                    ? null
-                    : MemoryImage(profileImageBytes!),
-                child: profileImageBytes == null
+                backgroundImage: profileImageBytes != null
+                    ? MemoryImage(profileImageBytes!)
+                    : (googlePhotoURL != null
+                        ? NetworkImage(googlePhotoURL!) as ImageProvider
+                        : null),
+                child: profileImageBytes == null && googlePhotoURL == null
                     ? Text(
                         'photo',
                         style: TextStyle(color: colors.textMuted, fontSize: 9),

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 
@@ -20,9 +21,13 @@ class _LoginScreenState extends State<LoginScreen> {
   //이메일+비밀번호 불러오기
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final customDomainController = TextEditingController();
+  final customDomainFocusNode = FocusNode();
 
   bool isLoading = false;
+  bool isCustomDomain = false;
   String emailDomain = 'gmail.com';
+  DateTime? _lastMessageTime;
 
   @override
   void dispose() {
@@ -30,6 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _authProvider.dispose();
     emailController.dispose();
     passwordController.dispose();
+    customDomainController.dispose();
+    customDomainFocusNode.dispose();
     super.dispose();
   }
 
@@ -37,9 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
     //아이디+비밀번호 .text처리
     //trim()? 공백 제거
     final localEmail = emailController.text.trim();
-    final email = localEmail.contains('@')
-        ? localEmail
-        : '$localEmail@$emailDomain';
+    final domain = isCustomDomain
+        ? customDomainController.text.trim()
+        : emailDomain;
+    final email = localEmail.contains('@') ? localEmail : '$localEmail@$domain';
     final password = passwordController.text;
 
     //비여있는지 확인
@@ -62,6 +70,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       //사용자가 화면에 머물러 있는지 확인
       if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        _showUnverifiedDialog(user);
+        return;
+      }
+
       showMessage('환영합니다');
     } on AuthServiceException catch (error) {
       if (!mounted) return;
@@ -92,10 +107,80 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showUnverifiedDialog(User user) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            '이메일 인증 필요',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            '이메일 인증이 완료되지 않았습니다.\n메일함을 확인하시거나 인증 메일을 다시 보내주세요.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('확인', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('재전송'),
+            ),
+          ],
+        );
+      },
+    ).then((shouldResend) async {
+      if (shouldResend == true) {
+        try {
+          await user.sendEmailVerification();
+          if (mounted) showMessage('인증 메일이 재발송되었습니다.');
+        } catch (e) {
+          if (mounted) showMessage('메일 재발송 중 오류가 발생했습니다.');
+        }
+      }
+      await FirebaseAuth.instance.signOut();
+    });
+  }
+
   void showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    final now = DateTime.now();
+    if (_lastMessageTime != null &&
+        now.difference(_lastMessageTime!) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastMessageTime = now;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: const Color(0xFF404150),
+          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
@@ -133,31 +218,83 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: 8),
               Expanded(
                 flex: 2,
-                child: DropdownButtonFormField<String>(
-                  initialValue: emailDomain,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'gmail.com',
-                      child: Text('gmail.com', overflow: TextOverflow.ellipsis),
-                    ),
-                    DropdownMenuItem(
-                      value: 'naver.com',
-                      child: Text('naver.com', overflow: TextOverflow.ellipsis),
-                    ),
-                    DropdownMenuItem(
-                      value: 'handong.ac.kr',
-                      child: Text(
-                        'handong.ac.kr',
-                        overflow: TextOverflow.ellipsis,
+                child: isCustomDomain
+                    ? TextField(
+                        controller: customDomainController,
+                        focusNode: customDomainFocusNode,
+                        decoration: InputDecoration(
+                          hintText: '직접 입력',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.arrow_drop_down, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                isCustomDomain = false;
+                                emailDomain = 'gmail.com';
+                              });
+                            },
+                          ),
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: emailDomain == 'custom'
+                            ? 'gmail.com'
+                            : emailDomain,
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'gmail.com',
+                            child: Text(
+                              'gmail.com',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'naver.com',
+                            child: Text(
+                              'naver.com',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'daum.net',
+                            child: Text(
+                              'daum.net',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'hanmail.net',
+                            child: Text(
+                              'hanmail.net',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'custom',
+                            child: Text(
+                              '직접 입력',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == 'custom') {
+                            setState(() {
+                              isCustomDomain = true;
+                              customDomainController.clear();
+                            });
+                            customDomainFocusNode.requestFocus();
+                          } else {
+                            setState(() => emailDomain = value ?? emailDomain);
+                          }
+                        },
                       ),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => emailDomain = value ?? emailDomain),
-                ),
               ),
             ],
           ),
