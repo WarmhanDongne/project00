@@ -11,7 +11,9 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
-class GamePreviewDialog extends StatelessWidget {
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+
+class GamePreviewDialog extends StatefulWidget {
   const GamePreviewDialog({
     super.key,
     required this.game,
@@ -21,17 +23,65 @@ class GamePreviewDialog extends StatelessWidget {
   final GameInfo game;
   final RoomProvider roomProvider;
 
+  @override
+  State<GamePreviewDialog> createState() => _GamePreviewDialogState();
+}
+
+class _GamePreviewDialogState extends State<GamePreviewDialog> {
+  bool _isPlayingVideo = false;
+  YoutubePlayerController? _youtubeController;
+
+  @override
+  void dispose() {
+    _youtubeController?.close();
+    super.dispose();
+  }
+
+  String? _extractVideoId(String url) {
+    if (url.contains('youtu.be/')) {
+      return url.split('youtu.be/').last.split('?').first;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.queryParameters.containsKey('v')) {
+      return uri.queryParameters['v'];
+    }
+    return null;
+  }
+
+  void _playVideo() {
+    final videoUrl = widget.game.ruleVideoUrl.isEmpty
+        ? 'https://www.youtube.com/watch?v=fq4N0hgOWzU' // 테스트 영상
+        : widget.game.ruleVideoUrl;
+        
+    final videoId = _extractVideoId(videoUrl);
+    
+    if (videoId != null && videoId.isNotEmpty) {
+      _youtubeController = YoutubePlayerController.fromVideoId(
+        videoId: videoId,
+        autoPlay: true,
+        params: const YoutubePlayerParams(
+          showFullscreenButton: true,
+          mute: false,
+        ),
+      );setState(() => _isPlayingVideo = true);
+    } else {
+      _showMessage(context, '유효하지 않은 영상 주소입니다.');
+    }
+  }
+
   String _playerCountText() {
-    final fixedPlayerCount = GameRegistry.find(game.id)?.fixedPlayerCount;
+    final fixedPlayerCount = GameRegistry.find(
+      widget.game.id,
+    )?.fixedPlayerCount;
     if (fixedPlayerCount != null) return '플레이 인원 $fixedPlayerCount명';
-    if (game.minPlayers > 0 && game.maxPlayers > 0) {
-      return '플레이 인원 ${game.minPlayers}~${game.maxPlayers}명';
+    if (widget.game.minPlayers > 0 && widget.game.maxPlayers > 0) {
+      return '플레이 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명';
     }
-    if (game.minPlayers > 0) {
-      return '최소 ${game.minPlayers}명';
+    if (widget.game.minPlayers > 0) {
+      return '최소 ${widget.game.minPlayers}명';
     }
-    if (game.maxPlayers > 0) {
-      return '최대 ${game.maxPlayers}명';
+    if (widget.game.maxPlayers > 0) {
+      return '최대 ${widget.game.maxPlayers}명';
     }
     return '';
   }
@@ -45,26 +95,26 @@ class GamePreviewDialog extends StatelessWidget {
   Future<void> _startGame(BuildContext context) async {
     // Mafia UI 개발 중에는 방 인원, 자리 배치, Cloud Function 실행을
     // 모두 건너뛰고 독립된 테스트 화면으로 바로 이동합니다.
-    if (game.id == 'mafia') {
+    if (widget.game.id == 'mafia') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const MafiaTestScreen()),
       );
       return;
     }
 
-    final players = roomProvider.players
+    final players = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
     final currentPlayerCount = players.length;
-    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
-    final maxPlayers = game.maxPlayers > 0 ? game.maxPlayers : 6;
+    final minPlayers = widget.game.minPlayers > 0 ? widget.game.minPlayers : 2;
+    final maxPlayers = widget.game.maxPlayers > 0 ? widget.game.maxPlayers : 6;
 
-    if (game.id.isEmpty) {
+    if (widget.game.id.isEmpty) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
       return;
     }
 
-    final templateGame = GameRegistry.find(game.id);
+    final templateGame = GameRegistry.find(widget.game.id);
     if (templateGame == null) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
       return;
@@ -85,14 +135,17 @@ class GamePreviewDialog extends StatelessWidget {
       return;
     }
 
-    final selected = await roomProvider.selectGame(game.id);
+    final selected = await widget.roomProvider.selectGame(widget.game.id);
     if (!context.mounted) return;
     if (!selected) {
-      _showMessage(context, roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.');
+      _showMessage(
+        context,
+        widget.roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.',
+      );
       return;
     }
 
-    final roomCode = roomProvider.roomCode;
+    final roomCode = widget.roomProvider.roomCode;
     if (roomCode == null) {
       _showMessage(context, '방 정보를 확인할 수 없습니다.');
       return;
@@ -110,7 +163,7 @@ class GamePreviewDialog extends StatelessWidget {
           chairImage: templateGame.layoutChairImage,
           onPrepare: (completedLayout) async {
             //자리 realtime database에 저장
-            final saved = await roomProvider.savePlayerSeatIndexes({
+            final saved = await widget.roomProvider.savePlayerSeatIndexes({
               for (final player in completedLayout.players)
                 player.uid: player.seatIndex,
             });
@@ -118,7 +171,7 @@ class GamePreviewDialog extends StatelessWidget {
             if (!saved) {
               _showMessage(
                 layoutContext,
-                roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+                widget.roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
               );
               return false;
             }
@@ -147,7 +200,7 @@ class GamePreviewDialog extends StatelessWidget {
                 reverseTransitionDuration: Duration.zero,
                 pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
                   playerLayout: completedLayout,
-                  provider: roomProvider,
+                  provider: widget.roomProvider,
                   roomCode: roomCode,
                 ),
               ),
@@ -160,17 +213,50 @@ class GamePreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_isPlayingVideo && _youtubeController != null) {
+      return Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: YoutubePlayer(
+                controller: _youtubeController!,
+                aspectRatio: 16 / 9,
+              ),
+            ),
+            Positioned(
+              right: 20,
+              top: 20,
+              child: IconButton.filledTonal(
+                tooltip: '닫기',
+                onPressed: () {
+                  setState(() {
+                    _isPlayingVideo = false;
+                    _youtubeController?.pauseVideo();
+                  });
+                },
+                icon: const Icon(Icons.close, size: 24),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final colors = context.platformColors;
     final informationTexts = <String>[
-      if (game.playTime > 0) '${game.playTime}분',
+      if (widget.game.playTime > 0) '${widget.game.playTime}분',
       if (_playerCountText().isNotEmpty) _playerCountText(),
     ];
-    final activePlayerCount = roomProvider.players
+    final activePlayerCount = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .length;
-    final fixedPlayerCount = GameRegistry.find(game.id)?.fixedPlayerCount;
+    final fixedPlayerCount = GameRegistry.find(
+      widget.game.id,
+    )?.fixedPlayerCount;
     final hasEnoughPlayers = fixedPlayerCount == null
-        ? activePlayerCount >= game.minPlayers
+        ? activePlayerCount >= widget.game.minPlayers
         : activePlayerCount == fixedPlayerCount;
 
     return Dialog(
@@ -198,7 +284,7 @@ class GamePreviewDialog extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 240,
-                    child: _PosterImage(imageUrl: game.imageUrl),
+                    child: _PosterImage(imageUrl: widget.game.imageUrl),
                   ),
                   const SizedBox(width: 22),
                   Expanded(
@@ -208,7 +294,9 @@ class GamePreviewDialog extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(right: 42),
                           child: Text(
-                            game.name.isEmpty ? '게임 이름' : game.name,
+                            widget.game.name.isEmpty
+                                ? '게임 이름'
+                                : widget.game.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -224,15 +312,15 @@ class GamePreviewDialog extends StatelessWidget {
                           children: [
                             for (final text in informationTexts)
                               PlatformTag(label: text),
-                            for (final genre in game.genres.take(3))
+                            for (final genre in widget.game.genres.take(3))
                               PlatformTag(label: genre, highlighted: true),
                           ],
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          game.description.isEmpty
+                          widget.game.description.isEmpty
                               ? '게임 설명이 없습니다.'
-                              : game.description,
+                              : widget.game.description,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -243,13 +331,16 @@ class GamePreviewDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 14),
                         Expanded(
-                          child: _RuleVideoArea(videoUrl: game.ruleVideoUrl),
+                          child: _RuleVideoArea(
+                            videoUrl: widget.game.ruleVideoUrl,
+                            onPlayPressed: _playVideo,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         if (!hasEnoughPlayers)
                           PlatformNotice(
                             message: fixedPlayerCount == null
-                                ? '현재 인원 $activePlayerCount명은 권장 인원 ${game.minPlayers}~${game.maxPlayers}명보다 적습니다.'
+                                ? '현재 인원 $activePlayerCount명은 권장 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명과 다릅니다.'
                                 : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
                             style: PlatformNoticeStyle.warning,
                           ),
@@ -319,21 +410,16 @@ class _PosterImage extends StatelessWidget {
 }
 
 class _RuleVideoArea extends StatelessWidget {
-  const _RuleVideoArea({required this.videoUrl});
+  const _RuleVideoArea({required this.videoUrl, required this.onPlayPressed});
 
   final String videoUrl;
+  final VoidCallback onPlayPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return InkWell(
-      onTap: videoUrl.isEmpty
-          ? null
-          : () {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text('룰 영상 주소: $videoUrl')));
-            },
+      onTap: onPlayPressed,
       borderRadius: BorderRadius.circular(9),
       child: Container(
         width: double.infinity,

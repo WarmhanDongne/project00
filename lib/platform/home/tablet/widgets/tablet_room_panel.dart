@@ -60,42 +60,49 @@ class _EmptyRoom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
+    const double radius = 38.0;
+    
     return Padding(
       padding: const EdgeInsets.all(18),
       child: Column(
         children: [
           const _PanelHeader(title: '구성원 목록'),
           const Spacer(),
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              color: colors.surfaceMuted,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: colors.border,
-                style: BorderStyle.solid,
+          CustomPaint(
+            painter: _DashedBorderPainter(
+              color: colors.border,
+              radius: radius,
+            ),
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: colors.surfaceMuted,
+                borderRadius: BorderRadius.circular(radius),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'empty art',
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.group_add_outlined,
-              color: colors.textMuted,
-              size: 30,
-            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           const Text(
             '아직 아무도 없습니다',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             '초대 코드를 띄우면 친구들이\n휴대폰으로 참여할 수 있습니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.textMuted,
-              fontSize: 13,
+              fontSize: 14,
               height: 1.45,
             ),
           ),
@@ -107,6 +114,56 @@ class _EmptyRoom extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final dashedPath = _createDashedPath(path);
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  Path _createDashedPath(Path source) {
+    const dashLength = 8.0;
+    const dashSpace = 6.0;
+    final pathMetrics = source.computeMetrics();
+    final dest = Path();
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dest.addPath(
+          metric.extractPath(distance, distance + dashLength),
+          Offset.zero,
+        );
+        distance += dashLength + dashSpace;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
@@ -125,7 +182,7 @@ class _InvitationRoom extends StatelessWidget {
         children: [
           const _PanelHeader(title: '초대하기'),
           const Spacer(),
-          _QrCard(roomCode: roomCode, size: 150),
+          _QrCard(roomCode: roomCode, size: 240),
           const SizedBox(height: 14),
           Text(
             '참여 코드',
