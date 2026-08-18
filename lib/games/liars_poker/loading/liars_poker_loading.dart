@@ -33,7 +33,14 @@ Future<void> preloadLiarsPokerAssets(
 }) async {
   final images = Assets.games.liarsPoker.images;
   final localAssets = <AssetGenImage>[
-    isPhone ? images.background.backgroundPhone : images.background.background,
+    // Liar's Poker 휴대폰은 세로·가로 회전을 모두 허용합니다. 현재 방향의
+    // 배경만 준비하면 관전 진입이나 회전 시 반대 방향 배경을 처음 디코딩하며
+    // 한 프레임 번쩍일 수 있으므로 휴대폰에서는 두 배경을 모두 준비합니다.
+    if (isPhone) ...[
+      images.background.backgroundPhone,
+      images.background.background,
+    ] else
+      images.background.background,
     images.background.a,
     images.background.k,
     images.background.q,

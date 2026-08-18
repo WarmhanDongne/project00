@@ -190,6 +190,12 @@ class FinalCallController extends Notifier<FinalCallGameState> {
     final nextRevision = (map['revision'] as num?)?.toInt() ?? current.revision;
     final nextPendingDrawUid = map['pendingDrawUid']?.toString();
     final nextPhase = map['phase']?.toString() ?? current.phase;
+    final nextRound = (map['round'] as num?)?.toInt() ?? current.round;
+    final enteredNewDealing =
+        nextPhase == 'dealing' &&
+        (current.loading ||
+            current.phase != 'dealing' ||
+            current.round != nextRound);
     final rawDiscard = map['discardCard'];
     final nextDiscardCard = rawDiscard is Map
         ? FinalCallCard.fromMap(Map<Object?, Object?>.from(rawDiscard))
@@ -252,7 +258,7 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       status: map['status']?.toString() ?? current.status,
       finishReason: map['finishReason']?.toString(),
       phase: nextPhase,
-      round: (map['round'] as num?)?.toInt() ?? current.round,
+      round: nextRound,
       revision: nextRevision,
       turnUid: map['turnUid']?.toString(),
       turnDeadlineAt: (map['turnDeadlineAt'] as num?)?.toInt(),
@@ -268,6 +274,14 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       resultRevealCompletedAt: (map['resultRevealCompletedAt'] as num?)
           ?.toInt(),
       players: parsedPlayers,
+      // 새 라운드 트랜잭션은 public phase와 private={}를 함께 기록하지만
+      // RTDB 리스너의 이벤트 도착 순서는 보장되지 않습니다. private null이
+      // public dealing보다 먼저 오면 재접속 보호 로직이 이전 손패를 보존할 수
+      // 있으므로, 공개 상태가 dealing에 진입한 순간 이전 손패를 확실히 지웁니다.
+      // 이 초기화가 없으면 이전 카드팩을 한 번 보여준 뒤 실제 새 손패로 카드팩을
+      // 다시 만드는 이중 분배 현상이 발생합니다.
+      hand: enteredNewDealing ? const <FinalCallCard>[] : current.hand,
+      pendingDraw: enteredNewDealing ? null : current.pendingDraw,
       roundResult: rawResult is Map
           ? FinalCallRoundResult.fromMap(Map<Object?, Object?>.from(rawResult))
           : null,

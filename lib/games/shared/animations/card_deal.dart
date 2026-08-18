@@ -18,6 +18,7 @@ class CardDealAnimation extends StatefulWidget {
   const CardDealAnimation({
     super.key,
     this.playerCount = 4,
+    this.boardSeatCount,
     this.playerSeatIndexes,
     this.playerPositions,
     this.cardsPerPlayer = 5,
@@ -32,6 +33,7 @@ class CardDealAnimation extends StatefulWidget {
     this.backgroundColor,
     this.onCompleted,
   }) : assert(playerCount > 0),
+       assert(boardSeatCount == null || boardSeatCount > 0),
        assert(
          playerSeatIndexes == null || playerSeatIndexes.length == playerCount,
          'playerSeatIndexes의 개수는 playerCount와 같아야 합니다.',
@@ -45,6 +47,13 @@ class CardDealAnimation extends StatefulWidget {
 
   /// 카드를 받는 플레이어 수입니다.
   final int playerCount;
+
+  /// 원래 자리 배치에 존재하는 전체 좌석 수입니다.
+  ///
+  /// 탈락자를 제외해 [playerCount]가 줄어도 카드 도착 위치는 최초 자리 배치를
+  /// 유지해야 합니다. 이때 전체 좌석 수를 전달하고, 생존자의 실제 좌석 번호만
+  /// [playerSeatIndexes]에 전달합니다. 생략하면 [playerCount]와 같습니다.
+  final int? boardSeatCount;
 
   /// 플레이어 인덱스별 실제 좌석 번호입니다.
   /// 예: `[2, 0, 1]`이면 첫 번째 플레이어는 2번 좌석으로 분배됩니다.
@@ -452,11 +461,16 @@ class CardDealAnimationState extends State<CardDealAnimation>
     }
 
     final centers = playerCentersForBoard(
-      playerCount: widget.playerCount,
+      playerCount: widget.boardSeatCount ?? widget.playerCount,
       boardSize: size,
     );
     final seatIndex = widget.playerSeatIndexes?[playerIndex] ?? playerIndex;
-    return centers[seatIndex];
+    assert(
+      seatIndex >= 0 && seatIndex < centers.length,
+      'playerSeatIndexes는 좌석판 범위 안에 있어야 합니다.',
+    );
+    final safeSeatIndex = seatIndex.clamp(0, centers.length - 1);
+    return centers[safeSeatIndex];
   }
 
   double _intervalProgress(

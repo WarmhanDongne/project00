@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_tablet_state.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_helper.dart';
@@ -110,6 +111,9 @@ class LiarsPokerTabletController extends Notifier<LiarsPokerTabletState> {
   List<int> get remainingCardCounts => _draft.remainingCardCounts;
   set remainingCardCounts(List<int> value) =>
       _draft = _draft.copyWith(remainingCardCounts: value);
+  List<int> get activeSeatIndexes => _draft.activeSeatIndexes;
+  set activeSeatIndexes(List<int> value) =>
+      _draft = _draft.copyWith(activeSeatIndexes: value);
   GameInterruption? get interruption => _draft.interruption;
   set interruption(GameInterruption? value) =>
       _draft = _draft.copyWith(interruption: value);
@@ -242,6 +246,7 @@ class LiarsPokerTabletController extends Notifier<LiarsPokerTabletState> {
     serverPhase = snapshot.phase;
     roundNumber = snapshot.round;
     remainingCardCounts = snapshot.remainingCardCounts(playerLayout);
+    activeSeatIndexes = snapshot.activeSeatIndexes(playerLayout);
     turnUid = snapshot.turnUid;
     winnerUid = snapshot.winnerUid;
     winnerPlayer = snapshot.playerByUid(winnerUid, playerLayout);
@@ -466,7 +471,7 @@ class LiarsPokerTabletController extends Notifier<LiarsPokerTabletState> {
     if (_penaltyTransitionTimer != null) return;
 
     // 공개된 카드와 판정 결과를 충분히 확인한 뒤 룰렛 화면으로 전환합니다.
-    _penaltyTransitionTimer = Timer(const Duration(seconds: 3), () {
+    _penaltyTransitionTimer = Timer(LiarsPokerFlowTiming.revealedCardsHold, () {
       _penaltyTransitionTimer = null;
       if (serverPhase == 'penalty' &&
           stage == LiarsPokerTabletStage.cardsRevealing) {

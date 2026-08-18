@@ -206,8 +206,8 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
 
   /// 마지막 남은 한 명에게 FOLD 선택지를 보여줄지 여부입니다.
   ///
-  /// 게임 전체 인원과 무관하게 카드 미제출자가 본인 한 명만 남았을 때만
-  /// LIAR/FOLD 선택을 표시합니다.
+  /// 이번 라운드 제출 횟수와 무관하게 잔여카드를 가진 생존자가 본인 한 명일
+  /// 때만 LIAR/FOLD 선택을 표시합니다.
   bool get showFoldPrompt =>
       phase == 'lastCardChallenge' &&
       isMyTurn &&

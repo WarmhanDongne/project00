@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
+import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
@@ -32,10 +33,14 @@ class LiarsPokerPhoneGameScreen extends StatefulWidget {
     super.key,
     this.controller,
     this.onExitRoom,
+    this.showSpectatorTopBar = false,
   });
 
   final LiarsPokerPhoneController? controller;
   final Future<bool> Function()? onExitRoom;
+
+  /// 탈락한 관전자가 판정·벌칙 화면을 보고 있을 때도 상단바를 유지합니다.
+  final bool showSpectatorTopBar;
 
   @override
   State<LiarsPokerPhoneGameScreen> createState() =>
@@ -57,9 +62,18 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     super.initState();
     _controlsEntryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 920),
+      duration: LiarsPokerFlowTiming.phoneControlsEntry,
     );
-    if (widget.controller?.hasRevealedHand == true) {
+    if (widget.showSpectatorTopBar ||
+        widget.controller?.hasRevealedHand == true) {
+      _controlsEntryController.value = 1;
+    }
+  }
+
+  @override
+  void didUpdateWidget(LiarsPokerPhoneGameScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.showSpectatorTopBar && widget.showSpectatorTopBar) {
       _controlsEntryController.value = 1;
     }
   }
@@ -94,6 +108,12 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     required String? waitingMessage,
     required bool showPenaltyHandOverlay,
   }) {
+    // ========================================================================
+    // 단계별 공용 안내 문구
+    // ========================================================================
+    // 이 함수는 문자열과 표시시간만 정하며 서버 상태를 변경하지 않습니다.
+    // GameAnnouncementLayer는 모든 포인터를 하위 UI로 통과시키고, 실제 입력
+    // 제한은 해당 단계에서 조작 위젯을 숨기거나 비활성화해 처리합니다.
     if (showGameStart) return const GameAnnouncement.gameStart();
 
     final verdict = controller?.liarVerdictMessage;
@@ -102,7 +122,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         id: 'verdict-${controller?.lastPlayId}-$verdict',
         text: verdict,
         tone: LiarsPokerCopy.verdictTone(verdict),
-        duration: const Duration(milliseconds: 2900),
+        duration: LiarsPokerFlowTiming.phoneVerdictAnnouncement,
         blocksInteraction: true,
       );
     }
@@ -236,7 +256,10 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         (!controller.isInitialLoading &&
             controller.phase != 'dealing' &&
             controller.handCards.isNotEmpty);
-    final showGameStart = !_hasCompletedGameStart && isGameStartReady;
+    final showGameStart =
+        !widget.showSpectatorTopBar &&
+        !_hasCompletedGameStart &&
+        isGameStartReady;
     if (showGameStart) _precacheInitialHand(controller);
 
     final isDealing = controller?.phase == 'dealing';
@@ -257,13 +280,16 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     }
 
     final showHeader =
-        _hasCompletedGameStart &&
-        (controller == null ||
-            (controller.hasRevealedHand &&
-                controller.phase != 'dealing' &&
-                !_isRevealInProgress));
+        widget.showSpectatorTopBar ||
+        (_hasCompletedGameStart &&
+            (controller == null ||
+                (controller.hasRevealedHand &&
+                    controller.phase != 'dealing' &&
+                    !_isRevealInProgress)));
     final showControls =
-        showHeader && (controller == null || controller.handCards.isNotEmpty);
+        !widget.showSpectatorTopBar &&
+        showHeader &&
+        (controller == null || controller.handCards.isNotEmpty);
 
     // 공개 완료 콜백 전에 화면이 재생성되거나 hot reload된 경우에도
     // 헤더가 투명도 0에 멈추지 않도록 현재 상태에서 진입을 보장합니다.
@@ -298,7 +324,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================세로 화면==============================
+  // ============================================================================
+  // 세로 화면 배치
+  // ============================================================================
   Widget _buildPortraitScreen(
     LiarsPokerPhoneController? controller, {
     required PhoneGamePlayer? turnPlayer,
@@ -339,7 +367,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
             children: [
               // 조건부 레이어가 추가·삭제되어도 손패 State가 다른 Positioned로
               // 재사용되지 않도록 모든 레이어에 역할별 고유 key를 유지합니다.
-              //=======================배경 화면==============================
               const Positioned.fill(
                 key: ValueKey('portrait-background-slot'),
                 child: _PhoneGameBackground(isLandscape: false),
@@ -370,8 +397,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                         unawaited(_showExitModal(origin: origin)),
                   ),
                 ),
-              //=======================타이머==============================
+              // 서버 deadline을 표시할 뿐 로컬에서 턴 결과를 판정하지 않습니다.
               if (showHeader &&
+                  !widget.showSpectatorTopBar &&
                   controller != null &&
                   controller.turnDeadlineAt != null &&
                   !controller.isInitialLoading &&
@@ -396,7 +424,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================턴 정보·게임 버튼==============================
+              // 서버 권한 상태에 따라 LIAR/SUBMIT 조작을 활성화합니다.
               if (showControls)
                 Positioned(
                   key: const ValueKey('portrait-turn-action-slot'),
@@ -415,7 +443,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================손패==============================
+              // dealing에서는 ROUND/Table 안내 뒤 손패 공개 연출을 실행합니다.
               if (!hideHandDuringPenalty)
                 Positioned(
                   key: const ValueKey('portrait-hand-slot'),
@@ -431,7 +459,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================라이어 판정·벌칙 전환==============================
+              // LIAR 판정 문구와 벌칙 결과는 같은 중앙 슬롯에서 전환합니다.
               if (showPenaltyHandOverlay && controller != null)
                 Positioned.fill(
                   key: const ValueKey('portrait-penalty-stage-slot'),
@@ -442,7 +470,8 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================마지막 미제출 1인 FOLD 선택==============================
+              // 잔여카드 보유 생존자가 정확히 한 명일 때만 손패를 잠그고
+              // LIAR/FOLD를 표시합니다. 단순한 "마지막 미제출자"가 아닙니다.
               if (showFoldPrompt && controller != null)
                 Positioned(
                   key: const ValueKey('portrait-two-player-pass-slot'),
@@ -456,7 +485,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                         unawaited(controller.foldLastCardChallenge()),
                   ),
                 ),
-              //=======================공용 문구 고정 슬롯==============================
+              // 문구 레이어는 포인터를 가로채지 않으며 같은 슬롯을 유지합니다.
               Positioned.fill(
                 key: const ValueKey('portrait-announcement-slot'),
                 child: GameAnnouncementLayer(
@@ -485,7 +514,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                   },
                 ),
               ),
-              //=======================오류 메시지==============================
+              // 명령을 3회 재시도한 뒤에도 실패한 경우에만 오류를 표시합니다.
               if (controller?.errorMessage != null)
                 Positioned(
                   key: const ValueKey('portrait-error-slot'),
@@ -505,7 +534,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================가로 화면==============================
+  // ============================================================================
+  // 가로 화면 배치
+  // ============================================================================
   Widget _buildLandscapeScreen(
     LiarsPokerPhoneController controller, {
     required PhoneGamePlayer? turnPlayer,
@@ -545,7 +576,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
             children: [
               // 가로 화면도 조건부 레이어의 순서 변화가 손패 State를 교체하지
               // 않도록 모든 Positioned를 역할별 key로 분리합니다.
-              //=======================배경 화면==============================
               Positioned.fill(
                 key: const ValueKey('landscape-background-slot'),
                 child: const _PhoneGameBackground(isLandscape: true),
@@ -564,7 +594,8 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                         controller.table,
                       ).image(height: 30, filterQuality: FilterQuality.high),
                       centerWidget:
-                          controller.turnDeadlineAt != null &&
+                          !widget.showSpectatorTopBar &&
+                              controller.turnDeadlineAt != null &&
                               controller.phase != 'dealing' &&
                               controller.phase != 'penalty' &&
                               controller.isMyTurn
@@ -587,7 +618,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================손패==============================
+              // 방향 전환 전과 동일한 손패 State와 공개 완료값을 유지합니다.
               if (!hideHandDuringPenalty)
                 Positioned(
                   key: const ValueKey('landscape-hand-slot'),
@@ -607,7 +638,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================라이어 판정·벌칙 전환==============================
+              // LIAR 판정 문구와 벌칙 결과는 같은 중앙 슬롯에서 전환합니다.
               if (showPenaltyHandOverlay)
                 Positioned.fill(
                   key: const ValueKey('landscape-penalty-stage-slot'),
@@ -618,7 +649,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================마지막 미제출 1인 FOLD 선택==============================
+              // 잔여카드 보유 생존자가 정확히 한 명일 때만 제출을 잠급니다.
               if (showFoldPrompt)
                 Positioned(
                   key: const ValueKey('landscape-two-player-pass-slot'),
@@ -632,7 +663,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                         unawaited(controller.foldLastCardChallenge()),
                   ),
                 ),
-              //=======================턴 정보·게임 버튼==============================
+              // 서버 권한 상태에 따라 LIAR/SUBMIT 조작을 활성화합니다.
               if (showControls)
                 Positioned(
                   key: const ValueKey('landscape-turn-action-slot'),
@@ -652,7 +683,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     ),
                   ),
                 ),
-              //=======================공용 문구 고정 슬롯==============================
+              // 문구 레이어는 포인터를 가로채지 않으며 같은 슬롯을 유지합니다.
               Positioned.fill(
                 key: const ValueKey('landscape-announcement-slot'),
                 child: GameAnnouncementLayer(
@@ -680,7 +711,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                   },
                 ),
               ),
-              //=======================오류 메시지==============================
+              // 명령을 3회 재시도한 뒤에도 실패한 경우에만 오류를 표시합니다.
               if (controller.errorMessage != null)
                 Positioned(
                   key: const ValueKey('landscape-error-slot'),
@@ -721,7 +752,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================가로·세로 공통 손패==============================
+  // ---------------------------------------------------------------------------
+  // 가로·세로 공통 손패
+  // ---------------------------------------------------------------------------
   Widget _buildHand(
     LiarsPokerPhoneController? controller, {
     required bool isLandscape,
@@ -753,7 +786,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     if (controller.phase == 'dealing') {
       return const SizedBox.shrink();
     }
-    //=======================손패 없음==============================
+    // 손패가 아직 없거나 모두 소진된 동안에는 빈 상태 문구를 표시합니다.
     if (controller.handCards.isEmpty && !controller.hasRevealedHand) {
       _showControlsAfterFrame();
       if (!controller.isEliminated) return const SizedBox.shrink();
@@ -838,11 +871,13 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================제한 시간 종료==============================
+  // ---------------------------------------------------------------------------
+  // 제한 시간 종료
+  // ---------------------------------------------------------------------------
   void _handleTurnTimeout(LiarsPokerPhoneController controller) {
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
-    // 마지막 미제출 1인 선택에서 응답하지 않으면 상대를 의심하지 않고
+    // 잔여카드를 가진 마지막 1인이 응답하지 않으면 상대를 의심하지 않고
     // FOLD 처리해 새 라운드로 진행합니다.
     if (controller.showFoldPrompt && controller.canFoldLastCardChallenge) {
       unawaited(controller.foldLastCardChallenge());
@@ -856,7 +891,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     unawaited(controller.submitCardIndexes([0]));
   }
 
-  //=======================LIAR·SUBMIT 버튼==============================
+  // ---------------------------------------------------------------------------
+  // LIAR·SUBMIT 버튼
+  // ---------------------------------------------------------------------------
   Widget _buildGameActionButton(
     LiarsPokerPhoneController? controller, {
     required bool isLandscape,
@@ -894,7 +931,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================오류 메시지==============================
+  // ---------------------------------------------------------------------------
+  // 재시도 후에도 실패한 명령 오류
+  // ---------------------------------------------------------------------------
   Widget _buildErrorMessage(
     String message, {
     required VoidCallback onTap,
@@ -922,7 +961,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================손패 없음==============================
+  // 손패가 없을 때 가로·세로에서 공통으로 사용하는 문구입니다.
   Widget _emptyHandMessage() {
     return const Center(
       child: Text(
@@ -932,7 +971,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
-  //=======================테이블 카드 자산==============================
+  // ---------------------------------------------------------------------------
+  // 테이블 카드 자산
+  // ---------------------------------------------------------------------------
   AssetGenImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
       'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
@@ -985,7 +1026,8 @@ class _PenaltyStageSwitcher extends StatefulWidget {
 
 class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
     with SingleTickerProviderStateMixin {
-  static const _transitionDuration = Duration(milliseconds: 540);
+  static const _transitionDuration =
+      LiarsPokerFlowTiming.phonePenaltyStageSwitch;
 
   late final AnimationController _controller;
   late String _displayedStageId;
@@ -1114,7 +1156,7 @@ class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
   }
 }
 
-/// 2인 상황에서 남은 플레이어의 손패를 잠그고 새 라운드 진행을 선택합니다.
+/// 잔여카드를 가진 마지막 플레이어의 손패를 잠그고 FOLD 선택을 표시합니다.
 class _FoldPrompt extends StatelessWidget {
   const _FoldPrompt({required this.enabled, required this.onPressed});
 
@@ -1244,7 +1286,9 @@ class _PortraitGameLayout {
   final double statusFontSize;
 }
 
-//=======================가로·세로 공통 배경 위젯==============================
+// ============================================================================
+// 가로·세로 공통 배경 위젯
+// ============================================================================
 class _PhoneGameBackground extends StatelessWidget {
   const _PhoneGameBackground({required this.isLandscape});
 

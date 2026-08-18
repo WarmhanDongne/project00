@@ -124,6 +124,14 @@ class GameAnnouncementLayer extends StatelessWidget {
   Widget _buildAnnouncement(GameAnnouncement current) {
     final textStyle = style.textStyleFor(current);
     final duration = displayDuration ?? current.duration;
+    if (!current.animate && current.kind != GameAnnouncementKind.persistent) {
+      return _StaticTimedAnnouncement(
+        key: ValueKey(current.id),
+        duration: duration,
+        onCompleted: () => onCompleted?.call(current),
+        child: Text(current.text, textAlign: style.textAlign, style: textStyle),
+      );
+    }
     return switch (current.kind) {
       GameAnnouncementKind.gameStart => PhoneGameStartAnimation(
         key: ValueKey(current.id),
@@ -149,4 +157,38 @@ class GameAnnouncementLayer extends StatelessWidget {
       ),
     };
   }
+}
+
+/// 애니메이션을 끈 문구도 유지시간 후 정상적으로 단계를 완료하게 합니다.
+///
+/// 단순 [Text]만 반환하면 완료 콜백이 호출되지 않아 `GAME START` 또는
+/// `ROUND N` 단계에 영구적으로 머무를 수 있으므로 별도 타이머가 필요합니다.
+class _StaticTimedAnnouncement extends StatefulWidget {
+  const _StaticTimedAnnouncement({
+    super.key,
+    required this.child,
+    required this.duration,
+    required this.onCompleted,
+  });
+
+  final Widget child;
+  final Duration duration;
+  final VoidCallback onCompleted;
+
+  @override
+  State<_StaticTimedAnnouncement> createState() =>
+      _StaticTimedAnnouncementState();
+}
+
+class _StaticTimedAnnouncementState extends State<_StaticTimedAnnouncement> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(widget.duration, () {
+      if (mounted) widget.onCompleted();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

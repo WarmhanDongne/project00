@@ -132,4 +132,23 @@ void main() {
 
     expect(completed?.id, 'duration-override');
   });
+
+  testWidgets('애니메이션을 꺼도 유지시간 뒤 완료 콜백을 호출한다', (tester) async {
+    GameAnnouncement? completed;
+    const announcement = GameAnnouncement(
+      id: 'static-round',
+      kind: GameAnnouncementKind.round,
+      text: 'ROUND 2',
+      duration: Duration(milliseconds: 100),
+      animate: false,
+    );
+
+    await tester.pumpWidget(
+      buildLayer(announcement, onCompleted: (value) => completed = value),
+    );
+    expect(find.text('ROUND 2'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(completed?.id, 'static-round');
+  });
 }
