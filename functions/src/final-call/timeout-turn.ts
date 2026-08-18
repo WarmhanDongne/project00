@@ -3,12 +3,13 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {assertControllerSession} from "../room/controller-session.js";
 import {nextFinalCallPlayer, resolveFinalCallRound,
   selectBestFinalCallCombination, startTurn} from "./game.js";
 import {FinalCallCard, FinalCallRoom} from "./types.js";
 import {FINAL_CALL_REGION, finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 30초가 지난 현재 턴의 카드를 자동으로 버리고 다음 턴을 시작합니다. */
 export const timeoutFinalCallTurn = onCall<Data>(
@@ -26,6 +27,9 @@ export const timeoutFinalCallTurn = onCall<Data>(
       const turnUid = game.public.turnUid;
       if (requesterUid !== controllerUid && requesterUid !== turnUid) {
         throw new HttpsError("permission-denied", "현재 턴을 종료할 권한이 없습니다.");
+      }
+      if (requesterUid === controllerUid) {
+        assertControllerSession(room, requesterUid, request.data?.controllerSessionId);
       }
       const deadline = game.public.turnDeadlineAt;
       const now = Date.now();

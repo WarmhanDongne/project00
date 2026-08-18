@@ -16,6 +16,7 @@ class FinalCallPhoneActions extends StatelessWidget {
     required this.onCall,
     required this.onCompleteTurn,
     required this.replacementInProgress,
+    required this.showInitialActionHint,
   });
 
   final FinalCallController controller;
@@ -24,6 +25,7 @@ class FinalCallPhoneActions extends StatelessWidget {
   final VoidCallback onCall;
   final Future<void> Function(String? replaceCardId) onCompleteTurn;
   final bool replacementInProgress;
+  final bool showInitialActionHint;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,7 @@ class FinalCallPhoneActions extends StatelessWidget {
         onTap: onOpenCardChange,
       );
     }
-    return Column(
+    final actions = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _PressableImageButton(
@@ -62,6 +64,91 @@ class FinalCallPhoneActions extends StatelessWidget {
           onTap: onOpenCardChange,
         ),
       ],
+    );
+    return showInitialActionHint && (controller.canCall || controller.canDraw)
+        ? FinalCallPrimaryActionHint(child: actions)
+        : actions;
+  }
+}
+
+/// 처음 게임에 들어온 사용자가 CALL·새 카드 조작부를 찾도록 돕는 안내 연출입니다.
+///
+/// 손패가 있는 왼쪽에서 오른쪽 버튼 방향으로 두 화살표가 움직입니다.
+/// 실제 버튼을 한 번 누르면 부모가 이 위젯을 제거합니다.
+class FinalCallPrimaryActionHint extends StatefulWidget {
+  const FinalCallPrimaryActionHint({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<FinalCallPrimaryActionHint> createState() =>
+      _FinalCallPrimaryActionHintState();
+}
+
+class _FinalCallPrimaryActionHintState extends State<FinalCallPrimaryActionHint>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _bounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 680),
+    )..repeat(reverse: true);
+    _bounce = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    ).drive(Tween(begin: 0.0, end: 9.0));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _bounce,
+      builder: (context, child) => Padding(
+        padding: const EdgeInsets.only(left: 34),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            widget.child,
+            Positioned(
+              left: -34,
+              top: 33,
+              child: Transform.translate(
+                key: const Key('final-call-action-hint-top'),
+                offset: Offset(_bounce.value, 0),
+                child: const Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Color(0xFF141414),
+                  size: 44,
+                ),
+              ),
+            ),
+            Positioned(
+              left: -34,
+              bottom: 33,
+              child: Transform.translate(
+                key: const Key('final-call-action-hint-bottom'),
+                offset: Offset(_bounce.value, 0),
+                child: const Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Color(0xFF141414),
+                  size: 44,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

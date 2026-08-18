@@ -95,6 +95,7 @@ export interface LiarsPokerGameState {
 
 export interface RealtimeRoom {
   controllerUid?: string;
+  controllerSessionId?: string;
   hostUid?: string;
   selectedGame?: string;
   players?: Record<string, Record<string, unknown>>;

@@ -8,9 +8,17 @@ import {
 } from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
 import {
+  InterruptibleRoom,
+  reconcileGamePlayerConnection,
+} from "../game-interruption/state.js";
+import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https";
+import {
+  assertControllerSession,
+  createControllerSessionId,
+} from "./controller-session.js";
 
 const REGION = "asia-northeast3";
 
@@ -28,6 +36,7 @@ const MAX_ROOM_CODE_ATTEMPTS = 20;
 type SaveSeatIndexesData = {
   roomCode?: unknown;
   seatIndexesByUid?: unknown;
+  controllerSessionId?: unknown;
 };
 
 type JoinRealtimeRoomData = {
@@ -69,6 +78,8 @@ export const createRealtimeRoom = onCall(
     }
 
     const database = getDatabase();
+    const controllerSessionId = createControllerSessionId();
+    const now = Date.now();
 
     for (
       let attempt = 0;
@@ -91,10 +102,17 @@ export const createRealtimeRoom = onCall(
           return {
             roomCode,
             controllerUid,
-            // 클라이언트는 방 전체 onDisconnect 삭제를 예약한 뒤에만
-            // true로 바꿉니다. 따라서 휴대폰이 예약 없는 방에
-            // 입장하는 경우를 막을 수 있습니다.
-            controllerConnected: false,
+            // controllerSessionId는 보안 규칙에서 읽기를 막고 태블릿이
+            // 로컬에 보관합니다. 모든 controller 명령은 UID와 세션을 함께
+            // 검사하여 오래된 앱 인스턴스의 요청을 차단합니다.
+            controllerSessionId,
+            controllerConnected: true,
+            controllerPresence: {
+              connected: true,
+              lastSeen: now,
+            },
+            status: "waiting",
+            cleanupAt: now + 3 * 60 * 1000,
             maxPlayers: DEFAULT_MAX_PLAYERS,
             selectedGame: null,
             createdAt: ServerValue.TIMESTAMP,
@@ -103,9 +121,11 @@ export const createRealtimeRoom = onCall(
       );
 
       if (result.committed) {
+        await database.ref(`controllerRooms/${controllerUid}`).set(roomCode);
         return {
           success: true,
           roomCode,
+          controllerSessionId,
         };
       }
     }
@@ -169,6 +189,9 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
     }
 
     const room = roomSnapshot.val() as Record<string, unknown>;
+    if (room.status === "closed") {
+      throw new HttpsError("failed-precondition", "종료된 방입니다.");
+    }
     const maxPlayers = typeof room.maxPlayers === "number" ?
       room.maxPlayers : DEFAULT_MAX_PLAYERS;
     const playersRef = roomRef.child("players");
@@ -238,9 +261,23 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
               (typeof existingPlayer.profileImageUrl === "string" ?
                 existingPlayer.profileImageUrl : ""),
             isConnected: true,
+            lastSeen: Date.now(),
             accentColor: effectiveAccentColor,
           };
           return players;
+        }
+
+        const publicGame = room.game as
+          {public?: {status?: unknown}} | undefined;
+        if (
+          room.status === "finished" ||
+          publicGame?.public?.status === "playing"
+        ) {
+          rejection = new HttpsError(
+            "failed-precondition",
+            "이미 진행 중인 게임에는 새로 참가할 수 없습니다.",
+          );
+          return;
         }
 
         if (Object.keys(players).length >= maxPlayers) {
@@ -257,6 +294,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           profileImageUrl,
           accentColor,
           isConnected: true,
+          lastSeen: Date.now(),
           seatIndex: -1,
           role: "player",
           status: "active",
@@ -273,6 +311,33 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         "aborted",
         "방 참가 요청이 충돌했습니다. 다시 시도해주세요.",
       );
+    }
+
+    // =======================게임 중 재접속 확정==============================
+    // players 하위 트랜잭션과 연결 이벤트 트리거의 실행 순서가 엇갈려도 현재
+    // presence와 게임 중단 해제를 한 방 트랜잭션에서 다시 확정합니다. seat와
+    // game/private는 UID 경로를 그대로 유지하므로 절대 새로 만들지 않습니다.
+    if (reconnected) {
+      await roomRef.transaction((currentValue) => {
+        if (currentValue === null || typeof currentValue !== "object") {
+          return currentValue;
+        }
+        const currentRoom = currentValue as Record<string, unknown> & {
+          players?: Record<string, Record<string, unknown>>;
+        };
+        const currentPlayer = currentRoom.players?.[uid];
+        if (!currentPlayer) return currentValue;
+        currentPlayer.isConnected = true;
+        currentPlayer.lastSeen = Date.now();
+        reconcileGamePlayerConnection(
+          currentRoom as unknown as InterruptibleRoom,
+          uid,
+          false,
+          true,
+          Date.now(),
+        );
+        return currentRoom;
+      });
     }
 
     return {
@@ -350,17 +415,11 @@ export const saveRealtimePlayerSeatIndexes =
         unknown
       >;
 
-      // 신규 방은 controllerUid를 사용합니다.
-      // hostUid는 기존 방 호환용입니다.
-      const controllerUid =
-        room.controllerUid ?? room.hostUid;
-
-      if (controllerUid !== requesterUid) {
-        throw new HttpsError(
-          "permission-denied",
-          "방을 만든 아이패드에서만 자리를 저장할 수 있습니다.",
-        );
-      }
+      assertControllerSession(
+        room,
+        requesterUid,
+        request.data?.controllerSessionId,
+      );
 
       const players = room.players;
 

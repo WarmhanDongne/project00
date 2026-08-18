@@ -2,52 +2,56 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "controllerRooms": {
+      ".read": false,
+      ".write": false
+    },
     "rooms": {
+      ".indexOn": ["controllerPresence/lastSeen", "status"],
       "$roomCode": {
-        ".write": "auth != null && ((!data.exists() && newData.child('controllerUid').val() == auth.uid) || (data.exists() && !newData.exists() && (data.child('controllerUid').val() == auth.uid || data.child('hostUid').val() == auth.uid)))",
-        "roomCode": {
-          ".read": "auth != null"
-        },
+        ".write": false,
+        "roomCode": {".read": "auth != null"},
         "controllerUid": {
           ".read": "auth != null && (data.val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())"
         },
-        "createdAt": {
-          ".read": "auth != null"
+        "controllerSessionId": {".read": false, ".write": false},
+        "createdAt": {".read": "auth != null"},
+        "status": {
+          ".read": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())",
+          ".write": false
         },
-        "controllerConnected": {
-          ".read": "auth != null",
-          ".write": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid)",
-          ".validate": "newData.isBoolean()"
+        "controllerConnected": {".read": "auth != null", ".write": false},
+        "controllerPresence": {
+          ".read": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())",
+          ".write": "auth != null && root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid",
+          ".validate": "newData.hasChildren(['connected', 'lastSeen']) && newData.child('connected').isBoolean() && newData.child('lastSeen').isNumber() && newData.child('lastSeen').val() <= now + 10000"
         },
-        "maxPlayers": {
-          ".read": "auth != null"
-        },
-        "selectedGame": {
-          ".read": "auth != null",
-          ".write": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid) && root.child('rooms').child($roomCode).child('game').child('public').child('status').val() != 'playing'"
-        },
+        "maxPlayers": {".read": "auth != null"},
+        "selectedGame": {".read": "auth != null", ".write": false},
         "players": {
           ".read": "auth != null",
           "$playerUid": {
-            ".write": "auth != null && (auth.uid == $playerUid || root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid)",
-            ".validate": "!newData.exists() || (newData.child('uid').val() == $playerUid && newData.child('nickname').isString() && newData.child('nickname').val().length > 0 && newData.child('nickname').val().length <= 20 && newData.child('seatIndex').isNumber())"
+            ".write": false,
+            "isConnected": {
+              ".write": "auth != null && auth.uid == $playerUid",
+              ".validate": "newData.isBoolean()"
+            },
+            "lastSeen": {
+              ".write": "auth != null && auth.uid == $playerUid",
+              ".validate": "newData.isNumber() && newData.val() <= now + 10000"
+            }
           }
         },
         "game": {
           ".read": false,
           ".write": false,
           "public": {
-            ".read": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('hostUid').val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())"
+            ".read": "auth != null && (root.child('rooms').child($roomCode).child('controllerUid').val() == auth.uid || root.child('rooms').child($roomCode).child('players').child(auth.uid).exists())"
           },
           "private": {
-            "$playerUid": {
-              ".read": "auth != null && auth.uid == $playerUid"
-            }
+            "$playerUid": {".read": "auth != null && auth.uid == $playerUid"}
           },
-          "server": {
-            ".read": false,
-            ".write": false
-          }
+          "server": {".read": false, ".write": false}
         }
       }
     }

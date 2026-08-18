@@ -12,7 +12,7 @@ import {
   requireFinalCallGame,
 } from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 방과 참가자는 유지하고 현재 Final Call 게임만 수동 종료합니다. */
 export const endFinalCallGame = onCall<Data>(
@@ -26,7 +26,7 @@ export const endFinalCallGame = onCall<Data>(
     const transaction = await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
-      assertFinalCallController(room, uid);
+      assertFinalCallController(room, uid, request.data?.controllerSessionId);
       const game = requireFinalCallGame(room, {allowInterruption: true});
       const now = Date.now();
 

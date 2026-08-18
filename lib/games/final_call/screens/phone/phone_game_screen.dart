@@ -62,6 +62,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
   // 컨트롤러로 함께 등장합니다.
   late final AnimationController _controlsEntryController;
   int? _revealedRoundForEntry;
+  bool _hasUsedPrimaryAction = false;
 
   FinalCallController get controller => widget.controller;
   bool get handRevealed => widget.handRevealed;
@@ -128,6 +129,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
         _deadlinePassed(expectedDeadline)) {
       return;
     }
+    _markPrimaryActionUsed();
     final source = await FinalCallCardChangeDialog.show(
       context,
       discardCard: discard,
@@ -161,6 +163,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
 
   Future<void> _call(BuildContext context) async {
     if (!controller.canCall) return;
+    _markPrimaryActionUsed();
     // 판을 뒤집는 선언이므로 강한 진동으로 확정감을 줍니다.
     GameFeedback.declare();
     onSelectedCardChanged(null);
@@ -168,6 +171,11 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
     if (!completed && context.mounted) {
       _showActionError(context, controller.actionErrorMessage);
     }
+  }
+
+  void _markPrimaryActionUsed() {
+    if (_hasUsedPrimaryAction || !mounted) return;
+    setState(() => _hasUsedPrimaryAction = true);
   }
 
   void _showActionError(BuildContext context, String message) {
@@ -388,6 +396,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
                     onCall: () => _call(context),
                     onCompleteTurn: onCompleteTurn,
                     replacementInProgress: replacementInProgress,
+                    showInitialActionHint: !_hasUsedPrimaryAction,
                   ),
           ),
         ),

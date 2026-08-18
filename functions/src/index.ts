@@ -17,6 +17,16 @@ export {
 } from "./room/realtime-room-functions.js";
 
 export {
+  cleanupStaleRealtimeRooms,
+  closeRoom,
+  leaveRealtimeRoom,
+  removeRealtimeRoomPlayer,
+  resumeRealtimeControllerRoom,
+  selectRealtimeRoomGame,
+  syncRealtimeRoomGameStatus,
+} from "./room/realtime-room-lifecycle.js";
+
+export {
   checkEmailDuplicate,
 } from "./auth/check-email.js";
 

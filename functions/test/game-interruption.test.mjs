@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   beginGameInterruption,
   cancelGameInterruption,
+  reconcileGamePlayerConnection,
 } from "../lib/game-interruption/state.js";
 
 function room() {
@@ -87,4 +88,32 @@ test("연결이 복구되면 중단 상태를 없애고 남은 턴 시간을 복
   assert.equal(value.game.public.interruption, undefined);
   assert.equal(value.game.server.interruption, undefined);
   assert.equal(value.game.public.turnDeadlineAt, 54000);
+});
+
+test("재접속 뒤 늦게 도착한 단절 이벤트는 게임을 다시 멈추지 않는다", () => {
+  const value = room();
+  value.players.leaving.isConnected = true;
+
+  reconcileGamePlayerConnection(value, "leaving", true, false, 1000);
+
+  assert.equal(value.game.public.interruption, undefined);
+  assert.equal(value.game.public.turnDeadlineAt, 51000);
+});
+
+test("재접속 확정은 중단 상태와 턴 남은 시간을 복원한다", () => {
+  const value = room();
+  const interruption = beginGameInterruption(
+    value,
+    "leaving",
+    "disconnected",
+    1000,
+  );
+  value.players.leaving.isConnected = true;
+
+  reconcileGamePlayerConnection(value, "leaving", false, true, 4000);
+
+  assert.equal(value.game.public.interruption, undefined);
+  assert.equal(value.game.server.interruption, undefined);
+  assert.equal(value.game.public.turnDeadlineAt, 54000);
+  assert.ok(interruption);
 });

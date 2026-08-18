@@ -12,7 +12,11 @@ import {
   finalCallUid,
 } from "./validation.js";
 
-type StartData = {roomCode?: unknown; restart?: unknown};
+type StartData = {
+  roomCode?: unknown;
+  restart?: unknown;
+  controllerSessionId?: unknown;
+};
 
 export const startFinalCallGame = onCall<StartData>(
   {region: FINAL_CALL_REGION},
@@ -23,7 +27,7 @@ export const startFinalCallGame = onCall<StartData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const room = (await roomRef.get()).val() as FinalCallRoom | null;
     if (!room) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
-    assertFinalCallController(room, uid);
+    assertFinalCallController(room, uid, request.data?.controllerSessionId);
     if (room.selectedGame !== "final_call") {
       throw new HttpsError("failed-precondition", "Final Call이 선택되지 않았습니다.");
     }

@@ -223,8 +223,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final turnPlayer = controller?.players[controller.turnUid];
     final waitingMessage = controller?.emptyHandWaitingMessage;
-    final showFoldPrompt =
-        controller?.showFoldPrompt ?? false;
+    final showFoldPrompt = controller?.showFoldPrompt ?? false;
     final showPenaltyHandOverlay = controller?.showPenaltyHandOverlay ?? false;
     // 허위 선언 판정 문구를 보여주는 동안에는 기존 요청대로 손패를
     // 어둡게 유지하고, 실제 벌칙 진행 및 결과 표시 단계에서는 숨깁니다.
@@ -443,7 +442,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================2인 FOLD 선택==============================
+              //=======================마지막 미제출 1인 FOLD 선택==============================
               if (showFoldPrompt && controller != null)
                 Positioned(
                   key: const ValueKey('portrait-two-player-pass-slot'),
@@ -619,7 +618,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     result: controller.visiblePenaltyResult,
                   ),
                 ),
-              //=======================2인 FOLD 선택==============================
+              //=======================마지막 미제출 1인 FOLD 선택==============================
               if (showFoldPrompt)
                 Positioned(
                   key: const ValueKey('landscape-two-player-pass-slot'),
@@ -843,10 +842,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   void _handleTurnTimeout(LiarsPokerPhoneController controller) {
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
-    // 1대1 마지막 카드 선택에서 응답하지 않으면 상대를 의심하지 않고
+    // 마지막 미제출 1인 선택에서 응답하지 않으면 상대를 의심하지 않고
     // FOLD 처리해 새 라운드로 진행합니다.
-    if (controller.showFoldPrompt &&
-        controller.canFoldLastCardChallenge) {
+    if (controller.showFoldPrompt && controller.canFoldLastCardChallenge) {
       unawaited(controller.foldLastCardChallenge());
       return;
     }

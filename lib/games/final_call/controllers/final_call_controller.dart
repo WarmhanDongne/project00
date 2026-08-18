@@ -27,6 +27,7 @@ class FinalCallController extends Notifier<FinalCallGameState> {
 
   StreamSubscription<DatabaseEvent>? _publicSubscription;
   StreamSubscription<DatabaseEvent>? _privateSubscription;
+  Timer? _missingPublicTimer;
   int _discardEventVersion = 0;
 
   @override
@@ -47,6 +48,7 @@ class FinalCallController extends Notifier<FinalCallGameState> {
           );
     }
     ref.onDispose(() {
+      _missingPublicTimer?.cancel();
       unawaited(_publicSubscription?.cancel());
       unawaited(_privateSubscription?.cancel());
     });
@@ -137,24 +139,54 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   void _handlePublic(DatabaseEvent event) {
     if (!ref.mounted) return;
 
-    // 태블릿이 게임 노드를 정리하면 휴대폰도 수동 종료 상태로 전환합니다.
+    // 재연결 직후 캐시가 잠깐 null인 경우를 실제 게임 삭제로 오인하지 않습니다.
     if (!event.snapshot.exists || event.snapshot.value == null) {
-      state = state.copyWith(
-        loading: false,
-        status: 'finished',
-        finishReason: 'manual',
-        phase: 'finished',
-        turnUid: null,
-        turnDeadlineAt: null,
-        pendingDrawUid: null,
-        pendingDrawSource: null,
-      );
+      _confirmMissingPublicGame();
       return;
     }
-    if (event.snapshot.value is! Map) return;
+    _missingPublicTimer?.cancel();
+    _missingPublicTimer = null;
+    _applyPublicValue(event.snapshot.value);
+  }
+
+  void _confirmMissingPublicGame() {
+    if (_missingPublicTimer != null) return;
+    _missingPublicTimer = Timer(const Duration(milliseconds: 1500), () async {
+      _missingPublicTimer = null;
+      try {
+        final snapshot = await service.query.readPublicGame(roomCode);
+        if (!ref.mounted) return;
+        if (snapshot.exists && snapshot.value != null) {
+          _applyPublicValue(snapshot.value);
+          return;
+        }
+        _finishForRemovedGame();
+      } catch (_) {
+        // 네트워크가 아직 복구 중이면 마지막 정상 상태를 유지합니다. onValue가
+        // 재연결 후 현재 공개 상태를 다시 전달하므로 임의 종료하지 않습니다.
+      }
+    });
+  }
+
+  void _finishForRemovedGame() {
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      loading: false,
+      status: 'finished',
+      finishReason: 'manual',
+      phase: 'finished',
+      turnUid: null,
+      turnDeadlineAt: null,
+      pendingDrawUid: null,
+      pendingDrawSource: null,
+    );
+  }
+
+  void _applyPublicValue(Object? value) {
+    if (!ref.mounted || value is! Map) return;
 
     final current = state;
-    final map = Map<Object?, Object?>.from(event.snapshot.value as Map);
+    final map = Map<Object?, Object?>.from(value);
     final nextRevision = (map['revision'] as num?)?.toInt() ?? current.revision;
     final nextPendingDrawUid = map['pendingDrawUid']?.toString();
     final nextPhase = map['phase']?.toString() ?? current.phase;
@@ -252,6 +284,12 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   void _handlePrivate(DatabaseEvent event) {
     if (!ref.mounted) return;
     final value = event.snapshot.value;
+    if (value == null &&
+        phase != 'dealing' &&
+        (hand.isNotEmpty || pendingDraw != null)) {
+      // 연결 복구 중의 일시적인 null로 손패와 이미 받은 새 카드를 지우지 않습니다.
+      return;
+    }
     final cards = <FinalCallCard>[];
     FinalCallCard? nextPendingDraw;
     if (value is Map) {

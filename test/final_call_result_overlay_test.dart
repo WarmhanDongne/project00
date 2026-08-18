@@ -39,8 +39,9 @@ void main() {
     );
 
     expect(find.text('게임 종료'), findsOneWidget);
+    expect(find.text('레드팀 승리'), findsOneWidget);
     expect(find.text('mino123  ·  teammate'), findsOneWidget);
-    expect(find.text('RED TEAM WINNER'), findsOneWidget);
+    expect(find.text('FINAL CALL WINNER'), findsOneWidget);
     expect(
       find.byKey(const Key('final-call-winner-profile-0')),
       findsOneWidget,

@@ -8,7 +8,7 @@ import {FinalCallRoom} from "./types.js";
 import {assertFinalCallController, FINAL_CALL_REGION, finalCallRoomCode,
   finalCallUid, requireFinalCallGame} from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 export const startFinalCallNextRound = onCall<Data>(
   {region: FINAL_CALL_REGION},
@@ -20,7 +20,7 @@ export const startFinalCallNextRound = onCall<Data>(
     const transaction = await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
-      assertFinalCallController(room, uid);
+      assertFinalCallController(room, uid, request.data?.controllerSessionId);
       const game = requireFinalCallGame(room);
       if (game.public.phase !== "roundResult" || game.public.status !== "playing") {
         throw new HttpsError("failed-precondition", "다음 라운드를 시작할 수 없습니다.");
