@@ -184,13 +184,12 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
       setState(() => isEndingGame = false);
       return;
     }
-    // game 노드 정리는 화면 복귀를 막지 않는 선택적 뒷정리입니다.
-    // clearGame은 방을 남긴 채 game 노드만 지우는 뒷정리입니다. 서버가
-    // `status == finished`를 아직 못 읽는 등으로 실패할 수 있는데, 그때
-    // 화면 전환까지 막으면 결과 화면에 갇힙니다. Liar's Poker는 endGame만
-    // 하고 바로 복귀하므로, 정리 실패는 무시하고 동일하게 홈으로 나갑니다.
-    await controller?.clearGame();
-    if (!mounted) return;
+    // Liar's Poker와 같은 흐름입니다: endGame 성공 = 즉시 복귀.
+    //
+    // 예전에는 여기서 clearGame까지 기다렸습니다. game 노드를 지우는 건 선택적
+    // 뒷정리인데, callable 왕복이 하나 더 붙어 종료가 그만큼 늦어지고 실패하면
+    // 결과 화면이 잠깐 비칩니다. 새 게임 시작(startFinalCallGame)이 finished
+    // 상태의 기존 게임을 그대로 교체하므로 미리 지울 필요가 없습니다.
     Navigator.of(context).maybePop();
   }
 

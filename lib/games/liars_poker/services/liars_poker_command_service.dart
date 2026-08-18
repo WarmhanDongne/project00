@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
@@ -131,6 +133,12 @@ class LiarsPokerCommandService {
       throw LiarsPokerCommandException(
         code: error.code,
         message: error.message ?? '게임 요청을 처리하지 못했습니다.',
+      );
+    } on TimeoutException {
+      // 재전송 예산을 다 썼습니다. 여기서 실패로 끝내야 화면이 잠금에서 풀립니다.
+      throw const LiarsPokerCommandException(
+        code: 'deadline-exceeded',
+        message: '서버 응답이 늦어 요청을 취소했습니다. 다시 시도해주세요.',
       );
     }
   }

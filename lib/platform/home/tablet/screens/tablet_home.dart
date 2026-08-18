@@ -126,10 +126,13 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
       unawaited(roomProvider.resumeControllerPresence());
       return;
     }
+    //=======================일시적인 inactive는 끊김이 아닙니다==============================
+    // iOS는 제어 센터를 내리거나 앱 스위처를 띄우기만 해도 inactive를 보냅니다.
+    // 그때마다 controllerPresence.connected를 false로 내리면, 휴대폰들이 그 값을
+    // '태블릿이 방을 닫았다'로 읽고 전원 방에서 나가 버립니다. 실제로 앱이
+    // 내려간 paused/detached에서만 연결 해제로 처리합니다.
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.hidden) {
+        state == AppLifecycleState.detached) {
       unawaited(roomProvider.pauseControllerPresence());
     }
   }
