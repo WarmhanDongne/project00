@@ -26,9 +26,26 @@ class TabletGameSettingsDialog extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '설정',
-              style: TextStyle(fontSize: 50, fontWeight: FontWeight.w900),
+            Row(
+              children: [
+                const Text(
+                  '설정',
+                  style: TextStyle(fontSize: 50, fontWeight: FontWeight.w900),
+                ),
+                // Spacer(),
+                // const Text(
+                //   '방코드',
+                //   style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
+                // ),
+                // SizedBox(width:10),
+                // Text(
+                //   provider.roomCode ?? '',
+                //   style: const TextStyle(
+                //     fontSize: 50,
+                //     fontWeight: FontWeight.w800,
+                //   ),
+                // ),
+              ],
             ),
             const SizedBox(height: 40),
             Expanded(
@@ -88,6 +105,7 @@ class _GameInfo extends StatelessWidget {
                   )
                 : const _ImagePlaceholder(),
           ),
+          const SizedBox(height: 70),
         ],
       ),
     );
@@ -143,16 +161,6 @@ class _RoomInfo extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            '방코드',
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
-          ),
-          Center(
-            child: Text(
-              provider.roomCode ?? '',
-              style: const TextStyle(fontSize: 50, fontWeight: FontWeight.w800),
-            ),
-          ),
         ],
       ),
     );
@@ -262,15 +270,7 @@ class _SettingsActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        TabletGameDialogButton(
-          text: '닫기',
-          color: Colors.black,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        const SizedBox(height: 30),
+    return 
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -281,7 +281,7 @@ class _SettingsActions extends StatelessWidget {
                   ? null
                   : () => _closeAndRun(context, onRestartGame),
             ),
-            const SizedBox(width: 30),
+            Spacer(),
             TabletGameDialogButton(
               text: '게임 종료',
               color: Colors.red,
@@ -289,9 +289,13 @@ class _SettingsActions extends StatelessWidget {
                   ? null
                   : () => _closeAndRun(context, onEndGame),
             ),
+            Spacer(),
+            TabletGameDialogButton(
+              text: '닫기',
+              color: Colors.black,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ],
-        ),
-      ],
-    );
+        );
   }
 }

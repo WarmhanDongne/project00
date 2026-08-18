@@ -56,7 +56,9 @@ class FinalCallPhoneGameScreen extends StatefulWidget {
 
 class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
     with SingleTickerProviderStateMixin {
-  //=======================조작부 등장==============================
+  // ---------------------------------------------------------------------------
+  // 손패 공개 후 조작부 등장
+  // ---------------------------------------------------------------------------
   // Liar's Poker와 동일한 컨트롤러·연출(PhoneControlEntryAnimation)을 그대로
   // 사용합니다. 손패 펼치기가 끝나는 순간 상단바·타이머·조작부가 같은
   // 컨트롤러로 함께 등장합니다.
@@ -208,7 +210,8 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
           children: [
             Column(
               children: [
-                //=======================상단바 자리==============================
+                // 상단바가 겹쳐 그려져도 카드 위치가 밀리지 않도록 높이를
+                // 항상 확보합니다.
                 // 상단바 자체는 공용 셸(PhoneGameShell)이 이 자리 위에 겹쳐
                 // 그립니다. 셸이 표시 시점과 퇴장 접근을 보장하며, 여기서는
                 // 카드 위치가 달라지지 않도록 같은 높이만 비워 둡니다.
@@ -270,7 +273,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
                               ),
                               Expanded(
                                 flex: 3,
-                                //=======================조작부·턴 정보 등장==============================
+                                // 상단바보다 조금 늦게 조작부와 턴 정보를 등장시킵니다.
                                 // 상단바보다 살짝 늦게, 큰 버튼답게 떨어지는
                                 // Liar's Poker의 heavyDrop 연출을 씁니다.
                                 child: PhoneControlEntryAnimation(
@@ -283,7 +286,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
                               ),
                             ],
                           ),
-                          //=======================상단 UI와 카드 사이 타이머==============================
+                          // 서버 deadline 타이머를 상단바와 카드 사이에 표시합니다.
                           if (timerVisible)
                             Positioned(
                               top: timerTop,
@@ -443,7 +446,7 @@ class _FinalSubmitAction extends StatelessWidget {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
-        //=======================최종 조합 점수 카드==============================
+        // 선택한 최종 조합의 현재 점수를 즉시 다시 계산해 표시합니다.
         SizedBox(
           width: scoreBlockHeight * 381 / 512,
           height: scoreBlockHeight,

@@ -30,6 +30,7 @@ class LiarsPokerTabletState {
     required this.activeAnimationPlayId,
     required this.profileImageUrls,
     required this.remainingCardCounts,
+    required this.activeSeatIndexes,
     required this.interruption,
   });
 
@@ -55,6 +56,7 @@ class LiarsPokerTabletState {
         activeAnimationPlayId: null,
         profileImageUrls: const <String>[],
         remainingCardCounts: List<int>.filled(playerCount, cardsPerPlayer),
+        activeSeatIndexes: List<int>.generate(playerCount, (index) => index),
         interruption: null,
       );
 
@@ -78,6 +80,7 @@ class LiarsPokerTabletState {
   final String? activeAnimationPlayId;
   final List<String> profileImageUrls;
   final List<int> remainingCardCounts;
+  final List<int> activeSeatIndexes;
   final GameInterruption? interruption;
 
   LiarsPokerTabletState copyWith({
@@ -101,6 +104,7 @@ class LiarsPokerTabletState {
     Object? activeAnimationPlayId = _notProvided,
     List<String>? profileImageUrls,
     List<int>? remainingCardCounts,
+    List<int>? activeSeatIndexes,
     Object? interruption = _notProvided,
   }) {
     return LiarsPokerTabletState(
@@ -143,6 +147,9 @@ class LiarsPokerTabletState {
       ),
       remainingCardCounts: List.unmodifiable(
         remainingCardCounts ?? this.remainingCardCounts,
+      ),
+      activeSeatIndexes: List.unmodifiable(
+        activeSeatIndexes ?? this.activeSeatIndexes,
       ),
       interruption: identical(interruption, _notProvided)
           ? this.interruption

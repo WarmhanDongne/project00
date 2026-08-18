@@ -19,6 +19,7 @@ class GameAnnouncement {
     required this.text,
     this.tone = GameAnnouncementTone.neutral,
     this.duration = const Duration(milliseconds: 1900),
+    this.animate = true,
     this.blocksInteraction = false,
     this.showScrim = false,
   });
@@ -29,6 +30,7 @@ class GameAnnouncement {
     this.duration = const Duration(milliseconds: 1700),
   }) : kind = GameAnnouncementKind.gameStart,
        tone = GameAnnouncementTone.neutral,
+       animate = true,
        blocksInteraction = true,
        showScrim = false;
 
@@ -87,6 +89,12 @@ class GameAnnouncement {
   final String text;
   final GameAnnouncementTone tone;
   final Duration duration;
+
+  /// false이면 Fade/Scale 없이 문구를 정적으로 유지합니다.
+  ///
+  /// 유지시간이 끝나면 애니메이션을 사용한 경우와 동일하게 완료 콜백을
+  /// 호출하므로, 연출을 꺼도 화면 단계가 멈추지 않습니다.
+  final bool animate;
   final bool blocksInteraction;
   final bool showScrim;
 }

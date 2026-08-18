@@ -23,7 +23,7 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //=======================사이드바 표시 조건==============================
+    // 분배·결과처럼 전체 화면 연출이 필요한 단계에서는 사이드바를 숨깁니다.
     // 카드 배분 전과 배분 중에는 숨기고, RoundStartReveal이 테이블과 잔여
     // 카드를 띄우기 시작하는 roundStarting부터 함께 등장시킵니다.
     if (stage == LiarsPokerTabletStage.waiting ||

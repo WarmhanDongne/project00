@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/game_entry_unroll.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/game_flow/game_flow_config.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
+import 'package:project00/games/shared/game_flow/phone_game_flow_config.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 
 /// 휴대폰 게임 화면의 공통 골격입니다.
@@ -31,8 +33,7 @@ class PhoneGameShell extends StatefulWidget {
     this.closingMessage = GameFlowCopy.insufficientPlayers,
     this.introTextColor = Colors.white,
     this.announcementStyle,
-    this.gameStartAnnouncementDuration = const Duration(milliseconds: 1700),
-    this.roundAnnouncementDuration = const Duration(milliseconds: 1900),
+    this.flowConfig,
     this.contentReady = true,
     this.contentRevealed = true,
   });
@@ -56,8 +57,12 @@ class PhoneGameShell extends StatefulWidget {
   final String closingMessage;
   final Color introTextColor;
   final GameAnnouncementStyle? announcementStyle;
-  final Duration gameStartAnnouncementDuration;
-  final Duration roundAnnouncementDuration;
+
+  /// 문구·연출·입력 차단 의도를 모아 둔 화면 단계 설정입니다.
+  ///
+  /// null이면 [buildPhoneGameFlowConfig]의 공용 기본값을 사용합니다. 게임별로
+  /// 시간을 바꿀 때 셸 내부 타이머를 수정하지 말고 이 설정을 교체하세요.
+  final GameFlowConfig<GameScreenPhase>? flowConfig;
 
   /// 진행 화면을 그릴 준비가 됐는지 여부입니다. false면 배경만 보여 줍니다.
   final bool contentReady;
@@ -85,7 +90,7 @@ class _PhoneGameShellState extends State<PhoneGameShell>
     super.initState();
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 920),
+      duration: PhoneGameFlowTiming.controlsEntry,
     );
     if (_shouldShowTopBar) {
       _entryController.value = 1;
@@ -130,7 +135,8 @@ class _PhoneGameShellState extends State<PhoneGameShell>
 
   @override
   Widget build(BuildContext context) {
-    final announcement = _announcementForPhase();
+    final flowStep = _flowStep;
+    final announcement = flowStep.buildAnnouncement();
     return GameEntryUnroll(
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -139,15 +145,29 @@ class _PhoneGameShellState extends State<PhoneGameShell>
           children: [
             widget.background,
             ...switch (widget.phase) {
-              GameScreenPhase.connecting => const <Widget>[],
-              GameScreenPhase.intro ||
-              GameScreenPhase.roundIntro => const <Widget>[],
-              GameScreenPhase.playing => _buildPlaying(),
-              GameScreenPhase.result => [
-                if (widget.result != null) widget.result!,
-                ..._buildTopBar(),
-              ],
-              GameScreenPhase.closing => const <Widget>[],
+              GameScreenPhase.connecting =>
+                flowStep.showScreen
+                    ? _buildPlaying(flowStep)
+                    : const <Widget>[],
+              GameScreenPhase.intro || GameScreenPhase.roundIntro =>
+                flowStep.showScreen
+                    ? _buildPlaying(flowStep)
+                    : const <Widget>[],
+              GameScreenPhase.playing =>
+                flowStep.showScreen
+                    ? _buildPlaying(flowStep)
+                    : const <Widget>[],
+              GameScreenPhase.result =>
+                flowStep.showScreen
+                    ? [
+                        if (widget.result != null) widget.result!,
+                        ..._buildTopBar(),
+                      ]
+                    : const <Widget>[],
+              GameScreenPhase.closing =>
+                flowStep.showScreen
+                    ? _buildPlaying(flowStep)
+                    : const <Widget>[],
             },
             // 문구 슬롯은 phase가 바뀌어도 항상 같은 자리에 유지합니다.
             Positioned.fill(
@@ -163,8 +183,14 @@ class _PhoneGameShellState extends State<PhoneGameShell>
     );
   }
 
-  List<Widget> _buildPlaying() => [
-    if (widget.contentReady) widget.content,
+  List<Widget> _buildPlaying(GameFlowStep<GameScreenPhase> flowStep) => [
+    if (widget.contentReady)
+      AbsorbPointer(
+        // 안내 레이어는 항상 포인터를 통과시킵니다. 단계 자체가 입력을
+        // 막아야 할 때만 셸이 실제 게임 content를 차단합니다.
+        absorbing: flowStep.blocksInteraction,
+        child: widget.content,
+      ),
     ..._buildTopBar(),
   ];
 
@@ -192,24 +218,13 @@ class _PhoneGameShellState extends State<PhoneGameShell>
     ];
   }
 
-  GameAnnouncement? _announcementForPhase() {
-    return switch (widget.phase) {
-      GameScreenPhase.intro => GameAnnouncement.gameStart(
-        duration: widget.gameStartAnnouncementDuration,
-      ),
-      GameScreenPhase.roundIntro => GameAnnouncement.round(
-        widget.roundNumber,
-        duration: widget.roundAnnouncementDuration,
-      ),
-      GameScreenPhase.closing => GameAnnouncement.persistent(
-        id: 'closing',
-        text: widget.closingMessage,
-        blocksInteraction: true,
-        showScrim: true,
-      ),
-      _ => null,
-    };
-  }
+  GameFlowStep<GameScreenPhase> get _flowStep =>
+      (widget.flowConfig ??
+              buildPhoneGameFlowConfig(
+                roundNumber: widget.roundNumber,
+                closingMessage: widget.closingMessage,
+              ))
+          .stepFor(widget.phase);
 
   GameAnnouncementStyle _announcementStyleForPhase() {
     if (widget.phase == GameScreenPhase.closing) {

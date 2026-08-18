@@ -1,29 +1,54 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
+import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
+import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
+import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 화면 방향에 맞게 생존 플레이어를 표시하는 휴대폰 관전 화면입니다.
 class PhoneSpectator extends StatelessWidget {
-  const PhoneSpectator({super.key, required this.players});
+  const PhoneSpectator({
+    super.key,
+    required this.players,
+    required this.table,
+    required this.onExitRoom,
+  });
 
   final List<PlayerLayoutPlayer> players;
+  final String table;
+  final Future<bool> Function() onExitRoom;
 
   @override
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    return isLandscape ? _buildLandscape() : _buildPortrait();
+    return isLandscape ? _buildLandscape(context) : _buildPortrait(context);
   }
 
   //=======================세로 관전 화면==============================
-  Widget _buildPortrait() {
+  Widget _buildPortrait(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           //=======================배경 화면==============================
-          Positioned.fill(child: _buildBackground()),
+          // 진행 화면과 같은 세로 배경을 유지해야 관전 전환 중 배경 이미지가
+          // 바뀌거나 새로 디코딩되며 번쩍이지 않습니다.
+          Positioned.fill(child: _buildBackground(isLandscape: false)),
+
+          //=======================공용 상단 바==============================
+          Positioned(
+            top: 18.h,
+            left: 20.w,
+            right: 20.w,
+            child: SafeArea(bottom: false, child: _buildTopBar(context, false)),
+          ),
 
           //=======================관전 정보==============================
           Positioned(
@@ -51,40 +76,19 @@ class PhoneSpectator extends StatelessWidget {
   }
 
   //=======================가로 관전 화면==============================
-  Widget _buildLandscape() {
+  Widget _buildLandscape(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           //=======================배경 화면==============================
-          Positioned.fill(child: _buildBackground()),
+          Positioned.fill(child: _buildBackground(isLandscape: true)),
 
-          //=======================상단 바==============================
+          //=======================공용 상단 바==============================
           Positioned(
-            top: 20,
+            top: 12,
             left: 30,
             right: 30,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Assets.games.liarsPoker.images.table.tableKingWhite.image(
-                  height: 30,
-                  filterQuality: FilterQuality.high,
-                ),
-                Row(
-                  children: [
-                    Assets.games.liarsPoker.images.icons.iconRole.image(
-                      width: 45,
-                      height: 45,
-                    ),
-                    const SizedBox(width: 15),
-                    Assets.games.liarsPoker.images.icons.iconOut.image(
-                      width: 32,
-                      height: 32,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            child: SafeArea(bottom: false, child: _buildTopBar(context, true)),
           ),
 
           //=======================관전 정보==============================
@@ -255,10 +259,72 @@ class PhoneSpectator extends StatelessWidget {
     );
   }
 
-  Widget _buildBackground() {
-    return Assets.games.liarsPoker.images.background.background.image(
+  Widget _buildBackground({required bool isLandscape}) {
+    final background = isLandscape
+        ? Assets.games.liarsPoker.images.background.background
+        : Assets.games.liarsPoker.images.background.backgroundPhone;
+    return background.image(
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
     );
+  }
+
+  Widget _buildTopBar(BuildContext context, bool isLandscape) {
+    return PhoneGameTopBar(
+      isLandscape: isLandscape,
+      leadingWidget: _tableAsset(table).image(
+        height: isLandscape ? 30 : 34.h,
+        filterQuality: FilterQuality.high,
+      ),
+      onSettingPressed: () => showDialog<void>(
+        context: context,
+        builder: (_) => const PhoneSettingsDialog(),
+      ),
+      onTipPressedAt: (origin) => _showRules(context, origin),
+      onOutPressedAt: (origin) =>
+          unawaited(_showExitModal(context, origin: origin)),
+    );
+  }
+
+  void _showRules(BuildContext context, Offset origin) {
+    showPhoneRippleDialog<void>(
+      context: context,
+      origin: origin,
+      builder: (_) => const PhoneGameRuleDialog(
+        title: "LIAR'S POKER",
+        rules:
+            '자신의 차례에는 1~3장의 카드를 선택해 제출합니다. 선언은 '
+            '진실일 수도, 거짓일 수도 있으며 다음 플레이어는 LIAR를 선언할 '
+            '수 있습니다.\n\n카드 공개 결과 선언이 거짓이면 카드를 낸 플레이어가, '
+            '선언이 진실이면 LIAR를 외친 플레이어가 벌칙을 진행합니다. '
+            '마지막까지 살아남은 플레이어가 승리합니다.',
+        surfaceColor: Color(0xFF142119),
+        foregroundColor: Colors.white,
+        showSurface: false,
+        dismissOnAnyTap: true,
+      ),
+    );
+  }
+
+  Future<void> _showExitModal(
+    BuildContext context, {
+    required Offset origin,
+  }) async {
+    final shouldExit = await PhoneExitModal.show(context, origin: origin);
+    if (!context.mounted || shouldExit != true) return;
+    final left = await onExitRoom();
+    if (!context.mounted || left) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+  }
+
+  AssetGenImage _tableAsset(String rank) {
+    return switch (rank.toUpperCase()) {
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+    };
   }
 }

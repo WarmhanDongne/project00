@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
@@ -40,6 +41,12 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   Future<void> _lockPlatformPortrait() => AppOrientation.lockPlatformPortrait();
 
   void _onRoomProviderChanged() {
+    final selectedGameId = widget.provider.selectedGameId;
+    if (selectedGameId != null && selectedGameId.isNotEmpty) {
+      //================상태바 표시=================
+      // 태블릿의 게임 선택은 자리 배치 시작 신호이므로 휴대폰도 이때 전체 화면에 진입합니다.
+      unawaited(AppSystemUi.enterGameFullscreen());
+    }
     _syncGameStatusSubscription();
     if (widget.provider.wasKicked) {
       widget.provider.wasKicked = false;
@@ -55,6 +62,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             duration: Duration(seconds: 2),
           ),
         );
+      //================상태바 표시=================
+      unawaited(AppSystemUi.showPlatformSystemBars());
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
@@ -109,6 +118,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     await widget.provider.leaveRoom();
     if (!mounted) return;
+    //================상태바 표시=================
+    unawaited(AppSystemUi.showPlatformSystemBars());
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -152,6 +163,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     if (!mounted) return;
     if (leftRoom == true) {
       // 참여 코드·닉네임·방 대기 경로를 모두 닫아 휴대폰 홈으로 이동합니다.
+      //================상태바 표시=================
+      unawaited(AppSystemUi.showPlatformSystemBars());
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
     // 화면 전환을 회전 응답보다 먼저 끝내 퇴장 성공 후 이전 화면에 갇히지
@@ -188,6 +201,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                   onPressed: () async {
                     final left = await widget.provider.leaveRoom();
                     if (!context.mounted || !left) return;
+                    //================상태바 표시=================
+                    unawaited(AppSystemUi.showPlatformSystemBars());
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                 ),

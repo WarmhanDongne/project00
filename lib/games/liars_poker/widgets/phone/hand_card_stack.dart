@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
+import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
@@ -454,6 +455,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
               ? GameAnnouncement.round(
                   widget.roundNumber,
                   id: 'phone-round-${widget.roundNumber}',
+                  duration: LiarsPokerFlowTiming.roundAnnouncement,
                 )
               : _showTableIntro
               ? GameAnnouncement.transient(

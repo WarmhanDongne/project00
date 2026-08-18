@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project00/games/shared/game_flow/game_announcement.dart';
+import 'package:project00/games/shared/game_flow/game_flow_config.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
+import 'package:project00/games/shared/game_flow/phone_game_flow_config.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 
 /// 공용 휴대폰 게임 셸의 표시 규칙을 고정합니다.
@@ -50,14 +53,35 @@ void main() {
     expect(find.text('ROUND 2'), findsOneWidget);
   });
 
-  testWidgets('안내 문구 유지 시간을 셸 파라미터로 조정한다', (tester) async {
+  testWidgets('안내 문구 유지 시간을 Flow Config로 조정한다', (tester) async {
     var introCompleted = false;
+    final defaultConfig = buildPhoneGameFlowConfig(roundNumber: 1);
+    final shortIntroConfig = GameFlowConfig<GameScreenPhase>(
+      steps: {
+        ...defaultConfig.steps,
+        GameScreenPhase.intro: const GameFlowStep<GameScreenPhase>(
+          stage: GameScreenPhase.intro,
+          showScreen: false,
+          showAnnouncement: true,
+          announcementId: 'short-game-start',
+          announcementKind: GameAnnouncementKind.gameStart,
+          announcement: 'GAME START',
+          announcementDuration: Duration(milliseconds: 120),
+          animation: GameFlowAnimationConfig(
+            name: 'PhoneGameStartAnimation',
+            duration: Duration(milliseconds: 120),
+          ),
+          blocksInteraction: true,
+          advancePolicy: GameFlowAdvancePolicy.clientPresentation,
+        ),
+      },
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: PhoneGameShell(
           phase: GameScreenPhase.intro,
           roundNumber: 1,
-          gameStartAnnouncementDuration: const Duration(milliseconds: 120),
+          flowConfig: shortIntroConfig,
           background: const ColoredBox(color: Colors.grey),
           content: const Text('게임화면'),
           onIntroCompleted: () => introCompleted = true,

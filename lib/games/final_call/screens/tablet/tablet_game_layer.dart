@@ -5,12 +5,15 @@ import 'package:project00/games/shared/animations/board_element_entrance.dart';
 import 'package:project00/games/shared/animations/card_deal.dart';
 import 'package:project00/games/shared/animations/one_shot_timeline.dart';
 import 'package:project00/games/final_call/animations/tablet_center_card_reveal.dart';
+import 'package:project00/games/final_call/final_call_flow_config.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_helper.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/games/shared/game_flow/game_flow_config.dart';
+import 'package:project00/games/shared/game_flow/game_flow_auto_complete.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// 중앙 덱, 플레이어별 생명과 라운드 공개 손패를 그리는 아이패드 보드입니다.
@@ -19,11 +22,13 @@ class FinalCallTabletGameLayer extends StatelessWidget {
     super.key,
     required this.controller,
     required this.stage,
+    required this.flowConfig,
     required this.onRoundRevealCompleted,
   });
 
   final FinalCallController controller;
   final FinalCallTabletStage stage;
+  final GameFlowConfig<FinalCallTabletStage> flowConfig;
   final VoidCallback onRoundRevealCompleted;
 
   @override
@@ -46,26 +51,38 @@ class FinalCallTabletGameLayer extends StatelessWidget {
           ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
     if (players.isEmpty) return const SizedBox.shrink();
 
-    //=======================태블릿 카드 배분==============================
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final allSeatPositions = normalizedPlayerSlotTopLeftPositions(
-          playerCount: controller.players.length,
-          boardSize: constraints.biggest,
-        );
-        return CardDealAnimation(
-          key: ValueKey('final-call-deal-${controller.round}'),
-          playerCount: players.length,
-          playerPositions: players
-              .map((player) => allSeatPositions[player.seatIndex])
-              .toList(growable: false),
-          cardsPerPlayer: 4,
-          cardAsset: Assets.games.finalCall.images.cards.cardBack,
-          cardWidth: 146,
-          duration: const Duration(milliseconds: 2800),
-          onCompleted: () => controller.completeDealing(),
-        );
-      },
+    // ========================================================================
+    // 2. 카드 분배 (DEALING)
+    // ========================================================================
+    // 생존 플레이어의 실제 seatIndex만 전달해야 탈락자의 빈자리를 건너뛰고
+    // 원래 자리 배치에 맞춰 카드가 날아갑니다.
+    final activeSeatIndexes = players
+        .map((player) => player.seatIndex)
+        .toList(growable: false);
+    final flowStep = flowConfig.stepFor(stage);
+    if (!flowStep.animation.enabled) {
+      return GameFlowAutoComplete(
+        key: ValueKey('final-call-deal-skipped-${controller.round}'),
+        delay: flowStep.beforeDelay + flowStep.afterDelay,
+        onCompleted: () => controller.completeDealing(),
+      );
+    }
+    return CardDealAnimation(
+      key: ValueKey(
+        'final-call-deal-${controller.round}-${activeSeatIndexes.join('-')}',
+      ),
+      playerCount: players.length,
+      boardSeatCount: controller.players.length,
+      playerSeatIndexes: activeSeatIndexes,
+      cardsPerPlayer: 4,
+      cardAsset: Assets.games.finalCall.images.cards.cardBack,
+      cardWidth: 146,
+      duration: flowStep.animation.duration,
+      // 첫 라운드만 중앙 덱을 눌러 시작하고, 이후 라운드는 서버가 dealing에
+      // 진입하면 라이어스 포커와 동일하게 자동 분배합니다.
+      autoplay: controller.round > 1,
+      tapToStart: controller.round == 1,
+      onCompleted: () => controller.completeDealing(),
     );
   }
 
@@ -79,7 +96,7 @@ class FinalCallTabletGameLayer extends StatelessWidget {
         controller.pendingDrawSource == 'discard';
     final hideDiscardDuringThrow =
         controller.discardEvent?.drawSource == 'discard';
-    //=======================보드 요소 등장==============================
+    // 카드 분배가 끝난 뒤 보드 요소를 같은 곡선으로 등장시킵니다.
     // 카드 분배가 끝난 뒤 중앙 카드와 생명(하트)이 Liar's Poker의 잔여 카드
     // 등장 연출과 같은 곡선으로 바닥에서 솟아오릅니다. 라운드가 바뀔 때만
     // 다시 재생되도록 라운드를 key로 씁니다.
@@ -109,6 +126,14 @@ class FinalCallTabletGameLayer extends StatelessWidget {
   Widget _buildRoundResult() {
     final result = controller.roundResult;
     if (result == null) return const SizedBox.shrink();
+    final flowStep = flowConfig.stepFor(stage);
+    if (!flowStep.animation.enabled) {
+      return GameFlowAutoComplete(
+        key: ValueKey('round-result-skipped-${controller.round}'),
+        delay: flowStep.beforeDelay,
+        onCompleted: onRoundRevealCompleted,
+      );
+    }
     return _RevealedTable(
       key: ValueKey('round-result-${controller.round}'),
       controller: controller,
@@ -136,12 +161,18 @@ class _RevealedTable extends StatefulWidget {
 }
 
 class _RevealedTableState extends State<_RevealedTable> {
-  static const int _initialHoldMs = 900;
-  static const int _focusMs = 520;
-  static const int _cardStepMs = 900;
-  static const int _cardFlipMs = 680;
-  static const int _settleMs = 520;
-  static const int _heartMs = 1500;
+  static final int _initialHoldMs =
+      FinalCallFlowTiming.roundResultInitialHold.inMilliseconds;
+  static final int _focusMs =
+      FinalCallFlowTiming.roundResultFocus.inMilliseconds;
+  static final int _cardStepMs =
+      FinalCallFlowTiming.roundResultCardStep.inMilliseconds;
+  static final int _cardFlipMs =
+      FinalCallFlowTiming.roundResultCardFlip.inMilliseconds;
+  static final int _settleMs =
+      FinalCallFlowTiming.roundResultSettle.inMilliseconds;
+  static final int _heartMs =
+      FinalCallFlowTiming.roundResultHeartLoss.inMilliseconds;
 
   late final List<FinalCallPlayer> _players;
   late final List<int> _playerStarts;
@@ -373,7 +404,7 @@ class _SequencedRevealedHand extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          //=======================점수·제출 카드==============================
+          // 제출 카드를 한 장씩 공개하면서 점수를 다시 계산해 표시합니다.
           // 변화하는 합계는 제출 카드 위에 둡니다.
           _AnimatedScoreCounter(score: score),
           const SizedBox(height: 8),
@@ -407,7 +438,7 @@ class _SequencedRevealedHand extends StatelessWidget {
     final showFront = progress >= 0.5;
     final rotationY = showFront ? (progress - 1) * math.pi : progress * math.pi;
 
-    //=======================좌석에서 밀려 나오는 등장==============================
+    // 좌석에서 제출 카드가 밀려 나오는 최초 등장 연출입니다.
     // 이 손패는 좌석이 테이블을 바라보도록 회전된 좌표계 안에 있으므로,
     // 로컬 +Y는 항상 테이블 반대쪽(플레이어 자리 쪽)입니다. 뒷면 카드를 그
     // 방향에서 한 장씩 밀어 넣어 좌석에서 제출한 느낌을 줍니다.
