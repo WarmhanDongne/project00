@@ -1,10 +1,12 @@
 /* eslint-disable valid-jsdoc, require-jsdoc */
 
 import {
+  countPlayersWithCards,
   findNextAlivePlayer,
   findNextPlayerWithCards,
 } from "./common/next-turn.js";
 import {
+  LAST_CARD_CHALLENGE_DURATION_MS,
   LiarsPokerGameState,
   TURN_DURATION_MS,
 } from "./common/types.js";
@@ -38,26 +40,62 @@ export function excludeLiarsPokerPlayer(
   const lastPlayOwnerLeft =
     game.public.phase === "lastCardChallenge" &&
     game.public.lastPlay?.playerUid === uid;
+  const challengePlayerLeft =
+    game.public.phase === "lastCardChallenge" &&
+    game.public.turnUid === uid;
 
-  if (penaltyTargetLeft || lastPlayOwnerLeft) {
+  if (penaltyTargetLeft || lastPlayOwnerLeft || challengePlayerLeft) {
     restartRound(game, nextAliveUid, now);
   } else {
-    if (game.public.turnUid === uid) {
-      // 카드가 없는 자리로는 턴을 넘기지 않습니다.
-      // 진행 중인 라운드에서는 손패가 남은 사람에게만 턴이 갑니다. 나간 사람이
-      // 마지막 카드 보유자였다면 이어갈 사람이 없으므로 라운드를 새로 엽니다.
-      const nextTurnUid = game.public.phase === "playing" ?
-        findNextPlayerWithCards(game.public.players, uid) :
-        nextAliveUid;
-      if (nextTurnUid === null) {
+    if (game.public.phase === "playing") {
+      const remainingCardHolderCount = countPlayersWithCards(
+        game.public.players,
+      );
+      const soleCardHolder = Object.values(game.public.players).find(
+        (player) =>
+          player.status === "alive" && player.remainingCardCount > 0,
+      );
+
+      if (remainingCardHolderCount === 0 || !soleCardHolder) {
         restartRound(game, nextAliveUid, now);
         return;
       }
-      game.public.turnUid = nextTurnUid;
-      const timerHasStarted = game.public.isFirstTurnReady === true;
-      game.public.turnDeadlineAt =
-        game.public.phase === "dealing" || !timerHasStarted ?
-          null : now + TURN_DURATION_MS;
+
+      // 제외 결과 실제 잔여카드를 가진 사람이 한 명만 남았고 직전 제출자가
+      // 다른 사람이라면, 그 한 명에게만 LIAR/FOLD 선택을 엽니다.
+      if (
+        remainingCardHolderCount === 1 &&
+        game.public.lastPlay &&
+        game.public.lastPlay.playerUid !== soleCardHolder.uid
+      ) {
+        game.public.phase = "lastCardChallenge";
+        game.public.turnUid = soleCardHolder.uid;
+        game.public.turnDeadlineAt = now + LAST_CARD_CHALLENGE_DURATION_MS;
+      } else if (remainingCardHolderCount === 1) {
+        // 유일한 카드 보유자가 자신의 제출을 의심할 수는 없으므로 새 라운드로
+        // 복구해 제출·FOLD가 모두 막힌 상태를 만들지 않습니다.
+        restartRound(game, soleCardHolder.uid, now);
+        return;
+      } else if (game.public.turnUid === uid) {
+        const nextTurnUid = findNextPlayerWithCards(
+          game.public.players,
+          uid,
+        );
+        if (nextTurnUid === null) {
+          restartRound(game, nextAliveUid, now);
+          return;
+        }
+        game.public.turnUid = nextTurnUid;
+        const timerHasStarted = game.public.isFirstTurnReady === true;
+        game.public.turnDeadlineAt = timerHasStarted ?
+          now + TURN_DURATION_MS : null;
+      }
+    } else if (
+      game.public.phase === "dealing" &&
+      game.public.turnUid === uid
+    ) {
+      game.public.turnUid = nextAliveUid;
+      game.public.turnDeadlineAt = null;
     }
     if (game.server.roundStarterUid === uid) {
       game.server.roundStarterUid = nextAliveUid;

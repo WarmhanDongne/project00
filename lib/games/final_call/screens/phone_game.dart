@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/games/final_call/final_call_flow_config.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
@@ -60,7 +62,12 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   @override
   void initState() {
     super.initState();
-    //=======================휴대폰 게임 방향 정책==============================
+    // ========================================================================
+    // 게임 진입 환경
+    // ========================================================================
+    // 게임을 시작하면 시스템 UI를 숨기고 Final Call 휴대폰 정책인 가로 방향으로
+    // 고정합니다. 플랫폼 화면으로 돌아갈 때 dispose에서 반드시 복원합니다.
+    unawaited(AppSystemUi.enterGameFullscreen());
     // Final Call 휴대폰 UI는 가로만 지원합니다. 태블릿은 별도 공용 불변
     // 조건에 따라 게임 종류와 관계없이 항상 가로 고정됩니다.
     unawaited(
@@ -94,7 +101,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       revealedRound = 0;
     }
     previousStatus = game.status;
-    //=======================승부가 나지 않은 종료는 모두 퇴장==============================
+    // ------------------------------------------------------------------------
+    // 승부가 나지 않은 종료 처리
+    // ------------------------------------------------------------------------
     // 나가야 할 종료 사유를 나열하지 않고, '정상 결과가 아니면 나간다'로 뒤집어
     // 판단합니다. 사유 목록 방식은 서버에 종료 사유가 하나만 늘어도 휴대폰이
     // 결과 화면에 갇힙니다. 라이어스포커와 같은 규칙입니다.
@@ -126,7 +135,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       observedCallerUid = game.callerUid;
       visibleCallerUid = game.callerUid;
       callNoticeTimer?.cancel();
-      callNoticeTimer = Timer(const Duration(milliseconds: 4200), () {
+      callNoticeTimer = Timer(FinalCallFlowTiming.callNotice, () {
         if (!mounted) return;
         setState(() => visibleCallerUid = null);
       });
@@ -134,7 +143,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     setState(() {});
   }
 
-  //=======================CALL 이후 자동 카드 교체 진입==============================
+  // ============================================================================
+  // CALL 이후 자동 카드 교체 진입
+  // ============================================================================
   // CALL하지 않은 플레이어의 마지막 턴에는 별도의 카드 교체 버튼을 누르지
   // 않아도 공개 카드·덱 선택창을 즉시 엽니다.
   void _scheduleAutomaticFinalTurnCardChange(FinalCallController game) {
@@ -233,7 +244,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         replacementInProgress = true;
         replacingCardId = replaceCardId;
       });
-      await Future<void>.delayed(const Duration(milliseconds: 460));
+      await Future<void>.delayed(FinalCallFlowTiming.phoneCardReplace);
       if (!mounted) return;
     }
 
@@ -278,32 +289,62 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   void dispose() {
     callNoticeTimer?.cancel();
     sessionSubscription?.close();
-    //=======================다른 화면 방향 복원==============================
+    // ---------------------------------------------------------------------------
+    // 게임 종료 후 플랫폼 화면 정책 복원
+    // ---------------------------------------------------------------------------
     unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }
 
-  //=======================게임 진입==============================
+  // ============================================================================
+  // 게임 화면 진입
+  // ============================================================================
   // 태블릿에서 테이블이 확대되는 순간과 맞춰 매트가 풀리며 게임 배경이
   // 드러납니다. 서버 데이터는 그 뒤에서 채워집니다.
   @override
   Widget build(BuildContext context) => _buildGameScreen(context);
 
-  //=======================서버 상태 → 공용 화면 단계==============================
-  // 화면 분기를 직접 짜지 않고, 공용 셸이 이해하는 단계로 번역만 합니다.
+  // ============================================================================
+  // 서버 상태 → 공용 휴대폰 화면 단계
+  // ============================================================================
+  //
+  // 아래 순서가 Final Call 휴대폰의 전체 흐름입니다.
+  //
+  // 연결 → GAME START → ROUND N → 플레이/카드 교체 → 라운드 판정 대기
+  // → 최종 결과 또는 인원 부족 종료
+  //
+  // 화면 분기를 직접 그리지 않고 [GameScreenPhase]로 번역만 합니다. 각 단계의
+  // 문구, 유지시간, Animation ON/OFF, Scrim, 입력 정책은
+  // `shared/game_flow/phone_game_flow_config.dart`에서 수정합니다.
   GameScreenPhase _resolvePhase(FinalCallController game) {
-    // 아직 서버 첫 상태나 내 손패가 오지 않았습니다.
+    // 1. CONNECTING: 첫 공개 상태 또는 개인 손패를 기다립니다.
+    // 배경만 표시하며 다음 단계는 서버 데이터 도착 조건으로 결정됩니다.
     if (game.loading) return GameScreenPhase.connecting;
-    if (game.phase == 'dealing' && game.hand.isEmpty) {
-      return GameScreenPhase.connecting;
-    }
-    if (game.isFinished &&
-        (game.finishReason == 'insufficientPlayers' ||
-            game.finishReason == 'interruptionVoteExpired')) {
+    // 6. CLOSING: 정상 승부가 아닌 종료는 결과 화면을 만들지 않습니다.
+    // dealing/손패 수신 조건보다 먼저 검사해야 수동 종료 직후 남아 있는 이전
+    // phase 때문에 연결 화면으로 잘못 돌아가지 않습니다. 상위 상태 리스너가
+    // 서버 finished를 확인한 뒤 실제 게임 라우트를 닫습니다.
+    if (game.isFinished && !game.isNaturalResult) {
       return GameScreenPhase.closing;
     }
+    // 태블릿 카드 분배가 끝나 completeDealing이 반영되기 전에는 이전 손패가
+    // 캐시에 남아 있어도 ROUND/카드팩 화면으로 진입하지 않습니다.
+    if (game.phase == 'dealing') {
+      return GameScreenPhase.connecting;
+    }
+    // completeDealing의 public playing 이벤트와 새 private 손패 이벤트도 순서가
+    // 바뀔 수 있습니다. 새 라운드 안내 전에는 실제 손패까지 기다립니다.
+    if (announcedRound != game.round && game.hand.isEmpty) {
+      return GameScreenPhase.connecting;
+    }
+    // 2. INTRO: GAME START 문구 연출입니다. 완료는 로컬 표시 상태만 바꾸며
+    // 서버 게임 phase를 진행시키지 않습니다.
     if (!gameStartCompleted) return GameScreenPhase.intro;
+    // 3. ROUND INTRO: 서버 round가 바뀔 때마다 ROUND N을 한 번 표시합니다.
     if (announcedRound != game.round) return GameScreenPhase.roundIntro;
+    // 4. PLAYING: draw/callerSubmit/finalTurns/finalSubmit과 태블릿 판정
+    // 연출 대기를 모두 포함합니다. 손패가 잠시 없어도 상단바는 유지합니다.
     // 태블릿의 카드 공개·생명 소멸 연출이 끝나기 전에는 결과를 열지 않고
     // 진행 화면을 유지합니다. 이 동안에도 퇴장할 수 있어야 합니다.
     if (game.isFinished &&
@@ -311,6 +352,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         game.resultRevealCompletedAt == null) {
       return GameScreenPhase.playing;
     }
+    // 5. RESULT: 서버 결과와 태블릿 공개 완료 신호가 모두 준비된 시점입니다.
     if (game.isFinished) return GameScreenPhase.result;
     return GameScreenPhase.playing;
   }
@@ -331,6 +373,11 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     }
 
     final phase = _resolvePhase(game);
+    final closingMessage = switch (game.finishReason) {
+      'interruptionVoteExpired' => GameFlowCopy.interruptionVoteExpired,
+      'insufficientPlayers' => GameFlowCopy.insufficientPlayers,
+      _ => GameFlowCopy.gameFinished,
+    };
     final winners = game.winners;
     final resultNickname = game.finishReason == 'draw'
         ? '무승부'
@@ -346,6 +393,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         PhoneGameShell(
           phase: phase,
           roundNumber: game.round,
+          closingMessage: closingMessage,
           introTextColor: Colors.black,
           background: Assets.games.finalCall.images.background.phoneBackground
               .image(fit: BoxFit.cover),
@@ -363,11 +411,16 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
             onExitRoom: () => unawaited(_leaveRoom()),
             onRulesPressed: (origin) => showFinalCallRules(context, origin),
           ),
-          result: PhoneResultDialog(
-            nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
-            profileImageUrl: resultProfile?.profileImageUrl ?? '',
-            resultLabel: resultLabel,
-          ),
+          // 정상 승자/무승부가 확정된 경우에만 결과 위젯을 구성합니다.
+          // 수동 종료나 인원 부족 종료가 phase 분기 오류로 result에 도달해도
+          // 승자 없는 결과 화면이 노출되지 않게 하는 마지막 안전장치입니다.
+          result: game.isNaturalResult
+              ? PhoneResultDialog(
+                  nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
+                  profileImageUrl: resultProfile?.profileImageUrl ?? '',
+                  resultLabel: resultLabel,
+                )
+              : const SizedBox.shrink(),
           content: Stack(
             fit: StackFit.expand,
             children: [

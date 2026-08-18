@@ -531,7 +531,24 @@ connecting -> intro -> roundIntro -> playing -> result
 손패가 비었거나 상대를 기다리는 순간도 게임 시작 후라면 `playing`이다. 이를
 `connecting`으로 바꾸면 상단바와 퇴장 버튼까지 사라진다.
 
-### 6.5 태블릿 연출 상태
+### 6.5 `GameFlowConfig`와 `GameFlowStep`: 클라이언트 표현 설정
+
+파일: `lib/games/shared/game_flow/game_flow_config.dart`
+
+`GameFlowStep<TStage>`은 화면, 문구, 애니메이션, Delay, 입력 차단 의도와 Scrim을
+typed stage에 연결한다. `GameFlowConfig<TStage>`는 각 단계 설정을 한곳에서 조회한다.
+
+이 설정은 **서버 상태 머신이 아니다.** 다음 턴, 승패, phase 전환을 직접 수행하지
+않으며 `GameFlowAdvancePolicy`로 다음 조건의 책임만 문서화한다.
+
+- `clientPresentation`: 로컬 연출 완료 뒤 로컬 화면만 전환
+- `waitsForServer`: 서버 상태 수신을 기다림
+- `clientCallbackThenServer`: 연출 완료 callable을 보낸 뒤 서버 상태를 기다림
+
+공용 휴대폰 기본값은 `phone_game_flow_config.dart`, 게임별 태블릿 설정은
+`<game>_flow_config.dart`에 둔다. 서버 턴 제한시간은 Flow Config에 넣지 않는다.
+
+### 6.6 태블릿 연출 상태
 
 Liar's Poker의 `LiarsPokerTabletStage`가 권장 예시다.
 
@@ -588,8 +605,8 @@ start/restart
      첫 플레이어가 손패 공개 완료 후 readyLiarsPokerTurn
      turnDeadlineAt 설정
   -> submit 1~3장
-     ├─ 손패 남음 -> playing, 다음 생존 플레이어
-     └─ 손패 0장  -> lastCardChallenge, 다음 플레이어, 1:1은 10초
+     ├─ 잔여카드 보유 생존자 2명 이상 -> playing, 다음 잔여카드 보유자
+     └─ 잔여카드 보유 생존자 1명 -> lastCardChallenge, 해당 플레이어, 10초
 
 playing/lastCardChallenge
   -> LIAR
@@ -601,13 +618,14 @@ playing/lastCardChallenge
      └─ 2명 이상  -> dealing(새 round, 새 손패)
 
 lastCardChallenge
-  -> PASS
-     ├─ 1:1 -> PASS한 플레이어가 penalty
-     └─ 3명 이상 -> dealing(새 round)
+  -> FOLD
+     └─ FOLD한 플레이어가 penalty
 ```
 
-기본 턴은 30초, 1:1 마지막 카드 선택은 10초다. 테이블 랭크는 A/K/Q 중 하나며
-JOKER는 어떤 테이블에서도 진실 카드로 인정한다.
+FOLD와 제출 잠금은 이번 라운드의 제출 횟수나 미제출자 수로 판단하지 않는다. 실제
+잔여카드를 가진 생존자가 정확히 한 명일 때만 그 플레이어는 카드를 제출할 수 없고
+LIAR 또는 FOLD만 선택한다. 기본 턴은 30초, 이 선택은 10초다. 테이블 랭크는 A/K/Q
+중 하나며 JOKER는 어떤 테이블에서도 진실 카드로 인정한다.
 
 ### 7.3 공개 카드 이벤트
 
@@ -780,7 +798,8 @@ GameEntryUnroll
 ```
 
 새 휴대폰 게임은 이 셸을 사용한다. 게임은 서버 상태를 `GameScreenPhase`로 번역하고
-`background`, `topBar`, `content`, `result`를 주입한다.
+`background`, `topBar`, `content`, `result`를 주입한다. 문구·시간·Animation ON/OFF,
+입력 차단 의도와 Scrim은 `GameFlowConfig<GameScreenPhase>`로 관리한다.
 
 `contentReady`는 실제 콘텐츠를 그릴 데이터가 있는지, `contentRevealed`는 손패 공개
 연출이 끝났는지다. 둘은 서버 `phase`와 다르다.
@@ -843,7 +862,7 @@ ValueKey(game.turnDeadlineAt)  // 타이머 변경이 unrelated UI까지 재생 
 
 개별 문구는 `GameAnnouncement.duration`, 같은 레이어의 문구를 일괄 조정할 때는
 `GameAnnouncementLayer.displayDuration`을 사용한다. `PhoneGameShell`의 시작·라운드
-문구는 `gameStartAnnouncementDuration`, `roundAnnouncementDuration`으로 조정한다.
+문구는 `buildPhoneGameFlowConfig()`의 각 `GameFlowStep`에서 조정한다.
 
 ### 10.1 진행 단계 문구
 
@@ -853,7 +872,8 @@ ValueKey(game.turnDeadlineAt)  // 타이머 변경이 unrelated UI까지 재생 
 - `FadeHoldFade`
 - font: `BebasNeue`
 - 화면 중앙
-- `IgnorePointer`로 입력 차단
+- `GameAnnouncementLayer` 자체는 `IgnorePointer`로 포인터를 하위 UI에 통과시킴
+- 입력을 막아야 하는 단계는 셸이 게임 Screen을 숨기거나 상위 레이어가 차단
 - 완료 callback 뒤에 다음 연출 시작
 
 ### 10.2 상태 유지 문구

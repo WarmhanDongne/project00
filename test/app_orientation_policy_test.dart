@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/final_call/final_call_game.dart';
 import 'package:project00/games/liars_poker/liars_poker_game.dart';
 
@@ -100,6 +101,39 @@ void main() {
       await AppOrientation.lockPlatformLandscape();
 
       expect(calls, hasLength(2));
+    });
+  });
+
+  group('게임 전체 화면 상태바 정책', () {
+    late List<MethodCall> calls;
+
+    setUp(() {
+      calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method.startsWith('SystemChrome.setEnabledSystemUI')) {
+              calls.add(call);
+            }
+            return null;
+          });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    test('게임 진입 시 전체 화면, 홈 복귀 시 시스템 바 표시를 요청한다', () async {
+      await AppSystemUi.enterGameFullscreen();
+      await AppSystemUi.showPlatformSystemBars();
+
+      expect(calls, hasLength(2));
+      expect(calls.first.arguments, contains('immersiveSticky'));
+      expect(calls.last.arguments.toString(), contains('SystemUiOverlay.top'));
+      expect(
+        calls.last.arguments.toString(),
+        contains('SystemUiOverlay.bottom'),
+      );
     });
   });
 }

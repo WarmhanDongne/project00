@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 
@@ -104,6 +106,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   int? _draggingPlayerIndex;
   int? _hoveredSlotIndex;
   bool _isCompleting = false;
+  bool _handedOffToGame = false;
 
   int get _playerCount => widget.initialLayout.playerCount;
 
@@ -126,6 +129,11 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   void dispose() {
     _entranceController.dispose();
     _zoomController.dispose();
+    if (!_handedOffToGame) {
+      //================상태바 표시=================
+      // 자리 배치를 취소한 경우에는 게임으로 넘기지 않았으므로 플랫폼 상태바를 복원합니다.
+      unawaited(AppSystemUi.showPlatformSystemBars());
+    }
     super.dispose();
   }
 
@@ -272,6 +280,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       await _zoomController.forward(from: 0);
       if (!mounted) return;
       handedOffToGame = true;
+      _handedOffToGame = true;
       widget.onComplete(completedLayout);
     } finally {
       // 준비가 실패한 경우만 다시 배치할 수 있도록 연출을 되돌립니다.

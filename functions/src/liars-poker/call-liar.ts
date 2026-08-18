@@ -71,7 +71,7 @@ export const callLiarsPoker = onCall<CallLiarData>(
       ) {
         throw new HttpsError(
           "failed-precondition",
-          "마지막 미제출 플레이어만 이 선택을 할 수 있습니다.",
+          "잔여카드를 가진 마지막 플레이어만 이 선택을 할 수 있습니다.",
         );
       }
 

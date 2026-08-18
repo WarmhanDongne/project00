@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
@@ -46,6 +47,8 @@ class GamePreviewDialog extends StatelessWidget {
     // Mafia UI 개발 중에는 방 인원, 자리 배치, Cloud Function 실행을
     // 모두 건너뛰고 독립된 테스트 화면으로 바로 이동합니다.
     if (game.id == 'mafia') {
+      //================상태바 표시=================
+      unawaited(AppSystemUi.enterGameFullscreen());
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const MafiaTestScreen()),
       );
@@ -100,6 +103,9 @@ class GamePreviewDialog extends StatelessWidget {
 
     final initialLayout = PlayerLayoutFactory.create(players);
 
+    //================상태바 표시=================
+    // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
+    unawaited(AppSystemUi.enterGameFullscreen());
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (layoutContext) => PlayerLayoutEditor(

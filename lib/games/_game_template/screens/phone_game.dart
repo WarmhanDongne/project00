@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
+import 'package:project00/games/shared/game_flow/phone_game_flow_config.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 
 /// 휴대폰 진행 화면 뼈대입니다.
@@ -39,8 +40,16 @@ class _TemplatePhoneGameState extends State<TemplatePhoneGame> {
   bool get _handReady => true;
   bool get _handRevealed => true;
 
-  /// 서버 상태를 공용 화면 단계로 번역합니다. 새 게임에서 유일하게 직접
-  /// 작성해야 하는 분기이며, 순서(종료 → 안내 → 진행)를 지키세요.
+  // ============================================================================
+  // 서버 상태 → 공용 휴대폰 화면 단계
+  // ============================================================================
+  //
+  // 새 게임의 기본 순서는 다음과 같습니다.
+  // 연결 → GAME START → ROUND N → 플레이 → 결과 또는 비정상 종료
+  //
+  // 서버 문자열을 Widget 곳곳에서 비교하지 말고 이 함수 한곳에서만 번역합니다.
+  // 각 단계의 문구·Duration·Animation·입력·Scrim 설정은
+  // `shared/game_flow/phone_game_flow_config.dart`에서 확인할 수 있습니다.
   GameScreenPhase _resolvePhase() {
     if (_isLoading) return GameScreenPhase.connecting;
     if (_isClosing) return GameScreenPhase.closing;
@@ -52,8 +61,10 @@ class _TemplatePhoneGameState extends State<TemplatePhoneGame> {
 
   @override
   Widget build(BuildContext context) {
+    final flowConfig = buildPhoneGameFlowConfig(roundNumber: _round);
     return PhoneGameShell(
       phase: _resolvePhase(),
+      flowConfig: flowConfig,
       roundNumber: _round,
       background: const ColoredBox(color: Colors.black),
       contentReady: _handReady,

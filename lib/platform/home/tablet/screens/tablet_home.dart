@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
@@ -33,6 +34,8 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    //================상태바 표시=================
+    unawaited(AppSystemUi.showPlatformSystemBars());
     //=======================초기 화면 방향 요청 금지==============================
     // 앱 첫 실행에서는 이 initState가 iOS scene 연결보다 먼저 호출될 수 있습니다.
     // 초기 태블릿 가로 고정은 main.dart가 lifecycle resumed 이후 한 번만 적용합니다.
@@ -102,6 +105,8 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
         : PlayerLayoutFactory.create(players);
 
     _isOpeningRestoredGame = true;
+    //================상태바 표시=================
+    unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.lockTabletGameLandscape());
     Navigator.of(context)
         .push<void>(

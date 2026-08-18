@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_phone_session_provider.dart';
 import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
@@ -52,7 +54,13 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   @override
   void initState() {
     super.initState();
-    //=======================휴대폰 게임 방향 정책==============================
+    // ========================================================================
+    // 게임 진입 환경
+    // ========================================================================
+    // 게임 중 시스템 UI를 숨기되 Liar's Poker 휴대폰은 가로·세로를 모두
+    // 허용합니다. 이 화면은 방향 전환 중 State를 보존하기 위해 자체 슬롯
+    // 레이아웃을 사용하며 PhoneGameShell로 강제 이전하지 않습니다.
+    unawaited(AppSystemUi.enterGameFullscreen());
     // Liar's Poker 휴대폰은 세로와 양쪽 가로를 모두 지원합니다.
     // 태블릿에는 이 정책을 적용하지 마세요. 모든 태블릿 게임은 가로 고정입니다.
     unawaited(
@@ -194,7 +202,9 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       return false;
     }
 
-    //=======================퇴장 후 화면 전환==============================
+    // ---------------------------------------------------------------------------
+    // 명시적 퇴장 후 화면 전환
+    // ---------------------------------------------------------------------------
     // 서버 퇴장이 끝나면 게임 라우트를 먼저 닫습니다. 화면 방향 복원을 먼저
     // 기다리면 iOS의 회전 Future가 지연될 때 이미 퇴장한 게임 화면에 갇힐 수
     // 있습니다. 세로 복원은 dispose와 상위 대기 화면이 비동기로 처리합니다.
@@ -207,8 +217,11 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   void dispose() {
     _resultDialogGeneration += 1;
     _sessionSubscription?.close();
-    //=======================플랫폼 세로 화면 복원==============================
+    // ---------------------------------------------------------------------------
+    // 게임 종료 후 플랫폼 화면 정책 복원
+    // ---------------------------------------------------------------------------
     unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }
 
@@ -236,7 +249,21 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       );
     }
 
-    //=======================게임 진입==============================
+    // ============================================================================
+    // 1. 게임 진입 및 서버 데이터 연결
+    // ============================================================================
+    //
+    // 시점/status:
+    // - 첫 game/public과 개인 손패가 준비되기 전
+    //
+    // 화면/문구/연출:
+    // - GameEntryUnroll 아래에 게임 배경만 표시
+    // - 별도 준비 문구, Scrim, 로딩 스피너는 표시하지 않음
+    // - 매트 연출 시간은 GameEntryUnroll의 공용 설정을 사용
+    //
+    // 입력/전환:
+    // - 게임 UI가 없어 입력할 수 없음
+    // - 서버 데이터가 한 번 준비되면 _hasEnteredGame을 유지함
     // 별도 로딩 화면 없이, 태블릿에서 테이블이 확대되는 순간과 맞춰 매트가
     // 풀리며 게임 배경이 드러납니다. 서버 데이터는 그 뒤에서 채워지고,
     // 준비되기 전까지는 배경만 보여 연출이 끊기지 않습니다.
@@ -250,9 +277,29 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _hasEnteredGame
-              ? _buildGameContent(controller)
-              : const _PhoneGameBackground(),
+          // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
+          // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
+          // key를 사용하므로, 관전 화면이 등장하거나 사라질 때만 한 번 페이드합니다.
+          AnimatedSwitcher(
+            duration: LiarsPokerFlowTiming.phoneSpectatorTransition,
+            reverseDuration: LiarsPokerFlowTiming.phoneSpectatorTransition,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              fit: StackFit.expand,
+              children: [...previousChildren, ?currentChild],
+            ),
+            // 양쪽 화면을 동시에 반투명하게 만들면 중간 프레임에서 뒤의 검은
+            // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
+            // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
+            transitionBuilder: _buildSpectatorTransition,
+            child: _hasEnteredGame
+                ? _buildGameContent(controller)
+                : const KeyedSubtree(
+                    key: ValueKey('liars-poker-game'),
+                    child: _PhoneGameBackground(),
+                  ),
+          ),
           GameInterruptionLayer(
             interruption: controller.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -270,14 +317,37 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   Widget _buildGameContent(LiarsPokerPhoneController controller) {
     final isAlive = !controller.isEliminated;
 
-    //=======================휴대폰 결과 배경==============================
+    // ============================================================================
+    // 6. 최종 결과
+    // ============================================================================
+    //
+    // 정상 승자가 확정되고 마지막 벌칙 결과까지 끝나면 게임 요소를 제거하고
+    // 공용 PhoneResultDialog만 표시합니다. 결과 닫기/다시하기는 서버 상태를
+    // 기다리며, 이 배경 자체는 게임 상태를 변경하지 않습니다.
     // 승리 결과를 발표할 때는 게임 중 손패·상단바·턴 정보·관전 요소를 모두
     // 제거하고 게임 배경 위에 결과 다이얼로그만 표시합니다.
     if (controller.isNaturalResult && !controller.isPenaltyResultVisible) {
-      return const _PhoneGameBackground();
+      return const KeyedSubtree(
+        key: ValueKey('liars-poker-game'),
+        child: _PhoneGameBackground(),
+      );
     }
 
-    // 가드 클로즈: 살아있을 때 (게임 진행 중) 화면 우선 반환
+    // ============================================================================
+    // 2~5. 준비 → 카드 분배 → 플레이 → 판정/벌칙
+    // ============================================================================
+    //
+    // 상세 단계는 LiarsPokerPhoneGameScreen이 담당합니다.
+    // - 서버 dealing: ROUND N 및 손패 수신/공개 연출
+    // - 서버 playing: 카드 선택·제출·LIAR 입력
+    // - lastCardChallenge: 잔여카드 보유자가 정확히 한 명일 때 제출을 잠그고
+    //   LIAR/FOLD만 허용
+    // - penalty/result 표시: 진실/거짓 판정과 벌칙 결과
+    //
+    // 안내 문구는 하위 화면의 공용 GameAnnouncementLayer 한 슬롯에서 표시하고,
+    // 연출 완료는 서버 판정과 분리합니다.
+    //
+    // 다음 가드는 살아있는 플레이어의 진행 화면을 우선 반환합니다.
     //
     // 나가기 처리 중(_isLeavingRoom)에는 서버가 플레이어 상태를 'eliminated'로
     // 바꾸더라도 관전 화면으로 전환하지 않습니다. 그렇지 않으면 이 화면이
@@ -285,15 +355,25 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     // LiarsPokerPhoneGameScreen이 사라져, 실제로는 방을 나갔는데도 화면 전환 없이
     // 관전 화면에 머무르는 문제가 있었습니다.
     if (isAlive || controller.showPenaltyHandOverlay || _isLeavingRoom) {
-      return RepaintBoundary(
-        child: LiarsPokerPhoneGameScreen(
-          controller: controller,
-          onExitRoom: _leaveRoom,
+      return KeyedSubtree(
+        key: const ValueKey('liars-poker-game'),
+        child: RepaintBoundary(
+          child: LiarsPokerPhoneGameScreen(
+            controller: controller,
+            onExitRoom: _leaveRoom,
+            // 탈락자가 진실/거짓 판정과 벌칙 결과를 보는 동안에도 나갈 수
+            // 있도록 관전자용 공용 상단바를 유지합니다.
+            showSpectatorTopBar: !isAlive,
+          ),
         ),
       );
     }
 
-    // 관전 모드: 죽은 상태 (isAlive == false)
+    // ============================================================================
+    // 5. 탈락 후 관전
+    // ============================================================================
+    // 서버에서 eliminated가 확정되고 벌칙 결과 표시도 끝난 뒤 관전 화면으로
+    // 전환합니다. 관전자는 게임 명령을 보낼 수 없고 생존자 상태만 구독합니다.
     final survivors = controller.players.values
         .where((p) => p.status != 'eliminated')
         .toList();
@@ -309,7 +389,26 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
         )
         .toList();
 
-    return PhoneSpectator(players: survivorPlayers);
+    return PhoneSpectator(
+      key: const ValueKey('liars-poker-spectator'),
+      players: survivorPlayers,
+      table: controller.table,
+      onExitRoom: _leaveRoom,
+    );
+  }
+
+  Widget _buildSpectatorTransition(Widget child, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, transitionChild) {
+        final isOutgoing = animation.status == AnimationStatus.reverse;
+        return Opacity(
+          opacity: isOutgoing ? 1 : animation.value,
+          child: transitionChild,
+        );
+      },
+    );
   }
 }
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/card_deal.dart';
 import 'package:project00/games/liars_poker/animations/tablet_round_start_reveal.dart';
-import 'package:project00/games/shared/game_flow/game_announcement.dart';
-import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/game_flow/game_flow_config.dart';
+import 'package:project00/games/shared/game_flow/game_flow_auto_complete.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
@@ -14,8 +14,10 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
   const LiarsPokerTabletGameLayer({
     super.key,
     required this.stage,
+    required this.flowConfig,
     required this.playerCount,
     required this.playerSeatIndexes,
+    required this.dealPlayerSeatIndexes,
     required this.cardsPerPlayer,
     required this.roundNumber,
     required this.cardPileVersion,
@@ -30,8 +32,10 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
   });
 
   final LiarsPokerTabletStage stage;
+  final GameFlowConfig<LiarsPokerTabletStage> flowConfig;
   final int playerCount;
   final List<int> playerSeatIndexes;
+  final List<int> dealPlayerSeatIndexes;
   final int cardsPerPlayer;
   final int roundNumber;
   final int cardPileVersion;
@@ -46,21 +50,19 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (stage) {
-      // 첫 RTDB 상태가 늦어져도 검은 화면으로 오해하지 않도록 배경 위에 준비
-      // 상태를 명확히 표시합니다. 공개 상태가 도착하면 dealing으로 교체됩니다.
       LiarsPokerTabletStage.waiting => GameAnnouncementLayer(
-        announcement: GameAnnouncement.persistent(
-          id: 'liars-poker-preparing',
-          text: GameFlowCopy.preparingGame,
-        ),
+        announcement: flowConfig.stepFor(stage).buildAnnouncement(),
         style: const GameAnnouncementStyle.tablet(),
       ),
       LiarsPokerTabletStage.dealing => _RoundDealLayer(
-        key: ValueKey('deal-$roundNumber-$cardPileVersion'),
+        key: ValueKey(
+          'deal-$roundNumber-$cardPileVersion-${dealPlayerSeatIndexes.join('-')}',
+        ),
         roundNumber: roundNumber,
-        playerCount: playerCount,
-        playerSeatIndexes: playerSeatIndexes,
+        boardSeatCount: playerCount,
+        playerSeatIndexes: dealPlayerSeatIndexes,
         cardsPerPlayer: cardsPerPlayer,
+        flowStep: flowConfig.stepFor(stage),
         onCompleted: onDealCompleted,
       ),
       LiarsPokerTabletStage.roundStarting ||
@@ -74,9 +76,22 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
         remainingCardCounts: remainingCardCounts,
         activePlayerIndex: currentTurnPlayerIndex,
         tableWidth: 300,
+        // playing/cardsPlaying/cardsRevealing에서도 같은 보드를 유지하지만,
+        // 등장 시간은 항상 roundStarting 단계 설정을 사용합니다. 현재 stage의
+        // 카드 이동 시간으로 덮으면 재접속 시 보드 속도가 달라질 수 있습니다.
+        duration:
+            flowConfig
+                .stepFor(LiarsPokerTabletStage.roundStarting)
+                .animation
+                .enabled
+            ? flowConfig
+                  .stepFor(LiarsPokerTabletStage.roundStarting)
+                  .animation
+                  .duration
+            : Duration.zero,
         onCompleted: onRoundRevealCompleted,
       ),
-      //=======================벌칙 배경 정리==============================
+      // 벌칙 중에는 테이블을 숨기고 상위 룰렛 레이어만 남깁니다.
       // 룰렛 진행 중에는 배경 위에 룰렛만 남기고 테이블과 잔여 카드는
       // 그리지 않습니다. 룰렛은 상위 LiarsPokerTabletGamePenalty 레이어가 담당합니다.
       LiarsPokerTabletStage.penalty => const SizedBox.shrink(),
@@ -86,10 +101,7 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
         onExitToLobby: onExitToLobby,
       ),
       LiarsPokerTabletStage.finished => GameAnnouncementLayer(
-        announcement: GameAnnouncement.persistent(
-          id: 'game-finished',
-          text: GameFlowCopy.gameFinished,
-        ),
+        announcement: flowConfig.stepFor(stage).buildAnnouncement(),
         style: const GameAnnouncementStyle.tablet(),
       ),
     };
@@ -101,16 +113,18 @@ class _RoundDealLayer extends StatefulWidget {
   const _RoundDealLayer({
     super.key,
     required this.roundNumber,
-    required this.playerCount,
+    required this.boardSeatCount,
     required this.playerSeatIndexes,
     required this.cardsPerPlayer,
+    required this.flowStep,
     required this.onCompleted,
   });
 
   final int roundNumber;
-  final int playerCount;
+  final int boardSeatCount;
   final List<int> playerSeatIndexes;
   final int cardsPerPlayer;
+  final GameFlowStep<LiarsPokerTabletStage> flowStep;
   final VoidCallback onCompleted;
 
   @override
@@ -123,31 +137,37 @@ class _RoundDealLayerState extends State<_RoundDealLayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.playerSeatIndexes.isEmpty) return const SizedBox.shrink();
     return Stack(
       fit: StackFit.expand,
       children: [
         // 룰렛이 퇴장하는 동안에도 중앙 카드팩은 이미 이 레이어에 있습니다.
         AbsorbPointer(
           absorbing: _showRoundIntro,
-          child: CardDealAnimation(
-            playerCount: widget.playerCount,
-            playerSeatIndexes: widget.playerSeatIndexes,
-            cardsPerPlayer: widget.cardsPerPlayer,
-            duration: const Duration(milliseconds: 2800),
-            // 첫 라운드만 중앙 덱을 직접 눌러 시작합니다. 2라운드부터는
-            // ROUND 안내가 끝나는 순간 자동 재생해 게임 흐름을 끊지 않습니다.
-            autoplay: widget.roundNumber > 1 && _introCompleted,
-            tapToStart: widget.roundNumber == 1,
-            onCompleted: widget.onCompleted,
-          ),
+          child: !widget.flowStep.animation.enabled && !_showRoundIntro
+              ? GameFlowAutoComplete(
+                  key: ValueKey('deal-skipped-${widget.roundNumber}'),
+                  delay:
+                      widget.flowStep.beforeDelay + widget.flowStep.afterDelay,
+                  onCompleted: widget.onCompleted,
+                )
+              : CardDealAnimation(
+                  playerCount: widget.playerSeatIndexes.length,
+                  boardSeatCount: widget.boardSeatCount,
+                  playerSeatIndexes: widget.playerSeatIndexes,
+                  cardsPerPlayer: widget.cardsPerPlayer,
+                  duration: widget.flowStep.animation.duration,
+                  // 첫 라운드만 중앙 덱을 직접 눌러 시작합니다. 2라운드부터는
+                  // ROUND 안내가 끝나는 순간 자동 재생해 게임 흐름을 끊지 않습니다.
+                  autoplay: widget.roundNumber > 1 && _introCompleted,
+                  tapToStart: widget.roundNumber == 1,
+                  onCompleted: widget.onCompleted,
+                ),
         ),
         Positioned.fill(
           child: GameAnnouncementLayer(
             announcement: _showRoundIntro
-                ? GameAnnouncement.round(
-                    widget.roundNumber,
-                    id: 'tablet-round-${widget.roundNumber}',
-                  )
+                ? widget.flowStep.buildAnnouncement()
                 : null,
             style: const GameAnnouncementStyle.tablet(),
             onCompleted: (_) {

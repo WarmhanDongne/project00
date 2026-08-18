@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
@@ -29,6 +30,8 @@ class _PhoneHomeState extends State<PhoneHome> {
   @override
   void initState() {
     super.initState();
+    //================상태바 표시=================
+    unawaited(AppSystemUi.showPlatformSystemBars());
     // 앱 첫 화면의 방향은 iOS scene이 resumed 된 뒤 main.dart에서 적용합니다.
     // 게임 종료 후 세로 복원은 휴대폰 게임 화면과 대기 화면이 담당합니다.
     _games = _gameService.fetchGames();

@@ -236,6 +236,20 @@ class TabletPublicGameSnapshot {
         .toList(growable: false);
   }
 
+  /// 최초 자리 배치 순서를 유지한 채 현재 생존자의 실제 좌석 번호만 반환합니다.
+  List<int> activeSeatIndexes(PlayerLayoutModel layout) {
+    final seats = <int>[];
+    for (final layoutPlayer in layout.players) {
+      final playerValue = players[layoutPlayer.uid];
+      if (playerValue is! Map) continue;
+      final status = playerValue['status']?.toString() ?? 'alive';
+      if (status != 'alive') continue;
+      seats.add(_asInt(playerValue['seatIndex']) ?? layoutPlayer.seatIndex);
+    }
+    seats.sort();
+    return List<int>.unmodifiable(seats);
+  }
+
   int get penaltyAttemptCount {
     final targetUid = penaltyTargetUid;
     if (targetUid == null) return 0;

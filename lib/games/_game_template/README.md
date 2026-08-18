@@ -8,6 +8,7 @@
 lib/games/<my_game>/
   <my_game>_game.dart        # TemplateGame 구현체 (GameRegistry에 등록할 것)
   <my_game>_copy.dart        # 게임 전용 사용자 문구와 동적 문구 함수
+  <my_game>_flow_config.dart # 화면 단계별 문구·연출·Duration·Delay 설정
   models/                    # 게임 전용 데이터 클래스 (fromMap 파싱 포함, §3 참고)
   controllers/
     <my_game>_controller.dart          # 기본: phone/tablet 공용 서버 세션
@@ -82,6 +83,27 @@ RTDB에서 온 `Map`을 파싱하는 책임은 **모델 클래스 자신**이 `f
 
 ## 3. 화면 흐름 — 공용 셸(PhoneGameShell) 표준
 
+### 3.0 Flow Config는 화면 표현만 관리
+
+`shared/game_flow/game_flow_config.dart`의 `GameFlowStep<TStage>`에는 다음 값을
+모읍니다.
+
+- 표시 Screen/Widget 여부
+- 안내 문구, ON/OFF, 유지시간
+- Animation 이름, ON/OFF, 재생시간
+- 시작 전/종료 후 Delay
+- 입력 차단 의도와 Scrim
+- 다음 단계가 로컬 연출인지 서버 상태 대기인지
+
+Flow Config에서 서버 phase, 턴, 승패를 직접 변경하면 안 됩니다. 서버 문자열은
+phone/tablet 진입점의 `_resolvePhase`/`_resolveStage`에서 typed enum으로 한 번만
+번역하고, 게임 규칙은 Cloud Functions가 결정합니다.
+
+새 게임은 `_game_template/template_flow_config.dart`를 복사한 뒤 단계별 주석을
+실제 규칙에 맞게 수정합니다. 각 주석은 게임 시점, 서버 status/phase, 화면, 문구,
+Animation, Duration, Delay, 입력, Scrim, 다음 조건, 서버/클라이언트 책임을
+설명해야 합니다. 코드로 자명한 레이아웃 주석은 추가하지 않습니다.
+
 **휴대폰 화면 분기는 직접 짜지 마세요.** 게임마다 다시 짜다가 진입 연출 순서와
 퇴장 버튼이 어긋났고, 실제로 "손패를 모두 제출하면 상단바가 사라져 게임에서
 나갈 수 없는" 버그가 났습니다. 이제 `shared/game_flow/`의 두 파일이 표준입니다.
@@ -142,6 +164,7 @@ final shouldCloseGame = game.isFinished && !game.isNaturalResult;
 ```dart
 PhoneGameShell(
   phase: _resolvePhase(game),
+  flowConfig: buildPhoneGameFlowConfig(roundNumber: game.round),
   roundNumber: game.round,
   background: <게임 배경>,
   topBar: <SharedPhoneGameTopBar로 만든 상단바>,   // 표시 시점은 셸이 제어
@@ -224,7 +247,7 @@ PhoneGameShell(
 
 문구별 시간은 `GameAnnouncement.duration`, 레이어 전체 시간은
 `GameAnnouncementLayer.displayDuration`, 공용 휴대폰 셸의 시작·라운드 시간은
-`gameStartAnnouncementDuration`과 `roundAnnouncementDuration`으로 설정합니다.
+`buildPhoneGameFlowConfig()`의 `announcementDuration`으로 설정합니다.
 
 화면 조작이 필요 없는 안내는 `GameAnnouncement(showScrim: true)`로 암전할 수 있으며
 이 경우에도 포인터는 항상 게임 UI로 통과합니다. 연결 끊김처럼 게임을 멈추고 투표를

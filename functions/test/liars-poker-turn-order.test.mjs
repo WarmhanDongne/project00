@@ -6,6 +6,9 @@ import {
   findNextAlivePlayer,
   findNextPlayerWithCards,
 } from "../lib/liars-poker/common/next-turn.js";
+import {
+  excludeLiarsPokerPlayer,
+} from "../lib/liars-poker/exclude-player.js";
 
 // 좌석 순서대로 플레이어를 만듭니다. cards로 각자 남은 손패 수를 지정합니다.
 function players(cards, {eliminated = []} = {}) {
@@ -70,8 +73,7 @@ test("findNextAlivePlayer는 손패 수와 무관하게 다음 생존자를 고�
 });
 
 // submit-card가 FOLD 단계를 여는 조건입니다.
-//   손패를 모두 냈다 && countPlayersWithCards(...) === 1
-// 살아 있는 인원이 아니라 카드를 가진 인원으로 세는 것이 핵심입니다.
+// 이번 라운드의 제출 인원 수가 아니라 실제 잔여카드 보유자 수가 핵심입니다.
 function opensFoldStage(cards, submitterIndex, options) {
   const seats = players(cards, options);
   const submitter = `uid${submitterIndex + 1}`;
@@ -79,26 +81,20 @@ function opensFoldStage(cards, submitterIndex, options) {
     countPlayersWithCards(seats) === 1;
 }
 
-test("3인 모두 카드가 있을 때 한 명이 다 내도 FOLD가 열리지 않는다", () => {
-  // uid1이 방금 손패를 비웠고 uid2·uid3에게는 아직 카드가 있습니다.
-  assert.equal(opensFoldStage([0, 3, 2], 0), false);
+test("4인 중 세 명이 제출했어도 모두 카드가 남으면 FOLD가 열리지 않는다", () => {
+  assert.equal(opensFoldStage([4, 4, 4, 5], 0), false);
 });
 
-test("먼저 손패를 비운 사람이 있어 둘만 남으면 FOLD가 열린다", () => {
-  // uid3은 앞서 다 냈고, 이제 uid1이 마저 비웠습니다. uid2만 카드가 남습니다.
-  assert.equal(opensFoldStage([0, 4, 0], 0), true);
+test("여러 명 중 잔여카드 보유자가 한 명이면 FOLD가 열린다", () => {
+  assert.equal(opensFoldStage([0, 4, 0, 0], 0), true);
 });
 
-test("2인 게임에서 한 명이 다 내면 FOLD가 열린다", () => {
+test("2인 게임도 한 명이 손패를 모두 냈을 때만 FOLD가 열린다", () => {
   assert.equal(opensFoldStage([0, 2], 0), true);
+  assert.equal(opensFoldStage([1, 2], 0), false);
 });
 
-test("손패가 남아 있으면 FOLD가 열리지 않는다", () => {
-  assert.equal(opensFoldStage([1, 0, 0], 0), false);
-});
-
-test("탈락자의 카드는 세지 않는다", () => {
-  // uid3은 탈락 상태라 카드 수와 무관합니다. 남은 카드 보유자는 uid2뿐입니다.
+test("탈락자의 잔여카드는 FOLD 조건에서 제외한다", () => {
   assert.equal(
     opensFoldStage([0, 3, 5], 0, {eliminated: ["uid3"]}),
     true,
@@ -112,4 +108,52 @@ test("카드를 가진 사람 수를 센다", () => {
     countPlayersWithCards(players([4, 4], {eliminated: ["uid2"]})),
     1,
   );
+});
+
+test("플레이어 제외 후 잔여카드 보유자가 한 명이면 그 사람에게 FOLD가 열린다", () => {
+  const seats = players([0, 3, 2]);
+  const lastPlay = {
+    playId: "play1",
+    round: 1,
+    playerUid: "uid1",
+    cardCount: 1,
+    declaredRank: "K",
+    revealed: false,
+    submittedAt: 1,
+  };
+  const game = {
+    public: {
+      status: "playing",
+      phase: "playing",
+      round: 1,
+      revision: 1,
+      table: "K",
+      turnUid: "uid3",
+      turnDeadlineAt: 1000,
+      isFirstTurnReady: true,
+      lastPlay,
+      roundPlays: {play1: lastPlay},
+      penaltyTargetUid: null,
+      winnerUid: null,
+      players: seats,
+      startedAt: 0,
+      updatedAt: 0,
+    },
+    private: {
+      uid1: {hand: {}},
+      uid2: {hand: {}},
+      uid3: {hand: {}},
+    },
+    server: {
+      lastPlayCards: [{id: "card1", rank: "K"}],
+      processedCommands: {},
+      roundStarterUid: "uid1",
+    },
+  };
+
+  excludeLiarsPokerPlayer(game, "uid3", 100);
+
+  assert.equal(game.public.phase, "lastCardChallenge");
+  assert.equal(game.public.turnUid, "uid2");
+  assert.equal(game.public.players.uid3.status, "eliminated");
 });

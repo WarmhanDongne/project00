@@ -80,7 +80,7 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       ) {
         throw new HttpsError(
           "failed-precondition",
-          "마지막 미제출 플레이어는 카드를 제출할 수 없습니다. LIAR 또는 FOLD를 선택해주세요.",
+          "잔여카드를 가진 마지막 플레이어는 카드를 제출할 수 없습니다. LIAR 또는 FOLD를 선택해주세요.",
         );
       }
 
@@ -102,17 +102,13 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       const now = Date.now();
       player.remainingCardCount = remainingCardCount;
 
-      // 카드를 다 쓴 플레이어는 턴에서 빼고 남은 사람들끼리 라운드를 이어갑니다.
-      // FOLD 판단은 이번 제출로 카드 미제출자가 한 명만 남았을 때 나옵니다.
-      // 마지막 한 명은 손패가 남아 있어도 더 제출할 수 없고 LIAR 또는 FOLD만
-      // 선택할 수 있습니다.
-      //
-      // 기준은 '살아 있는 인원'이 아니라 '카드를 가진 인원'입니다. 3인 이상이어도
-      // 다른 사람들이 이미 손패를 다 냈다면 마지막 미제출자 한 명만 판단하며,
-      // 먼저 손패를 비운 사람들은 이 벌칙에서 빠집니다.
+      // 카드를 다 쓴 플레이어는 턴에서 빼고 손패가 남은 사람들끼리 진행합니다.
+      // FOLD는 이번 라운드 제출 횟수와 무관하며, 실제 잔여카드를 가진 생존자가
+      // 정확히 한 명이 된 순간에만 그 플레이어에게 열립니다.
       const isLastCardChallenge = remainingCardCount === 0 &&
         countPlayersWithCards(game.public.players) === 1;
       const nextTurnUid = findNextPlayerWithCards(game.public.players, uid);
+
       const lastPlay = {
         playId: commandId,
         round: game.public.round,
@@ -129,10 +125,7 @@ export const submitLiarsPokerCards = onCall<SubmitCardsData>(
       game.server.lastPlayCards = submittedCards;
 
       if (nextTurnUid === null) {
-        // 이어서 낼 사람이 아무도 없습니다. 카드를 가진 사람이 한 명 남으면
-        // 위에서 FOLD 단계로 가므로 정상 진행에서는 나오지 않고, 플레이어가
-        // 도중에 나가 손패가 사라진 경우에 대비한 처리입니다. 다음 자리부터
-        // 새 라운드를 엽니다(restartRound가 phase를 dealing으로 되돌립니다).
+        // 이어서 카드를 낼 사람이 사라진 예외 상태에서는 새 라운드를 엽니다.
         restartRound(game, findNextAlivePlayer(game.public.players, uid), now);
       } else {
         game.public.phase = isLastCardChallenge ?
