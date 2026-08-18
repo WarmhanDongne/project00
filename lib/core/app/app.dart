@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,20 +17,18 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 화면 크기 구하기
-    final view = View.of(context);
-    final size = view.physicalSize / view.devicePixelRatio;
+    final view = PlatformDispatcher.instance.implicitView ??
+        PlatformDispatcher.instance.views.firstOrNull;
+    final size = view != null ? (view.physicalSize / view.devicePixelRatio) : const Size(390, 844);
 
-    // shortestSide를 기준으로 태블릿 여부를 판단합니다.
-    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
 
     // 테블릿, 폰 분기
+    final bool isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final Size currentDesignSize = isTablet
         ? const Size(834, 1194) // 테블릿 기본 사이즈
         : const Size(390, 844); // 핸드폰 기본 사이즈
 
     return ScreenUtilInit(
-      ensureScreenSize:
-          true, // 추가: Android 환경 등에서 첫 프레임 렌더링 시 크기가 0으로 잡혀 검은 화면이 되는 현상 방지
       designSize: currentDesignSize,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -45,27 +45,64 @@ class App extends StatelessWidget {
         home: StreamBuilder<User?>(
           stream: userChanges ?? FirebaseAuth.instance.userChanges(),
           builder: (context, snapshot) {
-            // Firebase 로그인 상태 확인 중
+            // 1. Firebase Auth 상태 로딩 중
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
 
-            // 로그인된 사용자
+            // 2. Auth에 로그인된 유저 정보가 있는 경우
             if (snapshot.hasData && snapshot.data != null) {
               final user = snapshot.data!;
-
-              // Google 로그인 후 필수 정보가 없다면 회원가입 계속 진행
-              if (user.displayName == null) {
-                return const RegisterScreen(isGoogleSignIn: true);
+              
+              // 이메일 유저인데 인증이 완료되지 않았다면 로그인 화면에 머물게 함
+              final isEmailProvider = user.providerData.any((p) => p.providerId == 'password');
+              if (isEmailProvider && !user.emailVerified) {
+                return const LoginScreen();
               }
 
-              // 로그인 완료 → 홈 화면
-              return const Home();
+              // 🔥 핵심 변경 부분: Firebase Auth 대신 Firestore의 users 컬렉션 확인
+              return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .snapshots(),
+                builder: (context, userDocSnapshot) {
+                  // Firestore 데이터 로딩 중
+                  if (userDocSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final doc = userDocSnapshot.data!;
+                  // 캐시 데이터만 있고 해당 문서가 존재하지 않는 경우 서버 응답을 대기하여 화면 깜빡임(Flash) 방지
+                  if (doc.metadata.isFromCache && !doc.exists) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  // Firestore에 문서가 없거나, 닉네임 데이터가 없으면 닉네임 설정 화면으로 연결
+                  final userData = doc.data() as Map<String, dynamic>?;
+
+                  if (!userDocSnapshot.hasData ||
+                      !userDocSnapshot.data!.exists ||
+                      userData == null ||
+                      userData['nickname'] == null ||
+                      userData['nickname'].toString().trim().isEmpty) {
+                    return const RegisterScreen(isGoogleSignIn: true);
+                  }
+
+                  // DB에 유저 문서와 닉네임이 모두 존재하면 홈 화면으로 이동
+                  return const Home();
+                },
+              );
             }
 
-            // 로그인 안 된 경우
+            // 3. 로그인되지 않은 상태
             return const LoginScreen();
           },
         ),

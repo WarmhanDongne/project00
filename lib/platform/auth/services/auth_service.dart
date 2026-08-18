@@ -56,6 +56,15 @@ class FirebaseAuthService {
     }
   }
 
+  //인증 메일 발송
+  Future<void> sendEmailVerification() async {
+    try {
+      await _auth.currentUser?.sendEmailVerification();
+    } on FirebaseAuthException catch (error) {
+      throw _toServiceException(error);
+    }
+  }
+
   //로그인
   Future<void> signInWithEmailAndPassword({
     required String email,

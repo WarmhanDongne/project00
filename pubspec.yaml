@@ -61,7 +61,7 @@ dependencies:
   dev: ^1.0.0
   flutter_gen_runner: ^5.15.0
   flutter_svg: ^2.3.0
-  
+  youtube_player_iframe: ^6.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

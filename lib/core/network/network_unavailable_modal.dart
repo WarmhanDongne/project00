@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -10,6 +11,7 @@ class NetworkUnavailableModal extends StatelessWidget {
     super.key,
     required this.onRetry,
     this.isRetrying = false,
+    this.onBypass,
   });
 
   static const cardKey = Key('network-unavailable-card');
@@ -17,6 +19,7 @@ class NetworkUnavailableModal extends StatelessWidget {
 
   final VoidCallback onRetry;
   final bool isRetrying;
+  final VoidCallback? onBypass;
 
   @override
   Widget build(BuildContext context) {
@@ -84,11 +87,14 @@ class NetworkUnavailableModal extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Assets.images.others.networkUnavailable.image(
-                            width: iconSize,
-                            height: iconSize,
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
+                          GestureDetector(
+                            onLongPress: kDebugMode ? onBypass : null,
+                            child: Assets.images.others.networkUnavailable.image(
+                              width: iconSize,
+                              height: iconSize,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                            ),
                           ),
                           SizedBox(height: isCompact ? 12 : 24),
                           Text(
