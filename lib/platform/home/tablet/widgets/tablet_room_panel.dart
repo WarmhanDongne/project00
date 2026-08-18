@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -176,7 +177,7 @@ class _InvitationRoom extends StatelessWidget {
         children: [
           const _PanelHeader(title: '초대하기'),
           const Spacer(flex: 2),
-          Flexible(flex: 8, child: _QrCard(roomCode: roomCode, size: 240)),
+          Flexible(flex: 8, child: RoomQrCard(roomCode: roomCode, size: 240)),
           const Spacer(flex: 1),
           Text(
             '참여 코드',
@@ -268,7 +269,7 @@ class _ActiveRoom extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              _QrCard(roomCode: roomCode, size: 92),
+              RoomQrCard(roomCode: roomCode, size: 92),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
@@ -418,8 +419,18 @@ Color _parseAccent(String value) {
   return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }
 
-class _QrCard extends StatelessWidget {
-  const _QrCard({required this.roomCode, required this.size});
+/// 참여 코드 QR을 정사각형 카드로 그립니다.
+///
+/// [size]는 최대 한 변이고, 부모가 더 좁으면 그만큼 줄어듭니다.
+///
+/// 이 위젯은 **부모가 크기를 제한해 주지 않아도** 스스로 정사각형을 만듭니다.
+/// 예전에는 `AspectRatio`를 썼는데, 활성 방 화면에서 이 카드가 Column 안의
+/// Row 직속 자식이라 가로·세로가 모두 무한이었고 그때마다
+/// `RenderAspectRatio has unbounded constraints`로 화면이 통째로 죽었습니다.
+/// 방을 만든 직후에는 초대 화면(Flexible 안이라 높이가 유한)이라 멀쩡하다가,
+/// 누군가 입장해 활성 방 화면으로 바뀌는 순간 터졌습니다.
+class RoomQrCard extends StatelessWidget {
+  const RoomQrCard({super.key, required this.roomCode, required this.size});
 
   final String roomCode;
   final double size;
@@ -427,18 +438,26 @@ class _QrCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: size, maxHeight: size),
-        padding: EdgeInsets.all(size * 0.08),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: colors.border),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: QrImageView(data: roomCode, padding: EdgeInsets.zero),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 부모가 준 여유와 요청 크기 중 작은 쪽으로 한 변을 정합니다.
+        // 무한 제약은 여유가 없다는 뜻이 아니므로 요청 크기를 그대로 씁니다.
+        final available = math.min(constraints.maxWidth, constraints.maxHeight);
+        final side = available.isFinite ? math.min(size, available) : size;
+        return SizedBox(
+          width: side,
+          height: side,
+          child: Container(
+            padding: EdgeInsets.all(side * 0.08),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: colors.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: QrImageView(data: roomCode, padding: EdgeInsets.zero),
+          ),
+        );
+      },
     );
   }
 }
