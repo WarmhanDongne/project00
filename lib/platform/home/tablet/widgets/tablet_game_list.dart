@@ -131,18 +131,16 @@ class _GameListState extends State<GameList> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          const columns = 5;
+                          final availableWidth = constraints.maxWidth;
+                          // 200px 기준, 최대 5열, 최소 1열
+                          final columns = (availableWidth / 200).floor().clamp(
+                            1,
+                            5,
+                          );
                           const spacing = 10.0;
                           final tileWidth =
-                              (constraints.maxWidth - spacing * (columns - 1)) /
+                              (availableWidth - spacing * (columns - 1)) /
                               columns;
-                          // 첫 줄 전체와 다음 줄 일부가 보이도록 최신 홈 시안의
-                          // 카드 비율을 유지합니다.
-                          final targetHeight =
-                              ((constraints.maxHeight - spacing) / 1.52).clamp(
-                                190.0,
-                                280.0,
-                              );
                           return GridView.builder(
                             padding: EdgeInsets.zero,
                             itemCount: games.length,
@@ -151,7 +149,7 @@ class _GameListState extends State<GameList> {
                                   crossAxisCount: columns,
                                   crossAxisSpacing: spacing,
                                   mainAxisSpacing: spacing,
-                                  childAspectRatio: tileWidth / targetHeight,
+                                  childAspectRatio: 168 / 276,
                                 ),
                             itemBuilder: (context, index) {
                               final game = games[index];
@@ -187,7 +185,6 @@ class GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -197,33 +194,35 @@ class GameCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
                 child: SizedBox.expand(child: _GameImage(url: game.imageUrl)),
               ),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 12),
             Text(
               game.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 10),
             Wrap(
-              spacing: 4,
-              runSpacing: 4,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 if (game.playTime > 0) PlatformTag(label: '${game.playTime}분'),
                 if (game.minPlayers > 0)
                   PlatformTag(label: '${game.minPlayers}~${game.maxPlayers}인'),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             if (game.genres.isNotEmpty)
               Wrap(
-                spacing: 4,
+                spacing: 6,
+                runSpacing: 6,
                 children: game.genres
                     .take(2)
                     .map(
@@ -234,13 +233,6 @@ class GameCard extends StatelessWidget {
                     )
                     .toList(growable: false),
               ),
-            const SizedBox(height: 5),
-            Text(
-              game.description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: colors.textMuted, fontSize: 12),
-            ),
           ],
         ),
       ),

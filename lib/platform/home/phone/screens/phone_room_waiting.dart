@@ -48,18 +48,23 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       unawaited(AppSystemUi.enterGameFullscreen());
     }
     _syncGameStatusSubscription();
-    if (widget.provider.wasKicked) {
+
+    final wasKicked = widget.provider.wasKicked;
+    final wasRoomClosed = widget.provider.wasRoomClosed;
+
+    if (wasKicked || wasRoomClosed) {
       widget.provider.wasKicked = false;
+      widget.provider.wasRoomClosed = false;
       if (!mounted) return;
-      // 방 대기 화면에서만 추방을 감지하고 게임 중(isOpeningGame)일 때는 무시합니다.
+      // 방 대기 화면에서만 추방/해체를 감지하고 게임 중(isOpeningGame)일 때는 무시합니다.
       if (_isOpeningGame || ModalRoute.of(context)?.isCurrent != true) return;
 
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('방에서 추방되었습니다.'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(wasRoomClosed ? '방을 찾을 수 없습니다' : '방에서 추방되었습니다.'),
+            duration: const Duration(seconds: 2),
           ),
         );
       //================상태바 표시=================

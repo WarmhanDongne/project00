@@ -175,16 +175,19 @@ class _InvitationRoom extends StatelessWidget {
       child: Column(
         children: [
           const _PanelHeader(title: '초대하기'),
-          const Spacer(),
-          _QrCard(roomCode: roomCode, size: 240),
-          const SizedBox(height: 14),
+          const Spacer(flex: 2),
+          Flexible(flex: 8, child: _QrCard(roomCode: roomCode, size: 240)),
+          const Spacer(flex: 1),
           Text(
             '참여 코드',
             style: TextStyle(color: colors.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 4),
-          _CopyableRoomCode(roomCode: roomCode, fontSize: 32),
-          const SizedBox(height: 12),
+          Flexible(
+            flex: 2,
+            child: _CopyableRoomCode(roomCode: roomCode, fontSize: 32),
+          ),
+          const Spacer(flex: 1),
           Text(
             '모바일 앱에서 이 코드를 입력하면\n바로 참여합니다.',
             textAlign: TextAlign.center,
@@ -195,10 +198,19 @@ class _InvitationRoom extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (provider.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                provider.errorMessage!,
+                style: const TextStyle(color: Colors.red, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
           PlatformButton(
-            label: '초기화',
+            label: provider.isLoading ? '초기화 중...' : '초기화',
             style: PlatformButtonStyle.secondary,
-            onPressed: provider.isLoading ? null : provider.createRoom,
+            onPressed: provider.isLoading ? null : provider.closeRoom,
           ),
         ],
       ),
@@ -415,16 +427,18 @@ class _QrCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    return Container(
-      width: size,
-      height: size,
-      padding: EdgeInsets.all(size * 0.08),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: colors.border),
-        borderRadius: BorderRadius.circular(8),
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: size, maxHeight: size),
+        padding: EdgeInsets.all(size * 0.08),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: colors.border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: QrImageView(data: roomCode, padding: EdgeInsets.zero),
       ),
-      child: QrImageView(data: roomCode, padding: EdgeInsets.zero),
     );
   }
 }
