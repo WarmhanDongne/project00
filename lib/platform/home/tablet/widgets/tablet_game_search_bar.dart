@@ -16,7 +16,7 @@ class GameSearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: '게임 검색',
           hintStyle: TextStyle(color: colors.textMuted, fontSize: 15),
-          prefixIcon: Icon(Icons.search, size: 20, color: colors.textMuted),
+          suffixIcon: Icon(Icons.search, size: 20, color: colors.textMuted),
           filled: true,
           fillColor: colors.surfaceMuted,
           border: OutlineInputBorder(

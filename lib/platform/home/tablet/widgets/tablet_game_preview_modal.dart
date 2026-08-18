@@ -282,16 +282,19 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
           ),
           child: Stack(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 240,
-                    child: _PosterImage(imageUrl: widget.game.imageUrl),
-                  ),
-                  const SizedBox(width: 22),
-                  Expanded(
-                    child: SingleChildScrollView(
+              SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      child: AspectRatio(
+                        aspectRatio: 320 / 468,
+                        child: _PosterImage(imageUrl: widget.game.imageUrl),
+                      ),
+                    ),
+                    const SizedBox(width: 22),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -358,8 +361,8 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Positioned(
                 right: 0,

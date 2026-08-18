@@ -133,18 +133,14 @@ class _GameListState extends State<GameList> {
                         builder: (context, constraints) {
                           final availableWidth = constraints.maxWidth;
                           // 200px 기준, 최대 5열, 최소 1열
-                          final columns = (availableWidth / 200).floor().clamp(1, 5);
+                          final columns = (availableWidth / 200).floor().clamp(
+                            1,
+                            5,
+                          );
                           const spacing = 10.0;
                           final tileWidth =
                               (availableWidth - spacing * (columns - 1)) /
                               columns;
-                          // 첫 줄 전체와 다음 줄 일부가 보이도록 최신 홈 시안의
-                          // 카드 비율을 유지합니다.
-                          final targetHeight =
-                              ((constraints.maxHeight - spacing) / 1.52).clamp(
-                                190.0,
-                                280.0,
-                              );
                           return GridView.builder(
                             padding: EdgeInsets.zero,
                             itemCount: games.length,
@@ -153,7 +149,7 @@ class _GameListState extends State<GameList> {
                                   crossAxisCount: columns,
                                   crossAxisSpacing: spacing,
                                   mainAxisSpacing: spacing,
-                                  childAspectRatio: tileWidth / targetHeight,
+                                  childAspectRatio: 168 / 276,
                                 ),
                             itemBuilder: (context, index) {
                               final game = games[index];
@@ -189,7 +185,6 @@ class GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -199,7 +194,8 @@ class GameCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
                 child: SizedBox.expand(child: _GameImage(url: game.imageUrl)),
@@ -236,13 +232,6 @@ class GameCard extends StatelessWidget {
                     )
                     .toList(growable: false),
               ),
-            const SizedBox(height: 5),
-            Text(
-              game.description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: colors.textMuted, fontSize: 12),
-            ),
           ],
         ),
       ),
