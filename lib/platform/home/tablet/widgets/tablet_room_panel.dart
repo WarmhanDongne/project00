@@ -61,7 +61,7 @@ class _EmptyRoom extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     const double radius = 38.0;
-    
+
     return Padding(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -69,10 +69,7 @@ class _EmptyRoom extends StatelessWidget {
           const _PanelHeader(title: '구성원 목록'),
           const Spacer(),
           CustomPaint(
-            painter: _DashedBorderPainter(
-              color: colors.border,
-              radius: radius,
-            ),
+            painter: _DashedBorderPainter(color: colors.border, radius: radius),
             child: Container(
               width: 150,
               height: 150,
@@ -118,10 +115,7 @@ class _EmptyRoom extends StatelessWidget {
 }
 
 class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({
-    required this.color,
-    required this.radius,
-  });
+  const _DashedBorderPainter({required this.color, required this.radius});
 
   final Color color;
   final double radius;
