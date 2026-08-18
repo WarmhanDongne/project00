@@ -127,7 +127,10 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 430),
+        constraints: BoxConstraints(
+          maxWidth: 430,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         child: PlatformPanel(
           border: false,
           radius: 16,

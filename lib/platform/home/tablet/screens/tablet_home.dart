@@ -168,7 +168,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final panelWidth = (constraints.maxWidth * 0.25).clamp(
-                        220.0,
+                        280.0,
                         310.0,
                       );
                       return Row(

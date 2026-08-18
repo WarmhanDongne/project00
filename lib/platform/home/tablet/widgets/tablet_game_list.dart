@@ -131,10 +131,12 @@ class _GameListState extends State<GameList> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          const columns = 5;
+                          final availableWidth = constraints.maxWidth;
+                          // 200px 기준, 최대 5열, 최소 1열
+                          final columns = (availableWidth / 200).floor().clamp(1, 5);
                           const spacing = 10.0;
                           final tileWidth =
-                              (constraints.maxWidth - spacing * (columns - 1)) /
+                              (availableWidth - spacing * (columns - 1)) /
                               columns;
                           // 첫 줄 전체와 다음 줄 일부가 보이도록 최신 홈 시안의
                           // 카드 비율을 유지합니다.
