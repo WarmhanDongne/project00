@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
@@ -152,18 +151,11 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return Scaffold(
+      backgroundColor: colors.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colors.border),
-            ),
-            child: Column(
-              children: [
-                _HomeHeader(
+        child: Column(
+          children: [
+            _HomeHeader(
                   onSearchChanged: (value) {
                     setState(() => searchWord = value);
                   },
@@ -173,7 +165,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final panelWidth = (constraints.maxWidth * 0.25).clamp(
-                        220.0,
+                        280.0,
                         310.0,
                       );
                       return Row(
@@ -200,9 +192,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                     },
                   ),
                 ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -247,17 +237,6 @@ class _HomeHeader extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () {
-                      FirebaseAuth.instance.signOut();
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    child: Text(
-                      '로그아웃',
-                      style: TextStyle(color: colors.textMuted, fontSize: 14),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   const Profile(),
                 ],
               ),

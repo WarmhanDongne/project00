@@ -267,7 +267,10 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 500),
+        constraints: BoxConstraints(
+          maxWidth: 780,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -283,86 +286,87 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
           ),
           child: Stack(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 240,
-                    child: _PosterImage(imageUrl: widget.game.imageUrl),
-                  ),
-                  const SizedBox(width: 22),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 42),
-                          child: Text(
-                            widget.game.name.isEmpty
-                                ? '게임 이름'
-                                : widget.game.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 27,
-                              fontWeight: FontWeight.w900,
+              SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      child: AspectRatio(
+                        aspectRatio: 320 / 468,
+                        child: _PosterImage(imageUrl: widget.game.imageUrl),
+                      ),
+                    ),
+                    const SizedBox(width: 22),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 42),
+                            child: Text(
+                              widget.game.name.isEmpty
+                                  ? '게임 이름'
+                                  : widget.game.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 27,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 9),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            for (final text in informationTexts)
-                              PlatformTag(label: text),
-                            for (final genre in widget.game.genres.take(3))
-                              PlatformTag(label: genre, highlighted: true),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          widget.game.description.isEmpty
-                              ? '게임 설명이 없습니다.'
-                              : widget.game.description,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: colors.textMuted,
-                            fontSize: 13,
-                            height: 1.55,
+                          const SizedBox(height: 9),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final text in informationTexts)
+                                PlatformTag(label: text),
+                              for (final genre in widget.game.genres.take(3))
+                                PlatformTag(label: genre, highlighted: true),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        Expanded(
-                          child: _RuleVideoArea(
+                          const SizedBox(height: 14),
+                          Text(
+                            widget.game.description.isEmpty
+                                ? '게임 설명이 없습니다.'
+                                : widget.game.description,
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 13,
+                              height: 1.55,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _RuleVideoArea(
                             videoUrl: widget.game.ruleVideoUrl,
                             onPlayPressed: _playVideo,
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (!hasEnoughPlayers)
-                          PlatformNotice(
-                            message: fixedPlayerCount == null
-                                ? '현재 인원 $activePlayerCount명은 권장 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명과 다릅니다.'
-                                : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
-                            style: PlatformNoticeStyle.warning,
-                          ),
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: SizedBox(
-                            width: 140,
-                            child: PlatformButton(
-                              label: '시작하기',
-                              onPressed: () => _startGame(context),
+                          const SizedBox(height: 10),
+                          if (!hasEnoughPlayers)
+                            PlatformNotice(
+                              message: fixedPlayerCount == null
+                                  ? '현재 인원 $activePlayerCount명은 권장 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명과 다릅니다.'
+                                  : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
+                              style: PlatformNoticeStyle.warning,
+                            ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(
+                              width: 140,
+                              child: PlatformButton(
+                                label: '시작하기',
+                                onPressed: () => _startGame(context),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Positioned(
                 right: 0,

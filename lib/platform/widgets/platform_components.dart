@@ -105,16 +105,16 @@ class PlatformTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: highlighted ? colors.primarySoft : colors.surfaceMuted,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: highlighted ? colors.primary : colors.textMuted,
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
       ),

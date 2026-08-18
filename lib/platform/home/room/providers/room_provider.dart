@@ -20,6 +20,7 @@ class RoomProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? roomSubscription;
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
   StreamSubscription<bool>? connectionSubscription;
+  StreamSubscription<String?>? statusSubscription;
 
   List<RoomPlayer> players = [];
   List<GameInfo> groupGames = [];
@@ -27,6 +28,7 @@ class RoomProvider extends ChangeNotifier {
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
   bool wasKicked = false;
+  bool wasRoomClosed = false;
   bool _hasJoined = false;
   bool _isLeaving = false;
   bool _wasServerDisconnected = false;
@@ -103,6 +105,20 @@ class RoomProvider extends ChangeNotifier {
       listenRoom();
       _startControllerHeartbeat(code);
     } else if (previousRoomDeleted) {
+      clearRoom();
+    }
+  }
+
+  Future<void> closeRoom() async {
+    final currentCode = roomCode;
+    if (currentCode == null) return;
+
+    final success = await _runCommand<bool>(() async {
+      await _service.closeControllerRoom(currentCode);
+      return true;
+    });
+
+    if (success == true) {
       clearRoom();
     }
   }
@@ -233,6 +249,7 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
+    statusSubscription?.cancel();
     _presenceRetryTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
 
@@ -240,6 +257,17 @@ class RoomProvider extends ChangeNotifier {
       _handleServerConnection,
       onError: (_) => _handleServerConnection(false),
     );
+
+    statusSubscription = _service.watchRoomStatus(roomCode!).listen((status) {
+      if (status == 'closed') {
+        _hasJoined = false;
+        wasRoomClosed = true;
+        unawaited(
+          PlayerRoomSessionStore.instance.clear(onlyRoomCode: roomCode),
+        );
+        clearRoom();
+      }
+    });
 
     if (_joinedNickname != null) {
       _startPlayerHeartbeat(roomCode!);
@@ -558,18 +586,19 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
-
   // 메모리 초기화 leaveRoom에서 사용
   void clearRoom() {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
+    statusSubscription?.cancel();
     _presenceRetryTimer?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     roomSubscription = null;
     playerSubscription = null;
     connectionSubscription = null;
+    statusSubscription = null;
     roomCode = null;
     players = [];
     selectedGameId = null;
@@ -591,6 +620,7 @@ class RoomProvider extends ChangeNotifier {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
+    statusSubscription?.cancel();
     _presenceRetryTimer?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();

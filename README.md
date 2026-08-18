@@ -68,3 +68,10 @@ flutter run
 - 골격: 사용자 저장소, 매치메이킹, 실시간 게임 룸, Liar's Poker 상태 관리
 - 미구현: 화면 UI, 공용 위젯, 테마, 라우팅
 - 추후 작업: 실제 인증 흐름, 데이터 직렬화, Firebase 보안 규칙, 에러/로딩 처리, 다국어 코드 생성 및 화면 연결
+
+## 자주 발생하는 문제 해결 (Troubleshooting)
+
+### 안드로이드 에뮬레이터에서 앱 실행 시 즉시 튕기는 현상 (Impeller 오류)
+Flutter 3.22+ 버전부터 안드로이드에 새로운 그래픽 렌더링 엔진인 **Impeller**가 기본 적용되었습니다. 하지만 윈도우 환경의 일부 안드로이드 에뮬레이터(가상 기기)에서는 그래픽 드라이버 호환성 문제로 인해 `Requested texture size (1, 1) exceeds maximum supported size of (0, 0)` 에러와 함께 앱이 즉시 강제 종료되는 문제가 있습니다.
+
+이 프로젝트는 에뮬레이터 개발 환경에서의 안정성을 위해 `android/app/src/main/AndroidManifest.xml`에 `<meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />` 옵션을 주입하여 기존의 안정적인 Skia 엔진을 강제로 사용하도록 조치해 두었습니다.

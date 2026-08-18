@@ -123,23 +123,18 @@ export const closeRoom = onCall<RoomData>(
       throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
     }
 
-    const result = await roomRef.transaction((raw) => {
-      if (raw === null) return;
-      const room = raw as RealtimeRoom;
-      assertControllerSession(room, uid, request.data?.controllerSessionId);
-      room.status = "closed";
-      room.controllerConnected = false;
-      room.controllerPresence = {
+    const room = roomSnapshot.val() as RealtimeRoom;
+    assertControllerSession(room, uid, request.data?.controllerSessionId);
+
+    await roomRef.update({
+      status: "closed",
+      controllerConnected: false,
+      controllerPresence: {
         connected: false,
         lastSeen: now,
-      };
-      room.cleanupAt = now + CLOSED_ROOM_RETENTION_MS;
-      return room;
+      },
+      cleanupAt: now + CLOSED_ROOM_RETENTION_MS,
     });
-
-    if (!result.committed) {
-      throw new HttpsError("aborted", "방을 종료하지 못했습니다.");
-    }
     const controllerRoomRef = getDatabase().ref(`controllerRooms/${uid}`);
     const mappedRoom = await controllerRoomRef.get();
     if (mappedRoom.val() === roomCode) await controllerRoomRef.remove();
