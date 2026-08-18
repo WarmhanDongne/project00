@@ -26,6 +26,7 @@ import {CARDS_PER_PLAYER} from "./restart-round.js";
 type StartGameData = {
   roomCode?: unknown;
   restart?: unknown;
+  controllerSessionId?: unknown;
 };
 
 /**
@@ -58,7 +59,7 @@ export const startLiarsPokerGame =
       const room = rawRoom as RealtimeRoom;
 
       // 방을 만든 아이패드인지 확인합니다.
-      assertController(room, uid);
+      assertController(room, uid, request.data?.controllerSessionId);
 
       if (room.selectedGame !== "liars_poker") {
         throw new HttpsError(

@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/games/game_registry.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
@@ -18,13 +22,13 @@ class TabletHome extends StatefulWidget {
   State<TabletHome> createState() => _TabletHomeState();
 }
 
-class _TabletHomeState extends State<TabletHome> {
+class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
   final RoomProvider roomProvider = RoomProvider();
   final GameProvider gameProvider = GameProvider();
   String searchWord = '';
-
-  String? _presenceRoomCode;
-  StreamSubscription<bool?>? _controllerRoomSubscription;
+  StreamSubscription<String?>? _restoredGameStatusSubscription;
+  String? _restoredStatusRoomCode;
+  bool _isOpeningRestoredGame = false;
 
   @override
   void initState() {
@@ -33,43 +37,107 @@ class _TabletHomeState extends State<TabletHome> {
     // 앱 첫 실행에서는 이 initState가 iOS scene 연결보다 먼저 호출될 수 있습니다.
     // 초기 태블릿 가로 고정은 main.dart가 lifecycle resumed 이후 한 번만 적용합니다.
     // 게임 종료 후 복원은 각 태블릿 게임 화면의 dispose가 담당합니다.
-    //=======================진행 기기 접속 표시==============================
-    // 방이 생기면 태블릿이 방을 열고 있다고 표시합니다. 태블릿이 사라지면
-    // 서버가 방 전체를 삭제해 고아 방과 휴대폰의 무한 대기를 막습니다.
-    roomProvider.addListener(_syncControllerPresence);
+    //=======================controller 방 복구==============================
+    // dispose나 lifecycle은 방 삭제 신호가 아닙니다. 저장된 session으로 기존
+    // 방을 복구하고, background에서는 heartbeat만 멈춥니다.
+    WidgetsBinding.instance.addObserver(this);
+    roomProvider.addListener(_syncRestoredGame);
+    unawaited(roomProvider.restoreControllerRoom());
   }
 
-  void _syncControllerPresence() {
+  void _syncRestoredGame() {
     final code = roomProvider.roomCode;
     if (code == null) {
-      _presenceRoomCode = null;
-      unawaited(_controllerRoomSubscription?.cancel());
-      _controllerRoomSubscription = null;
+      _restoredStatusRoomCode = null;
+      unawaited(_restoredGameStatusSubscription?.cancel());
+      _restoredGameStatusSubscription = null;
       return;
     }
-    if (code == _presenceRoomCode) return;
-    _presenceRoomCode = code;
-    unawaited(roomProvider.markControllerConnected());
-    unawaited(_controllerRoomSubscription?.cancel());
-    _controllerRoomSubscription = roomProvider
-        .watchControllerConnected(code)
-        .listen((connected) {
-          // 오프라인 중 RTDB 서버가 방을 삭제했다면, 재연결 후
-          // 아이패드에 존재하지 않는 방 코드를 계속 표시하지 않습니다.
-          if (connected == false && roomProvider.roomCode == code) {
-            roomProvider.clearRoom();
-          }
-        }, onError: (_) {});
+    if (_restoredStatusRoomCode == code) return;
+    _restoredStatusRoomCode = code;
+    unawaited(_restoredGameStatusSubscription?.cancel());
+    _restoredGameStatusSubscription = roomProvider.watchGameStatus(code).listen(
+      (status) {
+        if (status == 'playing') _openRestoredGameIfReady(code);
+      },
+      onError: (_) {},
+    );
+  }
+
+  void _openRestoredGameIfReady(String roomCode) {
+    if (_isOpeningRestoredGame ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final gameId = roomProvider.selectedGameId;
+    final game = gameId == null ? null : GameRegistry.find(gameId);
+    if (game == null || roomProvider.players.isEmpty) {
+      Future<void>.delayed(
+        const Duration(milliseconds: 150),
+        () => _openRestoredGameIfReady(roomCode),
+      );
+      return;
+    }
+
+    final players = [...roomProvider.players]
+      ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
+    final savedSeats = players.map((player) => player.seatIndex).toSet();
+    final hasValidSavedSeats =
+        savedSeats.length == players.length &&
+        savedSeats.every((seat) => seat >= 0 && seat < players.length);
+    final layout = hasValidSavedSeats
+        ? PlayerLayoutModel(
+            players: List.unmodifiable(
+              players.map(
+                (player) => PlayerLayoutPlayer(
+                  uid: player.uid,
+                  nickname: player.nickname,
+                  profileImageUrl: player.profileImageUrl,
+                  seatIndex: player.seatIndex,
+                ),
+              ),
+            ),
+          )
+        : PlayerLayoutFactory.create(players);
+
+    _isOpeningRestoredGame = true;
+    unawaited(AppOrientation.lockTabletGameLandscape());
+    Navigator.of(context)
+        .push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => game.buildTabletScreen(
+              playerLayout: layout,
+              provider: roomProvider,
+              roomCode: roomCode,
+            ),
+          ),
+        )
+        .whenComplete(() => _isOpeningRestoredGame = false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(roomProvider.resumeControllerPresence());
+      return;
+    }
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      unawaited(roomProvider.pauseControllerPresence());
+    }
   }
 
   @override
   void dispose() {
-    roomProvider.removeListener(_syncControllerPresence);
-    //=======================태블릿 정상 종료==============================
-    // 로그아웃·화면 종료 시에는 onDisconnect 타임아웃을 기다리지 않고
-    // 방을 즉시 삭제합니다. 앱 강제 종료는 서버 예약이 담당합니다.
-    unawaited(roomProvider.deleteControllerRoom());
-    unawaited(_controllerRoomSubscription?.cancel());
+    WidgetsBinding.instance.removeObserver(this);
+    roomProvider.removeListener(_syncRestoredGame);
+    unawaited(_restoredGameStatusSubscription?.cancel());
+    // 화면 dispose는 명시적 방 종료가 아닙니다. heartbeat만 정리하고 방과
+    // controller session은 재접속 유예시간 동안 서버에 유지합니다.
+    unawaited(roomProvider.pauseControllerPresence());
     roomProvider.dispose();
     gameProvider.dispose();
     super.dispose();

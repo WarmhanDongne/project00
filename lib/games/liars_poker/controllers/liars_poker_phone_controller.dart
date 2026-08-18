@@ -168,6 +168,15 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   bool get isEliminated => players[uid]?.status == 'eliminated';
   int get alivePlayerCount =>
       players.values.where((player) => player.status == 'alive').length;
+  int get playersWithCardsCount => players.values
+      .where(
+        (player) => player.status == 'alive' && player.remainingCardCount > 0,
+      )
+      .length;
+  bool get isOnlyPlayerWithCards =>
+      !isEliminated &&
+      (players[uid]?.remainingCardCount ?? 0) > 0 &&
+      playersWithCardsCount == 1;
 
   bool get showPenaltyHandOverlay =>
       liarVerdictMessage != null ||
@@ -197,13 +206,12 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
 
   /// 마지막 남은 한 명에게 FOLD 선택지를 보여줄지 여부입니다.
   ///
-  /// 서버가 `lastCardChallenge` 단계를 여는 조건 자체가 "카드를 가진 사람이
-  /// 둘만 남았고 그중 한 명이 손패를 모두 냈을 때"이므로, 여기서 인원 수를 다시
-  /// 확인하지 않습니다. 살아 있는 인원으로 판단하면 3인 이상 게임에서 다른
-  /// 사람들이 이미 패를 다 낸 1대1 상황을 놓칩니다.
+  /// 게임 전체 인원과 무관하게 카드 미제출자가 본인 한 명만 남았을 때만
+  /// LIAR/FOLD 선택을 표시합니다.
   bool get showFoldPrompt =>
       phase == 'lastCardChallenge' &&
       isMyTurn &&
+      isOnlyPlayerWithCards &&
       lastPlayPlayerUid != null &&
       lastPlayPlayerUid != uid;
 
@@ -212,6 +220,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
       interruption == null &&
       phase == 'playing' &&
       !isEliminated &&
+      !isOnlyPlayerWithCards &&
       handCards.isNotEmpty;
 
   bool get canSubmitCards => canSelectCards && isMyTurn && !isCommandInFlight;
@@ -231,6 +240,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
       phase == 'lastCardChallenge' &&
       isMyTurn &&
       !isEliminated &&
+      isOnlyPlayerWithCards &&
       !isCommandInFlight;
 
   String get turnNickname => players[turnUid]?.nickname ?? '다른 플레이어';

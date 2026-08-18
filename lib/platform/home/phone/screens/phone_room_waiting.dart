@@ -22,7 +22,7 @@ class PhoneRoomWaiting extends StatefulWidget {
 
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   StreamSubscription<String?>? _gameStatusSubscription;
-  StreamSubscription<bool?>? _controllerSubscription;
+  StreamSubscription<String?>? _controllerSubscription;
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
@@ -88,14 +88,14 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       _openGameIfReady(roomCode);
     }, onError: _showStatusError);
 
-    //=======================진행 기기 이탈 감지==============================
-    // 태블릿이 방을 닫으면 게임이 시작될 일이 없습니다. 안내 문구만 보며
-    // 무한 대기하지 않도록 방에서 나와 휴대폰 홈으로 돌아갑니다.
-    _controllerSubscription = widget.provider
-        .watchControllerConnected(roomCode)
-        .listen((connected) {
-          if (connected == false) _handleControllerLost();
-        }, onError: (_) {});
+    //=======================명시적인 방 종료 감지==============================
+    // controller presence false는 순간 단절이나 백그라운드일 수 있으므로
+    // 퇴장 조건으로 사용하지 않습니다. 서버 closeRoom의 closed 상태만 봅니다.
+    _controllerSubscription = widget.provider.watchRoomStatus(roomCode).listen((
+      status,
+    ) {
+      if (status == 'closed') _handleControllerLost();
+    }, onError: (_) {});
   }
 
   Future<void> _handleControllerLost() async {

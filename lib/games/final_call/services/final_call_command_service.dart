@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
+import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 /// Final Call Cloud Functions 명령 전용 서비스입니다.
 class FinalCallCommandService {
@@ -110,8 +111,14 @@ class FinalCallCommandService {
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
   }) async {
+    final roomCode = data['roomCode'];
+    final payload = roomCode is String
+        ? controllerCommandData(roomCode, data)
+        : data;
     return retryPolicy.run(() async {
-      final response = await _functions.httpsCallable(functionName).call(data);
+      final response = await _functions
+          .httpsCallable(functionName)
+          .call(payload);
       return response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : const {};

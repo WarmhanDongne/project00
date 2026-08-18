@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
+import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 class LiarsPokerCommandService {
   LiarsPokerCommandService({
@@ -110,9 +111,15 @@ class LiarsPokerCommandService {
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
   }) async {
+    final roomCode = data['roomCode'];
+    final payload = roomCode is String
+        ? controllerCommandData(roomCode, data)
+        : data;
     try {
       return await retryPolicy.run(() async {
-        final result = await _functions.httpsCallable(functionName).call(data);
+        final result = await _functions
+            .httpsCallable(functionName)
+            .call(payload);
 
         if (result.data is! Map) {
           return const {};

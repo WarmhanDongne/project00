@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:roulette/roulette.dart';
@@ -13,6 +14,7 @@ class PenaltyRoulette extends StatefulWidget {
     required this.onResult,
     this.centerProfileImageUrl,
   });
+
   final int attemptCount;
   final ValueChanged<RouletteResult> onResult;
   final String? centerProfileImageUrl;
@@ -23,46 +25,68 @@ class PenaltyRoulette extends StatefulWidget {
 
 class _PenaltyRouletteState extends State<PenaltyRoulette>
     with SingleTickerProviderStateMixin {
+  /// ============================================================
+  /// 기준 디자인 사이즈
+  ///
+  /// 모든 iPad에서 이 1300 × 900 화면을 기준으로
+  /// 전체 룰렛 UI가 동일한 비율로 확대/축소됩니다.
+  /// ============================================================
+  static const double _designWidth = 1300;
+  static const double _designHeight = 900;
+
   final RouletteController _controller = RouletteController();
   final Random _random = Random.secure();
 
   bool _isSpinning = false;
   bool _isLeverLocked = false;
   bool _isLeverDragActive = false;
+
   late final AnimationController _leverController;
 
   @override
   void initState() {
     super.initState();
+
     _leverController =
         AnimationController(
           vsync: this,
           duration: const Duration(milliseconds: 220),
         )..addListener(() {
-          debugPrint('leverProgress: ${_leverController.value}');
-
           setState(() {});
         });
   }
 
+  // ============================================================
+  // 레버
+  // ============================================================
+
   void _onLeverDragStart(DragStartDetails details) {
     if (_isLeverLocked || _isSpinning) return;
 
-    // 원래 디자인의 빨간 손잡이가 놓인 위치만 드래그를 허용한다.
+    /// GestureDetector 자체도 1300 × 900 기준 캔버스와
+    /// 같이 스케일링되기 때문에 이 좌표를 기기별로
+    /// 다시 계산할 필요가 없습니다.
     const initialHeadCenter = Offset(265, 150);
+
     _isLeverDragActive =
         (details.localPosition - initialHeadCenter).distance <= 200;
   }
 
   void _onLeverDragUpdate(DragUpdateDetails details) {
-    if (!_isLeverDragActive || _isLeverLocked || _isSpinning) return;
+    if (!_isLeverDragActive || _isLeverLocked || _isSpinning) {
+      return;
+    }
 
     final nextValue = _leverController.value + (details.delta.dy / 400);
+
     _leverController.value = nextValue.clamp(0.0, 1.0).toDouble();
   }
 
   Future<void> _onLeverDragEnd(DragEndDetails details) async {
-    if (!_isLeverDragActive || _isLeverLocked || _isSpinning) return;
+    if (!_isLeverDragActive || _isLeverLocked || _isSpinning) {
+      return;
+    }
+
     _isLeverDragActive = false;
 
     if (_leverController.value < 0.75) {
@@ -71,23 +95,45 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     }
 
     _isLeverLocked = true;
+
     await _leverController.animateTo(1, curve: Curves.easeOutCubic);
+
     if (!mounted) return;
+
     await _spin();
   }
 
-  /// true = 탈락
+  // ============================================================
+  // 룰렛 확률
+  // ============================================================
+
+  /// true  = 탈락
   /// false = 생존
   List<bool> get _sections {
     switch (widget.attemptCount) {
       case 0:
-        // 총 16칸 → 탈락 4 : 생존 12 (1 : 3)
+
+        /// 총 16칸
+        /// 탈락 4
+        /// 생존 12
+        ///
+        /// 탈락 : 생존 = 1 : 3
         return List.generate(16, (index) => index % 4 == 0);
+
       case 1:
-        // 총 15칸 → 탈락 5 : 생존 10 (1 : 2)
+
+        /// 총 15칸
+        /// 탈락 5
+        /// 생존 10
+        ///
+        /// 탈락 : 생존 = 1 : 2
         return List.generate(15, (index) => index % 3 == 0);
+
       default:
-        // 총 12칸 → 탈락 11 : 생존 1
+
+        /// 총 12칸
+        /// 탈락 11
+        /// 생존 1
         return List<bool>.generate(12, (index) => index != 0);
     }
   }
@@ -106,6 +152,10 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     );
   }
 
+  // ============================================================
+  // 룰렛 실행
+  // ============================================================
+
   Future<void> _spin() async {
     if (_isSpinning) return;
 
@@ -114,6 +164,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     });
 
     final sections = _sections;
+
     final selectedIndex = _random.nextInt(sections.length);
 
     final completed = await _controller.rollTo(
@@ -140,38 +191,82 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     );
   }
 
+  // ============================================================
+  // UI
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 1300,
-      height: 900,
-      child: Stack(
-        children: [
-          Center(
-            child: RouletteWheel(
-              controller: _controller,
-              group: _group,
-              leverProgress: _leverController.value,
-              centerProfileImageUrl: widget.centerProfileImageUrl,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+
+          /// ------------------------------------------------------
+          /// 핵심
+          ///
+          /// 내부 UI는 무조건 1300 × 900으로 제작하고
+          /// 실제 iPad 크기에 맞춰 전체를 한꺼번에
+          /// 확대/축소합니다.
+          ///
+          /// 따라서 iPad mini / 11 / 13인치에서도
+          /// 내부 요소들의 상대적인 크기와 위치가 같습니다.
+          /// ------------------------------------------------------
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: _designWidth,
+              height: _designHeight,
+              child: _buildDesignCanvas(),
             ),
           ),
-          Positioned(
-            top: 120,
-            right: -150,
-            bottom: 120,
-            width: 420,
-            child: IgnorePointer(
-              ignoring: _isLeverLocked || _isSpinning,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onVerticalDragStart: _onLeverDragStart,
-                onVerticalDragUpdate: _onLeverDragUpdate,
-                onVerticalDragEnd: _onLeverDragEnd,
-              ),
+        );
+      },
+    );
+  }
+
+  /// ============================================================
+  /// 1300 × 900 기준 디자인 캔버스
+  /// ============================================================
+
+  Widget _buildDesignCanvas() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        /// 룰렛
+        Center(
+          child: RouletteWheel(
+            controller: _controller,
+            group: _group,
+            leverProgress: _leverController.value,
+            centerProfileImageUrl: widget.centerProfileImageUrl,
+          ),
+        ),
+
+        /// ========================================================
+        /// 레버 터치 영역
+        ///
+        /// 이것도 디자인 캔버스 내부에 있기 때문에
+        /// 룰렛과 함께 동일한 비율로 스케일됩니다.
+        /// ========================================================
+        Positioned(
+          top: 120,
+          right: -150,
+          bottom: 120,
+          width: 420,
+          child: IgnorePointer(
+            ignoring: _isLeverLocked || _isSpinning,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onVerticalDragStart: _onLeverDragStart,
+              onVerticalDragUpdate: _onLeverDragUpdate,
+              onVerticalDragEnd: _onLeverDragEnd,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -179,11 +274,15 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   void dispose() {
     _leverController.dispose();
     _controller.dispose();
+
     super.dispose();
   }
 }
 
-/// 룰렛 원판 위젯
+// ================================================================
+// 룰렛 원판
+// ================================================================
+
 class RouletteWheel extends StatelessWidget {
   const RouletteWheel({
     super.key,
@@ -193,6 +292,7 @@ class RouletteWheel extends StatelessWidget {
     required this.centerProfileImageUrl,
   });
 
+  /// 룰렛 자체의 기준 크기
   static const double _rouletteSize = 700;
 
   final RouletteController controller;
@@ -208,6 +308,9 @@ class RouletteWheel extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
+          // ========================================================
+          // 기본 룰렛
+          // ========================================================
           SizedBox.square(
             dimension: _rouletteSize,
             child: Roulette(
@@ -222,9 +325,16 @@ class RouletteWheel extends StatelessWidget {
             ),
           ),
 
-          _SilverRing(size: 440, width: 5),
-          _SilverRing(size: 290, width: 10),
+          // ========================================================
+          // 실버 링
+          // ========================================================
+          const _SilverRing(size: 440, width: 5),
 
+          const _SilverRing(size: 290, width: 10),
+
+          // ========================================================
+          // 기본 화살표
+          // ========================================================
           const Positioned(
             top: -32,
             child: Icon(
@@ -241,13 +351,15 @@ class RouletteWheel extends StatelessWidget {
             ),
           ),
 
-          //테두리
+          // ========================================================
+          // 룰렛 외부 테두리
+          // ========================================================
           Positioned.fill(
             child: IgnorePointer(
               child: Transform.translate(
-                offset: Offset(0, 35),
+                offset: const Offset(0, 35),
                 child: Transform.scale(
-                  scale: 1.6, // 8% 확대
+                  scale: 1.6,
                   child: Assets.images.widgets.roulette.border.image(
                     fit: BoxFit.contain,
                   ),
@@ -256,13 +368,15 @@ class RouletteWheel extends StatelessWidget {
             ),
           ),
 
-          // 중간 스톤
+          // ========================================================
+          // 중앙 스톤
+          // ========================================================
           Positioned.fill(
             child: IgnorePointer(
               child: Transform.translate(
-                offset: Offset(0, 22),
+                offset: const Offset(0, 22),
                 child: Transform.scale(
-                  scale: 0.9, // 8% 확대
+                  scale: 0.9,
                   child: Assets.images.widgets.roulette.centerStone.image(
                     fit: BoxFit.contain,
                   ),
@@ -271,8 +385,9 @@ class RouletteWheel extends StatelessWidget {
             ),
           ),
 
-          // 라이어 포커에서는 중앙 스톤과 같은 지름으로 벌칙 대상 프로필을
-          // 덮어 현재 룰렛 대상이 누구인지 즉시 확인할 수 있게 합니다.
+          // ========================================================
+          // 중앙 프로필
+          // ========================================================
           if (centerProfileImageUrl != null)
             Positioned(
               top: (_rouletteSize - 320) / 2 + 22,
@@ -295,13 +410,15 @@ class RouletteWheel extends StatelessWidget {
               ),
             ),
 
-          //포인터
+          // ========================================================
+          // 상단 포인터
+          // ========================================================
           Positioned.fill(
             child: IgnorePointer(
               child: Transform.translate(
-                offset: Offset(0, -410),
+                offset: const Offset(0, -410),
                 child: Transform.scale(
-                  scale: 0.8, // 8% 확대
+                  scale: 0.8,
                   child: Assets.images.widgets.roulette.pointer.image(
                     fit: BoxFit.contain,
                   ),
@@ -310,7 +427,9 @@ class RouletteWheel extends StatelessWidget {
             ),
           ),
 
-          //lever
+          // ========================================================
+          // 레버 바닥
+          // ========================================================
           Positioned(
             right: -400,
             top: 0,
@@ -324,6 +443,10 @@ class RouletteWheel extends StatelessWidget {
               ),
             ),
           ),
+
+          // ========================================================
+          // 레버 중앙 검은 원
+          // ========================================================
           Positioned(
             top: 330,
             right: -175,
@@ -336,7 +459,10 @@ class RouletteWheel extends StatelessWidget {
               ),
             ),
           ),
-          //stick: 원래 디자인과 위치를 그대로 유지한다.
+
+          // ========================================================
+          // 레버 스틱 - 위
+          // ========================================================
           if (leverProgress < 0.27499999999999986)
             Positioned(
               right: -230,
@@ -354,6 +480,10 @@ class RouletteWheel extends StatelessWidget {
                 ),
               ),
             ),
+
+          // ========================================================
+          // 레버 스틱 - 아래
+          // ========================================================
           if (leverProgress > 0.7387499999999977)
             Positioned(
               right: -230,
@@ -374,7 +504,10 @@ class RouletteWheel extends StatelessWidget {
                 ),
               ),
             ),
-          //레버 아래로 이동
+
+          // ========================================================
+          // 빨간 레버 손잡이
+          // ========================================================
           Positioned(
             right: -470,
             top: 0,
@@ -402,6 +535,10 @@ class RouletteWheel extends StatelessWidget {
   }
 }
 
+// ================================================================
+// 프로필 이미지 Fallback
+// ================================================================
+
 class _RouletteProfileFallback extends StatelessWidget {
   const _RouletteProfileFallback();
 
@@ -414,13 +551,16 @@ class _RouletteProfileFallback extends StatelessWidget {
   }
 }
 
-/// 룰렛 중앙 실버 링
+// ================================================================
+// 룰렛 중앙 실버 링
+// ================================================================
+
 class _SilverRing extends StatelessWidget {
   const _SilverRing({required this.size, required this.width});
 
   final double size;
   final double width;
-  final gap = 50.0;
+
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
@@ -435,7 +575,10 @@ class _SilverRing extends StatelessWidget {
   }
 }
 
-/// 실버 링 한 줄
+// ================================================================
+// 실버 링 한 줄
+// ================================================================
+
 class _RingBorder extends StatelessWidget {
   const _RingBorder({required this.size, required this.width});
 

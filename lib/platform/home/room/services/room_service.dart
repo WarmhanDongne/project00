@@ -2,7 +2,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
+import 'package:project00/core/network/realtime_connection_monitor.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 class RoomService {
   static const int _databaseOperationAttempts = 4;
@@ -50,28 +52,19 @@ class RoomService {
       final data = Map<String, dynamic>.from(response.data as Map);
 
       final roomCode = data['roomCode'] as String?;
+      final controllerSessionId = data['controllerSessionId'] as String?;
 
-      if (roomCode == null || roomCode.isEmpty) {
+      if (roomCode == null ||
+          roomCode.isEmpty ||
+          controllerSessionId == null ||
+          controllerSessionId.isEmpty) {
         throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
-
-      //=======================태블릿 방 수명 주기==============================
-      // 방 코드를 UI에 노출하기 전에 방 전체 삭제를 onDisconnect에
-      // 예약합니다. 이 예약은 클라이언트가 다시 접속하지 못해도 RTDB
-      // 서버가 실행하므로 앱 종료·네트워크 단절 모두를 처리합니다.
-      try {
-        await markControllerConnected(roomCode);
-      } catch (error) {
-        // 연결 종료 예약 없이 생성된 방을 반환하면 앱 종료 후
-        // 고아 방이 남습니다. 예약 등록이 실패하면 가능한 한 방을
-        // 바로 정리하고 생성 실패로 처리합니다.
-        try {
-          await deleteControllerRoom(roomCode);
-        } catch (_) {
-          // 네트워크 단절 중이면 즉시 정리도 실패할 수 있습니다.
-        }
-        throw RoomCommandException('방 종료 처리를 준비하지 못했습니다: $error');
-      }
+      await ControllerRoomSessionStore.instance.save(
+        roomCode: roomCode,
+        sessionId: controllerSessionId,
+      );
+      await markControllerConnected(roomCode);
       return roomCode;
     } on FirebaseFunctionsException catch (error) {
       throw RoomCommandException(error.message ?? '방을 생성하지 못했습니다.');
@@ -106,38 +99,98 @@ class RoomService {
   }
 
   //=======================태블릿(진행 기기) 방 수명 주기==============================
-  // 태블릿은 players에 들어가지 않으므로 방 전체에 연결 종료 예약을
-  // 등록합니다. 앱이 종료되거나 인터넷이 끊기면 RTDB 서버가
-  // `rooms/{roomCode}`를 삭제하여 고아 방이 남지 않게 합니다.
+  // 방 전체를 삭제하지 않고 presence만 false로 예약합니다. 실제 삭제는
+  // controller lastSeen 유예시간을 확인하는 scheduled cleanup이 담당합니다.
   Future<void> markControllerConnected(String roomCode) async {
     final roomRef = realtime.ref('rooms/$roomCode');
-    // 이 예약이 실패하면 방을 표시하지 않아야 고아 방을 막을 수
-    // 있으므로 예외를 숨기지 않습니다.
-    await roomRef.onDisconnect().remove();
-    await _writeWithRetry(() => roomRef.child('controllerConnected').set(true));
+    final presenceRef = roomRef.child('controllerPresence');
+    await presenceRef.onDisconnect().update({
+      'connected': false,
+      'lastSeen': ServerValue.timestamp,
+    });
+    await _writeWithRetry(
+      () => presenceRef.set({
+        'connected': true,
+        'lastSeen': ServerValue.timestamp,
+      }),
+    );
   }
 
-  /// 초기화·로그아웃 같은 정상 흐름에서는 서버의 연결 단절 감지를
-  /// 기다리지 않고 방을 즉시 삭제합니다.
-  Future<void> deleteControllerRoom(String roomCode) async {
+  Future<void> heartbeatController(String roomCode) async {
+    await _writeWithRetry(
+      () => realtime.ref('rooms/$roomCode/controllerPresence').update({
+        'connected': true,
+        'lastSeen': ServerValue.timestamp,
+      }),
+    );
+  }
+
+  /// 백그라운드·dispose에서는 presence만 멈추며 방을 삭제하지 않습니다.
+  Future<void> markControllerDisconnected(String roomCode) async {
+    await _writeWithRetry(
+      () => realtime.ref('rooms/$roomCode/controllerPresence').update({
+        'connected': false,
+        'lastSeen': ServerValue.timestamp,
+      }),
+    );
+  }
+
+  /// 사용자가 명시적으로 방을 종료했을 때만 callable로 close 상태를 만듭니다.
+  Future<void> closeControllerRoom(String roomCode) async {
     final roomRef = realtime.ref('rooms/$roomCode');
     try {
-      await roomRef.onDisconnect().cancel();
+      await roomRef.child('controllerPresence').onDisconnect().cancel();
     } catch (_) {
-      // 아래 remove가 성공하면 기존 예약의 대상도 사라지므로 계속합니다.
+      // 서버 close가 방 종료의 권위이므로 예약 취소 실패는 계속 진행합니다.
     }
-    await _writeWithRetry(roomRef.remove);
+    await _functions
+        .httpsCallable('closeRoom')
+        .call(controllerCommandData(roomCode));
+    await ControllerRoomSessionStore.instance.clear(onlyRoomCode: roomCode);
+  }
+
+  /// 앱 재실행 뒤 로컬에 보존된 controller 세션으로 방을 복원합니다.
+  Future<String?> restoreControllerRoom() async {
+    final store = ControllerRoomSessionStore.instance;
+    await store.load();
+    final roomCode = store.roomCode;
+    final sessionId = roomCode == null
+        ? null
+        : store.sessionIdForRoom(roomCode);
+    if (roomCode == null || sessionId == null) return null;
+    try {
+      await _functions.httpsCallable('resumeRealtimeControllerRoom').call({
+        'roomCode': roomCode,
+        'controllerSessionId': sessionId,
+      });
+      await markControllerConnected(roomCode);
+      return roomCode;
+    } on FirebaseFunctionsException catch (error) {
+      if (error.code == 'not-found' ||
+          error.code == 'permission-denied' ||
+          error.code == 'failed-precondition') {
+        await store.clear(onlyRoomCode: roomCode);
+        return null;
+      }
+      throw RoomCommandException(error.message ?? '기존 방을 복구하지 못했습니다.');
+    }
   }
 
   /// `false`는 태블릿의 명시적 종료와 방 전체 삭제를 모두 의미합니다.
   Stream<bool?> watchControllerConnected(String roomCode) {
-    return realtime.ref('rooms/$roomCode/controllerConnected').onValue.map((
-      event,
-    ) {
-      final value = event.snapshot.value;
-      return value is bool ? value : false;
-    });
+    return realtime
+        .ref('rooms/$roomCode/controllerPresence/connected')
+        .onValue
+        .map((event) {
+          final value = event.snapshot.value;
+          return value is bool ? value : false;
+        });
   }
+
+  Stream<String?> watchRoomStatus(String roomCode) => realtime
+      .ref('rooms/$roomCode/status')
+      .onValue
+      .map((event) => event.snapshot.value?.toString());
 
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
@@ -146,14 +199,18 @@ class RoomService {
         .map((event) => _playersFromSnapshot(event.snapshot));
   }
 
+  /// Firebase 서버와 이 앱 인스턴스의 실제 연결 상태입니다.
+  Stream<bool> watchServerConnection() =>
+      RealtimeConnectionMonitor.instance.watch(realtime);
+
   //게임 선택
   Future<void> selectGame({
     required String roomCode,
     required String gameId,
   }) async {
-    await _writeWithRetry(
-      () => realtime.ref('rooms/$roomCode').update({'selectedGame': gameId}),
-    );
+    await _functions
+        .httpsCallable('selectRealtimeRoomGame')
+        .call(controllerCommandData(roomCode, {'gameId': gameId}));
   }
 
   List<RoomPlayer> _playersFromSnapshot(DataSnapshot snapshot) {
@@ -179,15 +236,15 @@ class RoomService {
     required Map<String, int> seatIndexesByUid,
   }) async {
     await _functions.httpsCallable('saveRealtimePlayerSeatIndexes').call({
-      'roomCode': roomCode,
+      ...controllerCommandData(roomCode),
       'seatIndexesByUid': seatIndexesByUid,
     });
   }
 
   Future<void> removePlayer(String roomCode, String userUid) async {
-    await _writeWithRetry(
-      () => realtime.ref('rooms/$roomCode/players/$userUid').remove(),
-    );
+    await _functions
+        .httpsCallable('removeRealtimeRoomPlayer')
+        .call(controllerCommandData(roomCode, {'playerUid': userUid}));
   }
 
   // ========================================================== phone ==================================================================
@@ -215,6 +272,54 @@ class RoomService {
     // 기능이므로 클라이언트에서 한 번만 예약하고 실패해도 입장은 유지합니다.
     final playerRef = realtime.ref('rooms/$code/players/$uid');
     await _registerDisconnectPresence(playerRef);
+  }
+
+  /// 네트워크가 돌아온 플레이어의 presence와 onDisconnect 예약을 복원합니다.
+  ///
+  /// 먼저 다음 단절 예약을 등록한 뒤 서버에서 기존 UID를 merge하므로 seat와
+  /// game/private 상태는 그대로 유지되고 `isConnected`만 true가 됩니다.
+  Future<void> restorePlayerConnection({
+    required String roomCode,
+    required String nickname,
+    required String accentColor,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const RoomCommandException('인증 정보가 없습니다.');
+    }
+    final code = roomCode.trim().toUpperCase();
+    final playerRef = realtime.ref('rooms/$code/players/${user.uid}');
+    await _registerDisconnectPresenceWithRetry(playerRef);
+    await _joinRoomWithRetry(
+      roomCode: code,
+      nickname: nickname,
+      accentColor: accentColor,
+      preserveProfile: true,
+    );
+  }
+
+  /// 저장된 세션이 실제로 현재 UID의 기존 참가자를 가리키는지 확인합니다.
+  ///
+  /// 이 확인 없이 join callable을 호출하면 대기 중인 방에서 강퇴된 사용자를 새
+  /// 참가자로 다시 만들 수 있으므로, 자동 재접속 경로에서는 반드시 선행합니다.
+  Future<bool> hasExistingPlayer(String roomCode) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final code = roomCode.trim().toUpperCase();
+    final snapshot = await _readWithRetry(
+      realtime.ref('rooms/$code/players/${user.uid}'),
+    );
+    return snapshot.exists;
+  }
+
+  Future<void> heartbeatPlayer(String roomCode) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _writeWithRetry(
+      () => realtime
+          .ref('rooms/${roomCode.trim().toUpperCase()}/players/${user.uid}')
+          .update({'isConnected': true, 'lastSeen': ServerValue.timestamp}),
+    );
   }
 
   /// 이미 참가한 플레이어의 닉네임과 UI 색상만 갱신합니다.
@@ -287,8 +392,9 @@ class RoomService {
       // 아래 remove가 성공하면 예약된 update 대상도 사라지므로 계속 진행합니다.
     }
 
-    // 플레이어 노드 즉시 삭제
-    await _writeWithRetry(playerRef.remove);
+    await _functions.httpsCallable('leaveRealtimeRoom').call({
+      'roomCode': code,
+    });
   }
 
   /// 진행 중인 게임에서 퇴장합니다.
@@ -382,10 +488,33 @@ class RoomService {
   /// 접속 여부 표시는 보조 기능이므로 예약 실패가 방 입장을 중단시키지 않습니다.
   Future<void> _registerDisconnectPresence(DatabaseReference playerRef) async {
     try {
-      await playerRef.onDisconnect().update({'isConnected': false});
+      await playerRef.onDisconnect().update({
+        'isConnected': false,
+        'lastSeen': ServerValue.timestamp,
+      });
     } catch (_) {
       // 실시간 게임 데이터와 재접속은 UID 기준이므로 presence 예약 없이도 안전합니다.
     }
+  }
+
+  Future<void> _registerDisconnectPresenceWithRetry(
+    DatabaseReference playerRef,
+  ) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < _databaseOperationAttempts; attempt += 1) {
+      try {
+        await playerRef.onDisconnect().update({
+          'isConnected': false,
+          'lastSeen': ServerValue.timestamp,
+        });
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt == _databaseOperationAttempts - 1) break;
+        await Future<void>.delayed(Duration(milliseconds: 180 * (attempt + 1)));
+      }
+    }
+    throw RoomCommandException(_databaseErrorMessage(lastError));
   }
 
   bool _isTransientDatabaseError(Object error) {

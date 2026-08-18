@@ -15,12 +15,12 @@ import {
 } from "../liars-poker/exclude-player.js";
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
 import {
-  beginGameInterruption,
-  cancelGameInterruption,
   completeGameInterruption,
   InterruptibleRoom,
+  reconcileGamePlayerConnection,
 } from "./state.js";
 import {InterruptibleGameState} from "./types.js";
+import {assertControllerSession} from "../room/controller-session.js";
 
 const REGION = "asia-northeast3";
 
@@ -33,7 +33,11 @@ const REGION = "asia-northeast3";
 const DATABASE_TRIGGER_REGION = "asia-southeast1";
 const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
 
-type Data = {roomCode?: unknown; interruptionId?: unknown};
+type Data = {
+  roomCode?: unknown;
+  interruptionId?: unknown;
+  controllerSessionId?: unknown;
+};
 
 const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
   final_call: 4,
@@ -42,6 +46,7 @@ const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
 
 interface GameRoom extends InterruptibleRoom {
   controllerUid?: string;
+  controllerSessionId?: string;
   hostUid?: string;
   selectedGame?: string;
   game?: InterruptibleGameState;
@@ -109,9 +114,7 @@ export const excludeInterruptedPlayerAndContinue = onCall<Data>(
     const transaction = await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as GameRoom;
-      if (uid !== room.controllerUid && uid !== room.hostUid) {
-        throw new HttpsError("permission-denied", "태블릿 진행자만 게임을 계속할 수 있습니다.");
-      }
+      assertControllerSession(room, uid, request.data?.controllerSessionId);
       const game = room.game;
       const interruption = game?.public.interruption;
       if (!game || !interruption || interruption.id !== interruptionId) {
@@ -161,6 +164,9 @@ export const expireInterruptedGame = onCall<Data>(
       if (!isParticipant) {
         throw new HttpsError("permission-denied", "게임 중단을 종료할 권한이 없습니다.");
       }
+      if (uid === room.controllerUid || uid === room.hostUid) {
+        assertControllerSession(room, uid, request.data?.controllerSessionId);
+      }
       const now = Date.now();
       if (now < interruption.deadlineAt) {
         throw new HttpsError("failed-precondition", "아직 투표 시간이 남아 있습니다.");
@@ -201,19 +207,14 @@ export const handleGamePlayerConnectionChanged = onValueWritten(
     await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as GameRoom;
-      const game = room.game;
-      if (!game || game.public.status !== "playing") return room;
-      const now = Date.now();
-      if (isConnected) {
-        const interruption = game.public.interruption;
-        if (interruption?.playerUid === uid) {
-          cancelGameInterruption(game, interruption.id, now);
-        }
-      } else if (wasConnected) {
-        beginGameInterruption(room, uid, "disconnected", now, {
-          minimumPlayerCount: minimumPlayerCount(room.selectedGame),
-        });
-      }
+      reconcileGamePlayerConnection(
+        room,
+        uid,
+        wasConnected,
+        isConnected,
+        Date.now(),
+        {minimumPlayerCount: minimumPlayerCount(room.selectedGame)},
+      );
       return room;
     });
   },

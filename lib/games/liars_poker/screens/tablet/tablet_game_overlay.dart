@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/liars_poker/widgets/tablet/rolebook.dart';
 import 'package:project00/games/liars_poker/widgets/tablet/settings.dart';
 import 'package:project00/games/liars_poker/screens/tablet/tablet_game_stage.dart';
-import 'package:project00/games/shared/widgets/tablet_game_side_bar.dart';
+import 'package:project00/games/shared/widgets/tablet_game_menu_overlay.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -30,27 +30,20 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
         stage == LiarsPokerTabletStage.dealing ||
         stage == LiarsPokerTabletStage.result ||
         stage == LiarsPokerTabletStage.finished) {
-      return const SizedBox.shrink();
+      return const SizedBox.expand();
     }
 
     final icons = Assets.games.liarsPoker.images.icons;
-    return Stack(
-      children: [
-        Positioned(
-          top: 20,
-          right: 20,
-          child: TabletGameSideBar(
-            roleIcon: icons.iconRole.image(fit: BoxFit.contain),
-            settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
-            roleDialogBuilder: (_) => RoleBook(provider: provider),
-            settingDialogBuilder: (_) => Setting(
-              provider: provider,
-              onRestartGame: onRestartGame,
-              onEndGame: onEndGame,
-            ),
-          ),
-        ),
-      ],
+    return TabletGameMenuOverlay(
+      visible: true,
+      roleIcon: icons.iconRole.image(fit: BoxFit.contain),
+      settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
+      roleDialogBuilder: (_) => RoleBook(provider: provider),
+      settingDialogBuilder: (_) => Setting(
+        provider: provider,
+        onRestartGame: onRestartGame,
+        onEndGame: onEndGame,
+      ),
     );
   }
 }

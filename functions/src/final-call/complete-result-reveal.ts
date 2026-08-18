@@ -12,7 +12,7 @@ import {
   requireFinalCallGame,
 } from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 태블릿의 최종 공개 연출이 끝난 뒤 휴대폰 결과 화면을 해제합니다. */
 export const completeFinalCallResultReveal = onCall<Data>(
@@ -26,7 +26,7 @@ export const completeFinalCallResultReveal = onCall<Data>(
     const transaction = await roomRef.transaction((raw) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
-      assertFinalCallController(room, uid);
+      assertFinalCallController(room, uid, request.data?.controllerSessionId);
       const game = requireFinalCallGame(room);
 
       if (game.public.status !== "finished") {

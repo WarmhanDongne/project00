@@ -11,8 +11,8 @@ class TabletGameSideBar extends StatelessWidget {
     required this.settingIcon,
     required this.roleDialogBuilder,
     required this.settingDialogBuilder,
-    this.iconSize = 100,
-    this.spacing = 0,
+    this.iconSize,
+    this.spacing,
     this.dialogAlignment = const Alignment(0, 0.7),
     this.animateEntry = true,
   });
@@ -21,8 +21,10 @@ class TabletGameSideBar extends StatelessWidget {
   final Widget settingIcon;
   final WidgetBuilder roleDialogBuilder;
   final WidgetBuilder settingDialogBuilder;
-  final double iconSize;
-  final double spacing;
+
+  /// null이면 태블릿의 짧은 변을 기준으로 72~100 사이에서 자동 조절합니다.
+  final double? iconSize;
+  final double? spacing;
   final Alignment dialogAlignment;
   final bool animateEntry;
 
@@ -42,21 +44,25 @@ class TabletGameSideBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
+    final effectiveIconSize =
+        iconSize ?? (shortestSide * 0.12).clamp(72.0, 100.0);
+    final effectiveSpacing = spacing ?? effectiveIconSize * 0.08;
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         //=======================룰북 버튼==============================
         _SideBarButton(
           label: '게임 규칙 열기',
-          size: iconSize,
+          size: effectiveIconSize,
           icon: roleIcon,
           onPressed: () => _showGameDialog(context, roleDialogBuilder),
         ),
-        SizedBox(width: spacing),
+        SizedBox(width: effectiveSpacing),
         //=======================설정 버튼==============================
         _SideBarButton(
           label: '게임 설정 열기',
-          size: iconSize,
+          size: effectiveIconSize,
           icon: settingIcon,
           onPressed: () => _showGameDialog(context, settingDialogBuilder),
         ),

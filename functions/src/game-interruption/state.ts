@@ -15,6 +15,37 @@ export interface InterruptibleRoom {
   game?: InterruptibleGameState;
 }
 
+/**
+ * 접속 이벤트와 트랜잭션 시점의 최신 presence를 함께 확인해 중단 상태를 갱신합니다.
+ *
+ * Cloud Functions 트리거는 false/true 이벤트가 매우 가깝게 발생하면 실행 순서가
+ * 뒤바뀔 수 있습니다. false 이벤트를 처리할 때 이미 현재 값이 true라면 오래된
+ * 단절 이벤트이므로 게임을 다시 멈추지 않습니다.
+ */
+export function reconcileGamePlayerConnection(
+  room: InterruptibleRoom,
+  playerUid: string,
+  wasConnected: boolean,
+  isConnected: boolean,
+  now: number,
+  options: {minimumPlayerCount?: number} = {},
+): void {
+  const game = room.game;
+  if (!game || game.public.status !== "playing") return;
+
+  if (isConnected) {
+    const interruption = game.public.interruption;
+    if (interruption?.playerUid === playerUid) {
+      cancelGameInterruption(game, interruption.id, now);
+    }
+    return;
+  }
+
+  if (!wasConnected) return;
+  if (room.players?.[playerUid]?.isConnected === true) return;
+  beginGameInterruption(room, playerUid, "disconnected", now, options);
+}
+
 /** 진행 상태를 멈추고 모든 게임이 공유하는 공개 중단 상태를 만듭니다. */
 export function beginGameInterruption(
   room: InterruptibleRoom,

@@ -14,6 +14,7 @@ import {
 
 type CompleteDealingData = {
   roomCode?: unknown;
+  controllerSessionId?: unknown;
 };
 
 /** 태블릿 카드 배분 연출이 끝난 뒤 휴대폰의 첫 턴을 엽니다. */
@@ -31,7 +32,7 @@ export const completeLiarsPokerDealing = onCall<CompleteDealingData>(
 
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
-      assertController(room, uid);
+      assertController(room, uid, request.data?.controllerSessionId);
 
       const game = requireGame(room);
       assertGameStatus(game.public.status, "playing");

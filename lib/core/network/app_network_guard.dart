@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/network/network_unavailable_modal.dart';
+import 'package:project00/core/network/realtime_connection_monitor.dart';
 
 /// 플랫폼과 모든 게임 위에 동일한 네트워크 연결 모달을 제공하는 앱 루트 레이어입니다.
 ///
@@ -60,10 +61,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
     try {
       final stream =
           widget.connectionChanges ??
-          _database
-              .ref('.info/connected')
-              .onValue
-              .map((event) => event.snapshot.value == true);
+          RealtimeConnectionMonitor.instance.watch(_database);
       _subscription = stream.listen(
         _handleConnectionChanged,
         onError: (_) => _handleConnectionChanged(false),

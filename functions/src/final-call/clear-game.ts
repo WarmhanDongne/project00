@@ -11,7 +11,7 @@ import {
   finalCallUid,
 } from "./validation.js";
 
-type Data = {roomCode?: unknown};
+type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 방과 참가자는 유지하고 현재 Final Call `game` 노드만 삭제합니다. */
 export const clearFinalCallGame = onCall<Data>(
@@ -26,7 +26,7 @@ export const clearFinalCallGame = onCall<Data>(
     }
 
     const room = roomSnapshot.val() as FinalCallRoom;
-    assertFinalCallController(room, uid);
+    assertFinalCallController(room, uid, request.data?.controllerSessionId);
 
     const gameRef = roomRef.child("game");
     let alreadyCleared = false;
