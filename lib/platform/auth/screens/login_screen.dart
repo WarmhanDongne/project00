@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final customDomainController = TextEditingController();
+  final customDomainFocusNode = FocusNode();
 
   bool isLoading = false;
   bool isCustomDomain = false;
@@ -35,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
     passwordController.dispose();
     customDomainController.dispose();
+    customDomainFocusNode.dispose();
     super.dispose();
   }
 
@@ -219,6 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: isCustomDomain
                     ? TextField(
                         controller: customDomainController,
+                        focusNode: customDomainFocusNode,
                         decoration: InputDecoration(
                           hintText: '직접 입력',
                           contentPadding: const EdgeInsets.symmetric(
@@ -286,6 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               isCustomDomain = true;
                               customDomainController.clear();
                             });
+                            customDomainFocusNode.requestFocus();
                           } else {
                             setState(() => emailDomain = value ?? emailDomain);
                           }

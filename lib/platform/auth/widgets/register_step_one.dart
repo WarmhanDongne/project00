@@ -7,6 +7,7 @@ class RegisterStepOne extends StatelessWidget {
   const RegisterStepOne({
     required this.emailController,
     required this.customDomainController,
+    required this.customDomainFocusNode,
     required this.passwordController,
     required this.confirmPasswordController,
     required this.emailDomain,
@@ -22,6 +23,7 @@ class RegisterStepOne extends StatelessWidget {
 
   final TextEditingController emailController;
   final TextEditingController customDomainController;
+  final FocusNode customDomainFocusNode;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final String emailDomain;
@@ -123,6 +125,7 @@ class RegisterStepOne extends StatelessWidget {
                     child: isCustomDomain
                         ? TextField(
                             controller: customDomainController,
+                            focusNode: customDomainFocusNode,
                             enabled: isFieldsEnabled,
                             decoration: InputDecoration(
                               hintText: '직접 입력',

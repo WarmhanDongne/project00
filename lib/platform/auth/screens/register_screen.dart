@@ -27,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final imagePicker = ImagePicker();
   final emailController = TextEditingController();
   final customDomainController = TextEditingController();
+  final customDomainFocusNode = FocusNode();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
   final nicknameController = TextEditingController();
@@ -120,6 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     _pollingTimer?.cancel();
     emailController.dispose();
     customDomainController.dispose();
+    customDomainFocusNode.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     nicknameController.dispose();
@@ -421,6 +423,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               RegisterStepOne(
                 emailController: emailController,
                 customDomainController: customDomainController,
+                customDomainFocusNode: customDomainFocusNode,
                 passwordController: passwordController,
                 confirmPasswordController: confirmPasswordController,
                 emailDomain: emailDomain,
@@ -439,6 +442,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         isCustomDomain = false;
                       }
                     });
+                    if (val == 'custom') {
+                      customDomainFocusNode.requestFocus();
+                    }
                   }
                 },
                 onProcessRegistration: processRegistration,
