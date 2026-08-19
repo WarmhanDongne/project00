@@ -124,23 +124,23 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _signInWithApple() async {
-    _setLoading(true);
+  // Future<void> _signInWithApple() async {
+  //   _setLoading(true);
 
-    try {
-      final credential = await _authProvider.signInWithApple();
+  //   try {
+  //     final credential = await _authProvider.signInWithApple();
 
-      if (!mounted) return;
+  //     if (!mounted) return;
 
-      _showMessage(
-        credential == null ? 'Apple 로그인에 실패했습니다.' : 'Apple 로그인에 성공했습니다.',
-      );
-    } finally {
-      if (mounted) {
-        _setLoading(false);
-      }
-    }
-  }
+  //     _showMessage(
+  //       credential == null ? 'Apple 로그인에 실패했습니다.' : 'Apple 로그인에 성공했습니다.',
+  //     );
+  //   } finally {
+  //     if (mounted) {
+  //       _setLoading(false);
+  //     }
+  //   }
+  // }
 
   // ============================================================
   // Navigation
@@ -333,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _SocialLoginButtons(
             isLoading: _isLoading,
             onGooglePressed: _signInWithGoogle,
-            onApplePressed: _signInWithApple,
+            // onApplePressed: _signInWithApple,
           ),
         ],
       ),
@@ -592,12 +592,12 @@ class _SocialLoginButtons extends StatelessWidget {
   const _SocialLoginButtons({
     required this.isLoading,
     required this.onGooglePressed,
-    required this.onApplePressed,
+    // required this.onApplePressed,
   });
 
   final bool isLoading;
   final VoidCallback onGooglePressed;
-  final VoidCallback onApplePressed;
+  // final VoidCallback onApplePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -611,17 +611,17 @@ class _SocialLoginButtons extends StatelessWidget {
           icon: Assets.images.logo.googleG.svg(width: 24, height: 24),
         ),
         const SizedBox(height: 12),
-        SocialLoginButton(
-          key: const Key('login-apple-button'),
-          label: 'Apple로 로그인',
-          enabled: !isLoading,
-          onPressed: onApplePressed,
-          // Apple 로고는 시각 중심이 살짝 위라 아래로 조금 내려 글자와 맞춥니다.
-          icon: const Padding(
-            padding: EdgeInsets.only(bottom: 2),
-            child: Icon(Icons.apple, size: 27, color: Colors.black),
-          ),
-        ),
+        // SocialLoginButton(
+        //   key: const Key('login-apple-button'),
+        //   label: 'Apple로 로그인',
+        //   enabled: !isLoading,
+        //   onPressed: onApplePressed,
+        //   // Apple 로고는 시각 중심이 살짝 위라 아래로 조금 내려 글자와 맞춥니다.
+        //   icon: const Padding(
+        //     padding: EdgeInsets.only(bottom: 2),
+        //     child: Icon(Icons.apple, size: 27, color: Colors.black),
+        //   ),
+        // ),
       ],
     );
   }
