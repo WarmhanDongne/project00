@@ -10,7 +10,7 @@ import {assertFinalCallController, FINAL_CALL_REGION, finalCallRoomCode,
 
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
-export const startFinalCallNextRound = onCall<Data>(
+export const game_final_call_start_next_round = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

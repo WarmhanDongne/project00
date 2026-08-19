@@ -36,7 +36,7 @@ type SubmitCardsData = {
 };
 
 /** 현재 플레이어의 손패에서 1~3장을 제출합니다. */
-export const submitLiarsPokerCards = onCall<SubmitCardsData>(
+export const game_liars_poker_submit_cards = onCall<SubmitCardsData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

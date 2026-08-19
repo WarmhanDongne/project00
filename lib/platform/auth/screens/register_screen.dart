@@ -1,478 +1,412 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/platform/auth/models/email_link_error_message.dart';
+import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
+import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/services/pending_email_store.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
-import 'package:project00/platform/auth/widgets/register_step_two.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, this.isGoogleSignIn = false});
+enum RegisterStep {
+  emailInput,
+  awaitingEmailLink,
+  emailLinkFailed,
+  settingPassword,
+}
 
-  final bool isGoogleSignIn; // 구글 로그인 여부
+enum RegisterAction { sendEmail, resendEmail, completeLink, setPassword }
+
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({
+    super.key,
+    this.initialStep = RegisterStep.emailInput,
+    this.initialEmail,
+    this.initialEmailLink,
+    this.initialError,
+    this.onEmailLinkHandled,
+    this.onCancel,
+    this.onReauthenticationStarted,
+    this.onboardingService,
+    this.pendingEmailStore,
+  });
+
+  final RegisterStep initialStep;
+  final String? initialEmail;
+  final Uri? initialEmailLink;
+  final String? initialError;
+  final ValueChanged<String?>? onEmailLinkHandled;
+  final VoidCallback? onCancel;
+  final ValueChanged<String>? onReauthenticationStarted;
+  final OnboardingService? onboardingService;
+  final PendingEmailStore? pendingEmailStore;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-enum VerificationState { initial, waiting, verified }
-
 class _RegisterScreenState extends State<RegisterScreen>
     with WidgetsBindingObserver {
-  final authService = FirebaseAuthService();
-  final imagePicker = ImagePicker();
-  final emailController = TextEditingController();
-  final customDomainController = TextEditingController();
-  final customDomainFocusNode = FocusNode();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-  final nicknameController = TextEditingController();
+  static const _resendCooldown = Duration(minutes: 5);
 
-  bool isLoading = false;
-  String emailDomain = 'gmail.com';
-  bool isCustomDomain = false;
-  String? errorMessage;
-  VerificationState verificationState = VerificationState.initial;
-  Timer? _pollingTimer;
-  bool _canPop = false;
+  late final OnboardingService _onboardingService;
+  late final PendingEmailStore _pendingEmailStore;
+  final _emailController = TextEditingController();
+  final _customDomainController = TextEditingController();
+  final _customDomainFocusNode = FocusNode();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  late int pageNumber; // late로 선언해 나중에 초기화
-  String? verificationId;
-  String? googlePhotoURL;
-  int? resendToken;
-  XFile? profileImage;
-  Uint8List? profileImageBytes;
+  late RegisterStep _step;
+  RegisterAction? _action;
+  String _emailDomain = 'gmail.com';
+  bool _isCustomDomain = false;
+  String? _errorMessage;
+  DateTime? _cooldownUntil;
+  Timer? _cooldownTimer;
+  Uri? _queuedEmailLink;
+  String? _lastHandledEmailLink;
+
+  int get _cooldownSeconds {
+    final until = _cooldownUntil;
+    if (until == null) return 0;
+    final seconds =
+        (until.millisecondsSinceEpoch - ServerClock.nowMillis()) ~/ 1000;
+    return seconds.clamp(0, _resendCooldown.inSeconds);
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    pageNumber = widget.isGoogleSignIn ? 1 : 0; // 구글 로그인 여부 설정
-
-    // 구글 로그인 객체 바탕으로 기본 정보 채우기
-    // 구글 로그인으로 접근이 아닌 경우 종료
-    if (!widget.isGoogleSignIn) return;
-
-    // 구글 로그인 계정 객체 생성
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) return; // 실패
-
-    final isEmailProvider = user.providerData.any(
-      (p) => p.providerId == 'password',
-    );
-    if (isEmailProvider && !user.emailVerified) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showUnverifiedDialog(user);
-      });
-      return;
+    _onboardingService = widget.onboardingService ?? OnboardingService();
+    _pendingEmailStore = widget.pendingEmailStore ?? PendingEmailStore();
+    _step = widget.initialStep;
+    _errorMessage = widget.initialError;
+    _setInitialEmail(widget.initialEmail);
+    if (widget.initialEmailLink != null) {
+      _queueIncomingLink(widget.initialEmailLink!);
+    } else if (_step == RegisterStep.awaitingEmailLink ||
+        _step == RegisterStep.emailLinkFailed) {
+      unawaited(_restorePendingEmail());
     }
-
-    // 성공 시 닉네임과 photoURL 갱신
-    nicknameController.text = user.displayName ?? '';
-    googlePhotoURL = user.photoURL;
   }
 
-  void _showUnverifiedDialog(User user) {
-    showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            '이메일 인증 필요',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            '이메일 인증이 완료되지 않았습니다.\n메일함을 확인하시거나 인증 메일을 다시 보내주세요.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('확인', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('재전송'),
-            ),
-          ],
-        );
-      },
-    ).then((shouldResend) async {
-      if (shouldResend == true) {
-        try {
-          await user.sendEmailVerification();
-          if (mounted) showMessage('인증 메일이 재발송되었습니다.');
-        } catch (e) {
-          if (mounted) showMessage('메일 재발송 중 오류가 발생했습니다.');
-        }
-      }
-      await FirebaseAuth.instance.signOut();
-    });
+  @override
+  void didUpdateWidget(covariant RegisterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incomingLink = widget.initialEmailLink;
+    if (incomingLink != null &&
+        incomingLink.toString() != oldWidget.initialEmailLink?.toString()) {
+      _queueIncomingLink(incomingLink);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    setState(() {});
+    if (_cooldownSeconds > 0) _startCooldownTicker();
+  }
+
+  void _setInitialEmail(String? email) {
+    final value = email?.trim();
+    if (value == null || value.isEmpty) return;
+    _emailController.text = value;
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pollingTimer?.cancel();
-    emailController.dispose();
-    customDomainController.dispose();
-    customDomainFocusNode.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    nicknameController.dispose();
+    _cooldownTimer?.cancel();
+    _emailController.dispose();
+    _customDomainController.dispose();
+    _customDomainFocusNode.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _handleBack() async {
-    if (FirebaseAuth.instance.currentUser == null) {
-      setState(() => _canPop = true);
-      Future.microtask(() {
-        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+  void _queueIncomingLink(Uri link) {
+    final value = link.toString();
+    if (value == _lastHandledEmailLink ||
+        value == _queuedEmailLink?.toString()) {
+      return;
+    }
+    _queuedEmailLink = link;
+    // addPostFrameCallback을 기다리는 첫 프레임부터 로딩 UI를 보여줍니다.
+    if (_action == null) {
+      _step = RegisterStep.awaitingEmailLink;
+      _action = RegisterAction.completeLink;
+      _errorMessage = null;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_processQueuedIncomingLink());
+    });
+  }
+
+  Future<void> _processQueuedIncomingLink() async {
+    if (!mounted ||
+        (_action != null && _action != RegisterAction.completeLink)) {
+      return;
+    }
+    final link = _queuedEmailLink;
+    if (link == null) return;
+    _queuedEmailLink = null;
+    _lastHandledEmailLink = link.toString();
+    await _completeIncomingLink(link);
+  }
+
+  Future<void> _restorePendingEmail() async {
+    final pending = await _pendingEmailStore.read();
+    if (!mounted || pending == null) return;
+    setState(() {
+      _emailController.text = pending.email;
+      _cooldownUntil = pending.cooldownUntil;
+    });
+    _startCooldownTicker();
+  }
+
+  String? _normalizedEmail() {
+    final input = _emailController.text.trim().toLowerCase();
+    if (input.contains('@')) return input;
+    final domain = _isCustomDomain
+        ? _customDomainController.text.trim().toLowerCase()
+        : _emailDomain;
+    return '$input@$domain';
+  }
+
+  bool _isValidEmail(String email) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
+
+  Future<void> _sendEmail({bool resend = false}) async {
+    if (_action != null) return;
+    final email = _normalizedEmail()!;
+    if (!_isValidEmail(email)) {
+      setState(() => _errorMessage = '이메일 형식이 올바르지 않습니다.');
+      return;
+    }
+    setState(() {
+      _action = resend ? RegisterAction.resendEmail : RegisterAction.sendEmail;
+      _errorMessage = null;
+    });
+    try {
+      await _onboardingService.sendEmailLink(email);
+      final cooldownUntil = DateTime.fromMillisecondsSinceEpoch(
+        ServerClock.nowMillis() + _resendCooldown.inMilliseconds,
+      );
+      await _pendingEmailStore.save(email: email, cooldownUntil: cooldownUntil);
+      if (!mounted) return;
+      setState(() {
+        _emailController.text = email;
+        _cooldownUntil = cooldownUntil;
+        _step = RegisterStep.awaitingEmailLink;
       });
+      _startCooldownTicker();
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = EmailLinkErrorMessage.from(error);
+        if (resend) _step = RegisterStep.emailLinkFailed;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _action = null);
+        unawaited(_processQueuedIncomingLink());
+      }
+    }
+  }
+
+  Future<void> _completeIncomingLink(Uri link) async {
+    if (_action != null && _action != RegisterAction.completeLink) {
+      _queuedEmailLink = link;
+      return;
+    }
+    if (_action != RegisterAction.completeLink) {
+      setState(() {
+        _step = RegisterStep.awaitingEmailLink;
+        _action = RegisterAction.completeLink;
+        _errorMessage = null;
+      });
+    }
+    try {
+      final pending = await _pendingEmailStore.read();
+      if (pending == null) {
+        throw const AuthServiceException(
+          'missing-email',
+          '인증을 요청한 기기에서 다시 시도해주세요.',
+        );
+      }
+      _emailController.text = pending.email;
+      await _onboardingService.completeEmailLink(
+        email: pending.email,
+        link: link.toString(),
+      );
+      await _pendingEmailStore.clear();
+      widget.onEmailLinkHandled?.call(null);
+      if (!mounted) return;
+      setState(() => _step = RegisterStep.settingPassword);
+    } on AuthServiceException catch (error) {
+      await FirebaseAuth.instance.signOut();
+      final message = EmailLinkErrorMessage.from(error);
+      widget.onEmailLinkHandled?.call(message);
+      if (!mounted) return;
+      setState(() {
+        _step = RegisterStep.emailLinkFailed;
+        _errorMessage = message;
+      });
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  Future<void> _setPassword() async {
+    if (_action != null) return;
+    final password = _passwordController.text;
+    if (!PasswordPolicy.isValid(password)) {
+      setState(
+        () => _errorMessage = PasswordPolicy.requirementsMessage,
+      );
+      return;
+    }
+    if (password != _confirmPasswordController.text) {
+      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
       return;
     }
 
-    final shouldCancel = await showDialog<bool>(
+    setState(() {
+      _action = RegisterAction.setPassword;
+      _errorMessage = null;
+    });
+    try {
+      await _onboardingService.setPasswordAndAdvance(password);
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on AuthServiceException catch (error) {
+      if (error.code == 'requires-recent-login') {
+        await _restartEmailVerification();
+      } else if (mounted) {
+        setState(() => _errorMessage = error.message);
+      }
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  Future<void> _restartEmailVerification() async {
+    final email = _emailController.text.trim();
+    try {
+      await _onboardingService.sendEmailLink(email);
+      final cooldownUntil = DateTime.fromMillisecondsSinceEpoch(
+        ServerClock.nowMillis() + _resendCooldown.inMilliseconds,
+      );
+      await _pendingEmailStore.save(email: email, cooldownUntil: cooldownUntil);
+      widget.onReauthenticationStarted?.call(email);
+      if (mounted) {
+        setState(() {
+          _cooldownUntil = cooldownUntil;
+          _step = RegisterStep.awaitingEmailLink;
+          _errorMessage = null;
+        });
+        _startCooldownTicker();
+      }
+      await FirebaseAuth.instance.signOut();
+    } on AuthServiceException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = '보안을 위해 이메일 인증이 다시 필요합니다. ${error.message}';
+        });
+      }
+    }
+  }
+
+  void _startCooldownTicker() {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() {});
+      if (_cooldownSeconds <= 0) timer.cancel();
+    });
+  }
+
+  void _changeDomain(String? value) {
+    if (value == null) return;
+    setState(() {
+      _isCustomDomain = value == 'custom';
+      if (!_isCustomDomain) _emailDomain = value;
+    });
+    if (_isCustomDomain) _customDomainFocusNode.requestFocus();
+  }
+
+  Future<void> _requestBack() async {
+    if (_action != null) return;
+    if (_step == RegisterStep.emailInput) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    final shouldLeave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          '가입 취소',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: const Text('아직 가입이 완료되지 않았습니다.\n정말 가입을 취소하시겠습니까?'),
+        title: const Text('회원가입을 중단할까요?'),
+        content: const Text('다시 로그인하면 완료하지 못한 단계부터 이어집니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('계속 진행', style: TextStyle(color: Colors.grey)),
+            child: const Text('계속하기'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('가입 취소', style: TextStyle(color: Colors.red)),
+            child: const Text('중단하기'),
           ),
         ],
       ),
     );
-
-    if (shouldCancel == true) {
-      setState(() => _canPop = true);
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        try {
-          await user.reload();
-          if (!user.emailVerified) {
-            await user.delete(); // 인증 안 된 임시 계정 삭제
-          } else {
-            await FirebaseAuth.instance.signOut();
-          }
-        } catch (_) {
-          await FirebaseAuth.instance.signOut();
-        }
-      }
-      Future.microtask(() {
-        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-      });
-    }
-  }
-
-  //회원가입 프로세스
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        verificationState == VerificationState.waiting) {
-      checkEmailVerification(silent: true);
-    }
-  }
-
-  void _startPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (verificationState == VerificationState.waiting) {
-        checkEmailVerification(silent: true);
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  String get fullEmail {
-    final localPart = emailController.text.trim();
-    if (localPart.isEmpty) return '';
-    final domain = isCustomDomain
-        ? customDomainController.text.trim()
-        : emailDomain;
-    return '$localPart@$domain';
-  }
-
-  //회원가입 원스텝 (중복확인 -> 계정가생성 -> 메일발송)
-  Future<void> processRegistration() async {
-    final email = fullEmail;
-
-    if (emailController.text.trim().isEmpty ||
-        (isCustomDomain && customDomainController.text.trim().isEmpty)) {
-      setState(() => errorMessage = '이메일을 완전히 입력해주세요.');
-      return;
-    }
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-      setState(() => errorMessage = '이메일 형식이 올바르지 않습니다.');
-      return;
-    }
-
-    final password = passwordController.text;
-    if (password.isEmpty) {
-      setState(() => errorMessage = '비밀번호를 입력해주세요.');
-      return;
-    }
-    if (password != confirmPasswordController.text) {
-      setState(() => errorMessage = '비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      errorMessage = null; // 에러 초기화
-    });
-
-    try {
-      // 1. 중복 확인
-      final isDuplicate = await authService.isEmailDuplicate(email);
-      if (!mounted) return;
-      if (isDuplicate) {
-        setState(() => errorMessage = '이미 가입된 이메일입니다. 뒤로 가기를 눌러 로그인 화면에서 진행해주세요.');
-        return;
-      }
-
-      // 2. 계정 생성
-      await authService.createEmailAccount(email: email, password: password);
-      if (!mounted) return;
-
-      // 3. 인증 메일 발송
-      await authService.sendEmailVerification();
-      if (!mounted) return;
-
-      setState(() {
-        verificationState = VerificationState.waiting;
-        errorMessage = null;
-      });
-      _startPolling();
-    } on AuthServiceException catch (error) {
-      if (!mounted) return;
-      final msg = switch (error.code) {
-        'weak-password' => '비밀번호는 6자 이상 입력해주세요.',
-        _ => error.message,
-      };
-      setState(() => errorMessage = msg);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => errorMessage = '네트워크 통신 중 오류가 발생했습니다.');
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  //재전송
-  Future<void> resendVerificationEmail() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-    try {
-      await authService.sendEmailVerification();
-      if (!mounted) return;
-      setState(() => verificationState = VerificationState.waiting);
-      showMessage('인증 메일이 재발송되었습니다. 메일함을 확인해주세요.');
-      _startPolling();
-    } on AuthServiceException catch (error) {
-      if (!mounted) return;
-      setState(() => errorMessage = error.message);
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  //이메일 인증 확인
-  Future<void> checkEmailVerification({bool silent = false}) async {
-    if (isLoading && !silent) return;
-    if (!silent) setState(() => isLoading = true);
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      await user?.reload();
-      if (!mounted) return;
-      if (user?.emailVerified == true) {
-        _pollingTimer?.cancel();
-        setState(() => verificationState = VerificationState.verified);
-        showMessage('이메일 인증이 완료되었습니다. 하단의 다음 버튼을 눌러주세요.');
-      } else if (!silent) {
-        showMessage('아직 이메일 인증이 완료되지 않았습니다. 메일함의 링크를 클릭해주세요.');
-      }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        _pollingTimer?.cancel();
-      }
-    } catch (e) {
-      // 기타 에러 무시 (백그라운드 폴링 중 발생할 수 있음)
-    } finally {
-      if (mounted && !silent) setState(() => isLoading = false);
-    }
-  }
-
-  //닉네임 형식 확인
-  void checkNickname() {
-    final nickname = nicknameController.text.trim();
-    showMessage(nickname.length >= 2 ? '사용 가능한 형식입니다.' : '닉네임을 2자 이상 입력해주세요.');
-  }
-
-  Future<void> pickProfileImage() async {
-    try {
-      final image = await imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        imageQuality: 85,
-      );
-
-      if (image == null) return;
-
-      final bytes = await image.readAsBytes();
-
-      if (!mounted) return;
-
-      setState(() {
-        profileImage = image;
-        profileImageBytes = bytes;
-      });
-    } catch (error, stackTrace) {
-      debugPrint('프로필 이미지 선택 오류: $error');
-      debugPrintStack(stackTrace: stackTrace);
-
-      if (!mounted) return;
-      showMessage('프로필 사진을 불러오지 못했습니다.\n$error');
-    }
-  }
-
-  //제출하기
-  Future<void> completeRegistration() async {
-    setState(() => isLoading = true);
-    try {
-      final image = profileImage;
-      final imageBytes = profileImageBytes;
-      //닉네임 저장
-      await authService.updateDisplayName(nicknameController.text.trim());
-      if (image != null && imageBytes != null) {
-        //프로필 이미지 저장
-        await authService.uploadProfileImage(
-          imageBytes: imageBytes,
-          fileName: image.name,
-          contentType: image.mimeType,
-        );
-      }
-      //(프로필 이미지+ 닉네임)을 계정정보를 firestore에 저장
-      await authService.createUserDocument();
-      if (!mounted) return;
-      _canPop = true;
-      showMessage('가입이 완료되었습니다.');
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } on AuthServiceException catch (error) {
-      if (!mounted) return;
-      showMessage(error.message);
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  //메시지 보여주기
-  void showMessage(String message) {
-    if (message.isEmpty) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    if (shouldLeave != true || !mounted) return;
+    await _pendingEmailStore.clear();
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    widget.onCancel?.call();
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return PopScope(
-      canPop: _canPop,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        _handleBack();
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_requestBack());
       },
       child: PlatformAuthShell(
+        maxWidth: 390,
         showBack: true,
-        onBackPressed: _handleBack,
-        maxWidth: pageNumber == 0 ? 440 : 400,
+        onBackPressed: () => unawaited(_requestBack()),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              pageNumber == 0 ? '회원가입' : '프로필 설정',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            const Text(
+              '회원가입',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 5),
-            if (pageNumber == 0)
-              Text(
-                '사용할 이메일과 비밀번호를 입력해 주세요.',
-                style: TextStyle(color: colors.textMuted, fontSize: 11),
-              ),
-            const SizedBox(height: 20),
-            if (pageNumber == 0)
-              RegisterStepOne(
-                emailController: emailController,
-                customDomainController: customDomainController,
-                customDomainFocusNode: customDomainFocusNode,
-                passwordController: passwordController,
-                confirmPasswordController: confirmPasswordController,
-                emailDomain: emailDomain,
-                isCustomDomain: isCustomDomain,
-                isLoading: isLoading,
-                errorMessage: errorMessage,
-                verificationState: verificationState,
-                onDomainChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      if (val == 'custom') {
-                        isCustomDomain = true;
-                        customDomainController.clear();
-                      } else {
-                        emailDomain = val;
-                        isCustomDomain = false;
-                      }
-                    });
-                    if (val == 'custom') {
-                      customDomainFocusNode.requestFocus();
-                    }
-                  }
-                },
-                onProcessRegistration: processRegistration,
-                onResendVerification: resendVerificationEmail,
-              )
-            else
-              RegisterStepTwo(
-                nicknameController: nicknameController,
-                isLoading: isLoading,
-                profileImageBytes: profileImageBytes,
-                googlePhotoURL: googlePhotoURL,
-                onPickProfileImage: pickProfileImage,
-                onCheckNickname: checkNickname,
-              ),
-            const SizedBox(height: 20),
-            PlatformButton(
-              label: pageNumber == 0
-                  ? (verificationState == VerificationState.waiting
-                        ? (isLoading ? '확인 중...' : '인증 확인')
-                        : '다음')
-                  : (isLoading ? '처리 중...' : '가입 완료'),
-              onPressed: pageNumber == 0
-                  ? (verificationState == VerificationState.waiting
-                        ? (isLoading ? null : checkEmailVerification)
-                        : (verificationState == VerificationState.verified
-                              ? () => setState(() => pageNumber = 1)
-                              : null)) // initial 상태에서는 다음 버튼 비활성화 (전송하기로 진행)
-                  : (isLoading ? null : completeRegistration),
+            const SizedBox(height: 18),
+            RegisterStepOne(
+              emailController: _emailController,
+              customDomainController: _customDomainController,
+              customDomainFocusNode: _customDomainFocusNode,
+              passwordController: _passwordController,
+              confirmPasswordController: _confirmPasswordController,
+              emailDomain: _emailDomain,
+              isCustomDomain: _isCustomDomain,
+              step: _step,
+              action: _action,
+              cooldownSeconds: _cooldownSeconds,
+              errorMessage: _errorMessage,
+              onDomainChanged: _changeDomain,
+              onSendEmail: _sendEmail,
+              onResendEmail: () => _sendEmail(resend: true),
+              onSetPassword: _setPassword,
             ),
           ],
         ),

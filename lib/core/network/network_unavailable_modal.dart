@@ -89,12 +89,13 @@ class NetworkUnavailableModal extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onLongPress: kDebugMode ? onBypass : null,
-                            child: Assets.images.others.networkUnavailable.image(
-                              width: iconSize,
-                              height: iconSize,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                            ),
+                            child: Assets.images.others.networkUnavailable
+                                .image(
+                                  width: iconSize,
+                                  height: iconSize,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.high,
+                                ),
                           ),
                           SizedBox(height: isCompact ? 12 : 24),
                           Text(

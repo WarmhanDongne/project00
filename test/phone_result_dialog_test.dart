@@ -10,10 +10,7 @@ void main() {
   /// `Navigator.maybePop()`은 PopScope가 막아도 '처리했다'는 뜻으로 true를
   /// 돌려주므로 반환값으로는 판단할 수 없습니다. 화면에 무엇이 남아 있는지로만
   /// 확인합니다.
-  Future<BuildContext> openGameScreen(
-    WidgetTester tester,
-    Widget body,
-  ) async {
+  Future<BuildContext> openGameScreen(WidgetTester tester, Widget body) async {
     late BuildContext gameContext;
     await tester.pumpWidget(
       MaterialApp(

@@ -53,9 +53,9 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     final videoUrl = widget.game.ruleVideoUrl.isEmpty
         ? 'https://www.youtube.com/watch?v=fq4N0hgOWzU' // 테스트 영상
         : widget.game.ruleVideoUrl;
-        
+
     final videoId = _extractVideoId(videoUrl);
-    
+
     if (videoId != null && videoId.isNotEmpty) {
       _youtubeController = YoutubePlayerController.fromVideoId(
         videoId: videoId,
@@ -64,7 +64,8 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
           showFullscreenButton: true,
           mute: false,
         ),
-      );setState(() => _isPlayingVideo = true);
+      );
+      setState(() => _isPlayingVideo = true);
     } else {
       _showMessage(context, '유효하지 않은 영상 주소입니다.');
     }

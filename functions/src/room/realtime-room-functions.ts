@@ -7,6 +7,8 @@ import {
   ServerValue,
 } from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
+import {assertOnboardingComplete} from
+  "../auth/require-complete-onboarding.js";
 import {
   InterruptibleRoom,
   reconcileGamePlayerConnection,
@@ -76,6 +78,7 @@ export const createRealtimeRoom = onCall(
         "방을 만들려면 로그인이 필요합니다.",
       );
     }
+    await assertOnboardingComplete(controllerUid);
 
     const database = getDatabase();
     const controllerSessionId = createControllerSessionId();
@@ -151,6 +154,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         "로그인이 필요합니다.",
       );
     }
+    await assertOnboardingComplete(uid);
 
     const rawRoomCode = request.data?.roomCode;
     const roomCode = typeof rawRoomCode === "string" ?

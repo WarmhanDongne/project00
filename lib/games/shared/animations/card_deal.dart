@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/sound/app_sounds.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -102,7 +104,14 @@ class CardDealAnimation extends StatefulWidget {
 
 class CardDealAnimationState extends State<CardDealAnimation>
     with TickerProviderStateMixin {
+  /// 마지막 카드가 도착하는 진행도입니다.
+  static const double _dealEnd = 0.72;
+
   late final AnimationController _controller;
+
+  /// 지금까지 효과음을 재생한 카드 수입니다.
+  int _dealtSoundCount = 0;
+  double _lastDealProgress = 0;
 
   /// 분배가 시작되기 전에 카드 더미가 화면 위에서 중앙으로 내려오는 연출입니다.
   late final AnimationController _deckEntryController;
@@ -111,7 +120,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration)
-      ..addStatusListener(_onStatusChanged);
+      ..addStatusListener(_onStatusChanged)
+      ..addListener(_playDealingSounds);
     _deckEntryController = AnimationController(
       vsync: this,
       duration: widget.deckEntryDuration,
@@ -260,6 +270,71 @@ class CardDealAnimationState extends State<CardDealAnimation>
     );
   }
 
+  /// 카드 한 장이 날아가는 데 쓰는 진행도 길이입니다.
+  ///
+  /// 카드 수가 많아져도 마지막 카드가 [_dealEnd] 전에 도착하도록 압축합니다.
+  static double _flightLength(int totalCards) =>
+      math.min(0.15, _dealEnd / totalCards * 3.2);
+
+  /// [dealIndex]번째 카드가 출발하는 진행도입니다.
+  static double _dealStartOf(int dealIndex, int totalCards) {
+    if (totalCards <= 1) return 0;
+    final lastStart = math.max(0.0, _dealEnd - _flightLength(totalCards));
+    return lastStart * dealIndex / (totalCards - 1);
+  }
+
+  /// 카드가 눈에 보이게 내려앉는 지점입니다(비행 구간 안에서의 비율).
+  ///
+  /// 비행은 [Curves.easeOutCubic]이라 거리의 97%를 앞쪽 69%의 시간에 끝냅니다
+  /// (1-(1-t)^3 = 0.97 → t ≈ 0.69). 남은 31%는 거의 멈춘 듯한 마무리라, 구간
+  /// 끝(1.0)에 맞추면 카드가 이미 놓인 뒤에 소리가 들립니다.
+  ///
+  /// 소리를 더 앞당기려면 이 값만 낮추세요(0에 가까울수록 출발 시점).
+  static const double _dealLandingFraction = 0.69;
+
+  /// [dealIndex]번째 카드가 플레이어 앞에 내려앉는 진행도입니다.
+  static double _dealLandingOf(int dealIndex, int totalCards) =>
+      _dealStartOf(dealIndex, totalCards) +
+      _flightLength(totalCards) * _dealLandingFraction;
+
+  /// 효과음을 화면보다 얼마나 먼저 요청할지입니다.
+  ///
+  /// 기기 오디오 출력에는 짧은 지연이 남습니다. 닿는 순간에 요청을 보내면 그만큼
+  /// 늦게 들리므로 조금 앞서 보냅니다.
+  ///
+  /// 아직 늦게 들리면 이 값을 키우고, 너무 빠르면 줄이세요. 여기만 고치면 됩니다.
+  static const Duration _dealSoundLead = Duration(milliseconds: 60);
+
+  /// 카드가 한 장 플레이어 앞에 닿을 때마다 분배 효과음을 한 번 재생합니다.
+  ///
+  /// 출발이 아니라 도착에 맞춥니다. 출발에 재생하면 카드가 아직 날아가는
+  /// 중인데 소리가 먼저 나서 한 장의 비행시간만큼(수백 ms) 앞서 들립니다.
+  ///
+  /// 화면에 그리는 것과 같은 [_dealStartOf], [_flightLength]로 계산하므로
+  /// 연출 시간을 바꿔도 소리가 따로 어긋나지 않습니다. 되감기(loop)로 진행도가
+  /// 뒤로 갈 때는 다시 세어 재생합니다.
+  void _playDealingSounds() {
+    if (!mounted) return;
+    final totalCards = widget.playerCount * widget.cardsPerPlayer;
+    if (totalCards <= 0) return;
+
+    final progress = _controller.value;
+    if (progress < _lastDealProgress) _dealtSoundCount = 0;
+    _lastDealProgress = progress;
+
+    final totalMilliseconds = widget.duration.inMilliseconds;
+    final leadProgress = totalMilliseconds <= 0
+        ? 0.0
+        : _dealSoundLead.inMilliseconds / totalMilliseconds;
+
+    while (_dealtSoundCount < totalCards &&
+        progress >=
+            _dealLandingOf(_dealtSoundCount, totalCards) - leadProgress) {
+      _dealtSoundCount += 1;
+      SoundEffects.play(context, AppSounds.dealing);
+    }
+  }
+
   Widget _buildAnimatedCard(
     BuildContext context,
     Size size,
@@ -267,7 +342,6 @@ class CardDealAnimationState extends State<CardDealAnimation>
     int totalCards,
   ) {
     const cardAspectRatio = 512 / 350;
-    const dealEnd = 0.72;
     const exitStart = 0.84;
 
     final cardWidth = _effectiveCardWidth(size);
@@ -287,12 +361,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
     final stackOffset = tangent * (cardIndex * 1.8);
     final target = playerTarget + stackOffset;
 
-    // 카드 수가 많아져도 마지막 카드는 dealEnd 전에 도착하도록 간격을 압축합니다.
-    final flightLength = math.min(0.15, dealEnd / totalCards * 3.2);
-    final lastStart = math.max(0.0, dealEnd - flightLength);
-    final dealStart = totalCards == 1
-        ? 0.0
-        : lastStart * dealIndex / (totalCards - 1);
+    final flightLength = _flightLength(totalCards);
+    final dealStart = _dealStartOf(dealIndex, totalCards);
     final dealProgress = _intervalProgress(
       _controller.value,
       dealStart,
