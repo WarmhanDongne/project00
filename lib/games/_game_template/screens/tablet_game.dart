@@ -20,7 +20,6 @@ class TemplateTabletGame extends StatelessWidget {
   final PlayerLayoutModel playerLayout;
   final String roomCode;
 
-  // TODO: 실제 세션 Controller의 불변 상태 접근자로 교체하세요.
   bool get _isLoading => false;
   bool get _isFinished => false;
   bool get _isClosing => false;
