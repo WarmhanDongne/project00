@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:project00/platform/home/phone/models/room_join_feedback.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -23,7 +24,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _isOpeningNameInput = false;
-  String? _validationMessage;
+  RoomJoinFeedback? _feedback;
 
   @override
   void initState() {
@@ -32,7 +33,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   }
 
   void _refreshCode() {
-    _validationMessage = null;
+    _feedback = null;
     _roomProvider.errorMessage = null;
     if (mounted) setState(() {});
   }
@@ -49,21 +50,18 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
 
   Future<void> _openNameInput() async {
     final roomCode = _roomCodeController.text.trim().toUpperCase();
-    if (roomCode.length != 5) {
-      setState(() => _validationMessage = '5자리 참여 코드를 입력해주세요.');
-      return;
-    }
+    if (roomCode.length != 5) return;
     if (_isOpeningNameInput) return;
     setState(() {
       _isOpeningNameInput = true;
-      _validationMessage = null;
+      _feedback = null;
     });
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() {
         _isOpeningNameInput = false;
-        _validationMessage = '로그인 정보를 확인할 수 없습니다.';
+        _feedback = roomJoinFeedbackFor('로그인 정보를 확인할 수 없습니다.');
       });
       return;
     }
@@ -95,7 +93,10 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
     }
     if (!mounted) return;
     if (!joined) {
-      setState(() => _isOpeningNameInput = false);
+      setState(() {
+        _isOpeningNameInput = false;
+        _feedback = roomJoinFeedbackFor(_roomProvider.errorMessage);
+      });
       return;
     }
 
@@ -126,103 +127,95 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
+    final canSubmit = _roomCodeController.text.length == 5;
     return PlatformPhoneFlowScaffold(
       title: '그룹 참여하기',
+      centerTitle: true,
       bottom: PlatformButton(
-        label: _isOpeningNameInput ? '접속 중...' : '입장하기',
-        onPressed: _isOpeningNameInput ? null : _openNameInput,
+        label: '입력 완료',
+        onPressed: canSubmit && !_isOpeningNameInput ? _openNameInput : null,
+        loading: _isOpeningNameInput,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '태블릿에 표시된 QR 코드를 스캔하거나,\n참여 코드를 입력해 주세요.',
-            style: TextStyle(
-              color: colors.textMuted,
-              fontSize: 14,
-              height: 1.55,
-            ),
-          ),
-          const SizedBox(height: 18),
-          AspectRatio(
-            aspectRatio: 1.36,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(
-                    color: const Color(0xFF232129),
-                    child: MobileScanner(
-                      controller: _scannerController,
-                      onDetect: (capture) {
-                        if (_isOpeningNameInput) return;
-                        for (final barcode in capture.barcodes) {
-                          final value = barcode.rawValue?.trim().toUpperCase();
-                          if (value != null && value.length == 5) {
-                            _roomCodeController.text = value;
-                            _openNameInput();
-                            break;
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                  const _ScannerFrame(),
-                  Center(
-                    child: Text(
-                      'camera view',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.26),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Divider(color: colors.border)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(
-                  'OR',
-                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+              Text(
+                '태블릿에 표시된 QR 코드를 스캔하거나,\n참여 코드를 입력해 주세요.',
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 14,
+                  height: 1.55,
                 ),
               ),
-              Expanded(child: Divider(color: colors.border)),
+              const SizedBox(height: 18),
+              AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(
+                        color: const Color(0xFF232129),
+                        child: MobileScanner(
+                          controller: _scannerController,
+                          onDetect: (capture) {
+                            if (_isOpeningNameInput) return;
+                            for (final barcode in capture.barcodes) {
+                              final value = barcode.rawValue
+                                  ?.trim()
+                                  .toUpperCase();
+                              if (value != null && value.length == 5) {
+                                _roomCodeController.text = value;
+                                _openNameInput();
+                                break;
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                      const _ScannerFrame(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: colors.border)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(
+                      'OR',
+                      style: TextStyle(color: colors.textMuted, fontSize: 11),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: colors.border)),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                '참여 코드 입력',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              _RoomCodeBoxes(
+                controller: _roomCodeController,
+                focusNode: _codeFocusNode,
+                onSubmitted: _openNameInput,
+                feedback: _feedback,
+              ),
+              if (_feedback != null) ...[
+                const SizedBox(height: 9),
+                _InlineJoinFeedback(feedback: _feedback!),
+              ],
             ],
           ),
-          const SizedBox(height: 18),
-          const Text(
-            '참여 코드 입력',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
-          _RoomCodeBoxes(
-            controller: _roomCodeController,
-            focusNode: _codeFocusNode,
-            onSubmitted: _openNameInput,
-          ),
-          if (_validationMessage != null ||
-              _roomProvider.errorMessage != null) ...[
-            const SizedBox(height: 10),
-            PlatformNotice(
-              message: _validationMessage ?? _roomProvider.errorMessage!,
-              style: PlatformNoticeStyle.danger,
-            ),
-          ] else if (_roomCodeController.text.isNotEmpty &&
-              _roomCodeController.text.length < 5) ...[
-            const SizedBox(height: 10),
-            PlatformNotice(
-              message: '태블릿에 표시된 5자리 코드를 입력해 주세요.',
-              style: PlatformNoticeStyle.warning,
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -233,27 +226,31 @@ class _RoomCodeBoxes extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.onSubmitted,
+    required this.feedback,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSubmitted;
+  final RoomJoinFeedback? feedback;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     final code = controller.text.toUpperCase();
+    final feedbackColor = switch (feedback?.tone) {
+      RoomJoinFeedbackTone.warning => colors.warning,
+      RoomJoinFeedbackTone.danger => colors.danger,
+      null => null,
+    };
     return GestureDetector(
       onTap: focusNode.requestFocus,
       child: Stack(
         children: [
           Row(
-            children: List.generate(5, (index) {
-              final hasValue = index < code.length;
-              final isCurrent = index == code.length.clamp(0, 4);
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: index == 4 ? 0 : 8),
+            children: [
+              for (var index = 0; index < 5; index++) ...[
+                Expanded(
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: AnimatedContainer(
@@ -263,13 +260,24 @@ class _RoomCodeBoxes extends StatelessWidget {
                         color: colors.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isCurrent ? colors.primary : colors.border,
-                          width: isCurrent ? 1.6 : 1,
+                          color:
+                              feedbackColor ??
+                              (index == code.length.clamp(0, 4)
+                                  ? colors.primary
+                                  : colors.border),
+                          width:
+                              feedbackColor != null ||
+                                  index == code.length.clamp(0, 4)
+                              ? 1.6
+                              : 1,
                         ),
                       ),
                       child: Text(
-                        hasValue ? code[index] : '',
-                        style: const TextStyle(
+                        index < code.length ? code[index] : '',
+                        style: TextStyle(
+                          color: feedback?.tone == RoomJoinFeedbackTone.danger
+                              ? colors.danger
+                              : colors.text,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                         ),
@@ -277,15 +285,18 @@ class _RoomCodeBoxes extends StatelessWidget {
                     ),
                   ),
                 ),
-              );
-            }),
+                if (index < 4) const SizedBox(width: 8),
+              ],
+            ],
           ),
           Positioned.fill(
             child: Opacity(
-              opacity: 0.01,
+              opacity: 0,
               child: TextField(
                 controller: controller,
                 focusNode: focusNode,
+                showCursor: false,
+                enableInteractiveSelection: false,
                 maxLength: 5,
                 textCapitalization: TextCapitalization.characters,
                 keyboardType: TextInputType.visiblePassword,
@@ -302,6 +313,53 @@ class _RoomCodeBoxes extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _InlineJoinFeedback extends StatelessWidget {
+  const _InlineJoinFeedback({required this.feedback});
+
+  final RoomJoinFeedback feedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    final color = switch (feedback.tone) {
+      RoomJoinFeedbackTone.warning => colors.warning,
+      RoomJoinFeedbackTone.danger => colors.danger,
+    };
+    final background = switch (feedback.tone) {
+      RoomJoinFeedbackTone.warning => colors.warningSoft,
+      RoomJoinFeedbackTone.danger => colors.dangerSoft,
+    };
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_rounded, size: 20, color: color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                feedback.message,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
