@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/platform/auth/models/email_link_error_message.dart';
 import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
@@ -188,8 +189,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() => _errorMessage = '이메일 형식이 올바르지 않습니다.');
       return;
     }
-    if (resend && _cooldownSeconds > 0) return;
-
     setState(() {
       _action = resend ? RegisterAction.resendEmail : RegisterAction.sendEmail;
       _errorMessage = null;
@@ -210,7 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = _emailErrorMessage(error);
+        _errorMessage = EmailLinkErrorMessage.from(error);
         if (resend) _step = RegisterStep.emailLinkFailed;
       });
     } finally {
@@ -252,7 +251,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() => _step = RegisterStep.settingPassword);
     } on AuthServiceException catch (error) {
       await FirebaseAuth.instance.signOut();
-      final message = _emailErrorMessage(error);
+      final message = EmailLinkErrorMessage.from(error);
       widget.onEmailLinkHandled?.call(message);
       if (!mounted) return;
       setState(() {
@@ -372,14 +371,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     widget.onCancel?.call();
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
-
-  String _emailErrorMessage(AuthServiceException error) => switch (error.code) {
-    'invalid-email' => '이메일 형식이 올바르지 않습니다.',
-    'invalid-action-code' ||
-    'expired-action-code' => '인증 링크가 만료되었거나 이미 사용되었습니다.',
-    'network-request-failed' => '네트워크 연결을 확인해주세요.',
-    _ => error.message,
-  };
 
   @override
   Widget build(BuildContext context) {

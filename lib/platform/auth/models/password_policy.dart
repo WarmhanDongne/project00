@@ -9,9 +9,18 @@ abstract final class PasswordPolicy {
     r'''[!@#$%^&*()_+\-=\[\]{};:'",.<>/?\\|`~]''',
   );
 
-  static bool isValid(String password) =>
-      password.length >= 6 &&
-      _letter.hasMatch(password) &&
-      _number.hasMatch(password) &&
+  static bool hasMinimumLength(String password) => password.length >= 6;
+
+  static bool hasLetter(String password) => _letter.hasMatch(password);
+
+  static bool hasNumber(String password) => _number.hasMatch(password);
+
+  static bool hasSpecialCharacter(String password) =>
       _special.hasMatch(password);
+
+  static bool isValid(String password) =>
+      hasMinimumLength(password) &&
+      hasLetter(password) &&
+      hasNumber(password) &&
+      hasSpecialCharacter(password);
 }

@@ -45,6 +45,7 @@ class PlatformButton extends StatelessWidget {
     this.height = 48,
     this.expand = true,
     this.loading = false,
+    this.leading,
   });
 
   final String label;
@@ -53,6 +54,7 @@ class PlatformButton extends StatelessWidget {
   final double height;
   final bool expand;
   final bool loading;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -95,12 +97,27 @@ class PlatformButton extends StatelessWidget {
                   color: foreground,
                 ),
               )
-            : Text(
+            : leading == null
+            ? Text(
                 label,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  leading!,
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
       ),
     );

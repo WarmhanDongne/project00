@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
@@ -244,6 +245,11 @@ class _LoginScreenState extends State<LoginScreen> {
           PlatformButton(
             label: 'Google 로그인',
             style: PlatformButtonStyle.secondary,
+            leading: SvgPicture.asset(
+              'assets/images/button/google_g_logo.svg',
+              width: 20,
+              height: 20,
+            ),
             loading: _action == _LoginAction.google,
             onPressed: isBusy ? null : _signInWithGoogle,
           ),

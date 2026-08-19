@@ -27,19 +27,19 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('재전송 제한이 끝나면 로더를 제거하고 재전송을 허용한다', (tester) async {
+  testWidgets('5분 재전송 안내 시간 중에도 즉시 재전송을 허용한다', (tester) async {
     var resendCalls = 0;
     await _pumpStep(
       tester,
       step: RegisterStep.awaitingEmailLink,
       action: null,
-      cooldownSeconds: 0,
+      cooldownSeconds: 300,
       onResendEmail: () => resendCalls++,
     );
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('재전송'), findsOneWidget);
-    expect(find.textContaining('다시 전송해 주세요'), findsOneWidget);
+    expect(find.textContaining('재전송 가능'), findsOneWidget);
 
     await tester.tap(find.text('재전송'));
     expect(resendCalls, 1);
@@ -66,6 +66,8 @@ void main() {
     await tester.enterText(find.byType(TextField).at(2), 'Abcdef1');
     await tester.pump();
     expect(PasswordPolicy.isValid('Abcdef1'), isFalse);
+    expect(find.byIcon(Icons.check_rounded), findsNWidgets(4));
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
     expect(nextButton().onPressed, isNull);
 
     await tester.enterText(find.byType(TextField).at(1), 'Abcdef1!');
@@ -76,10 +78,44 @@ void main() {
     await tester.enterText(find.byType(TextField).at(2), 'Abcdef1!');
     await tester.pump();
     expect(PasswordPolicy.isValid('Abcdef1!'), isTrue);
+    expect(find.byIcon(Icons.check_rounded), findsNWidgets(5));
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
     expect(nextButton().onPressed, isNotNull);
 
     await tester.tap(find.widgetWithText(FilledButton, '다음'));
     expect(setPasswordCalls, 1);
+  });
+
+  testWidgets('비밀번호와 비밀번호 확인의 눈 아이콘으로 표시 상태를 토글한다', (
+    tester,
+  ) async {
+    await _pumpStep(
+      tester,
+      step: RegisterStep.settingPassword,
+      action: null,
+    );
+    await tester.enterText(find.byType(TextField).at(1), 'Abcdef1!');
+    await tester.enterText(find.byType(TextField).at(2), 'Abcdef1!');
+
+    TextField passwordField() =>
+        tester.widget<TextField>(find.byType(TextField).at(1));
+    TextField confirmationField() =>
+        tester.widget<TextField>(find.byType(TextField).at(2));
+
+    expect(passwordField().obscureText, isTrue);
+    expect(confirmationField().obscureText, isTrue);
+
+    await tester.tap(find.byTooltip('비밀번호 보기'));
+    await tester.tap(find.byTooltip('비밀번호 확인 보기'));
+    await tester.pump();
+    expect(passwordField().obscureText, isFalse);
+    expect(confirmationField().obscureText, isFalse);
+
+    await tester.tap(find.byTooltip('비밀번호 숨기기'));
+    await tester.tap(find.byTooltip('비밀번호 확인 숨기기'));
+    await tester.pump();
+    expect(passwordField().obscureText, isTrue);
+    expect(confirmationField().obscureText, isTrue);
   });
 
   testWidgets('프로필 작업 중에는 앨범과 키보드 완료 동작이 비활성화된다', (tester) async {
