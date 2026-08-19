@@ -33,6 +33,9 @@ class $AssetsImagesGen {
   /// Directory path: assets/images/button
   $AssetsImagesButtonGen get button => const $AssetsImagesButtonGen();
 
+  /// Directory path: assets/images/logo
+  $AssetsImagesLogoGen get logo => const $AssetsImagesLogoGen();
+
   /// Directory path: assets/images/others
   $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
 
@@ -65,6 +68,9 @@ class $AssetsSoundsGen {
 
   /// File path: assets/sounds/.gitkeep
   String get aGitkeep => 'assets/sounds/.gitkeep';
+
+  /// Directory path: assets/sounds/common
+  $AssetsSoundsCommonGen get common => const $AssetsSoundsCommonGen();
 
   /// List of all assets
   List<String> get values => [aGitkeep];
@@ -104,6 +110,20 @@ class $AssetsImagesButtonGen {
   List<AssetGenImage> get values => [googleLoginButton];
 }
 
+class $AssetsImagesLogoGen {
+  const $AssetsImagesLogoGen();
+
+  /// File path: assets/images/logo/.gitkeep
+  String get aGitkeep => 'assets/images/logo/.gitkeep';
+
+  /// File path: assets/images/logo/google_g.svg
+  SvgGenImage get googleG =>
+      const SvgGenImage('assets/images/logo/google_g.svg');
+
+  /// List of all assets
+  List<dynamic> get values => [aGitkeep, googleG];
+}
+
 class $AssetsImagesOthersGen {
   const $AssetsImagesOthersGen();
 
@@ -129,6 +149,19 @@ class $AssetsImagesWidgetsGen {
   /// Directory path: assets/images/widgets/roulette
   $AssetsImagesWidgetsRouletteGen get roulette =>
       const $AssetsImagesWidgetsRouletteGen();
+}
+
+class $AssetsSoundsCommonGen {
+  const $AssetsSoundsCommonGen();
+
+  /// File path: assets/sounds/common/dealing.mp3
+  String get dealing => 'assets/sounds/common/dealing.mp3';
+
+  /// File path: assets/sounds/common/roulette.mp3
+  String get roulette => 'assets/sounds/common/roulette.mp3';
+
+  /// List of all assets
+  List<String> get values => [dealing, roulette];
 }
 
 class $AssetsGamesFinalCallImagesGen {

@@ -16,7 +16,7 @@ class LiarsPokerGame extends TemplateGame {
   @override
   String get title => "Liar's Poker";
   @override
-  String get leaveFunctionName => 'leaveLiarsPokerGame';
+  String get leaveFunctionName => 'game_liars_poker_leave_game';
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.portraitAndLandscape;

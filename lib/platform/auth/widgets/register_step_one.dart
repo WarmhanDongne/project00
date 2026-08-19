@@ -129,39 +129,66 @@ class RegisterStepOne extends StatelessWidget {
                             enabled: isFieldsEnabled,
                             decoration: InputDecoration(
                               hintText: '직접 입력',
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                              suffixIcon: isFieldsEnabled ? IconButton(
-                                icon: const Icon(Icons.arrow_drop_down, size: 20),
-                                onPressed: () => onDomainChanged('gmail.com'),
-                              ) : null,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              suffixIcon: isFieldsEnabled
+                                  ? IconButton(
+                                      icon: const Icon(
+                                        Icons.arrow_drop_down,
+                                        size: 20,
+                                      ),
+                                      onPressed: () =>
+                                          onDomainChanged('gmail.com'),
+                                    )
+                                  : null,
                             ),
                           )
                         : DropdownButtonFormField<String>(
                             isExpanded: true,
-                            initialValue: emailDomain == 'custom' ? 'gmail.com' : emailDomain,
+                            initialValue: emailDomain == 'custom'
+                                ? 'gmail.com'
+                                : emailDomain,
                             decoration: const InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
                             ),
                             items: const [
                               DropdownMenuItem(
                                 value: 'gmail.com',
-                                child: Text('gmail.com', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'gmail.com',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'naver.com',
-                                child: Text('naver.com', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'naver.com',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'daum.net',
-                                child: Text('daum.net', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'daum.net',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'hanmail.net',
-                                child: Text('hanmail.net', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'hanmail.net',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'custom',
-                                child: Text('직접 입력', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  '직접 입력',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                             onChanged: isFieldsEnabled ? onDomainChanged : null,
@@ -185,12 +212,16 @@ class RegisterStepOne extends StatelessWidget {
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          child: (verificationState == VerificationState.initial && errorMessage == null)
+          child:
+              (verificationState == VerificationState.initial &&
+                  errorMessage == null)
               ? const SizedBox.shrink()
               : PlatformNotice(
                   message: noticeMessage,
                   style: noticeStyle,
-                  leading: (verificationState == VerificationState.waiting && errorMessage == null)
+                  leading:
+                      (verificationState == VerificationState.waiting &&
+                          errorMessage == null)
                       ? SizedBox(
                           width: 14,
                           height: 14,

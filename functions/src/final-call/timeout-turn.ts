@@ -12,7 +12,7 @@ import {FINAL_CALL_REGION, finalCallRoomCode, finalCallUid, requireFinalCallGame
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 30초가 지난 현재 턴의 카드를 자동으로 버리고 다음 턴을 시작합니다. */
-export const timeoutFinalCallTurn = onCall<Data>(
+export const game_final_call_timeout_turn = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const requesterUid = finalCallUid(request);

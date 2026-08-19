@@ -242,7 +242,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       final isDuplicate = await authService.isEmailDuplicate(email);
       if (!mounted) return;
       if (isDuplicate) {
-        setState(() => errorMessage = '이미 가입된 이메일입니다. 뒤로 가기를 눌러 로그인 화면에서 진행해주세요.');
+        setState(
+          () => errorMessage = '이미 가입된 이메일입니다. 뒤로 가기를 눌러 로그인 화면에서 진행해주세요.',
+        );
         return;
       }
 

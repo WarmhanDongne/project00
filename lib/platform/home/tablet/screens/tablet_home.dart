@@ -159,42 +159,42 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
         child: Column(
           children: [
             _HomeHeader(
-                  onSearchChanged: (value) {
-                    setState(() => searchWord = value);
-                  },
-                ),
-                Divider(height: 1, color: colors.border),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final panelWidth = (constraints.maxWidth * 0.25).clamp(
-                        280.0,
-                        310.0,
-                      );
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: GameList(
-                              roomProvider: roomProvider,
-                              gameProvider: gameProvider,
-                              searchQuery: searchWord,
-                            ),
-                          ),
-                          VerticalDivider(
-                            width: 1,
-                            thickness: 1,
-                            color: colors.border,
-                          ),
-                          SizedBox(
-                            width: panelWidth,
-                            child: TabletRoomPanel(provider: roomProvider),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+              onSearchChanged: (value) {
+                setState(() => searchWord = value);
+              },
+            ),
+            Divider(height: 1, color: colors.border),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final panelWidth = (constraints.maxWidth * 0.25).clamp(
+                    280.0,
+                    310.0,
+                  );
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: GameList(
+                          roomProvider: roomProvider,
+                          gameProvider: gameProvider,
+                          searchQuery: searchWord,
+                        ),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: colors.border,
+                      ),
+                      SizedBox(
+                        width: panelWidth,
+                        child: TabletRoomPanel(provider: roomProvider),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -239,9 +239,7 @@ class _HomeHeader extends StatelessWidget {
               width: 170,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Profile(),
-                ],
+                children: [const Profile()],
               ),
             ),
           ],

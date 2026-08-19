@@ -11,7 +11,7 @@ import {FINAL_CALL_REGION, finalCallCommandId, finalCallRoomCode, finalCallUid, 
 type Data = {roomCode?: unknown; commandId?: unknown; cardIds?: unknown};
 
 /** 현재 플레이어가 손패에서 실제 공개할 최종 점수 조합만 제출합니다. */
-export const submitFinalCallHand = onCall<Data>(
+export const game_final_call_submit_hand = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

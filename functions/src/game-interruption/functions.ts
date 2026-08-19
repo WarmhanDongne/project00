@@ -53,7 +53,7 @@ interface GameRoom extends InterruptibleRoom {
 }
 
 /** 남은 플레이어가 연결이 끊긴 플레이어를 제외하고 계속 진행하는 데 투표합니다. */
-export const voteToContinueInterruptedGame = onCall<Data>(
+export const game_common_interruption_vote_to_continue = onCall<Data>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request.auth?.uid);
@@ -102,7 +102,7 @@ export const voteToContinueInterruptedGame = onCall<Data>(
 );
 
 /** 태블릿 진행자가 중단된 플레이어를 제외하고 즉시 게임을 계속합니다. */
-export const excludeInterruptedPlayerAndContinue = onCall<Data>(
+export const game_common_interruption_exclude_player = onCall<Data>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request.auth?.uid);
@@ -141,7 +141,7 @@ export const excludeInterruptedPlayerAndContinue = onCall<Data>(
 );
 
 /** 60초 동안 재접속하지 않으면 제외 후 계속하거나 인원 부족으로 종료합니다. */
-export const expireInterruptedGame = onCall<Data>(
+export const game_common_interruption_expire = onCall<Data>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request.auth?.uid);
@@ -191,7 +191,7 @@ export const expireInterruptedGame = onCall<Data>(
 );
 
 /** RTDB onDisconnect가 바꾼 플레이어 접속 상태를 공용 게임 중단 상태로 승격합니다. */
-export const handleGamePlayerConnectionChanged = onValueWritten(
+export const game_common_interruption_on_connection_changed = onValueWritten(
   {
     ref: "/rooms/{roomCode}/players/{uid}/isConnected",
     region: DATABASE_TRIGGER_REGION,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
@@ -14,6 +15,7 @@ class PhoneHandCardStackController extends ChangeNotifier {
   Object? _owner;
   Future<void> Function()? _submitSelection;
   List<int> _selectedIndexes = const [];
+  bool _disposed = false;
 
   List<int> get selectedIndexes => _selectedIndexes;
   bool get hasSelection => _selectedIndexes.isNotEmpty;
@@ -42,7 +44,40 @@ class PhoneHandCardStackController extends ChangeNotifier {
     if (!allowDetachedOwner && !identical(_owner, owner)) return;
     if (_sameIndexes(_selectedIndexes, indexes)) return;
     _selectedIndexes = List<int>.unmodifiable(indexes);
-    notifyListeners();
+    _notifySelectionListeners();
+  }
+
+  /// 선택 변경을 알립니다. 빌드 단계에서는 프레임이 끝난 뒤로 미룹니다.
+  ///
+  /// 손패 위젯의 `initState`·`dispose`·`didUpdateWidget`은 모두 빌드 단계에서
+  /// 실행됩니다. 새 라운드가 시작되면 손패 위젯의 key가 바뀌어 이전 State가
+  /// `dispose`(→ `_detach` → 선택 초기화)되고 새 State가 `initState`(→ `_attach`)
+  /// 되는 일이 한 번의 빌드 안에서 일어납니다.
+  ///
+  /// 이때 곧바로 알리면, 이 컨트롤러를 듣고 있는 SUBMIT/LIAR 버튼의
+  /// [AnimatedBuilder]가 빌드 도중 다시 빌드할 대상으로 표시되어
+  /// `setState() or markNeedsBuild() called during build` 오류가 납니다.
+  ///
+  /// 카드를 눌러 선택하는 평소 경로는 빌드 단계가 아니므로 그대로 즉시
+  /// 알립니다. 버튼 반응이 한 프레임 늦어지지 않습니다.
+  void _notifySelectionListeners() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase != SchedulerPhase.persistentCallbacks) {
+      notifyListeners();
+      return;
+    }
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed) return;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    // 미뤄 둔 알림이 dispose 이후에 실행되면 ChangeNotifier가 예외를 냅니다.
+    _disposed = true;
+    super.dispose();
   }
 
   bool _sameIndexes(List<int> left, List<int> right) {
@@ -76,6 +111,7 @@ class PhoneHandCardStack extends StatefulWidget {
     this.initiallyRevealed = false,
     this.entryCenterOffsetX = 0,
     this.entryCenterOffsetY = 0,
+    this.announcementCenterOffset = Offset.zero,
     this.roundNumber = 1,
     this.tableRank = 'K',
   }) : assert(maxSelection > 0);
@@ -94,6 +130,16 @@ class PhoneHandCardStack extends StatefulWidget {
   final bool initiallyRevealed;
   final double entryCenterOffsetX;
   final double entryCenterOffsetY;
+
+  /// ROUND·기준 카드(KING/QUEEN/ACE) 문구를 화면 정중앙에 놓기 위한 보정값입니다.
+  ///
+  /// 이 위젯은 화면 전체가 아니라 손패 영역에만 놓입니다. 그래서 문구를 이
+  /// 위젯 기준으로 가운데 두면 손패 영역의 중앙(화면 중앙보다 위)에 뜹니다.
+  /// 화면 크기를 아는 상위 화면이 `화면 중앙 - 손패 영역 중앙`을 넘겨줍니다.
+  ///
+  /// 카드 진입 위치([entryCenterOffsetX], [entryCenterOffsetY])와 따로 두어,
+  /// 문구 위치를 고쳐도 카드 연출이 움직이지 않습니다.
+  final Offset announcementCenterOffset;
   final int roundNumber;
   final String tableRank;
 
@@ -490,7 +536,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
               Positioned.fill(
                 child: GameAnnouncementLayer(
                   announcement: announcement,
-                  offset: Offset(widget.entryCenterOffsetX, 0),
+                  offset: widget.announcementCenterOffset,
                   style: GameAnnouncementStyle(
                     fontSize: widget.isLandscape ? 38 : 42,
                     gameStartFontSize: widget.isLandscape ? 38 : 42,

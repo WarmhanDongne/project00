@@ -17,6 +17,7 @@ import 'package:project00/games/final_call/screens/tablet/tablet_game_overlay.da
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/final_call/widgets/tablet/result_overlay.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -53,8 +54,19 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   bool resultRevealSignalInFlight = false;
   Timer? closingExitTimer;
 
+  /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
+  final GameBackgroundMusic backgroundMusic = GameBackgroundMusic();
+
   /// 설정에서 게임 종료를 누른 뒤 홈으로 나가는 중인지 여부입니다.
   bool isEndingGame = false;
+
+  /// 종료를 누른 순간 화면에 있던 단계입니다.
+  ///
+  /// 종료 명령이 서버에 반영되면 stage가 closing으로 바뀌고, closing은 판을
+  /// 아예 그리지 않습니다(`SizedBox.shrink`). 그래서 닫히기 직전에 좌석과
+  /// 프로필이 사라진 빈 화면이 한 번 보였습니다. 나가는 동안에는 이 단계를
+  /// 그대로 유지해 정리되는 장면을 보여주지 않습니다.
+  FinalCallTabletStage? stageBeforeExit;
 
   @override
   void initState() {
@@ -92,6 +104,10 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     if (game == null || !mounted) return;
     final enteredPhase = previousPhase != game.phase;
     previousPhase = game.phase;
+
+    // 카드 분배가 시작되면 배경음악을 켭니다. 라운드마다 분배가 반복되지만
+    // start가 한 번만 실행되므로 곡이 처음으로 되감기지 않습니다.
+    if (game.phase == 'dealing') backgroundMusic.start();
 
     if (game.isFinished && !game.isNaturalResult) {
       turnTimer?.cancel();
@@ -177,25 +193,34 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     // endGame이 서버 상태를 finished로 바꾸는 사이 결과 화면이 잠깐 떴다가
     // 사라졌습니다. Liar's Poker처럼 결과를 거치지 않고 바로 홈으로 나가도록
     // 종료 처리 중에는 결과 화면을 그리지 않습니다.
-    setState(() => isEndingGame = true);
+    setState(() {
+      isEndingGame = true;
+      stageBeforeExit = _currentStage();
+    });
     final ended = await controller?.endGame() ?? false;
     if (!mounted) return;
     if (!ended) {
-      setState(() => isEndingGame = false);
+      setState(() {
+        isEndingGame = false;
+        stageBeforeExit = null;
+      });
       return;
     }
     // Liar's Poker와 같은 흐름입니다: endGame 성공 = 즉시 복귀.
     //
     // 예전에는 여기서 clearGame까지 기다렸습니다. game 노드를 지우는 건 선택적
     // 뒷정리인데, callable 왕복이 하나 더 붙어 종료가 그만큼 늦어지고 실패하면
-    // 결과 화면이 잠깐 비칩니다. 새 게임 시작(startFinalCallGame)이 finished
-    // 상태의 기존 게임을 그대로 교체하므로 미리 지울 필요가 없습니다.
+    // 결과 화면이 잠깐 비칩니다. 새 게임 시작(game_final_call_start_game)이
+    // finished 상태의 기존 게임을 그대로 교체하므로 미리 지울 필요가 없습니다.
     Navigator.of(context).maybePop();
   }
 
   Future<void> _returnHomeAfterResult() async {
     if (isEndingGame) return;
-    setState(() => isEndingGame = true);
+    setState(() {
+      isEndingGame = true;
+      stageBeforeExit = _currentStage();
+    });
 
     // 결과 화면 HOME은 휴대폰에도 종료 상태가 전달된 뒤 태블릿을 닫습니다.
     // game 노드를 바로 지우고 태블릿만 나가면, clearGame이 실패했을 때
@@ -206,7 +231,10 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     final ended = await controller?.endGame() ?? false;
     if (!mounted) return;
     if (!ended) {
-      setState(() => isEndingGame = false);
+      setState(() {
+        isEndingGame = false;
+        stageBeforeExit = null;
+      });
       final message = controller?.actionErrorMessage;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -216,7 +244,17 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     Navigator.of(context).maybePop();
   }
 
+  /// 현재 서버 상태로 계산한 단계입니다.
+  FinalCallTabletStage? _currentStage() {
+    final game = controller;
+    return game == null ? null : _resolveStage(game);
+  }
+
   FinalCallTabletStage _resolveStage(FinalCallController game) {
+    // 나가는 중에는 종료가 반영되기 전 화면을 그대로 유지합니다.
+    final held = stageBeforeExit;
+    if (isEndingGame && held != null) return held;
+
     // ========================================================================
     // 서버 상태 → 태블릿 화면 단계
     // ========================================================================
@@ -242,7 +280,16 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // dispose에서는 context를 읽을 수 없으므로 미리 붙잡아 둡니다.
+    backgroundMusic.attach(context);
+  }
+
+  @override
   void dispose() {
+    // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
+    backgroundMusic.stop();
     phaseTimer?.cancel();
     turnTimer?.cancel();
     closingExitTimer?.cancel();

@@ -7,9 +7,9 @@ import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
-import 'package:project00/games/liars_poker/providers/liars_poker_phone_session_provider.dart';
-import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
-import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_session_provider.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_game_state.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
 import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
@@ -39,9 +39,9 @@ class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
 }
 
 class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
-  LiarsPokerPhoneController? _controller;
-  LiarsPokerPhoneSessionArgs? _sessionArgs;
-  ProviderSubscription<LiarsPokerPhoneState>? _sessionSubscription;
+  LiarsPokerController? _controller;
+  LiarsPokerSessionArgs? _sessionArgs;
+  ProviderSubscription<LiarsPokerGameState>? _sessionSubscription;
   String? _initializationError;
   bool _hasScheduledGameExit = false;
   bool _isLeavingRoom = false;
@@ -72,13 +72,14 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       return;
     }
 
-    final args = LiarsPokerPhoneSessionArgs(
+    final args = LiarsPokerSessionArgs(
       roomCode: widget.roomCode,
       uid: uid,
       service: widget.gameService,
+      watchPrivateHand: true,
     );
     _sessionArgs = args;
-    final provider = liarsPokerPhoneSessionProvider(args);
+    final provider = liarsPokerSessionProvider(args);
     _sessionSubscription = ref.listenManual(provider, (_, _) {
       _handleGameStateChanged();
     });
@@ -141,7 +142,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     });
   }
 
-  void _showResultDialog(LiarsPokerPhoneController controller) {
+  void _showResultDialog(LiarsPokerController controller) {
     final winnerUid = controller.winnerUid;
     final winner = controller.players[winnerUid];
     if (winnerUid == null || winner == null) return;
@@ -228,10 +229,10 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   @override
   Widget build(BuildContext context) {
     final args = _sessionArgs;
-    if (args != null) ref.watch(liarsPokerPhoneSessionProvider(args));
+    if (args != null) ref.watch(liarsPokerSessionProvider(args));
     final controller = args == null
         ? null
-        : ref.read(liarsPokerPhoneSessionProvider(args).notifier);
+        : ref.read(liarsPokerSessionProvider(args).notifier);
     _controller = controller;
     if (controller == null) {
       return Scaffold(
@@ -314,7 +315,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     );
   }
 
-  Widget _buildGameContent(LiarsPokerPhoneController controller) {
+  Widget _buildGameContent(LiarsPokerController controller) {
     final isAlive = !controller.isEliminated;
 
     // ============================================================================

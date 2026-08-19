@@ -13,7 +13,7 @@ import {
 type Data = {roomCode?: unknown};
 
 /** 방에서는 즉시 나가되, 진행 가능한 게임은 남은 플레이어 투표 뒤 제외합니다. */
-export const leaveFinalCallGame = onCall<Data>(
+export const game_final_call_leave_game = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);
