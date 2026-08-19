@@ -47,18 +47,15 @@ class _AuthGateState extends State<AuthGate> {
         _onboardingService.isEmailSignInLink(initialLink.toString())) {
       _emailLink = initialLink;
     }
-    _emailLinkSubscription = widget.emailLinks?.listen(
-      (link) {
-        if (!mounted ||
-            !_onboardingService.isEmailSignInLink(link.toString())) {
-          return;
-        }
-        setState(() => _emailLink = link);
-      },
-      onError: (Object error) {
-        debugPrint('이메일 링크 수신 오류: $error');
-      },
-    );
+    _subscribeToEmailLinks();
+  }
+
+  @override
+  void didUpdateWidget(covariant AuthGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.emailLinks, widget.emailLinks)) return;
+    unawaited(_emailLinkSubscription?.cancel());
+    _subscribeToEmailLinks();
   }
 
   @override
@@ -83,6 +80,7 @@ class _AuthGateState extends State<AuthGate> {
             return RegisterScreen(
               initialEmailLink: link,
               onEmailLinkHandled: _handleEmailLink,
+              onboardingService: _onboardingService,
             );
           }
           if (_emailLinkError != null) {
@@ -90,6 +88,7 @@ class _AuthGateState extends State<AuthGate> {
               initialStep: RegisterStep.emailLinkFailed,
               initialError: _emailLinkError,
               onCancel: () => setState(() => _emailLinkError = null),
+              onboardingService: _onboardingService,
             );
           }
           if (_reauthenticationEmail != null) {
@@ -97,6 +96,7 @@ class _AuthGateState extends State<AuthGate> {
               initialStep: RegisterStep.awaitingEmailLink,
               initialEmail: _reauthenticationEmail,
               onCancel: () => setState(() => _reauthenticationEmail = null),
+              onboardingService: _onboardingService,
             );
           }
           return const LoginScreen();
@@ -126,6 +126,7 @@ class _AuthGateState extends State<AuthGate> {
                 onReauthenticationStarted: (email) {
                   setState(() => _reauthenticationEmail = email);
                 },
+                onboardingService: _onboardingService,
               ),
               OnboardingStatus.settingProfile => const ProfileSetupScreen(),
               OnboardingStatus.complete => const Home(),
@@ -147,6 +148,37 @@ class _AuthGateState extends State<AuthGate> {
   void _clearOnboardingWatch() {
     _watchedOnboardingUid = null;
     _onboardingStream = null;
+  }
+
+  void _subscribeToEmailLinks() {
+    _emailLinkSubscription = widget.emailLinks?.listen(
+      _handleIncomingEmailLink,
+      onError: (Object error) {
+        debugPrint('이메일 링크 수신 오류: $error');
+      },
+    );
+  }
+
+  void _handleIncomingEmailLink(Uri link) {
+    if (!mounted) return;
+    final value = link.toString();
+    if (!_onboardingService.isEmailSignInLink(value)) {
+      debugPrint(
+        '이메일 인증이 아닌 링크를 무시했습니다: '
+        '${link.scheme}://${link.host}${link.path}',
+      );
+      return;
+    }
+    if (_emailLink?.toString() == value) return;
+
+    // LoginScreen에서 push한 RegisterScreen이 루트 AuthGate를 가리고
+    // 있을 수 있습니다. 인증 링크의 단일 소유자인 AuthGate로 복귀해
+    // 새 상태가 즉시 보이게 합니다.
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    setState(() {
+      _emailLink = link;
+      _emailLinkError = null;
+    });
   }
 
   void _handleEmailLink(String? error) {

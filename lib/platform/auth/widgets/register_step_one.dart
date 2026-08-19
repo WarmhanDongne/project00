@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
@@ -116,7 +117,7 @@ class RegisterStepOne extends StatelessWidget {
                     ? '재전송 중…'
                     : _emailEditable
                     ? '인증'
-                    : (_isSettingPassword ? '완료' : '재시도'),
+                    : (_isSettingPassword ? '완료' : '재전송'),
                 height: 48,
                 loading: action == RegisterAction.sendEmail,
                 onPressed: switch (step) {
@@ -142,14 +143,19 @@ class RegisterStepOne extends StatelessWidget {
                     ? '인증이 완료되었습니다.'
                     : _isFailed
                     ? '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.'
-                    : '인증 메일을 보냈습니다. 메일함을 확인해 주세요. '
-                          '(${_formatCooldown(cooldownSeconds)})'),
+                    : cooldownSeconds > 0
+                    ? '인증 메일을 보냈습니다. 메일함을 확인해 주세요. '
+                          '(${_formatCooldown(cooldownSeconds)})'
+                    : '메일이 오지 않았다면 인증 메일을 다시 전송해 주세요.'),
             style: errorMessage != null || _isFailed
                 ? PlatformNoticeStyle.danger
                 : _isSettingPassword
                 ? PlatformNoticeStyle.success
                 : PlatformNoticeStyle.warning,
-            leading: _isWaiting
+            leading:
+                _isWaiting &&
+                    (action == RegisterAction.completeLink ||
+                        cooldownSeconds > 0)
                 ? SizedBox(
                     width: 16,
                     height: 16,
@@ -171,6 +177,7 @@ class RegisterStepOne extends StatelessWidget {
             obscureText: true,
             onChanged: (_) {},
             decoration: const InputDecoration(
+              helperText: '영문, 숫자, 특수문자 포함 6자 이상',
               suffixIcon: Icon(Icons.visibility_outlined, size: 18),
             ),
           ),
@@ -187,10 +194,23 @@ class RegisterStepOne extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        PlatformButton(
-          label: _isSettingPassword ? '다음' : '다음',
-          loading: action == RegisterAction.setPassword,
-          onPressed: _isSettingPassword && !isBusy ? onSetPassword : null,
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            passwordController,
+            confirmPasswordController,
+          ]),
+          builder: (context, child) {
+            final canSetPassword =
+                PasswordPolicy.isValid(passwordController.text) &&
+                passwordController.text == confirmPasswordController.text;
+            return PlatformButton(
+              label: '다음',
+              loading: action == RegisterAction.setPassword,
+              onPressed: _isSettingPassword && !isBusy && canSetPassword
+                  ? onSetPassword
+                  : null,
+            );
+          },
         ),
       ],
     );

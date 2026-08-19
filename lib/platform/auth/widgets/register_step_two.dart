@@ -55,7 +55,7 @@ class RegisterStepTwo extends StatelessWidget {
             SizedBox(
               width: 92,
               child: PlatformButton(
-                label: '앨범열기',
+                label: '사진 설정',
                 style: PlatformButtonStyle.secondary,
                 onPressed: isLoading ? null : onPickProfileImage,
               ),

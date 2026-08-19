@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
 import 'package:project00/platform/auth/services/pending_email_store.dart';
@@ -46,7 +47,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen>
+    with WidgetsBindingObserver {
   static const _resendCooldown = Duration(minutes: 5);
 
   late final OnboardingService _onboardingService;
@@ -64,6 +66,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _errorMessage;
   DateTime? _cooldownUntil;
   Timer? _cooldownTimer;
+  Uri? _queuedEmailLink;
+  String? _lastHandledEmailLink;
 
   int get _cooldownSeconds {
     final until = _cooldownUntil;
@@ -76,19 +80,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _onboardingService = widget.onboardingService ?? OnboardingService();
     _pendingEmailStore = widget.pendingEmailStore ?? PendingEmailStore();
     _step = widget.initialStep;
     _errorMessage = widget.initialError;
     _setInitialEmail(widget.initialEmail);
     if (widget.initialEmailLink != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(_completeIncomingLink(widget.initialEmailLink!));
-      });
+      _queueIncomingLink(widget.initialEmailLink!);
     } else if (_step == RegisterStep.awaitingEmailLink ||
         _step == RegisterStep.emailLinkFailed) {
       unawaited(_restorePendingEmail());
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant RegisterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incomingLink = widget.initialEmailLink;
+    if (incomingLink != null &&
+        incomingLink.toString() != oldWidget.initialEmailLink?.toString()) {
+      _queueIncomingLink(incomingLink);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    setState(() {});
+    if (_cooldownSeconds > 0) _startCooldownTicker();
   }
 
   void _setInitialEmail(String? email) {
@@ -99,6 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cooldownTimer?.cancel();
     _emailController.dispose();
     _customDomainController.dispose();
@@ -106,6 +127,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _queueIncomingLink(Uri link) {
+    final value = link.toString();
+    if (value == _lastHandledEmailLink ||
+        value == _queuedEmailLink?.toString()) {
+      return;
+    }
+    _queuedEmailLink = link;
+    // addPostFrameCallback을 기다리는 첫 프레임부터 로딩 UI를 보여줍니다.
+    if (_action == null) {
+      _step = RegisterStep.awaitingEmailLink;
+      _action = RegisterAction.completeLink;
+      _errorMessage = null;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_processQueuedIncomingLink());
+    });
+  }
+
+  Future<void> _processQueuedIncomingLink() async {
+    if (!mounted ||
+        (_action != null && _action != RegisterAction.completeLink)) {
+      return;
+    }
+    final link = _queuedEmailLink;
+    if (link == null) return;
+    _queuedEmailLink = null;
+    _lastHandledEmailLink = link.toString();
+    await _completeIncomingLink(link);
   }
 
   Future<void> _restorePendingEmail() async {
@@ -163,17 +214,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (resend) _step = RegisterStep.emailLinkFailed;
       });
     } finally {
-      if (mounted) setState(() => _action = null);
+      if (mounted) {
+        setState(() => _action = null);
+        unawaited(_processQueuedIncomingLink());
+      }
     }
   }
 
   Future<void> _completeIncomingLink(Uri link) async {
-    if (_action != null) return;
-    setState(() {
-      _step = RegisterStep.awaitingEmailLink;
-      _action = RegisterAction.completeLink;
-      _errorMessage = null;
-    });
+    if (_action != null && _action != RegisterAction.completeLink) {
+      _queuedEmailLink = link;
+      return;
+    }
+    if (_action != RegisterAction.completeLink) {
+      setState(() {
+        _step = RegisterStep.awaitingEmailLink;
+        _action = RegisterAction.completeLink;
+        _errorMessage = null;
+      });
+    }
     try {
       final pending = await _pendingEmailStore.read();
       if (pending == null) {
@@ -208,10 +267,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _setPassword() async {
     if (_action != null) return;
     final password = _passwordController.text;
-    if (password.length < 6 ||
-        !RegExp('[A-Za-z]').hasMatch(password) ||
-        !RegExp('[0-9]').hasMatch(password)) {
-      setState(() => _errorMessage = '비밀번호는 영문과 숫자를 포함해 6자 이상이어야 합니다.');
+    if (!PasswordPolicy.isValid(password)) {
+      setState(
+        () => _errorMessage = PasswordPolicy.requirementsMessage,
+      );
       return;
     }
     if (password != _confirmPasswordController.text) {

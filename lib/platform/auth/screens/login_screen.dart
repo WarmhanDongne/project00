@@ -242,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 20),
           PlatformButton(
-            label: 'Google로 로그인',
+            label: 'Google 로그인',
             style: PlatformButtonStyle.secondary,
             loading: _action == _LoginAction.google,
             onPressed: isBusy ? null : _signInWithGoogle,
