@@ -157,15 +157,16 @@ class PlatformNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          leading ?? Icon(
-            switch (style) {
-              PlatformNoticeStyle.success => Icons.check_circle_rounded,
-              PlatformNoticeStyle.danger => Icons.error_rounded,
-              PlatformNoticeStyle.warning => Icons.warning_rounded,
-            },
-            size: 16,
-            color: foreground,
-          ),
+          leading ??
+              Icon(
+                switch (style) {
+                  PlatformNoticeStyle.success => Icons.check_circle_rounded,
+                  PlatformNoticeStyle.danger => Icons.error_rounded,
+                  PlatformNoticeStyle.warning => Icons.warning_rounded,
+                },
+                size: 16,
+                color: foreground,
+              ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -218,7 +219,8 @@ class PlatformAuthShell extends StatelessWidget {
                 top: 16,
                 child: IconButton.filledTonal(
                   visualDensity: VisualDensity.compact,
-                  onPressed: onBackPressed ?? () => Navigator.of(context).maybePop(),
+                  onPressed:
+                      onBackPressed ?? () => Navigator.of(context).maybePop(),
                   icon: const Icon(Icons.arrow_back, size: 18),
                 ),
               ),

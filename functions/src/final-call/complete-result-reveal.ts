@@ -15,7 +15,7 @@ import {
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 태블릿의 최종 공개 연출이 끝난 뒤 휴대폰 결과 화면을 해제합니다. */
-export const completeFinalCallResultReveal = onCall<Data>(
+export const game_final_call_complete_result_reveal = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

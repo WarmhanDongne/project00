@@ -41,8 +41,8 @@ class RegisterStepTwo extends StatelessWidget {
                 backgroundImage: profileImageBytes != null
                     ? MemoryImage(profileImageBytes!)
                     : (googlePhotoURL != null
-                        ? NetworkImage(googlePhotoURL!) as ImageProvider
-                        : null),
+                          ? NetworkImage(googlePhotoURL!) as ImageProvider
+                          : null),
                 child: profileImageBytes == null && googlePhotoURL == null
                     ? Text(
                         'photo',

@@ -9,7 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
-import 'package:project00/core/sound/provider.dart/sound_provider.dart';
+import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
 
@@ -22,9 +22,12 @@ void main() async {
   // 태블릿에서 가로입니다.
   //
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
-  final view = PlatformDispatcher.instance.implicitView ??
+  final view =
+      PlatformDispatcher.instance.implicitView ??
       PlatformDispatcher.instance.views.firstOrNull;
-  final physicalSize = view != null ? (view.physicalSize / view.devicePixelRatio) : const Size(390, 844);
+  final physicalSize = view != null
+      ? (view.physicalSize / view.devicePixelRatio)
+      : const Size(390, 844);
   final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

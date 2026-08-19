@@ -18,7 +18,7 @@ type StartData = {
   controllerSessionId?: unknown;
 };
 
-export const startFinalCallGame = onCall<StartData>(
+export const game_final_call_start_game = onCall<StartData>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

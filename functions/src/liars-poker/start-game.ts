@@ -32,7 +32,7 @@ type StartGameData = {
 /**
  * 아이패드 컨트롤러가 새로운 Liar's Poker 게임을 시작합니다.
  */
-export const startLiarsPokerGame =
+export const game_liars_poker_start_game =
   onCall<StartGameData>(
     {region: REGION},
     async (request) => {
@@ -227,7 +227,7 @@ async function createPublicPlayers(
             profileImageUrls.set(uid, firestoreProfileImageUrl.trim());
           }
         } catch (error) {
-          console.warn("startLiarsPokerGame profile lookup failed", error);
+          console.warn("start_game profile lookup failed", error);
         }
       },
     ),

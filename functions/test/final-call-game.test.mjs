@@ -170,3 +170,72 @@ test("RTDB에서 빈 최종 턴 목록이 생략되어도 플레이어 퇴장을
     ["uid2"],
   );
 });
+
+// 같은 숫자 4장을 제출한 CALL 라운드를 만듭니다.
+// uid1(red팀)이 7 네 장을 내고, 나머지는 평범한 조합을 냅니다.
+function fourOfAKindGame({callerUid = "uid1"} = {}) {
+  const game = finalCallGame();
+  const quad = [
+    card("q-red7", "red", 7),
+    card("q-blue7", "blue", 7),
+    card("q-green7", "green", 7),
+    card("q-yellow7", "yellow", 7),
+  ];
+  game.private.uid1 = {
+    hand: Object.fromEntries(quad.map((value) => [value.id, value])),
+  };
+  game.server.finalSubmissions.uid1 = quad;
+  game.public.callerUid = callerUid;
+  return game;
+}
+
+test("포카드로 CALL하면 상대팀 전원만 하트를 하나씩 잃는다", () => {
+  const game = fourOfAKindGame();
+
+  resolveFinalCallRound(game, 300, false);
+
+  const result = game.public.roundResult;
+  assert.equal(result.callerFourOfAKind, true);
+  // uid2, uid4가 blue팀입니다.
+  assert.deepEqual(result.lifeLosses, {uid2: 1, uid4: 1});
+  assert.equal(game.public.players.uid2.lives, 2);
+  assert.equal(game.public.players.uid4.lives, 2);
+  // 선언한 red팀은 아무도 잃지 않습니다.
+  assert.equal(game.public.players.uid1.lives, 3);
+  assert.equal(game.public.players.uid3.lives, 3);
+  // 최저 점수 판정은 건너뜁니다.
+  assert.deepEqual(result.lowestUids, []);
+});
+
+test("포카드를 들고 있어도 다른 사람이 CALL하면 평소대로 점수로 겨룬다", () => {
+  const game = fourOfAKindGame({callerUid: "uid2"});
+
+  resolveFinalCallRound(game, 300, false);
+
+  const result = game.public.roundResult;
+  assert.equal(result.callerFourOfAKind, false);
+  // uid1의 포카드는 28점이라 최저가 아니고, 하트도 잃지 않습니다.
+  assert.equal(result.scores.uid1, 28);
+  assert.equal(game.public.players.uid1.lives, 3);
+  // 최저 점수 판정이 그대로 동작합니다.
+  assert.ok(result.lowestUids.length > 0);
+  assert.equal(result.lifeLosses.uid1, undefined);
+});
+
+test("포카드가 아닌 일반 CALL은 기존 규칙 그대로다", () => {
+  const game = finalCallGame();
+
+  resolveFinalCallRound(game, 300, false);
+
+  const result = game.public.roundResult;
+  assert.equal(result.callerFourOfAKind, false);
+  assert.ok(result.lowestUids.length > 0);
+});
+
+test("덱 소진 자동 CALL에서는 포카드 규칙이 적용되지 않는다", () => {
+  const game = fourOfAKindGame();
+
+  resolveFinalCallRound(game, 300, true);
+
+  assert.equal(game.public.roundResult.callerFourOfAKind, false);
+});

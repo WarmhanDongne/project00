@@ -16,30 +16,33 @@ class FinalCallCommandService {
 
   //=======================게임 수명주기==============================
   Future<Map<String, dynamic>> startGame({required String roomCode}) {
-    return _call('startFinalCallGame', {'roomCode': roomCode});
+    return _call('game_final_call_start_game', {'roomCode': roomCode});
   }
 
   Future<Map<String, dynamic>> restartGame({required String roomCode}) {
-    return _call('startFinalCallGame', {'roomCode': roomCode, 'restart': true});
+    return _call('game_final_call_start_game', {
+      'roomCode': roomCode,
+      'restart': true,
+    });
   }
 
   /// 먼저 finished 상태를 전달해 모든 휴대폰이 종료를 인식하게 합니다.
   Future<Map<String, dynamic>> endGame({required String roomCode}) {
-    return _call('endFinalCallGame', {
+    return _call('game_final_call_end_game', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }
 
   /// 방과 참가자는 유지하고 `rooms/{code}/game`만 삭제합니다.
   Future<Map<String, dynamic>> clearGame({required String roomCode}) {
-    return _call('clearFinalCallGame', {
+    return _call('game_final_call_clear_game', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }
 
   //=======================라운드 진행==============================
   Future<Map<String, dynamic>> completeDealing({required String roomCode}) {
-    return _call('completeFinalCallDealing', {
+    return _call('game_final_call_complete_dealing', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }
@@ -48,7 +51,7 @@ class FinalCallCommandService {
     required String roomCode,
     required String source,
   }) {
-    return _call('drawFinalCallCard', {
+    return _call('game_final_call_draw_card', {
       'roomCode': roomCode,
       'source': source,
       'commandId': _commandId('draw'),
@@ -59,7 +62,7 @@ class FinalCallCommandService {
     required String roomCode,
     String? replaceCardId,
   }) {
-    return _call('completeFinalCallTurn', {
+    return _call('game_final_call_complete_turn', {
       'roomCode': roomCode,
       'replaceCardId': replaceCardId,
       'commandId': _commandId('turn'),
@@ -67,7 +70,7 @@ class FinalCallCommandService {
   }
 
   Future<Map<String, dynamic>> call({required String roomCode}) {
-    return _call('callFinalCall', {
+    return _call('game_final_call_declare', {
       'roomCode': roomCode,
       'commandId': _commandId('call'),
     }, retryTransientFailure: true);
@@ -77,7 +80,7 @@ class FinalCallCommandService {
     required String roomCode,
     required List<String> cardIds,
   }) {
-    return _call('submitFinalCallHand', {
+    return _call('game_final_call_submit_hand', {
       'roomCode': roomCode,
       'cardIds': cardIds,
       'commandId': _commandId('final_hand'),
@@ -85,13 +88,13 @@ class FinalCallCommandService {
   }
 
   Future<Map<String, dynamic>> startNextRound({required String roomCode}) {
-    return _call('startFinalCallNextRound', {
+    return _call('game_final_call_start_next_round', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }
 
   Future<Map<String, dynamic>> timeoutTurn({required String roomCode}) {
-    return _call('timeoutFinalCallTurn', {
+    return _call('game_final_call_timeout_turn', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }
@@ -100,7 +103,7 @@ class FinalCallCommandService {
   Future<Map<String, dynamic>> completeResultReveal({
     required String roomCode,
   }) {
-    return _call('completeFinalCallResultReveal', {
+    return _call('game_final_call_complete_result_reveal', {
       'roomCode': roomCode,
     }, retryTransientFailure: true);
   }

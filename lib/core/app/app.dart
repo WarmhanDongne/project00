@@ -17,10 +17,12 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 화면 크기 구하기
-    final view = PlatformDispatcher.instance.implicitView ??
+    final view =
+        PlatformDispatcher.instance.implicitView ??
         PlatformDispatcher.instance.views.firstOrNull;
-    final size = view != null ? (view.physicalSize / view.devicePixelRatio) : const Size(390, 844);
-
+    final size = view != null
+        ? (view.physicalSize / view.devicePixelRatio)
+        : const Size(390, 844);
 
     // 테블릿, 폰 분기
     final bool isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
@@ -55,9 +57,11 @@ class App extends StatelessWidget {
             // 2. Auth에 로그인된 유저 정보가 있는 경우
             if (snapshot.hasData && snapshot.data != null) {
               final user = snapshot.data!;
-              
+
               // 이메일 유저인데 인증이 완료되지 않았다면 로그인 화면에 머물게 함
-              final isEmailProvider = user.providerData.any((p) => p.providerId == 'password');
+              final isEmailProvider = user.providerData.any(
+                (p) => p.providerId == 'password',
+              );
               if (isEmailProvider && !user.emailVerified) {
                 return const LoginScreen();
               }

@@ -1,94 +1,18 @@
 import 'package:flutter/foundation.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/liars_poker/models/liars_poker_models.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
+import 'package:project00/gen/assets.gen.dart';
 
 const Object _notProvided = Object();
 
-//=======================휴대폰 공개 모델==============================
+//=======================Liar's Poker 불변 게임 상태==============================
+/// Realtime Database 공개 상태, 개인 손패, 명령 실행 상태를 한 시점의
+/// 스냅샷으로 표현합니다. Final Call처럼 휴대폰과 태블릿이 같은 상태를
+/// 구독하며, 태블릿 전용 연출 상태(stage, 카드 더미 버전 등)는 여기 두지 않고
+/// 태블릿 화면 State가 소유합니다.
 @immutable
-class PhoneHandCard {
-  const PhoneHandCard({required this.id, required this.rank});
-
-  final String id;
-  final String rank;
-
-  /// RTDB `hand/<cardKey>` 항목을 파싱합니다. rank가 없으면 null입니다.
-  static PhoneHandCard? fromMap(String key, Map<Object?, Object?> map) {
-    final id = map['id']?.toString();
-    final rank = map['rank']?.toString();
-    if (rank == null || rank.isEmpty) return null;
-    return PhoneHandCard(
-      id: (id == null || id.isEmpty) ? key : id,
-      rank: rank.toUpperCase(),
-    );
-  }
-}
-
-@immutable
-class PhoneGamePlayer {
-  const PhoneGamePlayer({
-    required this.uid,
-    required this.nickname,
-    required this.profileImageUrl,
-    required this.status,
-    required this.remainingCardCount,
-  });
-
-  final String uid;
-  final String nickname;
-  final String profileImageUrl;
-  final String status;
-  final int remainingCardCount;
-
-  factory PhoneGamePlayer.fromMap(String key, Map<Object?, Object?> map) {
-    final uid = map['uid']?.toString();
-    return PhoneGamePlayer(
-      uid: (uid == null || uid.isEmpty) ? key : uid,
-      nickname: map['nickname']?.toString() ?? 'Player',
-      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
-      status: map['status']?.toString() ?? 'alive',
-      remainingCardCount: (map['remainingCardCount'] as num?)?.toInt() ?? 0,
-    );
-  }
-}
-
-@immutable
-class PhonePenaltyResult {
-  const PhonePenaltyResult({
-    required this.targetUid,
-    required this.result,
-    required this.resolvedAt,
-  });
-
-  final String targetUid;
-  final String result;
-  final int resolvedAt;
-
-  /// RTDB `penaltyResult`를 파싱합니다. 필수 값이 없거나 결과 값이 유효하지
-  /// 않으면 null입니다.
-  static PhonePenaltyResult? fromMap(Map<Object?, Object?> map) {
-    final targetUid = map['targetUid']?.toString();
-    final result = map['result']?.toString();
-    final resolvedAt = (map['resolvedAt'] as num?)?.toInt();
-    if (targetUid == null ||
-        targetUid.isEmpty ||
-        result == null ||
-        (result != 'safe' && result != 'eliminated') ||
-        resolvedAt == null) {
-      return null;
-    }
-    return PhonePenaltyResult(
-      targetUid: targetUid,
-      result: result,
-      resolvedAt: resolvedAt,
-    );
-  }
-}
-
-//=======================Liar's Poker 휴대폰 불변 상태==============================
-@immutable
-class LiarsPokerPhoneState {
-  const LiarsPokerPhoneState({
+class LiarsPokerGameState {
+  const LiarsPokerGameState({
     required this.status,
     required this.finishReason,
     required this.phase,
@@ -104,9 +28,13 @@ class LiarsPokerPhoneState {
     required this.revision,
     required this.turnDeadlineAt,
     required this.players,
+    required this.roundPlays,
     required this.handCards,
     required this.handCardAssets,
     required this.isCommandInFlight,
+    required this.isMenuCommandInFlight,
+    required this.isResolvingPenalty,
+    required this.rouletteRetry,
     required this.hasRevealedHand,
     required this.handDealVersion,
     required this.errorMessage,
@@ -118,7 +46,7 @@ class LiarsPokerPhoneState {
     required this.interruption,
   });
 
-  factory LiarsPokerPhoneState.initial() => const LiarsPokerPhoneState(
+  factory LiarsPokerGameState.initial() => const LiarsPokerGameState(
     status: 'waiting',
     finishReason: null,
     phase: 'playing',
@@ -134,9 +62,13 @@ class LiarsPokerPhoneState {
     revision: 0,
     turnDeadlineAt: null,
     players: <String, PhoneGamePlayer>{},
+    roundPlays: <PublicLastPlay>[],
     handCards: <PhoneHandCard>[],
     handCardAssets: <AssetGenImage>[],
     isCommandInFlight: false,
+    isMenuCommandInFlight: false,
+    isResolvingPenalty: false,
+    rouletteRetry: 0,
     hasRevealedHand: false,
     handDealVersion: 0,
     errorMessage: null,
@@ -163,9 +95,24 @@ class LiarsPokerPhoneState {
   final int revision;
   final int? turnDeadlineAt;
   final Map<String, PhoneGamePlayer> players;
+
+  /// 이번 라운드의 제출 목록(원본)입니다. 태블릿 중앙 카드 더미의 근거입니다.
+  final List<PublicLastPlay> roundPlays;
+
   final List<PhoneHandCard> handCards;
   final List<AssetGenImage> handCardAssets;
   final bool isCommandInFlight;
+
+  /// 태블릿 설정 메뉴(재시작/종료)와 중단 처리 명령의 실행 상태입니다.
+  /// 게임 조작 명령([isCommandInFlight])과 분리해 서로 잠그지 않습니다.
+  final bool isMenuCommandInFlight;
+
+  /// 룰렛 결과를 서버에 전달하는 중인지 여부입니다.
+  final bool isResolvingPenalty;
+
+  /// 룰렛 결과 전달이 실패한 횟수입니다. 룰렛 위젯을 새로 만들 때 씁니다.
+  final int rouletteRetry;
+
   final bool hasRevealedHand;
   final int handDealVersion;
   final String? errorMessage;
@@ -176,7 +123,7 @@ class LiarsPokerPhoneState {
   final bool isPenaltyResultVisible;
   final GameInterruption? interruption;
 
-  LiarsPokerPhoneState copyWith({
+  LiarsPokerGameState copyWith({
     String? status,
     Object? finishReason = _notProvided,
     String? phase,
@@ -192,9 +139,13 @@ class LiarsPokerPhoneState {
     int? revision,
     Object? turnDeadlineAt = _notProvided,
     Map<String, PhoneGamePlayer>? players,
+    List<PublicLastPlay>? roundPlays,
     List<PhoneHandCard>? handCards,
     List<AssetGenImage>? handCardAssets,
     bool? isCommandInFlight,
+    bool? isMenuCommandInFlight,
+    bool? isResolvingPenalty,
+    int? rouletteRetry,
     bool? hasRevealedHand,
     int? handDealVersion,
     Object? errorMessage = _notProvided,
@@ -205,7 +156,7 @@ class LiarsPokerPhoneState {
     bool? isPenaltyResultVisible,
     Object? interruption = _notProvided,
   }) {
-    return LiarsPokerPhoneState(
+    return LiarsPokerGameState(
       status: status ?? this.status,
       finishReason: identical(finishReason, _notProvided)
           ? this.finishReason
@@ -235,9 +186,14 @@ class LiarsPokerPhoneState {
           ? this.turnDeadlineAt
           : turnDeadlineAt as int?,
       players: Map.unmodifiable(players ?? this.players),
+      roundPlays: List.unmodifiable(roundPlays ?? this.roundPlays),
       handCards: List.unmodifiable(handCards ?? this.handCards),
       handCardAssets: List.unmodifiable(handCardAssets ?? this.handCardAssets),
       isCommandInFlight: isCommandInFlight ?? this.isCommandInFlight,
+      isMenuCommandInFlight:
+          isMenuCommandInFlight ?? this.isMenuCommandInFlight,
+      isResolvingPenalty: isResolvingPenalty ?? this.isResolvingPenalty,
+      rouletteRetry: rouletteRetry ?? this.rouletteRetry,
       hasRevealedHand: hasRevealedHand ?? this.hasRevealedHand,
       handDealVersion: handDealVersion ?? this.handDealVersion,
       errorMessage: identical(errorMessage, _notProvided)
