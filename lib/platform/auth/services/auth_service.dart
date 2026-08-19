@@ -111,17 +111,26 @@ class FirebaseAuthService {
     final reference = _storage.ref('users/${user.uid}/profile.$safeExtension');
 
     try {
-      await reference.putData(
-        imageBytes,
-        SettableMetadata(contentType: contentType ?? 'image/jpeg'),
-      );
-      final downloadUrl = await reference.getDownloadURL();
-      await user.updatePhotoURL(downloadUrl);
-      return downloadUrl;
+      for (var attempt = 0; ; attempt++) {
+        try {
+          if (attempt > 0) await user.getIdToken(true);
+          await reference.putData(
+            imageBytes,
+            SettableMetadata(contentType: contentType ?? 'image/jpeg'),
+          );
+          final downloadUrl = await reference.getDownloadURL();
+          await user.updatePhotoURL(downloadUrl);
+          return downloadUrl;
+        } on FirebaseException catch (error) {
+          if (error.code != 'unauthenticated' || attempt > 0) rethrow;
+        }
+      }
     } on FirebaseException catch (error) {
       throw AuthServiceException(
         error.code,
-        error.message ?? '프로필 사진 업로드에 실패했습니다.',
+        error.code == 'unauthenticated'
+            ? '로그인 정보가 만료되었습니다. 다시 로그인해주세요.'
+            : error.message ?? '프로필 사진 업로드에 실패했습니다.',
       );
     }
   }
