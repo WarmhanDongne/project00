@@ -579,8 +579,10 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
 
     // 연결 복구 과정에서 동일한 snapshot이 다시 도착하면 카드 위젯과 선택
     // 상태를 그대로 유지합니다. 최초 빈 손패 수신은 로딩 종료를 위해 알립니다.
-    if (!handChanged && hadHandSnapshot && !dealVersionChanged) return;
+    // 진입 대기 완료 신호는 화면 갱신 여부와 무관하게 항상 검사해야
+    // waitForInitialData()가 영구 대기하지 않습니다.
     _completeInitialDataIfReady();
+    if (!handChanged && hadHandSnapshot && !dealVersionChanged) return;
     _commit();
   }
 

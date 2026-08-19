@@ -124,7 +124,15 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   Future<void> _warmUpAssets() async {
     final controller = _controller;
     if (controller == null) return;
-    await controller.waitForInitialData();
+    try {
+      // 첫 스냅샷이 오지 않거나 구독이 에러로 끝나도 사전 로딩 대기가
+      // unhandled exception이나 영구 대기로 남지 않게 합니다.
+      await controller.waitForInitialData().timeout(
+        const Duration(seconds: 12),
+      );
+    } catch (_) {
+      // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
+    }
     if (!mounted) return;
     await preloadLiarsPokerAssets(
       context,

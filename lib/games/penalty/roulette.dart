@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:math' as math;
 
@@ -200,7 +201,14 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       _isSpinning = false;
     });
 
-    if (!completed) return;
+    if (!completed) {
+      // 회전이 완료 신호 없이 끝나면(중단·취소) 레버를 되돌려 다시 당길 수
+      // 있게 합니다. 잠금을 유지하면 결과가 전송되지 않아 벌칙 단계가
+      // 영구히 멈춥니다.
+      setState(() => _isLeverLocked = false);
+      unawaited(_leverController.reverse());
+      return;
+    }
 
     final isEliminated = sections[selectedIndex];
 

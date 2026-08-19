@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -39,6 +40,8 @@ class RoomProvider extends ChangeNotifier {
   Timer? _playerHeartbeatTimer;
   String? _joinedNickname;
   String? _joinedAccentColor;
+  List<String>? _lastGroupGameUids;
+  int _groupGamesRequestId = 0;
 
   String? errorMessage;
   String? selectedGameId;
@@ -258,16 +261,31 @@ class RoomProvider extends ChangeNotifier {
       onError: (_) => _handleServerConnection(false),
     );
 
-    statusSubscription = _service.watchRoomStatus(roomCode!).listen((status) {
-      if (status == 'closed') {
-        _hasJoined = false;
-        wasRoomClosed = true;
-        unawaited(
-          PlayerRoomSessionStore.instance.clear(onlyRoomCode: roomCode),
+    statusSubscription = _service
+        .watchRoomStatus(roomCode!)
+        .listen(
+          (status) {
+            // Realtime Database는 삭제된 노드를 null로 전달합니다. cleanup으로
+            // 방 노드가 삭제됐거나 status 없이 players만 남은 깨진 방은 종료된
+            // 방과 동일하게 처리해, heartbeat가 유령 방을 되살리지 않게 합니다.
+            if (status == 'closed' || status == null) {
+              _hasJoined = false;
+              wasRoomClosed = true;
+              unawaited(
+                PlayerRoomSessionStore.instance.clear(onlyRoomCode: roomCode),
+              );
+              clearRoom();
+            }
+          },
+          onError: (Object error) {
+            // 내 참가자 노드가 사라지면 status 읽기 권한도 함께 사라져 이 구독이
+            // permission-denied로 종료됩니다. 퇴장·강퇴·방 삭제 정리는 players
+            // 구독이 담당하므로 여기서는 unhandled exception만 막습니다.
+            final message = error.toString().toLowerCase();
+            if (message.contains('permission')) return;
+            _handleSubscriptionError(error);
+          },
         );
-        clearRoom();
-      }
-    });
 
     if (_joinedNickname != null) {
       _startPlayerHeartbeat(roomCode!);
@@ -289,7 +307,7 @@ class RoomProvider extends ChangeNotifier {
     }, onError: _handleSubscriptionError);
     playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomPlayer,
-    ) async {
+    ) {
       players = roomPlayer;
 
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -311,15 +329,38 @@ class RoomProvider extends ChangeNotifier {
         }
       }
 
+      // players 변경(heartbeat 포함)은 Firestore 조회를 기다리지 않고 즉시
+      // 화면에 반영합니다.
+      notifyListeners();
+
       // 활성화된 유저의 uids 추출
       final activeUids = players
           .where((p) => p.isActive)
           .map((p) => p.uid)
           .toList(growable: false);
-      // 활성화된 유저들이 보유한 gameInfo 객체 리스트 노티
-      groupGames = await _gameService.fetchGroupGames(activeUids);
-      notifyListeners();
+      unawaited(_refreshGroupGames(activeUids));
     }, onError: _handleSubscriptionError);
+  }
+
+  /// 그룹 보유 게임은 활성 참가자 구성이 실제로 바뀔 때만 다시 조회합니다.
+  ///
+  /// players 노드는 10초 heartbeat(lastSeen)마다 이벤트를 발생시키므로, 매
+  /// 이벤트마다 Firestore를 조회하면 게임 내내 주기적인 쿼리 폭주와 프레임
+  /// 지연이 생깁니다.
+  Future<void> _refreshGroupGames(List<String> activeUids) async {
+    final sortedUids = [...activeUids]..sort();
+    if (listEquals(_lastGroupGameUids, sortedUids)) return;
+    _lastGroupGameUids = sortedUids;
+    final requestId = ++_groupGamesRequestId;
+    try {
+      final games = await _gameService.fetchGroupGames(activeUids);
+      if (_isDisposed || requestId != _groupGamesRequestId) return;
+      groupGames = games;
+      notifyListeners();
+    } catch (_) {
+      // 실패하면 다음 players 이벤트에서 같은 구성으로도 다시 시도합니다.
+      if (requestId == _groupGamesRequestId) _lastGroupGameUids = null;
+    }
   }
 
   void _startPlayerHeartbeat(String code) {
@@ -443,6 +484,8 @@ class RoomProvider extends ChangeNotifier {
     // return 분기
     if (result == true) {
       wasKicked = false;
+      // 직전 방이 닫히며 세워진 플래그가 새 방 입장으로 넘어오지 않게 합니다.
+      wasRoomClosed = false;
       _hasJoined = false;
       _joinedNickname = nickname;
       _joinedAccentColor = accentColor;
@@ -529,6 +572,7 @@ class RoomProvider extends ChangeNotifier {
       );
       if (_isDisposed) return false;
       wasKicked = false;
+      wasRoomClosed = false;
       _hasJoined = true;
       _joinedNickname = session.nickname;
       _joinedAccentColor = session.accentColor;
@@ -604,6 +648,8 @@ class RoomProvider extends ChangeNotifier {
     selectedGameId = null;
     selectedGame = null;
     groupGames = [];
+    _lastGroupGameUids = null;
+    _groupGamesRequestId += 1;
     _hasJoined = false;
     _isLeaving = false;
     _wasServerDisconnected = false;

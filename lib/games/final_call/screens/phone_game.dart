@@ -406,6 +406,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           onRoundIntroCompleted: () {
             if (mounted) setState(() => announcedRound = game.round);
           },
+          // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
+          onConnectingExit: () => unawaited(_leaveRoom()),
           topBar: FinalCallPhoneTopBar(
             controller: game,
             onExitRoom: () => unawaited(_leaveRoom()),
