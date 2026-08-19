@@ -18,7 +18,7 @@ class FinalCallGame extends TemplateGame {
   @override
   int get fixedPlayerCount => 4;
   @override
-  String get leaveFunctionName => 'leaveFinalCallGame';
+  String get leaveFunctionName => 'game_final_call_leave_game';
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.landscapeOnly;

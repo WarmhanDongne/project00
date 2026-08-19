@@ -241,7 +241,7 @@ class PlatformAuthShell extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   onPressed:
                       onBackPressed ?? () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back, size: 20),
+                  icon: const Icon(Icons.arrow_back, size: 18),
                 ),
               ),
             Align(

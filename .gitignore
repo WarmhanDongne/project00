@@ -36,8 +36,7 @@ devtools_options.yaml
 # Antigravity / AI IDE Local Settings
 .antigravity/
 .agents/
-docs/
 
 main_loby_and_game_modal/
-AGENTS.md
+docs/
 design/

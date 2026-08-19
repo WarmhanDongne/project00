@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/provider.dart/sound_provider.dart';
+import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/games/shared/widgets/tablet_game_modal_frame.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/player_list.dart';
@@ -270,32 +270,31 @@ class _SettingsActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TabletGameDialogButton(
-              text: '게임 재시작',
-              color: Colors.green,
-              onPressed: onRestartGame == null
-                  ? null
-                  : () => _closeAndRun(context, onRestartGame),
-            ),
-            Spacer(),
-            TabletGameDialogButton(
-              text: '게임 종료',
-              color: Colors.red,
-              onPressed: onEndGame == null
-                  ? null
-                  : () => _closeAndRun(context, onEndGame),
-            ),
-            Spacer(),
-            TabletGameDialogButton(
-              text: '닫기',
-              color: Colors.black,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TabletGameDialogButton(
+          text: '게임 재시작',
+          color: Colors.green,
+          onPressed: onRestartGame == null
+              ? null
+              : () => _closeAndRun(context, onRestartGame),
+        ),
+        Spacer(),
+        TabletGameDialogButton(
+          text: '게임 종료',
+          color: Colors.red,
+          onPressed: onEndGame == null
+              ? null
+              : () => _closeAndRun(context, onEndGame),
+        ),
+        Spacer(),
+        TabletGameDialogButton(
+          text: '닫기',
+          color: Colors.black,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
   }
 }

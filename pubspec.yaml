@@ -63,6 +63,8 @@ dependencies:
   flutter_gen_runner: ^5.15.0
   flutter_svg: ^2.3.0
   youtube_player_iframe: ^6.0.2
+  sign_in_with_apple: ^8.1.0
+  crypto: ^3.0.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -90,6 +92,7 @@ flutter:
     # - .env.dev
     - assets/images/
     - assets/images/button/
+    - assets/images/logo/
     - assets/images/others/
     - assets/images/widgets/layout/
     - assets/images/widgets/roulette/
@@ -114,6 +117,9 @@ flutter:
     - assets/games/final_call/images/modal/
     - assets/games/final_call/images/other/
     - assets/sounds/
+    - assets/sounds/background/
+    - assets/sounds/common/
+    - assets/sounds/liars_poker/
     - assets/lottie/
     - assets/l10n/
 

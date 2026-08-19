@@ -10,7 +10,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
-import 'package:project00/core/sound/provider.dart/sound_provider.dart';
+import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
 

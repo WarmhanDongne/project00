@@ -135,6 +135,17 @@ export function calculateFinalCallScore(cards: FinalCallCard[]): number {
   return Math.max(0, ...colorTotals.values(), ...valueTotals.values());
 }
 
+/**
+ * 제출한 카드가 같은 숫자 4장(포카드)인지 판정합니다.
+ *
+ * 손패가 4장이므로 포카드는 손패 전부를 제출한 경우뿐입니다. 공개되지 않은
+ * 카드로 판정이 갈리지 않도록 손패가 아니라 제출 카드만 봅니다.
+ */
+export function isFinalCallFourOfAKind(cards: FinalCallCard[]): boolean {
+  if (cards.length !== FINAL_CALL_CARDS_PER_PLAYER) return false;
+  return new Set(cards.map((card) => card.value)).size === 1;
+}
+
 /** 제한 시간 종료 시 자동 제출할 수 있는 가장 높은 점수 조합을 반환합니다. */
 export function selectBestFinalCallCombination(
   cards: FinalCallCard[],
@@ -186,17 +197,38 @@ export function resolveFinalCallRound(
     scores[player.uid] = calculateFinalCallScore(cards);
   }
 
-  const lowestScore = Math.min(...Object.values(scores));
-  const lowestUids = Object.keys(scores).filter((uid) => scores[uid] === lowestScore);
+  const callerUid = automaticCall ? null : game.public.callerUid ?? null;
+  const callerCards = callerUid ? revealedHands[callerUid] : undefined;
+  // 포카드는 선언한 본인에게만 효력이 있습니다. 다른 사람이 CALL한 라운드에서는
+  // 내가 포카드를 들고 있어도 평소처럼 점수 총합으로만 겨룹니다.
+  const callerFourOfAKind = !!callerCards && isFinalCallFourOfAKind(callerCards);
+
   const lifeLosses: Record<string, number> = {};
-  for (const uid of lowestUids) {
+  // 하트 파괴 연출과 서버 상태가 어긋나지 않도록 실제 보유한 수만 손실로 기록합니다.
+  const loseLife = (uid: string, requested: number): void => {
     const player = game.public.players[uid];
-    const requestedLoss = !automaticCall && game.public.callerUid === uid ? 2 : 1;
-    // 하트 파괴 연출과 서버 상태가 어긋나지 않도록 실제 보유한 수만 손실로 기록합니다.
-    const actualLoss = Math.min(player.lives, requestedLoss);
+    const actualLoss = Math.min(player.lives, requested);
     lifeLosses[uid] = actualLoss;
     player.lives -= actualLoss;
     if (player.lives === 0) player.status = "eliminated";
+  };
+
+  const caller = callerUid ? game.public.players[callerUid] : undefined;
+  let lowestUids: string[] = [];
+  if (callerFourOfAKind && caller) {
+    // 포카드로 CALL하면 최저 점수 판정을 건너뛰고 상대팀 전원이 하트를 하나씩
+    // 잃습니다. 선언한 쪽 팀은 아무도 잃지 않습니다.
+    const callerTeam = caller.team;
+    for (const player of orderedAlivePlayers(game.public.players)) {
+      if (player.team === callerTeam) continue;
+      loseLife(player.uid, 1);
+    }
+  } else {
+    const lowestScore = Math.min(...Object.values(scores));
+    lowestUids = Object.keys(scores).filter((uid) => scores[uid] === lowestScore);
+    for (const uid of lowestUids) {
+      loseLife(uid, callerUid === uid ? 2 : 1);
+    }
   }
 
   game.public.roundResult = {
@@ -204,8 +236,9 @@ export function resolveFinalCallRound(
     lifeLosses,
     lowestUids,
     revealedHands,
-    callerUid: automaticCall ? null : game.public.callerUid,
+    callerUid,
     automaticCall,
+    callerFourOfAKind,
     resolvedAt: now,
   };
   delete game.public.resultRevealCompletedAt;

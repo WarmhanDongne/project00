@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
@@ -242,18 +242,73 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          PlatformButton(
+          SocialLoginButton(
+            key: const Key('login-google-button'),
             label: 'Google 로그인',
-            style: PlatformButtonStyle.secondary,
-            leading: SvgPicture.asset(
-              'assets/images/button/google_g_logo.svg',
-              width: 20,
-              height: 20,
-            ),
-            loading: _action == _LoginAction.google,
-            onPressed: isBusy ? null : _signInWithGoogle,
+            icon: Assets.images.logo.googleG.svg(width: 24, height: 24),
+            enabled: !isBusy,
+            onPressed: _signInWithGoogle,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class SocialLoginButton extends StatelessWidget {
+  const SocialLoginButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final Widget icon;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.5,
+        child: Material(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: enabled ? onPressed : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border.all(color: colors.border),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  const SizedBox(width: 14),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: colors.text,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

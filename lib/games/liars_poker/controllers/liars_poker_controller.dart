@@ -5,29 +5,47 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
-import 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart';
+import 'package:project00/games/liars_poker/models/liars_poker_models.dart';
+import 'package:project00/games/liars_poker/providers/liars_poker_game_state.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/games/penalty/roulette.dart';
 import 'package:project00/games/shared/game_flow/game_finish.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-export 'package:project00/games/liars_poker/providers/liars_poker_phone_state.dart'
-    show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult;
+export 'package:project00/games/liars_poker/models/liars_poker_models.dart'
+    show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult, PublicLastPlay;
 
-/// 휴대폰의 공개 게임 상태와 개인 손패 구독, Cloud Function 명령을 관리합니다.
-class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
+typedef LiarsPokerErrorHandler = void Function(String message, Object error);
+
+//=======================Liar's Poker Riverpod 게임 컨트롤러==============================
+/// Final Call처럼 휴대폰과 태블릿이 함께 쓰는 단일 서버 미러 컨트롤러입니다.
+///
+/// 서버 상태는 불변 [LiarsPokerGameState]로 발행하고, 태블릿 전용 연출 상태
+/// (stage, 카드 더미 버전, 제출 연출)는 태블릿 화면 State가 소유합니다.
+/// Provider가 폐기되면 Realtime Database 구독도 종료됩니다.
+class LiarsPokerController extends Notifier<LiarsPokerGameState> {
   static const int _cardsPerNewHand = 5;
 
-  LiarsPokerPhoneController({
+  LiarsPokerController({
     required this.roomCode,
     required this.uid,
     required this.service,
+    this.watchPrivateHand = true,
+    this.onError,
   });
 
   final String roomCode;
   final String uid;
   final LiarsPokerService service;
+
+  /// 휴대폰은 true(내 손패 구독), 태블릿(진행 기기)은 false입니다.
+  final bool watchPrivateHand;
+
+  /// 태블릿이 SnackBar로 명령 실패를 알릴 때 씁니다. 휴대폰은 전달하지 않고
+  /// [errorMessage] 상태를 사용합니다.
+  final LiarsPokerErrorHandler? onError;
 
   StreamSubscription<DatabaseEvent>? _publicSubscription;
   StreamSubscription<DatabaseEvent>? _handSubscription;
@@ -45,11 +63,11 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   Timer? _penaltyResultTimer;
   String? _activePenaltyResultKey;
 
-  late LiarsPokerPhoneState _draft;
+  late LiarsPokerGameState _draft;
 
   @override
-  LiarsPokerPhoneState build() {
-    _draft = LiarsPokerPhoneState.initial();
+  LiarsPokerGameState build() {
+    _draft = LiarsPokerGameState.initial();
     initialize();
     ref.onDispose(() {
       _liarVerdictDelayTimer?.cancel();
@@ -104,6 +122,9 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   Map<String, PhoneGamePlayer> get players => _draft.players;
   set players(Map<String, PhoneGamePlayer> value) =>
       _draft = _draft.copyWith(players: value);
+  List<PublicLastPlay> get roundPlays => _draft.roundPlays;
+  set roundPlays(List<PublicLastPlay> value) =>
+      _draft = _draft.copyWith(roundPlays: value);
   List<PhoneHandCard> get handCards => _draft.handCards;
   set handCards(List<PhoneHandCard> value) =>
       _draft = _draft.copyWith(handCards: value);
@@ -113,6 +134,15 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   bool get isCommandInFlight => _draft.isCommandInFlight;
   set isCommandInFlight(bool value) =>
       _draft = _draft.copyWith(isCommandInFlight: value);
+  bool get isMenuCommandInFlight => _draft.isMenuCommandInFlight;
+  set isMenuCommandInFlight(bool value) =>
+      _draft = _draft.copyWith(isMenuCommandInFlight: value);
+  bool get isResolvingPenalty => _draft.isResolvingPenalty;
+  set isResolvingPenalty(bool value) =>
+      _draft = _draft.copyWith(isResolvingPenalty: value);
+  int get rouletteRetry => _draft.rouletteRetry;
+  set rouletteRetry(int value) =>
+      _draft = _draft.copyWith(rouletteRetry: value);
   bool get hasRevealedHand => _draft.hasRevealedHand;
   set hasRevealedHand(bool value) =>
       _draft = _draft.copyWith(hasRevealedHand: value);
@@ -141,9 +171,13 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   set interruption(GameInterruption? value) =>
       _draft = _draft.copyWith(interruption: value);
 
-  bool get isInitialLoading => !_hasPublicSnapshot || !_hasHandSnapshot;
+  bool get isInitialLoading => watchPrivateHand
+      ? (!_hasPublicSnapshot || !_hasHandSnapshot)
+      : !_hasPublicSnapshot;
 
   bool get isEntryDataReady {
+    // 태블릿은 손패가 없으므로 첫 공개 상태 도착이 곧 준비 완료입니다.
+    if (!watchPrivateHand) return _hasPublicSnapshot;
     if (isInitialLoading || phase == 'dealing') return false;
     final publicPlayer = players[uid];
     return handCards.isNotEmpty ||
@@ -152,7 +186,8 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
         isFinished;
   }
 
-  /// 공개 게임 상태와 내 개인 손패의 첫 스냅샷이 모두 도착할 때까지 기다립니다.
+  /// 첫 스냅샷이 도착할 때까지 기다립니다. 휴대폰은 공개 상태와 내 손패,
+  /// 태블릿은 공개 상태만 기다립니다.
   Future<void> waitForInitialData() {
     if (isEntryDataReady) return Future<void>.value();
     return _initialDataCompleter.future;
@@ -267,6 +302,22 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     return null;
   }
 
+  //=======================태블릿 파생 상태==============================
+  /// 벌칙 대상의 지금까지 벌칙 횟수입니다. 룰렛의 탈락 확률 단계를 정합니다.
+  int get penaltyAttemptCount => players[penaltyTargetUid]?.penaltyCount ?? 0;
+
+  /// 인원 부족·중단 만료로 승자 없이 끝났는지 여부입니다.
+  bool get isInsufficientPlayersEnding =>
+      status == 'finished' &&
+      (finishReason == 'insufficientPlayers' ||
+          finishReason == 'interruptionVoteExpired');
+
+  String? get endingMessage => switch (finishReason) {
+    'insufficientPlayers' => GameFlowCopy.insufficientPlayers,
+    'interruptionVoteExpired' => GameFlowCopy.interruptionVoteExpired,
+    _ => null,
+  };
+
   void initialize() {
     _publicSubscription?.cancel();
     _handSubscription?.cancel();
@@ -275,12 +326,37 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
       _initialDataCompleter = Completer<void>();
     }
 
+    // 태블릿(진행 기기)은 첫 카드 제출과 라이어 함수의 콜드 스타트를 미리
+    // 끝냅니다. 휴대폰은 명령을 보내는 시점이 제각각이라 준비하지 않습니다.
+    if (!watchPrivateHand) {
+      unawaited(_warmUpGameplayCommands());
+    }
+
     _publicSubscription = service.query
         .watchPublicGame(roomCode)
         .listen(_handlePublicGame, onError: _handleSubscriptionError);
-    _handSubscription = service.query
-        .watchPrivateHand(roomCode: roomCode, uid: uid)
-        .listen(_handleHand, onError: _handleSubscriptionError);
+    if (watchPrivateHand) {
+      _handSubscription = service.query
+          .watchPrivateHand(roomCode: roomCode, uid: uid)
+          .listen(_handleHand, onError: _handleSubscriptionError);
+    }
+  }
+
+  Future<void> _warmUpGameplayCommands() async {
+    try {
+      await service.command.warmUpGameplayCommands();
+    } catch (_) {
+      // 사전 준비 실패는 실제 명령의 자동 재시도로 복구되므로 UI에 표시하지 않습니다.
+    }
+  }
+
+  /// 카드가 제출된 직후 라이어 선언 함수가 바로 응답하도록 준비합니다.
+  Future<void> warmUpLiarCommand() async {
+    try {
+      await service.command.warmUpLiarCommand();
+    } catch (_) {
+      // 실제 라이어 명령에서 재시도하므로 사전 준비 오류는 무시합니다.
+    }
   }
 
   void _handlePublicGame(DatabaseEvent event) {
@@ -310,6 +386,11 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
         : null;
     final Map<String, PhoneGamePlayer> nextPlayers = Map.unmodifiable(
       _parsePlayers(data['players']),
+    );
+    final nextRoundPlays = mergeRoundPlays(
+      roundPlaysValue: data['roundPlays'],
+      lastPlayValue: data['lastPlay'],
+      round: nextRound,
     );
 
     final lastPlay = data['lastPlay'];
@@ -363,6 +444,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
         nextPhase == 'dealing' && (phase != 'dealing' || round != nextRound);
     final nextHasRevealedHand = shouldResetReveal ? false : hasRevealedHand;
     final playersChanged = !_samePlayers(players, nextPlayers);
+    final roundPlaysChanged = !_sameRoundPlays(roundPlays, nextRoundPlays);
     final hasChanged =
         !_hasPublicSnapshot ||
         status != nextStatus ||
@@ -385,6 +467,9 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
         hasRevealedHand != nextHasRevealedHand ||
         !_sameInterruption(interruption, nextInterruption) ||
         playersChanged ||
+        roundPlaysChanged ||
+        // 룰렛 결과 전송 중 표시는 서버 반영 확인(다음 공개 상태)과 함께 끝냅니다.
+        isResolvingPenalty ||
         errorMessage != null;
 
     _hasPublicSnapshot = true;
@@ -400,6 +485,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     revision = nextRevision;
     turnDeadlineAt = nextTurnDeadlineAt;
     players = playersChanged ? nextPlayers : players;
+    roundPlays = roundPlaysChanged ? nextRoundPlays : roundPlays;
     lastPlayId = nextLastPlayId;
     lastPlayPlayerUid = nextLastPlayPlayerUid;
     lastPlayRevealed = nextLastPlayRevealed;
@@ -410,6 +496,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     hasRevealedHand = nextHasRevealedHand;
     errorMessage = null;
     interruption = nextInterruption;
+    isResolvingPenalty = false;
 
     if (didRevealLiarCards) {
       _liarVerdictDelayTimer?.cancel();
@@ -530,7 +617,29 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
           player.nickname != other.nickname ||
           player.profileImageUrl != other.profileImageUrl ||
           player.status != other.status ||
-          player.remainingCardCount != other.remainingCardCount) {
+          player.remainingCardCount != other.remainingCardCount ||
+          player.seatIndex != other.seatIndex ||
+          player.penaltyCount != other.penaltyCount) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _sameRoundPlays(List<PublicLastPlay> left, List<PublicLastPlay> right) {
+    if (identical(left, right)) return true;
+    if (left.length != right.length) return false;
+
+    for (var index = 0; index < left.length; index++) {
+      final leftPlay = left[index];
+      final rightPlay = right[index];
+      if (leftPlay.playId != rightPlay.playId ||
+          leftPlay.playerUid != rightPlay.playerUid ||
+          leftPlay.cardCount != rightPlay.cardCount ||
+          leftPlay.declaredRank != rightPlay.declaredRank ||
+          leftPlay.revealed != rightPlay.revealed ||
+          leftPlay.submittedAt != rightPlay.submittedAt ||
+          !listEquals(leftPlay.actualRanks, rightPlay.actualRanks)) {
         return false;
       }
     }
@@ -602,6 +711,7 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     );
   }
 
+  //=======================휴대폰 게임 명령==============================
   Future<bool> submitCardIndexes(List<int> indexes) async {
     if (!canSubmitCards || indexes.isEmpty || indexes.length > 3) {
       return _reject('현재 카드를 제출할 수 없습니다.');
@@ -685,6 +795,77 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
     );
   }
 
+  //=======================태블릿(진행 기기) 게임 명령==============================
+  /// 현재 방과 좌석은 유지하고 게임 데이터만 새로 만듭니다.
+  Future<bool> restartGame() => _runMenuCommand(
+    () => service.command.restartGame(roomCode: roomCode),
+    failureMessage: '게임을 재시작하지 못했습니다.',
+  );
+
+  /// RTDB 방은 삭제하지 않고 현재 게임 상태만 종료합니다.
+  Future<bool> endGame() => _runMenuCommand(
+    () => service.command.endGame(roomCode: roomCode),
+    failureMessage: '게임을 종료하지 못했습니다.',
+  );
+
+  /// 태블릿 중단 배너의 만료 처리입니다. 설정 메뉴 명령과 같은 잠금을 씁니다.
+  Future<bool> expireInterruptionFromController() {
+    final current = interruption;
+    if (current == null) return Future.value(false);
+    return _runMenuCommand(
+      () => service.interruption.expire(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+      failureMessage: '연결 중단 상태를 종료하지 못했습니다.',
+    );
+  }
+
+  Future<bool> excludeInterruptedPlayerAndContinue() {
+    final current = interruption;
+    if (current == null || !current.canContinue) return Future.value(false);
+    return _runMenuCommand(
+      () => service.interruption.excludeAndContinue(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+      failureMessage: '플레이어를 제외하고 게임을 계속하지 못했습니다.',
+    );
+  }
+
+  /// 태블릿의 카드 배분 애니메이션이 끝났음을 서버에 알립니다.
+  Future<void> completeDealing() async {
+    // 이전 서버 버전이나 개발용 로컬 상태에서는 별도 완료 호출이 필요 없습니다.
+    if (phase != 'dealing') return;
+
+    try {
+      await service.command.completeDealing(roomCode: roomCode);
+    } catch (error) {
+      _reportError('카드 배분 완료 상태를 반영하지 못했습니다.', error);
+    }
+  }
+
+  /// 룰렛 결과만 Cloud Function에 전달합니다.
+  /// 실제 탈락 및 새 라운드 처리는 서버가 결정합니다.
+  Future<void> resolveRoulette(RouletteResult result) async {
+    if (isResolvingPenalty || penaltyTargetUid == null) return;
+
+    isResolvingPenalty = true;
+    _commit();
+
+    try {
+      await service.command.resolvePenalty(
+        roomCode: roomCode,
+        result: result.name,
+      );
+    } catch (error) {
+      isResolvingPenalty = false;
+      rouletteRetry += 1;
+      _commit();
+      _reportError('룰렛 결과를 반영하지 못했습니다.', error);
+    }
+  }
+
   Future<bool> _runCommand(Future<Object?> Function() command) async {
     if (isCommandInFlight) return false;
 
@@ -702,6 +883,36 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
       isCommandInFlight = false;
       _commit();
     }
+  }
+
+  Future<bool> _runMenuCommand(
+    Future<Object?> Function() command, {
+    required String failureMessage,
+  }) async {
+    if (isMenuCommandInFlight) return false;
+
+    isMenuCommandInFlight = true;
+    _commit();
+    try {
+      await command();
+      return true;
+    } catch (error) {
+      _reportError(failureMessage, error);
+      return false;
+    } finally {
+      isMenuCommandInFlight = false;
+      _commit();
+    }
+  }
+
+  void _reportError(String message, Object error) {
+    final handler = onError;
+    if (handler != null) {
+      handler(message, error);
+      return;
+    }
+    errorMessage = message;
+    _commit();
   }
 
   bool _reject(String message) {
@@ -726,6 +937,15 @@ class LiarsPokerPhoneController extends Notifier<LiarsPokerPhoneState> {
   }
 
   void _handleSubscriptionError(Object error) {
+    // 태블릿은 SnackBar 안내를 위해 화면 콜백으로 전달합니다.
+    if (onError != null) {
+      if (!_initialDataCompleter.isCompleted) {
+        _initialDataCompleter.completeError(error);
+      }
+      onError!.call('게임 상태를 불러오지 못했습니다.', error);
+      return;
+    }
+
     final message = error.toString().toLowerCase();
     if (message.contains('firebase_database/unknown') ||
         message.contains('stacktrace:')) {

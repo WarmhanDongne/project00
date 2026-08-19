@@ -15,7 +15,7 @@ import {
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 방과 참가자는 유지하고 현재 Final Call 게임만 수동 종료합니다. */
-export const endFinalCallGame = onCall<Data>(
+export const game_final_call_end_game = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);
