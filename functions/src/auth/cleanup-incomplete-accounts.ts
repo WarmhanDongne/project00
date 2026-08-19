@@ -2,7 +2,7 @@ import {getFirestore} from "firebase-admin/firestore";
 import {logger} from "firebase-functions";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
-import {parseOnboardingStatus} from "./onboarding-types.js";
+import {isExpiredIncompleteCandidate} from "./onboarding-types.js";
 
 /**
  * Reports expired incomplete accounts. Deletion intentionally remains disabled
@@ -22,7 +22,7 @@ export const cleanupIncompleteAccounts = onSchedule(
       .get();
 
     const candidates = snapshot.docs.filter((document) => {
-      return parseOnboardingStatus(document.data().status) !== "complete";
+      return isExpiredIncompleteCandidate(document.data().status);
     });
     logger.info("Incomplete account cleanup dry run", {
       dryRun: true,

@@ -4,6 +4,7 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {
   ONBOARDING_SCHEMA_VERSION,
   parseOnboardingStatus,
+  resolveProtectedAccess,
 } from "./onboarding-types.js";
 
 /**
@@ -20,8 +21,15 @@ export async function assertOnboardingComplete(uid: string): Promise<void> {
     userRef.get(),
   ]);
   const status = parseOnboardingStatus(onboarding.data()?.status);
-  if (status === "complete") return;
-  if (onboarding.exists) {
+  const nickname = user.data()?.nickname;
+  const decision = resolveProtectedAccess({
+    status,
+    hasOnboardingDocument: onboarding.exists,
+    hasValidLegacyNickname: typeof nickname === "string" &&
+      nickname.trim().length > 0,
+  });
+  if (decision === "allow") return;
+  if (decision === "deny") {
     throw new HttpsError(
       "failed-precondition",
       "회원가입을 완료한 뒤 이용해주세요.",
@@ -30,22 +38,13 @@ export async function assertOnboardingComplete(uid: string): Promise<void> {
 
   // Old production users did not have userOnboarding documents. Preserve
   // access when their existing public profile is complete and backfill once.
-  const nickname = user.data()?.nickname;
-  if (typeof nickname === "string" && nickname.trim().length > 0) {
-    await onboardingRef.set({
-      uid,
-      status: "complete",
-      provider: "legacyPassword",
-      schemaVersion: ONBOARDING_SCHEMA_VERSION,
-      startedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      completedAt: FieldValue.serverTimestamp(),
-    });
-    return;
-  }
-
-  throw new HttpsError(
-    "failed-precondition",
-    "회원가입을 완료한 뒤 이용해주세요.",
-  );
+  await onboardingRef.set({
+    uid,
+    status: "complete",
+    provider: "legacyPassword",
+    schemaVersion: ONBOARDING_SCHEMA_VERSION,
+    startedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    completedAt: FieldValue.serverTimestamp(),
+  });
 }

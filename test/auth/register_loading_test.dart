@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
+import 'package:project00/platform/auth/widgets/register_step_two.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
 void main() {
@@ -23,6 +24,37 @@ void main() {
     );
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('프로필 작업 중에는 앨범과 키보드 완료 동작이 비활성화된다', (tester) async {
+    final nickname = TextEditingController(text: '테스트');
+    addTearDown(nickname.dispose);
+    var albumCalls = 0;
+    var completeCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: RegisterStepTwo(
+            nicknameController: nickname,
+            isLoading: true,
+            googlePhotoURL: null,
+            profileImageBytes: null,
+            onPickProfileImage: () => albumCalls++,
+            onCheckNickname: () => completeCalls++,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('앨범열기'));
+    await tester.tap(find.byType(CircleAvatar));
+    await tester.tap(find.byType(TextField));
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    expect(albumCalls, 0);
+    expect(completeCalls, 0);
   });
 }
 

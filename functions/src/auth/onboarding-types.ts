@@ -98,3 +98,32 @@ export function canAdvanceToProfile(status: unknown): boolean {
   return status === "settingPassword" || status === "settingProfile" ||
     status === "complete";
 }
+
+export type ProtectedAccessDecision = "allow" | "backfill" | "deny";
+
+/**
+ * Decides whether an account may use room and game services.
+ * @param {{status: (OnboardingStatus|undefined),
+ * hasOnboardingDocument: boolean, hasValidLegacyNickname: boolean}} input
+ * Stored onboarding and legacy profile facts.
+ * @return {ProtectedAccessDecision} Access decision for the caller.
+ */
+export function resolveProtectedAccess(input: {
+  status?: OnboardingStatus;
+  hasOnboardingDocument: boolean;
+  hasValidLegacyNickname: boolean;
+}): ProtectedAccessDecision {
+  if (input.status === "complete") return "allow";
+  if (input.hasOnboardingDocument) return "deny";
+  return input.hasValidLegacyNickname ? "backfill" : "deny";
+}
+
+/**
+ * Returns whether an expired onboarding document is a cleanup candidate.
+ * Completed accounts must never be selected, including during dry runs.
+ * @param {unknown} status Stored onboarding status.
+ * @return {boolean} Whether the expired document is incomplete.
+ */
+export function isExpiredIncompleteCandidate(status: unknown): boolean {
+  return parseOnboardingStatus(status) !== "complete";
+}

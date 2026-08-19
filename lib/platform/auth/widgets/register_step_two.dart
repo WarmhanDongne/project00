@@ -70,8 +70,9 @@ class RegisterStepTwo extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: nicknameController,
+          enabled: !isLoading,
           maxLength: 12,
-          onSubmitted: (_) => onCheckNickname(),
+          onSubmitted: isLoading ? null : (_) => onCheckNickname(),
           decoration: const InputDecoration(hintText: '방장님', counterText: ''),
         ),
       ],

@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   canAdvanceToProfile,
+  isExpiredIncompleteCandidate,
   isValidNickname,
   parseOnboardingStatus,
+  resolveProtectedAccess,
   resolveGoogleSyncStatus,
   resolveLegacyStatus,
 } from "../lib/auth/onboarding-types.js";
@@ -14,6 +16,48 @@ test("onboarding status only accepts known server states", () => {
   assert.equal(parseOnboardingStatus("settingProfile"), "settingProfile");
   assert.equal(parseOnboardingStatus("complete"), "complete");
   assert.equal(parseOnboardingStatus("unknown"), undefined);
+});
+
+test("protected services only allow completed or safe legacy accounts", () => {
+  assert.equal(
+    resolveProtectedAccess({
+      status: "complete",
+      hasOnboardingDocument: true,
+      hasValidLegacyNickname: true,
+    }),
+    "allow",
+  );
+  for (const status of ["settingPassword", "settingProfile"]) {
+    assert.equal(
+      resolveProtectedAccess({
+        status,
+        hasOnboardingDocument: true,
+        hasValidLegacyNickname: true,
+      }),
+      "deny",
+    );
+  }
+  assert.equal(
+    resolveProtectedAccess({
+      hasOnboardingDocument: false,
+      hasValidLegacyNickname: true,
+    }),
+    "backfill",
+  );
+  assert.equal(
+    resolveProtectedAccess({
+      hasOnboardingDocument: false,
+      hasValidLegacyNickname: false,
+    }),
+    "deny",
+  );
+});
+
+test("cleanup dry-run candidates never include completed accounts", () => {
+  assert.equal(isExpiredIncompleteCandidate("complete"), false);
+  assert.equal(isExpiredIncompleteCandidate("settingPassword"), true);
+  assert.equal(isExpiredIncompleteCandidate("settingProfile"), true);
+  assert.equal(isExpiredIncompleteCandidate("unknown"), true);
 });
 
 test("legacy accounts resume without deleting auth users", () => {
