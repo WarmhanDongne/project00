@@ -42,6 +42,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 인증·프로필 설정 단계는 본인만 읽고 Cloud Functions만 씁니다.
+    match /userOnboarding/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
     // 아이패드의 고정 룸 연결 정보입니다.
     // 생성과 수정은 Cloud Functions만 수행합니다.
     match /userRooms/{userId} {

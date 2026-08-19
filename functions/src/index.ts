@@ -39,6 +39,17 @@ export {
 } from "./auth/sync-google-profile.js";
 
 export {
+  advanceOnboarding,
+  beginOnboarding,
+  completeOnboardingProfile,
+  recoverLegacyOnboarding,
+} from "./auth/onboarding.js";
+
+export {
+  cleanupIncompleteAccounts,
+} from "./auth/cleanup-incomplete-accounts.js";
+
+export {
   startLiarsPokerGame,
 } from "./liars-poker/start-game.js";
 

@@ -57,6 +57,7 @@ dependencies:
   provider: ^6.1.5+1
   flutter_riverpod: ^3.4.2
   shared_preferences: ^2.5.5
+  app_links: ^7.2.1
   roulette: ^0.3.2
   dev: ^1.0.0
   flutter_gen_runner: ^5.15.0

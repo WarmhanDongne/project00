@@ -138,9 +138,6 @@ class _GameListState extends State<GameList> {
                             5,
                           );
                           const spacing = 10.0;
-                          final tileWidth =
-                              (availableWidth - spacing * (columns - 1)) /
-                              columns;
                           return GridView.builder(
                             padding: EdgeInsets.zero,
                             itemCount: games.length,
