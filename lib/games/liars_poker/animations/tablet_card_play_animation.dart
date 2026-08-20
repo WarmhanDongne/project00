@@ -6,6 +6,7 @@ import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 // final playKey = GlobalKey<CardPlayAnimationState>();
 
@@ -14,9 +15,9 @@ import 'package:project00/gen/assets.gen.dart';
 //   playerCount: 5,
 //   fromPlayerIndex: 2,
 //   frontCardAssets: [
-//     Assets.games.liarsPoker.images.cards.whiteQ,
-//     Assets.games.liarsPoker.images.cards.whiteQ,
-//     Assets.games.liarsPoker.images.cards.whiteJoker,
+//     Assets.games.liarsPoker.images.cards.whiteQ.game,
+//     Assets.games.liarsPoker.images.cards.whiteQ.game,
+//     Assets.games.liarsPoker.images.cards.whiteJoker.game,
 //   ],
 //   onCardsPlayed: () {
 //     // 다음 플레이어 차례
@@ -67,8 +68,8 @@ class CardPlayAnimation extends StatefulWidget {
        assert(revealDuration > Duration.zero);
 
   /// 실제로 낸 카드의 앞면입니다. 던질 때는 [backCardAsset]만 보입니다.
-  final List<AssetGenImage> frontCardAssets;
-  final AssetGenImage? backCardAsset;
+  final List<GameImage> frontCardAssets;
+  final GameImage? backCardAsset;
 
   /// 공통 플레이어 배치에서 패를 던지는 플레이어입니다.
   final int playerCount;
@@ -504,7 +505,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
                 isFrontVisible
                     ? widget.frontCardAssets[cardIndex]
                     : widget.backCardAsset ??
-                          Assets.games.liarsPoker.images.cards.whiteBack,
+                          Assets.games.liarsPoker.images.cards.whiteBack.game,
                 lift: visualLift,
               ),
             ),
@@ -514,7 +515,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     );
   }
 
-  Widget _buildCard(AssetGenImage asset, {required double lift}) {
+  Widget _buildCard(GameImage asset, {required double lift}) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,

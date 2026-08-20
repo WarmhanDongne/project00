@@ -7,6 +7,7 @@ import 'package:project00/games/final_call/screens/tablet/tablet_game_helper.dar
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// CALL 선언 위치에서 최종 교체 과정이 끝날 때까지 말풍선을 유지합니다.
 class FinalCallTabletCallAnimation extends StatelessWidget {
@@ -54,7 +55,13 @@ class FinalCallTabletCallAnimation extends StatelessWidget {
                     center: center,
                     boardSize: boardSize,
                   ),
-                  child: Assets.games.finalCall.images.modal.modalMessageCall
+                  child: Assets
+                      .games
+                      .finalCall
+                      .images
+                      .modal
+                      .modalMessageCall
+                      .game
                       .image(
                         width: 142,
                         fit: BoxFit.contain,

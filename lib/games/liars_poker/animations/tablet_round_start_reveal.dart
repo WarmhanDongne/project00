@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/board_element_entrance.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.
 class RoundStartReveal extends StatefulWidget {
@@ -37,7 +38,7 @@ class RoundStartReveal extends StatefulWidget {
          'playerPositions의 개수는 playerCount와 같아야 합니다.',
        );
 
-  final AssetGenImage tableAsset;
+  final GameImage tableAsset;
   final int playerCount;
   final List<int> remainingCardCounts;
   final int? activePlayerIndex;
@@ -47,7 +48,7 @@ class RoundStartReveal extends StatefulWidget {
   final List<Offset>? playerPositions;
 
   final double tableWidth;
-  final AssetGenImage? cardCountAsset;
+  final GameImage? cardCountAsset;
   final Duration duration;
 
   /// 기본 플레이어 위치를 중앙 원 바깥 방향으로 확장하는 비율입니다.
@@ -222,7 +223,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                   key: ValueKey(playerIndex),
                   asset:
                       widget.cardCountAsset ??
-                      Assets.games.liarsPoker.images.cards.cardCount,
+                      Assets.games.liarsPoker.images.cards.cardCount.game,
                   count: widget.remainingCardCounts[playerIndex],
                   isCurrentTurn: isCurrentTurn,
                 ),
@@ -285,7 +286,13 @@ class _TurnCircleLight extends StatelessWidget {
               children: [
                 Opacity(
                   opacity: 0.82,
-                  child: Assets.games.liarsPoker.images.background.background
+                  child: Assets
+                      .games
+                      .liarsPoker
+                      .images
+                      .background
+                      .background
+                      .game
                       .image(
                         fit: BoxFit.cover,
                         alignment: Alignment.center,
@@ -365,7 +372,7 @@ class _RemainingCardCounter extends StatefulWidget {
     required this.isCurrentTurn,
   });
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final int count;
   final bool isCurrentTurn;
 

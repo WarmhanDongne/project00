@@ -13,6 +13,7 @@ import 'package:project00/games/shared/game_flow/game_finish.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 export 'package:project00/games/liars_poker/models/liars_poker_models.dart'
     show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult, PublicLastPlay;
@@ -128,8 +129,8 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
   List<PhoneHandCard> get handCards => _draft.handCards;
   set handCards(List<PhoneHandCard> value) =>
       _draft = _draft.copyWith(handCards: value);
-  List<AssetGenImage> get handCardAssets => _draft.handCardAssets;
-  set handCardAssets(List<AssetGenImage> value) =>
+  List<GameImage> get handCardAssets => _draft.handCardAssets;
+  set handCardAssets(List<GameImage> value) =>
       _draft = _draft.copyWith(handCardAssets: value);
   bool get isCommandInFlight => _draft.isCommandInFlight;
   set isCommandInFlight(bool value) =>
@@ -982,13 +983,13 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
         .toList(growable: false);
   }
 
-  AssetGenImage _cardAssetForRank(String rank) {
+  GameImage _cardAssetForRank(String rank) {
     return switch (rank.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.cards.whiteA,
-      'K' => Assets.games.liarsPoker.images.cards.whiteK,
-      'Q' => Assets.games.liarsPoker.images.cards.whiteQ,
-      'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker,
-      _ => Assets.games.liarsPoker.images.cards.whiteBack,
+      'A' => Assets.games.liarsPoker.images.cards.whiteA.game,
+      'K' => Assets.games.liarsPoker.images.cards.whiteK.game,
+      'Q' => Assets.games.liarsPoker.images.cards.whiteQ.game,
+      'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker.game,
+      _ => Assets.games.liarsPoker.images.cards.whiteBack.game,
     };
   }
 }

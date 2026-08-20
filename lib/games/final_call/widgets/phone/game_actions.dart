@@ -6,6 +6,7 @@ import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 class FinalCallPhoneActions extends StatelessWidget {
   const FinalCallPhoneActions({
@@ -42,7 +43,7 @@ class FinalCallPhoneActions extends StatelessWidget {
       // 하므로 마지막 교체 턴에서는 새 카드 버튼을 계속 유지합니다.
       return _PressableImageButton(
         enabled: controller.canDraw,
-        asset: Assets.games.finalCall.images.button.buttonBasicWide,
+        asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
         labelOverride: FinalCallCopy.newCard,
         onTap: onOpenCardChange,
       );
@@ -52,14 +53,14 @@ class FinalCallPhoneActions extends StatelessWidget {
       children: [
         _PressableImageButton(
           enabled: controller.canCall,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide,
+          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
           labelOverride: 'CALL',
           onTap: onCall,
         ),
         const SizedBox(height: 12),
         _PressableImageButton(
           enabled: controller.canDraw,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide,
+          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
           labelOverride: FinalCallCopy.newCard,
           onTap: onOpenCardChange,
         ),
@@ -202,7 +203,7 @@ class _PressableImageButton extends StatefulWidget {
     this.labelOverride,
   });
   final bool enabled;
-  final AssetGenImage asset;
+  final GameImage asset;
   final VoidCallback onTap;
   final String? labelOverride;
 

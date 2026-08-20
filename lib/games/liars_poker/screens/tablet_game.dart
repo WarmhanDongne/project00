@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
+import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
@@ -27,6 +28,7 @@ import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
@@ -486,7 +488,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     }
     // 빌드 도중 재생을 시작하지 않도록 프레임 이후로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _backgroundMusic.start();
+      if (mounted) _backgroundMusic.start(LiarsPokerSounds.background);
     });
   }
 
@@ -646,6 +648,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 child: LiarsPokerTabletGameOverlay(
                   provider: widget.provider,
                   stage: _stage,
+                  tableRank: game.table,
                   onRestartGame: _restartGame,
                   onEndGame: _endGame,
                 ),
@@ -690,7 +693,7 @@ class _GameBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.black,
-      child: Assets.games.liarsPoker.images.background.background.image(
+      child: Assets.games.liarsPoker.images.background.background.game.image(
         fit: BoxFit.cover,
         alignment: Alignment.center,
       ),

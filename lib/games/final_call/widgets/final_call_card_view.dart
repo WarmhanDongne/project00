@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Final Call 앞면 카드 원본(700 × 1026)의 높이/너비 비율입니다.
 const double finalCallCardHeightRatio = 1026 / 700;
 
-AssetGenImage finalCallCardAsset(FinalCallCard card) {
+GameImage finalCallCardAsset(FinalCallCard card) {
   final suffix = '${card.color}_${card.value}.png';
-  return Assets.games.finalCall.images.cards.values.firstWhere(
-    (asset) => asset.path.endsWith(suffix),
-    orElse: () => Assets.games.finalCall.images.cards.cardBack,
-  );
+  return Assets.games.finalCall.images.cards.values
+      .firstWhere(
+        (asset) => asset.path.endsWith(suffix),
+        orElse: () => Assets.games.finalCall.images.cards.cardBack,
+      )
+      .game;
 }
 
 class FinalCallCardView extends StatelessWidget {
@@ -30,7 +33,7 @@ class FinalCallCardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final asset = faceDown || card == null
-        ? Assets.games.finalCall.images.cards.cardBack
+        ? Assets.games.finalCall.images.cards.cardBack.game
         : finalCallCardAsset(card!);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),

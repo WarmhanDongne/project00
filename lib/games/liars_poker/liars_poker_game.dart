@@ -7,6 +7,7 @@ import 'package:project00/games/liars_poker/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 class LiarsPokerGame extends TemplateGame {
   const LiarsPokerGame();
@@ -24,13 +25,13 @@ class LiarsPokerGame extends TemplateGame {
   Color get tableColor => const Color(0xFF6E2A82);
   @override
   ImageProvider get tableBackgroundImage =>
-      Assets.games.liarsPoker.images.background.background.provider();
+      Assets.games.liarsPoker.images.background.background.game.provider();
   @override
   ImageProvider get layoutTableImage =>
-      Assets.games.liarsPoker.images.layout.layoutTable.provider();
+      Assets.games.liarsPoker.images.layout.layoutTable.game.provider();
   @override
   ImageProvider get layoutChairImage =>
-      Assets.games.liarsPoker.images.layout.layoutChair.provider();
+      Assets.games.liarsPoker.images.layout.layoutChair.game.provider();
 
   @override
   Future<void> startGame(String roomCode) =>

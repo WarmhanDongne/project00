@@ -3,6 +3,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 받은 카드 덱이 중앙으로 들어온 뒤, 사용자의 탭을 기다렸다가 공개됩니다.
 ///
@@ -29,8 +30,8 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
        assert(cardWidth > 0),
        assert(totalDuration > Duration.zero);
 
-  final List<AssetGenImage> frontCardAssets;
-  final AssetGenImage? backCardAsset;
+  final List<GameImage> frontCardAssets;
+  final GameImage? backCardAsset;
   final double cardWidth;
   final double spreadStepX;
   final double spreadStepY;
@@ -294,7 +295,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
                 asset: isFrontVisible
                     ? widget.frontCardAssets[cardIndex]
                     : widget.backCardAsset ??
-                          Assets.games.liarsPoker.images.cards.whiteBack,
+                          Assets.games.liarsPoker.images.cards.whiteBack.game,
                 flipLift: flipLift,
               ),
             ),
@@ -406,7 +407,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.asset, required this.flipLift});
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double flipLift;
 
   @override

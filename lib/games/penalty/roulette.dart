@@ -8,6 +8,7 @@ import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:roulette/roulette.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 enum RouletteResult { safe, eliminated }
 
@@ -394,7 +395,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, 35),
                 child: Transform.scale(
                   scale: 1.6,
-                  child: Assets.images.widgets.roulette.border.image(
+                  child: Assets.images.widgets.roulette.border.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -411,7 +412,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, 22),
                 child: Transform.scale(
                   scale: 0.9,
-                  child: Assets.images.widgets.roulette.centerStone.image(
+                  child: Assets.images.widgets.roulette.centerStone.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -453,7 +454,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, -410),
                 child: Transform.scale(
                   scale: 0.8,
-                  child: Assets.images.widgets.roulette.pointer.image(
+                  child: Assets.images.widgets.roulette.pointer.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -471,7 +472,7 @@ class RouletteWheel extends StatelessWidget {
             child: Center(
               child: SizedBox(
                 width: 450,
-                child: Assets.images.widgets.roulette.leverBottom.image(
+                child: Assets.images.widgets.roulette.leverBottom.game.image(
                   fit: BoxFit.contain,
                 ),
               ),
@@ -507,7 +508,7 @@ class RouletteWheel extends StatelessWidget {
                   width: 150,
                   height: 150,
                   child: ClipOval(
-                    child: Assets.images.widgets.roulette.leverStick.image(
+                    child: Assets.images.widgets.roulette.leverStick.game.image(
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -530,9 +531,8 @@ class RouletteWheel extends StatelessWidget {
                   child: ClipOval(
                     child: Transform.rotate(
                       angle: math.pi,
-                      child: Assets.images.widgets.roulette.leverStick.image(
-                        fit: BoxFit.contain,
-                      ),
+                      child: Assets.images.widgets.roulette.leverStick.game
+                          .image(fit: BoxFit.contain),
                     ),
                   ),
                 ),
@@ -554,9 +554,8 @@ class RouletteWheel extends StatelessWidget {
                     width: 630,
                     child: Transform.scale(
                       scale: 1.3,
-                      child: Assets.images.widgets.roulette.leverHead.image(
-                        fit: BoxFit.contain,
-                      ),
+                      child: Assets.images.widgets.roulette.leverHead.game
+                          .image(fit: BoxFit.contain),
                     ),
                   ),
                 ),

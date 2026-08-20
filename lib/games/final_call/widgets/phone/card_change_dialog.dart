@@ -6,6 +6,7 @@ import 'package:project00/games/final_call/final_call_copy.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 class FinalCallCardChangeDialog extends StatefulWidget {
   const FinalCallCardChangeDialog({
@@ -104,7 +105,7 @@ class _FinalCallCardChangeDialogState extends State<FinalCallCardChangeDialog> {
         padding: const EdgeInsets.fromLTRB(14, 16, 14, 13),
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: Assets.games.finalCall.images.background.phoneBackground
+            image: Assets.games.finalCall.images.background.phoneBackground.game
                 .provider(),
             fit: BoxFit.cover,
           ),

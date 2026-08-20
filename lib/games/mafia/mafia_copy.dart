@@ -1,0 +1,59 @@
+//=======================마피아 사용자 문구==============================
+/// 화면에 보이는 문구입니다.
+///
+/// 역할 이름이 문장에 들어가는 곳은 **조사가 이름에 따라 달라지므로** 여기서
+/// 만듭니다. 역할이 34개로 늘어나도 문법이 어긋나지 않게 하기 위한 것입니다.
+abstract final class MafiaCopy {
+  /// 마지막 글자에 받침이 있는지입니다.
+  ///
+  /// 한글 음절은 `0xAC00 + (초성 × 21 + 중성) × 28 + 종성`으로 만들어집니다.
+  /// 종성이 0이면 받침이 없습니다.
+  ///
+  /// 한글이 아닌 이름(영문·숫자)은 받침이 있는 것으로 봅니다. `이었습니다`가
+  /// 어느 쪽에도 크게 어긋나지 않기 때문입니다.
+  static bool hasFinalConsonant(String word) {
+    if (word.isEmpty) return true;
+    final code = word.codeUnitAt(word.length - 1);
+    if (code < 0xAC00 || code > 0xD7A3) return true;
+    return (code - 0xAC00) % 28 != 0;
+  }
+
+  /// 처형된 사람을 알리는 문구입니다.
+  static String executed(String nickname) => '$nickname님이 처형되었습니다.';
+
+  /// 처형자 발표 화면의 제목입니다. 당사자와 나머지 사람이 다른 문구를 봅니다.
+  static const String executedOtherTitle = '오늘의 처형자';
+  static const String executedSelfTitle = '당신은 처형 당했습니다';
+
+  /// 아무도 처형되지 않았을 때의 문구입니다(동표가 무효 처리되는 규칙일 때).
+  static const String noExecution = '처형된 사람이 없습니다';
+
+  /// 처형된 사람의 신분을 알리는 문구입니다.
+  ///
+  /// 받침에 따라 조사가 달라집니다. `시민이었습니다` / `마피아였습니다`.
+  static String wasRole(String nickname, String roleName) {
+    final suffix = hasFinalConsonant(roleName) ? '이었습니다' : '였습니다';
+    return '$nickname님은 $roleName$suffix.';
+  }
+
+  //=======================룰 다이얼로그==============================
+  /// 휴대폰 상단바의 룰(팁) 버튼이 보여 주는 문구입니다.
+  ///
+  /// 마크다운은 쓸 수 없어 문장만 넣습니다. 확정된 규칙만 담고, 아직 정해지지
+  /// 않은 것(토론 조기 종료 권한 등)은 넣지 않습니다.
+  static const List<String> phoneRules = [
+    '밤에는 특수한 신분들이 동시에 행동합니다. 시민은 아무것도 하지 않습니다.',
+    '아침에 밤 사이 일어난 일이 발표됩니다.',
+    '낮에는 자유롭게 토론한 뒤 비밀 투표로 한 명을 처형합니다.',
+    '표가 동일하면 아무도 처형되지 않습니다.',
+    '처형된 사람의 신분은 모두에게 공개됩니다.',
+    '사망하면 모든 사람의 신분을 볼 수 있습니다. 다른 사람에게 보여주지 마세요.',
+    '마피아가 모두 사라지면 시민 팀이 이깁니다.',
+    '마피아 수가 남은 사람 수와 같아지면 마피아 팀이 이깁니다.',
+  ];
+
+  /// 이 빌드가 모르는 신분일 때의 문구입니다.
+  ///
+  /// 새 역할을 서버가 먼저 배포한 뒤 구버전 앱이 붙는 경우를 막기 위한 것입니다.
+  static String unknownRole(String nickname) => '$nickname님의 신분을 확인할 수 없습니다.';
+}

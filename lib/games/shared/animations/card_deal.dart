@@ -6,6 +6,7 @@ import 'package:project00/core/sound/app_sounds.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 typedef DealCardBuilder =
     Widget Function(BuildContext context, int playerIndex, int cardIndex);
@@ -71,7 +72,7 @@ class CardDealAnimation extends StatefulWidget {
   final int cardsPerPlayer;
 
   /// [cardBuilder]를 지정하지 않았을 때 표시할 카드 뒷면 에셋입니다.
-  final AssetGenImage? cardAsset;
+  final GameImage? cardAsset;
 
   /// 게임별 카드 UI를 직접 전달할 때 사용합니다.
   final DealCardBuilder? cardBuilder;
@@ -461,7 +462,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
         borderRadius: BorderRadius.circular(7),
         child:
             customCard ??
-            (widget.cardAsset ?? Assets.games.liarsPoker.images.cards.whiteBack)
+            (widget.cardAsset ??
+                    Assets.games.liarsPoker.images.cards.whiteBack.game)
                 .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
       ),
     );

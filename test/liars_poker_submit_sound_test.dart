@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/games/liars_poker/animations/tablet_card_play_animation.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:provider/provider.dart';
 // SoundProvider가 SharedPreferences를 직접 만들기 때문에, 테스트에서는 메모리
@@ -30,7 +31,7 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
-  final cardAssets = [Assets.games.liarsPoker.images.cards.values.first];
+  final cardAssets = [Assets.games.liarsPoker.images.cards.values.first.game];
 
   Future<void> pumpPlay(
     WidgetTester tester,
