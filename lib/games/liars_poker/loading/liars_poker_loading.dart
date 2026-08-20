@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// Liar's Poker 로딩 화면에 표시할 전략 팁입니다.
 ///
@@ -27,11 +26,14 @@ const liarsPokerLoadingTips = <String>[
   '손패를 먼저 비워도 승리가 아닙니다. 마지막까지 살아남아야 이깁니다.',
 ];
 
-/// 게임 화면에서 최초 표시될 게임 이미지와 방 캐릭터를 미리 디코딩합니다.
+/// 게임 화면에서 최초 표시될 로컬 이미지와 참가자 프로필을 미리 디코딩합니다.
+///
+/// 프로필 하나의 실패는 게임 입장을 막지 않습니다. 해당 URL은 실제 화면에서
+/// 기본 프로필로 대체할 수 있도록 나머지 준비 작업과 분리해 처리합니다.
 Future<void> preloadLiarsPokerAssets(
   BuildContext context, {
   required bool isPhone,
-  required Iterable<String> characterIds,
+  required Iterable<String> profileImageUrls,
 }) async {
   // 첫 카드 제출·공개 소리가 늦지 않도록 게임 전용 효과음을 먼저 준비합니다.
   unawaited(
@@ -72,10 +74,17 @@ Future<void> preloadLiarsPokerAssets(
     );
   }
 
-  final uniqueCharacterIds = characterIds.toSet();
+  final uniqueProfileUrls = profileImageUrls
+      .map((url) => url.trim())
+      .where((url) => url.isNotEmpty)
+      .toSet();
   await Future.wait(
-    uniqueCharacterIds.map(
-      (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),
-    ),
+    uniqueProfileUrls.map((url) async {
+      try {
+        await precacheImage(NetworkImage(url), context);
+      } catch (_) {
+        // 프로필 서버가 일시적으로 실패해도 게임 자체는 기본 이미지로 진행합니다.
+      }
+    }),
   );
 }

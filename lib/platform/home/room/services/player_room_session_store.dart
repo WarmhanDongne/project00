@@ -10,13 +10,13 @@ class PlayerRoomSession {
     required this.uid,
     required this.roomCode,
     required this.nickname,
-    required this.characterId,
+    required this.accentColor,
   });
 
   final String uid;
   final String roomCode;
   final String nickname;
-  final String characterId;
+  final String accentColor;
 }
 
 class PlayerRoomSessionStore {
@@ -27,8 +27,7 @@ class PlayerRoomSessionStore {
   static const _uidKey = 'player_room_uid';
   static const _roomCodeKey = 'player_room_code';
   static const _nicknameKey = 'player_room_nickname';
-  static const _characterIdKey = 'player_room_character_id';
-  static const _legacyAccentColorKey = 'player_room_accent_color';
+  static const _accentColorKey = 'player_room_accent_color';
 
   PlayerRoomSession? _session;
   bool _loaded = false;
@@ -39,7 +38,7 @@ class PlayerRoomSessionStore {
     final uid = preferences.getString(_uidKey)?.trim();
     final roomCode = preferences.getString(_roomCodeKey)?.trim().toUpperCase();
     final nickname = preferences.getString(_nicknameKey)?.trim();
-    final characterId = preferences.getString(_characterIdKey)?.trim();
+    final accentColor = preferences.getString(_accentColorKey)?.trim();
     _loaded = true;
 
     if (uid == null ||
@@ -48,8 +47,8 @@ class PlayerRoomSessionStore {
         roomCode.isEmpty ||
         nickname == null ||
         nickname.isEmpty ||
-        characterId == null ||
-        characterId.isEmpty) {
+        accentColor == null ||
+        accentColor.isEmpty) {
       _session = null;
       return null;
     }
@@ -57,7 +56,7 @@ class PlayerRoomSessionStore {
       uid: uid,
       roomCode: roomCode,
       nickname: nickname,
-      characterId: characterId,
+      accentColor: accentColor,
     );
     return _session;
   }
@@ -66,21 +65,20 @@ class PlayerRoomSessionStore {
     required String uid,
     required String roomCode,
     required String nickname,
-    required String characterId,
+    required String accentColor,
   }) async {
     final session = PlayerRoomSession(
       uid: uid.trim(),
       roomCode: roomCode.trim().toUpperCase(),
       nickname: nickname.trim(),
-      characterId: characterId.trim(),
+      accentColor: accentColor.trim().toUpperCase(),
     );
     final preferences = await SharedPreferences.getInstance();
     await Future.wait([
       preferences.setString(_uidKey, session.uid),
       preferences.setString(_roomCodeKey, session.roomCode),
       preferences.setString(_nicknameKey, session.nickname),
-      preferences.setString(_characterIdKey, session.characterId),
-      preferences.remove(_legacyAccentColorKey),
+      preferences.setString(_accentColorKey, session.accentColor),
     ]);
     _session = session;
     _loaded = true;
@@ -97,8 +95,7 @@ class PlayerRoomSessionStore {
       preferences.remove(_uidKey),
       preferences.remove(_roomCodeKey),
       preferences.remove(_nicknameKey),
-      preferences.remove(_characterIdKey),
-      preferences.remove(_legacyAccentColorKey),
+      preferences.remove(_accentColorKey),
     ]);
     _session = null;
     _loaded = true;

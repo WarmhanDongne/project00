@@ -417,7 +417,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           result: game.isNaturalResult
               ? PhoneResultDialog(
                   nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
-                  characterId: resultProfile?.characterId ?? 'frog',
+                  profileImageUrl: resultProfile?.profileImageUrl ?? '',
                   resultLabel: resultLabel,
                 )
               : const SizedBox.shrink(),

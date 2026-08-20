@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -344,6 +343,7 @@ class _PlayerTileState extends State<_PlayerTile> {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     final player = widget.player;
+    final accent = _parseAccent(player.accentColor);
     return Container(
       height: 78,
       padding: const EdgeInsets.only(left: 12, right: 8),
@@ -357,13 +357,23 @@ class _PlayerTileState extends State<_PlayerTile> {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 50,
-            height: 50,
-            child: Image.asset(
-              roomCharacterAssetPath(player.characterId),
-              fit: BoxFit.contain,
-            ),
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: accent.withValues(alpha: 0.13),
+            backgroundImage: player.profileImageUrl.isEmpty
+                ? null
+                : NetworkImage(player.profileImageUrl),
+            child: player.profileImageUrl.isEmpty
+                ? Text(
+                    player.nickname.isEmpty
+                        ? '?'
+                        : player.nickname.substring(0, 1),
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -402,6 +412,11 @@ class _PlayerTileState extends State<_PlayerTile> {
       ),
     );
   }
+}
+
+Color _parseAccent(String value) {
+  final parsed = int.tryParse(value.replaceFirst('#', ''), radix: 16);
+  return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }
 
 /// 참여 코드 QR을 정사각형 카드로 그립니다.

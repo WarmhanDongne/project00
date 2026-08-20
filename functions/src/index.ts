@@ -16,7 +16,6 @@ export {
   createRealtimeRoom,
   joinRealtimeRoom,
   saveRealtimePlayerSeatIndexes,
-  validateRealtimeRoom,
 } from "./room/realtime-room-functions.js";
 
 export {

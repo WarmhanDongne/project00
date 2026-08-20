@@ -3,6 +3,7 @@
 import {randomInt} from "node:crypto";
 
 import {getDatabase} from "firebase-admin/database";
+import {getFirestore} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {createDeck} from "./common/deck.js";
@@ -203,6 +204,35 @@ async function createPublicPlayers(
   const players:
     Record<string, PublicGamePlayer> = {};
 
+  const profileImageUrls = new Map<string, string>();
+  await Promise.all(
+    Object.entries(roomPlayers).map(
+      async ([uid, value]) => {
+        const roomProfileImageUrl =
+          typeof value.profileImageUrl === "string" ?
+            value.profileImageUrl.trim() : "";
+        if (roomProfileImageUrl) {
+          profileImageUrls.set(uid, roomProfileImageUrl);
+          return;
+        }
+
+        try {
+          const userSnapshot = await getFirestore()
+            .collection("users")
+            .doc(uid)
+            .get();
+          const firestoreProfileImageUrl =
+            userSnapshot.data()?.profileImageUrl;
+          if (typeof firestoreProfileImageUrl === "string") {
+            profileImageUrls.set(uid, firestoreProfileImageUrl.trim());
+          }
+        } catch (error) {
+          console.warn("start_game profile lookup failed", error);
+        }
+      },
+    ),
+  );
+
   for (
     const [uid, value] of
     Object.entries(roomPlayers)
@@ -229,8 +259,7 @@ async function createPublicPlayers(
         typeof value.nickname === "string" ?
           value.nickname :
           "Player",
-      characterId: typeof value.characterId === "string" ?
-        value.characterId : "frog",
+      profileImageUrl: profileImageUrls.get(uid) ?? "",
       seatIndex: seatIndex as number,
       status: "alive",
       penaltyCount: 0,

@@ -52,14 +52,14 @@ class PlayerLayoutPlayer {
   const PlayerLayoutPlayer({
     required this.uid,
     required this.nickname,
-    required this.characterId,
+    required this.profileImageUrl,
 
     required this.seatIndex,
   });
 
   final String uid;
   final String nickname;
-  final String characterId;
+  final String profileImageUrl;
 
   /// 테이블 주변에서 몇 번째 자리인지 나타냅니다.
   final int seatIndex;
@@ -68,7 +68,7 @@ class PlayerLayoutPlayer {
     return PlayerLayoutPlayer(
       uid: uid,
       nickname: nickname,
-      characterId: characterId,
+      profileImageUrl: profileImageUrl,
       seatIndex: seatIndex ?? this.seatIndex,
     );
   }

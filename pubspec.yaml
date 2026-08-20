@@ -91,7 +91,6 @@ flutter:
   assets:
     # - .env.dev
     - assets/images/
-    - assets/images/character/
     - assets/images/button/
     - assets/images/logo/
     - assets/images/others/

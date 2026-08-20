@@ -11,7 +11,7 @@ class PlayerLayoutFactory {
           return PlayerLayoutPlayer(
             uid: player.uid,
             nickname: player.nickname,
-            characterId: player.characterId,
+            profileImageUrl: player.profileImageUrl,
 
             seatIndex: index,
           );

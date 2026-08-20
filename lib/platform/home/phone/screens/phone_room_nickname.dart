@@ -1,16 +1,34 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
-//=======================닉네임과 방 캐릭터 설정==============================
+const _playerAccentColors = <Color>[
+  Color(0xFFF07A63),
+  Color(0xFF58A7DE),
+  Color(0xFFD56AA5),
+  Color(0xFFA68D78),
+  Color(0xFF96B83F),
+  Color(0xFFE6A13C),
+  Color(0xFF6557D2),
+  Color(0xFFD7B53C),
+  Color(0xFF78BC78),
+  Color(0xFF4BBDB1),
+  Color(0xFF59A9C2),
+  Color(0xFF9AD9CF),
+  Color(0xFF95C2EA),
+  Color(0xFF8A80D8),
+  Color(0xFFCB87CA),
+  Color(0xFFB4A2A2),
+];
+
+//=======================닉네임과 참가 색상 설정==============================
 class PhoneRoomNickname extends StatefulWidget {
   const PhoneRoomNickname({
     super.key,
@@ -28,8 +46,9 @@ class PhoneRoomNickname extends StatefulWidget {
 class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   final math.Random _random = math.Random();
   late final TextEditingController _nicknameController;
-  String? _selectedCharacterId;
+  bool _didRestoreExistingNickname = false;
   bool _isOpeningWaitingRoom = false;
+  int _selectedColorIndex = 6;
 
   RoomProvider get _roomProvider => widget.provider;
 
@@ -37,55 +56,35 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   void initState() {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
-    final accountNickname = user?.displayName?.trim().isNotEmpty == true
+    final initialNickname = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ?? '사용자';
-    final initialNickname = accountNickname.length <= 12
-        ? accountNickname
-        : accountNickname.substring(0, 12);
     _nicknameController = TextEditingController(text: initialNickname);
-    _roomProvider.addListener(_handleRoomUpdate);
-    _roomProvider.listenRoomPreview(widget.roomCode);
-    _selectRandomAvailableCharacter();
+    _roomProvider.addListener(_restoreExistingProfile);
+    _restoreExistingProfile();
   }
 
-  Set<String> get _occupiedCharacterIds {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    return _roomProvider.players
-        .where((player) => player.uid != currentUid)
-        .map((player) => player.characterId)
-        .toSet();
-  }
-
-  List<RoomCharacter> get _availableCharacters => roomCharacters
-      .where((character) => !_occupiedCharacterIds.contains(character.id))
-      .toList(growable: false);
-
-  void _handleRoomUpdate() {
-    final selected = _selectedCharacterId;
-    if (selected != null && !_occupiedCharacterIds.contains(selected)) {
-      if (mounted) setState(() {});
-      return;
+  void _restoreExistingProfile() {
+    if (_didRestoreExistingNickname) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    for (final player in _roomProvider.players) {
+      if (player.uid != uid) continue;
+      _didRestoreExistingNickname = true;
+      // 첫 화면에서 사용하는 임시 닉네임을 입력창에 노출하지 않습니다.
+      // 사용자는 계정 닉네임을 기준으로 최종 닉네임을 직접 확정합니다.
+      final parsed = _parseHex(player.accentColor);
+      final index = _playerAccentColors.indexWhere(
+        (color) => color.toARGB32() == parsed.toARGB32(),
+      );
+      if (index >= 0) _selectedColorIndex = index;
+      break;
     }
-    _selectRandomAvailableCharacter();
-  }
-
-  void _selectRandomAvailableCharacter() {
-    final available = _availableCharacters;
-    final next = available.isEmpty
-        ? null
-        : available[_random.nextInt(available.length)].id;
-    if (!mounted) {
-      _selectedCharacterId = next;
-      return;
-    }
-    setState(() => _selectedCharacterId = next);
   }
 
   @override
   void dispose() {
-    _roomProvider.removeListener(_handleRoomUpdate);
-    _roomProvider.stopRoomPreview();
+    _roomProvider.removeListener(_restoreExistingProfile);
     _nicknameController.dispose();
     super.dispose();
   }
@@ -93,50 +92,30 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   Future<void> _saveProfileAndContinue() async {
     FocusScope.of(context).unfocus();
     final nickname = _nicknameController.text.trim();
-    final characterId = _selectedCharacterId;
     if (nickname.isEmpty) {
-      _roomProvider.errorMessage = '닉네임을 입력해주세요.';
-      setState(() {});
+      _showMessage('닉네임을 입력해주세요.');
       return;
     }
-    if (nickname.length > 12) {
-      _roomProvider.errorMessage = '닉네임은 12자 이하로 입력해주세요.';
-      setState(() {});
-      return;
-    }
-    if (characterId == null) {
-      _roomProvider.errorMessage = '사용할 수 있는 캐릭터가 없습니다.';
-      setState(() {});
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final duplicate = _roomProvider.players.any(
+      (player) => player.uid != currentUid && player.nickname == nickname,
+    );
+    if (duplicate) {
+      _showMessage('이미 사용 중인 닉네임입니다.');
       return;
     }
 
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    final duplicateNickname = _roomProvider.players.any(
-      (player) => player.uid != currentUid && player.nickname == nickname,
-    );
-    if (duplicateNickname) {
-      _roomProvider.errorMessage = '이미 사용 중인 닉네임입니다.';
-      setState(() {});
-      return;
-    }
-    if (_occupiedCharacterIds.contains(characterId)) {
-      _roomProvider.errorMessage = '이미 선택된 캐릭터입니다.';
-      _selectRandomAvailableCharacter();
-      return;
-    }
     if (_isOpeningWaitingRoom) return;
     setState(() => _isOpeningWaitingRoom = true);
 
-    final joined = await _roomProvider.joinRoom(
-      widget.roomCode,
-      nickname,
-      characterId: characterId,
+    // 참가자 설정 저장은 대기 화면 진입을 막지 않습니다. 색상 저장 여부와
+    // 관계없이 먼저 입장시키고, 닉네임·색상은 백그라운드에서 반영합니다.
+    unawaited(
+      _roomProvider.updateJoinedPlayerProfile(
+        nickname,
+        accentColor: _toHex(_playerAccentColors[_selectedColorIndex]),
+      ),
     );
-    if (!mounted) return;
-    if (!joined) {
-      setState(() => _isOpeningWaitingRoom = false);
-      return;
-    }
 
     await Navigator.push(
       context,
@@ -147,319 +126,200 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     if (!mounted) return;
     setState(() => _isOpeningWaitingRoom = false);
 
+    // 게임에서 나가면 대기 화면이 popUntil로 홈까지 한 번에 닫습니다. 그때는 이
+    // 화면도 이미 스택에서 제거되는 중이라 여기서 또 pop하면 홈 화면까지 닫혀
+    // 네비게이터 스택이 비고 검은 화면만 남습니다. 이 화면이 실제로 다시
+    // 보이는 경우(대기 화면만 정상적으로 닫힌 경우)에만 뒤로 이동합니다.
     final route = ModalRoute.of(context);
     if (route == null || !route.isCurrent) return;
     if (!_roomProvider.isInRoom) Navigator.of(context).pop();
   }
 
-  void _selectCharacter(String characterId) {
-    if (_occupiedCharacterIds.contains(characterId)) return;
-    _roomProvider.errorMessage = null;
-    setState(() => _selectedCharacterId = characterId);
-  }
-
   Future<void> _cancelSetup() async {
     if (_roomProvider.isLoading) return;
-    _roomProvider.stopRoomPreview();
-    if (mounted) Navigator.of(context).pop();
+    final left = await _roomProvider.leaveRoom();
+    if (!mounted || !left) return;
+    Navigator.of(context).pop();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final selectedColor = _playerAccentColors[_selectedColorIndex];
     return AnimatedBuilder(
       animation: _roomProvider,
       builder: (context, _) => PlatformPhoneFlowScaffold(
         title: '그룹 참여하기',
         onBack: _cancelSetup,
         bottom: PlatformButton(
-          label: '입장하기',
-          onPressed: _selectedCharacterId == null || _isOpeningWaitingRoom
-              ? null
-              : _saveProfileAndContinue,
-          loading: _isOpeningWaitingRoom,
+          label: _isOpeningWaitingRoom ? '입장 중...' : '설정 완료',
+          onPressed: _isOpeningWaitingRoom ? null : _saveProfileAndContinue,
         ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                _ParticipantPreview(players: _roomProvider.players),
-                const SizedBox(height: 22),
                 Text(
-                  '해당 그룹에서 사용할 닉네임과 캐릭터를 설정해 주세요.\n'
-                  '(다른 구성원과 중복이 불가합니다.)',
+                  '참여 코드',
                   style: TextStyle(
                     color: context.platformColors.textMuted,
                     fontSize: 13,
-                    height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _nicknameController,
-                        maxLength: 12,
-                        inputFormatters: [LengthLimitingTextInputFormatter(12)],
-                        decoration: const InputDecoration(
-                          hintText: '닉네임',
-                          counterText: '',
-                        ),
-                        onChanged: (_) {
-                          if (_roomProvider.errorMessage != null) {
-                            _roomProvider.errorMessage = null;
-                            setState(() {});
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    PlatformButton(
-                      label: '수정',
-                      expand: false,
-                      style: PlatformButtonStyle.secondary,
-                      onPressed: () => FocusScope.of(context).unfocus(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '캐릭터 선택',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    PlatformButton(
-                      label: '랜덤 선택',
-                      expand: false,
-                      height: 38,
-                      style: PlatformButtonStyle.secondary,
-                      onPressed: _availableCharacters.isEmpty
-                          ? null
-                          : _selectRandomAvailableCharacter,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: roomCharacters.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.86,
+                const SizedBox(width: 10),
+                Text(
+                  widget.roomCode,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
                   ),
-                  itemBuilder: (context, index) {
-                    final character = roomCharacters[index];
-                    return _CharacterChoice(
-                      character: character,
-                      selected: character.id == _selectedCharacterId,
-                      disabled: _occupiedCharacterIds.contains(character.id),
-                      onTap: () => _selectCharacter(character.id),
-                    );
-                  },
                 ),
-                if (_roomProvider.errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  _SetupAlert(message: _roomProvider.errorMessage!),
-                ],
               ],
             ),
-          ),
+            const SizedBox(height: 18),
+            PhoneRoomParticipantList(
+              players: _roomProvider.players,
+              compact: true,
+            ),
+            const SizedBox(height: 22),
+            const PlatformSectionTitle(title: '참가자 설정'),
+            const SizedBox(height: 8),
+            Text(
+              '게임에서 사용할 닉네임과 색상을 선택해 주세요.',
+              style: TextStyle(
+                color: context.platformColors.textMuted,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 29,
+                  backgroundColor: selectedColor.withValues(alpha: 0.15),
+                  backgroundImage: user?.photoURL?.isNotEmpty == true
+                      ? NetworkImage(user!.photoURL!)
+                      : null,
+                  child: user?.photoURL?.isNotEmpty == true
+                      ? null
+                      : Icon(Icons.person, color: selectedColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _nicknameController,
+                    maxLength: 12,
+                    decoration: const InputDecoration(
+                      hintText: '닉네임',
+                      counterText: '',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                const Text(
+                  '캐릭터 색상',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => setState(
+                    () => _selectedColorIndex = _random.nextInt(
+                      _playerAccentColors.length,
+                    ),
+                  ),
+                  child: const Text('랜덤 선택'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _playerAccentColors.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.25,
+              ),
+              itemBuilder: (context, index) => _ColorChoice(
+                color: _playerAccentColors[index],
+                selected: index == _selectedColorIndex,
+                onTap: () => setState(() => _selectedColorIndex = index),
+              ),
+            ),
+            if (_roomProvider.errorMessage != null) ...[
+              const SizedBox(height: 14),
+              PlatformNotice(
+                message: _roomProvider.errorMessage!,
+                style: PlatformNoticeStyle.danger,
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _ParticipantPreview extends StatelessWidget {
-  const _ParticipantPreview({required this.players});
-
-  final List<RoomPlayer> players;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              '참여자',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${players.length}명',
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (players.isEmpty)
-          Text(
-            '아직 참여자가 없습니다.',
-            style: TextStyle(color: colors.textMuted, fontSize: 13),
-          )
-        else
-          SizedBox(
-            height: 76,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: players.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final player = players[index];
-                return SizedBox(
-                  width: 54,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: colors.surfaceMuted,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Image.asset(
-                          roomCharacterAssetPath(player.characterId),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        player.nickname,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _CharacterChoice extends StatelessWidget {
-  const _CharacterChoice({
-    required this.character,
+class _ColorChoice extends StatelessWidget {
+  const _ColorChoice({
+    required this.color,
     required this.selected,
-    required this.disabled,
     required this.onTap,
   });
 
-  final RoomCharacter character;
+  final Color color;
   final bool selected;
-  final bool disabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    final image = Image.asset(character.assetPath, fit: BoxFit.contain);
     return InkWell(
-      onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Opacity(
-        opacity: disabled ? 0.34 : 1,
-        child: Column(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.13),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? context.platformColors.primary
+                : color.withValues(alpha: 0.28),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                width: double.infinity,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: colors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected ? colors.primary : Colors.transparent,
-                    width: selected ? 2.5 : 1,
-                  ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    disabled
-                        ? ColorFiltered(
-                            colorFilter: const ColorFilter.matrix(<double>[
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              1,
-                              0,
-                            ]),
-                            child: image,
-                          )
-                        : image,
-                    if (selected)
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: color.withValues(alpha: 0.2),
+              child: Text('ICON', style: TextStyle(color: color, fontSize: 6)),
+            ),
+            if (selected)
+              Positioned(
+                right: 5,
+                bottom: 5,
+                child: CircleAvatar(
+                  radius: 8,
+                  backgroundColor: context.platformColors.primary,
+                  child: const Icon(Icons.check, size: 11, color: Colors.white),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              character.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? colors.primary : colors.textMuted,
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-              ),
-            ),
           ],
         ),
       ),
@@ -467,40 +327,10 @@ class _CharacterChoice extends StatelessWidget {
   }
 }
 
-class _SetupAlert extends StatelessWidget {
-  const _SetupAlert({required this.message});
+String _toHex(Color color) =>
+    '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: colors.dangerSoft,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_rounded, size: 20, color: colors.danger),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: colors.danger,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+Color _parseHex(String value) {
+  final parsed = int.tryParse(value.replaceFirst('#', ''), radix: 16);
+  return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }

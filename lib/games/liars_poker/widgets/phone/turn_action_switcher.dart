@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
 
@@ -332,6 +331,10 @@ class PhonePlayerProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = player.profileImageUrl;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final imageCacheSize = (size * pixelRatio).round();
+
     return Container(
       width: size,
       height: size,
@@ -340,12 +343,21 @@ class PhonePlayerProfile extends StatelessWidget {
         color: Colors.grey,
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        roomCharacterAssetPath(player.characterId),
-        fit: BoxFit.contain,
-        gaplessPlayback: true,
-        filterQuality: FilterQuality.medium,
-      ),
+      child: imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              cacheWidth: imageCacheSize,
+              cacheHeight: imageCacheSize,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, _, _) => _fallbackIcon(),
+            )
+          : _fallbackIcon(),
     );
+  }
+
+  Widget _fallbackIcon() {
+    return Icon(Icons.person, color: Colors.white, size: size * 0.4);
   }
 }

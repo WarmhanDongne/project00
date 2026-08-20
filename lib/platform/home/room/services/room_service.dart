@@ -249,24 +249,10 @@ class RoomService {
 
   // ========================================================== phone ==================================================================
 
-  /// 실제 플레이어 노드를 만들기 전에 방 코드와 현재 입장 가능 상태만 검증합니다.
-  Future<void> validateRoomJoin(String roomCode) async {
-    final code = roomCode.trim().toUpperCase();
-    try {
-      await _functions.httpsCallable('validateRealtimeRoom').call({
-        'roomCode': code,
-      });
-    } on FirebaseFunctionsException catch (error) {
-      throw RoomCommandException(
-        error.message ?? '방 정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
-      );
-    }
-  }
-
   Future<void> joinRoom(
     String roomCode,
     String nickname, {
-    required String characterId,
+    required String accentColor,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -278,10 +264,8 @@ class RoomService {
     await _joinRoomWithRetry(
       roomCode: code,
       nickname: nickname,
-      characterId: characterId,
-      // 설정 화면에서 확정한 값을 사용합니다. 앱 재시작·네트워크 복구 경로만
-      // preserveProfile=true로 기존 방 프로필을 유지합니다.
-      preserveProfile: false,
+      accentColor: accentColor,
+      preserveProfile: true,
     );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
@@ -297,7 +281,7 @@ class RoomService {
   Future<void> restorePlayerConnection({
     required String roomCode,
     required String nickname,
-    required String characterId,
+    required String accentColor,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -309,7 +293,7 @@ class RoomService {
     await _joinRoomWithRetry(
       roomCode: code,
       nickname: nickname,
-      characterId: characterId,
+      accentColor: accentColor,
       preserveProfile: true,
     );
   }
@@ -338,22 +322,22 @@ class RoomService {
     );
   }
 
-  /// 이미 참가한 플레이어의 닉네임과 방 캐릭터를 갱신합니다.
+  /// 이미 참가한 플레이어의 닉네임과 UI 색상만 갱신합니다.
   Future<void> updateRoomPlayerProfile(
     String roomCode,
     String nickname, {
-    required String characterId,
+    required String accentColor,
   }) => _joinRoomWithRetry(
     roomCode: roomCode.trim().toUpperCase(),
     nickname: nickname,
-    characterId: characterId,
+    accentColor: accentColor,
     preserveProfile: false,
   );
 
   Future<void> _joinRoomWithRetry({
     required String roomCode,
     required String nickname,
-    required String characterId,
+    required String accentColor,
     required bool preserveProfile,
   }) async {
     FirebaseFunctionsException? lastError;
@@ -363,7 +347,7 @@ class RoomService {
         await _functions.httpsCallable('joinRealtimeRoom').call({
           'roomCode': roomCode,
           'nickname': nickname,
-          'characterId': characterId,
+          'accentColor': accentColor,
           'preserveProfile': preserveProfile,
         });
         return;
@@ -371,7 +355,8 @@ class RoomService {
         lastError = error;
         final shouldRetry =
             attempt < _functionOperationAttempts - 1 &&
-            (error.code == 'aborted' ||
+            (error.code == 'not-found' ||
+                error.code == 'aborted' ||
                 error.code == 'internal' ||
                 error.code == 'unavailable' ||
                 error.code == 'deadline-exceeded');

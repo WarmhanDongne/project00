@@ -80,7 +80,8 @@ void main() {
           RoomPlayer(
             uid: 'player-1',
             nickname: '플레이어1',
-            characterId: 'frog',
+            profileImageUrl: '',
+            accentColor: '#6557D2',
             isConnected: true,
             seatIndex: 0,
             role: 'player',

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
@@ -144,7 +143,7 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _PlayerAvatar(
-                      characterId: interruption.playerCharacterId,
+                      imageUrl: interruption.playerProfileImageUrl,
                       nickname: interruption.playerNickname,
                       size: isTabletController ? 116 : 96,
                     ),
@@ -259,17 +258,30 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
 
 class _PlayerAvatar extends StatelessWidget {
   const _PlayerAvatar({
-    required this.characterId,
+    required this.imageUrl,
     required this.nickname,
     required this.size,
   });
 
-  final String characterId;
+  final String imageUrl;
   final String nickname;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final fallback = ColoredBox(
+      color: const Color(0xFF303030),
+      child: Center(
+        child: Text(
+          nickname.isEmpty ? '?' : nickname.characters.first,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 30,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
     return Container(
       width: size,
       height: size,
@@ -278,10 +290,13 @@ class _PlayerAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0x55FFFFFF)),
       ),
-      child: Image.asset(
-        roomCharacterAssetPath(characterId),
-        fit: BoxFit.contain,
-      ),
+      child: imageUrl.trim().isEmpty
+          ? fallback
+          : Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            ),
     );
   }
 }

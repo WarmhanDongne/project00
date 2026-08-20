@@ -105,7 +105,7 @@ class FinalCallPlayer {
   const FinalCallPlayer({
     required this.uid,
     required this.nickname,
-    required this.characterId,
+    required this.profileImageUrl,
     required this.seatIndex,
     required this.team,
     required this.status,
@@ -114,7 +114,7 @@ class FinalCallPlayer {
 
   final String uid;
   final String nickname;
-  final String characterId;
+  final String profileImageUrl;
   final int seatIndex;
   final FinalCallTeam team;
   final String status;
@@ -125,7 +125,7 @@ class FinalCallPlayer {
     return FinalCallPlayer(
       uid: map['uid']?.toString() ?? key,
       nickname: map['nickname']?.toString() ?? 'Player',
-      characterId: map['characterId']?.toString() ?? 'frog',
+      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
       seatIndex: seatIndex,
       team: FinalCallTeam.fromWire(map['team'], seatIndex: seatIndex),
       status: map['status']?.toString() ?? 'alive',

@@ -129,7 +129,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     await preloadLiarsPokerAssets(
       context,
       isPhone: false,
-      characterIds: _characterIds,
+      profileImageUrls: _profileImageUrls,
     );
   }
 
@@ -282,9 +282,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       nickname: publicPlayer.nickname.trim().isNotEmpty
           ? publicPlayer.nickname.trim()
           : layoutPlayer?.nickname ?? 'Player',
-      characterId: publicPlayer.characterId.trim().isNotEmpty
-          ? publicPlayer.characterId.trim()
-          : layoutPlayer?.characterId ?? 'frog',
+      profileImageUrl: publicPlayer.profileImageUrl.trim().isNotEmpty
+          ? publicPlayer.profileImageUrl.trim()
+          : layoutPlayer?.profileImageUrl ?? '',
       seatIndex: publicPlayer.seatIndex,
     );
   }
@@ -318,17 +318,15 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     return seats;
   }
 
-  List<String> get _characterIds {
+  List<String> get _profileImageUrls {
     final players = _controller?.players ?? const <String, PhoneGamePlayer>{};
     return widget.playerLayout.players
         .map((layoutPlayer) {
-          final characterId = players[layoutPlayer.uid]?.characterId.trim();
-          if (characterId != null && characterId.isNotEmpty) {
-            return characterId;
-          }
-          return layoutPlayer.characterId.trim();
+          final publicUrl = players[layoutPlayer.uid]?.profileImageUrl.trim();
+          if (publicUrl != null && publicUrl.isNotEmpty) return publicUrl;
+          return layoutPlayer.profileImageUrl.trim();
         })
-        .where((id) => id.isNotEmpty)
+        .where((url) => url.isNotEmpty)
         .toList(growable: false);
   }
 
@@ -625,11 +623,11 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                             '${game.rouletteRetry}',
                           ),
                           attemptCount: game.penaltyAttemptCount,
-                          characterId:
+                          profileImageUrl:
                               _playerByUid(
                                 game.penaltyTargetUid,
-                              )?.characterId ??
-                              'frog',
+                              )?.profileImageUrl ??
+                              '',
                           isResolving: game.isResolvingPenalty,
                           onResult: game.resolveRoulette,
                         )

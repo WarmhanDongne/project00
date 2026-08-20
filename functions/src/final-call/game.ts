@@ -2,6 +2,7 @@
 
 import {randomInt} from "node:crypto";
 
+import {getFirestore} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 
 import {
@@ -41,6 +42,23 @@ export async function createFinalCallPlayers(
     throw new HttpsError("failed-precondition", "참가 플레이어가 없습니다.");
   }
 
+  const profileUrls = new Map<string, string>();
+  await Promise.all(Object.entries(roomPlayers).map(async ([uid, value]) => {
+    const roomUrl = typeof value.profileImageUrl === "string" ?
+      value.profileImageUrl.trim() : "";
+    if (roomUrl) {
+      profileUrls.set(uid, roomUrl);
+      return;
+    }
+    try {
+      const snapshot = await getFirestore().collection("users").doc(uid).get();
+      const url = snapshot.data()?.profileImageUrl;
+      if (typeof url === "string") profileUrls.set(uid, url.trim());
+    } catch (error) {
+      console.warn("Final Call profile lookup failed", error);
+    }
+  }));
+
   const players: Record<string, FinalCallPlayer> = {};
   for (const [uid, value] of Object.entries(roomPlayers)) {
     if (value.role !== "player" || value.status !== "active") continue;
@@ -53,8 +71,7 @@ export async function createFinalCallPlayers(
     players[uid] = {
       uid,
       nickname: typeof value.nickname === "string" ? value.nickname : "Player",
-      characterId: typeof value.characterId === "string" ?
-        value.characterId : "frog",
+      profileImageUrl: profileUrls.get(uid) ?? "",
       seatIndex: value.seatIndex as number,
       team: finalCallTeamForSeat(value.seatIndex as number),
       status: "alive",

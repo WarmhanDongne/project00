@@ -113,7 +113,7 @@ test("Final Call은 정확히 4명만 시작할 수 있다", async () => {
     role: "player",
     status: "active",
     nickname: `P${seatIndex}`,
-    characterId: "frog",
+    profileImageUrl: "https://example.com/profile.png",
     seatIndex,
   });
   await assert.rejects(() => createFinalCallPlayers({
@@ -129,7 +129,6 @@ test("Final Call은 정확히 4명만 시작할 수 있다", async () => {
     uid4: roomPlayer(3),
   });
   assert.equal(Object.keys(players).length, 4);
-  assert.equal(players.uid1.characterId, "frog");
   assert.equal(players.uid1.team, players.uid3.team);
   assert.equal(players.uid2.team, players.uid4.team);
 });

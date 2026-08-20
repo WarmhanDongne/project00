@@ -97,8 +97,8 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     await preloadLiarsPokerAssets(
       context,
       isPhone: true,
-      characterIds: controller.players.values.map(
-        (player) => player.characterId,
+      profileImageUrls: controller.players.values.map(
+        (player) => player.profileImageUrl,
       ),
     );
   }
@@ -168,7 +168,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             canPop: false,
             child: PhoneResultDialog(
               nickname: winner.nickname,
-              characterId: winner.characterId,
+              profileImageUrl: winner.profileImageUrl,
             ),
           );
         },
@@ -384,7 +384,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           (p) => PlayerLayoutPlayer(
             uid: p.uid,
             nickname: p.nickname,
-            characterId: p.characterId,
+            profileImageUrl: p.profileImageUrl, // 실제 프로필 이미지 연결
             seatIndex: 0,
           ),
         )

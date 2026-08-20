@@ -6,7 +6,6 @@ import 'package:project00/core/sound/app_sounds.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/gen/assets.gen.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:roulette/roulette.dart';
 
 enum RouletteResult { safe, eliminated }
@@ -16,12 +15,12 @@ class PenaltyRoulette extends StatefulWidget {
     super.key,
     required this.attemptCount,
     required this.onResult,
-    this.centerCharacterId,
+    this.centerProfileImageUrl,
   });
 
   final int attemptCount;
   final ValueChanged<RouletteResult> onResult;
-  final String? centerCharacterId;
+  final String? centerProfileImageUrl;
 
   @override
   State<PenaltyRoulette> createState() => _PenaltyRouletteState();
@@ -260,7 +259,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
             controller: _controller,
             group: _group,
             leverProgress: _leverController.value,
-            centerCharacterId: widget.centerCharacterId,
+            centerProfileImageUrl: widget.centerProfileImageUrl,
           ),
         ),
 
@@ -316,7 +315,7 @@ class RouletteWheel extends StatelessWidget {
     required this.controller,
     required this.group,
     required this.leverProgress,
-    required this.centerCharacterId,
+    required this.centerProfileImageUrl,
   });
 
   /// 룰렛 자체의 기준 크기
@@ -325,7 +324,7 @@ class RouletteWheel extends StatelessWidget {
   final RouletteController controller;
   final RouletteGroup group;
   final double leverProgress;
-  final String? centerCharacterId;
+  final String? centerProfileImageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +414,7 @@ class RouletteWheel extends StatelessWidget {
           // ========================================================
           // 중앙 프로필
           // ========================================================
-          if (centerCharacterId != null)
+          if (centerProfileImageUrl != null)
             Positioned(
               top: (_rouletteSize - 320) / 2 + 22,
               left: (_rouletteSize - 270) / 2,
@@ -423,11 +422,15 @@ class RouletteWheel extends StatelessWidget {
                 child: SizedBox.square(
                   dimension: 270,
                   child: ClipOval(
-                    child: Image.asset(
-                      roomCharacterAssetPath(centerCharacterId),
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                    ),
+                    child: centerProfileImageUrl!.trim().isEmpty
+                        ? const _RouletteProfileFallback()
+                        : Image.network(
+                            centerProfileImageUrl!,
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.high,
+                            errorBuilder: (_, _, _) =>
+                                const _RouletteProfileFallback(),
+                          ),
                   ),
                 ),
               ),
@@ -554,6 +557,22 @@ class RouletteWheel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ================================================================
+// 프로필 이미지 Fallback
+// ================================================================
+
+class _RouletteProfileFallback extends StatelessWidget {
+  const _RouletteProfileFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFF171717),
+      child: Icon(Icons.person_rounded, color: Colors.white70, size: 120),
     );
   }
 }
