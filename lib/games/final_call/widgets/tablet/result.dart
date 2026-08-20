@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
-import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// 게임 종료 후 우승자와 다음 동작을 보여주는 태블릿 결과 화면입니다.
 class Result extends StatelessWidget {
@@ -135,7 +136,7 @@ class _WinnerBadge extends StatelessWidget {
           child: SizedBox(
             width: 132,
             height: 132,
-            child: _WinnerProfileImage(imageUrl: player.profileImageUrl),
+            child: _WinnerProfileImage(characterId: player.characterId),
           ),
         ),
         const SizedBox(height: 40),
@@ -163,26 +164,16 @@ class _WinnerBadge extends StatelessWidget {
 }
 
 class _WinnerProfileImage extends StatelessWidget {
-  const _WinnerProfileImage({required this.imageUrl});
+  const _WinnerProfileImage({required this.characterId});
 
-  final String imageUrl;
+  final String characterId;
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty) return _buildFallback();
-
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
+    return Image.asset(
+      roomCharacterAssetPath(characterId),
+      fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
-      errorBuilder: (_, _, _) => _buildFallback(),
-    );
-  }
-
-  Widget _buildFallback() {
-    return const ColoredBox(
-      color: Color(0xffdedede),
-      child: Icon(Icons.account_circle, size: 112, color: Colors.grey),
     );
   }
 }

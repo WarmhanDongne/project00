@@ -1,11 +1,15 @@
 rules_version = '2';
 
 // 방과 게임 상태는 Realtime Database(`database.rules.json`)에만 있습니다.
-// Firestore에는 게임 스토어 목록과 사용자 프로필만 남습니다.
+// Firestore에는 게임 스토어 목록, 사용자 프로필, 온보딩 상태만 남습니다.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
       return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
     }
 
     // 게임 스토어 목록입니다. 등록과 수정은 콘솔에서만 합니다.
@@ -18,6 +22,12 @@ service cloud.firestore {
     // 쓰기는 Cloud Functions(`syncGoogleUserProfile`)만 수행합니다.
     match /users/{userId} {
       allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // 인증·프로필 설정 단계는 본인만 읽고 Cloud Functions만 씁니다.
+    match /userOnboarding/{userId} {
+      allow read: if isOwner(userId);
       allow write: if false;
     }
   }

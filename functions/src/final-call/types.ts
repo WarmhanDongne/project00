@@ -17,7 +17,7 @@ export interface FinalCallCard {
 export interface FinalCallPlayer {
   uid: string;
   nickname: string;
-  profileImageUrl: string;
+  characterId: string;
   seatIndex: number;
   team: FinalCallTeam;
   status: "alive" | "eliminated";

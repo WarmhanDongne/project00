@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
-import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// Final Call 태블릿에서 최종 승리자를 발표하는 결과 화면입니다.
 ///
@@ -302,7 +303,7 @@ class _WinnerPresentation extends StatelessWidget {
               height: winners.length > 1 ? 232 : 310,
               child: _WinnerProfile(
                 key: ValueKey('final-call-winner-profile-$index'),
-                imageUrl: winners[index].profileImageUrl,
+                characterId: winners[index].characterId,
                 accentColor: accentColor,
               ),
             ),
@@ -355,11 +356,11 @@ class _WinnerDivider extends StatelessWidget {
 class _WinnerProfile extends StatelessWidget {
   const _WinnerProfile({
     super.key,
-    required this.imageUrl,
+    required this.characterId,
     required this.accentColor,
   });
 
-  final String imageUrl;
+  final String characterId;
   final Color accentColor;
 
   @override
@@ -385,7 +386,9 @@ class _WinnerProfile extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(9),
-            child: ClipOval(child: _WinnerProfileImage(imageUrl: imageUrl)),
+            child: ClipOval(
+              child: _WinnerProfileImage(characterId: characterId),
+            ),
           ),
         ),
       ),
@@ -394,30 +397,16 @@ class _WinnerProfile extends StatelessWidget {
 }
 
 class _WinnerProfileImage extends StatelessWidget {
-  const _WinnerProfileImage({required this.imageUrl});
+  const _WinnerProfileImage({required this.characterId});
 
-  final String imageUrl;
+  final String characterId;
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty) return _fallback();
-
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
+    return Image.asset(
+      roomCharacterAssetPath(characterId),
+      fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
-      loadingBuilder: (context, child, progress) =>
-          progress == null ? child : _fallback(),
-      errorBuilder: (_, _, _) => _fallback(),
-    );
-  }
-
-  Widget _fallback() {
-    return const ColoredBox(
-      color: Color(0xFFE5E8EA),
-      child: Center(
-        child: Icon(Icons.person_rounded, size: 156, color: Color(0xFF73808A)),
-      ),
     );
   }
 }

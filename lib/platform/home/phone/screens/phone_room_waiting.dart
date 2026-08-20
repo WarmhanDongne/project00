@@ -23,11 +23,9 @@ class PhoneRoomWaiting extends StatefulWidget {
 
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   StreamSubscription<String?>? _gameStatusSubscription;
-  StreamSubscription<String?>? _controllerSubscription;
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
-  bool _isLeavingAfterControllerLost = false;
 
   @override
   void initState() {
@@ -82,9 +80,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     if (roomCode == null) {
       unawaited(_gameStatusSubscription?.cancel());
-      unawaited(_controllerSubscription?.cancel());
       _gameStatusSubscription = null;
-      _controllerSubscription = null;
       _subscribedRoomCode = null;
       _latestGameStatus = null;
       return;
@@ -96,7 +92,6 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     }
 
     unawaited(_gameStatusSubscription?.cancel());
-    unawaited(_controllerSubscription?.cancel());
     _subscribedRoomCode = roomCode;
     _latestGameStatus = null;
     _gameStatusSubscription = widget.provider.watchGameStatus(roomCode).listen((
@@ -105,31 +100,6 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       _latestGameStatus = status;
       _openGameIfReady(roomCode);
     }, onError: _showStatusError);
-
-    //=======================명시적인 방 종료 감지==============================
-    // controller presence false는 순간 단절이나 백그라운드일 수 있으므로
-    // 퇴장 조건으로 사용하지 않습니다. 서버 closeRoom의 closed 상태만 봅니다.
-    _controllerSubscription = widget.provider.watchRoomStatus(roomCode).listen((
-      status,
-    ) {
-      if (status == 'closed') _handleControllerLost();
-    }, onError: (_) {});
-  }
-
-  Future<void> _handleControllerLost() async {
-    // 게임 화면이 열려 있는 중이면 그 화면의 종료 흐름을 방해하지 않습니다.
-    if (_isLeavingAfterControllerLost || _isOpeningGame || !mounted) return;
-    _isLeavingAfterControllerLost = true;
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('태블릿이 방을 닫아 홈으로 돌아갑니다.')));
-
-    await widget.provider.leaveRoom();
-    if (!mounted) return;
-    //================상태바 표시=================
-    unawaited(AppSystemUi.showPlatformSystemBars());
-    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   /// `selectedGame`과 `game/public/status`는 서로 다른 RTDB 경로이므로 도착
@@ -185,7 +155,6 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   void dispose() {
     widget.provider.removeListener(_onRoomProviderChanged);
     _gameStatusSubscription?.cancel();
-    _controllerSubscription?.cancel();
     super.dispose();
   }
 
@@ -219,9 +188,11 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                     children: [
-                      PlatformNotice(
-                        message: '태블릿에서 게임을 선택하면 자동으로 시작합니다.',
-                        style: PlatformNoticeStyle.warning,
+                      _WaitingStatusBanner(
+                        message:
+                            selectedGameId == null || selectedGameId.isEmpty
+                            ? '태블릿에서 게임을 선택하는 중입니다'
+                            : '게임 시작을 기다리는 중입니다',
                       ),
                       const SizedBox(height: 18),
                       Row(
@@ -296,6 +267,55 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
           ),
         );
       },
+    );
+  }
+}
+
+class _WaitingStatusBanner extends StatelessWidget {
+  const _WaitingStatusBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              3,
+              (_) => Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

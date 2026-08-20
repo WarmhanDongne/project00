@@ -239,12 +239,4 @@ class SoundProvider extends ChangeNotifier {
     );
   }
 
-  // ============================================================
-  // Dispose
-  // ============================================================
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

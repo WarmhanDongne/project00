@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// 휴대폰에서 게임 우승자를 중앙에 표시하는 결과 다이얼로그입니다.
 ///
@@ -13,12 +14,12 @@ class PhoneResultDialog extends StatelessWidget {
   const PhoneResultDialog({
     super.key,
     required this.nickname,
-    required this.profileImageUrl,
+    required this.characterId,
     this.resultLabel = 'WINNER',
   });
 
   final String nickname;
-  final String profileImageUrl;
+  final String characterId;
   final String resultLabel;
 
   @override
@@ -41,7 +42,7 @@ class PhoneResultDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _CrownedWinnerProfile(
-                imageUrl: profileImageUrl,
+                characterId: characterId,
                 size: isLandscape ? 128 : 166,
               ),
               SizedBox(height: isLandscape ? 8 : 14),
@@ -60,9 +61,9 @@ class PhoneResultDialog extends StatelessWidget {
 
 /// 프로필 위에 은색 왕관 이미지를 겹쳐 씌운 우승자 표시입니다.
 class _CrownedWinnerProfile extends StatelessWidget {
-  const _CrownedWinnerProfile({required this.imageUrl, required this.size});
+  const _CrownedWinnerProfile({required this.characterId, required this.size});
 
-  final String imageUrl;
+  final String characterId;
   final double size;
 
   @override
@@ -76,7 +77,7 @@ class _CrownedWinnerProfile extends StatelessWidget {
         children: [
           Positioned(
             bottom: 0,
-            child: _WinnerProfile(imageUrl: imageUrl, size: size),
+            child: _WinnerProfile(characterId: characterId, size: size),
           ),
           Positioned(
             top: -40,
@@ -94,22 +95,13 @@ class _CrownedWinnerProfile extends StatelessWidget {
 }
 
 class _WinnerProfile extends StatelessWidget {
-  const _WinnerProfile({required this.imageUrl, required this.size});
+  const _WinnerProfile({required this.characterId, required this.size});
 
-  final String imageUrl;
+  final String characterId;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final fallback = ColoredBox(
-      color: const Color(0xFF263C31),
-      child: Icon(
-        Icons.person_rounded,
-        size: size * 0.7,
-        color: Colors.white70,
-      ),
-    );
-
     return Container(
       width: size,
       height: size,
@@ -119,14 +111,11 @@ class _WinnerProfile extends StatelessWidget {
         color: Color(0xFFD9E2DC),
       ),
       child: ClipOval(
-        child: imageUrl.trim().isEmpty
-            ? fallback
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (_, _, _) => fallback,
-              ),
+        child: Image.asset(
+          roomCharacterAssetPath(characterId),
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
       ),
     );
   }

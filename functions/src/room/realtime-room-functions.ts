@@ -6,7 +6,8 @@ import {
   getDatabase,
   ServerValue,
 } from "firebase-admin/database";
-import {getFirestore} from "firebase-admin/firestore";
+import {assertOnboardingComplete} from
+  "../auth/require-complete-onboarding.js";
 import {
   InterruptibleRoom,
   reconcileGamePlayerConnection,
@@ -34,6 +35,11 @@ const ROOM_CODE_PATTERN =
 // 게임의 start_game이 따로 확인합니다(예: 파이널콜은 4인 고정).
 const DEFAULT_MAX_PLAYERS = 12;
 const MAX_ROOM_CODE_ATTEMPTS = 20;
+const ROOM_CHARACTER_IDS = new Set([
+  "bear", "bee", "cat", "crab", "deer", "elephant", "frog", "giraffe",
+  "hedgehog", "kindbear", "octopus", "owl", "penguin", "rabbit", "shark",
+  "snake", "whale",
+]);
 
 type SaveSeatIndexesData = {
   roomCode?: unknown;
@@ -44,8 +50,12 @@ type SaveSeatIndexesData = {
 type JoinRealtimeRoomData = {
   roomCode?: unknown;
   nickname?: unknown;
-  accentColor?: unknown;
+  characterId?: unknown;
   preserveProfile?: unknown;
+};
+
+type ValidateRealtimeRoomData = {
+  roomCode?: unknown;
 };
 
 /**
@@ -78,6 +88,7 @@ export const createRealtimeRoom = onCall(
         "방을 만들려면 로그인이 필요합니다.",
       );
     }
+    await assertOnboardingComplete(controllerUid);
 
     const database = getDatabase();
     const controllerSessionId = createControllerSessionId();
@@ -139,6 +150,54 @@ export const createRealtimeRoom = onCall(
   },
 );
 
+/** 플레이어를 생성하지 않고 방 코드와 현재 입장 가능 상태만 검증합니다. */
+export const validateRealtimeRoom = onCall<ValidateRealtimeRoomData>(
+  {region: REGION},
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await assertOnboardingComplete(uid);
+
+    const rawRoomCode = request.data?.roomCode;
+    const roomCode = typeof rawRoomCode === "string" ?
+      rawRoomCode.trim().toUpperCase() : "";
+    if (!ROOM_CODE_PATTERN.test(roomCode)) {
+      throw new HttpsError("invalid-argument", "올바른 방 코드가 아닙니다.");
+    }
+
+    const snapshot = await getDatabase().ref(`rooms/${roomCode}`).get();
+    if (!snapshot.exists()) {
+      throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
+    }
+    const room = snapshot.val() as Record<string, unknown>;
+    if (room.status === "closed") {
+      throw new HttpsError("failed-precondition", "종료된 방입니다.");
+    }
+    const publicGame = room.game as
+      {public?: {status?: unknown}} | undefined;
+    if (
+      room.status === "finished" ||
+      publicGame?.public?.status === "playing"
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "이미 진행 중인 게임에는 새로 참가할 수 없습니다.",
+      );
+    }
+
+    const players = room.players !== null &&
+      typeof room.players === "object" &&
+      !Array.isArray(room.players) ?
+      room.players as Record<string, unknown> : {};
+    const maxPlayers = typeof room.maxPlayers === "number" ?
+      room.maxPlayers : DEFAULT_MAX_PLAYERS;
+    if (!(uid in players) && Object.keys(players).length >= maxPlayers) {
+      throw new HttpsError("resource-exhausted", "방 인원이 초과되었습니다.");
+    }
+    return {success: true, roomCode};
+  },
+);
+
 /**
  * 휴대폰 참가와 재접속을 Admin SDK로 처리합니다.
  * 기존 UID는 좌석과 게임 데이터를 유지하고 연결 상태만 복구합니다.
@@ -153,6 +212,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         "로그인이 필요합니다.",
       );
     }
+    await assertOnboardingComplete(uid);
 
     const rawRoomCode = request.data?.roomCode;
     const roomCode = typeof rawRoomCode === "string" ?
@@ -167,17 +227,19 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
     const rawNickname = request.data?.nickname;
     const nickname = typeof rawNickname === "string" ?
       rawNickname.trim() : "";
-    if (nickname.length < 1 || nickname.length > 20) {
+    if (nickname.length < 1 || nickname.length > 12) {
       throw new HttpsError(
         "invalid-argument",
-        "닉네임은 1~20자로 입력해주세요.",
+        "닉네임은 1~12자로 입력해주세요.",
       );
     }
 
-    const rawAccentColor = request.data?.accentColor;
-    const accentColor = typeof rawAccentColor === "string" &&
-      /^#[0-9A-F]{6}$/.test(rawAccentColor.toUpperCase()) ?
-      rawAccentColor.toUpperCase() : "#6557D2";
+    const rawCharacterId = request.data?.characterId;
+    const characterId = typeof rawCharacterId === "string" ?
+      rawCharacterId.trim() : "";
+    if (!ROOM_CHARACTER_IDS.has(characterId)) {
+      throw new HttpsError("invalid-argument", "올바른 캐릭터를 선택해주세요.");
+    }
     const preserveProfile = request.data?.preserveProfile === true;
 
     const database = getDatabase();
@@ -198,29 +260,6 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       room.maxPlayers : DEFAULT_MAX_PLAYERS;
     const playersRef = roomRef.child("players");
 
-    // Google 로그인 직후 Firestore에 동기화한 프로필을 우선 사용합니다.
-    // 문서가 없거나 일시적으로 읽지 못하면 인증 토큰의 사진을 사용합니다.
-    const tokenProfileImageUrl =
-      typeof request.auth?.token.picture === "string" ?
-        request.auth.token.picture : "";
-    let profileImageUrl = tokenProfileImageUrl;
-    try {
-      const userSnapshot = await getFirestore()
-        .collection("users")
-        .doc(uid)
-        .get();
-      const firestoreProfileImageUrl =
-        userSnapshot.data()?.profileImageUrl;
-      if (
-        typeof firestoreProfileImageUrl === "string" &&
-        firestoreProfileImageUrl.trim().length > 0
-      ) {
-        profileImageUrl = firestoreProfileImageUrl.trim();
-      }
-    } catch (error) {
-      console.warn("joinRealtimeRoom profile lookup failed", error);
-    }
-
     let rejection: HttpsError | null = null;
     let reconnected = false;
     let savedNickname = nickname;
@@ -238,9 +277,10 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         const effectiveNickname = preserveProfile &&
           existingPlayer && typeof existingPlayer.nickname === "string" ?
           existingPlayer.nickname : nickname;
-        const effectiveAccentColor = preserveProfile &&
-          existingPlayer && typeof existingPlayer.accentColor === "string" ?
-          existingPlayer.accentColor : accentColor;
+        const effectiveCharacterId = preserveProfile &&
+          existingPlayer && typeof existingPlayer.characterId === "string" &&
+          ROOM_CHARACTER_IDS.has(existingPlayer.characterId) ?
+          existingPlayer.characterId : characterId;
         const duplicatedNickname = Object.entries(players).some(
           ([playerUid, player]) =>
             playerUid !== uid && player?.nickname === effectiveNickname,
@@ -252,20 +292,31 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           );
           return;
         }
+        const duplicatedCharacter = Object.entries(players).some(
+          ([playerUid, player]) =>
+            playerUid !== uid && player?.characterId === effectiveCharacterId,
+        );
+        if (duplicatedCharacter) {
+          rejection = new HttpsError(
+            "already-exists",
+            "이미 선택된 캐릭터입니다.",
+          );
+          return;
+        }
 
         if (existingPlayer && typeof existingPlayer === "object") {
           reconnected = true;
           savedNickname = effectiveNickname;
-          players[uid] = {
+          const updatedPlayer: Record<string, unknown> = {
             ...existingPlayer,
             nickname: effectiveNickname,
-            profileImageUrl: profileImageUrl ||
-              (typeof existingPlayer.profileImageUrl === "string" ?
-                existingPlayer.profileImageUrl : ""),
+            characterId: effectiveCharacterId,
             isConnected: true,
             lastSeen: Date.now(),
-            accentColor: effectiveAccentColor,
           };
+          delete updatedPlayer.profileImageUrl;
+          delete updatedPlayer.accentColor;
+          players[uid] = updatedPlayer;
           return players;
         }
 
@@ -293,8 +344,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         players[uid] = {
           uid,
           nickname,
-          profileImageUrl,
-          accentColor,
+          characterId,
           isConnected: true,
           lastSeen: Date.now(),
           seatIndex: -1,

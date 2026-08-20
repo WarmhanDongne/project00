@@ -12,7 +12,7 @@ function room() {
     players: {
       leaving: {
         nickname: "나간 사람",
-        profileImageUrl: "https://example.com/profile.png",
+        characterId: "frog",
         isConnected: false,
       },
       a: {isConnected: true},
@@ -47,6 +47,7 @@ test("연결 중단은 턴 시간을 멈추고 남은 접속자의 과반 투표
   );
 
   assert.equal(interruption.playerNickname, "나간 사람");
+  assert.equal(interruption.playerCharacterId, "frog");
   assert.equal(interruption.deadlineAt, 61000);
   assert.deepEqual(interruption.eligibleVoterUids, ["a", "b", "c"]);
   assert.equal(interruption.requiredVotes, 2);
