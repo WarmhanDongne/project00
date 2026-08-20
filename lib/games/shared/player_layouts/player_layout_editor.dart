@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 typedef PlayerLayoutPrepared =
     Future<bool> Function(PlayerLayoutModel playerLayout);
@@ -593,8 +594,6 @@ class _PlayerSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasProfileImage = player.profileImageUrl.isNotEmpty;
-
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: Container(
@@ -605,12 +604,13 @@ class _PlayerSlot extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundImage: hasProfileImage
-                  ? NetworkImage(player.profileImageUrl)
-                  : null,
-              child: hasProfileImage ? null : const Icon(Icons.person),
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: Image.asset(
+                roomCharacterAssetPath(player.characterId),
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(height: 10),
             Row(

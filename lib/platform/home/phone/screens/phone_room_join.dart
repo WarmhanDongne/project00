@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -56,43 +55,9 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
       _isOpeningNameInput = true;
       _feedback = null;
     });
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _isOpeningNameInput = false;
-        _feedback = roomJoinFeedbackFor('로그인 정보를 확인할 수 없습니다.');
-      });
-      return;
-    }
-    final baseNickname = user.displayName?.trim().isNotEmpty == true
-        ? user.displayName!.trim()
-        : user.email?.split('@').first ?? '플레이어';
-    final safeBase = baseNickname.length <= 20
-        ? baseNickname
-        : baseNickname.substring(0, 20);
-
-    // 다음 화면에서 실제 닉네임을 정하기 전까지 잠깐 쓰이는 임시 값입니다.
-    // 같은 방에 동일한 닉네임이 이미 있으면 입장 자체가 막히므로,
-    // 그 경우에만 뒤에 작은 번호를 붙여 재시도합니다.
-    var joined = await _roomProvider.joinRoom(
-      roomCode,
-      safeBase,
-      accentColor: '#6557D2',
-    );
-    var attempt = 2;
-    while (!joined &&
-        _roomProvider.errorMessage == '이미 사용 중인 닉네임입니다.' &&
-        attempt <= 9) {
-      joined = await _roomProvider.joinRoom(
-        roomCode,
-        '$safeBase$attempt',
-        accentColor: '#6557D2',
-      );
-      attempt += 1;
-    }
+    final validated = await _roomProvider.validateRoomJoin(roomCode);
     if (!mounted) return;
-    if (!joined) {
+    if (!validated) {
       setState(() {
         _isOpeningNameInput = false;
         _feedback = roomJoinFeedbackFor(_roomProvider.errorMessage);

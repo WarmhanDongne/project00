@@ -184,9 +184,11 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                     children: [
-                      PlatformNotice(
-                        message: '태블릿에서 게임을 선택하면 자동으로 시작합니다.',
-                        style: PlatformNoticeStyle.warning,
+                      _WaitingStatusBanner(
+                        message:
+                            selectedGameId == null || selectedGameId.isEmpty
+                            ? '태블릿에서 게임을 선택하는 중입니다'
+                            : '게임 시작을 기다리는 중입니다',
                       ),
                       const SizedBox(height: 18),
                       Row(
@@ -261,6 +263,55 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
           ),
         );
       },
+    );
+  }
+}
+
+class _WaitingStatusBanner extends StatelessWidget {
+  const _WaitingStatusBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              3,
+              (_) => Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -615,7 +615,7 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
       if (other == null ||
           player.uid != other.uid ||
           player.nickname != other.nickname ||
-          player.profileImageUrl != other.profileImageUrl ||
+          player.characterId != other.characterId ||
           player.status != other.status ||
           player.remainingCardCount != other.remainingCardCount ||
           player.seatIndex != other.seatIndex ||

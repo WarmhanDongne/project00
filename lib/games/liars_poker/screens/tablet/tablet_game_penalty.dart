@@ -7,13 +7,13 @@ class LiarsPokerTabletGamePenalty extends StatelessWidget {
   const LiarsPokerTabletGamePenalty({
     super.key,
     required this.attemptCount,
-    required this.profileImageUrl,
+    required this.characterId,
     required this.isResolving,
     required this.onResult,
   });
 
   final int attemptCount;
-  final String profileImageUrl;
+  final String characterId;
   final bool isResolving;
   final ValueChanged<RouletteResult> onResult;
 
@@ -27,7 +27,7 @@ class LiarsPokerTabletGamePenalty extends StatelessWidget {
             child: Center(
               child: PenaltyRoulette(
                 attemptCount: attemptCount,
-                centerProfileImageUrl: profileImageUrl,
+                centerCharacterId: characterId,
                 onResult: onResult,
               ),
             ),

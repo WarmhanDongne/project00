@@ -78,8 +78,8 @@ export function beginGameInterruption(
     playerUid,
     playerNickname: stringValue(roomPlayer?.nickname) ||
       stringValue(publicPlayer.nickname) || "플레이어",
-    playerProfileImageUrl: stringValue(roomPlayer?.profileImageUrl) ||
-      stringValue(publicPlayer.profileImageUrl),
+    playerCharacterId: stringValue(roomPlayer?.characterId) ||
+      stringValue(publicPlayer.characterId) || "frog",
     reason,
     startedAt: now,
     deadlineAt: now + (options.durationMs ?? GAME_INTERRUPTION_VOTE_MS),

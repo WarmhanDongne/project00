@@ -9,7 +9,7 @@ class GameInterruption {
     required this.id,
     required this.playerUid,
     required this.playerNickname,
-    required this.playerProfileImageUrl,
+    required this.playerCharacterId,
     required this.reason,
     required this.startedAt,
     required this.deadlineAt,
@@ -26,7 +26,7 @@ class GameInterruption {
       id: map['id']?.toString() ?? '',
       playerUid: map['playerUid']?.toString() ?? '',
       playerNickname: map['playerNickname']?.toString() ?? '플레이어',
-      playerProfileImageUrl: map['playerProfileImageUrl']?.toString() ?? '',
+      playerCharacterId: map['playerCharacterId']?.toString() ?? 'frog',
       reason: map['reason']?.toString() == 'left'
           ? GameInterruptionReason.left
           : GameInterruptionReason.disconnected,
@@ -44,7 +44,7 @@ class GameInterruption {
   final String id;
   final String playerUid;
   final String playerNickname;
-  final String playerProfileImageUrl;
+  final String playerCharacterId;
   final GameInterruptionReason reason;
   final int startedAt;
   final int deadlineAt;

@@ -32,6 +32,14 @@
           ".read": "auth != null",
           "$playerUid": {
             ".write": false,
+            "nickname": {
+              ".write": false,
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "characterId": {
+              ".write": false,
+              ".validate": "newData.isString() && newData.val().matches(/^(bear|bee|cat|crab|deer|elephant|frog|giraffe|hedgehog|kindbear|octopus|owl|penguin|rabbit|shark|snake|whale)$/)"
+            },
             "isConnected": {
               ".write": "auth != null && auth.uid == $playerUid",
               ".validate": "newData.isBoolean()"

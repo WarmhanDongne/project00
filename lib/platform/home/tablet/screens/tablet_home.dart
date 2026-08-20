@@ -95,7 +95,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                 (player) => PlayerLayoutPlayer(
                   uid: player.uid,
                   nickname: player.nickname,
-                  profileImageUrl: player.profileImageUrl,
+                  characterId: player.characterId,
                   seatIndex: player.seatIndex,
                 ),
               ),
