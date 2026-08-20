@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -18,8 +19,6 @@ class PlayerListView extends StatelessWidget {
       itemCount: players.length,
       itemBuilder: (context, index) {
         final player = players[index];
-        final hasProfileImage = player.profileImageUrl.isNotEmpty;
-
         return ListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
@@ -31,14 +30,13 @@ class PlayerListView extends StatelessWidget {
             children: [
               _ConnectionDot(isConnected: player.isConnected),
               const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 16,
-                backgroundImage: hasProfileImage
-                    ? NetworkImage(player.profileImageUrl)
-                    : null,
-                child: hasProfileImage
-                    ? null
-                    : const Icon(Icons.person, size: 18),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: Image.asset(
+                  roomCharacterAssetPath(player.characterId),
+                  fit: BoxFit.contain,
+                ),
               ),
             ],
           ),

@@ -30,7 +30,7 @@ class PhoneGamePlayer {
   const PhoneGamePlayer({
     required this.uid,
     required this.nickname,
-    required this.profileImageUrl,
+    required this.characterId,
     required this.status,
     required this.remainingCardCount,
     this.seatIndex = 0,
@@ -39,7 +39,7 @@ class PhoneGamePlayer {
 
   final String uid;
   final String nickname;
-  final String profileImageUrl;
+  final String characterId;
   final String status;
   final int remainingCardCount;
 
@@ -54,7 +54,7 @@ class PhoneGamePlayer {
     return PhoneGamePlayer(
       uid: (uid == null || uid.isEmpty) ? key : uid,
       nickname: map['nickname']?.toString() ?? 'Player',
-      profileImageUrl: map['profileImageUrl']?.toString() ?? '',
+      characterId: map['characterId']?.toString() ?? 'frog',
       status: map['status']?.toString() ?? 'alive',
       remainingCardCount: (map['remainingCardCount'] as num?)?.toInt() ?? 0,
       seatIndex: (map['seatIndex'] as num?)?.toInt() ?? 0,

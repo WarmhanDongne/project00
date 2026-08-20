@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -17,7 +17,6 @@ class PhoneRoomParticipantList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -60,38 +59,23 @@ class PhoneRoomParticipantList extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) {
               final player = players[index];
-              final accent = _parseAccent(player.accentColor);
-              final isMe = player.uid == currentUid;
               return Container(
                 height: compact ? 46 : 52,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: isMe ? colors.primarySoft : colors.surface,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(
-                    color: isMe ? colors.primary : colors.border,
-                  ),
+                  border: Border.all(color: colors.border),
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: compact ? 14 : 16,
-                      backgroundColor: accent.withValues(alpha: 0.12),
-                      backgroundImage: player.profileImageUrl.isEmpty
-                          ? null
-                          : NetworkImage(player.profileImageUrl),
-                      child: player.profileImageUrl.isEmpty
-                          ? Text(
-                              player.nickname.isEmpty
-                                  ? '?'
-                                  : player.nickname.substring(0, 1),
-                              style: TextStyle(
-                                color: accent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            )
-                          : null,
+                    SizedBox(
+                      width: compact ? 30 : 34,
+                      height: compact ? 30 : 34,
+                      child: Image.asset(
+                        roomCharacterAssetPath(player.characterId),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -105,15 +89,6 @@ class PhoneRoomParticipantList extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isMe)
-                      Text(
-                        '나',
-                        style: TextStyle(
-                          color: colors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
                   ],
                 ),
               );
@@ -122,10 +97,4 @@ class PhoneRoomParticipantList extends StatelessWidget {
       ],
     );
   }
-}
-
-Color _parseAccent(String value) {
-  final hex = value.replaceFirst('#', '');
-  final parsed = int.tryParse(hex, radix: 16);
-  return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }

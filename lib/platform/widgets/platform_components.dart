@@ -271,6 +271,7 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
     this.showBack = true,
     this.actions = const [],
     this.onBack,
+    this.centerTitle = false,
   });
 
   final String title;
@@ -279,12 +280,14 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
   final bool showBack;
   final List<Widget> actions;
   final VoidCallback? onBack;
+  final bool centerTitle;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return Scaffold(
       appBar: AppBar(
+        centerTitle: centerTitle,
         automaticallyImplyLeading: false,
         leading: showBack
             ? IconButton(

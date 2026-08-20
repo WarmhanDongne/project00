@@ -42,7 +42,7 @@ class RoomProvider extends ChangeNotifier {
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
   String? _joinedNickname;
-  String? _joinedAccentColor;
+  String? _joinedCharacterId;
 
   String? errorMessage;
   String? selectedGameId;
@@ -147,6 +147,29 @@ class RoomProvider extends ChangeNotifier {
 
   Stream<String?> watchRoomStatus(String code) =>
       _service.watchRoomStatus(code.trim().toUpperCase());
+
+  Stream<List<RoomPlayer>> watchRoomPlayers(String code) =>
+      _service.watchRoomPlayers(code.trim().toUpperCase());
+
+  /// 입장 전 캐릭터 선택 화면에서 참가자와 점유 캐릭터만 구독합니다.
+  void listenRoomPreview(String rawRoomCode) {
+    if (roomCode != null) return;
+    final code = rawRoomCode.trim().toUpperCase();
+    playerSubscription?.cancel();
+    playerSubscription = _service.watchRoomPlayers(code).listen((value) {
+      if (roomCode != null) return;
+      players = value;
+      notifyListeners();
+    }, onError: _handleSubscriptionError);
+  }
+
+  void stopRoomPreview() {
+    if (roomCode != null) return;
+    playerSubscription?.cancel();
+    playerSubscription = null;
+    players = [];
+    notifyListeners();
+  }
 
   Stream<bool> watchServerConnection() => _service.watchServerConnection();
 
@@ -376,8 +399,8 @@ class RoomProvider extends ChangeNotifier {
       }
     }
     final nickname = currentPlayer?.nickname ?? _joinedNickname;
-    final accentColor = currentPlayer?.accentColor ?? _joinedAccentColor;
-    if (nickname == null || accentColor == null) return;
+    final characterId = currentPlayer?.characterId ?? _joinedCharacterId;
+    if (nickname == null || characterId == null) return;
 
     _presenceRestoreInFlight = true;
     _presenceRetryTimer?.cancel();
@@ -385,7 +408,7 @@ class RoomProvider extends ChangeNotifier {
       await _service.restorePlayerConnection(
         roomCode: code,
         nickname: nickname,
-        accentColor: accentColor,
+        characterId: characterId,
       );
       if (roomCode != code) return;
       _presenceRestoreAttempt = 0;
@@ -438,10 +461,20 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // ============================================== Phone을 위한 메서드 ========================================
+  Future<bool> validateRoomJoin(String rawRoomCode) async {
+    final code = rawRoomCode.trim().toUpperCase();
+    if (code.isEmpty) return false;
+    final result = await _runCommand<bool>(() async {
+      await _service.validateRoomJoin(code);
+      return true;
+    });
+    return result ?? false;
+  }
+
   Future<bool> joinRoom(
     String rawRoomCode,
     String nickname, {
-    String accentColor = '#6557D2',
+    required String characterId,
   }) async {
     // Room code 받기
     final code = rawRoomCode.trim().toUpperCase();
@@ -449,7 +482,7 @@ class RoomProvider extends ChangeNotifier {
 
     // joinRoom 실행
     final result = await _runCommand(() async {
-      await _service.joinRoom(code, nickname, accentColor: accentColor);
+      await _service.joinRoom(code, nickname, characterId: characterId);
       return true;
     });
 
@@ -458,12 +491,12 @@ class RoomProvider extends ChangeNotifier {
       wasKicked = false;
       _hasJoined = false;
       _joinedNickname = nickname;
-      _joinedAccentColor = accentColor;
+      _joinedCharacterId = characterId;
       roomCode = code;
       await _persistPlayerSession(
         roomCode: code,
         nickname: nickname,
-        accentColor: accentColor,
+        characterId: characterId,
       );
       listenRoom();
     }
@@ -472,7 +505,7 @@ class RoomProvider extends ChangeNotifier {
 
   Future<bool> updateJoinedPlayerProfile(
     String nickname, {
-    required String accentColor,
+    required String characterId,
   }) async {
     final code = roomCode;
     if (code == null) return false;
@@ -480,17 +513,17 @@ class RoomProvider extends ChangeNotifier {
       await _service.updateRoomPlayerProfile(
         code,
         nickname,
-        accentColor: accentColor,
+        characterId: characterId,
       );
       return true;
     });
     if (result == true) {
       _joinedNickname = nickname;
-      _joinedAccentColor = accentColor;
+      _joinedCharacterId = characterId;
       await _persistPlayerSession(
         roomCode: code,
         nickname: nickname,
-        accentColor: accentColor,
+        characterId: characterId,
       );
     }
     return result ?? false;
@@ -499,7 +532,7 @@ class RoomProvider extends ChangeNotifier {
   Future<void> _persistPlayerSession({
     required String roomCode,
     required String nickname,
-    required String accentColor,
+    required String characterId,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -508,7 +541,7 @@ class RoomProvider extends ChangeNotifier {
         uid: uid,
         roomCode: roomCode,
         nickname: nickname,
-        accentColor: accentColor,
+        characterId: characterId,
       );
     } catch (_) {
       // 로컬 저장 실패가 이미 성공한 서버 입장을 취소해서는 안 됩니다.
@@ -538,13 +571,13 @@ class RoomProvider extends ChangeNotifier {
       await _service.restorePlayerConnection(
         roomCode: session.roomCode,
         nickname: session.nickname,
-        accentColor: session.accentColor,
+        characterId: session.characterId,
       );
       if (_isDisposed) return false;
       wasKicked = false;
       _hasJoined = true;
       _joinedNickname = session.nickname;
-      _joinedAccentColor = session.accentColor;
+      _joinedCharacterId = session.characterId;
       roomCode = session.roomCode;
       listenRoom();
       _startPlayerHeartbeat(session.roomCode);
@@ -627,7 +660,7 @@ class RoomProvider extends ChangeNotifier {
     _presenceRestoreInFlight = false;
     _presenceRestoreAttempt = 0;
     _joinedNickname = null;
-    _joinedAccentColor = null;
+    _joinedCharacterId = null;
     notifyListeners();
   }
 
