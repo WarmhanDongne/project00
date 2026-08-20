@@ -123,8 +123,7 @@ class RegisterStepOne extends StatelessWidget {
                 onPressed: switch (step) {
                   RegisterStep.emailInput => isBusy ? null : onSendEmail,
                   RegisterStep.awaitingEmailLink ||
-                  RegisterStep.emailLinkFailed =>
-                    isBusy ? null : onResendEmail,
+                  RegisterStep.emailLinkFailed => isBusy ? null : onResendEmail,
                   RegisterStep.settingPassword => null,
                 },
                 style: _isSettingPassword
@@ -152,8 +151,7 @@ class RegisterStepOne extends StatelessWidget {
                 : _isSettingPassword
                 ? PlatformNoticeStyle.success
                 : PlatformNoticeStyle.warning,
-            leading:
-                _isWaiting && action == RegisterAction.completeLink
+            leading: _isWaiting && action == RegisterAction.completeLink
                 ? SizedBox(
                     width: 16,
                     height: 16,
@@ -224,8 +222,7 @@ class _PasswordFieldsState extends State<_PasswordFields> {
         final confirmation = widget.controller.text;
         final passwordStarted = password.isNotEmpty;
         final confirmationStarted = confirmation.isNotEmpty;
-        final passwordsMatch =
-            confirmationStarted && password == confirmation;
+        final passwordsMatch = confirmationStarted && password == confirmation;
         final canSetPassword =
             PasswordPolicy.isValid(password) && passwordsMatch;
 
@@ -290,14 +287,11 @@ class _PasswordFieldsState extends State<_PasswordFields> {
               },
               decoration: InputDecoration(
                 suffixIcon: IconButton(
-                  tooltip: _obscureConfirmation
-                      ? '비밀번호 확인 보기'
-                      : '비밀번호 확인 숨기기',
+                  tooltip: _obscureConfirmation ? '비밀번호 확인 보기' : '비밀번호 확인 숨기기',
                   onPressed: widget.isBusy
                       ? null
                       : () => setState(
-                          () => _obscureConfirmation =
-                              !_obscureConfirmation,
+                          () => _obscureConfirmation = !_obscureConfirmation,
                         ),
                   icon: Icon(
                     _obscureConfirmation
@@ -310,9 +304,7 @@ class _PasswordFieldsState extends State<_PasswordFields> {
             ),
             const SizedBox(height: 8),
             _PasswordRequirement(
-              label: passwordsMatch
-                  ? '비밀번호가 일치합니다.'
-                  : '비밀번호가 일치해야 합니다.',
+              label: passwordsMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치해야 합니다.',
               met: passwordsMatch,
               evaluated: confirmationStarted,
             ),

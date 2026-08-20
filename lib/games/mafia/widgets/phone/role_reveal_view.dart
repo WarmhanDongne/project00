@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class MafiaRoleRevealView extends StatefulWidget {
 }
 
 class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   //=======================디자인 기준 크기==============================
   // Figma 시안(402 × 874)의 좌표를 비율로 바꿔 어떤 휴대폰에서도 같은 배치가
   // 되도록 합니다. 값을 고칠 때는 시안과 함께 확인하세요.
@@ -52,30 +53,64 @@ class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
   /// 힌트 화살표 두 개의 중심 X입니다(시안 187·215).
   static const List<double> _hintCenterXRatios = [187 / 402, 215 / 402];
 
+  /// 보관 카드 자리입니다(시안 top 776 — 좌우는 카드와 같음).
+  static const double _storedTopRatio = 776 / 874;
+
+  /// 역할을 보여 주는 시간입니다. 이 뒤에 카드가 다시 뒤집혀 내려갑니다.
+  static const Duration _viewHold = Duration(seconds: 3);
+
   late final AnimationController _flipController;
+  late final AnimationController _slideController;
+  Timer? _viewTimer;
   bool _isRevealed = false;
+
+  /// 확인이 끝나 카드가 아래로 들어갔거나 들어가는 중인지입니다.
+  bool _isStoring = false;
 
   @override
   void initState() {
     super.initState();
+    // 재접속 복원: 이미 확인한 상태면 연출 없이 아래에 들어간 모습으로 시작합니다.
     _isRevealed = widget.initiallyRevealed;
+    _isStoring = widget.initiallyRevealed;
     _flipController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
-      value: widget.initiallyRevealed ? 1 : 0,
+      // 복원 상태는 카드가 이미 다시 뒤집혀(뒷면) 있습니다.
+      value: 0,
     )..addStatusListener(_handleFlipStatus);
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+      value: widget.initiallyRevealed ? 1 : 0,
+    );
   }
 
   void _handleFlipStatus(AnimationStatus status) {
-    if (status != AnimationStatus.completed) return;
-    widget.onRevealed?.call();
+    if (status == AnimationStatus.completed) {
+      // 확정 흐름: 뒤집힌 순간 확인 처리를 보냅니다. 그 뒤 잠시 보여 주고
+      // 카드가 다시 뒤집혀 화면 아래로 들어갑니다.
+      widget.onRevealed?.call();
+      _viewTimer = Timer(_viewHold, () {
+        if (!mounted) return;
+        setState(() => _isStoring = true);
+        _flipController.reverse();
+      });
+      return;
+    }
+    if (status == AnimationStatus.dismissed && _isStoring) {
+      // 다시 뒷면이 된 뒤 아래로 미끄러져 들어갑니다.
+      _slideController.forward();
+    }
   }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _flipController
       ..removeStatusListener(_handleFlipStatus)
       ..dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
@@ -107,7 +142,8 @@ class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
 
         final cardWidth = size.width * _cardWidthRatio;
         final cardHeight = cardWidth / _cardAspectRatio;
-        final cardTop = size.height * _cardTopRatio;
+        final revealTop = size.height * _cardTopRatio;
+        final storedTop = size.height * _storedTopRatio;
 
         return Stack(
           fit: StackFit.expand,
@@ -115,14 +151,27 @@ class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
             const Positioned.fill(child: MafiaPhoneBackground.day()),
             if (!_isRevealed)
               ..._buildFlipHints(size: size, textScale: textScale),
-            Positioned(
-              left: (size.width - cardWidth) / 2,
-              top: cardTop,
-              width: cardWidth,
-              height: cardHeight,
+            // 확인이 끝나면 카드가 보관 자리(시안 top 776)로 내려가 시안의
+            // 다른 화면들과 같은 모습이 됩니다.
+            AnimatedBuilder(
+              animation: _slideController,
+              builder: (context, child) {
+                final slide = Curves.easeInOut.transform(
+                  _slideController.value,
+                );
+                return Positioned(
+                  left: (size.width - cardWidth) / 2,
+                  top: revealTop + (storedTop - revealTop) * slide,
+                  width: cardWidth,
+                  height: cardHeight,
+                  child: child!,
+                );
+              },
               child: _buildCard(cardWidth: cardWidth),
             ),
-            if (_isRevealed) ..._buildRevealedTexts(size, textScale),
+            // 역할 문구는 카드가 내려가기 시작하면 함께 사라집니다.
+            if (_isRevealed && !_isStoring)
+              ..._buildRevealedTexts(size, textScale),
           ],
         );
       },

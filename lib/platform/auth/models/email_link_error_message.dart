@@ -9,8 +9,7 @@ abstract final class EmailLinkErrorMessage {
     'expired-action-code' =>
       '인증 링크가 만료되었습니다. '
           '아래 재전송 버튼으로 새 링크를 받아주세요.',
-    'too-many-requests' =>
-      '요청이 너무 많습니다. 잠시 후 인증 메일을 다시 요청해 주세요.',
+    'too-many-requests' => '요청이 너무 많습니다. 잠시 후 인증 메일을 다시 요청해 주세요.',
     'network-request-failed' => '네트워크 연결을 확인해주세요.',
     _ => error.message,
   };

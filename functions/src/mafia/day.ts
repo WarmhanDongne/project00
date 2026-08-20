@@ -4,7 +4,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
-import {beginMafiaVoting} from "./game.js";
+import {alivePlayers, beginMafiaVoting} from "./game.js";
 import {MafiaRoom} from "./types.js";
 import {
   assertMafiaAlive,
@@ -20,11 +20,11 @@ import {
 type EndData = {roomCode?: unknown; commandId?: unknown};
 
 /**
- * 자유 토론을 제한시간보다 먼저 끝냅니다(시안 P6의 `토론 종료 하기`).
+ * 토론 조기 종료에 **한 표**를 보탭니다(시안 P6의 `토론 종료 하기` = `n/m`).
  *
- * ⚠️ **미확정 규칙**: 지금은 살아 있는 사람 누구나 끝낼 수 있습니다. 시안에서
- * 버튼이 모든 휴대폰에 조건 없이 놓여 있어 그렇게 두었습니다. 방장만 또는
- * 과반 동의로 바꾸려면 이 함수의 조건만 고치면 됩니다.
+ * 확정 규칙: 살아 있는 사람의 **과반수**가 누르면 토론이 끝나고 투표로
+ * 넘어갑니다. 버튼은 실시간으로 `누른 사람 수 / 생존자 수`를 보여 줍니다.
+ * 한 번 누르면 취소할 수 없습니다.
  */
 export const game_mafia_end_discussion = onCall<EndData>(
   {region: MAFIA_REGION},
@@ -44,8 +44,7 @@ export const game_mafia_end_discussion = onCall<EndData>(
         response = previous;
         return room;
       }
-      // 이미 투표로 넘어갔으면 성공으로 답합니다. 여러 사람이 동시에 눌러도
-      // 첫 번째만 실제로 넘기고 나머지는 조용히 성공합니다.
+      // 이미 투표로 넘어갔으면 성공으로 답합니다(재시도 안전).
       if (game.public.phase !== "day") {
         response = {success: true, phase: game.public.phase};
         return room;
@@ -54,14 +53,35 @@ export const game_mafia_end_discussion = onCall<EndData>(
       assertMafiaAlive(game, uid);
 
       const now = Date.now();
-      beginMafiaVoting(game, now);
-      response = {success: true, phase: game.public.phase, endedBy: uid};
-      recordMafiaCommand(game, commandId, uid, "endDiscussion", now, response);
+      game.server.discussionSkipVotes ??= {};
+      const alreadyVoted = game.server.discussionSkipVotes[uid] === true;
+      game.server.discussionSkipVotes[uid] = true;
+      game.private[uid] ??= {roleId: game.server.roles[uid]};
+      game.private[uid].discussionSkipVoted = true;
+
+      const aliveCount = alivePlayers(game.public.players).length;
+      const skipCount = Object.keys(game.server.discussionSkipVotes).length;
+      game.public.discussionSkipCount = skipCount;
+      game.public.revision += 1;
+      game.public.updatedAt = now;
+
+      // 과반수 = 절반 초과. 10명이면 6명부터 끝납니다.
+      const majority = skipCount * 2 > aliveCount;
+      if (majority) beginMafiaVoting(game, now);
+
+      response = {
+        success: true,
+        alreadyVoted,
+        skipCount,
+        aliveCount,
+        phase: game.public.phase,
+      };
+      recordMafiaCommand(game, commandId, uid, "skipDiscussion", now, response);
       return room;
     });
 
     if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "토론을 끝내지 못했습니다.");
+      throw new HttpsError("aborted", "토론 종료 의사를 저장하지 못했습니다.");
     }
     return response;
   },

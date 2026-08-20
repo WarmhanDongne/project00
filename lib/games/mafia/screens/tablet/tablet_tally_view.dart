@@ -93,25 +93,30 @@ class MafiaTabletTallyView extends StatelessWidget {
       rect: Rect.fromLTWH(left, _avatarTop, _avatarSize, _avatarSize + 46),
       child: Column(
         children: [
-          SizedBox(
-            width: _avatarSize,
-            height: _avatarSize,
+          // 사진과 득표수를 위아래로 나눕니다. 득표수는 남는 공간 안에서만
+          // 그려지므로 화면 배율이 어떻게 바뀌어도 칸을 넘치지 않습니다.
+          Expanded(
+            flex: 136,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: MafiaProfileImage(url: player?.profileImageUrl ?? ''),
+              child: SizedBox.expand(
+                child: MafiaProfileImage(url: player?.profileImageUrl ?? ''),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
           // 득표수입니다. 누가 찍었는지는 담지 않습니다.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              '${entry.count}표',
-              maxLines: 1,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
+          Expanded(
+            flex: 46,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${entry.count}표',
+                maxLines: 1,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),

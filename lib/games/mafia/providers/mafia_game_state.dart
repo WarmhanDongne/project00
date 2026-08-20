@@ -27,6 +27,7 @@ class MafiaGameState {
     required this.roleRevealedUids,
     required this.nightSubmittedCount,
     required this.nightActorCount,
+    required this.discussionSkipCount,
     required this.voteSubmittedCount,
     required this.voteEligibleCount,
     required this.morningResult,
@@ -41,6 +42,7 @@ class MafiaGameState {
     required this.allySelections,
     required this.latestInvestigation,
     required this.voteTargetUid,
+    required this.discussionSkipVoted,
     required this.spectatorRoles,
   });
 
@@ -58,6 +60,7 @@ class MafiaGameState {
     roleRevealedUids: <String>[],
     nightSubmittedCount: 0,
     nightActorCount: 0,
+    discussionSkipCount: 0,
     voteSubmittedCount: 0,
     voteEligibleCount: 0,
     morningResult: null,
@@ -72,6 +75,7 @@ class MafiaGameState {
     allySelections: <String, String>{},
     latestInvestigation: null,
     voteTargetUid: null,
+    discussionSkipVoted: false,
     spectatorRoles: <String, String>{},
   );
 
@@ -98,6 +102,9 @@ class MafiaGameState {
   /// 밤 행동을 제출한 **인원수**입니다. 누가 냈는지는 서버가 보내지 않습니다.
   final int nightSubmittedCount;
   final int nightActorCount;
+
+  /// 토론 조기 종료에 동의한 인원수입니다. 버튼이 `n/m`으로 표시합니다.
+  final int discussionSkipCount;
 
   final int voteSubmittedCount;
   final int voteEligibleCount;
@@ -134,6 +141,9 @@ class MafiaGameState {
   /// 내가 투표한 대상입니다.
   final String? voteTargetUid;
 
+  /// 토론 조기 종료에 동의했는지입니다. 재접속해도 버튼 상태가 유지됩니다.
+  final bool discussionSkipVoted;
+
   /// 관전자에게만 주는 전원 신분표입니다. 사망 후에만 채워집니다.
   final Map<String, String> spectatorRoles;
 
@@ -151,6 +161,7 @@ class MafiaGameState {
     List<String>? roleRevealedUids,
     int? nightSubmittedCount,
     int? nightActorCount,
+    int? discussionSkipCount,
     int? voteSubmittedCount,
     int? voteEligibleCount,
     Object? morningResult = _notProvided,
@@ -165,6 +176,7 @@ class MafiaGameState {
     Map<String, String>? allySelections,
     Object? latestInvestigation = _notProvided,
     Object? voteTargetUid = _notProvided,
+    bool? discussionSkipVoted,
     Map<String, String>? spectatorRoles,
   }) {
     return MafiaGameState(
@@ -189,6 +201,7 @@ class MafiaGameState {
       ),
       nightSubmittedCount: nightSubmittedCount ?? this.nightSubmittedCount,
       nightActorCount: nightActorCount ?? this.nightActorCount,
+      discussionSkipCount: discussionSkipCount ?? this.discussionSkipCount,
       voteSubmittedCount: voteSubmittedCount ?? this.voteSubmittedCount,
       voteEligibleCount: voteEligibleCount ?? this.voteEligibleCount,
       morningResult: identical(morningResult, _notProvided)
@@ -217,6 +230,7 @@ class MafiaGameState {
       voteTargetUid: identical(voteTargetUid, _notProvided)
           ? this.voteTargetUid
           : voteTargetUid as String?,
+      discussionSkipVoted: discussionSkipVoted ?? this.discussionSkipVoted,
       spectatorRoles: Map.unmodifiable(spectatorRoles ?? this.spectatorRoles),
     );
   }

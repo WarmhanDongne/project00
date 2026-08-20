@@ -14,6 +14,7 @@ import {
 import {
   MAFIA_DAY_MS,
   MAFIA_NIGHT_MS,
+  MAFIA_ROLE_REVEAL_MS,
   MAFIA_VOTE_MS,
   MafiaFactionId,
   MafiaGameState,
@@ -179,12 +180,14 @@ export function createInitialMafiaGame(
       phase: "roleReveal",
       round: 1,
       revision: 1,
-      // 역할 확인은 전원이 누를 때까지 기다립니다. 제한시간을 두지 않습니다.
-      turnDeadlineAt: null,
+      // 전원 확인까지 기다리되 무한정은 아닙니다(확정: 약 1분). 시간이 지나면
+      // 태블릿이 completeRoleReveal로 진행합니다.
+      turnDeadlineAt: now + MAFIA_ROLE_REVEAL_MS,
       players,
       roleRevealedUids: [],
       nightSubmittedCount: 0,
       nightActorCount: 0,
+      discussionSkipCount: 0,
       voteSubmittedCount: 0,
       voteEligibleCount: 0,
       winner: null,
@@ -221,10 +224,15 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
   touch(game, now);
 }
 
-/** 낮 토론을 시작합니다. */
+/** 낮 토론을 시작합니다. 지난 낮의 조기 종료 동의를 지웁니다. */
 export function beginMafiaDay(game: MafiaGameState, now: number): void {
   game.public.phase = "day";
   game.public.turnDeadlineAt = now + MAFIA_DAY_MS;
+  game.public.discussionSkipCount = 0;
+  delete game.server.discussionSkipVotes;
+  for (const entry of Object.values(game.private)) {
+    delete entry.discussionSkipVoted;
+  }
   touch(game, now);
 }
 
@@ -283,6 +291,47 @@ function recordInvestigation(
   if (!actorPrivate) return;
   actorPrivate.investigations ??= {};
   actorPrivate.investigations[`r${round}`] = {round, targetUid, verdict};
+}
+
+/**
+ * 제출한 순간 조사·추적 결과를 본인 private에 기록합니다.
+ *
+ * 확정 흐름이 "선택 완료 → 결과 → 확인"이라 결과를 밤이 끝날 때까지 기다릴 수
+ * 없습니다. 다만 이 시점에는 프레이머 조작이나 대상의 최종 행동을 알 수 없어
+ * **잠정값**이고, 밤 해결 때 같은 자리(`r{round}`)에 최종값을 덮어씁니다.
+ */
+export function recordImmediateInvestigation(
+  game: MafiaGameState,
+  actorUid: string,
+  targetUid: string,
+  now: number,
+): void {
+  const role = mafiaRole(game.server.roles[actorUid]);
+  if (role === null) return;
+  const round = game.public.round;
+  switch (role.nightAction) {
+  case "investigate":
+  case "investigateRole": {
+    const verdict = mafiaInvestigationVerdict(
+      game.server.roles[targetUid],
+      false,
+    );
+    recordInvestigation(game, actorUid, targetUid, verdict, round);
+    break;
+  }
+  case "track": {
+    const visitedUid = game.server.nightActions?.[targetUid];
+    const verdict = visitedUid ?
+      game.public.players[visitedUid]?.nickname ?? "알 수 없음" :
+      "방문 없음";
+    recordInvestigation(game, actorUid, targetUid, verdict, round);
+    break;
+  }
+  default:
+    break;
+  }
+  // touch는 호출부(제출 트랜잭션)가 이미 합니다. now는 서명 일관성용입니다.
+  void now;
 }
 
 /** 표를 세어 최다 득표 대상을 고릅니다. */

@@ -47,11 +47,11 @@ class MafiaTabletExecutionView extends StatefulWidget {
   final VoidCallback? onSettingsPressed;
 
   //=======================연출 시간==============================
-  /// 이름을 보여 주는 시간입니다. 이 뒤에 카드가 나옵니다.
-  static const Duration nameHold = Duration(milliseconds: 2200);
+  /// 이름을 보여 주는 시간입니다(확정: 4초). 이 뒤에 카드가 나옵니다.
+  static const Duration nameHold = Duration(milliseconds: 4000);
 
-  /// 뒷면 카드를 보여 주는 시간입니다. 이 뒤에 뒤집습니다.
-  static const Duration cardHold = Duration(milliseconds: 1200);
+  /// 뒷면 카드를 보여 주는 시간입니다. 이 뒤에 뒤집혀 공개 5초가 이어집니다.
+  static const Duration cardHold = Duration(milliseconds: 1000);
 
   /// 카드가 뒤집히는 시간입니다. 휴대폰과 같게 맞췄습니다.
   static const Duration flipDuration = Duration(milliseconds: 620);

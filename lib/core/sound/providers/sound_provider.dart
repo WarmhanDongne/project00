@@ -238,5 +238,4 @@ class SoundProvider extends ChangeNotifier {
       }),
     );
   }
-
 }

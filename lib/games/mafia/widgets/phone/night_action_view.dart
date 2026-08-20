@@ -181,10 +181,13 @@ class MafiaNightActionView extends StatelessWidget {
           onSelect: onSelect,
         ),
       ),
+      // 확정 흐름: 대상을 고르기 전에는 버튼이 **무색**, 고르면 색이 생기며
+      // 활성됩니다. 누르면 서버로 제출됩니다.
       MafiaPhoneActionButton(
         label: '선택 완료',
         onTap: onConfirm,
         enabled: selectedUid != null && onConfirm != null,
+        colorlessWhenDisabled: true,
       ),
     ];
   }

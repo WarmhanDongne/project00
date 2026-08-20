@@ -16,6 +16,9 @@ import {PublicGameInterruption, ServerGameInterruption} from "../game-interrupti
 // server에만 두고, 개표 결과만 공개합니다.
 // =========================================================================
 
+/** 역할 확인 제한시간입니다. 이 안에 전원이 확인해야 합니다(확정: 약 1분). */
+export const MAFIA_ROLE_REVEAL_MS = 60000;
+
 /** 밤 제한시간입니다. 시안 미확정이라 잠정값입니다. */
 export const MAFIA_NIGHT_MS = 60000;
 
@@ -124,6 +127,13 @@ export interface MafiaPublicState {
   /** 이번 밤에 행동해야 하는 인원수입니다. */
   nightActorCount: number;
 
+  /**
+   * 토론 조기 종료에 동의한 인원수입니다(확정 규칙: 과반수 투표).
+   *
+   * 휴대폰 버튼이 `n/m`으로 실시간 표시합니다. 누가 눌렀는지는 넣지 않습니다.
+   */
+  discussionSkipCount: number;
+
   /** 투표를 마친 인원수입니다. 누가 마쳤는지는 넣지 않습니다. */
   voteSubmittedCount: number;
   /** 이번 투표에 참여할 수 있는 인원수입니다. */
@@ -180,6 +190,8 @@ export interface MafiaPrivatePlayer {
   investigations?: Record<string, MafiaInvestigationRecord>;
   /** 내가 투표한 대상입니다. */
   voteTargetUid?: string;
+  /** 토론 조기 종료에 동의했는지입니다. 재접속해도 버튼 상태가 유지됩니다. */
+  discussionSkipVoted?: boolean;
   /**
    * 관전자에게 공개하는 **전원의 신분**입니다. `uid → 역할 id`.
    *
@@ -204,6 +216,8 @@ export interface MafiaServerState {
   nightActions?: Record<string, string>;
   /** 이번 투표의 표입니다. `uid → 대상 uid`. */
   votes?: Record<string, string>;
+  /** 토론 조기 종료에 동의한 사람입니다. `uid → true`. */
+  discussionSkipVotes?: Record<string, true>;
   processedCommands?: Record<string, MafiaProcessedCommand>;
   interruption?: ServerGameInterruption;
 }

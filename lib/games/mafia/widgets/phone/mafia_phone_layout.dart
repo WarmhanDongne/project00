@@ -152,11 +152,22 @@ class MafiaPhoneActionButton extends StatelessWidget {
     required this.onTap,
     required this.enabled,
     this.top = MafiaPhoneDesign.buttonTop,
+    this.colorlessWhenDisabled = false,
+    this.labelColor,
   });
 
   final String label;
   final VoidCallback? onTap;
   final bool enabled;
+
+  /// 비활성일 때 배경을 **무색**으로 그립니다(확정: 밤 행동 화면).
+  ///
+  /// 대상을 고르기 전에는 버튼이 없는 것처럼 보이고, 고르면 색이 생기며
+  /// 활성됩니다. 기본값(false)은 기존처럼 40% 불투명입니다.
+  final bool colorlessWhenDisabled;
+
+  /// 글자 색을 덮어씁니다(예: 토론 조기 종료의 빨간 `n/m`).
+  final Color? labelColor;
 
   /// 시안 기준 top입니다. 기본값은 공용 버튼 위치입니다.
   final double top;
@@ -185,6 +196,8 @@ class MafiaPhoneActionButton extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: enabled
                           ? const Color(0xFFECEBEB)
+                          : colorlessWhenDisabled
+                          ? Colors.transparent
                           : const Color(0x66ECEBEB),
                       borderRadius: BorderRadius.circular(
                         MafiaPhoneDesign.buttonRadius * scale,
@@ -194,9 +207,13 @@ class MafiaPhoneActionButton extends StatelessWidget {
                       child: Text(
                         label,
                         style: TextStyle(
-                          color: enabled
-                              ? const Color(0xFF212730)
-                              : const Color(0x66212730),
+                          color:
+                              labelColor ??
+                              (enabled
+                                  ? const Color(0xFF212730)
+                                  : colorlessWhenDisabled
+                                  ? const Color(0x33ECEBEB)
+                                  : const Color(0x66212730)),
                           fontSize: 32 * scale,
                           fontWeight: FontWeight.w700,
                         ),
