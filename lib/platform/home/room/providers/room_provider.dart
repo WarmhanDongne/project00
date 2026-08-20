@@ -13,6 +13,8 @@ import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 
+enum RoomDataLoadStatus { idle, loading, loaded, failure }
+
 class RoomProvider extends ChangeNotifier {
   RoomProvider({RoomService? service, GameService? gameService})
     : _service = service ?? RoomService(),
@@ -29,6 +31,8 @@ class RoomProvider extends ChangeNotifier {
 
   List<RoomPlayer> players = [];
   List<GameInfo> groupGames = [];
+  RoomDataLoadStatus groupGamesLoadStatus = RoomDataLoadStatus.idle;
+  String? groupGamesError;
   bool isLoading = false;
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
@@ -46,10 +50,13 @@ class RoomProvider extends ChangeNotifier {
   String? _joinedCharacterId;
   List<String>? _lastGroupGameUids;
   int _groupGamesRequestId = 0;
+  int _selectedGameRequestId = 0;
 
   String? errorMessage;
   String? selectedGameId;
   GameInfo? selectedGame;
+  RoomDataLoadStatus selectedGameLoadStatus = RoomDataLoadStatus.idle;
+  String? selectedGameError;
 
   bool _isDisposed = false;
 
@@ -327,11 +334,18 @@ class RoomProvider extends ChangeNotifier {
       if (gameId != selectedGameId) {
         selectedGameId = gameId;
         selectedGame = null;
+        selectedGameError = null;
+        _selectedGameRequestId += 1;
+        selectedGameLoadStatus = gameId == null || gameId.isEmpty
+            ? RoomDataLoadStatus.idle
+            : RoomDataLoadStatus.loading;
         // 게임 시작 판단에 필요한 ID는 Firestore 메타데이터보다 먼저 전달합니다.
         notifyListeners();
 
-        if (gameId != null) {
-          unawaited(_loadSelectedGame(gameId));
+        if (gameId != null && gameId.isNotEmpty) {
+          unawaited(
+            _loadSelectedGame(gameId, expectedRoomCode: listenedRoomCode),
+          );
         }
       }
     }, onError: _handleSubscriptionError);
@@ -384,12 +398,24 @@ class RoomProvider extends ChangeNotifier {
   Future<void> _refreshGroupGames(
     List<String> activeUids, {
     required String expectedRoomCode,
+    bool force = false,
   }) async {
     if (roomCode != expectedRoomCode) return;
     final sortedUids = [...activeUids]..sort();
-    if (listEquals(_lastGroupGameUids, sortedUids)) return;
+    if (!force && listEquals(_lastGroupGameUids, sortedUids)) return;
     _lastGroupGameUids = sortedUids;
     final requestId = ++_groupGamesRequestId;
+    groupGames = [];
+    groupGamesLoadStatus = RoomDataLoadStatus.loading;
+    groupGamesError = null;
+    notifyListeners();
+
+    if (activeUids.isEmpty) {
+      groupGamesLoadStatus = RoomDataLoadStatus.loaded;
+      notifyListeners();
+      return;
+    }
+
     try {
       final games = await _gameService.fetchGroupGames(activeUids);
       if (_isDisposed ||
@@ -398,11 +424,34 @@ class RoomProvider extends ChangeNotifier {
         return;
       }
       groupGames = games;
+      groupGamesLoadStatus = RoomDataLoadStatus.loaded;
+      groupGamesError = null;
       notifyListeners();
     } catch (_) {
       // 실패하면 다음 players 이벤트에서 같은 구성으로도 다시 시도합니다.
-      if (requestId == _groupGamesRequestId) _lastGroupGameUids = null;
+      if (_isDisposed ||
+          roomCode != expectedRoomCode ||
+          requestId != _groupGamesRequestId) {
+        return;
+      }
+      _lastGroupGameUids = null;
+      groupGames = [];
+      groupGamesLoadStatus = RoomDataLoadStatus.failure;
+      groupGamesError = '게임 목록을 불러오지 못했습니다.';
+      notifyListeners();
     }
+  }
+
+  Future<void> retryGroupGames() async {
+    final code = roomCode;
+    if (code == null || groupGamesLoadStatus == RoomDataLoadStatus.loading) {
+      return;
+    }
+    final activeUids = players
+        .where((player) => player.isActive)
+        .map((player) => player.uid)
+        .toList(growable: false);
+    await _refreshGroupGames(activeUids, expectedRoomCode: code, force: true);
   }
 
   void _startPlayerHeartbeat(String code) {
@@ -481,16 +530,59 @@ class RoomProvider extends ChangeNotifier {
 
   /// 썸네일·설명 같은 화면용 Firestore 정보는 게임 시작 신호와 분리해 불러옵니다.
   /// 조회가 늦거나 실패해도 Realtime Database의 게임 시작 처리는 계속됩니다.
-  Future<void> _loadSelectedGame(String gameId) async {
+  Future<void> _loadSelectedGame(
+    String gameId, {
+    required String expectedRoomCode,
+  }) async {
+    if (roomCode != expectedRoomCode || selectedGameId != gameId) return;
+    final requestId = ++_selectedGameRequestId;
+    selectedGame = null;
+    selectedGameLoadStatus = RoomDataLoadStatus.loading;
+    selectedGameError = null;
+    notifyListeners();
     try {
       final game = await _gameService.getGame(gameId);
-      if (selectedGameId != gameId) return;
+      if (_isDisposed ||
+          roomCode != expectedRoomCode ||
+          selectedGameId != gameId ||
+          requestId != _selectedGameRequestId) {
+        return;
+      }
+      if (game == null) {
+        selectedGameLoadStatus = RoomDataLoadStatus.failure;
+        selectedGameError = '선택한 게임 정보를 찾을 수 없습니다.';
+        notifyListeners();
+        return;
+      }
       selectedGame = game;
+      selectedGameLoadStatus = RoomDataLoadStatus.loaded;
+      selectedGameError = null;
       notifyListeners();
     } catch (_) {
       // 게임 ID와 RTDB 상태만으로 게임 화면을 열 수 있으므로 메타데이터 실패는
       // 대기실의 시작 흐름을 중단하지 않습니다.
+      if (_isDisposed ||
+          roomCode != expectedRoomCode ||
+          selectedGameId != gameId ||
+          requestId != _selectedGameRequestId) {
+        return;
+      }
+      selectedGameLoadStatus = RoomDataLoadStatus.failure;
+      selectedGameError = '선택한 게임 정보를 불러오지 못했습니다.';
+      notifyListeners();
     }
+  }
+
+  Future<void> retrySelectedGame() async {
+    final code = roomCode;
+    final gameId = selectedGameId;
+    if (code == null ||
+        gameId == null ||
+        gameId.isEmpty ||
+        selectedGameLoadStatus == RoomDataLoadStatus.loading) {
+      return;
+    }
+    await _loadSelectedGame(gameId, expectedRoomCode: code);
   }
 
   void _handleSubscriptionError(Object error) {
@@ -703,7 +795,12 @@ class RoomProvider extends ChangeNotifier {
     players = [];
     selectedGameId = null;
     selectedGame = null;
+    selectedGameLoadStatus = RoomDataLoadStatus.idle;
+    selectedGameError = null;
+    _selectedGameRequestId += 1;
     groupGames = [];
+    groupGamesLoadStatus = RoomDataLoadStatus.idle;
+    groupGamesError = null;
     _lastGroupGameUids = null;
     _groupGamesRequestId += 1;
     _hasJoined = false;

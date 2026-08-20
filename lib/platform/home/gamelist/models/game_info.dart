@@ -6,6 +6,7 @@ class GameInfo {
     required this.id,
     required this.name,
     required this.description,
+    this.rules = '',
     required this.imageUrl,
     required this.enabled,
     required this.genres,
@@ -36,6 +37,7 @@ class GameInfo {
       id: firestoreString(json['id']),
       name: firestoreString(json['name'], fallback: '이름 없음'),
       description: firestoreString(json['description']),
+      rules: firestoreString(json['rules']),
       imageUrl: firestoreString(json['imageUrl']),
       enabled: json['enabled'] as bool? ?? true,
       genres: firestoreStringList(json['genres']),
@@ -54,6 +56,7 @@ class GameInfo {
   final String id;
   final String name;
   final String description;
+  final String rules;
   final String imageUrl;
   final bool enabled;
   final List<String> genres;
