@@ -57,9 +57,9 @@ abstract final class MafiaComposition {
     7: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 3},
     8: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 4},
     9: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 5},
-    10: {'godfather': 1, 'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 5},
+    10: {'mafia_boss': 1, 'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 5},
     11: {
-      'godfather': 1,
+      'mafia_boss': 1,
       'mafia': 2,
       'police': 1,
       'doctor': 1,
@@ -67,7 +67,7 @@ abstract final class MafiaComposition {
       'citizen': 5,
     },
     12: {
-      'godfather': 1,
+      'mafia_boss': 1,
       'mafia': 2,
       'police': 1,
       'doctor': 1,
