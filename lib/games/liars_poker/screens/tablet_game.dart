@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
+import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
@@ -27,6 +28,7 @@ import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
@@ -124,7 +126,15 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   Future<void> _warmUpAssets() async {
     final controller = _controller;
     if (controller == null) return;
-    await controller.waitForInitialData();
+    try {
+      // 첫 스냅샷이 오지 않거나 구독이 에러로 끝나도 사전 로딩 대기가
+      // unhandled exception이나 영구 대기로 남지 않게 합니다.
+      await controller.waitForInitialData().timeout(
+        const Duration(seconds: 12),
+      );
+    } catch (_) {
+      // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
+    }
     if (!mounted) return;
     await preloadLiarsPokerAssets(
       context,
@@ -478,7 +488,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     }
     // 빌드 도중 재생을 시작하지 않도록 프레임 이후로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _backgroundMusic.start();
+      if (mounted) _backgroundMusic.start(LiarsPokerSounds.background);
     });
   }
 
@@ -638,6 +648,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 child: LiarsPokerTabletGameOverlay(
                   provider: widget.provider,
                   stage: _stage,
+                  tableRank: game.table,
                   onRestartGame: _restartGame,
                   onEndGame: _endGame,
                 ),
@@ -682,7 +693,7 @@ class _GameBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.black,
-      child: Assets.games.liarsPoker.images.background.background.image(
+      child: Assets.games.liarsPoker.images.background.background.game.image(
         fit: BoxFit.cover,
         alignment: Alignment.center,
       ),

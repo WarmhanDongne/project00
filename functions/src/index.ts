@@ -71,6 +71,28 @@ export {game_final_call_end_game} from "./final-call/end-game.js";
 export {game_final_call_clear_game} from "./final-call/clear-game.js";
 export {game_final_call_leave_game} from "./final-call/leave-game.js";
 
+// ---------------------------------------------- 게임: 마피아
+export {game_mafia_start_game} from "./mafia/start-game.js";
+export {
+  game_mafia_confirm_role,
+  game_mafia_complete_role_reveal,
+} from "./mafia/role-reveal.js";
+export {
+  game_mafia_submit_night_action,
+  game_mafia_timeout_night,
+} from "./mafia/night.js";
+export {game_mafia_complete_morning} from "./mafia/morning.js";
+export {
+  game_mafia_end_discussion,
+  game_mafia_timeout_day,
+} from "./mafia/day.js";
+export {
+  game_mafia_submit_vote,
+  game_mafia_timeout_vote,
+  game_mafia_complete_vote_result,
+} from "./mafia/vote.js";
+export {game_mafia_end_game, game_mafia_leave_game} from "./mafia/end-game.js";
+
 // ---------------------------------------------- 게임 공용: 중단·재접속
 export {
   game_common_interruption_exclude_player,

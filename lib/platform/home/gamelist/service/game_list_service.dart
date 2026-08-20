@@ -48,17 +48,24 @@ class GameService {
 
   // 현재 그룹이 보유 중인 게임 목록을 반환
   Future<List<GameInfo>> fetchGroupGames(List<String> uids) async {
+    if (uids.isEmpty) return const [];
+
     // set 선언
     Set<String> groupOwnedGameIds = {};
 
-    for (final uid in uids) {
-      final userSnapshot = await _firestore.collection('users').doc(uid).get();
+    // uid별 순차 왕복 대신 병렬로 조회해 대기 시간을 1회 왕복 수준으로 줄입니다.
+    final userSnapshots = await Future.wait(
+      uids.map((uid) => _firestore.collection('users').doc(uid).get()),
+    );
+    for (final userSnapshot in userSnapshots) {
       final ownedGames = userSnapshot.data()?['ownedGames'];
 
       if (ownedGames is List) {
         groupOwnedGameIds.addAll(ownedGames.whereType<String>());
       }
     }
+
+    if (groupOwnedGameIds.isEmpty) return const [];
 
     // 전체 게임 목록 가져오기
     final gameSnapshot = await _firestore.collection('games').get();

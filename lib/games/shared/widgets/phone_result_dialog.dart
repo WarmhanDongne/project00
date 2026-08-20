@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 휴대폰에서 게임 우승자를 중앙에 표시하는 결과 다이얼로그입니다.
 ///
@@ -79,7 +80,7 @@ class _CrownedWinnerProfile extends StatelessWidget {
           ),
           Positioned(
             top: -40,
-            child: Assets.games.liarsPoker.images.other.borderCrown.image(
+            child: Assets.games.liarsPoker.images.other.borderCrown.game.image(
               width: size * 1.3,
               height: size * 0.86,
               fit: BoxFit.contain,

@@ -7,6 +7,7 @@ import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
 import 'package:project00/games/shared/game_flow/phone_game_flow_config.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
+import 'package:project00/games/shared/widgets/game_connecting_overlay.dart';
 
 /// 휴대폰 게임 화면의 공통 골격입니다.
 ///
@@ -36,6 +37,7 @@ class PhoneGameShell extends StatefulWidget {
     this.flowConfig,
     this.contentReady = true,
     this.contentRevealed = true,
+    this.onConnectingExit,
   });
 
   /// 현재 화면 단계입니다. 게임의 서버 상태를 번역해 넘깁니다.
@@ -75,6 +77,12 @@ class PhoneGameShell extends StatefulWidget {
 
   final VoidCallback onIntroCompleted;
   final VoidCallback onRoundIntroCompleted;
+
+  /// 연결 단계가 비정상적으로 길어질 때 표시하는 나가기 버튼의 동작입니다.
+  ///
+  /// 연결 단계는 배경만 보여 주는 것이 기본 연출이지만, 서버 상태가 오래
+  /// 오지 않으면 대기 안내와 탈출 수단을 제공해 영구 대기를 막습니다.
+  final VoidCallback? onConnectingExit;
 
   @override
   State<PhoneGameShell> createState() => _PhoneGameShellState();
@@ -176,6 +184,11 @@ class _PhoneGameShellState extends State<PhoneGameShell>
                 style: _announcementStyleForPhase(),
                 onCompleted: _handleAnnouncementCompleted,
               ),
+            ),
+            // 연결 단계가 길어지면 배경만 남는 화면 대신 대기 안내를 표시합니다.
+            GameConnectingOverlay(
+              isWaiting: widget.phase == GameScreenPhase.connecting,
+              onExit: widget.onConnectingExit,
             ),
           ],
         ),

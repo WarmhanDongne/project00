@@ -15,6 +15,7 @@ import 'package:project00/games/final_call/widgets/phone/turn_action_switcher.da
 import 'package:project00/games/final_call/widgets/phone/turn_timer.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 휴대폰의 손패와 조작부를 분리된 두 영역으로 표시합니다.
 class FinalCallPhoneGameScreen extends StatefulWidget {
@@ -319,7 +320,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
         return Stack(
           fit: StackFit.expand,
           children: [
-            Assets.games.finalCall.images.background.phoneBackground.image(
+            Assets.games.finalCall.images.background.phoneBackground.game.image(
               fit: BoxFit.cover,
             ),
             SafeArea(
@@ -382,9 +383,8 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
             isMyTurn: controller.isMyTurn,
             turnPlayer: controller.turnPlayer,
             callMessage: callNoticeReplacesTurnProfile
-                ? Assets.games.finalCall.images.modal.modalMessageCall.image(
-                    fit: BoxFit.contain,
-                  )
+                ? Assets.games.finalCall.images.modal.modalMessageCall.game
+                      .image(fit: BoxFit.contain)
                 : null,
             action: controller.isFinalSubmitPhase
                 ? _FinalSubmitAction(
@@ -454,7 +454,7 @@ class _FinalSubmitAction extends StatelessWidget {
             fit: StackFit.expand,
             alignment: Alignment.center,
             children: [
-              Assets.games.finalCall.images.other.blockNumberHolder.image(
+              Assets.games.finalCall.images.other.blockNumberHolder.game.image(
                 fit: BoxFit.contain,
                 filterQuality: FilterQuality.high,
               ),

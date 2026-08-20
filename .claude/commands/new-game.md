@@ -150,6 +150,12 @@ lib/games/<id>/
 - `assets/games/<id>/images/...`, `assets/sounds/<id>/` 구조
 - ⚠️ `pubspec.yaml` 에셋 등록은 **하위 폴더를 포함하지 않는다.** 폴더마다 한 줄씩 등록
 - 등록 후 `dart run build_runner build --delete-conflicting-outputs` — `lib/gen/assets.gen.dart` 직접 수정 금지
+- ⚠️ **게임 코드에서 이미지는 반드시 `Assets....game`([GameImage])으로 접근**한다.
+  `Assets....image()` 직접 호출 금지 — 서버 에셋 전환 시 그 화면만 깨진다.
+  소리는 기존대로 경로 문자열(`SoundService`가 해석). 게임 진입 preload에서
+  `GameAssetStore.instance.prepareGame('<id>')` 호출(실패는 삼킴)
+- 서버에 게임 문서를 등록할 때 `minAppVersion`에 그 게임이 포함된 앱 버전을
+  적는다. 구버전 앱에서는 시작 대신 업데이트 안내가 표시된다
 
 ## 반드시 사용자에게 물어봐야 하는 순간
 

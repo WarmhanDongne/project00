@@ -3,6 +3,7 @@ import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
@@ -21,6 +22,7 @@ import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Final Call 휴대폰 화면의 진입점입니다.
 class FinalCallPhoneGame extends ConsumerStatefulWidget {
@@ -72,6 +74,10 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     // 조건에 따라 게임 종류와 관계없이 항상 가로 고정됩니다.
     unawaited(
       AppOrientation.applyPhoneGame(PhoneGameOrientation.landscapeOnly),
+    );
+    // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행합니다.
+    unawaited(
+      GameAssetStore.instance.prepareGame('final_call').catchError((_) {}),
     );
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
@@ -198,7 +204,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   Future<void> _leaveRoom() async {
     final leave = await SharedPhoneExitModal.show(
       context,
-      doorImage: Assets.games.finalCall.images.modal.modalImageDoor.image(
+      doorImage: Assets.games.finalCall.images.modal.modalImageDoor.game.image(
         fit: BoxFit.contain,
       ),
       surfaceColor: Colors.white,
@@ -395,7 +401,13 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           roundNumber: game.round,
           closingMessage: closingMessage,
           introTextColor: Colors.black,
-          background: Assets.games.finalCall.images.background.phoneBackground
+          background: Assets
+              .games
+              .finalCall
+              .images
+              .background
+              .phoneBackground
+              .game
               .image(fit: BoxFit.cover),
           // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
           contentReady: game.hand.isNotEmpty,
@@ -406,6 +418,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           onRoundIntroCompleted: () {
             if (mounted) setState(() => announcedRound = game.round);
           },
+          // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
+          onConnectingExit: () => unawaited(_leaveRoom()),
           topBar: FinalCallPhoneTopBar(
             controller: game,
             onExitRoom: () => unawaited(_leaveRoom()),

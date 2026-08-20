@@ -9,6 +9,7 @@ import 'package:project00/games/shared/animations/phone_card_receive_animation.d
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 손패 선택 상태를 버튼에 전달하고 외부 SUBMIT 버튼으로 제출을 시작합니다.
 class PhoneHandCardStackController extends ChangeNotifier {
@@ -117,7 +118,7 @@ class PhoneHandCardStack extends StatefulWidget {
   }) : assert(maxSelection > 0);
 
   final bool isLandscape;
-  final List<AssetGenImage>? cards;
+  final List<GameImage>? cards;
   final PhoneHandCardStackController? controller;
   final bool enabled;
   final bool submissionEnabled;
@@ -173,7 +174,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   bool _showMaxSelectionMessage = false;
   int? _draggingCardId;
   double _dragOffsetY = 0;
-  List<AssetGenImage>? _pendingCards;
+  List<GameImage>? _pendingCards;
   Timer? _maxSelectionMessageTimer;
 
   @override
@@ -204,7 +205,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       // 제출 중 서버 손패가 먼저 갱신되어도 화면을 즉시 바꾸지 않습니다.
       // 카드가 화면 밖으로 이동한 다음 새 손패를 반영해야 중간 끊김이 없습니다.
       if (_isSubmitting) {
-        _pendingCards = List<AssetGenImage>.of(widget.cards!);
+        _pendingCards = List<GameImage>.of(widget.cards!);
       } else if (_sameCardAssets(_renderCardAssets, widget.cards!)) {
         // 낙관적으로 먼저 제거한 손패와 서버 손패가 같으면 카드 State와
         // 재배치 애니메이션을 유지합니다.
@@ -248,15 +249,15 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     super.dispose();
   }
 
-  List<AssetGenImage> get _defaultCards => [
-    Assets.games.liarsPoker.images.cards.whiteK,
-    Assets.games.liarsPoker.images.cards.whiteQ,
-    Assets.games.liarsPoker.images.cards.whiteA,
-    Assets.games.liarsPoker.images.cards.whiteA,
-    Assets.games.liarsPoker.images.cards.whiteJoker,
+  List<GameImage> get _defaultCards => [
+    Assets.games.liarsPoker.images.cards.whiteK.game,
+    Assets.games.liarsPoker.images.cards.whiteQ.game,
+    Assets.games.liarsPoker.images.cards.whiteA.game,
+    Assets.games.liarsPoker.images.cards.whiteA.game,
+    Assets.games.liarsPoker.images.cards.whiteJoker.game,
   ];
 
-  void _replaceCards(List<AssetGenImage> cards) {
+  void _replaceCards(List<GameImage> cards) {
     _renderCards = [
       for (final card in cards) _HandCardEntry(id: _nextCardId++, asset: card),
     ];
@@ -266,7 +267,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _dragOffsetY = 0;
   }
 
-  bool _sameCardAssets(List<AssetGenImage>? left, List<AssetGenImage> right) {
+  bool _sameCardAssets(List<GameImage>? left, List<GameImage> right) {
     if (identical(left, right)) return true;
     if (left == null || left.length != right.length) return false;
 
@@ -276,7 +277,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     return true;
   }
 
-  List<AssetGenImage> get _renderCardAssets =>
+  List<GameImage> get _renderCardAssets =>
       _renderCards.map((card) => card.asset).toList(growable: false);
 
   List<int> get _selectedIndexes => [
@@ -827,7 +828,7 @@ class _HandCardEntry {
   const _HandCardEntry({required this.id, required this.asset});
 
   final int id;
-  final AssetGenImage asset;
+  final GameImage asset;
 }
 
 class _StaticCardFace extends StatelessWidget {
@@ -841,7 +842,7 @@ class _StaticCardFace extends StatelessWidget {
   static const Color _selectedBorderColor = Color(0xFF8CA695);
   static const Color _selectedShadowColor = Color(0x66394F42);
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double cardWidth;
   final double cardHeight;
   final bool isSelected;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/widgets/phone_game_top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker 자산을 공용 휴대폰 상단 바에 연결합니다.
 class PhoneGameTopBar extends StatelessWidget {
@@ -34,10 +35,10 @@ class PhoneGameTopBar extends StatelessWidget {
       isLandscape: isLandscape,
       leading: leadingWidget,
       center: centerWidget,
-      bookIcon: Assets.games.liarsPoker.images.icons.iconRolePhone.image(
+      bookIcon: Assets.games.liarsPoker.images.icons.iconRolePhone.game.image(
         fit: BoxFit.contain,
       ),
-      outIcon: Assets.games.liarsPoker.images.icons.iconOut.image(
+      outIcon: Assets.games.liarsPoker.images.icons.iconOut.game.image(
         fit: BoxFit.contain,
       ),
       onBookPressed: onTipPressed ?? onSettingPressed,

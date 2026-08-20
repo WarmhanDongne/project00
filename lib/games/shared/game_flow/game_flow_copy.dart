@@ -8,6 +8,8 @@ abstract final class GameFlowCopy {
   static const authenticationRequired = '게임에 참여하려면 사용자 인증이 필요합니다.';
   static const gameOpenFailed = '게임을 열 수 없습니다.';
   static const leaveFailed = '게임에서 퇴장하지 못했습니다.';
+  static const waitingForGameData = '게임 준비를 기다리는 중...';
+  static const leaveGame = '나가기';
 
   static String round(int value) => 'ROUND $value';
 }

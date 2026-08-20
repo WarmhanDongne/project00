@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 역할 카드의 최초 확인부터 하단 보관, 재확인까지 모두 관리합니다.
 ///
@@ -30,8 +30,8 @@ class RoleCardRevealAnimation extends StatefulWidget {
        assert(storedVisibleFraction > 0 && storedVisibleFraction < 1),
        assert(sparkleCount > 0);
 
-  final AssetGenImage backCardAsset;
-  final AssetGenImage frontCardAsset;
+  final GameImage backCardAsset;
+  final GameImage frontCardAsset;
   final String revealedMessage;
   final double cardWidth;
   final Duration flipDuration;
@@ -292,7 +292,7 @@ class _RoleCardFace extends StatelessWidget {
     required this.flipLift,
   });
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double sparkleProgress;
   final List<_SparkleSpec> sparkles;
   final double flipLift;

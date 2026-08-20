@@ -5,6 +5,7 @@ import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker와 같은 진입 → 탭 → 좌우 회전 → 펼침 순서를 사용합니다.
 class FinalCallPhoneCardReceiveAnimation extends StatelessWidget {
@@ -53,7 +54,7 @@ class FinalCallPhoneCardReceiveAnimation extends StatelessWidget {
           frontCardAssets: cards
               .map(finalCallCardAsset)
               .toList(growable: false),
-          backCardAsset: Assets.games.finalCall.images.cards.cardBack,
+          backCardAsset: Assets.games.finalCall.images.cards.cardBack.game,
           cardWidth: cardWidth,
           spreadStepX: isLandscape ? cardWidth + 14 : 30,
           spreadStepY: isLandscape ? 0 : 30,

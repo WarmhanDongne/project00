@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:project00/games/shared/widgets/tablet_game_modal_frame.dart';
-import 'package:project00/gen/assets.gen.dart';
 import 'package:video_player/video_player.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 규칙 문구와 게임별 카드 자산만 주입하는 공용 태블릿 룰북입니다.
 class TabletGameRulebookDialog extends StatelessWidget {
@@ -16,7 +16,7 @@ class TabletGameRulebookDialog extends StatelessWidget {
 
   final String title;
   final String markdown;
-  final List<AssetGenImage> cardImages;
+  final List<GameImage> cardImages;
   final String? videoUrl;
 
   @override

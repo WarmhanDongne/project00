@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/widgets/tablet_game_rulebook_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 const _finalCallRules = '''
 # 게임 목표
@@ -62,10 +63,10 @@ class FinalCallTabletRoleBook extends StatelessWidget {
       markdown: _finalCallRules,
       videoUrl: provider.selectedGame?.ruleVideoUrl,
       cardImages: [
-        Assets.games.finalCall.images.cards.cardRed10,
-        Assets.games.finalCall.images.cards.cardBlue10,
-        Assets.games.finalCall.images.cards.cardYellow10,
-        Assets.games.finalCall.images.cards.cardGreen10,
+        Assets.games.finalCall.images.cards.cardRed10.game,
+        Assets.games.finalCall.images.cards.cardBlue10.game,
+        Assets.games.finalCall.images.cards.cardYellow10.game,
+        Assets.games.finalCall.images.cards.cardGreen10.game,
       ],
     );
   }

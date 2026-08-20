@@ -11,6 +11,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 화면 방향에 맞게 생존 플레이어를 표시하는 휴대폰 관전 화면입니다.
 class PhoneSpectator extends StatelessWidget {
@@ -262,8 +263,8 @@ class PhoneSpectator extends StatelessWidget {
 
   Widget _buildBackground({required bool isLandscape}) {
     final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
     return background.image(
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,
@@ -316,11 +317,11 @@ class PhoneSpectator extends StatelessWidget {
       ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
   }
 
-  AssetGenImage _tableAsset(String rank) {
+  GameImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
     };
   }
 }

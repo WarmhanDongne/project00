@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Final Call 태블릿에서 최종 승리자를 발표하는 결과 화면입니다.
 ///
@@ -32,7 +33,7 @@ class FinalCallResultOverlay extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Assets.games.finalCall.images.background.background.image(
+            Assets.games.finalCall.images.background.background.game.image(
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
             ),

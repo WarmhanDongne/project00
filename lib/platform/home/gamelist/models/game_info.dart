@@ -15,6 +15,7 @@ class GameInfo {
     required this.order,
     required this.ruleVideoUrl,
     required this.isOwned,
+    this.minAppVersion = '',
     this.createdAt,
     this.updatedAt,
   });
@@ -44,6 +45,7 @@ class GameInfo {
       order: firestoreInt(json['order']),
       ruleVideoUrl: firestoreString(json['ruleVideoUrl']),
       isOwned: json['isOwned'] == true,
+      minAppVersion: firestoreString(json['minAppVersion']),
       createdAt: firestoreDateTime(json['createdAt']),
       updatedAt: firestoreDateTime(json['updatedAt']),
     );
@@ -61,6 +63,13 @@ class GameInfo {
   final int order;
   final String ruleVideoUrl;
   final bool isOwned;
+
+  /// 이 게임을 실행하는 데 필요한 최소 앱 버전입니다(Firestore `minAppVersion`).
+  ///
+  /// 새 게임을 서버에 등록할 때 그 게임이 포함된 앱 버전을 함께 적으면,
+  /// 그 이전 빌드에서는 시작 대신 업데이트 안내가 표시됩니다. 빈 값이면
+  /// 모든 버전에서 허용합니다.
+  final String minAppVersion;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 

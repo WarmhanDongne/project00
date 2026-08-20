@@ -23,6 +23,7 @@ import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 기기 방향에 따라 가로·세로 배치를 전환하는 휴대폰 게임 화면입니다.
 ///
@@ -984,11 +985,11 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // ---------------------------------------------------------------------------
   // 테이블 카드 자산
   // ---------------------------------------------------------------------------
-  AssetGenImage _tableAsset(String rank) {
+  GameImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
     };
   }
 }
@@ -1179,7 +1180,7 @@ class _FoldPrompt extends StatelessWidget {
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
     final foldButton = LiarsPokerPressableAssetButton(
-      asset: Assets.games.liarsPoker.images.button.buttonFold,
+      asset: Assets.games.liarsPoker.images.button.buttonFold.game,
       // width: isLandscape ? 190 : 255.w,
       width: isLandscape ? 190 : 255.w,
       enabled: enabled,
@@ -1319,8 +1320,8 @@ class _PhoneGameBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final asset = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
 
     return asset.image(fit: BoxFit.cover, filterQuality: FilterQuality.high);
   }
