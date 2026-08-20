@@ -6,6 +6,10 @@
       ".read": false,
       ".write": false
     },
+    "roomCreateRequests": {
+      ".read": false,
+      ".write": false
+    },
     "rooms": {
       ".indexOn": ["controllerPresence/lastSeen", "status"],
       "$roomCode": {

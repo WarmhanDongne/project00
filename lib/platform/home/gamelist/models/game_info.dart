@@ -1,11 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:project00/firebase/utils/firestore_value.dart';
 
+enum GameAccessType {
+  free,
+  paid;
+
+  static GameAccessType fromFirestore(Object? value) =>
+      value == 'paid' ? GameAccessType.paid : GameAccessType.free;
+}
+
 class GameInfo {
   const GameInfo({
     required this.id,
     required this.name,
     required this.description,
+    this.rules = '',
     required this.imageUrl,
     required this.enabled,
     required this.genres,
@@ -15,6 +24,7 @@ class GameInfo {
     required this.order,
     required this.ruleVideoUrl,
     required this.isOwned,
+    this.accessType = GameAccessType.free,
     this.minAppVersion = '',
     this.createdAt,
     this.updatedAt,
@@ -36,6 +46,7 @@ class GameInfo {
       id: firestoreString(json['id']),
       name: firestoreString(json['name'], fallback: '이름 없음'),
       description: firestoreString(json['description']),
+      rules: firestoreString(json['rules']),
       imageUrl: firestoreString(json['imageUrl']),
       enabled: json['enabled'] as bool? ?? true,
       genres: firestoreStringList(json['genres']),
@@ -45,6 +56,7 @@ class GameInfo {
       order: firestoreInt(json['order']),
       ruleVideoUrl: firestoreString(json['ruleVideoUrl']),
       isOwned: json['isOwned'] == true,
+      accessType: GameAccessType.fromFirestore(json['accessType']),
       minAppVersion: firestoreString(json['minAppVersion']),
       createdAt: firestoreDateTime(json['createdAt']),
       updatedAt: firestoreDateTime(json['updatedAt']),
@@ -54,6 +66,7 @@ class GameInfo {
   final String id;
   final String name;
   final String description;
+  final String rules;
   final String imageUrl;
   final bool enabled;
   final List<String> genres;
@@ -63,6 +76,10 @@ class GameInfo {
   final int order;
   final String ruleVideoUrl;
   final bool isOwned;
+  final GameAccessType accessType;
+
+  bool get isFree => accessType == GameAccessType.free;
+  bool get isAccessible => isFree || isOwned;
 
   /// 이 게임을 실행하는 데 필요한 최소 앱 버전입니다(Firestore `minAppVersion`).
   ///

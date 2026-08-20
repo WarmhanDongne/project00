@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/network/critical_network_guard.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/games/mafia/screens/tablet_game.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
@@ -55,12 +56,19 @@ class MafiaGame extends TemplateGame {
   @override
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   }) {
-    return MafiaPhoneGame(
-      roomCode: roomCode,
-      gameService: MafiaService(),
-      onExitRoom: onExitRoom,
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        child: MafiaPhoneGame(
+          roomCode: roomCode,
+          gameService: MafiaService(),
+          onExitRoom: onExitRoom,
+        ),
+      ),
     );
   }
 
@@ -70,11 +78,18 @@ class MafiaGame extends TemplateGame {
     required RoomProvider provider,
     required String roomCode,
   }) {
-    return MafiaTabletGame(
-      roomCode: roomCode,
-      gameService: MafiaService(),
-      playerLayout: playerLayout,
-      provider: provider,
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        exitLabel: '대기실로',
+        onExit: () => Navigator.of(context).maybePop(),
+        child: MafiaTabletGame(
+          roomCode: roomCode,
+          gameService: MafiaService(),
+          playerLayout: playerLayout,
+          provider: provider,
+        ),
+      ),
     );
   }
 }

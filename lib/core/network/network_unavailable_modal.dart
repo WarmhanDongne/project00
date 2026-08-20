@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -11,7 +10,10 @@ class NetworkUnavailableModal extends StatelessWidget {
     super.key,
     required this.onRetry,
     this.isRetrying = false,
-    this.onBypass,
+    this.onExit,
+    this.exitLabel = '홈으로',
+    this.title = '네트워크에 접속할 수 없습니다.',
+    this.description = '네트워크 연결 상태를 확인해주세요.',
   });
 
   static const cardKey = Key('network-unavailable-card');
@@ -19,7 +21,10 @@ class NetworkUnavailableModal extends StatelessWidget {
 
   final VoidCallback onRetry;
   final bool isRetrying;
-  final VoidCallback? onBypass;
+  final VoidCallback? onExit;
+  final String exitLabel;
+  final String title;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
@@ -87,19 +92,15 @@ class NetworkUnavailableModal extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          GestureDetector(
-                            onLongPress: kDebugMode ? onBypass : null,
-                            child: Assets.images.others.networkUnavailable
-                                .image(
-                                  width: iconSize,
-                                  height: iconSize,
-                                  fit: BoxFit.contain,
-                                  filterQuality: FilterQuality.high,
-                                ),
+                          Assets.images.others.networkUnavailable.image(
+                            width: iconSize,
+                            height: iconSize,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
                           ),
                           SizedBox(height: isCompact ? 12 : 24),
                           Text(
-                            '네트워크에 접속할 수 없습니다.',
+                            title,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: const Color(0xFF404150),
@@ -111,7 +112,7 @@ class NetworkUnavailableModal extends StatelessWidget {
                           ),
                           SizedBox(height: isCompact ? 6 : 12),
                           Text(
-                            '네트워크 연결 상태를 확인해주세요.',
+                            description,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: const Color(0xFF9697A7),
@@ -129,6 +130,20 @@ class NetworkUnavailableModal extends StatelessWidget {
                             isRetrying: isRetrying,
                             onPressed: onRetry,
                           ),
+                          if (onExit != null) ...[
+                            SizedBox(height: isCompact ? 8 : 12),
+                            TextButton(
+                              onPressed: isRetrying ? null : onExit,
+                              child: Text(
+                                exitLabel,
+                                style: TextStyle(
+                                  color: const Color(0xFF6F7080),
+                                  fontSize: isTablet ? 20 : 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

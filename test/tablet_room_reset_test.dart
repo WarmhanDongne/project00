@@ -43,6 +43,21 @@ void main() {
       provider.dispose();
     });
 
+    test('방 생성 재시도는 같은 작업 ID를 재사용한다', () async {
+      final service = _FakeRoomService(failFirstCreate: true);
+      final provider = _provider(service);
+
+      await provider.createRoom();
+      expect(provider.roomCode, isNull);
+      await provider.createRoom();
+
+      expect(service.createOperationIds, hasLength(2));
+      expect(service.createOperationIds[0], isNotNull);
+      expect(service.createOperationIds[1], service.createOperationIds[0]);
+      expect(provider.roomCode, 'NEW12');
+      provider.dispose();
+    });
+
     test('이전 방의 늦은 정리 요청은 현재 방을 지우지 않는다', () {
       final provider = _provider(_FakeRoomService())..roomCode = 'NEW12';
 
@@ -54,6 +69,44 @@ void main() {
   });
 
   group('TabletRoomPanel Figma state flow', () {
+    testWidgets('내보내기는 해당 참가자만 로딩하고 초기화를 실행하지 않는다', (tester) async {
+      final removeCompleter = Completer<void>();
+      final service = _FakeRoomService(removeCompleter: removeCompleter);
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..players = const [
+          RoomPlayer(
+            uid: 'player-1',
+            nickname: '플레이어1',
+            characterId: 'frog',
+            isConnected: true,
+            seatIndex: 0,
+            role: 'player',
+            status: 'active',
+            penaltyAttemptCount: 0,
+          ),
+        ];
+      await _pumpPanel(tester, provider);
+
+      await tester.tap(find.byTooltip('내보내기'));
+      await tester.pump();
+
+      expect(service.removeCalls, 1);
+      expect(service.closeCalls, 0);
+      expect(provider.isLoading, isFalse);
+      expect(provider.isRemovingPlayer('player-1'), isTrue);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.tap(find.text('초기화'));
+      await tester.pump();
+      expect(service.closeCalls, 0);
+
+      removeCompleter.complete();
+      await tester.pumpAndSettle();
+      expect(provider.isRemovingPlayer('player-1'), isFalse);
+      provider.dispose();
+    });
+
     testWidgets('초대 모드 초기화는 구성원 없음으로 돌아간다', (tester) async {
       final service = _FakeRoomService();
       final provider = _provider(service)..roomCode = 'ABCDE';
@@ -123,11 +176,19 @@ Future<void> _pumpPanel(WidgetTester tester, RoomProvider provider) {
 }
 
 class _FakeRoomService implements RoomService {
-  _FakeRoomService({this.closeCompleter});
+  _FakeRoomService({
+    this.closeCompleter,
+    this.removeCompleter,
+    this.failFirstCreate = false,
+  });
 
   final Completer<void>? closeCompleter;
+  final Completer<void>? removeCompleter;
+  final bool failFirstCreate;
   int closeCalls = 0;
+  int removeCalls = 0;
   int createCalls = 0;
+  final List<String?> createOperationIds = [];
 
   @override
   Future<void> closeControllerRoom(String roomCode) {
@@ -136,9 +197,19 @@ class _FakeRoomService implements RoomService {
   }
 
   @override
-  Future<String> createRoom() async {
+  Future<String> createRoom({String? operationId}) async {
     createCalls += 1;
+    createOperationIds.add(operationId);
+    if (failFirstCreate && createCalls == 1) {
+      throw StateError('response lost');
+    }
     return 'NEW12';
+  }
+
+  @override
+  Future<void> removePlayer(String roomCode, String userUid) {
+    removeCalls += 1;
+    return removeCompleter?.future ?? Future<void>.value();
   }
 
   @override

@@ -265,13 +265,15 @@ static const games = [LiarsPokerGame(), FinalCallGame()];
 `games/{gameId}` 문서는 `GameInfo`로 파싱한다.
 
 ```text
-name, description, imageUrl, enabled, genres,
+name, description, rules, imageUrl, enabled, accessType, genres,
 minPlayers, maxPlayers, playTime, order, ruleVideoUrl,
 createdAt, updatedAt
 ```
 
-`users/{uid}`는 프로필과 `ownedGames`를 가진다. 그룹 보유 게임은 활성 참가자들의
-`ownedGames` 합집합이다. Firestore 데이터는 게임 턴 진행의 권위가 아니다.
+`accessType`은 `free` 또는 `paid`이며 누락된 기존 문서는 `free`로 해석한다.
+`users/{uid}`는 프로필과 `ownedGames`를 가진다. 그룹에서 접근 가능한 게임은
+활성 무료 게임과 태블릿 사용자·활성 참가자들의 `ownedGames` 합집합에 포함된
+유료 게임이다. Firestore 데이터는 게임 턴 진행의 권위가 아니다.
 
 ### 4.2 Realtime Database: 방과 현재 게임
 

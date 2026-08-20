@@ -44,6 +44,7 @@ class TemplateExampleGame extends TemplateGame {
   @override
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   }) {
     return TemplatePhoneGame(roomCode: roomCode, onExitRoom: onExitRoom);

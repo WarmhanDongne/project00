@@ -13,7 +13,6 @@ class GameService {
   /// 전체 게임 목록을 불러오고 현재 사용자의 보유 여부를 함께 반환
   Future<List<GameInfo>> fetchGames() async {
     final user = _auth.currentUser;
-    if (user == null) return [];
 
     // 전체 게임 목록
     final gameSnapshot = await _firestore.collection('games').get();
@@ -21,15 +20,12 @@ class GameService {
     // 내가 보유한 게임 ID
     Set<String> ownedGameIds = {};
 
-    final userSnapshot = await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-    final ownedGames = userSnapshot.data()?['ownedGames'];
-
-    if (ownedGames is List) {
-      ownedGameIds = ownedGames.whereType<String>().toSet();
+    if (user != null) {
+      final userSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      ownedGameIds = _ownedGameIds(userSnapshot.data()?['ownedGames']);
     }
 
     final games = gameSnapshot.docs
@@ -39,7 +35,7 @@ class GameService {
             isOwned: ownedGameIds.contains(doc.id),
           ),
         )
-        .where((game) => game.enabled)
+        .where((game) => game.enabled && game.isAccessible)
         .toList(growable: false);
 
     games.sort((left, right) => left.order.compareTo(right.order));
@@ -48,33 +44,30 @@ class GameService {
 
   // 현재 그룹이 보유 중인 게임 목록을 반환
   Future<List<GameInfo>> fetchGroupGames(List<String> uids) async {
-    if (uids.isEmpty) return const [];
-
-    // set 선언
-    Set<String> groupOwnedGameIds = {};
+    final groupOwnedGameIds = <String>{};
 
     // uid별 순차 왕복 대신 병렬로 조회해 대기 시간을 1회 왕복 수준으로 줄입니다.
     final userSnapshots = await Future.wait(
-      uids.map((uid) => _firestore.collection('users').doc(uid).get()),
+      uids.toSet().map((uid) => _firestore.collection('users').doc(uid).get()),
     );
     for (final userSnapshot in userSnapshots) {
-      final ownedGames = userSnapshot.data()?['ownedGames'];
-
-      if (ownedGames is List) {
-        groupOwnedGameIds.addAll(ownedGames.whereType<String>());
-      }
+      groupOwnedGameIds.addAll(
+        _ownedGameIds(userSnapshot.data()?['ownedGames']),
+      );
     }
-
-    if (groupOwnedGameIds.isEmpty) return const [];
 
     // 전체 게임 목록 가져오기
     final gameSnapshot = await _firestore.collection('games').get();
 
     // 그룹이 가진 게임만 필터링하여 GameInfo 객체로 반환
     final games = gameSnapshot.docs
-        .where((doc) => groupOwnedGameIds.contains(doc.id))
-        .map((doc) => GameInfo.fromSnapshot(doc, isOwned: true))
-        .where((game) => game.enabled)
+        .map(
+          (doc) => GameInfo.fromSnapshot(
+            doc,
+            isOwned: groupOwnedGameIds.contains(doc.id),
+          ),
+        )
+        .where((game) => game.enabled && game.isAccessible)
         .toList(growable: false);
 
     // 순서에 맞게 정렬 후 반환
@@ -101,14 +94,14 @@ class GameService {
   }
 
   Future<GameInfo?> getGame(String gameId) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('games')
-        .doc(gameId)
-        .get();
+    final snapshot = await _firestore.collection('games').doc(gameId).get();
 
     if (!snapshot.exists) {
       return null;
     }
     return GameInfo.fromSnapshot(snapshot);
   }
+
+  Set<String> _ownedGameIds(Object? value) =>
+      value is List ? value.whereType<String>().toSet() : const <String>{};
 }

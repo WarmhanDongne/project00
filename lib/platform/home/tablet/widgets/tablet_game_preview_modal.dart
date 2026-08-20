@@ -19,10 +19,12 @@ class GamePreviewDialog extends StatefulWidget {
     super.key,
     required this.game,
     required this.roomProvider,
+    this.selectionActive = false,
   });
 
   final GameInfo game;
   final RoomProvider roomProvider;
+  final bool selectionActive;
 
   @override
   State<GamePreviewDialog> createState() => _GamePreviewDialogState();
@@ -30,6 +32,7 @@ class GamePreviewDialog extends StatefulWidget {
 
 class _GamePreviewDialogState extends State<GamePreviewDialog> {
   bool _isPlayingVideo = false;
+  bool _isClosing = false;
   YoutubePlayerController? _youtubeController;
 
   @override
@@ -94,6 +97,38 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _dismiss() async {
+    if (_isClosing) return;
+    if (!widget.selectionActive) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() => _isClosing = true);
+    final cleared = await widget.roomProvider.clearSelectedGame();
+    if (!mounted) return;
+    if (cleared) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _isClosing = false);
+    _showMessage(
+      context,
+      widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
+    );
+  }
+
+  void _handleBack() {
+    if (_isPlayingVideo) {
+      setState(() {
+        _isPlayingVideo = false;
+        _youtubeController?.pauseVideo();
+      });
+      return;
+    }
+    unawaited(_dismiss());
+  }
+
   Future<void> _startGame(BuildContext context) async {
     final players = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
@@ -134,16 +169,6 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       return;
     }
 
-    final selected = await widget.roomProvider.selectGame(widget.game.id);
-    if (!context.mounted) return;
-    if (!selected) {
-      _showMessage(
-        context,
-        widget.roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.',
-      );
-      return;
-    }
-
     final roomCode = widget.roomProvider.roomCode;
     if (roomCode == null) {
       _showMessage(context, '방 정보를 확인할 수 없습니다.');
@@ -163,6 +188,17 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
           tableBackgroundImage: templateGame.tableBackgroundImage,
           tableImage: templateGame.layoutTableImage,
           chairImage: templateGame.layoutChairImage,
+          onCancel: () async {
+            final cleared = await widget.roomProvider.clearSelectedGame();
+            if (!layoutContext.mounted) return false;
+            if (!cleared) {
+              _showMessage(
+                layoutContext,
+                widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
+              );
+            }
+            return cleared;
+          },
           onPrepare: (completedLayout) async {
             //자리 realtime database에 저장
             final saved = await widget.roomProvider.savePlayerSeatIndexes({
@@ -216,32 +252,36 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
   @override
   Widget build(BuildContext context) {
     if (_isPlayingVideo && _youtubeController != null) {
-      return Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            Center(
-              child: YoutubePlayer(
-                controller: _youtubeController!,
-                aspectRatio: 16 / 9,
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, _) => _handleBack(),
+        child: Dialog(
+          backgroundColor: Colors.black,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              Center(
+                child: YoutubePlayer(
+                  controller: _youtubeController!,
+                  aspectRatio: 16 / 9,
+                ),
               ),
-            ),
-            Positioned(
-              right: 20,
-              top: 20,
-              child: IconButton.filledTonal(
-                tooltip: '닫기',
-                onPressed: () {
-                  setState(() {
-                    _isPlayingVideo = false;
-                    _youtubeController?.pauseVideo();
-                  });
-                },
-                icon: const Icon(Icons.close, size: 24),
+              Positioned(
+                right: 20,
+                top: 20,
+                child: IconButton.filledTonal(
+                  tooltip: '닫기',
+                  onPressed: () {
+                    setState(() {
+                      _isPlayingVideo = false;
+                      _youtubeController?.pauseVideo();
+                    });
+                  },
+                  icon: const Icon(Icons.close, size: 24),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -261,121 +301,131 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
         ? activePlayerCount >= widget.game.minPlayers
         : activePlayerCount == fixedPlayerCount;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 780,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x55000000),
-                blurRadius: 30,
-                offset: Offset(0, 14),
-              ),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, _) => _handleBack(),
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 780,
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
           ),
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 240,
-                      child: AspectRatio(
-                        aspectRatio: 320 / 468,
-                        child: _PosterImage(imageUrl: widget.game.imageUrl),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x55000000),
+                  blurRadius: 30,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 240,
+                        child: AspectRatio(
+                          aspectRatio: 320 / 468,
+                          child: _PosterImage(imageUrl: widget.game.imageUrl),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 22),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 42),
-                            child: Text(
-                              widget.game.name.isEmpty
-                                  ? '게임 이름'
-                                  : widget.game.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 27,
-                                fontWeight: FontWeight.w900,
+                      const SizedBox(width: 22),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 42),
+                              child: Text(
+                                widget.game.name.isEmpty
+                                    ? '게임 이름'
+                                    : widget.game.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 27,
+                                  fontWeight: FontWeight.w900,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 9),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              for (final text in informationTexts)
-                                PlatformTag(label: text),
-                              for (final genre in widget.game.genres.take(3))
-                                PlatformTag(label: genre, highlighted: true),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            widget.game.description.isEmpty
-                                ? '게임 설명이 없습니다.'
-                                : widget.game.description,
-                            style: TextStyle(
-                              color: colors.textMuted,
-                              fontSize: 13,
-                              height: 1.55,
+                            const SizedBox(height: 9),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final text in informationTexts)
+                                  PlatformTag(label: text),
+                                for (final genre in widget.game.genres.take(3))
+                                  PlatformTag(label: genre, highlighted: true),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          _RuleVideoArea(
-                            videoUrl: widget.game.ruleVideoUrl,
-                            onPlayPressed: _playVideo,
-                          ),
-                          const SizedBox(height: 10),
-                          if (!hasEnoughPlayers)
-                            PlatformNotice(
-                              message: fixedPlayerCount == null
-                                  ? '현재 인원 $activePlayerCount명은 권장 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명과 다릅니다.'
-                                  : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
-                              style: PlatformNoticeStyle.warning,
-                            ),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: SizedBox(
-                              width: 140,
-                              child: PlatformButton(
-                                label: '시작하기',
-                                onPressed: () => _startGame(context),
+                            const SizedBox(height: 14),
+                            Text(
+                              widget.game.description.isEmpty
+                                  ? '게임 설명이 없습니다.'
+                                  : widget.game.description,
+                              style: TextStyle(
+                                color: colors.textMuted,
+                                fontSize: 13,
+                                height: 1.55,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 14),
+                            _RuleVideoArea(
+                              videoUrl: widget.game.ruleVideoUrl,
+                              onPlayPressed: _playVideo,
+                            ),
+                            const SizedBox(height: 10),
+                            if (!hasEnoughPlayers)
+                              PlatformNotice(
+                                message: fixedPlayerCount == null
+                                    ? '현재 인원 $activePlayerCount명은 권장 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명과 다릅니다.'
+                                    : '이 게임은 정확히 $fixedPlayerCount명이 필요합니다. 현재 $activePlayerCount명입니다.',
+                                style: PlatformNoticeStyle.warning,
+                              ),
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: SizedBox(
+                                width: 140,
+                                child: PlatformButton(
+                                  label: '시작하기',
+                                  onPressed: () => _startGame(context),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: IconButton.filledTonal(
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, size: 20),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: IconButton.filledTonal(
+                    tooltip: '닫기',
+                    onPressed: _isClosing ? null : () => unawaited(_dismiss()),
+                    icon: _isClosing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.close, size: 20),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
