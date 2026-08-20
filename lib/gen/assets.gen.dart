@@ -257,8 +257,11 @@ class $AssetsGamesLiarsPokerSoundsGen {
   /// File path: assets/games/liars_poker/sounds/submit.mp3
   String get submit => 'assets/games/liars_poker/sounds/submit.mp3';
 
+  /// File path: assets/games/liars_poker/sounds/win.mp3
+  String get win => 'assets/games/liars_poker/sounds/win.mp3';
+
   /// List of all assets
-  List<String> get values => [aGitkeep, submit];
+  List<String> get values => [aGitkeep, submit, win];
 }
 
 class $AssetsGamesMafiaImagesGen {
@@ -1166,6 +1169,10 @@ class $AssetsGamesMafiaImagesBannerGen {
 class $AssetsGamesMafiaImagesCardsGen {
   const $AssetsGamesMafiaImagesCardsGen();
 
+  /// File path: assets/games/mafia/images/cards/role_arsonist.png
+  AssetGenImage get roleArsonist =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_arsonist.png');
+
   /// File path: assets/games/mafia/images/cards/role_back.png
   AssetGenImage get roleBack =>
       const AssetGenImage('assets/games/mafia/images/cards/role_back.png');
@@ -1178,6 +1185,19 @@ class $AssetsGamesMafiaImagesCardsGen {
   AssetGenImage get roleCitizen =>
       const AssetGenImage('assets/games/mafia/images/cards/role_citizen.png');
 
+  /// File path: assets/games/mafia/images/cards/role_cult_leader.png
+  AssetGenImage get roleCultLeader => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_cult_leader.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_cultist.png
+  AssetGenImage get roleCultist =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_cultist.png');
+
+  /// File path: assets/games/mafia/images/cards/role_detective.png
+  AssetGenImage get roleDetective =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_detective.png');
+
   /// File path: assets/games/mafia/images/cards/role_disguiser.png
   AssetGenImage get roleDisguiser =>
       const AssetGenImage('assets/games/mafia/images/cards/role_disguiser.png');
@@ -1186,43 +1206,159 @@ class $AssetsGamesMafiaImagesCardsGen {
   AssetGenImage get roleDoctor =>
       const AssetGenImage('assets/games/mafia/images/cards/role_doctor.png');
 
-  /// File path: assets/games/mafia/images/cards/role_godfather.png
-  AssetGenImage get roleGodfather =>
-      const AssetGenImage('assets/games/mafia/images/cards/role_godfather.png');
+  /// File path: assets/games/mafia/images/cards/role_executioner.png
+  AssetGenImage get roleExecutioner => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_executioner.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_framer.png
+  AssetGenImage get roleFramer =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_framer.png');
+
+  /// File path: assets/games/mafia/images/cards/role_hunter.png
+  AssetGenImage get roleHunter =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_hunter.png');
+
+  /// File path: assets/games/mafia/images/cards/role_information.png
+  AssetGenImage get roleInformation => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_information.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_jester.png
+  AssetGenImage get roleJester =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_jester.png');
 
   /// File path: assets/games/mafia/images/cards/role_mafia.png
   AssetGenImage get roleMafia =>
       const AssetGenImage('assets/games/mafia/images/cards/role_mafia.png');
 
+  /// File path: assets/games/mafia/images/cards/role_mafia_boss.png
+  AssetGenImage get roleMafiaBoss => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_mafia_boss.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_mafia_roleblocker.png
+  AssetGenImage get roleMafiaRoleblocker => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_mafia_roleblocker.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_mason.png
+  AssetGenImage get roleMason =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_mason.png');
+
+  /// File path: assets/games/mafia/images/cards/role_mayor.png
+  AssetGenImage get roleMayor =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_mayor.png');
+
+  /// File path: assets/games/mafia/images/cards/role_member.png
+  AssetGenImage get roleMember =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_member.png');
+
+  /// File path: assets/games/mafia/images/cards/role_miller.png
+  AssetGenImage get roleMiller =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_miller.png');
+
+  /// File path: assets/games/mafia/images/cards/role_pied_piper.png
+  AssetGenImage get rolePiedPiper => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_pied_piper.png',
+  );
+
   /// File path: assets/games/mafia/images/cards/role_police.png
   AssetGenImage get rolePolice =>
       const AssetGenImage('assets/games/mafia/images/cards/role_police.png');
+
+  /// File path: assets/games/mafia/images/cards/role_recruiter.png
+  AssetGenImage get roleRecruiter =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_recruiter.png');
 
   /// File path: assets/games/mafia/images/cards/role_reporter.png
   AssetGenImage get roleReporter =>
       const AssetGenImage('assets/games/mafia/images/cards/role_reporter.png');
 
+  /// File path: assets/games/mafia/images/cards/role_roleblocker.png
+  AssetGenImage get roleRoleblocker => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_roleblocker.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_serial_killer.png
+  AssetGenImage get roleSerialKiller => const AssetGenImage(
+    'assets/games/mafia/images/cards/role_serial_killer.png',
+  );
+
+  /// File path: assets/games/mafia/images/cards/role_sheriff.png
+  AssetGenImage get roleSheriff =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_sheriff.png');
+
   /// File path: assets/games/mafia/images/cards/role_silencer.png
   AssetGenImage get roleSilencer =>
       const AssetGenImage('assets/games/mafia/images/cards/role_silencer.png');
 
-  /// File path: assets/games/mafia/images/cards/role_tracker.png
-  AssetGenImage get roleTracker =>
-      const AssetGenImage('assets/games/mafia/images/cards/role_tracker.png');
+  /// File path: assets/games/mafia/images/cards/role_survivor.png
+  AssetGenImage get roleSurvivor =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_survivor.png');
+
+  /// File path: assets/games/mafia/images/cards/role_traitor.png
+  AssetGenImage get roleTraitor =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_traitor.png');
+
+  /// File path: assets/games/mafia/images/cards/role_vampire.png
+  AssetGenImage get roleVampire =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_vampire.png');
+
+  /// File path: assets/games/mafia/images/cards/role_vigilante.png
+  AssetGenImage get roleVigilante =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_vigilante.png');
+
+  /// File path: assets/games/mafia/images/cards/role_watcher.png
+  AssetGenImage get roleWatcher =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_watcher.png');
+
+  /// File path: assets/games/mafia/images/cards/role_witness.png
+  AssetGenImage get roleWitness =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_witness.png');
+
+  /// File path: assets/games/mafia/images/cards/role_yakuza.png
+  AssetGenImage get roleYakuza =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_yakuza.png');
 
   /// List of all assets
   List<AssetGenImage> get values => [
+    roleArsonist,
     roleBack,
     roleBodyguard,
     roleCitizen,
+    roleCultLeader,
+    roleCultist,
+    roleDetective,
     roleDisguiser,
     roleDoctor,
-    roleGodfather,
+    roleExecutioner,
+    roleFramer,
+    roleHunter,
+    roleInformation,
+    roleJester,
     roleMafia,
+    roleMafiaBoss,
+    roleMafiaRoleblocker,
+    roleMason,
+    roleMayor,
+    roleMember,
+    roleMiller,
+    rolePiedPiper,
     rolePolice,
+    roleRecruiter,
     roleReporter,
+    roleRoleblocker,
+    roleSerialKiller,
+    roleSheriff,
     roleSilencer,
-    roleTracker,
+    roleSurvivor,
+    roleTraitor,
+    roleVampire,
+    roleVigilante,
+    roleWatcher,
+    roleWitness,
+    roleYakuza,
   ];
 }
 

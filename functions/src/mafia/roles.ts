@@ -86,8 +86,8 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
     isImplemented: true,
   },
   // 대상이 누구에게 능력을 썼는지 조사합니다(시안 카드 이름은 '탐정').
-  tracker: {
-    id: "tracker",
+  detective: {
+    id: "detective",
     faction: "citizen",
     nightAction: "track",
     nightPhase: "investigate",
@@ -105,8 +105,8 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
     isImplemented: true,
   },
   // 마피아 보스는 마피아와 같지만 **조사에서 시민으로 보입니다.**
-  godfather: {
-    id: "godfather",
+  mafia_boss: {
+    id: "mafia_boss",
     faction: "mafia",
     nightAction: "eliminate",
     nightPhase: "mafiaAttack",
@@ -144,9 +144,9 @@ export const MAFIA_COMPOSITION: Record<number, Record<string, number>> = {
   7: {mafia: 2, police: 1, doctor: 1, citizen: 3},
   8: {mafia: 2, police: 1, doctor: 1, citizen: 4},
   9: {mafia: 2, police: 1, doctor: 1, citizen: 5},
-  10: {godfather: 1, mafia: 2, police: 1, doctor: 1, citizen: 5},
-  11: {godfather: 1, mafia: 2, police: 1, doctor: 1, bodyguard: 1, citizen: 5},
-  12: {godfather: 1, mafia: 2, police: 1, doctor: 1, bodyguard: 1, citizen: 6},
+  10: {mafia_boss: 1, mafia: 2, police: 1, doctor: 1, citizen: 5},
+  11: {mafia_boss: 1, mafia: 2, police: 1, doctor: 1, bodyguard: 1, citizen: 5},
+  12: {mafia_boss: 1, mafia: 2, police: 1, doctor: 1, bodyguard: 1, citizen: 6},
 };
 
 export const MAFIA_MIN_PLAYERS = 4;
