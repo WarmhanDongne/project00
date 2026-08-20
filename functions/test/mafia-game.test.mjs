@@ -331,18 +331,21 @@ test("승패가 안 났으면 다음 단계로 넘어간다", () => {
 
 // ===== 중도 퇴장 =====
 
-test("마지막 밤 행동자가 빠지면 그 자리에서 밤을 해결한다", () => {
+test("마지막 밤 행동자가 빠져도 밤은 마감까지 유지한다", () => {
+  // 확정(2026-08): 전원 제출·전원 퇴장 어느 쪽이든 밤을 일찍 끝내지 않습니다.
   const game = makeGame(SIX);
   game.public.nightActorCount = 3;
   game.public.nightSubmittedCount = 2;
   game.server.nightActions = {m1: "c1", p1: "c2"};
 
-  // 아직 안 낸 사람은 의사 한 명뿐. 그 사람이 빠지면 남은 사람이 다 낸 셈입니다.
+  // 아직 안 낸 사람은 의사 한 명뿐. 그 사람이 빠져도 밤은 계속됩니다.
   excludeMafiaPlayer(game, "d1", 6000);
 
   assert.equal(game.public.players.d1.status, "dead");
-  assert.equal(game.public.phase, "morning");
-  assert.deepEqual(game.public.morningResult.deadUids, ["c1"]);
+  assert.equal(game.public.phase, "night");
+  // 남은 사람 기준으로 인원만 다시 셉니다. 해결은 timeout_night 몫입니다.
+  assert.equal(game.public.nightActorCount, 2);
+  assert.equal(game.public.nightSubmittedCount, 2);
 });
 
 test("퇴장으로 인원이 최소치 미달이면 게임을 끝낸다", () => {

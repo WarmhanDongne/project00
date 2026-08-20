@@ -269,7 +269,7 @@ class MafiaPracticeEngine {
       );
     }
     _publish();
-    _maybeResolveNight();
+    // 확정(2026-08): 전원이 제출해도 밤은 마감(3분)까지 유지합니다.
   }
 
   void _recordInvestigation(String uid, String targetUid, String verdict) {
@@ -347,7 +347,7 @@ class MafiaPracticeEngine {
   //=======================단계 전환==============================
   void _beginNight() {
     _phase = 'night';
-    _deadlineAt = _now + 60000;
+    _deadlineAt = _now + 180000;
     _nightActions.clear();
     _votes.clear();
     for (final map in _private.values) {
@@ -360,8 +360,9 @@ class MafiaPracticeEngine {
     _voteResult = null;
     _publish();
     _scheduleBots();
-    // 마감이 지나면 남은 사람 없이 해결합니다(실제 태블릿의 timeout_night).
-    _schedulePhase(const Duration(milliseconds: 60250), () {
+    // 마감(3분)이 지나면 해결합니다(실제 태블릿의 timeout_night). 개발 중
+    // 기다리기 싫으면 조종판의 '밤 마감' 버튼을 쓰세요.
+    _schedulePhase(const Duration(milliseconds: 180250), () {
       if (_phase == 'night') _resolveNight();
     });
   }
@@ -376,13 +377,6 @@ class MafiaPracticeEngine {
     _schedulePhase(const Duration(milliseconds: 30250), () {
       if (_phase == 'voting') _resolveVoting();
     });
-  }
-
-  void _maybeResolveNight() {
-    final actors = _aliveUids
-        .where((uid) => _roleOf(uid)?.actsAtNight ?? false)
-        .length;
-    if (_nightActions.length >= actors) _resolveNight();
   }
 
   void _resolveNight() {

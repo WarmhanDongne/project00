@@ -121,8 +121,8 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       game.public.revision += 1;
       game.public.updatedAt = now;
 
-      const allSubmitted = submitted >= game.public.nightActorCount;
-      if (allSubmitted) resolveMafiaNight(game, now);
+      // 확정(2026-08): 전원이 제출해도 밤을 일찍 끝내지 않습니다. 밤은
+      // MAFIA_NIGHT_MS를 채우고, 해결은 timeout_night(마감)이 합니다.
 
       response = {
         success: true,

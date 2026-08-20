@@ -58,6 +58,11 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   String? _nightSelection;
   int? _nightSelectionRound;
 
+  //=======================투표 로컬 상태==============================
+  // 투표도 같은 방식입니다: 탭 = 선택만, '선택 완료' 버튼 = 제출.
+  String? _voteSelection;
+  int? _voteSelectionRound;
+
   /// 조사 결과에서 '확인'을 누른 라운드입니다. 누르면 대기 화면으로 넘어갑니다.
   int? _acknowledgedInvestigationRound;
 
@@ -151,15 +156,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         hasVotedToSkip: game.hasVotedToSkipDiscussion,
         onEndDiscussion: game.endDiscussion,
       ),
-      'voting' => MafiaVoteView(
-        role: game.myRole,
-        players: game.voteTargets,
-        selectedUid: game.voteTargetUid,
-        remainingSeconds: _remainingSeconds(game),
-        isSubmitted: game.hasVoted,
-        onSelect: game.canVote ? _submitVote : null,
-        onConfirm: null,
-      ),
+      'voting' => _buildVoting(game),
       // 그 밖의 단계(연결 중·종료)는 셸이 처리합니다.
       _ => MafiaDayDiscussionView(role: game.myRole, title: '잠시만 기다려 주세요'),
     };
@@ -211,6 +208,29 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     );
   }
 
+  Widget _buildVoting(MafiaController game) {
+    // 라운드가 바뀌면 지난 투표의 선택을 버립니다.
+    if (_voteSelectionRound != game.round) {
+      _voteSelectionRound = game.round;
+      _voteSelection = null;
+    }
+
+    return MafiaVoteView(
+      role: game.myRole,
+      players: game.voteTargets,
+      selectedUid: game.hasVoted ? game.voteTargetUid : _voteSelection,
+      remainingSeconds: _remainingSeconds(game),
+      isSubmitted: game.hasVoted,
+      // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
+      onSelect: game.canVote
+          ? (uid) => setState(() => _voteSelection = uid)
+          : null,
+      onConfirm: game.canVote && _voteSelection != null
+          ? () => unawaited(game.submitVote(_voteSelection!))
+          : null,
+    );
+  }
+
   Widget _buildExecution(MafiaController game) {
     final executed = game.executedPlayer;
     if (_executionStage == _ExecutionStage.announce || executed == null) {
@@ -235,9 +255,5 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     if (deadline == null) return null;
     final remaining = (deadline - DateTime.now().millisecondsSinceEpoch) / 1000;
     return remaining <= 0 ? 0 : remaining.ceil();
-  }
-
-  void _submitVote(String targetUid) {
-    unawaited(widget.controller.submitVote(targetUid));
   }
 }

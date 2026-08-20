@@ -23,11 +23,16 @@ void main() {
     await tester.pump();
     expect(find.byType(MafiaRoleRevealView), findsOneWidget);
 
-    // 내 카드를 뒤집어 확인합니다(뒤집기 620ms + 보여 주기 3초 + 보관 연출).
-    await tester.tap(find.byType(MafiaRoleRevealView));
-    await tester.pump(const Duration(milliseconds: 700));
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pump(const Duration(seconds: 1));
+    // 내 카드를 눌러 확인합니다. 카드는 화면 아래에 꽂혀 있으므로(확정 흐름)
+    // 미리보기 좌표계에서 그 자리를 계산해 누릅니다.
+    final phone = tester.getRect(find.byType(MafiaRoleRevealView));
+    await tester.tapAt(
+      Offset(phone.center.dx, phone.top + phone.height * 0.93),
+    );
+    // 올라오기(520ms) → 뒤집기(620ms) → 3초 보여 주기 → 보관 연출까지.
+    for (var i = 0; i < 8; i += 1) {
+      await tester.pump(const Duration(seconds: 1));
+    }
 
     // 봇 5명이 순서대로 확인합니다(봇 지연 2초 간격).
     await tester.pump(const Duration(seconds: 11));

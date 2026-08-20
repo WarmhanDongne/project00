@@ -27,6 +27,7 @@ class GameList extends StatefulWidget {
 
 class _GameListState extends State<GameList> {
   String selectedGenre = '전체';
+  String? _selectingGameId;
 
   @override
   void initState() {
@@ -54,21 +55,82 @@ class _GameListState extends State<GameList> {
         .toList(growable: false);
   }
 
+  Future<void> _openPreview(GameInfo game) async {
+    if (_selectingGameId != null) return;
+    final hasRoom = widget.roomProvider.roomCode != null;
+    if (hasRoom) {
+      setState(() => _selectingGameId = game.id);
+      final selected = await widget.roomProvider.selectGame(game.id);
+      if (!mounted) return;
+      setState(() => _selectingGameId = null);
+      if (!selected) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.',
+              ),
+            ),
+          );
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => GamePreviewDialog(
+        game: game,
+        roomProvider: widget.roomProvider,
+        selectionActive: hasRoom,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return AnimatedBuilder(
-      animation: widget.gameProvider,
+      animation: Listenable.merge([widget.gameProvider, widget.roomProvider]),
       builder: (context, _) {
-        if (widget.gameProvider.isLoading) {
+        final hasRoom = widget.roomProvider.roomCode != null;
+        final groupStatus = widget.roomProvider.groupGamesLoadStatus;
+        final isLoading = hasRoom
+            ? groupStatus == RoomDataLoadStatus.idle ||
+                  groupStatus == RoomDataLoadStatus.loading
+            : widget.gameProvider.isLoading;
+        final errorMessage = hasRoom
+            ? widget.roomProvider.groupGamesError
+            : widget.gameProvider.errorMessage;
+        final sourceGames = hasRoom
+            ? widget.roomProvider.groupGames
+            : widget.gameProvider.games;
+
+        if (isLoading) {
           return Center(
             child: CircularProgressIndicator(color: colors.primary),
           );
         }
-        if (widget.gameProvider.errorMessage != null) {
-          return Center(child: Text(widget.gameProvider.errorMessage!));
+        if (errorMessage != null) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(errorMessage),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: hasRoom
+                      ? widget.roomProvider.retryGroupGames
+                      : widget.gameProvider.fetchGames,
+                  child: const Text('다시 시도'),
+                ),
+              ],
+            ),
+          );
         }
-        final games = _filteredGames(widget.gameProvider.games);
+        final games = _filteredGames(sourceGames);
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
           child: Column(
@@ -76,13 +138,13 @@ class _GameListState extends State<GameList> {
             children: [
               Row(
                 children: [
-                  const Text(
-                    '보유 중인 게임',
+                  Text(
+                    hasRoom ? '그룹이 보유 중인 게임' : '보유 중인 게임',
                     style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(width: 20),
                   Text(
-                    '${widget.gameProvider.games.length}',
+                    '${sourceGames.length}',
                     style: TextStyle(color: colors.textMuted, fontSize: 15),
                   ),
                 ],
@@ -152,13 +214,8 @@ class _GameListState extends State<GameList> {
                               final game = games[index];
                               return GameCard(
                                 game: game,
-                                onTap: () => showDialog<void>(
-                                  context: context,
-                                  builder: (_) => GamePreviewDialog(
-                                    game: game,
-                                    roomProvider: widget.roomProvider,
-                                  ),
-                                ),
+                                loading: _selectingGameId == game.id,
+                                onTap: () => _openPreview(game),
                               );
                             },
                           );
@@ -175,63 +232,88 @@ class _GameListState extends State<GameList> {
 
 //=======================게임 카드==============================
 class GameCard extends StatelessWidget {
-  const GameCard({super.key, required this.game, required this.onTap});
+  const GameCard({
+    super.key,
+    required this.game,
+    required this.onTap,
+    this.loading = false,
+  });
 
   final GameInfo game;
   final VoidCallback onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       borderRadius: BorderRadius.circular(10),
-      child: PlatformPanel(
-        padding: const EdgeInsets.all(7),
-        radius: 10,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(7),
-                child: SizedBox.expand(child: _GameImage(url: game.imageUrl)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              game.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
+      child: Stack(
+        children: [
+          PlatformPanel(
+            padding: const EdgeInsets.all(7),
+            radius: 10,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (game.playTime > 0) PlatformTag(label: '${game.playTime}분'),
-                if (game.minPlayers > 0)
-                  PlatformTag(label: '${game.minPlayers}~${game.maxPlayers}인'),
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: SizedBox.expand(
+                      child: _GameImage(url: game.imageUrl),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  game.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (game.playTime > 0)
+                      PlatformTag(label: '${game.playTime}분'),
+                    if (game.minPlayers > 0)
+                      PlatformTag(
+                        label: '${game.minPlayers}~${game.maxPlayers}인',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (game.genres.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: game.genres
+                        .take(2)
+                        .map(
+                          (genre) => PlatformTag(
+                            label: _localizedGenre(genre),
+                            highlighted: true,
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (game.genres.isNotEmpty)
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: game.genres
-                    .take(2)
-                    .map(
-                      (genre) => PlatformTag(
-                        label: _localizedGenre(genre),
-                        highlighted: true,
-                      ),
-                    )
-                    .toList(growable: false),
+          ),
+          if (loading)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x66FFFFFF),
+                child: Center(child: CircularProgressIndicator()),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'package:project00/platform/home/room/models/room_character.dart';
 typedef PlayerLayoutPrepared =
     Future<bool> Function(PlayerLayoutModel playerLayout);
 typedef PlayerLayoutCompleted = void Function(PlayerLayoutModel playerLayout);
+typedef PlayerLayoutCancelled = Future<bool> Function();
 
 /// 자리 배치 완료 연출에서 의자가 좌석 순서대로 진입하도록 만든 진행률입니다.
 ///
@@ -41,6 +42,7 @@ class PlayerLayoutEditor extends StatefulWidget {
     required this.initialLayout,
     required this.onPrepare,
     required this.onComplete,
+    required this.onCancel,
     required this.tableColor,
     this.tableBackgroundImage,
     this.tableImage,
@@ -53,6 +55,7 @@ class PlayerLayoutEditor extends StatefulWidget {
   final PlayerLayoutModel initialLayout;
   final PlayerLayoutPrepared onPrepare;
   final PlayerLayoutCompleted onComplete;
+  final PlayerLayoutCancelled onCancel;
 
   /// 설정 완료 연출에서 중앙 테이블에 쓰는 바탕색입니다. [tableBackgroundImage]가
   /// 없거나 아직 안 그려졌을 때를 대비한 입장할 게임의 배경 이미지와 같은 톤입니다.
@@ -107,6 +110,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   int? _draggingPlayerIndex;
   int? _hoveredSlotIndex;
   bool _isCompleting = false;
+  bool _isCancelling = false;
   bool _handedOffToGame = false;
 
   int get _playerCount => widget.initialLayout.playerCount;
@@ -146,6 +150,18 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       _hoveredSlotIndex = null;
       _draggingPositions[playerIndex] = _slotPositions[currentSlotIndex];
     });
+  }
+
+  Future<void> _cancel() async {
+    if (_isCompleting || _isCancelling || !mounted) return;
+    setState(() => _isCancelling = true);
+    final canLeave = await widget.onCancel();
+    if (!mounted) return;
+    if (canLeave) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _isCancelling = false);
   }
 
   void _movePlayer({
@@ -346,91 +362,134 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 22),
-            if (!_isCompleting)
-              const Text(
-                '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-              ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final boardSize = Size(
-                    constraints.maxWidth,
-                    constraints.maxHeight,
-                  );
-                  _slotPositions = normalizedPlayerSlotTopLeftPositions(
-                    playerCount: _playerCount,
-                    boardSize: boardSize,
-                    slotSize: _playerSlotSize,
-                  );
-
-                  return AnimatedBuilder(
-                    animation: Listenable.merge([
-                      _entranceController,
-                      _zoomController,
-                    ]),
-                    builder: (context, _) {
-                      final t = _entranceController.value;
-                      final zoomT = Curves.easeInCubic.transform(
-                        _zoomController.value,
-                      );
-                      final zoomScale =
-                          1 + (_maxZoomScale(boardSize) - 1) * zoomT;
-                      return Transform.scale(
-                        scale: zoomScale,
-                        child: Stack(
-                          children: [
-                            for (
-                              var playerIndex = 0;
-                              playerIndex < _playerCount;
-                              playerIndex++
-                            )
-                              _buildPlayer(
-                                playerIndex: playerIndex,
-                                boardSize: boardSize,
-                                t: t,
-                              ),
-                            _buildTable(boardSize: boardSize, t: t),
-                            for (
-                              var seatIndex = 0;
-                              seatIndex < _playerCount;
-                              seatIndex++
-                            )
-                              _buildChair(
-                                seatIndex: seatIndex,
-                                boardSize: boardSize,
-                                t: t,
-                              ),
-                            if (!_isCompleting)
-                              Positioned(
-                                right: 24,
-                                bottom: 14,
-                                child: FilledButton(
-                                  onPressed: _completeSetting,
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xffd4d4d4),
-                                    foregroundColor: Colors.black,
-                                    shape: const RoundedRectangleBorder(),
-                                  ),
-                                  child: const Text('설정 완료'),
-                                ),
-                              ),
-                          ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_cancel());
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (!_isCompleting)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SizedBox(
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton.filledTonal(
+                            tooltip: '뒤로가기',
+                            onPressed: _isCancelling
+                                ? null
+                                : () => unawaited(_cancel()),
+                            icon: _isCancelling
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.arrow_back),
+                          ),
                         ),
-                      );
-                    },
-                  );
-                },
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 64),
+                          child: Text(
+                            '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final boardSize = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    _slotPositions = normalizedPlayerSlotTopLeftPositions(
+                      playerCount: _playerCount,
+                      boardSize: boardSize,
+                      slotSize: _playerSlotSize,
+                    );
+
+                    return AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _entranceController,
+                        _zoomController,
+                      ]),
+                      builder: (context, _) {
+                        final t = _entranceController.value;
+                        final zoomT = Curves.easeInCubic.transform(
+                          _zoomController.value,
+                        );
+                        final zoomScale =
+                            1 + (_maxZoomScale(boardSize) - 1) * zoomT;
+                        return Transform.scale(
+                          scale: zoomScale,
+                          child: Stack(
+                            children: [
+                              for (
+                                var playerIndex = 0;
+                                playerIndex < _playerCount;
+                                playerIndex++
+                              )
+                                _buildPlayer(
+                                  playerIndex: playerIndex,
+                                  boardSize: boardSize,
+                                  t: t,
+                                ),
+                              _buildTable(boardSize: boardSize, t: t),
+                              for (
+                                var seatIndex = 0;
+                                seatIndex < _playerCount;
+                                seatIndex++
+                              )
+                                _buildChair(
+                                  seatIndex: seatIndex,
+                                  boardSize: boardSize,
+                                  t: t,
+                                ),
+                              if (!_isCompleting)
+                                Positioned(
+                                  right: 24,
+                                  bottom: 14,
+                                  child: FilledButton(
+                                    onPressed: _completeSetting,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xffd4d4d4),
+                                      foregroundColor: Colors.black,
+                                      shape: const RoundedRectangleBorder(),
+                                    ),
+                                    child: const Text('설정 완료'),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

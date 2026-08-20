@@ -19,8 +19,13 @@ import {PublicGameInterruption, ServerGameInterruption} from "../game-interrupti
 /** 역할 확인 제한시간입니다. 이 안에 전원이 확인해야 합니다(확정: 약 1분). */
 export const MAFIA_ROLE_REVEAL_MS = 60000;
 
-/** 밤 제한시간입니다. 시안 미확정이라 잠정값입니다. */
-export const MAFIA_NIGHT_MS = 60000;
+/**
+ * 밤 제한시간입니다(확정 2026-08: 최소 3분).
+ *
+ * 전원이 행동을 끝내도 밤은 이 시간을 채웁니다. 일찍 끝내면 제출 속도로
+ * 특수직 수가 드러날 수 있고, 밤의 긴장감도 사라지기 때문입니다.
+ */
+export const MAFIA_NIGHT_MS = 180000;
 
 /** 낮 자유 토론 제한시간입니다. 시안의 `2m 30s`에서 가져왔습니다. */
 export const MAFIA_DAY_MS = 150000;

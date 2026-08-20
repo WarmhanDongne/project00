@@ -47,6 +47,16 @@ type SaveSeatIndexesData = {
   controllerSessionId?: unknown;
 };
 
+type CreateRealtimeRoomData = {
+  operationId?: unknown;
+};
+
+type RoomCreateReservation = {
+  roomCode: string;
+  controllerSessionId: string;
+  createdAt: number;
+};
+
 type JoinRealtimeRoomData = {
   roomCode?: unknown;
   nickname?: unknown;
@@ -71,13 +81,23 @@ function generateRoomCode(): string {
   ).join("");
 }
 
+/** 구버전 요청은 null로 두고 새 클라이언트의 방 생성 작업 ID를 검증합니다. */
+function parseCreateOperationId(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const operationId = typeof value === "string" ? value.trim() : "";
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(operationId)) {
+    throw new HttpsError("invalid-argument", "올바른 작업 ID가 필요합니다.");
+  }
+  return operationId;
+}
+
 /**
  * 아이패드 컨트롤러용 RTDB 방 생성 함수입니다.
  *
  * Firebase Admin SDK를 사용하기 때문에 클라이언트의
  * Realtime Database 보안 규칙을 적용받지 않습니다.
  */
-export const createRealtimeRoom = onCall(
+export const createRealtimeRoom = onCall<CreateRealtimeRoomData>(
   {region: REGION},
   async (request) => {
     const controllerUid = request.auth?.uid;
@@ -91,7 +111,7 @@ export const createRealtimeRoom = onCall(
     await assertOnboardingComplete(controllerUid);
 
     const database = getDatabase();
-    const controllerSessionId = createControllerSessionId();
+    const operationId = parseCreateOperationId(request.data?.operationId);
     const now = Date.now();
 
     for (
@@ -99,16 +119,40 @@ export const createRealtimeRoom = onCall(
       attempt < MAX_ROOM_CODE_ATTEMPTS;
       attempt += 1
     ) {
-      const roomCode = generateRoomCode();
+      let roomCode = generateRoomCode();
+      let controllerSessionId = createControllerSessionId();
+      let reservationRef: ReturnType<typeof database.ref> | null = null;
+      if (operationId) {
+        reservationRef = database.ref(
+          `roomCreateRequests/${controllerUid}/${operationId}`,
+        );
+        const reserved = await reservationRef.transaction((current) => {
+          if (current !== null) return current;
+          return {roomCode, controllerSessionId, createdAt: now};
+        });
+        const reservation = reserved.snapshot.val() as
+          RoomCreateReservation | null;
+        if (!reservation?.roomCode || !reservation.controllerSessionId) {
+          throw new HttpsError("internal", "방 생성 요청을 준비하지 못했습니다.");
+        }
+        roomCode = reservation.roomCode;
+        controllerSessionId = reservation.controllerSessionId;
+      }
       const roomRef = database.ref(
         `rooms/${roomCode}`,
       );
 
       const result = await roomRef.transaction(
         (currentRoom) => {
-          // 같은 코드의 방이 이미 존재하면
-          // 이 트랜잭션을 중단하고 다른 코드를 시도합니다.
           if (currentRoom !== null) {
+            if (
+              operationId &&
+              currentRoom.controllerUid === controllerUid &&
+              currentRoom.creationOperationId === operationId
+            ) {
+              return currentRoom;
+            }
+            // 같은 코드의 다른 방이 이미 존재하면 새 코드를 예약합니다.
             return;
           }
 
@@ -119,6 +163,7 @@ export const createRealtimeRoom = onCall(
             // 로컬에 보관합니다. 모든 controller 명령은 UID와 세션을 함께
             // 검사하여 오래된 앱 인스턴스의 요청을 차단합니다.
             controllerSessionId,
+            ...(operationId ? {creationOperationId: operationId} : {}),
             controllerConnected: true,
             controllerPresence: {
               connected: true,
@@ -140,6 +185,10 @@ export const createRealtimeRoom = onCall(
           roomCode,
           controllerSessionId,
         };
+      }
+      if (reservationRef) {
+        // 극히 드문 방 코드 충돌일 때만 같은 요청의 예약 코드를 다시 뽑습니다.
+        await reservationRef.remove();
       }
     }
 

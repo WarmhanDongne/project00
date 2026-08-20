@@ -57,8 +57,10 @@ class MafiaDayDiscussionView extends StatelessWidget {
   final String endLabel;
 
   //=======================시안 기준 좌표==============================
-  static const double _titleTop = 142;
-  static const double _timerTop = 209;
+  // 제목·타이머는 다른 단계와 같은 자리·크기를 씁니다(2026-08 통일 지시.
+  // 시안은 제목 48px@142, 타이머 209였습니다).
+  static const double _titleTop = MafiaPhoneStatusText.promptTop;
+  static const double _timerTop = MafiaPhoneStatusText.timerTop;
   static const double _illustrationTop = 244;
   static const double _illustrationSize = 349;
 
@@ -100,7 +102,7 @@ class MafiaDayDiscussionView extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 48 * scale,
+                    fontSize: MafiaPhoneStatusText.promptFontSize * scale,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -122,7 +124,7 @@ class MafiaDayDiscussionView extends StatelessWidget {
                       color: seconds < urgentThreshold
                           ? const Color(0xFFFF0000)
                           : Colors.black,
-                      fontSize: 36 * scale,
+                      fontSize: MafiaPhoneStatusText.timerFontSize * scale,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

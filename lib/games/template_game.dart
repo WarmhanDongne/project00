@@ -66,6 +66,7 @@ abstract class TemplateGame {
   /// 휴대폰 진행 화면을 생성합니다.
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   });
 

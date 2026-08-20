@@ -53,6 +53,28 @@ abstract final class MafiaPhoneDesign {
   );
 }
 
+//=======================상태 문구 공통 좌표==============================
+/// 화면 상단 상태 문구의 공통 자리·크기입니다(2026-08 통일 지시).
+///
+/// '제거할 대상을 선택하세요'(밤) · '투표 할 대상을 선택하세요'(투표) ·
+/// '자유 토론'(낮) 등 단계 안내와 그 아래 남은 시간이 모두 이 값을 씁니다.
+/// 화면마다 제각각이면 단계가 바뀔 때 글자가 튀어 보입니다.
+abstract final class MafiaPhoneStatusText {
+  /// 안내 문구 자리(시안 P2~P7의 top 102)와 크기입니다.
+  static const double promptTop = 102;
+  static const double promptFontSize = 24;
+
+  /// 남은 시간 자리(시안 top 142)와 크기입니다.
+  static const double timerTop = 142;
+  static const double timerFontSize = 36;
+
+  /// 제출 뒤 대기 문구 자리(시안 P5의 top 325·377)와 크기입니다.
+  static const double waitingTop = 325;
+  static const double waitingFontSize = 24;
+  static const double waitingSubTop = 377;
+  static const double waitingSubFontSize = 20;
+}
+
 //=======================격자 규격==============================
 /// 플레이어를 격자로 늘어놓는 화면들의 공용 규격입니다.
 ///

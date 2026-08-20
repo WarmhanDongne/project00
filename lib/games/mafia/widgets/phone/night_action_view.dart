@@ -87,8 +87,9 @@ class MafiaNightActionView extends StatelessWidget {
 
   //=======================시안 기준 좌표==============================
   // 공용 좌표(버튼·보관 카드)는 [MafiaPhoneDesign]에 있습니다.
-  static const double _promptTop = 102;
-  static const double _timerTop = 142;
+  // 안내·타이머는 모든 단계 공통 자리(MafiaPhoneStatusText)를 씁니다.
+  static const double _promptTop = MafiaPhoneStatusText.promptTop;
+  static const double _timerTop = MafiaPhoneStatusText.timerTop;
 
   /// 대상을 고르는 화면인지입니다.
   bool get _showsSelection {
@@ -146,7 +147,7 @@ class MafiaNightActionView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 24 * scale,
+              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -163,7 +164,7 @@ class MafiaNightActionView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 36 * scale,
+                fontSize: MafiaPhoneStatusText.timerFontSize * scale,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -217,13 +218,13 @@ class MafiaNightActionView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: accent,
-              fontSize: 24 * scale,
+              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
       ),
-      // 결과 값 (예: 시민 / 마피아)
+      // 결과 값 (예: 시민 / 마피아) — 시안 고유 자리(151)라 통일 대상이 아닙니다.
       Positioned(
         left: 0,
         right: 0,
@@ -290,14 +291,14 @@ class MafiaNightActionView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, 325),
+        top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop),
         child: IgnorePointer(
           child: Text(
             '선택을 완료했습니다',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 24 * scale,
+              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -306,7 +307,7 @@ class MafiaNightActionView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, 377),
+        top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingSubTop),
         child: IgnorePointer(
           // 시안은 한 줄(nowrap)입니다. 좁은 기기에서 두 줄로 흐르지 않게
           // 필요한 만큼만 줄여 한 줄을 유지합니다.
@@ -318,7 +319,7 @@ class MafiaNightActionView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 20 * scale,
+                fontSize: MafiaPhoneStatusText.waitingSubFontSize * scale,
                 fontWeight: FontWeight.w300,
               ),
             ),
