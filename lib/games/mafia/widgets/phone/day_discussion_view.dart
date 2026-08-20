@@ -24,6 +24,9 @@ class MafiaDayDiscussionView extends StatelessWidget {
     this.remainingSeconds,
     this.onEndDiscussion,
     this.canEndDiscussion = false,
+    this.skipVoteCount = 0,
+    this.aliveCount = 0,
+    this.hasVotedToSkip = false,
     this.endLabel = '토론 종료 하기',
   });
 
@@ -39,17 +42,25 @@ class MafiaDayDiscussionView extends StatelessWidget {
   /// 토론을 미리 끝낼 때입니다. null이면 버튼이 비활성입니다.
   final VoidCallback? onEndDiscussion;
 
-  /// 지금 토론을 끝낼 수 있는지입니다.
-  ///
-  /// 누가 끝낼 권한을 갖는지(방장만·과반 동의 등)는 서버 규칙이 정할 일이라
-  /// 여기서 판단하지 않고 호출부가 넘겨줍니다.
+  /// 지금 토론 종료에 동의를 보탤 수 있는지입니다.
   final bool canEndDiscussion;
+
+  /// 조기 종료에 동의한 인원수입니다(확정 규칙: 과반수 투표).
+  final int skipVoteCount;
+
+  /// 살아 있는 인원수입니다. 버튼의 분모가 됩니다.
+  final int aliveCount;
+
+  /// 내가 이미 동의를 눌렀는지입니다. 한 번 누르면 취소할 수 없습니다.
+  final bool hasVotedToSkip;
 
   final String endLabel;
 
   //=======================시안 기준 좌표==============================
-  static const double _titleTop = 142;
-  static const double _timerTop = 209;
+  // 제목·타이머는 다른 단계와 같은 자리·크기를 씁니다(2026-08 통일 지시.
+  // 시안은 제목 48px@142, 타이머 209였습니다).
+  static const double _titleTop = MafiaPhoneStatusText.promptTop;
+  static const double _timerTop = MafiaPhoneStatusText.timerTop;
   static const double _illustrationTop = 244;
   static const double _illustrationSize = 349;
 
@@ -91,7 +102,7 @@ class MafiaDayDiscussionView extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 48 * scale,
+                    fontSize: MafiaPhoneStatusText.promptFontSize * scale,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -113,7 +124,7 @@ class MafiaDayDiscussionView extends StatelessWidget {
                       color: seconds < urgentThreshold
                           ? const Color(0xFFFF0000)
                           : Colors.black,
-                      fontSize: 36 * scale,
+                      fontSize: MafiaPhoneStatusText.timerFontSize * scale,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -132,10 +143,20 @@ class MafiaDayDiscussionView extends StatelessWidget {
                 ),
               ),
             ),
+            // 확정 흐름: 아무도 안 눌렀으면 원래 문구, 한 명이라도 누르면
+            // 시안(986:266)대로 빨간 `n/m` 실시간 집계로 바뀝니다. 과반수가
+            // 되는 순간 서버가 투표로 넘깁니다.
             MafiaPhoneActionButton(
-              label: endLabel,
+              label: skipVoteCount > 0
+                  ? '$skipVoteCount/$aliveCount'
+                  : endLabel,
+              labelColor: skipVoteCount > 0 ? const Color(0xFFFF0000) : null,
               onTap: onEndDiscussion,
-              enabled: canEndDiscussion && onEndDiscussion != null,
+              // 이미 누른 사람은 다시 누를 수 없지만 집계는 계속 보입니다.
+              enabled:
+                  canEndDiscussion &&
+                  !hasVotedToSkip &&
+                  onEndDiscussion != null,
             ),
             MafiaStoredRoleCard(role: role),
           ],

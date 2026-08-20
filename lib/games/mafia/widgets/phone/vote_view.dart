@@ -49,9 +49,11 @@ class MafiaVoteView extends StatelessWidget {
   final VoidCallback? onConfirm;
 
   //=======================시안 기준 좌표==============================
-  static const double _promptTop = 102;
-  static const double _timerTop = 142;
-  static const double _waitingTop = 360;
+  // 안내·타이머는 모든 단계 공통 자리(MafiaPhoneStatusText)를 씁니다.
+  static const double _promptTop = MafiaPhoneStatusText.promptTop;
+  static const double _timerTop = MafiaPhoneStatusText.timerTop;
+  // 대기 문구도 밤(P5)과 같은 자리를 씁니다(2026-08 통일 지시. 시안은 360).
+  static const double _waitingTop = MafiaPhoneStatusText.waitingTop;
 
   /// 낮 투표의 선택 테두리 색입니다(시안 `#B18D56`).
   ///
@@ -94,7 +96,7 @@ class MafiaVoteView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.black,
-              fontSize: 24 * scale,
+              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -112,7 +114,7 @@ class MafiaVoteView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 36 * scale,
+                fontSize: MafiaPhoneStatusText.timerFontSize * scale,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -160,7 +162,7 @@ class MafiaVoteView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.black,
-              fontSize: 24 * scale,
+              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
               fontWeight: FontWeight.w700,
               height: 1.2,
             ),

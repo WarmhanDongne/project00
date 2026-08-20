@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/widgets/phone/day_discussion_view.dart';
+import 'package:project00/games/mafia/widgets/phone/morning_announcement_view.dart';
 import 'package:project00/games/mafia/widgets/phone/execution_view.dart';
 import 'package:project00/games/mafia/widgets/phone/night_action_view.dart';
 import 'package:project00/games/mafia/widgets/phone/role_reveal_view.dart';
@@ -38,15 +39,32 @@ class MafiaPhoneGameScreen extends StatefulWidget {
 ///
 /// 서버는 `voteResult` 하나로만 알려 주므로 발표 → 신분 공개 순서는 화면이
 /// 직접 셉니다. 연출 상태라 컨트롤러에 두지 않습니다.
+///
+/// 서버는 `voteResult` 하나로만 알려 주므로 발표 → 신분 공개 순서는 화면이
+/// 직접 셉니다. 연출 상태라 컨트롤러에 두지 않습니다.
 enum _ExecutionStage { announce, reveal, done }
 
 class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
-  /// 처형자 이름을 보여 주는 시간입니다. 이 뒤에 카드를 뒤집습니다.
-  static const Duration _announceHold = Duration(milliseconds: 2600);
+  /// 처형자 이름을 보여 주는 시간입니다(확정: 이름 4초). 이 뒤에 카드를 뒤집습니다.
+  static const Duration _announceHold = Duration(milliseconds: 4000);
 
   _ExecutionStage _executionStage = _ExecutionStage.done;
   int? _executionRound;
   Timer? _announceTimer;
+
+  //=======================밤 행동 로컬 상태==============================
+  // 확정 흐름: 대상 탭 = **선택만**, '선택 완료' 버튼 = 제출. 그래서 제출 전
+  // 선택은 서버가 아니라 화면이 들고 있습니다.
+  String? _nightSelection;
+  int? _nightSelectionRound;
+
+  //=======================투표 로컬 상태==============================
+  // 투표도 같은 방식입니다: 탭 = 선택만, '선택 완료' 버튼 = 제출.
+  String? _voteSelection;
+  int? _voteSelectionRound;
+
+  /// 조사 결과에서 '확인'을 누른 라운드입니다. 누르면 대기 화면으로 넘어갑니다.
+  int? _acknowledgedInvestigationRound;
 
   @override
   void didUpdateWidget(MafiaPhoneGameScreen oldWidget) {
@@ -123,52 +141,93 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         onRevealed: game.confirmRole,
       ),
       'night' => _buildNight(game),
-      // 아침은 태블릿이 발표하고 휴대폰은 기다립니다.
-      // ⚠️ 시안이 없어 낮 화면을 제목만 바꿔 씁니다(미확정).
-      'morning' => MafiaDayDiscussionView(role: game.myRole, title: '아침'),
+      // 아침은 태블릿과 같은 발표 문구를 보여 줍니다(확정).
+      'morning' => MafiaMorningAnnouncementView(
+        role: game.myRole,
+        result: game.morningResult,
+        players: game.players,
+      ),
       'day' => MafiaDayDiscussionView(
         role: game.myRole,
         remainingSeconds: _remainingSeconds(game),
         canEndDiscussion: game.canEndDiscussion,
+        skipVoteCount: game.discussionSkipCount,
+        aliveCount: game.alivePlayers.length,
+        hasVotedToSkip: game.hasVotedToSkipDiscussion,
         onEndDiscussion: game.endDiscussion,
       ),
-      'voting' => MafiaVoteView(
-        role: game.myRole,
-        players: game.voteTargets,
-        selectedUid: game.voteTargetUid,
-        remainingSeconds: _remainingSeconds(game),
-        isSubmitted: game.hasVoted,
-        onSelect: game.canVote ? _submitVote : null,
-        onConfirm: null,
-      ),
+      'voting' => _buildVoting(game),
       // 그 밖의 단계(연결 중·종료)는 셸이 처리합니다.
       _ => MafiaDayDiscussionView(role: game.myRole, title: '잠시만 기다려 주세요'),
     };
   }
 
   Widget _buildNight(MafiaController game) {
+    // 라운드가 바뀌면 지난 밤의 선택·확인 기록을 버립니다.
+    if (_nightSelectionRound != game.round) {
+      _nightSelectionRound = game.round;
+      _nightSelection = null;
+    }
+
     final investigation = game.currentInvestigation;
     final target = investigation == null
         ? null
         : game.players[investigation.targetUid];
+    // 조사 결과는 '확인'을 누를 때까지만 보여 줍니다(확정 흐름).
+    final showsResult =
+        investigation != null &&
+        target != null &&
+        _acknowledgedInvestigationRound != game.round;
 
     return MafiaNightActionView(
       role: game.myRole,
       players: game.nightTargets,
-      selectedUid: game.nightTargetUid,
+      selectedUid: game.hasSubmittedNight
+          ? game.nightTargetUid
+          : _nightSelection,
       allySelectedUids: game.allySelectedUids,
       remainingSeconds: _remainingSeconds(game),
       isSubmitted: game.hasSubmittedNight,
-      onSelect: game.canSubmitNightAction ? game.submitNightAction : null,
-      onConfirm: null,
-      investigationResult: (investigation == null || target == null)
-          ? null
-          : MafiaNightInvestigationResult(
+      // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
+      onSelect: game.canSubmitNightAction
+          ? (uid) => setState(() => _nightSelection = uid)
+          : null,
+      onConfirm: game.canSubmitNightAction && _nightSelection != null
+          ? () => unawaited(game.submitNightAction(_nightSelection!))
+          : null,
+      investigationResult: showsResult
+          ? MafiaNightInvestigationResult(
               target: target,
               verdict: investigation.verdict,
               title: game.myRole?.nightPromptVerb == '추적' ? '추적 결과' : '조사 결과',
-            ),
-      onConfirmResult: null,
+            )
+          : null,
+      onConfirmResult: showsResult
+          ? () => setState(() => _acknowledgedInvestigationRound = game.round)
+          : null,
+    );
+  }
+
+  Widget _buildVoting(MafiaController game) {
+    // 라운드가 바뀌면 지난 투표의 선택을 버립니다.
+    if (_voteSelectionRound != game.round) {
+      _voteSelectionRound = game.round;
+      _voteSelection = null;
+    }
+
+    return MafiaVoteView(
+      role: game.myRole,
+      players: game.voteTargets,
+      selectedUid: game.hasVoted ? game.voteTargetUid : _voteSelection,
+      remainingSeconds: _remainingSeconds(game),
+      isSubmitted: game.hasVoted,
+      // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
+      onSelect: game.canVote
+          ? (uid) => setState(() => _voteSelection = uid)
+          : null,
+      onConfirm: game.canVote && _voteSelection != null
+          ? () => unawaited(game.submitVote(_voteSelection!))
+          : null,
     );
   }
 
@@ -196,9 +255,5 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     if (deadline == null) return null;
     final remaining = (deadline - DateTime.now().millisecondsSinceEpoch) / 1000;
     return remaining <= 0 ? 0 : remaining.ceil();
-  }
-
-  void _submitVote(String targetUid) {
-    unawaited(widget.controller.submitVote(targetUid));
   }
 }

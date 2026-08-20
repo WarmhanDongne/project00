@@ -4,7 +4,10 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
-import {resolveMafiaNight} from "./game.js";
+import {
+  recordImmediateInvestigation,
+  resolveMafiaNight,
+} from "./game.js";
 import {mafiaRole} from "./roles.js";
 import {MafiaGameState, MafiaRoom} from "./types.js";
 import {
@@ -109,14 +112,17 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       game.private[uid] ??= {roleId: game.server.roles[uid]};
       game.private[uid].nightTargetUid = targetUid;
       shareSelectionWithAllies(game, uid, targetUid);
+      // 조사류 결과는 제출한 순간 보여 줍니다(확정 흐름: 선택 완료 → 결과 →
+      // 확인). 밤이 끝날 때 최종값으로 한 번 더 덮어씁니다.
+      recordImmediateInvestigation(game, uid, targetUid, Date.now());
 
       const submitted = Object.keys(game.server.nightActions).length;
       game.public.nightSubmittedCount = submitted;
       game.public.revision += 1;
       game.public.updatedAt = now;
 
-      const allSubmitted = submitted >= game.public.nightActorCount;
-      if (allSubmitted) resolveMafiaNight(game, now);
+      // 확정(2026-08): 전원이 제출해도 밤을 일찍 끝내지 않습니다. 밤은
+      // MAFIA_NIGHT_MS를 채우고, 해결은 timeout_night(마감)이 합니다.
 
       response = {
         success: true,

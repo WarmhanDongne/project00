@@ -267,9 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (_action != null) return;
     final password = _passwordController.text;
     if (!PasswordPolicy.isValid(password)) {
-      setState(
-        () => _errorMessage = PasswordPolicy.requirementsMessage,
-      );
+      setState(() => _errorMessage = PasswordPolicy.requirementsMessage);
       return;
     }
     if (password != _confirmPasswordController.text) {

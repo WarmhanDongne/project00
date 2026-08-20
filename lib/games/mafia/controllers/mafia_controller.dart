@@ -170,6 +170,13 @@ class MafiaController extends Notifier<MafiaGameState> {
   MafiaVoteResult? get voteResult => state.voteResult;
   MafiaMorningResult? get morningResult => state.morningResult;
 
+  //=======================토론 조기 종료 (과반수 투표)==============================
+  /// 조기 종료에 동의한 인원수입니다. 버튼이 `n/m`으로 표시합니다.
+  int get discussionSkipCount => state.discussionSkipCount;
+
+  /// 내가 이미 동의를 눌렀는지입니다. 한 번 누르면 취소할 수 없습니다.
+  bool get hasVotedToSkipDiscussion => state.discussionSkipVoted;
+
   /// 처형된 사람입니다. 동표로 무처형이면 null입니다.
   MafiaPlayer? get executedPlayer {
     final executedUid = state.voteResult?.executedUid;
@@ -208,9 +215,10 @@ class MafiaController extends Notifier<MafiaGameState> {
       isAlive &&
       !commandInFlight;
 
-  bool get canSubmitNightAction => canAct && isNight && actsAtNight;
+  bool get canSubmitNightAction =>
+      canAct && isNight && actsAtNight && !hasSubmittedNight;
   bool get canVote => canAct && isVoting && !hasVoted;
-  bool get canEndDiscussion => canAct && isDay;
+  bool get canEndDiscussion => canAct && isDay && !hasVotedToSkipDiscussion;
 
   String get actionErrorMessage =>
       errorMessage == null || errorMessage!.trim().isEmpty
@@ -376,6 +384,7 @@ class MafiaController extends Notifier<MafiaGameState> {
       allySelections: allySelections,
       latestInvestigation: latest,
       voteTargetUid: map['voteTargetUid']?.toString(),
+      discussionSkipVoted: map['discussionSkipVoted'] == true,
       spectatorRoles: spectatorRoles,
     );
   }

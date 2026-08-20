@@ -56,9 +56,9 @@ export const game_mafia_confirm_role = onCall<ConfirmData>(
       game.public.updatedAt = now;
 
       const total = Object.keys(game.public.players).length;
-      const allConfirmed = confirmed.size >= total;
-      if (allConfirmed) beginMafiaNight(game, now);
-
+      // 전원이 확인해도 **곧바로 밤을 시작하지 않습니다.** 태블릿이 10초 여유를
+      // 두고 '밤이 됐습니다' 안내를 보여 준 뒤 completeRoleReveal로 넘깁니다.
+      // (확정 흐름: 전원 확인 → 10초 → 안내 → 밤)
       response = {
         success: true,
         confirmedCount: confirmed.size,

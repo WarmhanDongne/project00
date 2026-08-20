@@ -45,9 +45,7 @@ void main() {
     expect(resendCalls, 1);
   });
 
-  testWidgets('비밀번호 정책과 재입력 일치를 모두 충족해야 다음 버튼이 활성화된다', (
-    tester,
-  ) async {
+  testWidgets('비밀번호 정책과 재입력 일치를 모두 충족해야 다음 버튼이 활성화된다', (tester) async {
     var setPasswordCalls = 0;
     await _pumpStep(
       tester,
@@ -56,9 +54,8 @@ void main() {
       onSetPassword: () => setPasswordCalls++,
     );
 
-    FilledButton nextButton() => tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '다음'),
-    );
+    FilledButton nextButton() =>
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '다음'));
 
     expect(nextButton().onPressed, isNull);
 
@@ -86,14 +83,8 @@ void main() {
     expect(setPasswordCalls, 1);
   });
 
-  testWidgets('비밀번호와 비밀번호 확인의 눈 아이콘으로 표시 상태를 토글한다', (
-    tester,
-  ) async {
-    await _pumpStep(
-      tester,
-      step: RegisterStep.settingPassword,
-      action: null,
-    );
+  testWidgets('비밀번호와 비밀번호 확인의 눈 아이콘으로 표시 상태를 토글한다', (tester) async {
+    await _pumpStep(tester, step: RegisterStep.settingPassword, action: null);
     await tester.enterText(find.byType(TextField).at(1), 'Abcdef1!');
     await tester.enterText(find.byType(TextField).at(2), 'Abcdef1!');
 

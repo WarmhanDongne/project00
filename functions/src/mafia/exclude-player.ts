@@ -5,7 +5,6 @@ import {
   checkMafiaWinner,
   finishMafiaGame,
   killMafiaPlayer,
-  resolveMafiaNight,
   resolveMafiaVoting,
 } from "./game.js";
 import {actsAtNight, MAFIA_MIN_PLAYERS} from "./roles.js";
@@ -60,10 +59,7 @@ export function excludeMafiaPlayer(
       .filter((player) => actsAtNight(game.server.roles[player.uid])).length;
     game.public.nightSubmittedCount =
       Object.keys(game.server.nightActions ?? {}).length;
-    if (game.public.nightSubmittedCount >= game.public.nightActorCount) {
-      resolveMafiaNight(game, now);
-      return;
-    }
+    // 확정(2026-08): 남은 행동자가 없어져도 밤은 마감까지 유지합니다.
   } else if (game.public.phase === "voting") {
     game.public.voteEligibleCount = alive.length;
     game.public.voteSubmittedCount = Object.keys(game.server.votes ?? {}).length;

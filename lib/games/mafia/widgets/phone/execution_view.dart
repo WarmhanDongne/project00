@@ -332,7 +332,8 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
     return AnimatedBuilder(
       animation: _flipController,
       builder: (context, _) {
-        final progress = _flipController.value;
+        // 시작·끝을 눙치는 곡선으로 종이 카드처럼 부드럽게 돕니다(P1과 동일).
+        final progress = Curves.easeInOutCubic.transform(_flipController.value);
         final showsFront = progress >= 0.5 && front != null;
         final angle = showsFront
             ? math.pi * (1 - progress)
@@ -413,8 +414,11 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
         child: AnimatedBuilder(
           animation: _flipController,
           builder: (context, child) {
-            // 뒤집기 후반부에 맞춰 떠오릅니다.
-            final opacity = ((_flipController.value - 0.5) * 2).clamp(0.0, 1.0);
+            // 뒤집기 후반부에 맞춰 떠오릅니다(카드와 같은 곡선).
+            final eased = Curves.easeInOutCubic.transform(
+              _flipController.value,
+            );
+            final opacity = ((eased - 0.5) * 2).clamp(0.0, 1.0);
             return Opacity(opacity: opacity, child: child);
           },
           child: FittedBox(

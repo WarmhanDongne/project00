@@ -31,17 +31,36 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late final OnboardingService _onboardingService;
+
+  /// 로그인 상태 스트림입니다. **반드시 한 번만 만들어 보관합니다.**
+  ///
+  /// 빌드마다 `userChanges()`를 새로 만들면 회전 같은 평범한 리빌드에도
+  /// StreamBuilder가 구독을 갈아 끼우며 `waiting`으로 돌아가, 화면 전체가
+  /// 스피너로 접혔다 펴집니다. 그 과정에서 아래 온보딩 구독이 다시 마운트되어
+  /// `Bad state: Stream has already been listened to.`로 터졌습니다(회전 크래시).
+  late final Stream<User?> _userChanges;
+
   StreamSubscription<Uri>? _emailLinkSubscription;
   Uri? _emailLink;
   String? _emailLinkError;
   String? _reauthenticationEmail;
+
+  //=======================온보딩 구독==============================
+  // 온보딩 스트림(`async*`)은 **한 번만 들을 수 있습니다.** StreamBuilder에
+  // 캐시된 스트림을 넘기면 위젯이 다시 마운트되는 순간 두 번째 listen이 되어
+  // 터집니다. 그래서 StreamBuilder 대신 여기서 직접 한 번 구독하고, 최근 값을
+  // 상태로 들고 있다가 그립니다. 다시 마운트돼도 구독은 그대로입니다.
   String? _watchedOnboardingUid;
-  Stream<UserOnboarding?>? _onboardingStream;
+  StreamSubscription<UserOnboarding?>? _onboardingSubscription;
+  UserOnboarding? _onboarding;
+  bool _onboardingLoaded = false;
+  bool _onboardingFailed = false;
 
   @override
   void initState() {
     super.initState();
     _onboardingService = widget.onboardingService ?? OnboardingService();
+    _userChanges = widget.userChanges ?? FirebaseAuth.instance.userChanges();
     final initialLink = widget.initialEmailLink;
     if (initialLink != null &&
         _onboardingService.isEmailSignInLink(initialLink.toString())) {
@@ -61,13 +80,14 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void dispose() {
     _emailLinkSubscription?.cancel();
+    _onboardingSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: widget.userChanges ?? FirebaseAuth.instance.userChanges(),
+      stream: _userChanges,
       builder: (context, authSnapshot) {
         if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const _AppInitializingView();
@@ -103,51 +123,83 @@ class _AuthGateState extends State<AuthGate> {
         }
         if (_emailLink != null) return const _AppInitializingView();
 
-        return StreamBuilder<UserOnboarding?>(
-          stream: _watchOnboarding(user.uid),
-          builder: (context, onboardingSnapshot) {
-            if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
-              return const _AppInitializingView();
-            }
-            if (onboardingSnapshot.hasError) {
-              return _GateErrorView(
-                message: '회원가입 상태를 불러오지 못했습니다.',
-                onRetry: () => setState(() {}),
-              );
-            }
-            final onboarding = onboardingSnapshot.data;
-            if (onboarding == null) {
-              return _LegacyRecoveryView(service: _onboardingService);
-            }
-            return switch (onboarding.status) {
-              OnboardingStatus.settingPassword => RegisterScreen(
-                initialStep: RegisterStep.settingPassword,
-                initialEmail: user.email,
-                onReauthenticationStarted: (email) {
-                  setState(() => _reauthenticationEmail = email);
-                },
-                onboardingService: _onboardingService,
-              ),
-              OnboardingStatus.settingProfile => const ProfileSetupScreen(),
-              OnboardingStatus.complete => const Home(),
-            };
-          },
-        );
+        _ensureOnboardingWatch(user.uid);
+        if (_onboardingFailed) {
+          return _GateErrorView(
+            message: '회원가입 상태를 불러오지 못했습니다.',
+            onRetry: _retryOnboardingWatch,
+          );
+        }
+        if (!_onboardingLoaded) return const _AppInitializingView();
+        final onboarding = _onboarding;
+        if (onboarding == null) {
+          return _LegacyRecoveryView(service: _onboardingService);
+        }
+        return switch (onboarding.status) {
+          OnboardingStatus.settingPassword => RegisterScreen(
+            initialStep: RegisterStep.settingPassword,
+            initialEmail: user.email,
+            onReauthenticationStarted: (email) {
+              setState(() => _reauthenticationEmail = email);
+            },
+            onboardingService: _onboardingService,
+          ),
+          OnboardingStatus.settingProfile => const ProfileSetupScreen(),
+          OnboardingStatus.complete => const Home(),
+        };
       },
     );
   }
 
-  Stream<UserOnboarding?> _watchOnboarding(String uid) {
-    if (_watchedOnboardingUid != uid || _onboardingStream == null) {
-      _watchedOnboardingUid = uid;
-      _onboardingStream = _onboardingService.watch(uid);
+  /// 이 uid의 온보딩 상태를 구독합니다. 이미 같은 uid를 듣고 있으면
+  /// 아무것도 하지 않습니다. 빌드 중에 불러도 안전합니다 — listen 자체는
+  /// 콜백을 즉시 부르지 않고, 값은 다음 이벤트 루프에서 setState로 반영됩니다.
+  void _ensureOnboardingWatch(String uid) {
+    if (_watchedOnboardingUid == uid && _onboardingSubscription != null) {
+      return;
     }
-    return _onboardingStream!;
+    unawaited(_onboardingSubscription?.cancel());
+    _watchedOnboardingUid = uid;
+    _onboarding = null;
+    _onboardingLoaded = false;
+    _onboardingFailed = false;
+    // 스트림은 매번 새로 만듭니다(async*는 한 번만 들을 수 있습니다).
+    _onboardingSubscription = _onboardingService
+        .watch(uid)
+        .listen(
+          (onboarding) {
+            if (!mounted) return;
+            setState(() {
+              _onboarding = onboarding;
+              _onboardingLoaded = true;
+            });
+          },
+          onError: (Object error) {
+            debugPrint('온보딩 상태 수신 오류: $error');
+            if (!mounted) return;
+            setState(() => _onboardingFailed = true);
+          },
+        );
+  }
+
+  void _retryOnboardingWatch() {
+    final uid = _watchedOnboardingUid;
+    // 구독 자체를 새로 만들어야 다시 시도가 됩니다. uid를 지워 두면
+    // 다음 빌드의 _ensureOnboardingWatch가 처음부터 다시 구독합니다.
+    unawaited(_onboardingSubscription?.cancel());
+    _onboardingSubscription = null;
+    _watchedOnboardingUid = null;
+    setState(() {});
+    if (uid != null) _ensureOnboardingWatch(uid);
   }
 
   void _clearOnboardingWatch() {
+    unawaited(_onboardingSubscription?.cancel());
+    _onboardingSubscription = null;
     _watchedOnboardingUid = null;
-    _onboardingStream = null;
+    _onboarding = null;
+    _onboardingLoaded = false;
+    _onboardingFailed = false;
   }
 
   void _subscribeToEmailLinks() {

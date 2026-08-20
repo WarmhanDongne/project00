@@ -73,6 +73,15 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   Timer? _stageTimer;
   bool _isNightMusic = false;
 
+  //=======================밤 시작 안내 (확정 흐름)==============================
+  // 전원 확인 → 10초 대기 → '밤이 됐습니다' 안내 2.5초 → 서버에 밤 시작.
+  // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
+  static const Duration _nightNoticeDelay = Duration(seconds: 10);
+  static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
+  Timer? _nightNoticeTimer;
+  bool _showsNightNotice = false;
+  bool _nightNoticeScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +112,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   void dispose() {
     _deadlineTimer?.cancel();
     _stageTimer?.cancel();
+    _nightNoticeTimer?.cancel();
     _bgm.stop();
     _subscription?.close();
     unawaited(AppOrientation.lockPlatformPortrait());
@@ -119,7 +129,12 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (nextStage != _stage) {
       _stage = nextStage;
       _onStageEntered(game, nextStage);
+      // 단계가 바뀌면 밤 안내 상태를 처음으로 돌립니다(재시작 대비).
+      _nightNoticeTimer?.cancel();
+      _showsNightNotice = false;
+      _nightNoticeScheduled = false;
     }
+    _maybeScheduleNightNotice(game);
     _syncBackgroundMusic(game);
     _scheduleDeadlineCheck(game);
     setState(() {});
@@ -153,6 +168,27 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     );
   }
 
+  /// 전원이 역할을 확인하면 10초 뒤 밤 안내를 예약합니다(확정 흐름).
+  void _maybeScheduleNightNotice(MafiaController game) {
+    if (_stage != MafiaTabletStage.roleDeal || _nightNoticeScheduled) return;
+    final total = game.players.length;
+    if (total == 0 || game.roleConfirmedCount < total) return;
+
+    _nightNoticeScheduled = true;
+    _nightNoticeTimer = Timer(_nightNoticeDelay, _showNightNotice);
+  }
+
+  /// '밤이 됐습니다'를 잠시 보여 준 뒤 서버에 밤 시작을 알립니다.
+  void _showNightNotice() {
+    if (!mounted || _stage != MafiaTabletStage.roleDeal) return;
+    setState(() => _showsNightNotice = true);
+    _nightNoticeTimer = Timer(_nightNoticeHold, () {
+      if (!mounted) return;
+      final game = _controller;
+      if (game != null) _advance(game, MafiaTabletStage.roleDeal);
+    });
+  }
+
   /// 마감이 있는 단계는 시간이 지났을 때 서버에 알립니다.
   ///
   /// 서버는 스스로 시간을 재지 않으므로 이 호출이 없으면 그 단계에서 멈춥니다.
@@ -161,6 +197,26 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     final deadline = game.turnDeadlineAt;
     final stage = _stage;
+    // 역할 확인의 제한시간(서버 1분)이 끝나면 곧바로 넘기지 않고 같은
+    // '밤이 됐습니다' 안내를 거칩니다.
+    if (stage == MafiaTabletStage.roleDeal) {
+      if (deadline == null || _nightNoticeScheduled) return;
+      if (ServerClock.hasPassed(deadline)) {
+        _nightNoticeScheduled = true;
+        _showNightNotice();
+        return;
+      }
+      _deadlineTimer = Timer(
+        ServerClock.remainingUntil(deadline) +
+            const Duration(milliseconds: 250),
+        () {
+          if (!mounted || _nightNoticeScheduled) return;
+          _nightNoticeScheduled = true;
+          _showNightNotice();
+        },
+      );
+      return;
+    }
     if (deadline == null || !stage.hasDeadline) return;
 
     if (ServerClock.hasPassed(deadline)) {
@@ -212,6 +268,8 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
             stage: _stage,
             controller: game,
             playerLayout: widget.playerLayout,
+            remainingSeconds: _remainingSeconds(game),
+            showsNightNotice: _showsNightNotice,
             onRulebookPressed: _openRulebook,
             onSettingsPressed: () => _openSettings(game),
             onRestart: () => unawaited(game.restartGame()),
@@ -229,6 +287,14 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
         ],
       ),
     );
+  }
+
+  /// 남은 시간(초)입니다. 마감이 없는 단계면 null입니다.
+  int? _remainingSeconds(MafiaController game) {
+    final deadline = game.turnDeadlineAt;
+    if (deadline == null) return null;
+    final remaining = ServerClock.remainingUntil(deadline);
+    return remaining.isNegative ? 0 : remaining.inSeconds;
   }
 
   //=======================룰북·설정==============================

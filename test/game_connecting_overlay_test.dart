@@ -7,7 +7,6 @@ void main() {
   Widget buildOverlay({
     required bool isWaiting,
     VoidCallback? onExit,
-    Duration indicatorDelay = const Duration(seconds: 6),
     Duration exitDelay = const Duration(seconds: 20),
   }) {
     return MaterialApp(
@@ -19,7 +18,6 @@ void main() {
             GameConnectingOverlay(
               isWaiting: isWaiting,
               onExit: onExit,
-              indicatorDelay: indicatorDelay,
               exitDelay: exitDelay,
             ),
           ],
@@ -38,17 +36,31 @@ void main() {
     expect(opacity.opacity, 0);
   });
 
-  testWidgets('대기가 길어지면 안내를, 더 길어지면 나가기 버튼을 표시한다', (tester) async {
+  testWidgets('로딩 문구·스피너는 어떤 시점에도 보이지 않는다', (tester) async {
+    // 사용자 요청으로 대기 안내(문구 + 스피너)를 없앴습니다. 정상 진입에서도
+    // 잠깐 비치며 연출을 해쳤기 때문입니다.
+    await tester.pumpWidget(buildOverlay(isWaiting: true, onExit: () {}));
+
+    await tester.pump(const Duration(seconds: 7));
+    expect(find.text(GameFlowCopy.waitingForGameData), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pump(const Duration(seconds: 30));
+    expect(find.text(GameFlowCopy.waitingForGameData), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('병적으로 오래 멈춘 경우에만 나가기 버튼이 나타난다', (tester) async {
     var exited = false;
     await tester.pumpWidget(
       buildOverlay(isWaiting: true, onExit: () => exited = true),
     );
 
-    await tester.pump(const Duration(seconds: 7));
-    expect(find.text(GameFlowCopy.waitingForGameData), findsOneWidget);
+    // 20초 전에는 아무것도 없습니다.
+    await tester.pump(const Duration(seconds: 19));
     expect(find.text(GameFlowCopy.leaveGame), findsNothing);
 
-    await tester.pump(const Duration(seconds: 14));
+    await tester.pump(const Duration(seconds: 2));
     expect(find.text(GameFlowCopy.leaveGame), findsOneWidget);
 
     await tester.tap(find.text(GameFlowCopy.leaveGame));

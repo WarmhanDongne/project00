@@ -41,6 +41,7 @@ function makeGame(roleMap, {phase = "night", round = 1} = {}) {
       roleRevealedUids: [],
       nightSubmittedCount: 0,
       nightActorCount: 0,
+      discussionSkipCount: 0,
       voteSubmittedCount: 0,
       voteEligibleCount: Object.keys(roleMap).length,
       winner: null,
@@ -330,18 +331,21 @@ test("승패가 안 났으면 다음 단계로 넘어간다", () => {
 
 // ===== 중도 퇴장 =====
 
-test("마지막 밤 행동자가 빠지면 그 자리에서 밤을 해결한다", () => {
+test("마지막 밤 행동자가 빠져도 밤은 마감까지 유지한다", () => {
+  // 확정(2026-08): 전원 제출·전원 퇴장 어느 쪽이든 밤을 일찍 끝내지 않습니다.
   const game = makeGame(SIX);
   game.public.nightActorCount = 3;
   game.public.nightSubmittedCount = 2;
   game.server.nightActions = {m1: "c1", p1: "c2"};
 
-  // 아직 안 낸 사람은 의사 한 명뿐. 그 사람이 빠지면 남은 사람이 다 낸 셈입니다.
+  // 아직 안 낸 사람은 의사 한 명뿐. 그 사람이 빠져도 밤은 계속됩니다.
   excludeMafiaPlayer(game, "d1", 6000);
 
   assert.equal(game.public.players.d1.status, "dead");
-  assert.equal(game.public.phase, "morning");
-  assert.deepEqual(game.public.morningResult.deadUids, ["c1"]);
+  assert.equal(game.public.phase, "night");
+  // 남은 사람 기준으로 인원만 다시 셉니다. 해결은 timeout_night 몫입니다.
+  assert.equal(game.public.nightActorCount, 2);
+  assert.equal(game.public.nightSubmittedCount, 2);
 });
 
 test("퇴장으로 인원이 최소치 미달이면 게임을 끝낸다", () => {
@@ -416,4 +420,62 @@ test("기자와 탐정이 같은 밤에 함께 동작한다", () => {
   assert.equal(game.public.revealedRoles.p1, "police");
   assert.equal(game.private.p1.investigations.r1.verdict, "마피아");
   assert.equal(game.private.t1.investigations.r1.verdict, "c1");
+});
+
+// ===== 토론 조기 종료 (과반수 투표) =====
+
+import {beginMafiaVoting, beginMafiaDay} from "../lib/mafia/game.js";
+
+test("낮을 시작하면 조기 종료 동의가 초기화된다", () => {
+  const game = makeGame(SIX, {phase: "morning"});
+  game.server.discussionSkipVotes = {c1: true};
+  game.public.discussionSkipCount = 1;
+  game.private.c1.discussionSkipVoted = true;
+
+  beginMafiaDay(game, 5000);
+
+  assert.equal(game.public.phase, "day");
+  assert.equal(game.public.discussionSkipCount, 0);
+  assert.equal(game.server.discussionSkipVotes, undefined);
+  assert.equal(game.private.c1.discussionSkipVoted, undefined);
+});
+
+test("투표를 시작해도 밤 선택·표가 초기화된다 (기존 규칙 유지 확인)", () => {
+  const game = makeGame(SIX, {phase: "day"});
+  beginMafiaVoting(game, 5000);
+  assert.equal(game.public.phase, "voting");
+  assert.equal(game.public.voteEligibleCount, 6);
+});
+
+// ===== 제출 즉시 조사 결과 =====
+
+import {recordImmediateInvestigation} from "../lib/mafia/game.js";
+
+test("경찰은 제출한 순간 결과를 받는다", () => {
+  const game = makeGame(SIX);
+  game.server.nightActions = {p1: "m1"};
+  recordImmediateInvestigation(game, "p1", "m1", 1000);
+
+  assert.equal(game.private.p1.investigations.r1.verdict, "마피아");
+});
+
+test("탐정의 즉시 결과는 잠정값이고 밤 해결이 최종값으로 덮어쓴다", () => {
+  const roles = {...SIX, c3: "detective"};
+  const game = makeGame(roles);
+  // 탐정이 먼저 제출한 시점에는 마피아가 아직 아무도 안 골랐습니다.
+  game.server.nightActions = {c3: "m1"};
+  recordImmediateInvestigation(game, "c3", "m1", 1000);
+  assert.equal(game.private.c3.investigations.r1.verdict, "방문 없음");
+
+  // 그 뒤 마피아가 c1을 고르고 밤이 끝나면 최종값이 덮어씁니다.
+  game.server.nightActions.m1 = "c1";
+  resolveMafiaNight(game, 2000);
+  assert.equal(game.private.c3.investigations.r1.verdict, "c1");
+});
+
+test("일반 시민 제출은 즉시 결과를 만들지 않는다", () => {
+  const game = makeGame(SIX);
+  game.server.nightActions = {d1: "c1"};
+  recordImmediateInvestigation(game, "d1", "c1", 1000);
+  assert.equal(game.private.d1.investigations, undefined);
 });

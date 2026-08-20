@@ -128,16 +128,43 @@ class MafiaTabletSun extends StatelessWidget {
   }
 }
 
+/// 밤 화면 가운데의 달입니다. 시안의 밤 화면에는 이것 말고 아무 것도 없습니다.
+class MafiaTabletMoon extends StatelessWidget {
+  const MafiaTabletMoon({super.key});
+
+  /// 시안 좌표입니다. 가운데(597, 419)에 옵니다.
+  static const Rect rect = Rect.fromLTWH(352, 174, 490, 490);
+
+  @override
+  Widget build(BuildContext context) {
+    return MafiaTabletBox(
+      rect: rect,
+      child: Assets.games.mafia.images.other.moon.game.image(
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      ),
+    );
+  }
+}
+
 /// 우상단 룰북·설정 아이콘입니다.
 ///
-/// 시안에는 그림만 있고 동작이 정해져 있지 않습니다. 눌렀을 때 열 화면은
-/// 호출부가 넘겨 줍니다.
+/// 시안은 밤에 **밝은색 아이콘**을 쓰고 크기·위치도 조금 다릅니다(설정 132 vs
+/// 123, 룰북 154×105 vs 149×98). 같은 아이콘이 단계마다 튀어 보이는 것은
+/// 시안 작업 중 생긴 차이로 보고 **낮 좌표로 통일**하고 그림만 바꿉니다.
+///
+/// ⚠️ 시안의 펼친 책·전용 설정 아이콘 4개가 저장소에 없습니다. 지금은 있는
+/// 아이콘으로 대신 그립니다.
 class MafiaTabletChrome extends StatelessWidget {
   const MafiaTabletChrome({
     super.key,
+    this.isNight = false,
     this.onRulebookPressed,
     this.onSettingsPressed,
   });
+
+  /// 밤이면 밝은색 아이콘을 씁니다.
+  final bool isNight;
 
   final VoidCallback? onRulebookPressed;
   final VoidCallback? onSettingsPressed;
@@ -160,7 +187,9 @@ class MafiaTabletChrome extends StatelessWidget {
           rect: MafiaTabletDesign.settingIcon,
           ignorePointer: false,
           child: _button(
-            icons.settingIcon.game.image(fit: BoxFit.contain),
+            (isNight ? icons.settingWhite : icons.settingIcon).game.image(
+              fit: BoxFit.contain,
+            ),
             onSettingsPressed,
             '설정 열기',
           ),

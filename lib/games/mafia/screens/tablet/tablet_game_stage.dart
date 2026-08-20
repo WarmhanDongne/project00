@@ -44,13 +44,15 @@ enum MafiaTabletStage {
   /// 발표 연출을 보여 주는 시간입니다. 없으면 null입니다.
   ///
   /// 이 시간이 지나면 태블릿이 서버에 완료를 알려 다음 단계로 넘깁니다.
+  ///
+  /// 역할 배분(roleDeal)은 여기 없습니다 — 시간이 아니라 **전원 확인**으로
+  /// 넘어갑니다(확정: 전원 확인 → 10초 → '밤이 됐습니다' 안내 → 밤).
+  /// 그 흐름은 화면(tablet_game.dart)이 관리합니다.
   Duration? get announcementHold => switch (this) {
-    // 카드가 자리마다 날아가는 시간입니다.
-    MafiaTabletStage.roleDeal => const Duration(milliseconds: 3200),
-    // 사망자 발표를 읽을 시간입니다.
-    MafiaTabletStage.morning => const Duration(milliseconds: 4000),
-    // 개표 → 처형자 발표 → 신분 공개까지의 시간입니다.
-    MafiaTabletStage.voteResult => const Duration(milliseconds: 7000),
+    // 사망자 발표를 읽을 시간입니다(확정: 8초).
+    MafiaTabletStage.morning => const Duration(milliseconds: 8000),
+    // 개표(4초) → 처형자 이름(4초) → 신분 공개(5초). 확정: 약 13초.
+    MafiaTabletStage.voteResult => const Duration(milliseconds: 13000),
     _ => null,
   };
 
@@ -92,6 +94,8 @@ class MafiaTabletStageView extends StatelessWidget {
     required this.stage,
     required this.controller,
     required this.playerLayout,
+    this.remainingSeconds,
+    this.showsNightNotice = false,
     this.onRulebookPressed,
     this.onSettingsPressed,
     this.onRestart,
@@ -101,6 +105,13 @@ class MafiaTabletStageView extends StatelessWidget {
   final MafiaTabletStage stage;
   final MafiaController controller;
   final PlayerLayoutModel playerLayout;
+
+  /// 남은 시간(초)입니다. 토론 타이머가 씁니다.
+  final int? remainingSeconds;
+
+  /// 역할 배분 화면 위에 '밤이 됐습니다' 안내를 덮을지입니다.
+  final bool showsNightNotice;
+
   final VoidCallback? onRulebookPressed;
   final VoidCallback? onSettingsPressed;
   final VoidCallback? onRestart;
@@ -114,12 +125,12 @@ class MafiaTabletStageView extends StatelessWidget {
       MafiaTabletStage.roleDeal => MafiaTabletRoleDealView(
         players: controller.orderedPlayers,
         confirmedCount: controller.roleConfirmedCount,
+        showsNightNotice: showsNightNotice,
         onRulebookPressed: onRulebookPressed,
         onSettingsPressed: onSettingsPressed,
       ),
+      // 시안에 문구가 없어 진행 현황도 넣지 않습니다.
       MafiaTabletStage.night => MafiaTabletNightView(
-        submittedCount: controller.nightSubmittedCount,
-        actorCount: controller.nightActorCount,
         onRulebookPressed: onRulebookPressed,
         onSettingsPressed: onSettingsPressed,
       ),
@@ -132,6 +143,7 @@ class MafiaTabletStageView extends StatelessWidget {
       // 토론과 투표 시간은 같은 시안에서 가운데 그림만 다릅니다.
       MafiaTabletStage.day => MafiaTabletDayView(
         showBallotBox: false,
+        remainingSeconds: remainingSeconds,
         onRulebookPressed: onRulebookPressed,
         onSettingsPressed: onSettingsPressed,
       ),

@@ -47,11 +47,11 @@ class MafiaTabletExecutionView extends StatefulWidget {
   final VoidCallback? onSettingsPressed;
 
   //=======================연출 시간==============================
-  /// 이름을 보여 주는 시간입니다. 이 뒤에 카드가 나옵니다.
-  static const Duration nameHold = Duration(milliseconds: 2200);
+  /// 이름을 보여 주는 시간입니다(확정: 4초). 이 뒤에 카드가 나옵니다.
+  static const Duration nameHold = Duration(milliseconds: 4000);
 
-  /// 뒷면 카드를 보여 주는 시간입니다. 이 뒤에 뒤집습니다.
-  static const Duration cardHold = Duration(milliseconds: 1200);
+  /// 뒷면 카드를 보여 주는 시간입니다. 이 뒤에 뒤집혀 공개 5초가 이어집니다.
+  static const Duration cardHold = Duration(milliseconds: 1000);
 
   /// 카드가 뒤집히는 시간입니다. 휴대폰과 같게 맞췄습니다.
   static const Duration flipDuration = Duration(milliseconds: 620);
@@ -136,7 +136,8 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
       AnimatedBuilder(
         animation: _flip,
         builder: (context, _) {
-          final progress = _flip.value;
+          // 시작·끝을 눙치는 곡선으로 종이 카드처럼 부드럽게 돕니다(P1과 동일).
+          final progress = Curves.easeInOutCubic.transform(_flip.value);
           // 뒤집는 동안 카드가 문구 자리를 만들며 올라갑니다.
           final rect = Rect.lerp(_cardBefore, _cardAfter, progress)!;
           return MafiaTabletBox(
@@ -149,7 +150,8 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
         animation: _flip,
         builder: (context, child) {
           // 뒤집기 후반부에 맞춰 문구가 떠오릅니다.
-          final opacity = ((_flip.value - 0.5) * 2).clamp(0.0, 1.0);
+          final eased = Curves.easeInOutCubic.transform(_flip.value);
+          final opacity = ((eased - 0.5) * 2).clamp(0.0, 1.0);
           return Opacity(opacity: opacity, child: child);
         },
         child: MafiaTabletHeadline(

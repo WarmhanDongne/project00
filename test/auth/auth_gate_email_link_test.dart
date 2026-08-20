@@ -9,9 +9,7 @@ import 'package:project00/platform/auth/widgets/auth_gate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('실행 중 이메일 링크는 push된 화면을 닫고 인증 로딩을 보여준다', (
-    tester,
-  ) async {
+  testWidgets('실행 중 이메일 링크는 push된 화면을 닫고 인증 로딩을 보여준다', (tester) async {
     SharedPreferences.setMockInitialValues({
       'auth.pendingEmail': 'tester@example.com',
       'auth.emailLinkCooldownUntil': DateTime.now()
@@ -35,7 +33,9 @@ void main() {
     await tester.pump();
 
     Navigator.of(tester.element(find.byType(AuthGate))).push(
-      MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('cover'))),
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('cover')),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.text('cover'), findsOneWidget);
