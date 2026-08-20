@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
@@ -34,6 +34,9 @@ class RoomProvider extends ChangeNotifier {
   RoomDataLoadStatus groupGamesLoadStatus = RoomDataLoadStatus.idle;
   String? groupGamesError;
   bool isLoading = false;
+  final Set<String> _removingPlayerUids = <String>{};
+  bool get isRemovingAnyPlayer => _removingPlayerUids.isNotEmpty;
+  bool isRemovingPlayer(String uid) => _removingPlayerUids.contains(uid);
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
   bool wasKicked = false;
@@ -41,9 +44,7 @@ class RoomProvider extends ChangeNotifier {
   bool _hasJoined = false;
   bool _isLeaving = false;
   bool _wasServerDisconnected = false;
-  bool _presenceRestoreInFlight = false;
-  int _presenceRestoreAttempt = 0;
-  Timer? _presenceRetryTimer;
+  Future<void>? _connectionRecoveryFuture;
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
   String? _joinedNickname;
@@ -152,6 +153,17 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  Future<bool> clearSelectedGame() async {
+    if (roomCode == null) return false;
+
+    final result = await _runCommand<bool>(() async {
+      await _service.selectGame(roomCode: roomCode!, gameId: null);
+      return true;
+    });
+
+    return result ?? false;
+  }
+
   /// 휴대폰 대기실에서 게임 종류와 무관하게 시작 상태를 한 번만 구독합니다.
   Stream<String?> watchGameStatus(String code) =>
       _service.watchGameStatus(code.trim().toUpperCase());
@@ -221,8 +233,23 @@ class RoomProvider extends ChangeNotifier {
     _controllerHeartbeatTimer = Timer.periodic(const Duration(seconds: 10), (
       _,
     ) {
-      if (roomCode == code) unawaited(_service.heartbeatController(code));
+      if (roomCode == code) unawaited(_heartbeatControllerSafely(code));
     });
+  }
+
+  Future<void> _heartbeatControllerSafely(String code) async {
+    try {
+      await _service.heartbeatController(code);
+    } catch (error) {
+      // heartbeat는 다음 주기에 다시 실행됩니다. 순간 단절을 전역 미처리
+      // 예외로 올리면 태블릿 디버거가 멈추거나 앱이 종료된 것처럼 보입니다.
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=controller_heartbeat_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+    }
   }
 
   Future<void> resumeControllerPresence() async {
@@ -258,11 +285,28 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<bool> removePlayer(String userUid) async {
-    final result = await _runCommand<bool>(() async {
-      await _service.removePlayer(roomCode!, userUid);
+    final code = roomCode;
+    if (code == null || _removingPlayerUids.contains(userUid)) return false;
+
+    _removingPlayerUids.add(userUid);
+    errorMessage = null;
+    notifyListeners();
+    try {
+      await _service.removePlayer(code, userUid);
       return true;
-    });
-    return result ?? false;
+    } on RoomCommandException catch (error) {
+      errorMessage = error.message;
+      return false;
+    } on FirebaseFunctionsException catch (error) {
+      errorMessage = error.message ?? '플레이어를 내보내지 못했습니다.';
+      return false;
+    } catch (error) {
+      errorMessage = error.toString();
+      return false;
+    } finally {
+      _removingPlayerUids.remove(userUid);
+      notifyListeners();
+    }
   }
 
   Future<bool> savePlayerSeatIndexes(Map<String, int> seatIndexesByUid) async {
@@ -292,7 +336,6 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
-    _presenceRetryTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
 
     connectionSubscription = _service.watchServerConnection().listen(
@@ -386,10 +429,7 @@ class RoomProvider extends ChangeNotifier {
       notifyListeners();
 
       // 활성화된 유저의 uids 추출
-      final activeUids = players
-          .where((p) => p.isActive)
-          .map((p) => p.uid)
-          .toList(growable: false);
+      final activeUids = _groupMemberUids();
       unawaited(
         _refreshGroupGames(activeUids, expectedRoomCode: listenedRoomCode),
       );
@@ -453,21 +493,47 @@ class RoomProvider extends ChangeNotifier {
     if (code == null || groupGamesLoadStatus == RoomDataLoadStatus.loading) {
       return;
     }
-    final activeUids = players
+    final activeUids = _groupMemberUids();
+    await _refreshGroupGames(activeUids, expectedRoomCode: code, force: true);
+  }
+
+  List<String> _groupMemberUids() {
+    final uids = players
         .where((player) => player.isActive)
         .map((player) => player.uid)
-        .toList(growable: false);
-    await _refreshGroupGames(activeUids, expectedRoomCode: code, force: true);
+        .where((uid) => uid.isNotEmpty)
+        .toSet();
+    String? currentUid;
+    try {
+      currentUid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // Firebase를 초기화하지 않는 순수 위젯/단위 테스트에서는 참가자 UID만 사용합니다.
+    }
+    if (currentUid != null && currentUid.isNotEmpty) uids.add(currentUid);
+    return uids.toList(growable: false);
   }
 
   void _startPlayerHeartbeat(String code) {
     _playerHeartbeatTimer?.cancel();
-    unawaited(_service.heartbeatPlayer(code));
+    unawaited(_heartbeatPlayerSafely(code));
     _playerHeartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (roomCode == code && !_isLeaving) {
-        unawaited(_service.heartbeatPlayer(code));
+        unawaited(_heartbeatPlayerSafely(code));
       }
     });
+  }
+
+  Future<void> _heartbeatPlayerSafely(String code) async {
+    try {
+      await _service.heartbeatPlayer(code);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=player_heartbeat_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+    }
   }
 
   void _handleServerConnection(bool isConnected) {
@@ -477,15 +543,7 @@ class RoomProvider extends ChangeNotifier {
     }
     if (!_wasServerDisconnected) return;
     _wasServerDisconnected = false;
-    final code = roomCode;
-    final isController =
-        code != null &&
-        ControllerRoomSessionStore.instance.sessionIdForRoom(code) != null;
-    if (isController) {
-      unawaited(resumeControllerPresence());
-    } else {
-      unawaited(_restorePlayerConnection());
-    }
+    unawaited(retryConnectionRecovery().catchError((Object _) {}));
   }
 
   /// 네트워크 모달의 재시도 버튼에서 현재 세션을 실제로 복원합니다.
@@ -493,8 +551,28 @@ class RoomProvider extends ChangeNotifier {
   /// RTDB는 물리 네트워크가 돌아오면 자체 재연결하므로 `goOnline()`을 다시 부르는
   /// 대신, 연결 단절 중 실패했을 presence 예약과 서버의 참가 상태를 복구합니다.
   Future<void> retryConnectionRecovery() async {
+    final activeRecovery = _connectionRecoveryFuture;
+    if (activeRecovery != null) {
+      await activeRecovery;
+      return;
+    }
+
+    final recovery = _performConnectionRecovery();
+    _connectionRecoveryFuture = recovery;
+    try {
+      await recovery;
+    } finally {
+      if (identical(_connectionRecoveryFuture, recovery)) {
+        _connectionRecoveryFuture = null;
+      }
+    }
+  }
+
+  Future<void> _performConnectionRecovery() async {
     final code = roomCode;
-    if (code == null) return;
+    if (code == null) {
+      throw const RoomCommandException('복구할 방 정보가 없습니다.');
+    }
 
     final controllerSessionId = ControllerRoomSessionStore.instance
         .sessionIdForRoom(code);
@@ -509,7 +587,9 @@ class RoomProvider extends ChangeNotifier {
     }
 
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      throw const RoomCommandException('인증 정보가 없습니다.');
+    }
     RoomPlayer? currentPlayer;
     for (final player in players) {
       if (player.uid == user.uid) {
@@ -519,7 +599,9 @@ class RoomProvider extends ChangeNotifier {
     }
     final nickname = currentPlayer?.nickname ?? _joinedNickname;
     final characterId = currentPlayer?.characterId ?? _joinedCharacterId;
-    if (nickname == null || characterId == null) return;
+    if (nickname == null || characterId == null) {
+      throw const RoomCommandException('복구할 플레이어 정보가 없습니다.');
+    }
 
     await _service
         .restorePlayerConnection(
@@ -529,57 +611,9 @@ class RoomProvider extends ChangeNotifier {
         )
         .timeout(const Duration(seconds: 8));
     if (roomCode != code) return;
-    _presenceRestoreAttempt = 0;
-    _presenceRetryTimer?.cancel();
     _startPlayerHeartbeat(code);
     errorMessage = null;
     notifyListeners();
-  }
-
-  Future<void> _restorePlayerConnection() async {
-    if (_presenceRestoreInFlight || _isLeaving) return;
-    final code = roomCode;
-    final user = FirebaseAuth.instance.currentUser;
-    if (code == null || user == null) return;
-    RoomPlayer? currentPlayer;
-    for (final player in players) {
-      if (player.uid == user.uid) {
-        currentPlayer = player;
-        break;
-      }
-    }
-    final nickname = currentPlayer?.nickname ?? _joinedNickname;
-    final characterId = currentPlayer?.characterId ?? _joinedCharacterId;
-    if (nickname == null || characterId == null) return;
-
-    _presenceRestoreInFlight = true;
-    _presenceRetryTimer?.cancel();
-    try {
-      await _service.restorePlayerConnection(
-        roomCode: code,
-        nickname: nickname,
-        characterId: characterId,
-      );
-      if (roomCode != code) return;
-      _presenceRestoreAttempt = 0;
-      _startPlayerHeartbeat(code);
-      errorMessage = null;
-      notifyListeners();
-    } catch (_) {
-      if (roomCode != code || _isLeaving) return;
-      _presenceRestoreAttempt += 1;
-      if (_presenceRestoreAttempt < 4) {
-        final delaySeconds = 1 << (_presenceRestoreAttempt - 1);
-        _presenceRetryTimer = Timer(Duration(seconds: delaySeconds), () {
-          unawaited(_restorePlayerConnection());
-        });
-      } else {
-        errorMessage = '게임 연결을 복원하지 못했습니다. 네트워크를 확인해주세요.';
-        notifyListeners();
-      }
-    } finally {
-      _presenceRestoreInFlight = false;
-    }
   }
 
   /// 썸네일·설명 같은 화면용 Firestore 정보는 게임 시작 신호와 분리해 불러옵니다.
@@ -838,7 +872,6 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
-    _presenceRetryTimer?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     roomSubscription = null;
@@ -847,6 +880,7 @@ class RoomProvider extends ChangeNotifier {
     statusSubscription = null;
     roomCode = null;
     players = [];
+    _removingPlayerUids.clear();
     selectedGameId = null;
     selectedGame = null;
     selectedGameLoadStatus = RoomDataLoadStatus.idle;
@@ -860,8 +894,7 @@ class RoomProvider extends ChangeNotifier {
     _hasJoined = false;
     _isLeaving = false;
     _wasServerDisconnected = false;
-    _presenceRestoreInFlight = false;
-    _presenceRestoreAttempt = 0;
+    _connectionRecoveryFuture = null;
     _joinedNickname = null;
     _joinedCharacterId = null;
     notifyListeners();
@@ -874,7 +907,6 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
-    _presenceRetryTimer?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     super.dispose();

@@ -242,7 +242,13 @@ class _ActiveRoom extends StatelessWidget {
                 label: '초기화',
                 height: 40,
                 style: PlatformButtonStyle.secondary,
-                onPressed: provider.isLoading ? null : provider.closeRoom,
+                onPressed: provider.isLoading
+                    ? null
+                    : () {
+                        if (!provider.isRemovingAnyPlayer) {
+                          unawaited(provider.closeRoom());
+                        }
+                      },
               ),
             ),
           ),
@@ -254,7 +260,9 @@ class _ActiveRoom extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) => _PlayerTile(
               player: players[index],
-              onRemove: () => provider.removePlayer(players[index].uid),
+              isRemoving: provider.isRemovingPlayer(players[index].uid),
+              onRemove: () =>
+                  unawaited(provider.removePlayer(players[index].uid)),
             ),
           ),
         ),
@@ -297,9 +305,14 @@ class _ActiveRoom extends StatelessWidget {
 }
 
 class _PlayerTile extends StatefulWidget {
-  const _PlayerTile({required this.player, required this.onRemove});
+  const _PlayerTile({
+    required this.player,
+    required this.isRemoving,
+    required this.onRemove,
+  });
 
   final RoomPlayer player;
+  final bool isRemoving;
   final VoidCallback onRemove;
 
   @override
@@ -394,8 +407,14 @@ class _PlayerTileState extends State<_PlayerTile> {
             ),
             child: IconButton(
               tooltip: '내보내기',
-              onPressed: widget.onRemove,
-              icon: Icon(Icons.close, size: 25, color: colors.textMuted),
+              onPressed: widget.isRemoving ? null : widget.onRemove,
+              icon: widget.isRemoving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.close, size: 25, color: colors.textMuted),
             ),
           ),
         ],

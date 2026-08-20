@@ -84,7 +84,11 @@ export async function updateGameRules({dryRun = false} = {}) {
   const firestore = getFirestore();
   const batch = firestore.batch();
   for (const [gameId, rules] of Object.entries(gameRules)) {
-    batch.set(firestore.collection("games").doc(gameId), {rules}, {merge: true});
+    batch.set(
+      firestore.collection("games").doc(gameId),
+      {rules, accessType: "free"},
+      {merge: true},
+    );
   }
   await batch.commit();
   console.log(`Updated rules for ${Object.keys(gameRules).length} games.`);

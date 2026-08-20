@@ -69,6 +69,44 @@ void main() {
   });
 
   group('TabletRoomPanel Figma state flow', () {
+    testWidgets('내보내기는 해당 참가자만 로딩하고 초기화를 실행하지 않는다', (tester) async {
+      final removeCompleter = Completer<void>();
+      final service = _FakeRoomService(removeCompleter: removeCompleter);
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..players = const [
+          RoomPlayer(
+            uid: 'player-1',
+            nickname: '플레이어1',
+            characterId: 'frog',
+            isConnected: true,
+            seatIndex: 0,
+            role: 'player',
+            status: 'active',
+            penaltyAttemptCount: 0,
+          ),
+        ];
+      await _pumpPanel(tester, provider);
+
+      await tester.tap(find.byTooltip('내보내기'));
+      await tester.pump();
+
+      expect(service.removeCalls, 1);
+      expect(service.closeCalls, 0);
+      expect(provider.isLoading, isFalse);
+      expect(provider.isRemovingPlayer('player-1'), isTrue);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.tap(find.text('초기화'));
+      await tester.pump();
+      expect(service.closeCalls, 0);
+
+      removeCompleter.complete();
+      await tester.pumpAndSettle();
+      expect(provider.isRemovingPlayer('player-1'), isFalse);
+      provider.dispose();
+    });
+
     testWidgets('초대 모드 초기화는 구성원 없음으로 돌아간다', (tester) async {
       final service = _FakeRoomService();
       final provider = _provider(service)..roomCode = 'ABCDE';
@@ -138,11 +176,17 @@ Future<void> _pumpPanel(WidgetTester tester, RoomProvider provider) {
 }
 
 class _FakeRoomService implements RoomService {
-  _FakeRoomService({this.closeCompleter, this.failFirstCreate = false});
+  _FakeRoomService({
+    this.closeCompleter,
+    this.removeCompleter,
+    this.failFirstCreate = false,
+  });
 
   final Completer<void>? closeCompleter;
+  final Completer<void>? removeCompleter;
   final bool failFirstCreate;
   int closeCalls = 0;
+  int removeCalls = 0;
   int createCalls = 0;
   final List<String?> createOperationIds = [];
 
@@ -160,6 +204,12 @@ class _FakeRoomService implements RoomService {
       throw StateError('response lost');
     }
     return 'NEW12';
+  }
+
+  @override
+  Future<void> removePlayer(String roomCode, String userUid) {
+    removeCalls += 1;
+    return removeCompleter?.future ?? Future<void>.value();
   }
 
   @override

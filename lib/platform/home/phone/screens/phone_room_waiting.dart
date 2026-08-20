@@ -9,7 +9,7 @@ import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/phone/widgets/phone_header.dart';
+import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
@@ -40,6 +40,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     super.initState();
     //=======================플랫폼 세로 화면 고정==============================
     unawaited(_lockPlatformPortrait());
+    unawaited(AppSystemUi.showPlatformSystemBars());
     widget.provider.addListener(_onRoomProviderChanged);
     // 마운트 시점에 이미 추방/방 종료 상태면 핸들러가 ModalRoute.of를
     // 호출하므로, initState 완료 전에 실행하지 않고 첫 프레임 뒤로 미룹니다.
@@ -51,12 +52,6 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   Future<void> _lockPlatformPortrait() => AppOrientation.lockPlatformPortrait();
 
   void _onRoomProviderChanged() {
-    final selectedGameId = widget.provider.selectedGameId;
-    if (selectedGameId != null && selectedGameId.isNotEmpty) {
-      //================상태바 표시=================
-      // 태블릿의 게임 선택은 자리 배치 시작 신호이므로 휴대폰도 이때 전체 화면에 진입합니다.
-      unawaited(AppSystemUi.enterGameFullscreen());
-    }
     _syncGameStatusSubscription();
 
     final wasKicked = widget.provider.wasKicked;
@@ -135,6 +130,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     // 휴대폰 방향은 게임 등록 정보가 단일 기준입니다. 새 게임에서 화면마다
     // 임의로 방향을 정하지 말고 TemplateGame.phoneOrientation을 선언하세요.
+    unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.applyPhoneGame(game.phoneOrientation));
 
     final leftRoom = await Navigator.of(context).push<bool>(
@@ -157,6 +153,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     }
     // 화면 전환을 회전 응답보다 먼저 끝내 퇴장 성공 후 이전 화면에 갇히지
     // 않게 합니다. 방향 복원은 플랫폼 채널 응답을 기다리지 않습니다.
+    unawaited(AppSystemUi.showPlatformSystemBars());
     unawaited(_lockPlatformPortrait());
   }
 
@@ -190,8 +187,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
               child: Column(
                 children: [
                   widget.headerForTesting ??
-                      PhoneHeader(
-                        buttonText: '그룹 나가기',
+                      _PhoneRoomHeader(
                         onPressed: () async {
                           final left = await widget.provider.leaveRoom();
                           if (!context.mounted || !left) return;
@@ -224,6 +220,41 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   }
 }
 
+class _PhoneRoomHeader extends StatelessWidget {
+  const _PhoneRoomHeader({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(bottom: BorderSide(color: colors.border)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 112,
+            child: PlatformButton(
+              label: '그룹 나가기',
+              height: 44,
+              expand: false,
+              style: PlatformButtonStyle.secondary,
+              onPressed: onPressed,
+            ),
+          ),
+          const Spacer(),
+          const PhoneProfile(),
+        ],
+      ),
+    );
+  }
+}
+
 class _GroupWaitingContent extends StatelessWidget {
   const _GroupWaitingContent({required this.provider, required this.players});
 
@@ -232,36 +263,22 @@ class _GroupWaitingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
         const _WaitingStatusBanner(message: '태블릿에서 게임을 선택하는 중입니다'),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            const Text(
-              '참여 코드',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-            const Spacer(),
-            Text(
-              provider.roomCode ?? '',
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 22,
-                letterSpacing: 1.5,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         PhoneRoomParticipantList(players: players),
         const SizedBox(height: 24),
-        const PlatformSectionTitle(
-          title: '그룹이 보유 중인 게임',
-          trailing: _ReadOnlyBadge(),
+        const Row(
+          children: [
+            Text(
+              '그룹이 보유 중인 게임',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+            ),
+            SizedBox(width: 10),
+            _ReadOnlyBadge(),
+          ],
         ),
         const SizedBox(height: 12),
         _GroupGamesContent(provider: provider),
@@ -366,12 +383,16 @@ class _WaitingGameCard extends StatelessWidget {
     ].join(' · ');
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: PlatformPanel(
-        padding: const EdgeInsets.all(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.surfaceMuted,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Row(
           children: [
-            _GameCover(gameInfo: gameInfo, size: 88),
-            const SizedBox(width: 13),
+            _GameCover(gameInfo: gameInfo, size: 96),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +402,7 @@ class _WaitingGameCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -392,7 +413,7 @@ class _WaitingGameCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: colors.textMuted,
-                      fontSize: 11,
+                      fontSize: 12,
                       height: 1.35,
                       fontWeight: FontWeight.w700,
                     ),
@@ -402,7 +423,7 @@ class _WaitingGameCard extends StatelessWidget {
                     gameInfo.description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colors.textMuted, fontSize: 11),
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
                   ),
                 ],
               ),
@@ -466,45 +487,36 @@ class _SelectedGameDetails extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _GameCover(gameInfo: gameInfo, size: 118),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    gameInfo.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      height: 1.15,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      PlatformTag(label: '${gameInfo.playTime}분'),
-                      PlatformTag(
-                        label: '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
-                      ),
-                      for (final genre in gameInfo.genres)
-                        PlatformTag(label: genre, highlighted: true),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+        Text(
+          '그룹이 선택한 게임',
+          style: TextStyle(color: colors.textMuted, fontSize: 14),
         ),
         const SizedBox(height: 20),
-        Text(
-          gameInfo.description,
-          style: TextStyle(color: colors.textMuted, fontSize: 14, height: 1.65),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final coverSize = (constraints.maxWidth * 0.48).clamp(142.0, 210.0);
+            final details = _SelectedGameSummary(gameInfo: gameInfo);
+            if (constraints.maxWidth < 330) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: _GameCover(gameInfo: gameInfo, size: coverSize),
+                  ),
+                  const SizedBox(height: 18),
+                  details,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _GameCover(gameInfo: gameInfo, size: coverSize),
+                const SizedBox(width: 16),
+                Expanded(child: details),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 30),
         const Text(
@@ -513,6 +525,48 @@ class _SelectedGameDetails extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(rules, style: const TextStyle(fontSize: 14, height: 1.7)),
+      ],
+    );
+  }
+}
+
+class _SelectedGameSummary extends StatelessWidget {
+  const _SelectedGameSummary({required this.gameInfo});
+
+  final GameInfo gameInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          gameInfo.name,
+          style: const TextStyle(
+            fontSize: 24,
+            height: 1.15,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            PlatformTag(label: '${gameInfo.playTime}분'),
+            PlatformTag(
+              label: '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
+            ),
+            for (final genre in gameInfo.genres)
+              PlatformTag(label: genre, highlighted: true),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          gameInfo.description,
+          style: TextStyle(color: colors.textMuted, fontSize: 13, height: 1.55),
+        ),
       ],
     );
   }

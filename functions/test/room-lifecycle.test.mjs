@@ -5,7 +5,10 @@ import {
   assertControllerSession,
   createControllerSessionId,
 } from "../lib/room/controller-session.js";
-import {shouldDeleteRoom} from "../lib/room/realtime-room-lifecycle.js";
+import {
+  isGameAccessibleToGroup,
+  shouldDeleteRoom,
+} from "../lib/room/realtime-room-lifecycle.js";
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
   const sessionId = createControllerSessionId();
@@ -43,5 +46,18 @@ test("finished 방은 보존 시간이 지난 뒤에만 삭제한다", () => {
   assert.equal(
     shouldDeleteRoom({status: "finished", retainUntil: now}, now),
     true,
+  );
+});
+
+test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에게만 허용한다", () => {
+  assert.equal(isGameAccessibleToGroup(undefined, "mafia", []), true);
+  assert.equal(isGameAccessibleToGroup("free", "final_call", []), true);
+  assert.equal(
+    isGameAccessibleToGroup("paid", "paid_game", [[], ["paid_game"]]),
+    true,
+  );
+  assert.equal(
+    isGameAccessibleToGroup("paid", "paid_game", [["another_game"]]),
+    false,
   );
 });

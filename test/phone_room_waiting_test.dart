@@ -25,6 +25,16 @@ void main() {
     test('uses an empty string when legacy documents have no rules', () {
       expect(GameInfo.fromJson(const {}).rules, isEmpty);
     });
+
+    test('treats legacy games as free and parses paid access', () {
+      expect(GameInfo.fromJson(const {}).isFree, isTrue);
+      final paid = GameInfo.fromJson(const {
+        'accessType': 'paid',
+        'isOwned': false,
+      });
+      expect(paid.accessType, GameAccessType.paid);
+      expect(paid.isAccessible, isFalse);
+    });
   });
 
   group('RoomProvider group games', () {
@@ -62,6 +72,18 @@ void main() {
       expect(provider.groupGamesLoadStatus, RoomDataLoadStatus.idle);
       provider.dispose();
     });
+
+    test('clears the server selection with a null game id', () async {
+      final roomService = _FakeRoomService();
+      final provider = RoomProvider(
+        service: roomService,
+        gameService: _StaticGameService(),
+      )..roomCode = 'ABCDE';
+
+      expect(await provider.clearSelectedGame(), isTrue);
+      expect(roomService.selectedGameIds, [null]);
+      provider.dispose();
+    });
   });
 
   group('PhoneRoomWaiting Figma states', () {
@@ -72,7 +94,11 @@ void main() {
         ..roomCode = 'ABCDE'
         ..players = const [_player]
         ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
-        ..groupGames = [_game('mafia', '마피아'), _game('liars_poker', '라이어스 포커')];
+        ..groupGames = [
+          _game('mafia', '마피아'),
+          _game('liars_poker', '라이어스 포커'),
+          _game('final_call', 'Final Call'),
+        ];
 
       await _pumpWaiting(tester, provider);
 
@@ -80,6 +106,12 @@ void main() {
       expect(find.text('보기 전용'), findsOneWidget);
       expect(find.text('마피아'), findsOneWidget);
       expect(find.text('라이어스 포커'), findsOneWidget);
+      expect(find.text('Final Call'), findsOneWidget);
+      expect(find.text('참여 코드'), findsNothing);
+      expect(
+        find.ancestor(of: find.text('마피아'), matching: find.byType(InkWell)),
+        findsNothing,
+      );
       expect(find.text('곧 시작합니다'), findsNothing);
       provider.dispose();
     });
@@ -101,6 +133,7 @@ void main() {
       await _pumpWaiting(tester, provider);
 
       expect(find.text('Final Call'), findsOneWidget);
+      expect(find.text('그룹이 선택한 게임'), findsOneWidget);
       expect(find.text('게임 규칙'), findsOneWidget);
       expect(find.textContaining('[게임 목표]'), findsOneWidget);
       expect(find.text('곧 시작합니다'), findsOneWidget);
@@ -122,6 +155,20 @@ void main() {
       await _pumpWaiting(tester, provider);
 
       expect(find.text('게임 규칙을 준비 중입니다.'), findsOneWidget);
+      provider.dispose();
+    });
+
+    testWidgets('740 does not overflow on a narrow phone', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..selectedGameId = 'final_call'
+        ..selectedGameLoadStatus = RoomDataLoadStatus.loaded
+        ..selectedGame = _game('final_call', 'Final Call', rules: '첫 줄\n둘째 줄');
+
+      await _pumpWaiting(tester, provider, size: const Size(320, 700));
+
+      expect(find.text('그룹이 선택한 게임'), findsOneWidget);
+      expect(tester.takeException(), isNull);
       provider.dispose();
     });
 
@@ -177,9 +224,13 @@ GameInfo _game(String id, String name, {String rules = ''}) => GameInfo(
   isOwned: true,
 );
 
-Future<void> _pumpWaiting(WidgetTester tester, RoomProvider provider) async {
+Future<void> _pumpWaiting(
+  WidgetTester tester,
+  RoomProvider provider, {
+  Size size = const Size(390, 844),
+}) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   await tester.pumpWidget(
@@ -206,6 +257,16 @@ int _activeDot(WidgetTester tester) {
 }
 
 class _FakeRoomService implements RoomService {
+  final List<String?> selectedGameIds = [];
+
+  @override
+  Future<void> selectGame({
+    required String roomCode,
+    required String? gameId,
+  }) async {
+    selectedGameIds.add(gameId);
+  }
+
   @override
   Stream<String?> watchGameStatus(String roomCode) => const Stream.empty();
 

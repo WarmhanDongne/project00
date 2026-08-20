@@ -19,6 +19,28 @@ void main() {
       expect(find.byKey(NetworkUnavailableModal.cardKey), findsNothing);
     });
 
+    testWidgets('기본 유예 시간은 Firebase 재연결을 위해 10초를 보장한다', (tester) async {
+      final connectionChanges = StreamController<bool>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AppNetworkGuard(
+            connectionChanges: connectionChanges.stream,
+            onRetry: () async {},
+            child: const Scaffold(body: SizedBox.expand()),
+          ),
+        ),
+      );
+
+      connectionChanges.add(false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 9999));
+      expect(find.byKey(NetworkUnavailableModal.cardKey), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(find.byKey(NetworkUnavailableModal.cardKey), findsOneWidget);
+      await connectionChanges.close();
+    });
+
     testWidgets('필수 화면의 최초 false가 지연 시간 동안 유지되면 모달을 띄운다', (tester) async {
       final connectionChanges = StreamController<bool>();
       await _pumpGuard(tester, connectionChanges.stream);

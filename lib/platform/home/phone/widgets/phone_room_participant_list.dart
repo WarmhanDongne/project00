@@ -60,31 +60,31 @@ class PhoneRoomParticipantList extends StatelessWidget {
             itemBuilder: (context, index) {
               final player = players[index];
               return Container(
-                height: compact ? 46 : 52,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                height: compact ? 46 : 68,
+                padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
                 decoration: BoxDecoration(
                   color: colors.surface,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(compact ? 9 : 14),
                   border: Border.all(color: colors.border),
                 ),
                 child: Row(
                   children: [
                     SizedBox(
-                      width: compact ? 30 : 34,
-                      height: compact ? 30 : 34,
+                      width: compact ? 30 : 48,
+                      height: compact ? 30 : 48,
                       child: Image.asset(
                         roomCharacterAssetPath(player.characterId),
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: compact ? 10 : 14),
                     Expanded(
                       child: Text(
                         player.nickname,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
+                        style: TextStyle(
+                          fontSize: compact ? 14 : 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),

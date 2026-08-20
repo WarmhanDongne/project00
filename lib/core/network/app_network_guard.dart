@@ -18,7 +18,7 @@ class AppNetworkGuard extends StatefulWidget {
     this.onRetry,
     this.onExit,
     this.exitLabel = '홈으로',
-    this.showDelay = const Duration(seconds: 5),
+    this.showDelay = const Duration(seconds: 10),
   });
 
   final Widget child;
