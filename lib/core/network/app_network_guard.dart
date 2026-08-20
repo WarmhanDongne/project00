@@ -4,7 +4,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/network/network_unavailable_modal.dart';
 import 'package:project00/core/network/realtime_connection_monitor.dart';
-import 'package:project00/firebase/services/realtime_database_service.dart';
 
 /// 플랫폼과 모든 게임 위에 동일한 네트워크 연결 모달을 제공하는 앱 루트 레이어입니다.
 ///
@@ -43,7 +42,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard> {
   bool _everConnected = false;
 
   FirebaseDatabase get _database =>
-      widget.database ?? RealtimeDatabaseService.instance;
+      widget.database ?? FirebaseDatabase.instance;
 
   @override
   void initState() {

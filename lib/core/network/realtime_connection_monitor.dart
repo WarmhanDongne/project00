@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart';
 
 /// 앱 전체에서 RTDB `.info/connected`를 한 번만 구독하는 연결 상태 소스입니다.
 ///
@@ -11,61 +9,28 @@ import 'package:flutter/foundation.dart';
 class RealtimeConnectionMonitor {
   RealtimeConnectionMonitor._();
 
-  @visibleForTesting
-  RealtimeConnectionMonitor.forTesting();
-
   static final RealtimeConnectionMonitor instance =
       RealtimeConnectionMonitor._();
-
-  final Map<Object, _ConnectionChannel> _channels =
-      HashMap<Object, _ConnectionChannel>.identity();
-
-  Stream<bool> watch(FirebaseDatabase database) => _watchSource(
-    database,
-    () => database
-        .ref('.info/connected')
-        .onValue
-        .map((event) => event.snapshot.value == true),
-  );
-
-  /// Firebase 없이 인스턴스별 구독 분리와 최신값 재생을 검증하기 위한 진입점입니다.
-  @visibleForTesting
-  Stream<bool> watchConnectionSource(
-    Object identity,
-    Stream<bool> Function() createSource,
-  ) => _watchSource(identity, createSource);
-
-  Stream<bool> _watchSource(
-    Object identity,
-    Stream<bool> Function() createSource,
-  ) {
-    final channel = _channels.putIfAbsent(
-      identity,
-      () => _ConnectionChannel(createSource()),
-    );
-    return channel.watch();
-  }
-
-  @visibleForTesting
-  Future<void> dispose() async {
-    final channels = _channels.values.toList(growable: false);
-    _channels.clear();
-    await Future.wait(channels.map((channel) => channel.dispose()));
-  }
-}
-
-class _ConnectionChannel {
-  _ConnectionChannel(Stream<bool> source) {
-    _subscription = source.listen(_emit, onError: (_) => _emit(false));
-  }
 
   final StreamController<bool> _changes = StreamController<bool>.broadcast(
     sync: true,
   );
-  late final StreamSubscription<bool> _subscription;
+  StreamSubscription<DatabaseEvent>? _subscription;
+  FirebaseDatabase? _database;
   bool? _latest;
 
-  Stream<bool> watch() {
+  Stream<bool> watch(FirebaseDatabase database) {
+    if (_subscription == null || !identical(_database, database)) {
+      unawaited(_subscription?.cancel());
+      _database = database;
+      _subscription = database
+          .ref('.info/connected')
+          .onValue
+          .listen(
+            (event) => _emit(event.snapshot.value == true),
+            onError: (_) => _emit(false),
+          );
+    }
     return Stream<bool>.multi((controller) {
       final latest = _latest;
       if (latest != null) controller.add(latest);
@@ -82,10 +47,5 @@ class _ConnectionChannel {
     if (_latest == value) return;
     _latest = value;
     _changes.add(value);
-  }
-
-  Future<void> dispose() async {
-    await _subscription.cancel();
-    await _changes.close();
   }
 }

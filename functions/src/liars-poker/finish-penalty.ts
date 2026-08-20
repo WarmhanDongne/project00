@@ -29,7 +29,7 @@ type ResolvePenaltyData = {
 };
 
 /** 아이패드 룰렛이 반환한 생존 또는 탈락 결과를 게임에 반영합니다. */
-export const game_liars_poker_resolve_penalty = onCall<ResolvePenaltyData>(
+export const resolveLiarsPokerPenalty = onCall<ResolvePenaltyData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

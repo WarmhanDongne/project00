@@ -41,8 +41,8 @@ class RegisterStepTwo extends StatelessWidget {
                 backgroundImage: profileImageBytes != null
                     ? MemoryImage(profileImageBytes!)
                     : (googlePhotoURL != null
-                          ? NetworkImage(googlePhotoURL!) as ImageProvider
-                          : null),
+                        ? NetworkImage(googlePhotoURL!) as ImageProvider
+                        : null),
                 child: profileImageBytes == null && googlePhotoURL == null
                     ? Text(
                         'photo',
@@ -55,7 +55,7 @@ class RegisterStepTwo extends StatelessWidget {
             SizedBox(
               width: 92,
               child: PlatformButton(
-                label: '사진 설정',
+                label: '앨범열기',
                 style: PlatformButtonStyle.secondary,
                 onPressed: isLoading ? null : onPickProfileImage,
               ),
@@ -70,9 +70,8 @@ class RegisterStepTwo extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: nicknameController,
-          enabled: !isLoading,
           maxLength: 12,
-          onSubmitted: isLoading ? null : (_) => onCheckNickname(),
+          onSubmitted: (_) => onCheckNickname(),
           decoration: const InputDecoration(hintText: '방장님', counterText: ''),
         ),
       ],

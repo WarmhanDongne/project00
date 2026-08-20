@@ -13,7 +13,7 @@ import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 /// 2. 자기 게임의 상단바·진행 화면·결과 위젯을 넘기기
 ///
 /// 실제 게임에서는 Riverpod 세션 컨트롤러(`NotifierProvider.autoDispose.family`)를
-
+/// 구독해 `game` 상태를 읽고 아래 TODO를 채우면 됩니다.
 class TemplatePhoneGame extends StatefulWidget {
   const TemplatePhoneGame({
     super.key,
@@ -32,6 +32,7 @@ class _TemplatePhoneGameState extends State<TemplatePhoneGame> {
   bool _introDone = false;
   int _announcedRound = 0;
 
+  // TODO: 컨트롤러에서 읽어올 값으로 교체하세요.
   int get _round => 1;
   bool get _isLoading => false;
   bool get _isFinished => false;
@@ -70,10 +71,10 @@ class _TemplatePhoneGameState extends State<TemplatePhoneGame> {
       contentRevealed: _handRevealed,
       onIntroCompleted: () => setState(() => _introDone = true),
       onRoundIntroCompleted: () => setState(() => _announcedRound = _round),
-
+      // TODO: SharedPhoneGameTopBar로 게임 상단바를 만들어 넘기세요.
       // 셸이 표시 시점만 제어하므로, 여기서 상태에 따라 감추지 마세요.
       topBar: const SizedBox(height: 52),
-
+      // TODO: PhoneResultDialog 등 결과 화면을 넘기세요.
       result: const SizedBox.shrink(),
       content: Center(
         child: Text(

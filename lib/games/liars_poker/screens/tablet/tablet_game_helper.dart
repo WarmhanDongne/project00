@@ -1,3 +1,5 @@
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/game_flow/game_interruption.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 const int cardsPerPlayer = 5;
@@ -58,4 +60,243 @@ class SubmittedPlay {
       animateEntry: animateEntry ?? this.animateEntry,
     );
   }
+}
+
+/// `game/public/lastPlay`에서 태블릿 애니메이션에 필요한 값만 추립니다.
+class PublicLastPlay {
+  const PublicLastPlay({
+    required this.playId,
+    required this.round,
+    required this.playerUid,
+    required this.cardCount,
+    required this.declaredRank,
+    required this.revealed,
+    required this.actualRanks,
+    required this.submittedAt,
+  });
+
+  final String playId;
+  final int? round;
+  final String playerUid;
+  final int cardCount;
+  final String declaredRank;
+  final bool revealed;
+  final List<String> actualRanks;
+  final int submittedAt;
+
+  static PublicLastPlay? tryParse(Object? value) {
+    if (value is! Map) return null;
+
+    final data = Map<Object?, Object?>.from(value);
+    final playId = data['playId'];
+    final playerUid = data['playerUid'];
+    final cardCount = _asInt(data['cardCount']);
+
+    if (playId is! String ||
+        playerUid is! String ||
+        cardCount == null ||
+        cardCount <= 0) {
+      return null;
+    }
+
+    return PublicLastPlay(
+      playId: playId,
+      round: _asInt(data['round']),
+      playerUid: playerUid,
+      cardCount: cardCount,
+      declaredRank: data['declaredRank'] is String
+          ? data['declaredRank'] as String
+          : 'Q',
+      revealed: data['revealed'] == true,
+      actualRanks: _asStringList(data['actualRanks']),
+      submittedAt: _asInt(data['submittedAt']) ?? 0,
+    );
+  }
+}
+
+/// Cloud Function이 작성한 `game/public` 스냅샷입니다.
+class TabletPublicGameSnapshot {
+  const TabletPublicGameSnapshot({
+    required this.status,
+    required this.finishReason,
+    required this.phase,
+    required this.round,
+    required this.table,
+    required this.turnUid,
+    required this.winnerUid,
+    required this.penaltyTargetUid,
+    required this.players,
+    required this.lastPlay,
+    required this.roundPlays,
+    required this.interruption,
+  });
+
+  final String status;
+  final String? finishReason;
+  final String phase;
+  final int round;
+  final String table;
+  final String? turnUid;
+  final String? winnerUid;
+  final String? penaltyTargetUid;
+  final Map<Object?, Object?> players;
+  final PublicLastPlay? lastPlay;
+  final List<PublicLastPlay> roundPlays;
+  final GameInterruption? interruption;
+
+  static TabletPublicGameSnapshot? tryParse(Object? value) {
+    if (value is! Map) return null;
+
+    final data = Map<Object?, Object?>.from(value);
+    final playersValue = data['players'];
+
+    final round = _asInt(data['round']) ?? 1;
+    final lastPlay = PublicLastPlay.tryParse(data['lastPlay']);
+    final roundPlays = _parseRoundPlays(
+      data['roundPlays'],
+    ).where((play) => play.round == round).toList();
+
+    // 배포 전 데이터처럼 round가 없는 제출은 누적 목록 전체를 복원하지 않고,
+    // 현재 lastPlay 한 건만 호환 표시해 이전 라운드 카드가 섞이지 않게 합니다.
+    final canUseLastPlay =
+        lastPlay != null && (lastPlay.round == null || lastPlay.round == round);
+    final containsLastPlay =
+        lastPlay != null &&
+        roundPlays.any((play) => play.playId == lastPlay.playId);
+    if (canUseLastPlay && !containsLastPlay) {
+      roundPlays.add(lastPlay);
+    }
+    roundPlays.sort((left, right) {
+      final timeOrder = left.submittedAt.compareTo(right.submittedAt);
+      return timeOrder != 0 ? timeOrder : left.playId.compareTo(right.playId);
+    });
+
+    return TabletPublicGameSnapshot(
+      status: data['status'] is String ? data['status'] as String : 'playing',
+      finishReason: data['finishReason'] is String
+          ? data['finishReason'] as String
+          : null,
+      phase: data['phase'] is String ? data['phase'] as String : 'playing',
+      round: round,
+      table: data['table'] is String ? data['table'] as String : 'K',
+      turnUid: data['turnUid'] is String ? data['turnUid'] as String : null,
+      winnerUid: data['winnerUid'] is String
+          ? data['winnerUid'] as String
+          : null,
+      penaltyTargetUid: data['penaltyTargetUid'] as String?,
+      players: playersValue is Map
+          ? Map<Object?, Object?>.from(playersValue)
+          : const <Object?, Object?>{},
+      lastPlay: lastPlay,
+      roundPlays: List.unmodifiable(roundPlays),
+      interruption: data['interruption'] is Map
+          ? GameInterruption.fromMap(
+              Map<Object?, Object?>.from(data['interruption'] as Map),
+            )
+          : null,
+    );
+  }
+
+  /// 공개 게임 데이터에서 플레이어를 찾고 자리 배치 데이터로 빈 값을 보완합니다.
+  PlayerLayoutPlayer? playerByUid(String? uid, PlayerLayoutModel layout) {
+    if (uid == null) return null;
+
+    final layoutPlayer = layout.playerByUid(uid);
+    final playerValue = players[uid];
+    if (playerValue is! Map) return layoutPlayer;
+
+    final nicknameValue = playerValue['nickname'];
+    final profileImageUrlValue = playerValue['profileImageUrl'];
+    final nickname = nicknameValue is String && nicknameValue.trim().isNotEmpty
+        ? nicknameValue.trim()
+        : layoutPlayer?.nickname ?? 'Player';
+    final publicProfileImageUrl = profileImageUrlValue is String
+        ? profileImageUrlValue.trim()
+        : '';
+
+    return PlayerLayoutPlayer(
+      uid: uid,
+      nickname: nickname,
+      profileImageUrl: publicProfileImageUrl.isNotEmpty
+          ? publicProfileImageUrl
+          : layoutPlayer?.profileImageUrl ?? '',
+      seatIndex:
+          _asInt(playerValue['seatIndex']) ?? layoutPlayer?.seatIndex ?? 0,
+    );
+  }
+
+  /// 화면에 배치된 플레이어 순서대로 남은 카드 수를 반환합니다.
+  List<int> remainingCardCounts(PlayerLayoutModel layout) {
+    return layout.players
+        .map((layoutPlayer) {
+          final playerValue = players[layoutPlayer.uid];
+          if (playerValue is! Map) return 0;
+          return _asInt(playerValue['remainingCardCount']) ?? 0;
+        })
+        .toList(growable: false);
+  }
+
+  /// 최초 자리 배치 순서를 유지한 채 현재 생존자의 실제 좌석 번호만 반환합니다.
+  List<int> activeSeatIndexes(PlayerLayoutModel layout) {
+    final seats = <int>[];
+    for (final layoutPlayer in layout.players) {
+      final playerValue = players[layoutPlayer.uid];
+      if (playerValue is! Map) continue;
+      final status = playerValue['status']?.toString() ?? 'alive';
+      if (status != 'alive') continue;
+      seats.add(_asInt(playerValue['seatIndex']) ?? layoutPlayer.seatIndex);
+    }
+    seats.sort();
+    return List<int>.unmodifiable(seats);
+  }
+
+  int get penaltyAttemptCount {
+    final targetUid = penaltyTargetUid;
+    if (targetUid == null) return 0;
+
+    final playerValue = players[targetUid];
+    if (playerValue is! Map) return 0;
+    return _asInt(playerValue['penaltyCount']) ?? 0;
+  }
+}
+
+List<PublicLastPlay> _parseRoundPlays(Object? value) {
+  if (value is! Map) return <PublicLastPlay>[];
+
+  final plays = value.values
+      .map(PublicLastPlay.tryParse)
+      .whereType<PublicLastPlay>()
+      .toList();
+
+  plays.sort((left, right) {
+    final timeOrder = left.submittedAt.compareTo(right.submittedAt);
+    return timeOrder != 0 ? timeOrder : left.playId.compareTo(right.playId);
+  });
+  return plays;
+}
+
+int? _asInt(Object? value) {
+  return value is num ? value.toInt() : null;
+}
+
+List<String> _asStringList(Object? value) {
+  if (value is List) {
+    return value.whereType<String>().toList(growable: false);
+  }
+
+  // RTDB 배열이 드물게 숫자 키를 가진 Map으로 반환되는 경우도 처리합니다.
+  if (value is Map) {
+    final entries = value.entries.toList()
+      ..sort((left, right) {
+        final leftIndex = int.tryParse(left.key.toString()) ?? 0;
+        final rightIndex = int.tryParse(right.key.toString()) ?? 0;
+        return leftIndex.compareTo(rightIndex);
+      });
+    return entries
+        .map((entry) => entry.value)
+        .whereType<String>()
+        .toList(growable: false);
+  }
+
+  return const [];
 }

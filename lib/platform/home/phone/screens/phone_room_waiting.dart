@@ -23,9 +23,11 @@ class PhoneRoomWaiting extends StatefulWidget {
 
 class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   StreamSubscription<String?>? _gameStatusSubscription;
+  StreamSubscription<String?>? _controllerSubscription;
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
+  bool _isLeavingAfterControllerLost = false;
 
   @override
   void initState() {
@@ -76,7 +78,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     if (roomCode == null) {
       unawaited(_gameStatusSubscription?.cancel());
+      unawaited(_controllerSubscription?.cancel());
       _gameStatusSubscription = null;
+      _controllerSubscription = null;
       _subscribedRoomCode = null;
       _latestGameStatus = null;
       return;
@@ -88,6 +92,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     }
 
     unawaited(_gameStatusSubscription?.cancel());
+    unawaited(_controllerSubscription?.cancel());
     _subscribedRoomCode = roomCode;
     _latestGameStatus = null;
     _gameStatusSubscription = widget.provider.watchGameStatus(roomCode).listen((
@@ -96,6 +101,31 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       _latestGameStatus = status;
       _openGameIfReady(roomCode);
     }, onError: _showStatusError);
+
+    //=======================명시적인 방 종료 감지==============================
+    // controller presence false는 순간 단절이나 백그라운드일 수 있으므로
+    // 퇴장 조건으로 사용하지 않습니다. 서버 closeRoom의 closed 상태만 봅니다.
+    _controllerSubscription = widget.provider.watchRoomStatus(roomCode).listen((
+      status,
+    ) {
+      if (status == 'closed') _handleControllerLost();
+    }, onError: (_) {});
+  }
+
+  Future<void> _handleControllerLost() async {
+    // 게임 화면이 열려 있는 중이면 그 화면의 종료 흐름을 방해하지 않습니다.
+    if (_isLeavingAfterControllerLost || _isOpeningGame || !mounted) return;
+    _isLeavingAfterControllerLost = true;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('태블릿이 방을 닫아 홈으로 돌아갑니다.')));
+
+    await widget.provider.leaveRoom();
+    if (!mounted) return;
+    //================상태바 표시=================
+    unawaited(AppSystemUi.showPlatformSystemBars());
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   /// `selectedGame`과 `game/public/status`는 서로 다른 RTDB 경로이므로 도착
@@ -151,6 +181,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   void dispose() {
     widget.provider.removeListener(_onRoomProviderChanged);
     _gameStatusSubscription?.cancel();
+    _controllerSubscription?.cancel();
     super.dispose();
   }
 

@@ -2,9 +2,6 @@ import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/app_sounds.dart';
-import 'package:project00/core/sound/providers/sound_provider.dart';
-import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:roulette/roulette.dart';
 
@@ -45,12 +42,6 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   bool _isLeverDragActive = false;
 
   late final AnimationController _leverController;
-
-  /// 원판이 도는 시간입니다. 효과음도 이 길이에 맞춰 끝을 정렬합니다.
-  static const Duration _spinDuration = Duration(seconds: 4);
-
-  /// dispose에서도 사운드를 멈춰야 해서 미리 잡아 둡니다.
-  SoundProvider? _sound;
 
   @override
   void initState() {
@@ -104,10 +95,6 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     }
 
     _isLeverLocked = true;
-
-    // 레버가 잠기는 순간에 재생합니다. 이어지는 회전 효과음과 짧게 겹치면서
-    // 레버를 내려 원판이 돌기 시작하는 흐름으로 들립니다.
-    SoundEffects.play(context, AppSounds.lever);
 
     await _leverController.animateTo(1, curve: Curves.easeOutCubic);
 
@@ -176,11 +163,6 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       _isSpinning = true;
     });
 
-    // 룰렛 사운드는 파일이 회전보다 깁니다. 뒤를 끊으면 멈추는 순간의 소리와
-    // 여운이 사라지므로, 앞부분을 건너뛰어 회전이 끝나는 시점에 소리도
-    // 자연스럽게 끝나도록 맞춥니다. 정지는 화면이 사라질 때만 합니다.
-    _sound?.playSustainedEffect(AppSounds.roulette, window: _spinDuration);
-
     final sections = _sections;
 
     final selectedIndex = _random.nextInt(sections.length);
@@ -189,7 +171,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       selectedIndex,
       offset: 0.15 + (_random.nextDouble() * 0.7),
       animationConfig: const CurveAnimationConfig(
-        duration: _spinDuration,
+        duration: Duration(seconds: 4),
         curve: Curves.easeOutCubic,
       ),
     );
@@ -289,15 +271,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _sound ??= SoundEffects.of(context);
-  }
-
-  @override
   void dispose() {
-    // 회전 도중 화면이 사라져도 17초짜리 사운드가 남지 않도록 정지시킵니다.
-    _sound?.stopSustainedEffect();
     _leverController.dispose();
     _controller.dispose();
 

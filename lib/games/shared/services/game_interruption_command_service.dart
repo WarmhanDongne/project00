@@ -22,9 +22,8 @@ class GameInterruptionCommandService {
       'interruptionId': interruptionId,
     });
     await retryPolicy.run(
-      () => _functions
-          .httpsCallable('game_common_interruption_vote_to_continue')
-          .call(data),
+      () =>
+          _functions.httpsCallable('voteToContinueInterruptedGame').call(data),
       enabled: true,
     );
   }
@@ -37,9 +36,7 @@ class GameInterruptionCommandService {
       'interruptionId': interruptionId,
     });
     await retryPolicy.run(
-      () => _functions
-          .httpsCallable('game_common_interruption_expire')
-          .call(data),
+      () => _functions.httpsCallable('expireInterruptedGame').call(data),
       enabled: true,
     );
   }
@@ -54,7 +51,7 @@ class GameInterruptionCommandService {
     });
     await retryPolicy.run(
       () => _functions
-          .httpsCallable('game_common_interruption_exclude_player')
+          .httpsCallable('excludeInterruptedPlayerAndContinue')
           .call(data),
       enabled: true,
     );

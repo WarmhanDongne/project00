@@ -14,7 +14,7 @@ import {
 type LeaveGameData = {roomCode?: unknown};
 
 /** 방에서는 즉시 나가되, 진행 가능한 게임은 남은 플레이어 투표 뒤 제외합니다. */
-export const game_liars_poker_leave_game = onCall<LeaveGameData>(
+export const leaveLiarsPokerGame = onCall<LeaveGameData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

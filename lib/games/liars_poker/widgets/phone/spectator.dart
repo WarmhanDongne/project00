@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
 import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
@@ -294,7 +293,12 @@ class PhoneSpectator extends StatelessWidget {
       origin: origin,
       builder: (_) => const PhoneGameRuleDialog(
         title: "LIAR'S POKER",
-        rules: LiarsPokerCopy.phoneRules,
+        rules:
+            '자신의 차례에는 1~3장의 카드를 선택해 제출합니다. 선언은 '
+            '진실일 수도, 거짓일 수도 있으며 다음 플레이어는 LIAR를 선언할 '
+            '수 있습니다.\n\n카드 공개 결과 선언이 거짓이면 카드를 낸 플레이어가, '
+            '선언이 진실이면 LIAR를 외친 플레이어가 벌칙을 진행합니다. '
+            '마지막까지 살아남은 플레이어가 승리합니다.',
         surfaceColor: Color(0xFF142119),
         foregroundColor: Colors.white,
         showSurface: false,

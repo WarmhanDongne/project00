@@ -21,7 +21,7 @@ class TemplateExampleGame extends TemplateGame {
   @override
   String get title => 'Template Example';
   @override
-  String get leaveFunctionName => 'game_template_example_leave_game';
+  String get leaveFunctionName => 'leaveTemplateExampleGame';
   @override
   // 새 게임의 휴대폰 UI가 실제로 지원하는 방향으로 반드시 변경하세요.
   // 태블릿 게임은 이 값과 관계없이 공용 정책에서 항상 가로 고정됩니다.

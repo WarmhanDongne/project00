@@ -31,13 +31,6 @@ export interface FinalCallRoundResult {
   revealedHands: Record<string, FinalCallCard[]>;
   callerUid: string | null;
   automaticCall: boolean;
-  /**
-   * CALL을 선언한 플레이어가 같은 숫자 4장을 제출했는지 여부입니다.
-   *
-   * true면 최저 점수 판정 대신 상대팀 전원이 하트를 하나씩 잃습니다. 결과만
-   * 봐서는 왜 상대팀만 하트를 잃었는지 알 수 없으므로 판정 근거를 함께 남깁니다.
-   */
-  callerFourOfAKind: boolean;
   resolvedAt: number;
 }
 

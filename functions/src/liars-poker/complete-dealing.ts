@@ -18,7 +18,7 @@ type CompleteDealingData = {
 };
 
 /** 태블릿 카드 배분 연출이 끝난 뒤 휴대폰의 첫 턴을 엽니다. */
-export const game_liars_poker_complete_dealing = onCall<CompleteDealingData>(
+export const completeLiarsPokerDealing = onCall<CompleteDealingData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

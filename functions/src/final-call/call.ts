@@ -11,7 +11,7 @@ import {assertFinalCallTurn, FINAL_CALL_REGION, finalCallCommandId,
 
 type Data = {roomCode?: unknown; commandId?: unknown};
 
-export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION}, async (request) => {
+export const callFinalCall = onCall<Data>({region: FINAL_CALL_REGION}, async (request) => {
   const uid = finalCallUid(request);
   const roomCode = finalCallRoomCode(request.data?.roomCode);
   const commandId = finalCallCommandId(request.data?.commandId);

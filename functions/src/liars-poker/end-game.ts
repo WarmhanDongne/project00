@@ -17,7 +17,7 @@ type EndGameData = {
 };
 
 /** 방은 유지하고 현재 Liar's Poker 게임만 종료합니다. */
-export const game_liars_poker_end_game = onCall<EndGameData>(
+export const endLiarsPokerGame = onCall<EndGameData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

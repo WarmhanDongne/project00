@@ -19,7 +19,7 @@ import {
 type ReadyTurnData = {roomCode?: unknown; commandId?: unknown};
 
 /** 사용자가 카드를 펼쳐 애니메이션을 끝냈을 때 최초 턴 타이머를 30초로 시작합니다. */
-export const game_liars_poker_ready_turn = onCall<ReadyTurnData>(
+export const readyLiarsPokerTurn = onCall<ReadyTurnData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

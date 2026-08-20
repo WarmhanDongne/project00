@@ -13,12 +13,8 @@ import 'package:project00/platform/home/gamelist/service/game_list_service.dart'
 import 'package:project00/platform/home/room/services/room_service.dart';
 
 class RoomProvider extends ChangeNotifier {
-  RoomProvider({RoomService? service, GameService? gameService})
-    : _service = service ?? RoomService(),
-      _gameService = gameService ?? GameService();
-
-  final RoomService _service;
-  final GameService _gameService;
+  final RoomService _service = RoomService();
+  final GameService _gameService = GameService();
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
@@ -59,10 +55,6 @@ class RoomProvider extends ChangeNotifier {
 
   // phone용 공통함수
   Future<T?> _runCommand<T>(Future<T> Function() command) async {
-    // 버튼이 비활성화되기 전 연타 입력이 이미 큐에 들어온
-    // 경우에도 동일한 방 명령이 중복 실행되지 않게 합니다.
-    if (isLoading) return null;
-
     // 로딩 시작 및 이전 에러 초기화
     isLoading = true;
     errorMessage = null;
@@ -97,23 +89,29 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> createRoom() async {
-    // Figma 상태 계약에서 방 생성은 `구성원 없음`에서만 가능합니다.
-    // 기존 방의 `초기화`는 closeRoom이 담당하며 새 코드를 만들지 않습니다.
-    if (roomCode != null || isLoading) return;
-
-    final code = await _runCommand<String>(_service.createRoom);
+    final previousRoomCode = roomCode;
+    var previousRoomDeleted = false;
+    final code = await _runCommand<String>(() async {
+      // `초기화`로 새 코드를 만들 때 기존 방을 남기지 않습니다.
+      if (previousRoomCode != null) {
+        await _service.closeControllerRoom(previousRoomCode);
+        previousRoomDeleted = true;
+      }
+      return await _service.createRoom();
+    });
 
     if (code != null) {
       roomCode = code;
       listenRoom();
       _startControllerHeartbeat(code);
-      notifyListeners();
+    } else if (previousRoomDeleted) {
+      clearRoom();
     }
   }
 
   Future<void> closeRoom() async {
     final currentCode = roomCode;
-    if (currentCode == null || isLoading) return;
+    if (currentCode == null) return;
 
     final success = await _runCommand<bool>(() async {
       await _service.closeControllerRoom(currentCode);
@@ -121,7 +119,7 @@ class RoomProvider extends ChangeNotifier {
     });
 
     if (success == true) {
-      clearRoom(expectedRoomCode: currentCode);
+      clearRoom();
     }
   }
 
@@ -246,8 +244,7 @@ class RoomProvider extends ChangeNotifier {
   }
 
   void listenRoom() {
-    final listenedRoomCode = roomCode;
-    if (listenedRoomCode == null) return;
+    if (roomCode == null) return;
 
     roomSubscription?.cancel();
     playerSubscription?.cancel();
@@ -261,26 +258,22 @@ class RoomProvider extends ChangeNotifier {
       onError: (_) => _handleServerConnection(false),
     );
 
-    statusSubscription = _service.watchRoomStatus(listenedRoomCode).listen((
-      status,
-    ) {
-      if (roomCode != listenedRoomCode) return;
+    statusSubscription = _service.watchRoomStatus(roomCode!).listen((status) {
       if (status == 'closed') {
         _hasJoined = false;
         wasRoomClosed = true;
         unawaited(
-          PlayerRoomSessionStore.instance.clear(onlyRoomCode: listenedRoomCode),
+          PlayerRoomSessionStore.instance.clear(onlyRoomCode: roomCode),
         );
-        clearRoom(expectedRoomCode: listenedRoomCode);
+        clearRoom();
       }
     });
 
     if (_joinedNickname != null) {
-      _startPlayerHeartbeat(listenedRoomCode);
+      _startPlayerHeartbeat(roomCode!);
     }
 
-    roomSubscription = _service.watchRoom(listenedRoomCode).listen((event) {
-      if (roomCode != listenedRoomCode) return;
+    roomSubscription = _service.watchRoom(roomCode!).listen((event) {
       final gameId = event.snapshot.value as String?;
 
       if (gameId != selectedGameId) {
@@ -294,14 +287,13 @@ class RoomProvider extends ChangeNotifier {
         }
       }
     }, onError: _handleSubscriptionError);
-    playerSubscription = _service.watchRoomPlayers(listenedRoomCode).listen((
+    playerSubscription = _service.watchRoomPlayers(roomCode!).listen((
       roomPlayer,
     ) async {
-      if (roomCode != listenedRoomCode) return;
       players = roomPlayer;
 
       final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
+      if (currentUser != null && roomCode != null) {
         final myUid = currentUser.uid;
         final isMeInPlayers = roomPlayer.any(
           (p) => p.uid == myUid && p.isActive,
@@ -312,15 +304,12 @@ class RoomProvider extends ChangeNotifier {
           _hasJoined = false;
           wasKicked = true;
           unawaited(
-            PlayerRoomSessionStore.instance.clear(
-              onlyRoomCode: listenedRoomCode,
-            ),
+            PlayerRoomSessionStore.instance.clear(onlyRoomCode: roomCode),
           );
-          clearRoom(expectedRoomCode: listenedRoomCode);
+          clearRoom();
           return;
         }
       }
-      notifyListeners();
 
       // 활성화된 유저의 uids 추출
       final activeUids = players
@@ -328,9 +317,7 @@ class RoomProvider extends ChangeNotifier {
           .map((p) => p.uid)
           .toList(growable: false);
       // 활성화된 유저들이 보유한 gameInfo 객체 리스트 노티
-      final fetchedGroupGames = await _gameService.fetchGroupGames(activeUids);
-      if (roomCode != listenedRoomCode) return;
-      groupGames = fetchedGroupGames;
+      groupGames = await _gameService.fetchGroupGames(activeUids);
       notifyListeners();
     }, onError: _handleSubscriptionError);
   }
@@ -600,11 +587,7 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // 메모리 초기화 leaveRoom에서 사용
-  void clearRoom({String? expectedRoomCode}) {
-    // 이전 방의 늦은 closed/players 이벤트가 새 방 상태를 지우지
-    // 못하게 구독을 시작한 방 identity를 검증합니다.
-    if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
-
+  void clearRoom() {
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();

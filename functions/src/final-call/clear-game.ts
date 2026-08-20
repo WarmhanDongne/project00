@@ -14,7 +14,7 @@ import {
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
 /** 방과 참가자는 유지하고 현재 Final Call `game` 노드만 삭제합니다. */
-export const game_final_call_clear_game = onCall<Data>(
+export const clearFinalCallGame = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

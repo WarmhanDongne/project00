@@ -17,7 +17,7 @@ import {
 
 type Data = {roomCode?: unknown; commandId?: unknown; source?: unknown};
 
-export const game_final_call_draw_card = onCall<Data>(
+export const drawFinalCallCard = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

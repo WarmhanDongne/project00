@@ -15,7 +15,7 @@ import {
 
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
-export const game_final_call_complete_dealing = onCall<Data>(
+export const completeFinalCallDealing = onCall<Data>(
   {region: FINAL_CALL_REGION},
   async (request) => {
     const uid = finalCallUid(request);

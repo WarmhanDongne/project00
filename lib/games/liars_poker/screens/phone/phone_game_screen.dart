@@ -9,7 +9,7 @@ import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
-import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
 import 'package:project00/games/liars_poker/widgets/phone/penalty_status.dart';
@@ -36,7 +36,7 @@ class LiarsPokerPhoneGameScreen extends StatefulWidget {
     this.showSpectatorTopBar = false,
   });
 
-  final LiarsPokerController? controller;
+  final LiarsPokerPhoneController? controller;
   final Future<bool> Function()? onExitRoom;
 
   /// 탈락한 관전자가 판정·벌칙 화면을 보고 있을 때도 상단바를 유지합니다.
@@ -102,7 +102,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   }
 
   GameAnnouncement? _resolveAnnouncement(
-    LiarsPokerController? controller, {
+    LiarsPokerPhoneController? controller, {
     required bool showGameStart,
     required bool showStatusMessage,
     required String? waitingMessage,
@@ -195,7 +195,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     setState(() => _hasCompletedGameStart = true);
   }
 
-  void _precacheInitialHand(LiarsPokerController? controller) {
+  void _precacheInitialHand(LiarsPokerPhoneController? controller) {
     if (_hasPrecachedInitialHand || controller == null) return;
     _hasPrecachedInitialHand = true;
 
@@ -238,7 +238,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     return _buildGameScreen(widget.controller);
   }
 
-  Widget _buildGameScreen(LiarsPokerController? controller) {
+  Widget _buildGameScreen(LiarsPokerPhoneController? controller) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final turnPlayer = controller?.players[controller.turnUid];
@@ -328,7 +328,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // 세로 화면 배치
   // ============================================================================
   Widget _buildPortraitScreen(
-    LiarsPokerController? controller, {
+    LiarsPokerPhoneController? controller, {
     required PhoneGamePlayer? turnPlayer,
     required bool showHeader,
     required bool showControls,
@@ -455,12 +455,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                     child: _buildHand(
                       controller,
                       isLandscape: false,
-                      // 손패 영역은 화면 정중앙보다 조금 위에 있으므로 그만큼
-                      // 내려 ROUND·기준 카드 문구를 화면 가운데에 놓습니다.
-                      announcementCenterOffset: Offset(
-                        0,
-                        layout.announcementCenterOffsetY,
-                      ),
                       dimmed: showFoldPrompt || showPenaltyHandOverlay,
                     ),
                   ),
@@ -544,7 +538,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // 가로 화면 배치
   // ============================================================================
   Widget _buildLandscapeScreen(
-    LiarsPokerController controller, {
+    LiarsPokerPhoneController controller, {
     required PhoneGamePlayer? turnPlayer,
     required bool showHeader,
     required bool showControls,
@@ -640,12 +634,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
                       // 그 차이만큼 보정해야 실제 화면 정중앙에 표시됩니다.
                       entryCenterOffsetX: controlsWidth / 2 + 4,
                       entryCenterOffsetY: -32,
-                      // 가로 손패 영역(top 72 / bottom 8)의 중앙은 화면 중앙보다
-                      // 32 아래이므로, 덱과 같은 보정값이 문구에도 맞습니다.
-                      announcementCenterOffset: Offset(
-                        controlsWidth / 2 + 4,
-                        -32,
-                      ),
                       dimmed: showFoldPrompt || showPenaltyHandOverlay,
                     ),
                   ),
@@ -750,7 +738,12 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
       origin: origin ?? Offset(screenSize.width - 82, 28),
       builder: (_) => const PhoneGameRuleDialog(
         title: "LIAR'S POKER",
-        rules: LiarsPokerCopy.phoneRules,
+        rules:
+            '자신의 차례에는 1~3장의 카드를 선택해 제출합니다. 선언은 '
+            '진실일 수도, 거짓일 수도 있으며 다음 플레이어는 LIAR를 선언할 '
+            '수 있습니다.\n\n카드 공개 결과 선언이 거짓이면 카드를 낸 플레이어가, '
+            '선언이 진실이면 LIAR를 외친 플레이어가 벌칙을 진행합니다. '
+            '마지막까지 살아남은 플레이어가 승리합니다.',
         surfaceColor: Color(0xFF142119),
         foregroundColor: Colors.white,
         showSurface: false,
@@ -763,12 +756,11 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // 가로·세로 공통 손패
   // ---------------------------------------------------------------------------
   Widget _buildHand(
-    LiarsPokerController? controller, {
+    LiarsPokerPhoneController? controller, {
     required bool isLandscape,
     required bool dimmed,
     double entryCenterOffsetX = 0,
     double entryCenterOffsetY = 0,
-    Offset announcementCenterOffset = Offset.zero,
   }) {
     if (!_hasCompletedGameStart) return const SizedBox.shrink();
 
@@ -780,7 +772,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
           onRevealCompleted: _showGameControls,
           entryCenterOffsetX: entryCenterOffsetX,
           entryCenterOffsetY: entryCenterOffsetY,
-          announcementCenterOffset: announcementCenterOffset,
         ),
         dimmed: dimmed,
       );
@@ -821,7 +812,6 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         onCardsSubmitRequested: controller.submitCardIndexes,
         entryCenterOffsetX: entryCenterOffsetX,
         entryCenterOffsetY: entryCenterOffsetY,
-        announcementCenterOffset: announcementCenterOffset,
       ),
       dimmed: dimmed,
     );
@@ -884,7 +874,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // ---------------------------------------------------------------------------
   // 제한 시간 종료
   // ---------------------------------------------------------------------------
-  void _handleTurnTimeout(LiarsPokerController controller) {
+  void _handleTurnTimeout(LiarsPokerPhoneController controller) {
     if (!controller.isMyTurn || controller.phase == 'penalty') return;
 
     // 잔여카드를 가진 마지막 1인이 응답하지 않으면 상대를 의심하지 않고
@@ -905,7 +895,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // LIAR·SUBMIT 버튼
   // ---------------------------------------------------------------------------
   Widget _buildGameActionButton(
-    LiarsPokerController? controller, {
+    LiarsPokerPhoneController? controller, {
     required bool isLandscape,
     double? portraitHeight,
   }) {
@@ -1232,7 +1222,6 @@ class _PortraitGameLayout {
     required this.actionHorizontalPadding,
     required this.tableHeight,
     required this.statusFontSize,
-    required this.height,
   });
 
   factory _PortraitGameLayout.fromSize(
@@ -1280,7 +1269,6 @@ class _PortraitGameLayout {
       actionHorizontalPadding: (width * 0.18).clamp(54.0, 82.0),
       tableHeight: (height * 0.0285).clamp(20.0, 26.0),
       statusFontSize: (width * 0.041).clamp(14.0, 17.0),
-      height: height,
     );
   }
 
@@ -1296,16 +1284,6 @@ class _PortraitGameLayout {
   final double actionHorizontalPadding;
   final double tableHeight;
   final double statusFontSize;
-
-  /// 배치 계산에 사용한 화면 높이입니다.
-  final double height;
-
-  /// 손패 영역 기준 중앙을 화면 정중앙으로 옮기는 세로 보정값입니다.
-  ///
-  /// 손패 영역은 상단 정보와 하단 조작부 사이에 있어 화면 정중앙보다 조금
-  /// 위에 놓입니다. 그만큼 내려 주어야 안내 문구가 정확히 화면 가운데 뜹니다.
-  double get announcementCenterOffsetY =>
-      height / 2 - (handTop + handHeight / 2);
 }
 
 // ============================================================================

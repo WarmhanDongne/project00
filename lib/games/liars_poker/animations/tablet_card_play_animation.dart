@@ -2,8 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/sound_effects.dart';
-import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -128,25 +126,8 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     ),
   ]);
 
-  /// 던진 카드가 테이블에 닿는 시점입니다(카드 한 장의 비행 구간 기준).
-  ///
-  /// [_throwScaleMotion]의 첫 구간 weight(68)와 같은 값입니다. 카드가 가장 크게
-  /// 보인 뒤 눌리기 시작하는 순간이 착지입니다.
-  static const double _throwImpactProgress = 0.68;
-
-  /// [cardIndex]번째 카드가 뒤집기를 시작·끝내는 진행도입니다.
-  ///
-  /// 화면과 효과음이 같은 값을 쓰도록 여기서만 정의합니다.
-  static double _flipStartOf(int cardIndex) => 0.16 + cardIndex * 0.055;
-
-  static double _flipEndOf(int cardIndex) =>
-      math.min(0.92, _flipStartOf(cardIndex) + 0.56);
-
   late final AnimationController _throwController;
   late final AnimationController _revealController;
-
-  bool _throwLandingSoundPlayed = false;
-  bool _revealLandingSoundPlayed = false;
 
   Duration get _totalThrowDuration {
     final lastCardDelay =
@@ -160,28 +141,16 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   @override
   void initState() {
     super.initState();
-    _throwController =
-        AnimationController(
-            vsync: this,
-            duration: _totalThrowDuration,
-            value: widget.initiallyPlayed ? 1 : 0,
-          )
-          ..addStatusListener(_onThrowStatusChanged)
-          ..addListener(_playThrowLandingSound);
-    _revealController =
-        AnimationController(
-            vsync: this,
-            duration: widget.revealDuration,
-            value: widget.initiallyPlayed && widget.revealCards ? 1 : 0,
-          )
-          ..addStatusListener(_onRevealStatusChanged)
-          ..addListener(_playRevealLandingSound);
-
-    // 재접속·화면 재구성으로 이미 놓인 패를 복원할 때는 소리를 내지 않습니다.
-    if (widget.initiallyPlayed) {
-      _throwLandingSoundPlayed = true;
-      if (widget.revealCards) _revealLandingSoundPlayed = true;
-    }
+    _throwController = AnimationController(
+      vsync: this,
+      duration: _totalThrowDuration,
+      value: widget.initiallyPlayed ? 1 : 0,
+    )..addStatusListener(_onThrowStatusChanged);
+    _revealController = AnimationController(
+      vsync: this,
+      duration: widget.revealDuration,
+      value: widget.initiallyPlayed && widget.revealCards ? 1 : 0,
+    )..addStatusListener(_onRevealStatusChanged);
 
     if (widget.autoplay && !widget.initiallyPlayed) {
       playCards().then((_) {
@@ -231,8 +200,6 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   Future<void> playCards({bool restart = false}) async {
     if (restart) {
       _revealController.reset();
-      _throwLandingSoundPlayed = false;
-      _revealLandingSoundPlayed = false;
       await _throwController.forward(from: 0);
       return;
     }
@@ -251,38 +218,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
             (_revealController.isAnimating || _revealController.isCompleted))) {
       return;
     }
-    if (restart) _revealLandingSoundPlayed = false;
     await _revealController.forward(from: restart ? 0 : null);
-  }
-
-  /// 던진 패가 테이블에 닿는 순간에 맞춰 효과음을 재생합니다.
-  ///
-  /// [_throwScaleMotion]에서 카드가 눌리기 시작하는 지점이 착지 순간입니다.
-  void _playThrowLandingSound() {
-    if (!mounted || _throwLandingSoundPlayed) return;
-
-    final totalMilliseconds = _totalThrowDuration.inMilliseconds;
-    if (totalMilliseconds <= 0) return;
-
-    final elapsed = _throwController.value * totalMilliseconds;
-    final impactAt = widget.throwDuration.inMilliseconds * _throwImpactProgress;
-    if (elapsed < impactAt) return;
-
-    _throwLandingSoundPlayed = true;
-    SoundEffects.play(context, LiarsPokerSounds.submit);
-  }
-
-  /// 뒤집던 카드가 테이블에 다시 내려앉는 순간에 맞춰 효과음을 재생합니다.
-  ///
-  /// 카드는 뒤집히는 동안 살짝 떠 있다가([_flipLift]) 뒤집기가 끝나면서 다시
-  /// 바닥에 놓입니다. 연출 시작에 재생하면 첫 장이 내려앉기까지 남은 시간만큼
-  /// (기본 900ms 기준 약 650ms) 소리가 먼저 들립니다.
-  void _playRevealLandingSound() {
-    if (!mounted || _revealLandingSoundPlayed) return;
-    if (_revealController.value < _flipEndOf(0)) return;
-
-    _revealLandingSoundPlayed = true;
-    SoundEffects.play(context, LiarsPokerSounds.submit);
   }
 
   /// 공개된 패를 다시 뒷면 상태로 되돌립니다.
@@ -291,19 +227,15 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   void reset() {
     _throwController.reset();
     _revealController.reset();
-    _throwLandingSoundPlayed = false;
-    _revealLandingSoundPlayed = false;
   }
 
   @override
   void dispose() {
     _throwController
       ..removeStatusListener(_onThrowStatusChanged)
-      ..removeListener(_playThrowLandingSound)
       ..dispose();
     _revealController
       ..removeStatusListener(_onRevealStatusChanged)
-      ..removeListener(_playRevealLandingSound)
       ..dispose();
     super.dispose();
   }
@@ -450,8 +382,8 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     );
     position = Offset.lerp(position, faceUpTarget, spreadProgress)!;
 
-    final flipStart = _flipStartOf(cardIndex);
-    final flipEnd = _flipEndOf(cardIndex);
+    final flipStart = 0.16 + cardIndex * 0.055;
+    final flipEnd = math.min(0.92, flipStart + 0.56);
     final flipProgress = _interval(
       _revealController.value,
       flipStart,

@@ -20,7 +20,7 @@ import {
 type PassChallengeData = {roomCode?: unknown; commandId?: unknown};
 
 /** 마지막 카드를 의심하지 않고(FOLD) 대신 자신이 벌칙 룰렛을 받습니다. */
-export const game_liars_poker_pass_challenge = onCall<PassChallengeData>(
+export const passLiarsPokerChallenge = onCall<PassChallengeData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

@@ -241,7 +241,7 @@ class _ActiveRoom extends StatelessWidget {
                 label: '초기화',
                 height: 40,
                 style: PlatformButtonStyle.secondary,
-                onPressed: provider.isLoading ? null : provider.closeRoom,
+                onPressed: provider.isLoading ? null : provider.createRoom,
               ),
             ),
           ),

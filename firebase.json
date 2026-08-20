@@ -17,7 +17,7 @@
         }
       },
       "dart": {
-        "lib/firebase/firebase_options.dart": {
+        "lib/firebase_options.dart": {
           "projectId": "project0000-ec01e",
           "configurations": {
             "android": "1:93097008048:android:ba00391987c6630dd49475",
@@ -51,29 +51,5 @@
   },
   "database": {
     "rules": "database.rules.json"
-  },
-  "hosting": {
-    "site": "project0000-ec01e",
-    "public": "public",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "headers": [
-      {
-        "source": "/.well-known/assetlinks.json",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=300"
-          }
-        ]
-      }
-    ]
   }
 }

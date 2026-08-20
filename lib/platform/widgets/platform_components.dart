@@ -44,8 +44,6 @@ class PlatformButton extends StatelessWidget {
     this.style = PlatformButtonStyle.primary,
     this.height = 48,
     this.expand = true,
-    this.loading = false,
-    this.leading,
   });
 
   final String label;
@@ -53,8 +51,6 @@ class PlatformButton extends StatelessWidget {
   final PlatformButtonStyle style;
   final double height;
   final bool expand;
-  final bool loading;
-  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +69,7 @@ class PlatformButton extends StatelessWidget {
     final button = SizedBox(
       height: height,
       child: FilledButton(
-        onPressed: loading ? null : onPressed,
+        onPressed: onPressed,
         style: FilledButton.styleFrom(
           backgroundColor: background,
           foregroundColor: foreground,
@@ -88,37 +84,10 @@ class PlatformButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        child: loading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: foreground,
-                ),
-              )
-            : leading == null
-            ? Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  leading!,
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
       ),
     );
     return expand ? SizedBox(width: double.infinity, child: button) : button;
@@ -188,16 +157,15 @@ class PlatformNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          leading ??
-              Icon(
-                switch (style) {
-                  PlatformNoticeStyle.success => Icons.check_circle_rounded,
-                  PlatformNoticeStyle.danger => Icons.error_rounded,
-                  PlatformNoticeStyle.warning => Icons.warning_rounded,
-                },
-                size: 16,
-                color: foreground,
-              ),
+          leading ?? Icon(
+            switch (style) {
+              PlatformNoticeStyle.success => Icons.check_circle_rounded,
+              PlatformNoticeStyle.danger => Icons.error_rounded,
+              PlatformNoticeStyle.warning => Icons.warning_rounded,
+            },
+            size: 16,
+            color: foreground,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -228,29 +196,42 @@ class PlatformAuthShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return Scaffold(
-      backgroundColor: context.platformColors.surface,
       body: SafeArea(
         child: Stack(
           children: [
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: colors.border),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
             if (showBack)
               Positioned(
-                left: 8,
-                top: 8,
-                child: IconButton(
+                left: 16,
+                top: 16,
+                child: IconButton.filledTonal(
                   visualDensity: VisualDensity.compact,
-                  onPressed:
-                      onBackPressed ?? () => Navigator.of(context).maybePop(),
+                  onPressed: onBackPressed ?? () => Navigator.of(context).maybePop(),
                   icon: const Icon(Icons.arrow_back, size: 18),
                 ),
               ),
-            Align(
-              alignment: Alignment.topCenter,
+            Center(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(20, showBack ? 72 : 96, 20, 24),
+                padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: child,
+                  child: PlatformPanel(
+                    border: false,
+                    padding: const EdgeInsets.all(24),
+                    child: child,
+                  ),
                 ),
               ),
             ),

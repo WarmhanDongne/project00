@@ -2,11 +2,9 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/app_sounds.dart';
-import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/shared/animations/fade_hold_fade.dart';
-import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
+import 'package:project00/games/liars_poker/controllers/liars_poker_phone_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -34,7 +32,6 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
   late final AnimationController _waitingExitController;
   late final AnimationController _stampController;
   bool _didPrecacheStamp = false;
-  bool _stampSoundPlayed = false;
 
   bool get _hasResolvedResult =>
       widget.result == 'safe' || widget.result == 'eliminated';
@@ -54,7 +51,7 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
     _stampController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1580),
-    )..addListener(_playStampSound);
+    );
     if (_hasResolvedResult) _stampController.forward();
   }
 
@@ -70,37 +67,8 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
     }
 
     if (oldWidget.result != widget.result && _hasResolvedResult) {
-      _stampSoundPlayed = false;
       _stampController.forward(from: 0);
     }
-  }
-
-  /// 도장 효과음을 화면보다 얼마나 먼저 요청할지입니다.
-  ///
-  /// 기기 오디오 출력에는 짧은 지연이 남습니다. 닿는 순간에 요청을 보내면 그만큼
-  /// 늦게 들리므로 조금 앞서 보냅니다. 화면(접촉 시점)은 그대로 두고 소리만
-  /// 앞당기므로, 아직 늦으면 이 값만 키우세요.
-  static const Duration _stampSoundLead = Duration(milliseconds: 60);
-
-  /// 도장이 프로필에 닿는 순간에 맞춰 효과음을 한 번 재생합니다.
-  ///
-  /// [_StampedProfile]의 타임라인에서 0.30이 접촉(hit-stop) 지점입니다. 도장이
-  /// 내려오기 시작할 때 재생하면 닿기까지 남은 시간만큼(1580ms 기준 약 470ms)
-  /// 소리가 먼저 들립니다.
-  void _playStampSound() {
-    if (!mounted || _stampSoundPlayed) return;
-
-    final totalMilliseconds = _stampController.duration?.inMilliseconds ?? 0;
-    final leadProgress = totalMilliseconds <= 0
-        ? 0.0
-        : _stampSoundLead.inMilliseconds / totalMilliseconds;
-    if (_stampController.value <
-        _StampedProfile.stampHitProgress - leadProgress) {
-      return;
-    }
-
-    _stampSoundPlayed = true;
-    SoundEffects.play(context, AppSounds.stamp);
   }
 
   @override
@@ -118,9 +86,7 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
   void dispose() {
     _entryController.dispose();
     _waitingExitController.dispose();
-    _stampController
-      ..removeListener(_playStampSound)
-      ..dispose();
+    _stampController.dispose();
     super.dispose();
   }
 
@@ -234,15 +200,6 @@ class _StampedProfile extends StatelessWidget {
   final double stampProgress;
   final String? result;
 
-  /// 도장이 프로필에 닿는 진행도입니다. 효과음도 이 값에 맞춰 재생합니다.
-  static const double stampHitProgress = 0.30;
-
-  /// 도장 본체와 잉크 자국이 같은 각도로 놓이도록 한곳에서만 정의합니다.
-  ///
-  /// 두 값이 어긋나면 도장은 똑바로 내려오는데 자국만 기울어져, 자국이 도장
-  /// 아래에서 반대쪽 두 모서리로 삐져나옵니다.
-  static const double _stampTiltZ = -0.10;
-
   @override
   Widget build(BuildContext context) {
     //=======================1인칭 스탬프 타임라인==============================
@@ -250,20 +207,20 @@ class _StampedProfile extends StatelessWidget {
     // 0.30~0.332: 약 50ms 충돌 hit-stop입니다.
     // 0.30~0.743: 정확히 약 0.7초 동안 프로필에 눌린 채 유지됩니다.
     // 0.743~1.00: 도장이 다시 카메라 쪽으로 빠지며 사라집니다.
-    final approachProgress = (stampProgress / stampHitProgress).clamp(0.0, 1.0);
+    final approachProgress = (stampProgress / 0.30).clamp(0.0, 1.0);
     final retreatProgress = ((stampProgress - 0.743) / 0.257).clamp(0.0, 1.0);
     final easedApproach = Curves.easeInCubic.transform(approachProgress);
     final easedRetreat = Curves.easeInCubic.transform(retreatProgress);
-    final hasHit = stampProgress >= stampHitProgress;
+    final hasHit = stampProgress >= 0.30;
 
     // 카메라 앞에서는 크고 기울어진 상태이며, 접촉 시 정면으로 평평해집니다.
-    final stampScale = stampProgress < stampHitProgress
+    final stampScale = stampProgress < 0.30
         ? 1.72 - (0.72 * easedApproach)
         : 1.0 + (0.62 * easedRetreat);
-    final stampTilt = stampProgress < stampHitProgress
+    final stampTilt = stampProgress < 0.30
         ? -0.58 * (1 - easedApproach)
         : -0.38 * easedRetreat;
-    final stampOffsetY = stampProgress < stampHitProgress
+    final stampOffsetY = stampProgress < 0.30
         ? -54 * (1 - easedApproach)
         : -42 * easedRetreat;
     final stampOpacity = stampProgress < 0.743
@@ -289,7 +246,7 @@ class _StampedProfile extends StatelessWidget {
           profile,
           if (hasHit)
             Transform.rotate(
-              angle: _stampTiltZ,
+              angle: -0.10,
               child: _ResultInkMark(
                 size: size,
                 label: stampLabel,
@@ -306,8 +263,6 @@ class _StampedProfile extends StatelessWidget {
                   transform: Matrix4.identity()
                     ..setEntry(3, 2, 0.0018)
                     ..rotateX(stampTilt)
-                    // 자국과 같은 각도로 내려와야 도장이 자국 위에 정확히 겹칩니다.
-                    ..rotateZ(_stampTiltZ)
                     ..scaleByDouble(stampScale, stampScale, 1, 1),
                   child: Assets.games.liarsPoker.images.other.stamp.image(
                     width: size * 1.82,

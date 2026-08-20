@@ -24,7 +24,7 @@ type CallLiarData = {
 };
 
 /** 현재 플레이어가 직전 제출에 대해 라이어를 선언합니다. */
-export const game_liars_poker_call_liar = onCall<CallLiarData>(
+export const callLiarsPoker = onCall<CallLiarData>(
   {region: REGION},
   async (request) => {
     const uid = requireUid(request);

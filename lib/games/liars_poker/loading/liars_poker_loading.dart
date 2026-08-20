@@ -1,29 +1,25 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/sound_effects.dart';
-import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 /// Liar's Poker 로딩 화면에 표시할 전략 팁입니다.
-///
-/// 실제 규칙과 어긋나면 안내가 아니라 혼란이 되므로, 규칙이 바뀌면 태블릿
-/// 룰북(`widgets/tablet/rolebook.dart`)과 함께 고칩니다.
 const liarsPokerLoadingTips = <String>[
-  '기준 카드는 라운드마다 바뀝니다. 새 라운드가 시작되면 먼저 확인하세요.',
-  '조커는 어떤 기준 카드로든 인정됩니다. 아껴 두면 위기에서 진실이 됩니다.',
-  '한 번에 3장까지 낼 수 있습니다. 많이 낼수록 들켰을 때 잃는 것도 커집니다.',
-  '룰렛에서 살아남아도 다음 룰렛은 더 불리해집니다. 두 번은 피하세요.',
-  '세 번째 룰렛은 12칸 중 11칸이 탈락입니다. 그 전에 승부를 보세요.',
-  'LIAR는 확신이 들 때만 외치세요. 틀리면 내가 룰렛을 돌립니다.',
-  '내가 기준 카드를 많이 들고 있다면, 상대의 주장은 거짓일 확률이 높습니다.',
-  '상대가 낸 장수를 세어 두면 손패가 언제 바닥나는지 보입니다.',
-  '카드가 남은 사람이 나 혼자가 되면 FOLD로 의심을 접을 수 있습니다.',
-  '남은 사람이 둘뿐일 때 LIAR 판정에 실패하면 룰렛이 한 단계 불리해집니다.',
-  '망설임 없이 바로 낸 카드가 언제나 진실은 아닙니다.',
-  '같은 방식으로만 속이면 패턴이 읽힙니다. 진실도 섞어 내세요.',
-  '상대가 나를 정직한 사람으로 여기게 만들면 결정적인 순간에 통합니다.',
-  '손패를 먼저 비워도 승리가 아닙니다. 마지막까지 살아남아야 이깁니다.',
+  '항상 진실만 낼 필요는 없습니다. 블러핑도 중요한 전략입니다.',
+  '너무 자신감 있는 플레이는 오히려 의심을 살 수 있습니다.',
+  '가끔은 약한 패도 강하게 보이는 것이 더 효과적입니다.',
+  '상대의 행동과 속도를 함께 관찰해 보세요.',
+  '좋은 카드는 너무 빨리 공개하지 않는 것도 전략입니다.',
+  '상대의 습관을 기억하면 다음 라운드에 도움이 됩니다.',
+  '남은 카드 수를 기억하면 판단이 쉬워집니다.',
+  '블러핑은 전략입니다. 하지만 너무 자주 하면 들키기 쉽습니다.',
+  '라이어는 확신이 들 때만 외치세요.',
+  '상대의 표정보다 플레이 패턴을 읽어보세요.',
+  '좋은 카드를 아끼는 것도 하나의 전략입니다.',
+  '조커는 판을 뒤집을 수 있는 카드입니다.',
+  '침착함은 최고의 무기입니다.',
+  '상대가 빠르게 낸 카드가 항상 진실은 아닙니다.',
+  '카드를 모두 버리는 것보다 끝까지 살아남는 것이 중요할 수도 있습니다.',
+  '한 번의 성공적인 블러핑이 게임의 흐름을 바꿀 수 있습니다.',
+  '상대가 당신을 어떻게 생각하는지도 중요한 정보입니다.',
 ];
 
 /// 게임 화면에서 최초 표시될 로컬 이미지와 참가자 프로필을 미리 디코딩합니다.
@@ -35,12 +31,6 @@ Future<void> preloadLiarsPokerAssets(
   required bool isPhone,
   required Iterable<String> profileImageUrls,
 }) async {
-  // 첫 카드 제출·공개 소리가 늦지 않도록 게임 전용 효과음을 먼저 준비합니다.
-  unawaited(
-    SoundEffects.of(context)?.preloadEffects(LiarsPokerSounds.preloadTargets) ??
-        Future<void>.value(),
-  );
-
   final images = Assets.games.liarsPoker.images;
   final localAssets = <AssetGenImage>[
     // Liar's Poker 휴대폰은 세로·가로 회전을 모두 허용합니다. 현재 방향의
