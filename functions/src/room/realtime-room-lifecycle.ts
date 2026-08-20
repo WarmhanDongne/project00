@@ -26,6 +26,7 @@ type SelectGameData = RoomData & {gameId?: unknown};
 type RemovePlayerData = RoomData & {playerUid?: unknown};
 
 interface RealtimeRoom extends ControllerSessionRoom {
+  creationOperationId?: string;
   status?: string;
   selectedGame?: string;
   controllerConnected?: boolean;
@@ -138,6 +139,11 @@ export const closeRoom = onCall<RoomData>(
     const controllerRoomRef = getDatabase().ref(`controllerRooms/${uid}`);
     const mappedRoom = await controllerRoomRef.get();
     if (mappedRoom.val() === roomCode) await controllerRoomRef.remove();
+    if (room.creationOperationId) {
+      await getDatabase()
+        .ref(`roomCreateRequests/${uid}/${room.creationOperationId}`)
+        .remove();
+    }
     return {success: true, roomCode};
   },
 );
@@ -285,11 +291,19 @@ export const cleanupStaleRealtimeRooms = onSchedule(
         return null;
       }).then(async (result) => {
         if (!result.committed || result.snapshot.exists()) return;
-        const controllerUid = (child.val() as RealtimeRoom).controllerUid;
+        const deletedRoom = child.val() as RealtimeRoom;
+        const controllerUid = deletedRoom.controllerUid;
         if (!controllerUid) return;
         const mappingRef = database.ref(`controllerRooms/${controllerUid}`);
         const mapping = await mappingRef.get();
         if (mapping.val() === roomCode) await mappingRef.remove();
+        if (deletedRoom.creationOperationId) {
+          await database
+            .ref(
+              `roomCreateRequests/${controllerUid}/${deletedRoom.creationOperationId}`,
+            )
+            .remove();
+        }
       }));
     });
     await Promise.all(cleanupJobs);

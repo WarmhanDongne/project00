@@ -37,7 +37,7 @@ class RoomService {
     return user;
   }
 
-  Future<String> createRoom() async {
+  Future<String> createRoom({String? operationId}) async {
     final user = _auth.currentUser;
 
     if (user == null) {
@@ -47,7 +47,7 @@ class RoomService {
     try {
       final response = await _functions
           .httpsCallable('createRealtimeRoom')
-          .call();
+          .call(operationId == null ? null : {'operationId': operationId});
 
       final data = Map<String, dynamic>.from(response.data as Map);
 

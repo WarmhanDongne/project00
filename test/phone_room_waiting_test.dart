@@ -210,6 +210,9 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchGameStatus(String roomCode) => const Stream.empty();
 
   @override
+  Stream<bool> watchServerConnection() => const Stream.empty();
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

@@ -43,6 +43,21 @@ void main() {
       provider.dispose();
     });
 
+    test('방 생성 재시도는 같은 작업 ID를 재사용한다', () async {
+      final service = _FakeRoomService(failFirstCreate: true);
+      final provider = _provider(service);
+
+      await provider.createRoom();
+      expect(provider.roomCode, isNull);
+      await provider.createRoom();
+
+      expect(service.createOperationIds, hasLength(2));
+      expect(service.createOperationIds[0], isNotNull);
+      expect(service.createOperationIds[1], service.createOperationIds[0]);
+      expect(provider.roomCode, 'NEW12');
+      provider.dispose();
+    });
+
     test('이전 방의 늦은 정리 요청은 현재 방을 지우지 않는다', () {
       final provider = _provider(_FakeRoomService())..roomCode = 'NEW12';
 
@@ -123,11 +138,13 @@ Future<void> _pumpPanel(WidgetTester tester, RoomProvider provider) {
 }
 
 class _FakeRoomService implements RoomService {
-  _FakeRoomService({this.closeCompleter});
+  _FakeRoomService({this.closeCompleter, this.failFirstCreate = false});
 
   final Completer<void>? closeCompleter;
+  final bool failFirstCreate;
   int closeCalls = 0;
   int createCalls = 0;
+  final List<String?> createOperationIds = [];
 
   @override
   Future<void> closeControllerRoom(String roomCode) {
@@ -136,8 +153,12 @@ class _FakeRoomService implements RoomService {
   }
 
   @override
-  Future<String> createRoom() async {
+  Future<String> createRoom({String? operationId}) async {
     createCalls += 1;
+    createOperationIds.add(operationId);
+    if (failFirstCreate && createCalls == 1) {
+      throw StateError('response lost');
+    }
     return 'NEW12';
   }
 

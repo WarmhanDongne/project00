@@ -42,6 +42,20 @@ void main() {
     expect(attempts, 1);
   });
 
+  test('리소스·조회 오류를 네트워크 오류로 오인해 재전송하지 않는다', () async {
+    for (final code in ['not-found', 'resource-exhausted']) {
+      var attempts = 0;
+      await expectLater(
+        policy.run(() async {
+          attempts += 1;
+          throw FirebaseFunctionsException(code: code, message: 'business');
+        }, enabled: true),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+      expect(attempts, 1, reason: code);
+    }
+  });
+
   //=======================전체 대기 시간 상한==============================
   // 이 상한이 없을 때 휴대폰이 멈췄습니다. callable 기본 타임아웃 70초가 4번
   // 이어지면 최악 281초 동안 응답을 기다렸고, 그동안 isCommandInFlight가 true라

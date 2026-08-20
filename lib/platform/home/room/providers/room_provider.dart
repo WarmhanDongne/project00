@@ -51,6 +51,7 @@ class RoomProvider extends ChangeNotifier {
   List<String>? _lastGroupGameUids;
   int _groupGamesRequestId = 0;
   int _selectedGameRequestId = 0;
+  String? _pendingCreateRoomOperationId;
 
   String? errorMessage;
   String? selectedGameId;
@@ -111,9 +112,14 @@ class RoomProvider extends ChangeNotifier {
     // 기존 방의 `초기화`는 closeRoom이 담당하며 새 코드를 만들지 않습니다.
     if (roomCode != null || isLoading) return;
 
-    final code = await _runCommand<String>(_service.createRoom);
+    final operationId = _pendingCreateRoomOperationId ??=
+        'create_room_${DateTime.now().microsecondsSinceEpoch}';
+    final code = await _runCommand<String>(
+      () => _service.createRoom(operationId: operationId),
+    );
 
     if (code != null) {
+      _pendingCreateRoomOperationId = null;
       roomCode = code;
       listenRoom();
       _startControllerHeartbeat(code);
@@ -480,6 +486,54 @@ class RoomProvider extends ChangeNotifier {
     } else {
       unawaited(_restorePlayerConnection());
     }
+  }
+
+  /// 네트워크 모달의 재시도 버튼에서 현재 세션을 실제로 복원합니다.
+  ///
+  /// RTDB는 물리 네트워크가 돌아오면 자체 재연결하므로 `goOnline()`을 다시 부르는
+  /// 대신, 연결 단절 중 실패했을 presence 예약과 서버의 참가 상태를 복구합니다.
+  Future<void> retryConnectionRecovery() async {
+    final code = roomCode;
+    if (code == null) return;
+
+    final controllerSessionId = ControllerRoomSessionStore.instance
+        .sessionIdForRoom(code);
+    if (controllerSessionId != null) {
+      await _service
+          .markControllerConnected(code)
+          .timeout(const Duration(seconds: 8));
+      _startControllerHeartbeat(code);
+      errorMessage = null;
+      notifyListeners();
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    RoomPlayer? currentPlayer;
+    for (final player in players) {
+      if (player.uid == user.uid) {
+        currentPlayer = player;
+        break;
+      }
+    }
+    final nickname = currentPlayer?.nickname ?? _joinedNickname;
+    final characterId = currentPlayer?.characterId ?? _joinedCharacterId;
+    if (nickname == null || characterId == null) return;
+
+    await _service
+        .restorePlayerConnection(
+          roomCode: code,
+          nickname: nickname,
+          characterId: characterId,
+        )
+        .timeout(const Duration(seconds: 8));
+    if (roomCode != code) return;
+    _presenceRestoreAttempt = 0;
+    _presenceRetryTimer?.cancel();
+    _startPlayerHeartbeat(code);
+    errorMessage = null;
+    notifyListeners();
   }
 
   Future<void> _restorePlayerConnection() async {

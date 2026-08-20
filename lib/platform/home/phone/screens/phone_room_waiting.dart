@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/network/critical_network_guard.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -140,6 +141,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       MaterialPageRoute<bool>(
         builder: (_) => game.buildPhoneScreen(
           roomCode: roomCode,
+          provider: widget.provider,
           onExitRoom: () => widget.provider.leaveGame(game.id),
         ),
       ),
@@ -167,50 +169,57 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.provider,
-      builder: (context, _) {
-        final selectedGameId = widget.provider.selectedGameId;
-        final hasSelectedGame =
-            selectedGameId != null && selectedGameId.isNotEmpty;
-        final players = widget.provider.players
-            .where((player) => player.isActive)
-            .toList(growable: false);
-
-        return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                widget.headerForTesting ??
-                    PhoneHeader(
-                      buttonText: '그룹 나가기',
-                      onPressed: () async {
-                        final left = await widget.provider.leaveRoom();
-                        if (!context.mounted || !left) return;
-                        //================상태바 표시=================
-                        unawaited(AppSystemUi.showPlatformSystemBars());
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      },
-                    ),
-                if (hasSelectedGame) ...[
-                  Expanded(
-                    child: _SelectedGameContent(provider: widget.provider),
-                  ),
-                  const _StartingSoonBar(),
-                ] else
-                  Expanded(
-                    child: _GroupWaitingContent(
-                      provider: widget.provider,
-                      players: players,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
+    return CriticalNetworkGuard(
+      provider: widget.provider,
+      onExit: () {
+        unawaited(AppSystemUi.showPlatformSystemBars());
+        Navigator.of(context).popUntil((route) => route.isFirst);
       },
+      child: AnimatedBuilder(
+        animation: widget.provider,
+        builder: (context, _) {
+          final selectedGameId = widget.provider.selectedGameId;
+          final hasSelectedGame =
+              selectedGameId != null && selectedGameId.isNotEmpty;
+          final players = widget.provider.players
+              .where((player) => player.isActive)
+              .toList(growable: false);
+
+          return Scaffold(
+            body: SafeArea(
+              child: Column(
+                children: [
+                  widget.headerForTesting ??
+                      PhoneHeader(
+                        buttonText: '그룹 나가기',
+                        onPressed: () async {
+                          final left = await widget.provider.leaveRoom();
+                          if (!context.mounted || !left) return;
+                          //================상태바 표시=================
+                          unawaited(AppSystemUi.showPlatformSystemBars());
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                        },
+                      ),
+                  if (hasSelectedGame) ...[
+                    Expanded(
+                      child: _SelectedGameContent(provider: widget.provider),
+                    ),
+                    const _StartingSoonBar(),
+                  ] else
+                    Expanded(
+                      child: _GroupWaitingContent(
+                        provider: widget.provider,
+                        players: players,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
