@@ -146,9 +146,9 @@ void main() {
       // 클래식 4종
       'citizen', 'police', 'doctor', 'mafia',
       // 데이터만으로 동작해 함께 켠 역할
-      'bodyguard', 'godfather',
+      'bodyguard', 'mafia_boss',
       // 능력을 확정받아 서버에 구현한 역할
-      'reporter', 'tracker',
+      'reporter', 'detective',
     });
   });
 
@@ -177,7 +177,7 @@ void main() {
       MafiaInvestigationAppearance.asMafia,
     );
     expect(
-      MafiaRoles.godfather.investigationAppearance,
+      MafiaRoles.mafiaBoss.investigationAppearance,
       MafiaInvestigationAppearance.asCitizen,
     );
     expect(

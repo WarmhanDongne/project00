@@ -103,7 +103,7 @@ test("마피아는 서로를 알고 시작하고 시민은 모른다", () => {
   // 12인 구성은 보스 1 + 마피아 2 = 3명이므로 서로 2명씩 압니다.
   for (const [uid, entry] of Object.entries(game.private)) {
     const faction = game.server.roles[uid] === "mafia" ||
-      game.server.roles[uid] === "godfather" ? "mafia" : "citizen";
+      game.server.roles[uid] === "mafia_boss" ? "mafia" : "citizen";
     if (faction === "mafia") {
       assert.equal(entry.allyUids.length, 2, `${uid} 동료 수`);
       assert.ok(!entry.allyUids.includes(uid), "자신은 동료에 없다");
@@ -213,7 +213,7 @@ test("경찰 조사 결과가 본인 private에만 쌓인다", () => {
 
 test("마피아 보스는 조사에서 시민으로 보인다", () => {
   assert.equal(mafiaInvestigationVerdict("mafia", false), "마피아");
-  assert.equal(mafiaInvestigationVerdict("godfather", false), "시민");
+  assert.equal(mafiaInvestigationVerdict("mafia_boss", false), "시민");
   assert.equal(mafiaInvestigationVerdict("citizen", false), "시민");
   // 조작(프레이머)은 실제 진영을 덮습니다.
   assert.equal(mafiaInvestigationVerdict("citizen", true), "마피아");
@@ -370,7 +370,7 @@ const WITH_SPECIALS = {
   m1: "mafia",
   p1: "police",
   r1: "reporter",
-  t1: "tracker",
+  t1: "detective",
   c1: "citizen",
   c2: "citizen",
 };

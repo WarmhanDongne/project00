@@ -111,11 +111,21 @@ class MafiaController extends Notifier<MafiaGameState> {
   bool get hasConfirmedRole => state.roleRevealedUids.contains(uid);
   int get roleConfirmedCount => state.roleRevealedUids.length;
 
+  //=======================진행 현황 (인원수만)==============================
+  // **누가** 했는지는 서버가 보내지 않습니다. 보이면 특수직이 드러납니다.
+  int get nightSubmittedCount => state.nightSubmittedCount;
+  int get nightActorCount => state.nightActorCount;
+  int get voteSubmittedCount => state.voteSubmittedCount;
+  int get voteEligibleCount => state.voteEligibleCount;
+
   /// 밤에 대상을 골라야 하는 역할인지입니다.
   bool get actsAtNight => myRole?.actsAtNight ?? false;
 
+  /// 내가 이번 밤에 고른 대상입니다. 아직 안 골랐으면 null입니다.
+  String? get nightTargetUid => state.nightTargetUid;
+
   /// 이번 밤에 이미 제출했는지입니다.
-  bool get hasSubmittedNight => state.nightTargetUid != null;
+  bool get hasSubmittedNight => nightTargetUid != null;
 
   /// 밤 화면에서 고를 수 있는 대상입니다.
   ///
@@ -148,7 +158,10 @@ class MafiaController extends Notifier<MafiaGameState> {
   }
 
   //=======================투표==============================
-  bool get hasVoted => state.voteTargetUid != null;
+  /// 내가 찍은 대상입니다. 비밀 투표라 **나만** 볼 수 있습니다.
+  String? get voteTargetUid => state.voteTargetUid;
+
+  bool get hasVoted => voteTargetUid != null;
 
   /// 투표 대상입니다. 자기 자신은 뺍니다(시안 기준).
   List<MafiaPlayer> get voteTargets =>

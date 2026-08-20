@@ -95,6 +95,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.independentAttack,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleVigilante.game,
     // 게임당 사용 횟수 제한은 규칙마다 다릅니다. 우선 1회로 두고 확정 시 조정.
     maxUses: 1,
   );
@@ -106,6 +107,7 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.extended,
     abilityTiming: MafiaAbilityTiming.onDeath,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleHunter.game,
   );
 
   static final mayor = MafiaRole(
@@ -115,6 +117,7 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.extended,
     abilityTiming: MafiaAbilityTiming.day,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleMayor.game,
   );
 
   static final sheriff = MafiaRole(
@@ -124,6 +127,7 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.extended,
     abilityTiming: MafiaAbilityTiming.day,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleSheriff.game,
   );
 
   static final mason = MafiaRole(
@@ -133,6 +137,7 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.extended,
     abilityTiming: MafiaAbilityTiming.gameStart,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleMason.game,
     knowsAllies: true,
   );
 
@@ -146,10 +151,11 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.watch,
     nightPhase: MafiaNightPhase.investigate,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleWatcher.game,
   );
 
-  static final tracker = MafiaRole(
-    id: 'tracker',
+  static final detective = MafiaRole(
+    id: 'detective',
     nightPromptVerb: '추적',
     // 확정 명세는 '추적자'였지만 시안 카드가 '탐정'이라 카드를 따릅니다.
     // 능력(대상이 누구에게 능력을 썼는지 조사)은 같은 역할입니다.
@@ -160,7 +166,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.track,
     nightPhase: MafiaNightPhase.investigate,
     accentColor: _citizenColor,
-    card: Assets.games.mafia.images.cards.roleTracker.game,
+    card: Assets.games.mafia.images.cards.roleDetective.game,
     isImplemented: true,
   );
 
@@ -173,6 +179,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.passive,
     investigationAppearance: MafiaInvestigationAppearance.asMafia,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleMiller.game,
   );
 
   static final witness = MafiaRole(
@@ -182,10 +189,11 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.advanced,
     abilityTiming: MafiaAbilityTiming.gameStart,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleWitness.game,
   );
 
-  static final citizenRoleblocker = MafiaRole(
-    id: 'citizen_roleblocker',
+  static final roleblocker = MafiaRole(
+    id: 'roleblocker',
     nightPromptVerb: '차단',
     displayName: '역할 차단자',
     faction: MafiaFaction.citizen,
@@ -194,6 +202,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.roleblock,
     accentColor: _citizenColor,
+    card: Assets.games.mafia.images.cards.roleRoleblocker.game,
   );
 
   /// 밤에 지목한 사람의 신분을 **다음 아침에 전체 공개**합니다.
@@ -239,8 +248,8 @@ abstract final class MafiaRoles {
   );
 
   /// 조사에서 시민으로 보이는 마피아 우두머리입니다.
-  static final godfather = MafiaRole(
-    id: 'godfather',
+  static final mafiaBoss = MafiaRole(
+    id: 'mafia_boss',
     nightPromptVerb: '제거',
     displayName: '마피아 보스',
     faction: MafiaFaction.mafia,
@@ -250,15 +259,15 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.mafiaAttack,
     investigationAppearance: MafiaInvestigationAppearance.asCitizen,
     accentColor: _mafiaColor,
-    card: Assets.games.mafia.images.cards.roleGodfather.game,
+    card: Assets.games.mafia.images.cards.roleMafiaBoss.game,
     knowsAllies: true,
     // 마피아와 같은 제거 + 조사에 시민으로 보이기. 둘 다 데이터로 처리되므로
     // 서버 엔진을 고치지 않고 동작합니다.
     isImplemented: true,
   );
 
-  static final mafioso = MafiaRole(
-    id: 'mafioso',
+  static final member = MafiaRole(
+    id: 'member',
     nightPromptVerb: '제거',
     displayName: '조직원',
     faction: MafiaFaction.mafia,
@@ -267,6 +276,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.mafiaAttack,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleMember.game,
     knowsAllies: true,
   );
 
@@ -279,6 +289,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.passive,
     investigationAppearance: MafiaInvestigationAppearance.asCitizen,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleTraitor.game,
   );
 
   static final framer = MafiaRole(
@@ -291,6 +302,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.frame,
     nightPhase: MafiaNightPhase.frame,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleFramer.game,
     knowsAllies: true,
   );
 
@@ -308,8 +320,8 @@ abstract final class MafiaRoles {
     knowsAllies: true,
   );
 
-  static final consigliere = MafiaRole(
-    id: 'consigliere',
+  static final information = MafiaRole(
+    id: 'information',
     nightPromptVerb: '조사',
     displayName: '정보원',
     faction: MafiaFaction.mafia,
@@ -318,6 +330,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.investigateRole,
     nightPhase: MafiaNightPhase.investigate,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleInformation.game,
     knowsAllies: true,
   );
 
@@ -331,6 +344,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.roleblock,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleMafiaRoleblocker.game,
     knowsAllies: true,
   );
 
@@ -358,6 +372,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.convert,
     nightPhase: MafiaNightPhase.convert,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleRecruiter.game,
     knowsAllies: true,
   );
 
@@ -371,6 +386,7 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.convert,
     nightPhase: MafiaNightPhase.convert,
     accentColor: _mafiaColor,
+    card: Assets.games.mafia.images.cards.roleYakuza.game,
     knowsAllies: true,
   );
 
@@ -389,6 +405,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.independentAttack,
     winCondition: MafiaWinCondition.lastStanding,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleSerialKiller.game,
   );
 
   static final arsonist = MafiaRole(
@@ -402,6 +419,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.independentAttack,
     winCondition: MafiaWinCondition.lastStanding,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleArsonist.game,
   );
 
   /// 낮 투표로 자신이 처형되면 승리합니다.
@@ -413,6 +431,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.passive,
     winCondition: MafiaWinCondition.lynchedSelf,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleJester.game,
   );
 
   /// 지정된 목표가 낮 투표로 처형되면 승리합니다.
@@ -424,6 +443,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.gameStart,
     winCondition: MafiaWinCondition.lynchTarget,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleExecutioner.game,
   );
 
   static final survivor = MafiaRole(
@@ -437,6 +457,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.protect,
     winCondition: MafiaWinCondition.surviveToEnd,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleSurvivor.game,
     maxUses: 2,
   );
 
@@ -451,6 +472,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.convert,
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleCultLeader.game,
   );
 
   static final cultist = MafiaRole(
@@ -461,10 +483,11 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.passive,
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleCultist.game,
   );
 
-  static final piper = MafiaRole(
-    id: 'piper',
+  static final piedPiper = MafiaRole(
+    id: 'pied_piper',
     nightPromptVerb: '매혹',
     displayName: '피리 부는 사나이',
     faction: MafiaFaction.neutral,
@@ -474,6 +497,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.statusEffect,
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.rolePiedPiper.game,
   );
 
   static final vampire = MafiaRole(
@@ -487,6 +511,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.convert,
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
+    card: Assets.games.mafia.images.cards.roleVampire.game,
   );
 
   // ======================================================================
@@ -495,13 +520,13 @@ abstract final class MafiaRoles {
   static final all = <MafiaRole>[
     // 시민 진영
     citizen, police, doctor, bodyguard, vigilante, hunter, mayor, sheriff,
-    mason, watcher, tracker, miller, witness, citizenRoleblocker, reporter,
+    mason, watcher, detective, miller, witness, roleblocker, reporter,
     // 마피아 진영
-    mafia, godfather, mafioso, traitor, framer, silencer, consigliere,
+    mafia, mafiaBoss, member, traitor, framer, silencer, information,
     mafiaRoleblocker, disguiser, recruiter, yakuza,
     // 중립 진영
     serialKiller, arsonist, jester, executioner, survivor, cultLeader,
-    cultist, piper, vampire,
+    cultist, piedPiper, vampire,
   ];
 
   /// 서버 처리까지 완성돼 실제로 배분해도 되는 역할입니다.

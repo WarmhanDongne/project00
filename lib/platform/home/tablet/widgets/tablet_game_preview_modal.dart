@@ -130,11 +130,6 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
   }
 
   Future<void> _startGame(BuildContext context) async {
-    if (widget.game.id == 'mafia') {
-      _showMessage(context, '마피아 게임 시작은 준비 중입니다.');
-      return;
-    }
-
     final players = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
