@@ -33,7 +33,11 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     //=======================플랫폼 세로 화면 고정==============================
     unawaited(_lockPlatformPortrait());
     widget.provider.addListener(_onRoomProviderChanged);
-    _onRoomProviderChanged();
+    // 마운트 시점에 이미 추방/방 종료 상태면 핸들러가 ModalRoute.of를
+    // 호출하므로, initState 완료 전에 실행하지 않고 첫 프레임 뒤로 미룹니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onRoomProviderChanged();
+    });
   }
 
   Future<void> _lockPlatformPortrait() => AppOrientation.lockPlatformPortrait();

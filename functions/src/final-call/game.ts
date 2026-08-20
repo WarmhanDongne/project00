@@ -266,6 +266,28 @@ export function resolveFinalCallRound(
   }
 }
 
+/**
+ * 다음 라운드를 시작할 플레이어를 정합니다.
+ *
+ * 직전 라운드에서 생명을 잃은 생존자가 시작하고, 여러 명이면 남은 생명이
+ * 가장 적은 플레이어가 시작합니다. 동률이면 좌석 순서가 빠른 쪽입니다.
+ * 생명을 잃은 플레이어가 모두 탈락했으면 생존자 전체에서 같은 기준
+ * (남은 생명 최소, 좌석 순서)으로 정합니다.
+ */
+export function nextFinalCallRoundStarter(game: FinalCallGameState): string {
+  const lifeLosses = game.public.roundResult?.lifeLosses ?? {};
+  const alive = orderedAlivePlayers(game.public.players);
+  if (alive.length === 0) throw new Error("생존 플레이어가 없습니다.");
+  const losers = alive.filter((player) => (lifeLosses[player.uid] ?? 0) > 0);
+  const candidates = losers.length > 0 ? losers : alive;
+  // orderedAlivePlayers가 좌석 순서라 첫 최소값 유지가 곧 좌석 우선입니다.
+  let starter = candidates[0];
+  for (const candidate of candidates) {
+    if (candidate.lives < starter.lives) starter = candidate;
+  }
+  return starter.uid;
+}
+
 /** 좌석 순서의 다음 생존 플레이어를 반환합니다. */
 export function nextFinalCallPlayer(
   players: Record<string, FinalCallPlayer>,

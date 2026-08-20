@@ -66,14 +66,20 @@ class $AssetsLottieGen {
 class $AssetsSoundsGen {
   const $AssetsSoundsGen();
 
-  /// File path: assets/sounds/.gitkeep
-  String get aGitkeep => 'assets/sounds/.gitkeep';
+  /// File path: assets/sounds/dealing.mp3
+  String get dealing => 'assets/sounds/dealing.mp3';
 
-  /// Directory path: assets/sounds/common
-  $AssetsSoundsCommonGen get common => const $AssetsSoundsCommonGen();
+  /// File path: assets/sounds/lever.mp3
+  String get lever => 'assets/sounds/lever.mp3';
+
+  /// File path: assets/sounds/roulette.mp3
+  String get roulette => 'assets/sounds/roulette.mp3';
+
+  /// File path: assets/sounds/stamp.mp3
+  String get stamp => 'assets/sounds/stamp.mp3';
 
   /// List of all assets
-  List<String> get values => [aGitkeep];
+  List<String> get values => [dealing, lever, roulette, stamp];
 }
 
 class $AssetsGamesFinalCallGen {
@@ -82,6 +88,10 @@ class $AssetsGamesFinalCallGen {
   /// Directory path: assets/games/final_call/images
   $AssetsGamesFinalCallImagesGen get images =>
       const $AssetsGamesFinalCallImagesGen();
+
+  /// Directory path: assets/games/final_call/sounds
+  $AssetsGamesFinalCallSoundsGen get sounds =>
+      const $AssetsGamesFinalCallSoundsGen();
 }
 
 class $AssetsGamesLiarsPokerGen {
@@ -90,6 +100,10 @@ class $AssetsGamesLiarsPokerGen {
   /// Directory path: assets/games/liars_poker/images
   $AssetsGamesLiarsPokerImagesGen get images =>
       const $AssetsGamesLiarsPokerImagesGen();
+
+  /// Directory path: assets/games/liars_poker/sounds
+  $AssetsGamesLiarsPokerSoundsGen get sounds =>
+      const $AssetsGamesLiarsPokerSoundsGen();
 }
 
 class $AssetsGamesMafiaGen {
@@ -97,6 +111,9 @@ class $AssetsGamesMafiaGen {
 
   /// Directory path: assets/games/mafia/images
   $AssetsGamesMafiaImagesGen get images => const $AssetsGamesMafiaImagesGen();
+
+  /// Directory path: assets/games/mafia/sounds
+  $AssetsGamesMafiaSoundsGen get sounds => const $AssetsGamesMafiaSoundsGen();
 }
 
 class $AssetsImagesButtonGen {
@@ -151,19 +168,6 @@ class $AssetsImagesWidgetsGen {
       const $AssetsImagesWidgetsRouletteGen();
 }
 
-class $AssetsSoundsCommonGen {
-  const $AssetsSoundsCommonGen();
-
-  /// File path: assets/sounds/common/dealing.mp3
-  String get dealing => 'assets/sounds/common/dealing.mp3';
-
-  /// File path: assets/sounds/common/roulette.mp3
-  String get roulette => 'assets/sounds/common/roulette.mp3';
-
-  /// List of all assets
-  List<String> get values => [dealing, roulette];
-}
-
 class $AssetsGamesFinalCallImagesGen {
   const $AssetsGamesFinalCallImagesGen();
 
@@ -194,6 +198,14 @@ class $AssetsGamesFinalCallImagesGen {
   /// Directory path: assets/games/final_call/images/other
   $AssetsGamesFinalCallImagesOtherGen get other =>
       const $AssetsGamesFinalCallImagesOtherGen();
+}
+
+class $AssetsGamesFinalCallSoundsGen {
+  const $AssetsGamesFinalCallSoundsGen();
+
+  /// Directory path: assets/games/final_call/sounds/background
+  $AssetsGamesFinalCallSoundsBackgroundGen get background =>
+      const $AssetsGamesFinalCallSoundsBackgroundGen();
 }
 
 class $AssetsGamesLiarsPokerImagesGen {
@@ -232,12 +244,33 @@ class $AssetsGamesLiarsPokerImagesGen {
       const $AssetsGamesLiarsPokerImagesTableGen();
 }
 
+class $AssetsGamesLiarsPokerSoundsGen {
+  const $AssetsGamesLiarsPokerSoundsGen();
+
+  /// File path: assets/games/liars_poker/sounds/.gitkeep
+  String get aGitkeep => 'assets/games/liars_poker/sounds/.gitkeep';
+
+  /// Directory path: assets/games/liars_poker/sounds/background
+  $AssetsGamesLiarsPokerSoundsBackgroundGen get background =>
+      const $AssetsGamesLiarsPokerSoundsBackgroundGen();
+
+  /// File path: assets/games/liars_poker/sounds/submit.mp3
+  String get submit => 'assets/games/liars_poker/sounds/submit.mp3';
+
+  /// List of all assets
+  List<String> get values => [aGitkeep, submit];
+}
+
 class $AssetsGamesMafiaImagesGen {
   const $AssetsGamesMafiaImagesGen();
 
   /// Directory path: assets/games/mafia/images/background
   $AssetsGamesMafiaImagesBackgroundGen get background =>
       const $AssetsGamesMafiaImagesBackgroundGen();
+
+  /// Directory path: assets/games/mafia/images/banner
+  $AssetsGamesMafiaImagesBannerGen get banner =>
+      const $AssetsGamesMafiaImagesBannerGen();
 
   /// Directory path: assets/games/mafia/images/cards
   $AssetsGamesMafiaImagesCardsGen get cards =>
@@ -250,6 +283,26 @@ class $AssetsGamesMafiaImagesGen {
   /// Directory path: assets/games/mafia/images/other
   $AssetsGamesMafiaImagesOtherGen get other =>
       const $AssetsGamesMafiaImagesOtherGen();
+}
+
+class $AssetsGamesMafiaSoundsGen {
+  const $AssetsGamesMafiaSoundsGen();
+
+  /// Directory path: assets/games/mafia/sounds/background
+  $AssetsGamesMafiaSoundsBackgroundGen get background =>
+      const $AssetsGamesMafiaSoundsBackgroundGen();
+
+  /// File path: assets/games/mafia/sounds/gun.mp3
+  String get gun => 'assets/games/mafia/sounds/gun.mp3';
+
+  /// File path: assets/games/mafia/sounds/vote.mp3
+  String get vote => 'assets/games/mafia/sounds/vote.mp3';
+
+  /// File path: assets/games/mafia/sounds/win_mafia.mp3
+  String get winMafia => 'assets/games/mafia/sounds/win_mafia.mp3';
+
+  /// List of all assets
+  List<String> get values => [gun, vote, winMafia];
 }
 
 class $AssetsImagesWidgetsLayoutGen {
@@ -542,6 +595,11 @@ class $AssetsGamesFinalCallImagesCardsGen {
     'assets/games/final_call/images/cards/card_yellow_6.png',
   );
 
+  /// File path: assets/games/final_call/images/cards/card_yellow_6png.png
+  AssetGenImage get cardYellow6png => const AssetGenImage(
+    'assets/games/final_call/images/cards/card_yellow_6png.png',
+  );
+
   /// File path: assets/games/final_call/images/cards/card_yellow_7.png
   AssetGenImage get cardYellow7 => const AssetGenImage(
     'assets/games/final_call/images/cards/card_yellow_7.png',
@@ -597,6 +655,7 @@ class $AssetsGamesFinalCallImagesCardsGen {
     cardYellow4,
     cardYellow5,
     cardYellow6,
+    cardYellow6png,
     cardYellow7,
     cardYellow8,
     cardYellow9,
@@ -718,6 +777,17 @@ class $AssetsGamesFinalCallImagesOtherGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [blockNumberHolder];
+}
+
+class $AssetsGamesFinalCallSoundsBackgroundGen {
+  const $AssetsGamesFinalCallSoundsBackgroundGen();
+
+  /// File path: assets/games/final_call/sounds/background/background.mp3
+  String get background =>
+      'assets/games/final_call/sounds/background/background.mp3';
+
+  /// List of all assets
+  List<String> get values => [background];
 }
 
 class $AssetsGamesLiarsPokerImagesBackgroundGen {
@@ -990,6 +1060,17 @@ class $AssetsGamesLiarsPokerImagesTableGen {
   ];
 }
 
+class $AssetsGamesLiarsPokerSoundsBackgroundGen {
+  const $AssetsGamesLiarsPokerSoundsBackgroundGen();
+
+  /// File path: assets/games/liars_poker/sounds/background/background.mp3
+  String get background =>
+      'assets/games/liars_poker/sounds/background/background.mp3';
+
+  /// List of all assets
+  List<String> get values => [background];
+}
+
 class $AssetsGamesMafiaImagesBackgroundGen {
   const $AssetsGamesMafiaImagesBackgroundGen();
 
@@ -1013,6 +1094,26 @@ class $AssetsGamesMafiaImagesBackgroundGen {
     'assets/games/mafia/images/background/background_night_phone.png',
   );
 
+  /// File path: assets/games/mafia/images/background/background_phone_mafia_win.png
+  AssetGenImage get backgroundPhoneMafiaWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_phone_mafia_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_phone_sitizen_win.png
+  AssetGenImage get backgroundPhoneSitizenWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_phone_sitizen_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_tablet_mafia_win.png
+  AssetGenImage get backgroundTabletMafiaWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_tablet_mafia_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_tablet_sitizen_win.png
+  AssetGenImage get backgroundTabletSitizenWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_tablet_sitizen_win.png',
+  );
+
   /// Directory path: assets/games/mafia/images/background/bird
   $AssetsGamesMafiaImagesBackgroundBirdGen get bird =>
       const $AssetsGamesMafiaImagesBackgroundBirdGen();
@@ -1023,6 +1124,42 @@ class $AssetsGamesMafiaImagesBackgroundGen {
     backgroundMorningPhone,
     backgroundNight,
     backgroundNightPhone,
+    backgroundPhoneMafiaWin,
+    backgroundPhoneSitizenWin,
+    backgroundTabletMafiaWin,
+    backgroundTabletSitizenWin,
+  ];
+}
+
+class $AssetsGamesMafiaImagesBannerGen {
+  const $AssetsGamesMafiaImagesBannerGen();
+
+  /// File path: assets/games/mafia/images/banner/banner_citizen_lose.png
+  AssetGenImage get bannerCitizenLose => const AssetGenImage(
+    'assets/games/mafia/images/banner/banner_citizen_lose.png',
+  );
+
+  /// File path: assets/games/mafia/images/banner/banner_citizen_win.png
+  AssetGenImage get bannerCitizenWin => const AssetGenImage(
+    'assets/games/mafia/images/banner/banner_citizen_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/banner/banner_mafia_lose.png
+  AssetGenImage get bannerMafiaLose => const AssetGenImage(
+    'assets/games/mafia/images/banner/banner_mafia_lose.png',
+  );
+
+  /// File path: assets/games/mafia/images/banner/banner_mafia_win.png
+  AssetGenImage get bannerMafiaWin => const AssetGenImage(
+    'assets/games/mafia/images/banner/banner_mafia_win.png',
+  );
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    bannerCitizenLose,
+    bannerCitizenWin,
+    bannerMafiaLose,
+    bannerMafiaWin,
   ];
 }
 
@@ -1033,16 +1170,68 @@ class $AssetsGamesMafiaImagesCardsGen {
   AssetGenImage get roleBack =>
       const AssetGenImage('assets/games/mafia/images/cards/role_back.png');
 
+  /// File path: assets/games/mafia/images/cards/role_bodyguard.png
+  AssetGenImage get roleBodyguard =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_bodyguard.png');
+
   /// File path: assets/games/mafia/images/cards/role_citizen.png
   AssetGenImage get roleCitizen =>
       const AssetGenImage('assets/games/mafia/images/cards/role_citizen.png');
 
+  /// File path: assets/games/mafia/images/cards/role_disguiser.png
+  AssetGenImage get roleDisguiser =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_disguiser.png');
+
+  /// File path: assets/games/mafia/images/cards/role_doctor.png
+  AssetGenImage get roleDoctor =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_doctor.png');
+
+  /// File path: assets/games/mafia/images/cards/role_godfather.png
+  AssetGenImage get roleGodfather =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_godfather.png');
+
+  /// File path: assets/games/mafia/images/cards/role_mafia.png
+  AssetGenImage get roleMafia =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_mafia.png');
+
+  /// File path: assets/games/mafia/images/cards/role_police.png
+  AssetGenImage get rolePolice =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_police.png');
+
+  /// File path: assets/games/mafia/images/cards/role_reporter.png
+  AssetGenImage get roleReporter =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_reporter.png');
+
+  /// File path: assets/games/mafia/images/cards/role_silencer.png
+  AssetGenImage get roleSilencer =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_silencer.png');
+
+  /// File path: assets/games/mafia/images/cards/role_tracker.png
+  AssetGenImage get roleTracker =>
+      const AssetGenImage('assets/games/mafia/images/cards/role_tracker.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [roleBack, roleCitizen];
+  List<AssetGenImage> get values => [
+    roleBack,
+    roleBodyguard,
+    roleCitizen,
+    roleDisguiser,
+    roleDoctor,
+    roleGodfather,
+    roleMafia,
+    rolePolice,
+    roleReporter,
+    roleSilencer,
+    roleTracker,
+  ];
 }
 
 class $AssetsGamesMafiaImagesIconsGen {
   const $AssetsGamesMafiaImagesIconsGen();
+
+  /// File path: assets/games/mafia/images/icons/icon_out.png
+  AssetGenImage get iconOut =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_out.png');
 
   /// File path: assets/games/mafia/images/icons/role_icon.png
   AssetGenImage get roleIcon =>
@@ -1064,17 +1253,23 @@ class $AssetsGamesMafiaImagesIconsGen {
   AssetGenImage get tip =>
       const AssetGenImage('assets/games/mafia/images/icons/tip.png');
 
+  /// File path: assets/games/mafia/images/icons/tip_book.png
+  AssetGenImage get tipBook =>
+      const AssetGenImage('assets/games/mafia/images/icons/tip_book.png');
+
   /// File path: assets/games/mafia/images/icons/tip_light.png
   AssetGenImage get tipLight =>
       const AssetGenImage('assets/games/mafia/images/icons/tip_light.png');
 
   /// List of all assets
   List<AssetGenImage> get values => [
+    iconOut,
     roleIcon,
     settingBlack,
     settingIcon,
     settingWhite,
     tip,
+    tipBook,
     tipLight,
   ];
 }
@@ -1085,6 +1280,18 @@ class $AssetsGamesMafiaImagesOtherGen {
   /// File path: assets/games/mafia/images/other/dead_message.png
   AssetGenImage get deadMessage =>
       const AssetGenImage('assets/games/mafia/images/other/dead_message.png');
+
+  /// File path: assets/games/mafia/images/other/moon.png
+  AssetGenImage get moon =>
+      const AssetGenImage('assets/games/mafia/images/other/moon.png');
+
+  /// File path: assets/games/mafia/images/other/reveal_arrow.svg
+  SvgGenImage get revealArrow =>
+      const SvgGenImage('assets/games/mafia/images/other/reveal_arrow.svg');
+
+  /// File path: assets/games/mafia/images/other/sun.png
+  AssetGenImage get sun =>
+      const AssetGenImage('assets/games/mafia/images/other/sun.png');
 
   /// File path: assets/games/mafia/images/other/talk_phone.png
   AssetGenImage get talkPhone =>
@@ -1099,12 +1306,30 @@ class $AssetsGamesMafiaImagesOtherGen {
       const AssetGenImage('assets/games/mafia/images/other/vote_box.png');
 
   /// List of all assets
-  List<AssetGenImage> get values => [
+  List<dynamic> get values => [
     deadMessage,
+    moon,
+    revealArrow,
+    sun,
     talkPhone,
     talkTablet,
     voteBox,
   ];
+}
+
+class $AssetsGamesMafiaSoundsBackgroundGen {
+  const $AssetsGamesMafiaSoundsBackgroundGen();
+
+  /// File path: assets/games/mafia/sounds/background/background.mp3
+  String get background =>
+      'assets/games/mafia/sounds/background/background.mp3';
+
+  /// File path: assets/games/mafia/sounds/background/background_night.mp3
+  String get backgroundNight =>
+      'assets/games/mafia/sounds/background/background_night.mp3';
+
+  /// List of all assets
+  List<String> get values => [background, backgroundNight];
 }
 
 class $AssetsGamesMafiaImagesBackgroundBirdGen {

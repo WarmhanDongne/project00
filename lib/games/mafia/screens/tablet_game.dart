@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Mafia 태블릿 UI를 확인하는 개발용 화면입니다.
 class MafiaTabletGame extends StatefulWidget {
@@ -26,7 +27,7 @@ class _GameBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.black,
-      child: Assets.games.mafia.images.background.backgroundMorning.image(
+      child: Assets.games.mafia.images.background.backgroundMorning.game.image(
         fit: BoxFit.contain,
         alignment: Alignment.center,
       ),

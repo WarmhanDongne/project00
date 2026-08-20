@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/mafia/animations/role_card_reveal_animation.dart';
 import 'package:project00/games/mafia/widgets/phone_top_bar.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 final bool isMorning = true;
 
@@ -20,8 +21,8 @@ class MafiaPhoneGame extends StatelessWidget {
           // Positioned.fill(child: FreeTalk()),
           Positioned.fill(
             child: RoleCardRevealAnimation(
-              backCardAsset: Assets.games.mafia.images.cards.roleBack,
-              frontCardAsset: Assets.games.mafia.images.cards.roleCitizen,
+              backCardAsset: Assets.games.mafia.images.cards.roleBack.game,
+              frontCardAsset: Assets.games.mafia.images.cards.roleCitizen.game,
             ),
           ),
         ],
@@ -38,14 +39,10 @@ class _GameBackground extends StatelessWidget {
     return ColoredBox(
       color: Colors.black,
       child: isMorning
-          ? Assets.games.mafia.images.background.backgroundMorningPhone.image(
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            )
-          : Assets.games.mafia.images.background.backgroundNightPhone.image(
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
+          ? Assets.games.mafia.images.background.backgroundMorningPhone.game
+                .image(fit: BoxFit.cover, alignment: Alignment.center)
+          : Assets.games.mafia.images.background.backgroundNightPhone.game
+                .image(fit: BoxFit.cover, alignment: Alignment.center),
     );
   }
 }
@@ -95,7 +92,7 @@ class FreeTalk extends StatelessWidget {
             "2m 30s",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
-          Assets.games.mafia.images.other.talkPhone.image(
+          Assets.games.mafia.images.other.talkPhone.game.image(
             fit: BoxFit.cover,
             alignment: Alignment.center,
           ),
@@ -196,7 +193,7 @@ class Player extends StatelessWidget {
           height: 80,
           clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-          child: Assets.games.mafia.images.cards.roleCitizen.image(
+          child: Assets.games.mafia.images.cards.roleCitizen.game.image(
             fit: BoxFit.cover,
             alignment: Alignment.center,
           ),

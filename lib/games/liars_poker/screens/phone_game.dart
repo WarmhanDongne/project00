@@ -18,7 +18,9 @@ import 'package:project00/games/shared/animations/game_entry_unroll.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/shared/widgets/game_connecting_overlay.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
 class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
@@ -92,7 +94,16 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   Future<void> _warmUpAssets() async {
     final controller = _controller;
     if (controller == null) return;
-    await controller.waitForInitialData();
+    try {
+      // 첫 스냅샷이 오지 않거나 구독이 에러로 끝나도 사전 로딩 대기가
+      // unhandled exception이나 영구 대기로 남지 않게 합니다. 실제 화면
+      // 전환은 컨트롤러 상태 구독이 계속 담당합니다.
+      await controller.waitForInitialData().timeout(
+        const Duration(seconds: 12),
+      );
+    } catch (_) {
+      // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
+    }
     if (!mounted) return;
     await preloadLiarsPokerAssets(
       context,
@@ -310,6 +321,12 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             },
             onExpired: controller.expireInterruption,
           ),
+          // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
+          // 나가기 버튼을 표시해 영구 대기를 막습니다.
+          GameConnectingOverlay(
+            isWaiting: !_hasEnteredGame,
+            onExit: () => unawaited(_leaveRoom()),
+          ),
         ],
       ),
     );
@@ -422,8 +439,8 @@ class _PhoneGameBackground extends StatelessWidget {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
 
     return Scaffold(
       backgroundColor: Colors.black,

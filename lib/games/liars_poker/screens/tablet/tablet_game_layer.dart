@@ -54,10 +54,11 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
         announcement: flowConfig.stepFor(stage).buildAnnouncement(),
         style: const GameAnnouncementStyle.tablet(),
       ),
+      // key에 좌석 목록을 넣지 않습니다. 분배 도중 플레이어 상태가 바뀌어
+      // 좌석 집합이 변하면 애니메이션이 처음부터 재생성되고, 1라운드는 시작
+      // 탭을 다시 기다리게 되어 분배가 영원히 끝나지 않을 수 있습니다.
       LiarsPokerTabletStage.dealing => _RoundDealLayer(
-        key: ValueKey(
-          'deal-$roundNumber-$cardPileVersion-${dealPlayerSeatIndexes.join('-')}',
-        ),
+        key: ValueKey('deal-$roundNumber-$cardPileVersion'),
         roundNumber: roundNumber,
         boardSeatCount: playerCount,
         playerSeatIndexes: dealPlayerSeatIndexes,
@@ -137,7 +138,18 @@ class _RoundDealLayerState extends State<_RoundDealLayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.playerSeatIndexes.isEmpty) return const SizedBox.shrink();
+    if (widget.playerSeatIndexes.isEmpty) {
+      // 공개 players와 좌석 배치가 아직 매칭되지 않으면 분배 애니메이션을
+      // 만들 수 없습니다. 그렇다고 완료 신호 없이 대기만 하면 서버 phase가
+      // dealing에 영구 고착되어 모든 기기가 멈추므로, 잠시 기다렸다가
+      // 좌석 정보가 오지 않으면 완료 신호를 보내 게임을 진행시킵니다.
+      // 그 사이 좌석 정보가 도착하면 아래 일반 분기로 전환됩니다.
+      return GameFlowAutoComplete(
+        key: ValueKey('deal-empty-${widget.roundNumber}'),
+        delay: const Duration(seconds: 3),
+        onCompleted: widget.onCompleted,
+      );
+    }
     return Stack(
       fit: StackFit.expand,
       children: [

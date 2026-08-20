@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 void main() {
@@ -17,10 +18,10 @@ void main() {
     final controller = PhoneHandCardStackController();
     addTearDown(controller.dispose);
 
-    final cards = <AssetGenImage>[
-      Assets.games.liarsPoker.images.cards.whiteA,
-      Assets.games.liarsPoker.images.cards.whiteK,
-      Assets.games.liarsPoker.images.cards.whiteQ,
+    final cards = <GameImage>[
+      Assets.games.liarsPoker.images.cards.whiteA.game,
+      Assets.games.liarsPoker.images.cards.whiteK.game,
+      Assets.games.liarsPoker.images.cards.whiteQ.game,
     ];
 
     // 실제 화면과 같은 구조입니다. 버튼 자리가 컨트롤러를 듣고 있어야 이 오류가

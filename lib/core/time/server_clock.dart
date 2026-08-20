@@ -15,9 +15,16 @@ import 'package:firebase_database/firebase_database.dart';
 abstract final class ServerClock {
   static StreamSubscription<DatabaseEvent>? _subscription;
   static int _offsetMillis = 0;
+  static bool _hasSynced = false;
 
   /// 서버와 기기 시각의 차이(밀리초)입니다.
   static int get offsetMillis => _offsetMillis;
+
+  /// 서버 시각 보정값을 한 번이라도 받았는지 여부입니다.
+  ///
+  /// 보정 전의 남은 시간 0은 기기 시계 오차일 수 있으므로, 마감 기반의
+  /// 자동 행동(턴 타임아웃 등)은 이 값이 true일 때만 확정해야 합니다.
+  static bool get hasSynced => _hasSynced;
 
   /// 앱 시작 시 한 번 호출해 서버 시각 보정을 시작합니다.
   static void start([FirebaseDatabase? database]) {
@@ -28,7 +35,10 @@ abstract final class ServerClock {
     _subscription = ref.onValue.listen(
       (event) {
         final value = event.snapshot.value;
-        if (value is num) _offsetMillis = value.toInt();
+        if (value is num) {
+          _offsetMillis = value.toInt();
+          _hasSynced = true;
+        }
       },
       // 보정을 못 받아도 기기 시각으로 계속 동작해야 하므로 무시합니다.
       onError: (_) {},
@@ -50,11 +60,15 @@ abstract final class ServerClock {
       deadlineMillis != null && nowMillis() >= deadlineMillis;
 
   /// 테스트에서 보정값을 직접 지정합니다.
-  static void debugSetOffset(int millis) => _offsetMillis = millis;
+  static void debugSetOffset(int millis) {
+    _offsetMillis = millis;
+    _hasSynced = true;
+  }
 
   static Future<void> stop() async {
     await _subscription?.cancel();
     _subscription = null;
     _offsetMillis = 0;
+    _hasSynced = false;
   }
 }

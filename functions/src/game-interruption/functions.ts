@@ -13,6 +13,11 @@ import {
   excludeLiarsPokerPlayer,
   finishLiarsPokerForInsufficientPlayers,
 } from "../liars-poker/exclude-player.js";
+import {
+  excludeMafiaPlayer,
+  finishMafiaForInsufficientPlayers,
+} from "../mafia/exclude-player.js";
+import {MafiaGameState} from "../mafia/types.js";
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
 import {
   completeGameInterruption,
@@ -42,6 +47,7 @@ type Data = {
 const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
   final_call: 4,
   liars_poker: 2,
+  mafia: 4,
 };
 
 interface GameRoom extends InterruptibleRoom {
@@ -227,6 +233,10 @@ function excludePlayer(room: GameRoom, uid: string, now: number): void {
   }
   if (room.selectedGame === "liars_poker") {
     excludeLiarsPokerPlayer(room.game as unknown as LiarsPokerGameState, uid, now);
+    return;
+  }
+  if (room.selectedGame === "mafia") {
+    excludeMafiaPlayer(room.game as unknown as MafiaGameState, uid, now);
   }
 }
 
@@ -239,6 +249,10 @@ function finishForInsufficientPlayers(room: GameRoom, now: number): void {
   if (room.selectedGame === "liars_poker") {
     const game = room.game as unknown as LiarsPokerGameState;
     finishLiarsPokerForInsufficientPlayers(game, now);
+    return;
+  }
+  if (room.selectedGame === "mafia") {
+    finishMafiaForInsufficientPlayers(room.game as unknown as MafiaGameState, now);
   }
 }
 

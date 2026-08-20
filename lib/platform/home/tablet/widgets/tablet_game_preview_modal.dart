@@ -8,6 +8,7 @@ import 'package:project00/games/mafia/screens/mafia_test_screen.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
@@ -116,9 +117,15 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       return;
     }
 
+    // 스토어 배포 후 서버에 추가된 게임은 이 빌드에 코드가 없을 수 있습니다.
+    // 시작 지점 한 곳에서 막고 업데이트를 안내합니다.
+    if (!isGamePlayableOnThisBuild(widget.game)) {
+      _showMessage(context, gameRequiresUpdateMessage);
+      return;
+    }
     final templateGame = GameRegistry.find(widget.game.id);
     if (templateGame == null) {
-      _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      _showMessage(context, gameRequiresUpdateMessage);
       return;
     }
     final fixedPlayerCount = templateGame.fixedPlayerCount;

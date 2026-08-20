@@ -7,6 +7,7 @@ import 'package:project00/games/final_call/screens/tablet_game.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 class FinalCallGame extends TemplateGame {
   const FinalCallGame();
@@ -26,13 +27,13 @@ class FinalCallGame extends TemplateGame {
   Color get tableColor => const Color(0xFFF2F0EB);
   @override
   ImageProvider get tableBackgroundImage =>
-      Assets.games.finalCall.images.background.background.provider();
+      Assets.games.finalCall.images.background.background.game.provider();
   @override
   ImageProvider get layoutTableImage =>
-      Assets.games.finalCall.images.layout.layoutTable.provider();
+      Assets.games.finalCall.images.layout.layoutTable.game.provider();
   @override
   ImageProvider get layoutChairImage =>
-      Assets.games.finalCall.images.layout.layoutChair.provider();
+      Assets.games.finalCall.images.layout.layoutChair.game.provider();
 
   @override
   Future<void> startGame(String roomCode) =>

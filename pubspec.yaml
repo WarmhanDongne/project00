@@ -65,6 +65,7 @@ dependencies:
   youtube_player_iframe: ^6.0.2
   sign_in_with_apple: ^8.1.0
   crypto: ^3.0.7
+  wakelock_plus: ^1.7.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -105,11 +106,16 @@ flutter:
     - assets/games/liars_poker/images/table/
     - assets/games/liars_poker/images/modal/
     - assets/games/liars_poker/images/other/
+    - assets/games/liars_poker/sounds/
+    - assets/games/liars_poker/sounds/background/
     - assets/games/mafia/images/background/
     - assets/games/mafia/images/background/bird/
+    - assets/games/mafia/images/banner/
     - assets/games/mafia/images/cards/
     - assets/games/mafia/images/icons/
     - assets/games/mafia/images/other/
+    - assets/games/mafia/sounds/
+    - assets/games/mafia/sounds/background/
     - assets/games/final_call/images/background/
     - assets/games/final_call/images/button/
     - assets/games/final_call/images/cards/
@@ -117,10 +123,8 @@ flutter:
     - assets/games/final_call/images/layout/
     - assets/games/final_call/images/modal/
     - assets/games/final_call/images/other/
+    - assets/games/final_call/sounds/background/
     - assets/sounds/
-    - assets/sounds/background/
-    - assets/sounds/common/
-    - assets/sounds/liars_poker/
     - assets/lottie/
     - assets/l10n/
 

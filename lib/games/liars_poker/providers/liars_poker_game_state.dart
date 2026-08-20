@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:project00/games/liars_poker/models/liars_poker_models.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 const Object _notProvided = Object();
 
@@ -64,7 +64,7 @@ class LiarsPokerGameState {
     players: <String, PhoneGamePlayer>{},
     roundPlays: <PublicLastPlay>[],
     handCards: <PhoneHandCard>[],
-    handCardAssets: <AssetGenImage>[],
+    handCardAssets: <GameImage>[],
     isCommandInFlight: false,
     isMenuCommandInFlight: false,
     isResolvingPenalty: false,
@@ -100,7 +100,7 @@ class LiarsPokerGameState {
   final List<PublicLastPlay> roundPlays;
 
   final List<PhoneHandCard> handCards;
-  final List<AssetGenImage> handCardAssets;
+  final List<GameImage> handCardAssets;
   final bool isCommandInFlight;
 
   /// 태블릿 설정 메뉴(재시작/종료)와 중단 처리 명령의 실행 상태입니다.
@@ -141,7 +141,7 @@ class LiarsPokerGameState {
     Map<String, PhoneGamePlayer>? players,
     List<PublicLastPlay>? roundPlays,
     List<PhoneHandCard>? handCards,
-    List<AssetGenImage>? handCardAssets,
+    List<GameImage>? handCardAssets,
     bool? isCommandInFlight,
     bool? isMenuCommandInFlight,
     bool? isResolvingPenalty,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
 import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
@@ -251,8 +252,8 @@ class PhoneSpectator extends StatelessWidget {
 
   Widget _buildBackground({required bool isLandscape}) {
     final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
     return background.image(
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,
@@ -305,11 +306,11 @@ class PhoneSpectator extends StatelessWidget {
       ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
   }
 
-  AssetGenImage _tableAsset(String rank) {
+  GameImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
     };
   }
 }

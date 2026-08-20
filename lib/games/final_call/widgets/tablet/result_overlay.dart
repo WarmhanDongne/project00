@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
@@ -33,7 +34,7 @@ class FinalCallResultOverlay extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Assets.games.finalCall.images.background.background.image(
+            Assets.games.finalCall.images.background.background.game.image(
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
             ),

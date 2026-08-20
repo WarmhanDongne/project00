@@ -15,6 +15,7 @@ import 'package:project00/games/shared/player_layouts/player_slot_positions.dart
 import 'package:project00/games/shared/game_flow/game_flow_config.dart';
 import 'package:project00/games/shared/game_flow/game_flow_auto_complete.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 중앙 덱, 플레이어별 생명과 라운드 공개 손패를 그리는 아이패드 보드입니다.
 class FinalCallTabletGameLayer extends StatelessWidget {
@@ -75,7 +76,7 @@ class FinalCallTabletGameLayer extends StatelessWidget {
       boardSeatCount: controller.players.length,
       playerSeatIndexes: activeSeatIndexes,
       cardsPerPlayer: 4,
-      cardAsset: Assets.games.finalCall.images.cards.cardBack,
+      cardAsset: Assets.games.finalCall.images.cards.cardBack.game,
       cardWidth: 146,
       duration: flowStep.animation.duration,
       // 첫 라운드만 중앙 덱을 눌러 시작하고, 이후 라운드는 서버가 dealing에
@@ -606,8 +607,8 @@ class _FinalCallLifeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final previousLives = (player.lives + loss).clamp(0, 3);
     final heart = player.team == FinalCallTeam.blue
-        ? Assets.games.finalCall.images.icons.iconHeartBlue
-        : Assets.games.finalCall.images.icons.iconHeartRed;
+        ? Assets.games.finalCall.images.icons.iconHeartBlue.game
+        : Assets.games.finalCall.images.icons.iconHeartRed.game;
     var rowScale = 1.0;
     if (loss > 0 && lossProgress < 0.45) {
       rowScale = 1 + 0.42 * Curves.easeOutBack.transform(lossProgress / 0.45);
@@ -676,8 +677,8 @@ class _BreakingHeart extends StatelessWidget {
     ];
     const rotations = <double>[-0.48, 0.42, -0.7, 0.62];
     final heart = team == FinalCallTeam.blue
-        ? Assets.games.finalCall.images.icons.iconHeartBlue
-        : Assets.games.finalCall.images.icons.iconHeartRed;
+        ? Assets.games.finalCall.images.icons.iconHeartBlue.game
+        : Assets.games.finalCall.images.icons.iconHeartRed.game;
     return SizedBox.square(
       dimension: 31,
       child: Stack(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/liars_poker/widgets/pressable_asset_button.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -72,7 +73,7 @@ class _ResultContent extends StatelessWidget {
           top: _ResultLayout.cardTop - 30,
           left: _ResultLayout.cardLeft - 120,
           child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteA,
+            asset: Assets.games.liarsPoker.images.cards.whiteA.game,
             angle: -0.24,
           ),
         ),
@@ -80,7 +81,7 @@ class _ResultContent extends StatelessWidget {
           top: _ResultLayout.cardTop - 80,
           left: _ResultLayout.cardLeft - 80,
           child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteK,
+            asset: Assets.games.liarsPoker.images.cards.whiteK.game,
             angle: -0.1,
           ),
         ),
@@ -88,7 +89,7 @@ class _ResultContent extends StatelessWidget {
           top: _ResultLayout.cardTop - 30,
           left: _ResultLayout.cardLeft + 120,
           child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteJoker,
+            asset: Assets.games.liarsPoker.images.cards.whiteJoker.game,
             angle: 0.24,
           ),
         ),
@@ -96,7 +97,7 @@ class _ResultContent extends StatelessWidget {
           top: _ResultLayout.cardTop,
           left: _ResultLayout.cardLeft,
           child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.finishCard,
+            asset: Assets.games.liarsPoker.images.cards.finishCard.game,
           ),
         ),
         if (winnerPlayer != null)
@@ -191,12 +192,12 @@ class _ResultActions extends StatelessWidget {
         _ResultActionButton(
           action: onRestartGame,
           label: '다시하기',
-          asset: Assets.games.liarsPoker.images.button.buttonRetry,
+          asset: Assets.games.liarsPoker.images.button.buttonRetry.game,
         ),
         _ResultActionButton(
           action: onExitToLobby,
           label: '나가기',
-          asset: Assets.games.liarsPoker.images.button.buttonHome,
+          asset: Assets.games.liarsPoker.images.button.buttonHome.game,
         ),
       ],
     );
@@ -212,7 +213,7 @@ class _ResultActionButton extends StatelessWidget {
 
   final VoidCallback? action;
   final String label;
-  final AssetGenImage asset;
+  final GameImage asset;
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +231,7 @@ class _ResultActionButton extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   const _ResultCard({required this.asset, this.angle = 0});
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double angle;
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
 
@@ -80,7 +81,7 @@ class _CrownedWinnerProfile extends StatelessWidget {
           ),
           Positioned(
             top: -40,
-            child: Assets.games.liarsPoker.images.other.borderCrown.image(
+            child: Assets.games.liarsPoker.images.other.borderCrown.game.image(
               width: size * 1.3,
               height: size * 0.86,
               fit: BoxFit.contain,

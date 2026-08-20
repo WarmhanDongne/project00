@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/widgets/tablet_game_rulebook_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 const _liarsPokerRules = '''
 # 게임 목표
@@ -55,10 +56,10 @@ class RoleBook extends StatelessWidget {
       markdown: _liarsPokerRules,
       videoUrl: provider.selectedGame?.ruleVideoUrl,
       cardImages: [
-        Assets.games.liarsPoker.images.cards.whiteA,
-        Assets.games.liarsPoker.images.cards.whiteK,
-        Assets.games.liarsPoker.images.cards.whiteQ,
-        Assets.games.liarsPoker.images.cards.whiteJoker,
+        Assets.games.liarsPoker.images.cards.whiteA.game,
+        Assets.games.liarsPoker.images.cards.whiteK.game,
+        Assets.games.liarsPoker.images.cards.whiteQ.game,
+        Assets.games.liarsPoker.images.cards.whiteJoker.game,
       ],
     );
   }

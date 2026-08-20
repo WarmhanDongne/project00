@@ -1,25 +1,26 @@
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 const int cardsPerPlayer = 5;
 
 /// 서버에서 받은 카드 랭크를 태블릿 카드 이미지로 변환합니다.
-AssetGenImage cardAssetForRank(String rank) {
+GameImage cardAssetForRank(String rank) {
   return switch (rank.toUpperCase()) {
-    'A' => Assets.games.liarsPoker.images.cards.whiteA,
-    'K' => Assets.games.liarsPoker.images.cards.whiteK,
-    'Q' => Assets.games.liarsPoker.images.cards.whiteQ,
-    'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker,
-    _ => Assets.games.liarsPoker.images.cards.whiteBack,
+    'A' => Assets.games.liarsPoker.images.cards.whiteA.game,
+    'K' => Assets.games.liarsPoker.images.cards.whiteK.game,
+    'Q' => Assets.games.liarsPoker.images.cards.whiteQ.game,
+    'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker.game,
+    _ => Assets.games.liarsPoker.images.cards.whiteBack.game,
   };
 }
 
 /// 서버에서 받은 테이블 랭크를 중앙 테이블 이미지로 변환합니다.
-AssetGenImage tableAssetForRank(String rank) {
+GameImage tableAssetForRank(String rank) {
   return switch (rank.toUpperCase()) {
-    'A' => Assets.games.liarsPoker.images.background.a,
-    'K' => Assets.games.liarsPoker.images.background.k,
-    'Q' => Assets.games.liarsPoker.images.background.q,
-    _ => Assets.games.liarsPoker.images.background.q,
+    'A' => Assets.games.liarsPoker.images.background.a.game,
+    'K' => Assets.games.liarsPoker.images.background.k.game,
+    'Q' => Assets.games.liarsPoker.images.background.q.game,
+    _ => Assets.games.liarsPoker.images.background.q.game,
   };
 }
 
@@ -36,7 +37,7 @@ class SubmittedPlay {
 
   final String eventId;
   final int playerIndex;
-  final List<AssetGenImage> frontCardAssets;
+  final List<GameImage> frontCardAssets;
   final int submittedAt;
   final bool isRevealed;
   final bool animateEntry;
@@ -44,7 +45,7 @@ class SubmittedPlay {
   SubmittedPlay copyWith({
     String? eventId,
     int? playerIndex,
-    List<AssetGenImage>? frontCardAssets,
+    List<GameImage>? frontCardAssets,
     int? submittedAt,
     bool? isRevealed,
     bool? animateEntry,

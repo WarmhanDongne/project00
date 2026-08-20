@@ -6,6 +6,7 @@ import 'package:project00/games/shared/widgets/phone_game_top_bar.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 상단바가 차지하는 높이입니다(위 여백 4 + 바 48).
 ///
@@ -35,10 +36,10 @@ class FinalCallPhoneTopBar extends StatelessWidget {
       child: SharedPhoneGameTopBar(
         isLandscape: true,
         trailingLeading: _buildLives(),
-        bookIcon: Assets.games.finalCall.images.icons.iconTipBlack.image(
+        bookIcon: Assets.games.finalCall.images.icons.iconTipBlack.game.image(
           fit: BoxFit.contain,
         ),
-        outIcon: Assets.games.finalCall.images.icons.iconOut.image(
+        outIcon: Assets.games.finalCall.images.icons.iconOut.game.image(
           fit: BoxFit.contain,
         ),
         onOutPressed: onExitRoom,
@@ -52,8 +53,8 @@ class FinalCallPhoneTopBar extends StatelessWidget {
     final player = controller.players[controller.uid];
     final lives = player?.lives ?? 0;
     final heart = player?.team == FinalCallTeam.blue
-        ? Assets.games.finalCall.images.icons.iconHeartBlue
-        : Assets.games.finalCall.images.icons.iconHeartRed;
+        ? Assets.games.finalCall.images.icons.iconHeartBlue.game
+        : Assets.games.finalCall.images.icons.iconHeartRed.game;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

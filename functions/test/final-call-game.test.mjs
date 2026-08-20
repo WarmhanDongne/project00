@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createFinalCallPlayers,
   finalCallTeamForSeat,
+  nextFinalCallRoundStarter,
   removeFinalTurnPendingPlayer,
   resolveFinalCallRound,
 } from "../lib/final-call/game.js";
@@ -239,4 +240,93 @@ test("덱 소진 자동 CALL에서는 포카드 규칙이 적용되지 않는다
   resolveFinalCallRound(game, 300, true);
 
   assert.equal(game.public.roundResult.callerFourOfAKind, false);
+});
+
+// ============================================================================
+// 다음 라운드 시작 플레이어
+// ============================================================================
+
+function roundStarterGame({lifeLosses, players}) {
+  return {
+    public: {
+      status: "playing",
+      phase: "roundResult",
+      round: 2,
+      revision: 5,
+      turnUid: null,
+      players,
+      roundResult: {
+        scores: {},
+        lifeLosses,
+        lowestUids: Object.keys(lifeLosses),
+        revealedHands: {},
+        callerUid: null,
+        automaticCall: false,
+        callerFourOfAKind: false,
+        resolvedAt: 200,
+      },
+    },
+    private: {},
+    server: {deck: [], pendingHands: {}, finalSubmissions: {}, roundStarterUid: "uid1", processedCommands: {}},
+  };
+}
+
+function starterPlayer(uid, seatIndex, lives, status = "alive") {
+  return {uid, nickname: uid, seatIndex, team: seatIndex % 2 === 0 ? "red" : "blue", status, lives};
+}
+
+test("직전 라운드에 생명을 잃은 플레이어가 다음 라운드를 시작한다", () => {
+  const game = roundStarterGame({
+    lifeLosses: {uid3: 1},
+    players: {
+      uid1: starterPlayer("uid1", 0, 3),
+      uid2: starterPlayer("uid2", 1, 3),
+      uid3: starterPlayer("uid3", 2, 2),
+      uid4: starterPlayer("uid4", 3, 3),
+    },
+  });
+
+  assert.equal(nextFinalCallRoundStarter(game), "uid3");
+});
+
+test("두 명이 동시에 잃었으면 남은 생명이 더 적은 플레이어가 시작한다", () => {
+  const game = roundStarterGame({
+    lifeLosses: {uid2: 1, uid4: 1},
+    players: {
+      uid1: starterPlayer("uid1", 0, 3),
+      uid2: starterPlayer("uid2", 1, 2),
+      uid3: starterPlayer("uid3", 2, 3),
+      uid4: starterPlayer("uid4", 3, 1),
+    },
+  });
+
+  assert.equal(nextFinalCallRoundStarter(game), "uid4");
+});
+
+test("잃은 생명까지 같으면 좌석 순서가 빠른 플레이어가 시작한다", () => {
+  const game = roundStarterGame({
+    lifeLosses: {uid2: 1, uid4: 1},
+    players: {
+      uid1: starterPlayer("uid1", 0, 3),
+      uid2: starterPlayer("uid2", 1, 2),
+      uid3: starterPlayer("uid3", 2, 3),
+      uid4: starterPlayer("uid4", 3, 2),
+    },
+  });
+
+  assert.equal(nextFinalCallRoundStarter(game), "uid2");
+});
+
+test("생명을 잃은 플레이어가 탈락했으면 생존자 중 생명이 가장 적은 쪽이 시작한다", () => {
+  const game = roundStarterGame({
+    lifeLosses: {uid3: 1},
+    players: {
+      uid1: starterPlayer("uid1", 0, 3),
+      uid2: starterPlayer("uid2", 1, 1),
+      uid3: starterPlayer("uid3", 2, 0, "eliminated"),
+      uid4: starterPlayer("uid4", 3, 2),
+    },
+  });
+
+  assert.equal(nextFinalCallRoundStarter(game), "uid2");
 });

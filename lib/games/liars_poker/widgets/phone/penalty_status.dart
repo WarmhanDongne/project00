@@ -9,6 +9,7 @@ import 'package:project00/games/shared/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/turn_action_switcher.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 벌칙 대상 프로필과 룰렛 결과 스탬프 연출을 표시합니다.
 ///
@@ -109,7 +110,7 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
     if (_didPrecacheStamp) return;
     _didPrecacheStamp = true;
     precacheImage(
-      Assets.games.liarsPoker.images.other.stamp.provider(),
+      Assets.games.liarsPoker.images.other.stamp.game.provider(),
       context,
     );
   }
@@ -309,7 +310,7 @@ class _StampedProfile extends StatelessWidget {
                     // 자국과 같은 각도로 내려와야 도장이 자국 위에 정확히 겹칩니다.
                     ..rotateZ(_stampTiltZ)
                     ..scaleByDouble(stampScale, stampScale, 1, 1),
-                  child: Assets.games.liarsPoker.images.other.stamp.image(
+                  child: Assets.games.liarsPoker.images.other.stamp.game.image(
                     width: size * 1.82,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,

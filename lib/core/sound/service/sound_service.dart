@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:flutter/foundation.dart';
 
 /// 앱 전체에서 사용하는 공용 사운드 서비스.
@@ -89,8 +90,12 @@ class SoundService {
       if (_preparedEffects.containsKey(assetPath)) continue;
 
       try {
-        // 에셋을 파일로 풀어 두고,
-        await AudioCache.instance.load(_normalizeAssetPath(assetPath));
+        // 번들 에셋이면 파일로 풀어 둡니다. 서버에서 내려받은 파일은 이미
+        // 기기에 있으므로 이 단계가 필요 없습니다.
+        final cachePath = GameAssetStore.instance.cacheableAssetPath(assetPath);
+        if (cachePath != null) {
+          await AudioCache.instance.load(cachePath);
+        }
 
         // 그 파일을 물린 플레이어까지 미리 준비 상태로 만들어 둡니다.
         final players = <AudioPlayer>[];
@@ -100,7 +105,9 @@ class SoundService {
           await player.setVolume(_effectVolume);
           // setSource는 네이티브 준비가 끝날 때까지 기다립니다. 이 비용을
           // 재생 시점이 아니라 지금 치릅니다.
-          await player.setSource(AssetSource(_normalizeAssetPath(assetPath)));
+          await player.setSource(
+            GameAssetStore.instance.soundSourceFor(assetPath),
+          );
           players.add(player);
         }
         _preparedEffects[assetPath] = players;
@@ -145,7 +152,7 @@ class SoundService {
     await initialize();
 
     await _bgmPlayer.play(
-      AssetSource(_normalizeAssetPath(assetPath)),
+      GameAssetStore.instance.soundSourceFor(assetPath),
       volume: _bgmVolume,
     );
   }
@@ -200,7 +207,7 @@ class SoundService {
     // 준비되지 않은 소리는 그 자리에서 불러옵니다. 이 경로는 첫 재생이 늦으니
     // 제때 나야 하는 소리는 [preloadEffects]에 등록하세요.
     await _takeEffectPlayer().play(
-      AssetSource(_normalizeAssetPath(assetPath)),
+      GameAssetStore.instance.soundSourceFor(assetPath),
       volume: _effectVolume,
     );
   }
@@ -217,7 +224,7 @@ class SoundService {
     await initialize();
 
     await _sustainedEffectPlayer.stop();
-    final source = AssetSource(_normalizeAssetPath(assetPath));
+    final source = GameAssetStore.instance.soundSourceFor(assetPath);
 
     if (window == null) {
       await _sustainedEffectPlayer.play(source, volume: _effectVolume);
@@ -291,18 +298,8 @@ class SoundService {
   /// 경로 앞의 `assets/`를 제거합니다.
   ///
   /// 예:
-  /// assets/sounds/common/click.mp3
-  /// → sounds/common/click.mp3
-  String _normalizeAssetPath(String path) {
-    const assetPrefix = 'assets/';
-
-    if (path.startsWith(assetPrefix)) {
-      return path.substring(assetPrefix.length);
-    }
-
-    return path;
-  }
-
+  /// assets/sounds/click.mp3
+  /// → sounds/click.mp3
   /// 볼륨 값을 0.0 ~ 1.0 범위로 제한합니다.
   double _normalizeVolume(double value) {
     return value.clamp(0.0, 1.0).toDouble();
