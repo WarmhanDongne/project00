@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -78,6 +79,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
 
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic _backgroundMusic = GameBackgroundMusic();
+
+  /// 우승 발표마다 승리음을 한 번만 재생하기 위한 플래그입니다.
+  bool _hasPlayedWinSound = false;
 
   LiarsPokerTabletStage get stage => _stage;
 
@@ -256,6 +260,19 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       _stage = game.phase == 'penalty'
           ? LiarsPokerTabletStage.penalty
           : LiarsPokerTabletStage.playing;
+    }
+
+    // 정상 우승이 확정돼 결과 화면이 뜨는 순간, 배경음악을 멈추고 승리음을
+    // 한 번 재생합니다. 수동 종료·인원 부족 종료에서는 재생하지 않습니다.
+    if (game.isFinished && game.isNaturalResult) {
+      if (!_hasPlayedWinSound) {
+        _hasPlayedWinSound = true;
+        _backgroundMusic.stop();
+        SoundEffects.play(context, LiarsPokerSounds.win);
+      }
+    } else {
+      // 다시하기로 새 판이 시작되면 다음 우승 발표에서 다시 재생합니다.
+      _hasPlayedWinSound = false;
     }
 
     _hasReceivedFirstState = true;

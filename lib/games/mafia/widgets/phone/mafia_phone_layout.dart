@@ -256,6 +256,29 @@ class MafiaPhoneActionButton extends StatelessWidget {
 ///
 /// 밤·낮 어느 화면에서든 내 신분을 다시 확인할 수 있게 남겨 둡니다. 카드
 /// 에셋이 아직 없는 역할은 뒷면으로 대신 그리므로 게임이 깨지지 않습니다.
+//=======================셸이 맡는 공통 요소==============================
+/// 배경과 보관 카드를 **셸(휴대폰 진행 화면)이 계속 그리는 중**임을 알리는
+/// 표시입니다.
+///
+/// 확정(2026-08): 단계가 바뀔 때 화면 전체가 새로 그려지는 느낌을 없애려면,
+/// 단계와 무관하게 그대로 있는 요소(배경·내 신분 카드)는 전환 **밖**에
+/// 있어야 합니다. 그래서 셸이 그것들을 직접 그리고, 이 표시가 있는 동안
+/// 각 단계 화면은 자기 배경·보관 카드를 그리지 않습니다.
+///
+/// 이 표시가 없으면(위젯 테스트처럼 화면 하나만 띄울 때) 화면들이 예전처럼
+/// 자기 배경과 카드를 그립니다.
+class MafiaPhoneShellChrome extends InheritedWidget {
+  const MafiaPhoneShellChrome({super.key, required super.child});
+
+  /// 셸이 배경·보관 카드를 맡고 있는지입니다.
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<MafiaPhoneShellChrome>() !=
+      null;
+
+  @override
+  bool updateShouldNotify(MafiaPhoneShellChrome oldWidget) => false;
+}
+
 class MafiaStoredRoleCard extends StatelessWidget {
   const MafiaStoredRoleCard({super.key, required this.role});
 
@@ -263,6 +286,8 @@ class MafiaStoredRoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 셸이 카드를 계속 그리고 있으면 단계 화면은 그리지 않습니다.
+    if (MafiaPhoneShellChrome.of(context)) return const SizedBox.shrink();
     final card = role?.card ?? Assets.games.mafia.images.cards.roleBack.game;
 
     return LayoutBuilder(
@@ -328,6 +353,9 @@ class MafiaPhoneBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 셸이 배경을 계속 그리고 있으면 단계 화면은 그리지 않습니다. 그리면
+    // 전환 도중 배경이 두 겹이 되어 한 번 어두워집니다.
+    if (MafiaPhoneShellChrome.of(context)) return const SizedBox.shrink();
     final background = Assets.games.mafia.images.background;
 
     return ColoredBox(

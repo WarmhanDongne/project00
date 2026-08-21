@@ -7,6 +7,12 @@ abstract final class LiarsPokerSounds {
   /// 좌석에서 중앙으로 패를 던질 때와, 그 패를 뒤집어 공개할 때 재생합니다.
   static const submit = 'assets/games/liars_poker/sounds/submit.mp3';
 
+  /// 우승자 발표(태블릿 결과 화면)가 뜨는 순간 한 번 재생합니다.
+  ///
+  /// 폰에서는 재생하지 않습니다. 같은 방의 여러 기기가 동시에 울리면
+  /// 소리가 겹치므로 방 중앙의 태블릿만 냅니다.
+  static const win = 'assets/games/liars_poker/sounds/win.mp3';
+
   /// 게임 진행 중 반복 재생하는 배경음악입니다(파이널콜과 같은 곡, 확정).
   ///
   /// 효과음이 아니라 BGM 전용 플레이어로 재생합니다. 반복 재생이므로 게임
@@ -15,5 +21,8 @@ abstract final class LiarsPokerSounds {
   static const background = AppSounds.background;
 
   /// 게임 진입 준비 단계에서 미리 풀어 둘 효과음입니다.
-  static const preloadTargets = [submit];
+  ///
+  /// 승리음처럼 한 게임에 한 번만 나는 소리는 미리 준비하지 않으면 첫
+  /// 재생이 화면보다 늦습니다.
+  static const preloadTargets = [submit, win];
 }

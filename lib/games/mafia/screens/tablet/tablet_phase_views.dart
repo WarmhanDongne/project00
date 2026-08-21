@@ -24,8 +24,6 @@ class MafiaTabletRoleDealView extends StatelessWidget {
     required this.players,
     required this.confirmedCount,
     this.showsNightNotice = false,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
   });
 
   final List<MafiaPlayer> players;
@@ -35,9 +33,6 @@ class MafiaTabletRoleDealView extends StatelessWidget {
 
   /// '밤이 됐습니다' 안내를 덮어 보여 줄지입니다(확정: 전원 확인 10초 뒤).
   final bool showsNightNotice;
-
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -85,10 +80,6 @@ class MafiaTabletRoleDealView extends StatelessWidget {
               ),
             ),
           ),
-        MafiaTabletChrome(
-          onRulebookPressed: onRulebookPressed,
-          onSettingsPressed: onSettingsPressed,
-        ),
       ],
     );
   }
@@ -100,14 +91,7 @@ class MafiaTabletRoleDealView extends StatelessWidget {
 /// **시안에 문구가 하나도 없습니다.** 달만 뜹니다. 진행 현황도 넣지 않습니다 —
 /// 누가 행동을 마쳤는지 보이면 특수직이 드러나고, 인원수조차 시안에 없습니다.
 class MafiaTabletNightView extends StatelessWidget {
-  const MafiaTabletNightView({
-    super.key,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
-  });
-
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
+  const MafiaTabletNightView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -117,11 +101,6 @@ class MafiaTabletNightView extends StatelessWidget {
         const MafiaTabletMoon(),
         // 새가 한 번씩 오른쪽에서 왼쪽으로 지나갑니다.
         const MafiaTabletNightBird(),
-        MafiaTabletChrome(
-          isNight: true,
-          onRulebookPressed: onRulebookPressed,
-          onSettingsPressed: onSettingsPressed,
-        ),
       ],
     );
   }
@@ -141,14 +120,10 @@ class MafiaTabletMorningView extends StatelessWidget {
     super.key,
     required this.result,
     required this.players,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
   });
 
   final MafiaMorningResult? result;
   final Map<String, MafiaPlayer> players;
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
 
   //=======================시안 기준 좌표==============================
   /// 시체 그림입니다. 시안은 754 × 754 자리에 여백을 포함한 그림을 넣었지만,
@@ -174,7 +149,6 @@ class MafiaTabletMorningView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const MafiaTabletSun(),
         if (deadNames.isEmpty)
           const MafiaTabletHeadline(
             text: '어제 밤, 아무도 죽지 않았습니다.',
@@ -197,10 +171,6 @@ class MafiaTabletMorningView extends StatelessWidget {
             fontWeight: FontWeight.w400,
           ),
         ],
-        MafiaTabletChrome(
-          onRulebookPressed: onRulebookPressed,
-          onSettingsPressed: onSettingsPressed,
-        ),
       ],
     );
   }
@@ -218,16 +188,12 @@ class MafiaTabletVoteResultSequence extends StatefulWidget {
     required this.players,
     required this.executed,
     required this.executedRole,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
   });
 
   final MafiaVoteResult? result;
   final Map<String, MafiaPlayer> players;
   final MafiaPlayer? executed;
   final MafiaRole? executedRole;
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
 
   /// 개표판을 보여 주는 시간입니다(확정: 4초).
   static const Duration tallyHold = Duration(milliseconds: 4000);
@@ -262,16 +228,12 @@ class _MafiaTabletVoteResultSequenceState
       return MafiaTabletTallyView(
         result: widget.result,
         players: widget.players,
-        onRulebookPressed: widget.onRulebookPressed,
-        onSettingsPressed: widget.onSettingsPressed,
       );
     }
     return MafiaTabletExecutionView(
       executed: widget.executed,
       executedRole: widget.executedRole,
       isTie: widget.result?.tie ?? false,
-      onRulebookPressed: widget.onRulebookPressed,
-      onSettingsPressed: widget.onSettingsPressed,
     );
   }
 }

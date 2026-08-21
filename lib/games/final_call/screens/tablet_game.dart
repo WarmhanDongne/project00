@@ -8,6 +8,7 @@ import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/final_call/final_call_flow_config.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
@@ -60,6 +61,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
 
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic backgroundMusic = GameBackgroundMusic();
+
+  /// 우승 발표마다 승리음을 한 번만 재생하기 위한 플래그입니다.
+  bool hasPlayedWinSound = false;
 
   /// 설정에서 게임 종료를 누른 뒤 홈으로 나가는 중인지 여부입니다.
   bool isEndingGame = false;
@@ -170,6 +174,29 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
         }),
       );
     }
+
+    _celebrateWinIfNeeded(game);
+  }
+
+  /// 우승 발표 오버레이가 화면에 뜨는 순간 승리음을 한 번 재생합니다.
+  ///
+  /// 결과 화면은 두 경로로 열립니다 — 마지막 라운드 공개 연출이 끝난 뒤
+  /// ([_handleRoundRevealCompleted]), 또는 공개 없이 승자가 확정된 스냅샷
+  /// 직후([_handleState]). 두 곳 모두 이 함수를 지나며, 오버레이가 실제로
+  /// 보이는 조건과 같은 시점에만 냅니다. 배경음악은 발표와 함께 멈춥니다.
+  void _celebrateWinIfNeeded(FinalCallController game) {
+    if (!game.isFinished || !game.isNaturalResult) {
+      // 다시하기로 새 판이 시작되면 다음 우승 발표에서 다시 재생합니다.
+      hasPlayedWinSound = false;
+      return;
+    }
+    // 마지막 라운드의 카드 공개·하트 소멸 연출이 끝나기 전에는 결과
+    // 오버레이가 뜨지 않으므로 소리도 내지 않습니다.
+    if (game.roundResult != null && completedRevealRound != game.round) return;
+    if (hasPlayedWinSound) return;
+    hasPlayedWinSound = true;
+    backgroundMusic.stop();
+    SoundEffects.play(context, FinalCallSounds.win);
   }
 
   // ============================================================================
@@ -188,6 +215,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     completedRevealRound = game.round;
     setState(() {});
     if (game.isFinished) {
+      _celebrateWinIfNeeded(game);
       unawaited(game.completeResultReveal());
       return;
     }

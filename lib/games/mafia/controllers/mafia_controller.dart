@@ -116,6 +116,10 @@ class MafiaController extends Notifier<MafiaGameState> {
   int get nightSubmittedCount => state.nightSubmittedCount;
   int get nightActorCount => state.nightActorCount;
   int get voteSubmittedCount => state.voteSubmittedCount;
+
+  /// 투표를 마친 사람들입니다. 태블릿 투표지 연출이 씁니다(어디에 냈는지는
+  /// 서버가 보내지 않습니다).
+  List<String> get voteSubmittedUids => state.voteSubmittedUids;
   int get voteEligibleCount => state.voteEligibleCount;
 
   /// 밤에 대상을 골라야 하는 역할인지입니다.
@@ -320,6 +324,7 @@ class MafiaController extends Notifier<MafiaGameState> {
       nightSubmittedCount: (map['nightSubmittedCount'] as num?)?.toInt() ?? 0,
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
       voteSubmittedCount: (map['voteSubmittedCount'] as num?)?.toInt() ?? 0,
+      voteSubmittedUids: mafiaStringList(map['voteSubmittedUids']),
       voteEligibleCount: (map['voteEligibleCount'] as num?)?.toInt() ?? 0,
       morningResult: rawMorning is Map
           ? MafiaMorningResult.fromMap(Map<Object?, Object?>.from(rawMorning))

@@ -39,7 +39,15 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
   }
 
   void _notifyTimeoutIfNeeded() {
-    if (seconds > 0 || _didNotifyTimeout) return;
+    if (seconds > 0) {
+      // 뒤늦게 도착한 시계 보정으로 만료가 취소되면 타임아웃도 다시 무장합니다.
+      _didNotifyTimeout = false;
+      return;
+    }
+    // 서버 시각 보정 전의 0은 기기 시계 오차일 수 있으므로 자동 행동을
+    // 확정하지 않습니다. 보정이 도착하면 다음 tick에서 판정합니다.
+    // (라이어스 포커 PhoneTimer와 같은 규칙입니다.)
+    if (_didNotifyTimeout || !ServerClock.hasSynced) return;
     _didNotifyTimeout = true;
     widget.onTimeout?.call();
   }

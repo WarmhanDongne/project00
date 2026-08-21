@@ -356,6 +356,21 @@ test("퇴장으로 인원이 최소치 미달이면 게임을 끝낸다", () => 
   assert.equal(game.public.finishReason, "insufficientPlayers");
 });
 
+test("투표를 마친 사람 목록은 공개하되 표 내용은 감춘다", () => {
+  // 태블릿이 그 좌석에서 투표지가 날아가는 연출을 그리려면 '누가 냈는지'가
+  // 필요합니다. '어디에 냈는지'는 server에만 남아야 합니다.
+  const game = makeGame(SIX, {phase: "voting"});
+  game.server.votes = {c1: "m1", c2: "m1"};
+  game.public.voteSubmittedUids = Object.keys(game.server.votes);
+
+  assert.deepEqual(game.public.voteSubmittedUids, ["c1", "c2"]);
+  // 공개 상태에는 대상이 어디에도 없습니다.
+  assert.equal(JSON.stringify(game.public).includes("voteTarget"), false);
+
+  beginMafiaVoting(game, 7000);
+  assert.deepEqual(game.public.voteSubmittedUids, []);
+});
+
 test("퇴장한 사람의 표는 개표에서 빠진다", () => {
   const roles = {...SIX, c4: "citizen", c5: "citizen"};
   const game = makeGame(roles, {phase: "voting"});

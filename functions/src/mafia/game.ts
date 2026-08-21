@@ -189,6 +189,7 @@ export function createInitialMafiaGame(
       nightActorCount: 0,
       discussionSkipCount: 0,
       voteSubmittedCount: 0,
+      voteSubmittedUids: [],
       voteEligibleCount: 0,
       winner: null,
       winnerUids: [],
@@ -241,6 +242,7 @@ export function beginMafiaVoting(game: MafiaGameState, now: number): void {
   game.public.phase = "voting";
   game.public.turnDeadlineAt = now + MAFIA_VOTE_MS;
   game.public.voteSubmittedCount = 0;
+  game.public.voteSubmittedUids = [];
   game.public.voteEligibleCount = alivePlayers(game.public.players).length;
   delete game.server.votes;
   for (const entry of Object.values(game.private)) {

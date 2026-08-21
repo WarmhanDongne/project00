@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
@@ -7,7 +8,7 @@ import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
-enum _LoginAction { password, google }
+enum _LoginAction { password, google, apple }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -99,6 +100,30 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       if (credential == null) {
         _errorMessage = _authProvider.errorMessage ?? '구글 로그인을 완료하지 못했습니다.';
+      }
+      _action = null;
+    });
+  }
+
+  // Apple 로그인은 애플 플랫폼에서만 네이티브로 동작합니다. Android/웹에서 쓰려면
+  // sign_in_with_apple의 webAuthenticationOptions 설정이 추가로 필요합니다.
+  bool get _isAppleSignInAvailable =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  Future<void> _signInWithApple() async {
+    if (_action != null) return;
+    setState(() {
+      _action = _LoginAction.apple;
+      _errorMessage = null;
+    });
+    final credential = await _authProvider.signInWithApple();
+    if (!mounted) return;
+    setState(() {
+      // 사용자가 창을 닫은 경우에는 errorMessage가 비어 있어 문구를 띄우지 않습니다.
+      if (credential == null && _authProvider.errorMessage != null) {
+        _errorMessage = _authProvider.errorMessage;
       }
       _action = null;
     });
@@ -249,6 +274,20 @@ class _LoginScreenState extends State<LoginScreen> {
             enabled: !isBusy,
             onPressed: _signInWithGoogle,
           ),
+          if (_isAppleSignInAvailable) ...[
+            const SizedBox(height: 12),
+            SocialLoginButton(
+              key: const Key('login-apple-button'),
+              label: 'Apple로 로그인',
+              // Apple 로고는 시각 중심이 살짝 위라 아래로 조금 내려 글자와 맞춥니다.
+              icon: Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Icon(Icons.apple, size: 27, color: colors.text),
+              ),
+              enabled: !isBusy,
+              onPressed: _signInWithApple,
+            ),
+          ],
         ],
       ),
     );

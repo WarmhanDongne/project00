@@ -1162,6 +1162,26 @@ class $AssetsGamesLiarsPokerImagesTableGen {
 class $AssetsGamesMafiaImagesBackgroundGen {
   const $AssetsGamesMafiaImagesBackgroundGen();
 
+  /// File path: assets/games/mafia/images/background/background_citizen_win.png
+  AssetGenImage get backgroundCitizenWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_citizen_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_citizen_win_phone.png
+  AssetGenImage get backgroundCitizenWinPhone => const AssetGenImage(
+    'assets/games/mafia/images/background/background_citizen_win_phone.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_mafia_win.png
+  AssetGenImage get backgroundMafiaWin => const AssetGenImage(
+    'assets/games/mafia/images/background/background_mafia_win.png',
+  );
+
+  /// File path: assets/games/mafia/images/background/background_mafia_win_phone.png
+  AssetGenImage get backgroundMafiaWinPhone => const AssetGenImage(
+    'assets/games/mafia/images/background/background_mafia_win_phone.png',
+  );
+
   /// File path: assets/games/mafia/images/background/background_morning.png
   AssetGenImage get backgroundMorning => const AssetGenImage(
     'assets/games/mafia/images/background/background_morning.png',
@@ -1182,40 +1202,20 @@ class $AssetsGamesMafiaImagesBackgroundGen {
     'assets/games/mafia/images/background/background_night_phone.png',
   );
 
-  /// File path: assets/games/mafia/images/background/background_phone_mafia_win.png
-  AssetGenImage get backgroundPhoneMafiaWin => const AssetGenImage(
-    'assets/games/mafia/images/background/background_phone_mafia_win.png',
-  );
-
-  /// File path: assets/games/mafia/images/background/background_phone_sitizen_win.png
-  AssetGenImage get backgroundPhoneSitizenWin => const AssetGenImage(
-    'assets/games/mafia/images/background/background_phone_sitizen_win.png',
-  );
-
-  /// File path: assets/games/mafia/images/background/background_tablet_mafia_win.png
-  AssetGenImage get backgroundTabletMafiaWin => const AssetGenImage(
-    'assets/games/mafia/images/background/background_tablet_mafia_win.png',
-  );
-
-  /// File path: assets/games/mafia/images/background/background_tablet_sitizen_win.png
-  AssetGenImage get backgroundTabletSitizenWin => const AssetGenImage(
-    'assets/games/mafia/images/background/background_tablet_sitizen_win.png',
-  );
-
   /// Directory path: assets/games/mafia/images/background/bird
   $AssetsGamesMafiaImagesBackgroundBirdGen get bird =>
       const $AssetsGamesMafiaImagesBackgroundBirdGen();
 
   /// List of all assets
   List<AssetGenImage> get values => [
+    backgroundCitizenWin,
+    backgroundCitizenWinPhone,
+    backgroundMafiaWin,
+    backgroundMafiaWinPhone,
     backgroundMorning,
     backgroundMorningPhone,
     backgroundNight,
     backgroundNightPhone,
-    backgroundPhoneMafiaWin,
-    backgroundPhoneSitizenWin,
-    backgroundTabletMafiaWin,
-    backgroundTabletSitizenWin,
   ];
 }
 
@@ -1454,44 +1454,46 @@ class $AssetsGamesMafiaImagesIconsGen {
   AssetGenImage get iconOut =>
       const AssetGenImage('assets/games/mafia/images/icons/icon_out.png');
 
-  /// File path: assets/games/mafia/images/icons/role_icon.png
-  AssetGenImage get roleIcon =>
-      const AssetGenImage('assets/games/mafia/images/icons/role_icon.png');
+  /// File path: assets/games/mafia/images/icons/icon_role.png
+  AssetGenImage get iconRole =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_role.png');
 
-  /// File path: assets/games/mafia/images/icons/setting_black.png
-  AssetGenImage get settingBlack =>
-      const AssetGenImage('assets/games/mafia/images/icons/setting_black.png');
+  /// File path: assets/games/mafia/images/icons/icon_setting.png
+  AssetGenImage get iconSetting =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_setting.png');
 
-  /// File path: assets/games/mafia/images/icons/setting_icon.png
-  AssetGenImage get settingIcon =>
-      const AssetGenImage('assets/games/mafia/images/icons/setting_icon.png');
+  /// File path: assets/games/mafia/images/icons/icon_setting_black.png
+  AssetGenImage get iconSettingBlack => const AssetGenImage(
+    'assets/games/mafia/images/icons/icon_setting_black.png',
+  );
 
-  /// File path: assets/games/mafia/images/icons/setting_white.png
-  AssetGenImage get settingWhite =>
-      const AssetGenImage('assets/games/mafia/images/icons/setting_white.png');
+  /// File path: assets/games/mafia/images/icons/icon_setting_white.png
+  AssetGenImage get iconSettingWhite => const AssetGenImage(
+    'assets/games/mafia/images/icons/icon_setting_white.png',
+  );
 
-  /// File path: assets/games/mafia/images/icons/tip.png
-  AssetGenImage get tip =>
-      const AssetGenImage('assets/games/mafia/images/icons/tip.png');
+  /// File path: assets/games/mafia/images/icons/icon_tip.png
+  AssetGenImage get iconTip =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_tip.png');
 
-  /// File path: assets/games/mafia/images/icons/tip_book.png
-  AssetGenImage get tipBook =>
-      const AssetGenImage('assets/games/mafia/images/icons/tip_book.png');
+  /// File path: assets/games/mafia/images/icons/icon_tip_book.png
+  AssetGenImage get iconTipBook =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_tip_book.png');
 
-  /// File path: assets/games/mafia/images/icons/tip_light.png
-  AssetGenImage get tipLight =>
-      const AssetGenImage('assets/games/mafia/images/icons/tip_light.png');
+  /// File path: assets/games/mafia/images/icons/icon_tip_light.png
+  AssetGenImage get iconTipLight =>
+      const AssetGenImage('assets/games/mafia/images/icons/icon_tip_light.png');
 
   /// List of all assets
   List<AssetGenImage> get values => [
     iconOut,
-    roleIcon,
-    settingBlack,
-    settingIcon,
-    settingWhite,
-    tip,
-    tipBook,
-    tipLight,
+    iconRole,
+    iconSetting,
+    iconSettingBlack,
+    iconSettingWhite,
+    iconTip,
+    iconTipBook,
+    iconTipLight,
   ];
 }
 

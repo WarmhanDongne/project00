@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/mafia_phase_transition.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/widgets/phone/day_discussion_view.dart';
+import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/morning_announcement_view.dart';
 import 'package:project00/games/mafia/widgets/phone/execution_view.dart';
 import 'package:project00/games/mafia/widgets/phone/night_action_view.dart';
@@ -113,6 +115,54 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   Widget build(BuildContext context) {
     final game = widget.controller;
 
+    // 확정(2026-08): 단계가 바뀔 때 화면 전체가 새로 그려지는 느낌을 없애려고
+    // **배경과 내 보관 카드는 셸이 계속 그립니다.** 바뀌는 내용만 전환합니다.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 낮·밤 배경은 부드럽게 바뀝니다(태블릿은 방사형 전환, 휴대폰은 겹침).
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: KeyedSubtree(
+            key: ValueKey(game.isNight),
+            child: MafiaPhoneBackground(isNight: game.isNight),
+          ),
+        ),
+        MafiaPhoneShellChrome(
+          child: MafiaPhaseTransition(
+            child: KeyedSubtree(
+              key: ValueKey(_pageKey(game)),
+              child: _buildPage(game),
+            ),
+          ),
+        ),
+        // 내 신분 카드는 단계가 바뀌어도 같은 자리에 그대로 있습니다.
+        // 역할 확인(P1)은 이 카드를 직접 움직이는 연출이라 제외하고,
+        // 결과 화면은 포스터가 화면 전부라 카드를 두지 않습니다.
+        if (_showsStoredCard(game)) MafiaStoredRoleCard(role: game.myRole),
+      ],
+    );
+  }
+
+  /// 지금 보여 줄 화면을 가리키는 값입니다. 이 값이 바뀔 때만 전환합니다.
+  ///
+  /// 같은 화면 안의 상태 변화(선택·집계·타이머)로는 바뀌지 않아야 합니다.
+  String _pageKey(MafiaController game) {
+    if (game.isVoteResult && _executionStage != _ExecutionStage.done) {
+      return 'execution';
+    }
+    if (game.isSpectating) return 'spectator';
+    return game.phase;
+  }
+
+  /// 아래 보관 카드를 셸이 그릴 단계인지입니다.
+  bool _showsStoredCard(MafiaController game) {
+    if (game.phase == 'roleReveal') return false;
+    if (game.isFinished) return false;
+    return true;
+  }
+
+  Widget _buildPage(MafiaController game) {
     // 처형 발표는 사망 여부보다 먼저 봅니다. 자기가 처형된 사람도 발표를
     // 봐야 하기 때문입니다.
     if (game.isVoteResult && _executionStage != _ExecutionStage.done) {

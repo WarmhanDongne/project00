@@ -203,6 +203,7 @@ class MafiaPracticeEngine {
         .length,
     'discussionSkipCount': _skipVotes.length,
     'voteSubmittedCount': _votes.length,
+    'voteSubmittedUids': _votes.keys.toList(),
     'voteEligibleCount': _aliveUids.length,
     if (_morningResult != null) 'morningResult': _morningResult,
     if (_voteResult != null) 'voteResult': _voteResult,

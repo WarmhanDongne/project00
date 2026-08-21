@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/games/mafia/animations/ballot_animations.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/gen/fonts.gen.dart';
@@ -16,8 +17,9 @@ class MafiaTabletDayView extends StatelessWidget {
     super.key,
     required this.showBallotBox,
     this.remainingSeconds,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
+    this.voteSubmittedUids = const [],
+    this.seatIndexes = const {},
+    this.boardSeatCount = 1,
   });
 
   /// 투표 시간이면 true입니다. 삽화가 작아지고 투표함이 나옵니다.
@@ -26,8 +28,14 @@ class MafiaTabletDayView extends StatelessWidget {
   /// 남은 시간(초)입니다. null이면 타이머를 그리지 않습니다.
   final int? remainingSeconds;
 
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
+  /// 투표를 마친 사람들입니다. 늘어날 때마다 그 좌석에서 투표지가 날아갑니다.
+  final List<String> voteSubmittedUids;
+
+  /// `uid → 좌석 번호`입니다. 투표지가 어느 자리에서 출발할지 정합니다.
+  final Map<String, int> seatIndexes;
+
+  /// 방의 전체 좌석 수입니다. 좌석 방향 계산 기준입니다.
+  final int boardSeatCount;
 
   //=======================시안 기준 좌표==============================
   /// 토론 화면의 큰 삽화입니다(시안 `tablet-T4 자유토론`).
@@ -39,8 +47,9 @@ class MafiaTabletDayView extends StatelessWidget {
   /// 투표 화면의 작은 삽화입니다(`tablet-p7 투표 시간`).
   static const Rect _talkSmall = Rect.fromLTWH(282, 126, 636, 636);
 
-  /// 투표 화면의 투표함입니다.
-  static const Rect _ballotBox = Rect.fromLTWH(544, 322, 124.44, 122);
+  /// 투표 화면의 투표함입니다. 개표에서 이 자리에서 이동하기 시작하므로
+  /// 좌표는 [MafiaBallotBoxRects]에 함께 둡니다.
+  static const Rect _ballotBox = MafiaBallotBoxRects.voting;
 
   /// 시안 표기법입니다. `02:30`처럼 분·초를 두 자리로 씁니다.
   static String formatTabletTimer(int seconds) {
@@ -56,7 +65,6 @@ class MafiaTabletDayView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const MafiaTabletSun(),
         MafiaTabletBox(
           rect: showBallotBox ? _talkSmall : _talkLarge,
           child: other.talkTablet.game.image(
@@ -83,7 +91,7 @@ class MafiaTabletDayView extends StatelessWidget {
               ),
             ),
           ),
-        if (showBallotBox)
+        if (showBallotBox) ...[
           MafiaTabletBox(
             rect: _ballotBox,
             child: other.voteBox.game.image(
@@ -91,10 +99,14 @@ class MafiaTabletDayView extends StatelessWidget {
               filterQuality: FilterQuality.high,
             ),
           ),
-        MafiaTabletChrome(
-          onRulebookPressed: onRulebookPressed,
-          onSettingsPressed: onSettingsPressed,
-        ),
+          // 확정(2026-08): 누군가 투표하면 그 좌석에서 투표지가 날아와
+          // 투표함에 들어가며 사라집니다.
+          MafiaBallotTossLayer(
+            submittedUids: voteSubmittedUids,
+            seatIndexes: seatIndexes,
+            boardSeatCount: boardSeatCount,
+          ),
+        ],
       ],
     );
   }

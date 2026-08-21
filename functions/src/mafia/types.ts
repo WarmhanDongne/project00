@@ -139,8 +139,18 @@ export interface MafiaPublicState {
    */
   discussionSkipCount: number;
 
-  /** 투표를 마친 인원수입니다. 누가 마쳤는지는 넣지 않습니다. */
+  /** 투표를 마친 인원수입니다. */
   voteSubmittedCount: number;
+
+  /**
+   * 투표를 마친 사람의 uid 목록입니다(**표를 어디에 냈는지는 없습니다**).
+   *
+   * 태블릿이 그 사람 좌석에서 투표지가 날아가는 연출을 그리는 데 씁니다.
+   * 실제 게임에서도 누가 투표함에 넣었는지는 모두가 보므로 공개해도 무해합니다.
+   * 밤 행동은 사정이 달라 [nightSubmittedCount]처럼 **수만** 공개합니다 —
+   * 누가 행동했는지가 드러나면 특수직이 노출됩니다.
+   */
+  voteSubmittedUids: string[];
   /** 이번 투표에 참여할 수 있는 인원수입니다. */
   voteEligibleCount: number;
 

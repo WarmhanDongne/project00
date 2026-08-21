@@ -12,15 +12,13 @@ import 'package:project00/gen/assets.gen.dart';
 /// 중립 역할은 개별 승리 조건을 가지고(광대·처형자·생존자 등) 전용 그림이
 /// 없습니다. 그때는 null을 돌려주고, 화면이 문구로 대신 알립니다.
 ///
-/// 배경 파일 이름의 `sitizen`은 오타가 아니라 **에셋 파일명 그대로**입니다.
-/// (배너는 `citizen`으로 되어 있어 둘이 다릅니다)
 abstract final class MafiaResultArt {
   /// 휴대폰 결과 포스터입니다. 시안은 이 그림 한 장이 화면 전부입니다.
   static GameImage? phonePoster(MafiaFaction? winner) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
-      MafiaFaction.mafia => background.backgroundPhoneMafiaWin.game,
-      MafiaFaction.citizen => background.backgroundPhoneSitizenWin.game,
+      MafiaFaction.mafia => background.backgroundMafiaWinPhone.game,
+      MafiaFaction.citizen => background.backgroundCitizenWinPhone.game,
       // 중립 승리 포스터는 아직 없습니다.
       MafiaFaction.neutral || null => null,
     };
@@ -30,8 +28,8 @@ abstract final class MafiaResultArt {
   static GameImage? tabletPoster(MafiaFaction? winner) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
-      MafiaFaction.mafia => background.backgroundTabletMafiaWin.game,
-      MafiaFaction.citizen => background.backgroundTabletSitizenWin.game,
+      MafiaFaction.mafia => background.backgroundMafiaWin.game,
+      MafiaFaction.citizen => background.backgroundCitizenWin.game,
       MafiaFaction.neutral || null => null,
     };
   }

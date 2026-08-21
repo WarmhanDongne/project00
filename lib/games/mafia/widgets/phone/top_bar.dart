@@ -34,7 +34,7 @@ class MafiaPhoneTopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 4, 14, 0),
       child: SharedPhoneGameTopBar(
         isLandscape: false,
-        bookIcon: icons.tipBook.game.image(fit: BoxFit.contain),
+        bookIcon: icons.iconTipBook.game.image(fit: BoxFit.contain),
         outIcon: icons.iconOut.game.image(fit: BoxFit.contain),
         onOutPressed: onExitRoom,
         onBookPressed: () => onRulesPressed(null),

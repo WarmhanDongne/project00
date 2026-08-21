@@ -69,6 +69,8 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
 
       const submitted = Object.keys(game.server.votes).length;
       game.public.voteSubmittedCount = submitted;
+      // 누가 냈는지만 공개합니다(어디에 냈는지는 server에만 둡니다).
+      game.public.voteSubmittedUids = Object.keys(game.server.votes);
       game.public.revision += 1;
       game.public.updatedAt = now;
 

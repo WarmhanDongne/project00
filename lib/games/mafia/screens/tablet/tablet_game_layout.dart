@@ -271,19 +271,17 @@ class MafiaTabletMoon extends StatelessWidget {
 class MafiaTabletChrome extends StatelessWidget {
   const MafiaTabletChrome({
     super.key,
-    this.isNight = false,
     this.onRulebookPressed,
     this.onSettingsPressed,
   });
-
-  /// 밤이면 밝은색 아이콘을 씁니다.
-  final bool isNight;
 
   final VoidCallback? onRulebookPressed;
   final VoidCallback? onSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
+    // 다른 게임 태블릿 사이드바와 같은 이름을 씁니다(icon_role · icon_setting).
+    // 마피아 테마 아이콘은 낮·밤 공용이라 시간대로 갈라 쓰지 않습니다.
     final icons = Assets.games.mafia.images.icons;
     return Stack(
       children: [
@@ -291,7 +289,7 @@ class MafiaTabletChrome extends StatelessWidget {
           rect: MafiaTabletDesign.rulebookIcon,
           ignorePointer: false,
           child: _button(
-            icons.roleIcon.game.image(fit: BoxFit.contain),
+            icons.iconRole.game.image(fit: BoxFit.contain),
             onRulebookPressed,
             '룰북 열기',
           ),
@@ -300,9 +298,7 @@ class MafiaTabletChrome extends StatelessWidget {
           rect: MafiaTabletDesign.settingIcon,
           ignorePointer: false,
           child: _button(
-            (isNight ? icons.settingWhite : icons.settingIcon).game.image(
-              fit: BoxFit.contain,
-            ),
+            icons.iconSetting.game.image(fit: BoxFit.contain),
             onSettingsPressed,
             '설정 열기',
           ),
