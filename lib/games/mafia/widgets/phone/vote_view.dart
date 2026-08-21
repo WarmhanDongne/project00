@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/ballot_animations.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
@@ -19,7 +20,7 @@ import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 ///
 /// 투표는 모두가 함께 하는 단계라, 새 신분이 추가돼도 이 화면은 고칠 필요가
 /// 없습니다. 역할에 따라 달라지는 것은 아래 보관 카드뿐입니다.
-class MafiaVoteView extends StatelessWidget {
+class MafiaVoteView extends StatefulWidget {
   const MafiaVoteView({
     super.key,
     required this.role,
@@ -61,23 +62,98 @@ class MafiaVoteView extends StatelessWidget {
   /// 하기 때문입니다.
   static const Color selectionColor = Color(0xFFB18D56);
 
+  //=======================제출 연출==============================
+  /// 표를 내는 연출의 전체 시간입니다(확정 2026-08).
+  ///
+  ///   가운데 요소가 뭉쳐 사라짐 → 투표지 한 장으로 바뀜 → 위로 날아감
+  static const Duration submitDuration = Duration(milliseconds: 900);
+
+  /// 투표지 크기입니다(시안 기준). 태블릿 투표지와 같은 46 : 34 비율입니다.
+  static const double paperWidth = 120;
+  static const double paperHeight = paperWidth * 34 / 46;
+
+  @override
+  State<MafiaVoteView> createState() => _MafiaVoteViewState();
+}
+
+class _MafiaVoteViewState extends State<MafiaVoteView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _submit;
+
+  /// 내가 눌러서 연출이 돌아가는 중인지입니다.
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _submit = AnimationController(
+      vsync: this,
+      duration: MafiaVoteView.submitDuration,
+    )..addStatusListener(_handleSubmitDone);
+  }
+
+  void _handleSubmitDone(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    // 연출이 끝나면 대기 화면으로 넘깁니다. 서버 응답이 늦어도 화면은
+    // 먼저 넘어가 있어야 두 번 누르지 않습니다.
+    setState(() => _isSubmitting = false);
+  }
+
+  @override
+  void dispose() {
+    _submit
+      ..removeStatusListener(_handleSubmitDone)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// 표를 냅니다. 연출을 시작하면서 서버에도 바로 보냅니다.
+  void _handleConfirm() {
+    final confirm = widget.onConfirm;
+    if (confirm == null || _isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    _submit.forward(from: 0);
+    confirm();
+  }
+
+  //=======================연출 구간==============================
+  /// 가운데 요소가 뭉쳐 사라지는 진행도입니다.
+  double get _collapse =>
+      Curves.easeIn.transform((_submit.value / 0.45).clamp(0.0, 1.0));
+
+  /// 투표지가 나타나는 진행도입니다.
+  double get _paperIn =>
+      Curves.easeOut.transform(((_submit.value - 0.3) / 0.25).clamp(0.0, 1.0));
+
+  /// 투표지가 위로 날아가는 진행도입니다.
+  double get _flyAway =>
+      Curves.easeIn.transform(((_submit.value - 0.55) / 0.45).clamp(0.0, 1.0));
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
+        // 연출 중에는 서버 상태와 무관하게 연출 화면을 보여 줍니다.
+        final showsWaiting = !_isSubmitting && widget.isSubmitted;
 
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            const Positioned.fill(child: MafiaPhoneBackground.day()),
-            if (isSubmitted)
-              _buildWaiting(size, scale)
-            else
-              ..._buildSelectionLayer(size, scale),
-            MafiaStoredRoleCard(role: role),
-          ],
+        // 제출 연출이 매 프레임 다시 그려지도록 컨트롤러를 구독합니다.
+        return AnimatedBuilder(
+          animation: _submit,
+          builder: (context, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              const Positioned.fill(child: MafiaPhoneBackground.day()),
+              if (showsWaiting)
+                _buildWaiting(size, scale)
+              else if (_isSubmitting)
+                ..._buildSubmitAnimation(size, scale)
+              else
+                ..._buildSelectionLayer(size, scale),
+              MafiaStoredRoleCard(role: widget.role),
+            ],
+          ),
         );
       },
     );
@@ -88,7 +164,7 @@ class MafiaVoteView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, _promptTop),
+        top: MafiaPhoneDesign.top(size, MafiaVoteView._promptTop),
         child: IgnorePointer(
           child: Text(
             '투표 할 대상을 선택하세요',
@@ -102,14 +178,14 @@ class MafiaVoteView extends StatelessWidget {
           ),
         ),
       ),
-      if (remainingSeconds != null)
+      if (widget.remainingSeconds != null)
         Positioned(
           left: 0,
           right: 0,
-          top: MafiaPhoneDesign.top(size, _timerTop),
+          top: MafiaPhoneDesign.top(size, MafiaVoteView._timerTop),
           child: IgnorePointer(
             child: Text(
-              '$remainingSeconds초',
+              '${widget.remainingSeconds}초',
               maxLines: 1,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -125,25 +201,92 @@ class MafiaVoteView extends StatelessWidget {
         right: 0,
         top: MafiaPhoneDesign.top(
           size,
-          MafiaPlayerSelectGrid.topFor(players.length),
+          MafiaPlayerSelectGrid.topFor(widget.players.length),
         ),
         child: MafiaPlayerSelectGrid(
-          players: players,
-          selectedUid: selectedUid,
-          selectionColor: selectionColor,
+          players: widget.players,
+          selectedUid: widget.selectedUid,
+          selectionColor: MafiaVoteView.selectionColor,
           // 시안의 낮 투표는 테두리 3px, 나머지는 40%로 흐립니다.
           selectionBorderWidth: 3,
           nicknameColor: Colors.black,
           dimsUnselected: true,
-          onSelect: onSelect,
+          onSelect: widget.onSelect,
         ),
       ),
       MafiaPhoneActionButton(
         label: '선택 완료',
-        onTap: onConfirm,
-        enabled: selectedUid != null && onConfirm != null,
+        onTap: _handleConfirm,
+        enabled: widget.selectedUid != null && widget.onConfirm != null,
       ),
     ];
+  }
+
+  //=======================제출 연출==============================
+  /// 가운데 요소가 뭉쳐 사라지고, 투표지 한 장이 되어 위로 날아갑니다.
+  ///
+  /// 확정(2026-08): 태블릿에서 쓰는 그 투표지([MafiaBallotPaper])로 바뀌어
+  /// 화면 위로 빠져나갑니다. 내 표가 태블릿의 투표함으로 간다는 것을 두 화면이
+  /// 같은 종이로 이어 보여 줍니다.
+  List<Widget> _buildSubmitAnimation(Size size, double scale) {
+    return [
+      // 1. 안내·타이머·격자가 가운데로 뭉쳐 사라집니다.
+      Positioned.fill(
+        child: IgnorePointer(
+          child: Opacity(
+            opacity: (1 - _collapse).clamp(0.0, 1.0),
+            child: Transform.scale(
+              scale: 1 - 0.8 * _collapse,
+              // 내용 띠 가운데로 모입니다.
+              alignment: Alignment(
+                0,
+                (MafiaPhoneDesign.contentBandCenter /
+                            MafiaPhoneDesign.size.height) *
+                        2 -
+                    1,
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: _buildSelectionLayer(size, scale),
+              ),
+            ),
+          ),
+        ),
+      ),
+      // 2. 그 자리에 투표지가 생겨 3. 위로 날아갑니다.
+      if (_paperIn > 0) _buildFlyingPaper(size, scale),
+    ];
+  }
+
+  Widget _buildFlyingPaper(Size size, double scale) {
+    final width = MafiaVoteView.paperWidth * scale;
+    final height = MafiaVoteView.paperHeight * scale;
+    final centerTop = MafiaPhoneDesign.top(
+      size,
+      MafiaPhoneDesign.contentBandCenter,
+    );
+    // 화면 위로 완전히 빠져나갈 만큼 올립니다.
+    final travel = (centerTop + height) * _flyAway;
+
+    return Positioned(
+      left: (size.width - width) / 2,
+      top: centerTop - height / 2 - travel,
+      width: width,
+      height: height,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: _paperIn,
+          child: Transform.rotate(
+            // 날아가며 살짝 기울어집니다.
+            angle: -0.12 * _flyAway,
+            child: Transform.scale(
+              scale: 0.6 + 0.4 * _paperIn,
+              child: MafiaBallotPaper(width: width, height: height),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   /// 표를 내고 다른 사람을 기다리는 화면입니다.
@@ -154,7 +297,7 @@ class MafiaVoteView extends StatelessWidget {
     return Positioned(
       left: 0,
       right: 0,
-      top: MafiaPhoneDesign.top(size, _waitingTop),
+      top: MafiaPhoneDesign.top(size, MafiaVoteView._waitingTop),
       child: IgnorePointer(
         // 시안은 두 줄이고 각 줄이 한 줄로 유지됩니다. 좁은 기기에서 더 쪼개지지
         // 않게 필요한 만큼만 줄입니다.

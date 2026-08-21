@@ -118,3 +118,50 @@ test("재접속 확정은 중단 상태와 턴 남은 시간을 복원한다", (
   assert.equal(value.game.public.turnDeadlineAt, 54000);
   assert.ok(interruption);
 });
+
+// =========================================================================
+// 마감 시각이 **없는 구간**에서 중단이 걸릴 때 (2026-08 실제 오류 재현)
+//
+// RTDB는 null을 저장하지 않고 키를 지웁니다. 그래서 `turnDeadlineAt = null`로
+// 둔 뒤 다시 읽으면 그 키가 **아예 없습니다**(undefined). 이것을 계산에 쓰면
+// NaN이 되고 RTDB가 쓰기를 거부해, 실제로 아침·개표 발표 중에 나가면
+// `game_mafia_leave_game`이 다음 오류로 실패했습니다.
+//
+//   transaction failed: Data returned contains NaN in property
+//   'rooms.XXXXX.game.server.interruption.previousTurnRemainingMs'
+// =========================================================================
+
+test("마감 시각이 없는 구간(아침·개표 발표)에서도 NaN이 되지 않는다", () => {
+  const value = room();
+  // 마피아 아침·개표 발표 구간을 재현합니다. RTDB에서 읽으면 키가 없습니다.
+  delete value.game.public.turnDeadlineAt;
+
+  beginGameInterruption(value, "leaving", "left", 1000);
+
+  const saved = value.game.server.interruption.previousTurnRemainingMs;
+  assert.equal(saved, null, "남은 시간이 null이어야 합니다(NaN 금지)");
+  assert.equal(Number.isNaN(saved), false);
+});
+
+test("보관된 남은 시간이 없어도 복구가 NaN을 만들지 않는다", () => {
+  const value = room();
+  delete value.game.public.turnDeadlineAt;
+  const interruption = beginGameInterruption(value, "leaving", "left", 1000);
+  // 저장 뒤 다시 읽은 상태를 재현합니다(null이던 키가 사라집니다).
+  delete value.game.server.interruption.previousTurnRemainingMs;
+
+  cancelGameInterruption(value.game, interruption.id, 5000);
+
+  assert.equal(value.game.public.turnDeadlineAt, null);
+  assert.equal(Number.isNaN(value.game.public.turnDeadlineAt), false);
+});
+
+test("마감 시각이 있으면 남은 시간을 그대로 보관하고 복구한다", () => {
+  const value = room();
+  const interruption = beginGameInterruption(value, "leaving", "left", 1000);
+  assert.equal(value.game.server.interruption.previousTurnRemainingMs, 50000);
+
+  // 복구 시점(5000)부터 남은 시간만큼 다시 갑니다.
+  cancelGameInterruption(value.game, interruption.id, 5000);
+  assert.equal(value.game.public.turnDeadlineAt, 55000);
+});

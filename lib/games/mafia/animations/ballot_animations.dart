@@ -21,8 +21,12 @@ abstract final class MafiaBallotBoxRects {
   /// 확정(2026-08): 토론 삽화가 **크기를 유지한 채** 그대로 있고, 그 삽화의
   /// 가운데에서 투표함이 떠오릅니다. 삽화는 Rect(126, 0, 943, 943)이라
   /// 가운데가 (597.5, 471.5)입니다. 시안(544, 322)에서 그 자리로 옮겼고,
-  /// 그 뒤 지시대로 조금 키우고(1.3배) 조금 올렸습니다(40).
-  static const Rect voting = Rect.fromLTWH(516.6, 351.7, 161.8, 158.6);
+  /// 그 뒤 지시대로 조금 키웠습니다(1.3배).
+  ///
+  /// 높이는 삽화 속 **모자를 가리지 않는 선**까지 올렸습니다(2026-08).
+  /// 모자 자리는 `MafiaTabletDayView.hatRegion`에 적어 두었고,
+  /// `test/mafia_ballot_animation_test.dart`가 겹치지 않는지 확인합니다.
+  static const Rect voting = Rect.fromLTWH(516.6, 296, 161.8, 158.6);
 
   /// 개표(시안 `tablet-p7 개표`)의 투표함입니다.
   static const Rect tally = Rect.fromLTWH(886, 528, 277, 270);

@@ -44,6 +44,13 @@ class MafiaTabletDayView extends StatelessWidget {
   /// 토론 화면의 큰 삽화입니다(시안 `tablet-T4 자유토론`).
   static const Rect _talkLarge = Rect.fromLTWH(126, 0, 943, 943);
 
+  /// 삽화 속 **빨간 띠 모자**가 놓인 자리입니다(설계 좌표).
+  ///
+  /// 그림 파일(`talk_tablet.png`, 1024 × 1024)에서 모자가 대략
+  /// x 450~575 · y 505~590에 있어, 삽화 좌표로 옮긴 값입니다.
+  /// 투표함이 이 위를 덮지 않아야 합니다(확정 2026-08).
+  static const Rect hatRegion = Rect.fromLTWH(540, 465, 115, 78);
+
   /// 토론 타이머입니다. 시안은 96px 흰색 숫자입니다.
   static const Rect _timer = Rect.fromLTWH(405, 325, 384, 124);
 

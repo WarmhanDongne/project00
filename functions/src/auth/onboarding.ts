@@ -209,10 +209,15 @@ export const recoverLegacyOnboarding = onCall(
     const isGoogle = authUser.providerData.some(
       (item) => item.providerId === "google.com",
     );
+    const isApple = authUser.providerData.some(
+      (item) => item.providerId === "apple.com",
+    );
+    // 소셜 계정은 이미 자격 증명을 가지고 있으므로 비밀번호 단계가 없습니다.
+    const isSocial = isGoogle || isApple;
     const status = resolveLegacyStatus({
       hasValidNickname: isValidNickname(userSnapshot.data()?.nickname),
       emailVerified: authUser.emailVerified,
-      hasPasswordCredential: Boolean(authUser.passwordHash) || isGoogle,
+      hasPasswordCredential: Boolean(authUser.passwordHash) || isSocial,
     });
     if (!status) {
       throw new HttpsError(
@@ -222,7 +227,8 @@ export const recoverLegacyOnboarding = onCall(
     }
 
     const provider: OnboardingProvider = isGoogle ?
-      "google" : authUser.passwordHash ? "legacyPassword" : "emailLink";
+      "google" : isApple ?
+        "apple" : authUser.passwordHash ? "legacyPassword" : "emailLink";
     await onboardingRef.set({
       uid,
       provider,

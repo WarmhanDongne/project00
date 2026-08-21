@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/mafia/mafia_result_art.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/models/mafia_player.dart';
+import 'package:project00/games/mafia/screens/tablet/tablet_result_view.dart';
+import 'package:project00/games/mafia/widgets/phone/result_sequence.dart';
 import 'package:project00/games/mafia/widgets/phone/result_view.dart';
 
 /// 결과 화면(P9)입니다.
@@ -103,6 +106,63 @@ void main() {
       );
 
       expect(find.text('게임 종료'), findsOneWidget);
+    });
+  });
+
+  group('휴대폰 결과 순서 (확정 2026-08)', () {
+    Future<void> pumpSequence(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MafiaPhoneResultSequence(
+            winner: MafiaFaction.citizen,
+            players: const [
+              MafiaPlayer(
+                uid: 'u0',
+                nickname: '가나',
+                profileImageUrl: '',
+                seatIndex: 0,
+              ),
+              MafiaPlayer(
+                uid: 'u1',
+                nickname: '다라',
+                profileImageUrl: '',
+                seatIndex: 1,
+              ),
+            ],
+            revealedRoles: {'u0': null, 'u1': null},
+          ),
+        ),
+      );
+    }
+
+    testWidgets('승리 그림을 2초 보여 준 뒤 전원 신분 명단으로 넘어간다', (tester) async {
+      await pumpSequence(tester);
+
+      // 1박자: 그림만. 닉네임은 아직 없습니다.
+      await tester.pump();
+      expect(find.byType(MafiaResultView), findsOneWidget);
+      expect(find.text('가나'), findsNothing);
+
+      // 2박자: 2초 뒤 명단이 떠오릅니다.
+      await tester.pump(MafiaPhoneResultSequence.defaultPosterHold);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(MafiaResultView), findsNothing);
+      expect(find.text('가나'), findsOneWidget);
+      expect(find.text('다라'), findsOneWidget);
+    });
+
+    test('휴대폰과 태블릿의 승리 화면 시간이 같다', () {
+      expect(
+        MafiaPhoneResultSequence.defaultPosterHold,
+        MafiaTabletResultView.posterHold,
+      );
+      expect(
+        MafiaPhoneResultSequence.defaultPosterHold,
+        const Duration(seconds: 2),
+      );
     });
   });
 }

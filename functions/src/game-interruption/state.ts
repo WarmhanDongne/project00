@@ -90,10 +90,11 @@ export function beginGameInterruption(
     canContinue,
   };
 
-  const oldDeadline = game.public.turnDeadlineAt;
+  const oldDeadline = finiteOrNull(game.public.turnDeadlineAt);
   game.server.interruption = {
     id: interruption.id,
-    previousTurnRemainingMs: oldDeadline === null ? null : Math.max(0, oldDeadline - now),
+    previousTurnRemainingMs: oldDeadline === null ?
+      null : Math.max(0, oldDeadline - now),
   };
   game.public.turnDeadlineAt = null;
   game.public.interruption = interruption;
@@ -134,10 +135,27 @@ function restoreTurnDeadline(
 ): void {
   const saved = game.server.interruption;
   if (saved?.id === interruptionId && game.public.status === "playing") {
-    game.public.turnDeadlineAt = saved.previousTurnRemainingMs === null ?
-      null : now + saved.previousTurnRemainingMs;
+    const remaining = finiteOrNull(saved.previousTurnRemainingMs);
+    game.public.turnDeadlineAt = remaining === null ? null : now + remaining;
   }
   delete game.server.interruption;
+}
+
+/**
+ * 숫자로 계산해도 안전한 값만 통과시킵니다.
+ *
+ * RTDB는 `null`을 저장하지 않고 **키를 지웁니다.** 그래서 다시 읽으면
+ * `undefined`가 되는데, 이것을 그대로 계산에 쓰면 `undefined - now`가 NaN이
+ * 되고 RTDB가 쓰기를 거부합니다(`Data returned contains NaN`).
+ *
+ * 실제로 마피아 아침·개표 발표는 `turnDeadlineAt`이 없는 구간이라, 그때 나가면
+ * `game_mafia_leave_game`이 이 NaN 때문에 실패했습니다(2026-08 수정).
+ *
+ * @param {unknown} value 검사할 값
+ * @return {number|null} 유한한 숫자면 그 값, 아니면 null
+ */
+function finiteOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function stringValue(value: unknown): string {

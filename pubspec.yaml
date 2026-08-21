@@ -97,6 +97,7 @@ flutter:
     - assets/images/button/
     - assets/images/logo/
     - assets/images/others/
+    - assets/images/reconnect/
     - assets/images/widgets/layout/
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/

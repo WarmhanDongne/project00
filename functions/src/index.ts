@@ -32,6 +32,7 @@ export {
 // ---------------------------------------------- 인증
 export {checkEmailDuplicate} from "./auth/check-email.js";
 export {syncGoogleUserProfile} from "./auth/sync-google-profile.js";
+export {syncAppleUserProfile} from "./auth/sync-apple-profile.js";
 
 // 클라이언트에서 호출하는 곳이 없는 공개 HTTP 엔드포인트입니다. 회원 정보 저장은
 // syncGoogleUserProfile이 담당합니다. 삭제 여부는 따로 결정한 뒤 정리하세요.

@@ -10,6 +10,7 @@ import 'package:project00/platform/home/phone/widgets/phone_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 class PhoneHome extends StatefulWidget {
   const PhoneHome({super.key});
@@ -96,10 +97,7 @@ class _PhoneHomeState extends State<PhoneHome> {
       body: SafeArea(
         child: Column(
           children: [
-            PhoneHeader(
-              buttonText: _restoreInFlight ? '재접속 중' : '그룹 참여',
-              onPressed: () => unawaited(_openRoomJoin()),
-            ),
+            const PhoneHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
               child: Row(
@@ -117,8 +115,25 @@ class _PhoneHomeState extends State<PhoneHome> {
               ),
             ),
             PhoneOwnGameList(games: _games),
+            _buildJoinBar(),
           ],
         ),
+      ),
+    );
+  }
+
+  //================하단 고정 그룹 참여 버튼=================
+  Widget _buildJoinBar() {
+    final colors = context.platformColors;
+    final busy = _restoreInFlight || _waitingRoomOpen;
+    return Container(
+      width: double.infinity,
+      color: colors.canvas,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      child: PlatformButton(
+        label: busy ? '재접속 중' : '그룹 참여',
+        height: 56,
+        onPressed: busy ? null : () => unawaited(_openRoomJoin()),
       ),
     );
   }

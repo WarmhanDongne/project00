@@ -360,25 +360,15 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '참여 QR',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      tooltip: 'QR 확대 닫기',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, size: 20),
-                    ),
-                  ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton.filledTonal(
+                    tooltip: 'QR 확대 닫기',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
                 RoomQrCard(
                   key: const Key('expanded-room-qr'),
                   roomCode: roomCode,
@@ -392,7 +382,7 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
                 const SizedBox(height: 4),
                 _CopyableRoomCode(
                   roomCode: roomCode,
-                  fontSize: 40,
+                  fontSize: 64,
                   alignment: Alignment.center,
                 ),
                 const SizedBox(height: 8),

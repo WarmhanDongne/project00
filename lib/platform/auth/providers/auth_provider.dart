@@ -203,6 +203,13 @@ class AuthProvider extends ChangeNotifier {
       return userCredential;
     } on GoogleSignInException {
       return null;
+    } on AuthServiceException catch (e) {
+      // 인증은 끝났지만 프로필 동기화가 실패한 경우입니다. AuthGate가 온보딩을
+      // 복구하므로 치명적이지 않지만, 원인은 그대로 보여줍니다.
+      _errorMessage = e.message;
+      notifyListeners();
+
+      return null;
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
@@ -267,10 +274,10 @@ class AuthProvider extends ChangeNotifier {
       final user = userCredential.user;
 
       if (user != null) {
-        // Apple은 이름 정보를 최초 승인 시에만 제공할 수 있으므로
-        // 필요하면 여기에서 별도의 프로필 동기화를 수행하세요.
-        //
-        // await _authService.syncAppleUserProfile(user);
+        // 구글과 같은 경로입니다. 이 호출이 users/userOnboarding 문서를 만들어
+        // AuthGate가 프로필 설정 단계로 이어갑니다. 빠지면 온보딩 문서가 없어
+        // 소셜 계정인데도 비밀번호 설정 화면으로 떨어집니다.
+        await _authService.syncAppleUserProfile(user);
       }
 
       notifyListeners();
@@ -288,6 +295,13 @@ class AuthProvider extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       _errorMessage = e.message ?? e.code;
+      notifyListeners();
+
+      return null;
+    } on AuthServiceException catch (e) {
+      // 인증은 끝났지만 프로필 동기화가 실패한 경우입니다. AuthGate가 온보딩을
+      // 복구하므로 치명적이지 않지만, 원인은 그대로 보여줍니다.
+      _errorMessage = e.message;
       notifyListeners();
 
       return null;
@@ -342,7 +356,7 @@ class AuthProvider extends ChangeNotifier {
   /// Apple 로그인에 사용할 랜덤 nonce를 생성합니다.
   String _generateNonce([int length = 32]) {
     const charset =
-        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZ'
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         'abcdefghijklmnopqrstuvwxyz-._';
 
     final random = Random.secure();

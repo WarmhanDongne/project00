@@ -42,6 +42,9 @@ class $AssetsImagesGen {
   /// Directory path: assets/images/others
   $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
 
+  /// Directory path: assets/images/reconnect
+  $AssetsImagesReconnectGen get reconnect => const $AssetsImagesReconnectGen();
+
   /// Directory path: assets/images/widgets
   $AssetsImagesWidgetsGen get widgets => const $AssetsImagesWidgetsGen();
 }
@@ -267,6 +270,21 @@ class $AssetsImagesOthersGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [codeExample, networkUnavailable];
+}
+
+class $AssetsImagesReconnectGen {
+  const $AssetsImagesReconnectGen();
+
+  /// File path: assets/images/reconnect/game_controller.png
+  AssetGenImage get gameController =>
+      const AssetGenImage('assets/images/reconnect/game_controller.png');
+
+  /// File path: assets/images/reconnect/star.png
+  AssetGenImage get star =>
+      const AssetGenImage('assets/images/reconnect/star.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [gameController, star];
 }
 
 class $AssetsImagesWidgetsGen {
