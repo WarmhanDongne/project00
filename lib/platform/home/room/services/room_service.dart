@@ -178,14 +178,18 @@ class RoomService {
     }
   }
 
-  /// `false`는 태블릿의 명시적 종료와 방 전체 삭제를 모두 의미합니다.
+  /// 태블릿의 현재 접속 표시입니다.
+  ///
+  /// `false`는 백그라운드·강제 종료·순간적인 네트워크 단절을 뜻할 수 있으므로
+  /// 방 종료 신호로 사용하지 않습니다. 값이 없으면 방 삭제와 초기 캐시 미수신을
+  /// 구분할 수 없으므로 `null`을 유지하고 별도의 방 생존 마커로 확인합니다.
   Stream<bool?> watchControllerConnected(String roomCode) {
     return realtime
         .ref('rooms/$roomCode/controllerPresence/connected')
         .onValue
         .map((event) {
           final value = event.snapshot.value;
-          return value is bool ? value : false;
+          return value is bool ? value : null;
         });
   }
 
@@ -193,6 +197,21 @@ class RoomService {
       .ref('rooms/$roomCode/status')
       .onValue
       .map((event) => event.snapshot.value?.toString());
+
+  /// 방 전체를 읽지 않고 생성 시부터 삭제까지 유지되는 공개 roomCode 마커를
+  /// 구독합니다. `false` 이벤트는 서버 재조회로 한 번 더 확인한 뒤 사용합니다.
+  Stream<bool> watchRoomExists(String roomCode) => realtime
+      .ref('rooms/${roomCode.trim().toUpperCase()}/roomCode')
+      .onValue
+      .map((event) => event.snapshot.exists);
+
+  /// 캐시의 일시적인 null이 아니라 서버에서도 방 마커가 사라졌는지 확인합니다.
+  Future<bool> roomExists(String roomCode) async {
+    final snapshot = await _readWithRetry(
+      realtime.ref('rooms/${roomCode.trim().toUpperCase()}/roomCode'),
+    );
+    return snapshot.exists;
+  }
 
   Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
     return realtime
