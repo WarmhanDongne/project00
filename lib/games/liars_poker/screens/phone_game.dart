@@ -15,10 +15,13 @@ import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/animations/game_entry_unroll.dart';
+import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/games/shared/widgets/game_connecting_overlay.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
 class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
@@ -50,6 +53,9 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   String? _shownWinnerUid;
   BuildContext? _resultDialogContext;
   int _resultDialogGeneration = 0;
+  bool _wasMyTurn = false;
+  bool _wasPenaltyPhase = false;
+  String? _previousTurnUid;
 
   @override
   void initState() {
@@ -92,13 +98,22 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   Future<void> _warmUpAssets() async {
     final controller = _controller;
     if (controller == null) return;
-    await controller.waitForInitialData();
+    try {
+      // 첫 스냅샷이 오지 않거나 구독이 에러로 끝나도 사전 로딩 대기가
+      // unhandled exception이나 영구 대기로 남지 않게 합니다. 실제 화면
+      // 전환은 컨트롤러 상태 구독이 계속 담당합니다.
+      await controller.waitForInitialData().timeout(
+        const Duration(seconds: 12),
+      );
+    } catch (_) {
+      // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
+    }
     if (!mounted) return;
     await preloadLiarsPokerAssets(
       context,
       isPhone: true,
-      profileImageUrls: controller.players.values.map(
-        (player) => player.profileImageUrl,
+      characterIds: controller.players.values.map(
+        (player) => player.characterId,
       ),
     );
   }
@@ -110,6 +125,8 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   void _handleGameStateChanged() {
     final controller = _controller;
     if (controller == null || !mounted) return;
+
+    _notifyTurnAndLiarFeedback(controller);
 
     if (!controller.isFinished) {
       _hasScheduledGameExit = false;
@@ -142,6 +159,36 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     });
   }
 
+  /// 내 턴 시작과 다른 플레이어의 LIAR 선언을 진동으로 알립니다.
+  ///
+  /// 컨트롤러 알림은 판정 문구 타이머 같은 로컬 커밋에도 오므로, 직전 값과의
+  /// 전이를 비교해 각각 한 번만 울립니다. penalty 전환 직전의 turnUid가 LIAR를
+  /// 외친 플레이어이며, 선언한 본인은 버튼을 누를 때 이미 declare 진동을
+  /// 받았으므로 제외합니다.
+  void _notifyTurnAndLiarFeedback(LiarsPokerController controller) {
+    final wasMyTurn = _wasMyTurn;
+    final wasPenaltyPhase = _wasPenaltyPhase;
+    final previousTurnUid = _previousTurnUid;
+    _wasMyTurn = controller.isMyTurn;
+    _wasPenaltyPhase = controller.phase == 'penalty';
+    _previousTurnUid = controller.turnUid;
+
+    if (controller.isFinished) return;
+
+    // 내 턴이 시작되면 화면을 보고 있지 않아도 알 수 있게 진동을 울립니다.
+    if (!wasMyTurn && controller.isMyTurn) {
+      GameFeedback.alert();
+      return;
+    }
+
+    if (!wasPenaltyPhase &&
+        controller.phase == 'penalty' &&
+        previousTurnUid != null &&
+        previousTurnUid != controller.uid) {
+      GameFeedback.alert();
+    }
+  }
+
   void _showResultDialog(LiarsPokerController controller) {
     final winnerUid = controller.winnerUid;
     final winner = controller.players[winnerUid];
@@ -168,7 +215,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             canPop: false,
             child: PhoneResultDialog(
               nickname: winner.nickname,
-              profileImageUrl: winner.profileImageUrl,
+              characterId: winner.characterId,
             ),
           );
         },
@@ -310,6 +357,12 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             },
             onExpired: controller.expireInterruption,
           ),
+          // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
+          // 나가기 버튼을 표시해 영구 대기를 막습니다.
+          GameConnectingOverlay(
+            isWaiting: !_hasEnteredGame,
+            onExit: () => unawaited(_leaveRoom()),
+          ),
         ],
       ),
     );
@@ -384,7 +437,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           (p) => PlayerLayoutPlayer(
             uid: p.uid,
             nickname: p.nickname,
-            profileImageUrl: p.profileImageUrl, // 실제 프로필 이미지 연결
+            characterId: p.characterId,
             seatIndex: 0,
           ),
         )
@@ -422,8 +475,8 @@ class _PhoneGameBackground extends StatelessWidget {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
 
     return Scaffold(
       backgroundColor: Colors.black,

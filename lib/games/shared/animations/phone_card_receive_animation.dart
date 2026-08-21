@@ -2,7 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
+import 'package:project00/games/shared/widgets/game_card_face.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 받은 카드 덱이 중앙으로 들어온 뒤, 사용자의 탭을 기다렸다가 공개됩니다.
 ///
@@ -22,15 +25,14 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
     this.spreadCenterOffsetX = 0,
     this.spreadCenterOffsetY = 0,
     this.totalDuration = const Duration(milliseconds: 2200),
-    this.autoplay = true,
     this.onRevealStarted,
     this.onCompleted,
   }) : assert(frontCardAssets.length > 0),
        assert(cardWidth > 0),
        assert(totalDuration > Duration.zero);
 
-  final List<AssetGenImage> frontCardAssets;
-  final AssetGenImage? backCardAsset;
+  final List<GameImage> frontCardAssets;
+  final GameImage? backCardAsset;
   final double cardWidth;
   final double spreadStepX;
   final double spreadStepY;
@@ -49,8 +51,6 @@ class PhoneCardReceiveAnimation extends StatefulWidget {
   /// 자동 진입과 탭 후 공개 애니메이션을 합친 기준 시간입니다.
   final Duration totalDuration;
 
-  /// true이면 화면이 열릴 때 카드 덱이 자동으로 중앙까지 들어옵니다.
-  final bool autoplay;
   final VoidCallback? onRevealStarted;
   final VoidCallback? onCompleted;
 
@@ -107,9 +107,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
       _idleController,
     ]);
 
-    if (widget.autoplay) {
-      _entryController.forward();
-    }
+    _entryController.forward();
   }
 
   @override
@@ -119,10 +117,6 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     if (oldWidget.totalDuration != widget.totalDuration) {
       _entryController.duration = _entryDuration;
       _revealController.duration = _revealDuration;
-    }
-
-    if (!oldWidget.autoplay && widget.autoplay && !_isEntryCompleted) {
-      _entryController.forward();
     }
   }
 
@@ -201,8 +195,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
   }
 
   Widget _buildRevealTapTarget(Size size) {
-    const cardAspectRatio = 512 / 350;
-    final cardHeight = widget.cardWidth * cardAspectRatio;
+    final cardHeight = widget.cardWidth * kCardAspectRatio;
     final entryCenterX = size.width / 2 + widget.entryCenterOffsetX;
     final entryCenterY = size.height / 2 + widget.entryCenterOffsetY;
 
@@ -226,8 +219,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
   }
 
   Widget _buildAnimatedCard({required Size size, required int cardIndex}) {
-    const cardAspectRatio = 512 / 350;
-    final cardHeight = widget.cardWidth * cardAspectRatio;
+    final cardHeight = widget.cardWidth * kCardAspectRatio;
     final cardCount = widget.frontCardAssets.length;
     final center = Offset(size.width / 2, size.height / 2);
     final entryCenter =
@@ -244,7 +236,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
         Offset(0, _deckIdleOffsetY);
 
     // 1단계: 카드가 겹쳐진 상태에서 덱 전체를 먼저 공개합니다.
-    final flipProgress = _intervalProgress(
+    final flipProgress = intervalProgress(
       _revealController.value,
       0.06,
       0.48,
@@ -290,12 +282,18 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.0015)
                 ..rotateY(yRotation),
-              child: _CardFace(
+              child: GameCardFace(
                 asset: isFrontVisible
                     ? widget.frontCardAssets[cardIndex]
                     : widget.backCardAsset ??
-                          Assets.games.liarsPoker.images.cards.whiteBack,
-                flipLift: flipLift,
+                          Assets.games.liarsPoker.images.cards.whiteBack.game,
+                radius: 8,
+                // 뒤집는 동안 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
+                shadow: BoxShadow(
+                  color: const Color(0x66000000),
+                  blurRadius: 7 + flipLift * 8,
+                  offset: Offset(0, 5 + flipLift * 5),
+                ),
               ),
             ),
           ),
@@ -309,7 +307,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     required Offset entryPosition,
     required double centeredIndex,
   }) {
-    final spreadProgress = _intervalProgress(
+    final spreadProgress = intervalProgress(
       _revealController.value,
       0.52,
       1,
@@ -349,7 +347,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
         .toDouble();
 
     // 회전 완료 직후에는 모든 카드가 한 덱처럼 함께 기준점으로 이동합니다.
-    final anchorProgress = _intervalProgress(
+    final anchorProgress = intervalProgress(
       _revealController.value,
       0.50,
       0.68,
@@ -367,7 +365,7 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     // 오른쪽 카드와 가까운 카드부터 출발해 왼쪽 끝까지 차례로 펼칩니다.
     final fanBegin = 0.64 + (distanceFromRight - 1) * 0.045;
     final fanEnd = math.min(1.0, 0.91 + (distanceFromRight - 1) * 0.022);
-    final fanProgress = _intervalProgress(
+    final fanProgress = intervalProgress(
       _revealController.value,
       fanBegin,
       fanEnd,
@@ -375,16 +373,6 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
     );
     return anchorPosition +
         Offset(-distanceFromRight * spreadStep * fanProgress, 0);
-  }
-
-  double _intervalProgress(
-    double value,
-    double begin,
-    double end,
-    Curve curve,
-  ) {
-    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
-    return curve.transform(progress);
   }
 
   /// 클릭 전에는 덱이 천천히 위아래로 움직이고, 클릭한 순간의 위치에서
@@ -401,35 +389,4 @@ class _PhoneCardReceiveAnimationState extends State<PhoneCardReceiveAnimation>
 
   double get _currentIdleOffsetY =>
       math.sin(_idleController.value * math.pi * 2) * 4;
-}
-
-class _CardFace extends StatelessWidget {
-  const _CardFace({required this.asset, required this.flipLift});
-
-  final AssetGenImage asset;
-  final double flipLift;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x66000000),
-            blurRadius: 7 + flipLift * 8,
-            offset: Offset(0, 5 + flipLift * 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: asset.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
-      ),
-    );
-  }
 }

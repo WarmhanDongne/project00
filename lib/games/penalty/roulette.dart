@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,7 +6,9 @@ import 'package:project00/core/sound/app_sounds.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:roulette/roulette.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 enum RouletteResult { safe, eliminated }
 
@@ -15,12 +17,12 @@ class PenaltyRoulette extends StatefulWidget {
     super.key,
     required this.attemptCount,
     required this.onResult,
-    this.centerProfileImageUrl,
+    this.centerCharacterId,
   });
 
   final int attemptCount;
   final ValueChanged<RouletteResult> onResult;
-  final String? centerProfileImageUrl;
+  final String? centerCharacterId;
 
   @override
   State<PenaltyRoulette> createState() => _PenaltyRouletteState();
@@ -38,7 +40,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   static const double _designHeight = 900;
 
   final RouletteController _controller = RouletteController();
-  final Random _random = Random.secure();
+  final math.Random _random = math.Random.secure();
 
   bool _isSpinning = false;
   bool _isLeverLocked = false;
@@ -200,7 +202,14 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       _isSpinning = false;
     });
 
-    if (!completed) return;
+    if (!completed) {
+      // 회전이 완료 신호 없이 끝나면(중단·취소) 레버를 되돌려 다시 당길 수
+      // 있게 합니다. 잠금을 유지하면 결과가 전송되지 않아 벌칙 단계가
+      // 영구히 멈춥니다.
+      setState(() => _isLeverLocked = false);
+      unawaited(_leverController.reverse());
+      return;
+    }
 
     final isEliminated = sections[selectedIndex];
 
@@ -259,7 +268,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
             controller: _controller,
             group: _group,
             leverProgress: _leverController.value,
-            centerProfileImageUrl: widget.centerProfileImageUrl,
+            centerCharacterId: widget.centerCharacterId,
           ),
         ),
 
@@ -315,7 +324,7 @@ class RouletteWheel extends StatelessWidget {
     required this.controller,
     required this.group,
     required this.leverProgress,
-    required this.centerProfileImageUrl,
+    required this.centerCharacterId,
   });
 
   /// 룰렛 자체의 기준 크기
@@ -324,7 +333,7 @@ class RouletteWheel extends StatelessWidget {
   final RouletteController controller;
   final RouletteGroup group;
   final double leverProgress;
-  final String? centerProfileImageUrl;
+  final String? centerCharacterId;
 
   @override
   Widget build(BuildContext context) {
@@ -386,7 +395,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, 35),
                 child: Transform.scale(
                   scale: 1.6,
-                  child: Assets.images.widgets.roulette.border.image(
+                  child: Assets.images.widgets.roulette.border.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -403,7 +412,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, 22),
                 child: Transform.scale(
                   scale: 0.9,
-                  child: Assets.images.widgets.roulette.centerStone.image(
+                  child: Assets.images.widgets.roulette.centerStone.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -414,7 +423,7 @@ class RouletteWheel extends StatelessWidget {
           // ========================================================
           // 중앙 프로필
           // ========================================================
-          if (centerProfileImageUrl != null)
+          if (centerCharacterId != null)
             Positioned(
               top: (_rouletteSize - 320) / 2 + 22,
               left: (_rouletteSize - 270) / 2,
@@ -422,15 +431,11 @@ class RouletteWheel extends StatelessWidget {
                 child: SizedBox.square(
                   dimension: 270,
                   child: ClipOval(
-                    child: centerProfileImageUrl!.trim().isEmpty
-                        ? const _RouletteProfileFallback()
-                        : Image.network(
-                            centerProfileImageUrl!,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
-                            errorBuilder: (_, _, _) =>
-                                const _RouletteProfileFallback(),
-                          ),
+                    child: Image.asset(
+                      roomCharacterAssetPath(centerCharacterId),
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                 ),
               ),
@@ -445,7 +450,7 @@ class RouletteWheel extends StatelessWidget {
                 offset: const Offset(0, -410),
                 child: Transform.scale(
                   scale: 0.8,
-                  child: Assets.images.widgets.roulette.pointer.image(
+                  child: Assets.images.widgets.roulette.pointer.game.image(
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -463,7 +468,7 @@ class RouletteWheel extends StatelessWidget {
             child: Center(
               child: SizedBox(
                 width: 450,
-                child: Assets.images.widgets.roulette.leverBottom.image(
+                child: Assets.images.widgets.roulette.leverBottom.game.image(
                   fit: BoxFit.contain,
                 ),
               ),
@@ -499,7 +504,7 @@ class RouletteWheel extends StatelessWidget {
                   width: 150,
                   height: 150,
                   child: ClipOval(
-                    child: Assets.images.widgets.roulette.leverStick.image(
+                    child: Assets.images.widgets.roulette.leverStick.game.image(
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -522,9 +527,8 @@ class RouletteWheel extends StatelessWidget {
                   child: ClipOval(
                     child: Transform.rotate(
                       angle: math.pi,
-                      child: Assets.images.widgets.roulette.leverStick.image(
-                        fit: BoxFit.contain,
-                      ),
+                      child: Assets.images.widgets.roulette.leverStick.game
+                          .image(fit: BoxFit.contain),
                     ),
                   ),
                 ),
@@ -546,9 +550,8 @@ class RouletteWheel extends StatelessWidget {
                     width: 630,
                     child: Transform.scale(
                       scale: 1.3,
-                      child: Assets.images.widgets.roulette.leverHead.image(
-                        fit: BoxFit.contain,
-                      ),
+                      child: Assets.images.widgets.roulette.leverHead.game
+                          .image(fit: BoxFit.contain),
                     ),
                   ),
                 ),
@@ -557,22 +560,6 @@ class RouletteWheel extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ================================================================
-// 프로필 이미지 Fallback
-// ================================================================
-
-class _RouletteProfileFallback extends StatelessWidget {
-  const _RouletteProfileFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFF171717),
-      child: Icon(Icons.person_rounded, color: Colors.white70, size: 120),
     );
   }
 }
@@ -590,35 +577,13 @@ class _SilverRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: SizedBox.square(
-        dimension: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [_RingBorder(size: size, width: width)],
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xfffafafa), width: width),
         ),
-      ),
-    );
-  }
-}
-
-// ================================================================
-// 실버 링 한 줄
-// ================================================================
-
-class _RingBorder extends StatelessWidget {
-  const _RingBorder({required this.size, required this.width});
-
-  final double size;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xfffafafa), width: width),
       ),
     );
   }

@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
+import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/liars_poker/loading/liars_poker_loading.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
@@ -27,6 +29,7 @@ import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker 태블릿 진행 화면의 진입점입니다.
 ///
@@ -77,6 +80,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic _backgroundMusic = GameBackgroundMusic();
 
+  /// 우승 발표마다 승리음을 한 번만 재생하기 위한 플래그입니다.
+  bool _hasPlayedWinSound = false;
+
   LiarsPokerTabletStage get stage => _stage;
 
   @override
@@ -124,12 +130,20 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   Future<void> _warmUpAssets() async {
     final controller = _controller;
     if (controller == null) return;
-    await controller.waitForInitialData();
+    try {
+      // 첫 스냅샷이 오지 않거나 구독이 에러로 끝나도 사전 로딩 대기가
+      // unhandled exception이나 영구 대기로 남지 않게 합니다.
+      await controller.waitForInitialData().timeout(
+        const Duration(seconds: 12),
+      );
+    } catch (_) {
+      // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
+    }
     if (!mounted) return;
     await preloadLiarsPokerAssets(
       context,
       isPhone: false,
-      profileImageUrls: _profileImageUrls,
+      characterIds: _characterIds,
     );
   }
 
@@ -248,6 +262,19 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
           : LiarsPokerTabletStage.playing;
     }
 
+    // 정상 우승이 확정돼 결과 화면이 뜨는 순간, 배경음악을 멈추고 승리음을
+    // 한 번 재생합니다. 수동 종료·인원 부족 종료에서는 재생하지 않습니다.
+    if (game.isFinished && game.isNaturalResult) {
+      if (!_hasPlayedWinSound) {
+        _hasPlayedWinSound = true;
+        _backgroundMusic.stop();
+        SoundEffects.play(context, LiarsPokerSounds.win);
+      }
+    } else {
+      // 다시하기로 새 판이 시작되면 다음 우승 발표에서 다시 재생합니다.
+      _hasPlayedWinSound = false;
+    }
+
     _hasReceivedFirstState = true;
     _previousServerPhase = game.phase;
     _previousRound = game.round;
@@ -282,9 +309,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       nickname: publicPlayer.nickname.trim().isNotEmpty
           ? publicPlayer.nickname.trim()
           : layoutPlayer?.nickname ?? 'Player',
-      profileImageUrl: publicPlayer.profileImageUrl.trim().isNotEmpty
-          ? publicPlayer.profileImageUrl.trim()
-          : layoutPlayer?.profileImageUrl ?? '',
+      characterId: publicPlayer.characterId.trim().isNotEmpty
+          ? publicPlayer.characterId.trim()
+          : layoutPlayer?.characterId ?? 'frog',
       seatIndex: publicPlayer.seatIndex,
     );
   }
@@ -318,15 +345,17 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     return seats;
   }
 
-  List<String> get _profileImageUrls {
+  List<String> get _characterIds {
     final players = _controller?.players ?? const <String, PhoneGamePlayer>{};
     return widget.playerLayout.players
         .map((layoutPlayer) {
-          final publicUrl = players[layoutPlayer.uid]?.profileImageUrl.trim();
-          if (publicUrl != null && publicUrl.isNotEmpty) return publicUrl;
-          return layoutPlayer.profileImageUrl.trim();
+          final characterId = players[layoutPlayer.uid]?.characterId.trim();
+          if (characterId != null && characterId.isNotEmpty) {
+            return characterId;
+          }
+          return layoutPlayer.characterId.trim();
         })
-        .where((url) => url.isNotEmpty)
+        .where((id) => id.isNotEmpty)
         .toList(growable: false);
   }
 
@@ -478,7 +507,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     }
     // 빌드 도중 재생을 시작하지 않도록 프레임 이후로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _backgroundMusic.start();
+      if (mounted) _backgroundMusic.start(LiarsPokerSounds.background);
     });
   }
 
@@ -623,11 +652,11 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                             '${game.rouletteRetry}',
                           ),
                           attemptCount: game.penaltyAttemptCount,
-                          profileImageUrl:
+                          characterId:
                               _playerByUid(
                                 game.penaltyTargetUid,
-                              )?.profileImageUrl ??
-                              '',
+                              )?.characterId ??
+                              'frog',
                           isResolving: game.isResolvingPenalty,
                           onResult: game.resolveRoulette,
                         )
@@ -638,6 +667,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 child: LiarsPokerTabletGameOverlay(
                   provider: widget.provider,
                   stage: _stage,
+                  tableRank: game.table,
                   onRestartGame: _restartGame,
                   onEndGame: _endGame,
                 ),
@@ -682,7 +712,7 @@ class _GameBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.black,
-      child: Assets.games.liarsPoker.images.background.background.image(
+      child: Assets.games.liarsPoker.images.background.background.game.image(
         fit: BoxFit.cover,
         alignment: Alignment.center,
       ),

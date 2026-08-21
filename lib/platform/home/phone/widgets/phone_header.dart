@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -16,9 +16,6 @@ class PhoneHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    final user = FirebaseAuth.instance.currentUser;
-    final photoURL = user?.photoURL;
-    final hasPhoto = photoURL != null && photoURL.isNotEmpty;
 
     return Container(
       height: 72,
@@ -48,30 +45,7 @@ class PhoneHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          TextButton(
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: Text(
-              '로그아웃',
-              style: TextStyle(color: colors.textMuted, fontSize: 13),
-            ),
-          ),
-          const SizedBox(width: 6),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: colors.surfaceMuted,
-            backgroundImage: hasPhoto ? NetworkImage(photoURL) : null,
-            child: hasPhoto
-                ? null
-                : Icon(Icons.person_outline, color: colors.textMuted),
-          ),
+          const PhoneProfile(),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -241,7 +242,13 @@ class _ActiveRoom extends StatelessWidget {
                 label: '초기화',
                 height: 40,
                 style: PlatformButtonStyle.secondary,
-                onPressed: provider.isLoading ? null : provider.createRoom,
+                onPressed: provider.isLoading
+                    ? null
+                    : () {
+                        if (!provider.isRemovingAnyPlayer) {
+                          unawaited(provider.closeRoom());
+                        }
+                      },
               ),
             ),
           ),
@@ -253,7 +260,9 @@ class _ActiveRoom extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) => _PlayerTile(
               player: players[index],
-              onRemove: () => provider.removePlayer(players[index].uid),
+              isRemoving: provider.isRemovingPlayer(players[index].uid),
+              onRemove: () =>
+                  unawaited(provider.removePlayer(players[index].uid)),
             ),
           ),
         ),
@@ -269,7 +278,19 @@ class _ActiveRoom extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              RoomQrCard(roomCode: roomCode, size: 92),
+              Tooltip(
+                message: 'QR 코드 확대',
+                child: Semantics(
+                  button: true,
+                  label: 'QR 코드 확대',
+                  child: InkWell(
+                    key: const Key('active-room-qr-expand'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _showExpandedQr(context, roomCode),
+                    child: RoomQrCard(roomCode: roomCode, size: 92),
+                  ),
+                ),
+              ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
@@ -295,10 +316,109 @@ class _ActiveRoom extends StatelessWidget {
   }
 }
 
+Future<void> _showExpandedQr(BuildContext context, String roomCode) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) => _ExpandedRoomQrDialog(roomCode: roomCode),
+  );
+}
+
+class _ExpandedRoomQrDialog extends StatelessWidget {
+  const _ExpandedRoomQrDialog({required this.roomCode});
+
+  final String roomCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
+    final qrSize = (shortestSide * 0.52).clamp(240.0, 360.0);
+    return Dialog(
+      key: const Key('expanded-room-qr-dialog'),
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 420,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 30,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '참여 QR',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'QR 확대 닫기',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, size: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                RoomQrCard(
+                  key: const Key('expanded-room-qr'),
+                  roomCode: roomCode,
+                  size: qrSize,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  '참여 코드',
+                  style: TextStyle(color: colors.textMuted, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                _CopyableRoomCode(
+                  roomCode: roomCode,
+                  fontSize: 40,
+                  alignment: Alignment.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'QR을 스캔하거나 참여 코드를 눌러 복사하세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.textMuted, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlayerTile extends StatefulWidget {
-  const _PlayerTile({required this.player, required this.onRemove});
+  const _PlayerTile({
+    required this.player,
+    required this.isRemoving,
+    required this.onRemove,
+  });
 
   final RoomPlayer player;
+  final bool isRemoving;
   final VoidCallback onRemove;
 
   @override
@@ -343,7 +463,6 @@ class _PlayerTileState extends State<_PlayerTile> {
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     final player = widget.player;
-    final accent = _parseAccent(player.accentColor);
     return Container(
       height: 78,
       padding: const EdgeInsets.only(left: 12, right: 8),
@@ -357,23 +476,13 @@ class _PlayerTileState extends State<_PlayerTile> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: accent.withValues(alpha: 0.13),
-            backgroundImage: player.profileImageUrl.isEmpty
-                ? null
-                : NetworkImage(player.profileImageUrl),
-            child: player.profileImageUrl.isEmpty
-                ? Text(
-                    player.nickname.isEmpty
-                        ? '?'
-                        : player.nickname.substring(0, 1),
-                    style: TextStyle(
-                      color: accent,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  )
-                : null,
+          SizedBox(
+            width: 50,
+            height: 50,
+            child: Image.asset(
+              roomCharacterAssetPath(player.characterId),
+              fit: BoxFit.contain,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -404,19 +513,20 @@ class _PlayerTileState extends State<_PlayerTile> {
             ),
             child: IconButton(
               tooltip: '내보내기',
-              onPressed: widget.onRemove,
-              icon: Icon(Icons.close, size: 25, color: colors.textMuted),
+              onPressed: widget.isRemoving ? null : widget.onRemove,
+              icon: widget.isRemoving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.close, size: 25, color: colors.textMuted),
             ),
           ),
         ],
       ),
     );
   }
-}
-
-Color _parseAccent(String value) {
-  final parsed = int.tryParse(value.replaceFirst('#', ''), radix: 16);
-  return parsed == null ? const Color(0xFF6557D2) : Color(0xFF000000 | parsed);
 }
 
 /// 참여 코드 QR을 정사각형 카드로 그립니다.
@@ -463,10 +573,15 @@ class RoomQrCard extends StatelessWidget {
 }
 
 class _CopyableRoomCode extends StatelessWidget {
-  const _CopyableRoomCode({required this.roomCode, required this.fontSize});
+  const _CopyableRoomCode({
+    required this.roomCode,
+    required this.fontSize,
+    this.alignment = Alignment.centerLeft,
+  });
 
   final String roomCode;
   final double fontSize;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -480,7 +595,7 @@ class _CopyableRoomCode extends StatelessWidget {
       },
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
+        alignment: alignment,
         child: Text(
           roomCode,
           style: TextStyle(

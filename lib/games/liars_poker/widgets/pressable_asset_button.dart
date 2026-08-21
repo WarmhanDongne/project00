@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Liar's Poker에서 사용하는 이미지 버튼의 공통 눌림 동작입니다.
 ///
@@ -15,7 +15,7 @@ class LiarsPokerPressableAssetButton extends StatefulWidget {
     this.semanticsLabel,
   });
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double width;
   final double? height;
   final bool enabled;
@@ -299,7 +299,7 @@ class LiarsPokerButtonSurface extends StatelessWidget {
 
   static const _pressDuration = Duration(milliseconds: 105);
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double width;
   final double? height;
   final bool pressed;
@@ -315,7 +315,7 @@ class LiarsPokerButtonSurface extends StatelessWidget {
     );
   }
 
-  Widget _assetImage(AssetGenImage image) {
+  Widget _assetImage(GameImage image) {
     return image.image(
       width: width,
       height: height ?? width,

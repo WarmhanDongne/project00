@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:project00/core/sound/app_sounds.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 
@@ -21,7 +20,7 @@ import 'package:project00/core/sound/sound_effects.dart';
 /// }
 ///
 /// // 카드 분배 단계에 들어갈 때
-/// _bgm.start();
+/// _bgm.start(LiarsPokerSounds.background);
 ///
 /// @override
 /// void dispose() {
@@ -48,14 +47,17 @@ class GameBackgroundMusic {
   ///
   /// 라운드마다 카드 분배가 반복되므로 두 번째 호출부터는 무시합니다. 그렇지
   /// 않으면 라운드가 넘어갈 때마다 곡이 처음으로 되감깁니다.
-  void start() {
+  ///
+  /// [asset]은 게임마다 다릅니다. 각 게임의 `sound/<game>_sounds.dart`에 있는
+  /// 값을 넘기세요. 곡을 바꾸려면 [stop]으로 멈춘 뒤 다시 부릅니다.
+  void start(String asset) {
     if (_isPlaying) return;
 
     final sound = _sound;
     if (sound == null) return;
 
     _isPlaying = true;
-    _run(sound.playBgm(AppSounds.background), '배경음악을 재생하지 못했습니다');
+    _run(sound.playBgm(asset), '배경음악을 재생하지 못했습니다');
   }
 
   /// 배경음악을 멈춥니다. 화면의 `dispose`에서 반드시 호출하세요.

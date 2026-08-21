@@ -1,9 +1,10 @@
+import 'package:project00/platform/home/room/models/room_character.dart';
+
 class RoomPlayer {
   const RoomPlayer({
     required this.uid,
     required this.nickname,
-    required this.profileImageUrl,
-    required this.accentColor,
+    required this.characterId,
     required this.isConnected,
     required this.seatIndex,
     required this.role,
@@ -18,8 +19,8 @@ class RoomPlayer {
     return RoomPlayer(
       uid: key ?? json['uid'] as String? ?? '',
       nickname: json['nickname'] as String? ?? 'Player',
-      profileImageUrl: json['profileImageUrl'] as String? ?? '',
-      accentColor: json['accentColor'] as String? ?? '#6557D2',
+      // 마이그레이션 전 플레이어는 기본 캐릭터로 표시하고 재입장 시 정상 저장합니다.
+      characterId: json['characterId'] as String? ?? defaultRoomCharacterId,
       isConnected: json['isConnected'] as bool? ?? true,
       seatIndex: json['seatIndex'] as int? ?? -1,
       role: json['role'] as String? ?? 'player',
@@ -32,8 +33,7 @@ class RoomPlayer {
 
   final String uid;
   final String nickname;
-  final String profileImageUrl;
-  final String accentColor;
+  final String characterId;
   final bool isConnected;
   final int seatIndex;
   final String role;
@@ -41,6 +41,19 @@ class RoomPlayer {
   final DateTime? joinedAt;
   final DateTime? updatedAt;
   final int penaltyAttemptCount;
+
+  Map<String, dynamic> toJson() => {
+    'uid': uid,
+    'nickname': nickname,
+    'characterId': characterId,
+    'isConnected': isConnected,
+    'seatIndex': seatIndex,
+    'role': role,
+    'status': status,
+    if (joinedAt != null) 'joinedAt': joinedAt!.millisecondsSinceEpoch,
+    if (updatedAt != null) 'updatedAt': updatedAt!.millisecondsSinceEpoch,
+    'penaltyAttemptCount': penaltyAttemptCount,
+  };
 
   bool get isPlayer => role == 'player';
   bool get isActive => status == 'active';

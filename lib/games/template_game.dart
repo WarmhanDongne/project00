@@ -47,6 +47,9 @@ abstract class TemplateGame {
   /// 준비된 이미지가 없는 게임은 null을 반환해 [tableColor]만 씁니다.
   ImageProvider? get tableBackgroundImage;
 
+  /// 태블릿의 게임 선택 팝업에 표시할 실제 게임 구성 요소 미리보기입니다.
+  Widget buildTabletPreviewArtwork();
+
   /// 자리 배치 완료 연출에 쓸 위에서 내려다본 테이블 이미지입니다.
   /// null이면 [tableColor]·[tableBackgroundImage]로 그린 원형 테이블을 씁니다.
   ImageProvider? get layoutTableImage => null;
@@ -66,6 +69,7 @@ abstract class TemplateGame {
   /// 휴대폰 진행 화면을 생성합니다.
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   });
 

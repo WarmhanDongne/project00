@@ -8,6 +8,10 @@
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
+    "catalog:rules:dry-run": "node scripts/update-game-rules.mjs --dry-run",
+    "catalog:rules:update": "node scripts/update-game-rules.mjs",
+    "catalog:preview:dry-run": "node scripts/update-game-preview.mjs --dry-run",
+    "catalog:preview:update": "node scripts/update-game-preview.mjs",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },

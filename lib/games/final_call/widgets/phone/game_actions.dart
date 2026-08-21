@@ -6,6 +6,7 @@ import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/controllers/final_call_controller.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 class FinalCallPhoneActions extends StatelessWidget {
   const FinalCallPhoneActions({
@@ -42,7 +43,7 @@ class FinalCallPhoneActions extends StatelessWidget {
       // 하므로 마지막 교체 턴에서는 새 카드 버튼을 계속 유지합니다.
       return _PressableImageButton(
         enabled: controller.canDraw,
-        asset: Assets.games.finalCall.images.button.buttonBasicWide,
+        asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
         labelOverride: FinalCallCopy.newCard,
         onTap: onOpenCardChange,
       );
@@ -52,14 +53,14 @@ class FinalCallPhoneActions extends StatelessWidget {
       children: [
         _PressableImageButton(
           enabled: controller.canCall,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide,
+          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
           labelOverride: 'CALL',
           onTap: onCall,
         ),
         const SizedBox(height: 12),
         _PressableImageButton(
           enabled: controller.canDraw,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide,
+          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
           labelOverride: FinalCallCopy.newCard,
           onTap: onOpenCardChange,
         ),
@@ -202,7 +203,7 @@ class _PressableImageButton extends StatefulWidget {
     this.labelOverride,
   });
   final bool enabled;
-  final AssetGenImage asset;
+  final GameImage asset;
   final VoidCallback onTap;
   final String? labelOverride;
 
@@ -371,7 +372,9 @@ class _WhiteActionButton extends StatelessWidget {
 
 /// 덱에서 가져온 카드는 뒷면으로 들어온 뒤 회전해 공개하고, 공개 카드에서
 /// 가져온 경우에는 앞면 그대로 조작부에 들어옵니다.
-class _PendingCardEntry extends StatefulWidget {
+///
+/// 상위가 카드마다 다른 key를 주므로 새 카드가 올 때마다 처음부터 재생됩니다.
+class _PendingCardEntry extends StatelessWidget {
   const _PendingCardEntry({
     super.key,
     required this.card,
@@ -384,45 +387,21 @@ class _PendingCardEntry extends StatefulWidget {
   final bool leavingForReplacement;
 
   @override
-  State<_PendingCardEntry> createState() => _PendingCardEntryState();
-}
-
-class _PendingCardEntryState extends State<_PendingCardEntry>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 620),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return AnimatedSlide(
-      offset: widget.leavingForReplacement
-          ? const Offset(-2.4, 0)
-          : Offset.zero,
+      offset: leavingForReplacement ? const Offset(-2.4, 0) : Offset.zero,
       duration: const Duration(milliseconds: 460),
       curve: Curves.easeInOutCubic,
       child: AnimatedOpacity(
-        opacity: widget.leavingForReplacement ? 0 : 1,
+        opacity: leavingForReplacement ? 0 : 1,
         duration: const Duration(milliseconds: 460),
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            final progress = Curves.easeOutCubic.transform(_controller.value);
-            final showFront = !widget.revealFromBack || progress >= 0.5;
-            final rotationY = widget.revealFromBack
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 620),
+          curve: Curves.easeOutCubic,
+          builder: (context, progress, _) {
+            final showFront = !revealFromBack || progress >= 0.5;
+            final rotationY = revealFromBack
                 ? showFront
                       ? (progress - 1) * math.pi
                       : progress * math.pi
@@ -441,7 +420,7 @@ class _PendingCardEntryState extends State<_PendingCardEntry>
                     alignment: Alignment.topCenter,
                     children: [
                       FinalCallCardView(
-                        card: widget.card,
+                        card: card,
                         faceDown: !showFront,
                         width: 98,
                       ),

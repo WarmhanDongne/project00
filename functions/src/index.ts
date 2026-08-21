@@ -16,6 +16,7 @@ export {
   createRealtimeRoom,
   joinRealtimeRoom,
   saveRealtimePlayerSeatIndexes,
+  validateRealtimeRoom,
 } from "./room/realtime-room-functions.js";
 
 export {
@@ -35,6 +36,17 @@ export {syncGoogleUserProfile} from "./auth/sync-google-profile.js";
 // 클라이언트에서 호출하는 곳이 없는 공개 HTTP 엔드포인트입니다. 회원 정보 저장은
 // syncGoogleUserProfile이 담당합니다. 삭제 여부는 따로 결정한 뒤 정리하세요.
 export {registerProfile} from "./auth/register-profile.js";
+
+export {
+  advanceOnboarding,
+  beginOnboarding,
+  completeOnboardingProfile,
+  recoverLegacyOnboarding,
+} from "./auth/onboarding.js";
+
+export {
+  cleanupIncompleteAccounts,
+} from "./auth/cleanup-incomplete-accounts.js";
 
 // ---------------------------------------------- 게임: Liar's Poker
 export {game_liars_poker_start_game} from "./liars-poker/start-game.js";
@@ -70,6 +82,28 @@ export {game_final_call_start_next_round} from "./final-call/next-round.js";
 export {game_final_call_end_game} from "./final-call/end-game.js";
 export {game_final_call_clear_game} from "./final-call/clear-game.js";
 export {game_final_call_leave_game} from "./final-call/leave-game.js";
+
+// ---------------------------------------------- 게임: 마피아
+export {game_mafia_start_game} from "./mafia/start-game.js";
+export {
+  game_mafia_confirm_role,
+  game_mafia_complete_role_reveal,
+} from "./mafia/role-reveal.js";
+export {
+  game_mafia_submit_night_action,
+  game_mafia_timeout_night,
+} from "./mafia/night.js";
+export {game_mafia_complete_morning} from "./mafia/morning.js";
+export {
+  game_mafia_end_discussion,
+  game_mafia_timeout_day,
+} from "./mafia/day.js";
+export {
+  game_mafia_submit_vote,
+  game_mafia_timeout_vote,
+  game_mafia_complete_vote_result,
+} from "./mafia/vote.js";
+export {game_mafia_end_game, game_mafia_leave_game} from "./mafia/end-game.js";
 
 // ---------------------------------------------- 게임 공용: 중단·재접속
 export {

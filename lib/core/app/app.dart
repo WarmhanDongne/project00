@@ -1,22 +1,28 @@
 import 'dart:ui';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:project00/platform/auth/screens/login_screen.dart';
-import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/core/diagnostics/dev_error_overlay.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/core/network/app_network_guard.dart';
-import 'package:project00/platform/home/home.dart';
+import 'package:project00/platform/auth/widgets/auth_gate.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
 class App extends StatelessWidget {
-  const App({super.key, this.userChanges});
+  const App({
+    super.key,
+    this.userChanges,
+    this.emailLinks,
+    this.initialEmailLink,
+  });
+
   final Stream<User?>? userChanges;
+  final Stream<Uri>? emailLinks;
+  final Uri? initialEmailLink;
 
   @override
   Widget build(BuildContext context) {
-    // 화면 크기 구하기
     final view =
         PlatformDispatcher.instance.implicitView ??
         PlatformDispatcher.instance.views.firstOrNull;
@@ -24,11 +30,10 @@ class App extends StatelessWidget {
         ? (view.physicalSize / view.devicePixelRatio)
         : const Size(390, 844);
 
-    // 테블릿, 폰 분기
-    final bool isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
-    final Size currentDesignSize = isTablet
-        ? const Size(834, 1194) // 테블릿 기본 사이즈
-        : const Size(390, 844); // 핸드폰 기본 사이즈
+    final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
+    final currentDesignSize = isTablet
+        ? const Size(834, 1194)
+        : const Size(390, 844);
 
     return ScreenUtilInit(
       designSize: currentDesignSize,
@@ -38,77 +43,15 @@ class App extends StatelessWidget {
         theme: PlatformTheme.light(),
         darkTheme: PlatformTheme.dark(),
         themeMode: ThemeMode.light,
-        //=======================앱 전체 네트워크 모달==============================
-        // Navigator보다 바깥에서 한 번만 연결 상태를 구독하므로 로그인·플랫폼·
-        // 모든 게임과 그 위에 열린 dialog까지 같은 반응형 모달이 덮습니다.
-        builder: (context, child) =>
-            AppNetworkGuard(child: child ?? const SizedBox.shrink()),
-
-        home: StreamBuilder<User?>(
-          stream: userChanges ?? FirebaseAuth.instance.userChanges(),
-          builder: (context, snapshot) {
-            // 1. Firebase Auth 상태 로딩 중
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            // 2. Auth에 로그인된 유저 정보가 있는 경우
-            if (snapshot.hasData && snapshot.data != null) {
-              final user = snapshot.data!;
-
-              // 이메일 유저인데 인증이 완료되지 않았다면 로그인 화면에 머물게 함
-              final isEmailProvider = user.providerData.any(
-                (p) => p.providerId == 'password',
-              );
-              if (isEmailProvider && !user.emailVerified) {
-                return const LoginScreen();
-              }
-
-              // 🔥 핵심 변경 부분: Firebase Auth 대신 Firestore의 users 컬렉션 확인
-              return StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user.uid)
-                    .snapshots(),
-                builder: (context, userDocSnapshot) {
-                  // Firestore 데이터 로딩 중
-                  if (userDocSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  final doc = userDocSnapshot.data!;
-                  // 캐시 데이터만 있고 해당 문서가 존재하지 않는 경우 서버 응답을 대기하여 화면 깜빡임(Flash) 방지
-                  if (doc.metadata.isFromCache && !doc.exists) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  // Firestore에 문서가 없거나, 닉네임 데이터가 없으면 닉네임 설정 화면으로 연결
-                  final userData = doc.data() as Map<String, dynamic>?;
-
-                  if (!userDocSnapshot.hasData ||
-                      !userDocSnapshot.data!.exists ||
-                      userData == null ||
-                      userData['nickname'] == null ||
-                      userData['nickname'].toString().trim().isEmpty) {
-                    return const RegisterScreen(isGoogleSignIn: true);
-                  }
-
-                  // DB에 유저 문서와 닉네임이 모두 존재하면 홈 화면으로 이동
-                  return const Home();
-                },
-              );
-            }
-
-            // 3. 로그인되지 않은 상태
-            return const LoginScreen();
-          },
+        // 개발 중 오류 표시는 가장 바깥에 둡니다. 어떤 화면에서 오류가 나도
+        // 같은 자리에서 볼 수 있습니다(릴리스에서는 통과만 합니다).
+        builder: (context, child) => DevErrorOverlay(
+          child: AppNetworkGuard(child: child ?? const SizedBox.shrink()),
+        ),
+        home: AuthGate(
+          userChanges: userChanges,
+          emailLinks: emailLinks,
+          initialEmailLink: initialEmailLink,
         ),
       ),
     );

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 
 void main() {
-  const dialog = PhoneResultDialog(nickname: '민수', profileImageUrl: '');
+  const dialog = PhoneResultDialog(nickname: '민수', characterId: 'frog');
 
   /// 게임 화면 라우트를 하나 띄우고, 그 라우트의 context를 돌려줍니다.
   ///

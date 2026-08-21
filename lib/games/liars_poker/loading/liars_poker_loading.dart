@@ -1,9 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_asset_store.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// Liar's Poker 로딩 화면에 표시할 전략 팁입니다.
 ///
@@ -26,15 +30,23 @@ const liarsPokerLoadingTips = <String>[
   '손패를 먼저 비워도 승리가 아닙니다. 마지막까지 살아남아야 이깁니다.',
 ];
 
-/// 게임 화면에서 최초 표시될 로컬 이미지와 참가자 프로필을 미리 디코딩합니다.
-///
-/// 프로필 하나의 실패는 게임 입장을 막지 않습니다. 해당 URL은 실제 화면에서
-/// 기본 프로필로 대체할 수 있도록 나머지 준비 작업과 분리해 처리합니다.
+/// 게임 화면에서 최초 표시될 게임 이미지와 방 캐릭터를 미리 디코딩합니다.
 Future<void> preloadLiarsPokerAssets(
   BuildContext context, {
   required bool isPhone,
-  required Iterable<String> profileImageUrls,
+  required Iterable<String> characterIds,
 }) async {
+  // 서버 에셋 도입 대비 훅입니다. 지금은 아무것도 하지 않지만, 도입 후에는
+  // 여기서 게임 리소스 버전 검사와 다운로드가 일어납니다. 실패해도 번들
+  // 폴백으로 진행하므로 게임 진입을 막지 않습니다.
+  try {
+    await GameAssetStore.instance.prepareGame('liars_poker');
+  } catch (error, stack) {
+    // 실패해도 번들 폴백으로 게임은 진행됩니다. 다만 원인은 남깁니다.
+    CrashReporting.recordError(error, stack, reason: '라이어스 포커 에셋 준비');
+  }
+  if (!context.mounted) return;
+
   // 첫 카드 제출·공개 소리가 늦지 않도록 게임 전용 효과음을 먼저 준비합니다.
   unawaited(
     SoundEffects.of(context)?.preloadEffects(LiarsPokerSounds.preloadTargets) ??
@@ -42,26 +54,26 @@ Future<void> preloadLiarsPokerAssets(
   );
 
   final images = Assets.games.liarsPoker.images;
-  final localAssets = <AssetGenImage>[
+  final localAssets = <GameImage>[
     // Liar's Poker 휴대폰은 세로·가로 회전을 모두 허용합니다. 현재 방향의
     // 배경만 준비하면 관전 진입이나 회전 시 반대 방향 배경을 처음 디코딩하며
     // 한 프레임 번쩍일 수 있으므로 휴대폰에서는 두 배경을 모두 준비합니다.
     if (isPhone) ...[
-      images.background.backgroundPhone,
-      images.background.background,
+      images.background.backgroundPhone.game,
+      images.background.background.game,
     ] else
-      images.background.background,
-    images.background.a,
-    images.background.k,
-    images.background.q,
-    ...images.cards.values,
-    ...images.button.values,
-    ...images.icons.values,
-    ...images.modal.values,
-    ...images.other.values,
-    images.table.tableAceWhite,
-    images.table.tableKingWhite,
-    images.table.tableQueenWhite,
+      images.background.background.game,
+    images.background.a.game,
+    images.background.k.game,
+    images.background.q.game,
+    ...images.cards.values.game,
+    ...images.button.values.game,
+    ...images.icons.values.game,
+    ...images.modal.values.game,
+    ...images.other.values.game,
+    images.table.tableAceWhite.game,
+    images.table.tableKingWhite.game,
+    images.table.tableQueenWhite.game,
   ];
 
   // 한꺼번에 모든 대형 PNG를 디코딩해 메모리가 튀지 않도록 작은 묶음으로 준비합니다.
@@ -74,17 +86,10 @@ Future<void> preloadLiarsPokerAssets(
     );
   }
 
-  final uniqueProfileUrls = profileImageUrls
-      .map((url) => url.trim())
-      .where((url) => url.isNotEmpty)
-      .toSet();
+  final uniqueCharacterIds = characterIds.toSet();
   await Future.wait(
-    uniqueProfileUrls.map((url) async {
-      try {
-        await precacheImage(NetworkImage(url), context);
-      } catch (_) {
-        // 프로필 서버가 일시적으로 실패해도 게임 자체는 기본 이미지로 진행합니다.
-      }
-    }),
+    uniqueCharacterIds.map(
+      (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),
+    ),
   );
 }

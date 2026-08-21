@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -37,7 +39,7 @@ class RoomService {
     return user;
   }
 
-  Future<String> createRoom() async {
+  Future<String> createRoom({String? operationId}) async {
     final user = _auth.currentUser;
 
     if (user == null) {
@@ -47,7 +49,7 @@ class RoomService {
     try {
       final response = await _functions
           .httpsCallable('createRealtimeRoom')
-          .call();
+          .call(operationId == null ? null : {'operationId': operationId});
 
       final data = Map<String, dynamic>.from(response.data as Map);
 
@@ -104,16 +106,16 @@ class RoomService {
   Future<void> markControllerConnected(String roomCode) async {
     final roomRef = realtime.ref('rooms/$roomCode');
     final presenceRef = roomRef.child('controllerPresence');
-    await presenceRef.onDisconnect().update({
-      'connected': false,
-      'lastSeen': ServerValue.timestamp,
-    });
     await _writeWithRetry(
       () => presenceRef.set({
         'connected': true,
         'lastSeen': ServerValue.timestamp,
       }),
     );
+    // 현재 연결 상태 갱신이 복구의 성공 기준입니다. 다음 단절 예약은 Android/iOS
+    // native plugin에서 일시적인 `unknown`을 낼 수 있는 보조 기능이므로, 성공한
+    // 복구와 네트워크 팝업 종료를 지연하거나 실패시키지 않습니다.
+    unawaited(_registerControllerDisconnectPresence(presenceRef));
   }
 
   Future<void> heartbeatController(String roomCode) async {
@@ -206,7 +208,7 @@ class RoomService {
   //게임 선택
   Future<void> selectGame({
     required String roomCode,
-    required String gameId,
+    required String? gameId,
   }) async {
     await _functions
         .httpsCallable('selectRealtimeRoomGame')
@@ -249,10 +251,24 @@ class RoomService {
 
   // ========================================================== phone ==================================================================
 
+  /// 실제 플레이어 노드를 만들기 전에 방 코드와 현재 입장 가능 상태만 검증합니다.
+  Future<void> validateRoomJoin(String roomCode) async {
+    final code = roomCode.trim().toUpperCase();
+    try {
+      await _functions.httpsCallable('validateRealtimeRoom').call({
+        'roomCode': code,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw RoomCommandException(
+        error.message ?? '방 정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
+  }
+
   Future<void> joinRoom(
     String roomCode,
     String nickname, {
-    required String accentColor,
+    required String characterId,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -264,8 +280,10 @@ class RoomService {
     await _joinRoomWithRetry(
       roomCode: code,
       nickname: nickname,
-      accentColor: accentColor,
-      preserveProfile: true,
+      characterId: characterId,
+      // 설정 화면에서 확정한 값을 사용합니다. 앱 재시작·네트워크 복구 경로만
+      // preserveProfile=true로 기존 방 프로필을 유지합니다.
+      preserveProfile: false,
     );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
@@ -276,12 +294,13 @@ class RoomService {
 
   /// 네트워크가 돌아온 플레이어의 presence와 onDisconnect 예약을 복원합니다.
   ///
-  /// 먼저 다음 단절 예약을 등록한 뒤 서버에서 기존 UID를 merge하므로 seat와
-  /// game/private 상태는 그대로 유지되고 `isConnected`만 true가 됩니다.
+  /// 서버에서 기존 UID를 먼저 merge하므로 seat와 game/private 상태는 그대로
+  /// 유지되고 `isConnected`만 true가 됩니다. 다음 단절 예약은 보조 기능으로
+  /// 비동기 등록해 native `unknown`이 실제 복구를 실패시키지 않게 합니다.
   Future<void> restorePlayerConnection({
     required String roomCode,
     required String nickname,
-    required String accentColor,
+    required String characterId,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -289,16 +308,16 @@ class RoomService {
     }
     final code = roomCode.trim().toUpperCase();
     final playerRef = realtime.ref('rooms/$code/players/${user.uid}');
-    await _registerDisconnectPresenceWithRetry(playerRef);
     await _joinRoomWithRetry(
       roomCode: code,
       nickname: nickname,
-      accentColor: accentColor,
+      characterId: characterId,
       preserveProfile: true,
     );
+    unawaited(_registerDisconnectPresence(playerRef));
   }
 
-  /// 저장된 세션이 실제로 현재 UID의 기존 참가자를 가리키는지 확인합니다.
+  /// 저장된 세션이 실제로 현재 UID의 복원 가능한 방/게임을 가리키는지 확인합니다.
   ///
   /// 이 확인 없이 join callable을 호출하면 대기 중인 방에서 강퇴된 사용자를 새
   /// 참가자로 다시 만들 수 있으므로, 자동 재접속 경로에서는 반드시 선행합니다.
@@ -306,10 +325,32 @@ class RoomService {
     final user = _auth.currentUser;
     if (user == null) return false;
     final code = roomCode.trim().toUpperCase();
-    final snapshot = await _readWithRetry(
+    // players는 인증 사용자에게 독립적으로 읽기가 허용됩니다. 먼저 참가자 노드를
+    // 확인해야, 이미 제거된 사용자가 status/game을 읽다가 permission-denied가 나
+    // 로컬 유령 세션을 계속 보존하는 일을 막을 수 있습니다.
+    final playerSnapshot = await _readWithRetry(
       realtime.ref('rooms/$code/players/${user.uid}'),
     );
-    return snapshot.exists;
+    final playerValue = playerSnapshot.value;
+    final playerStatus = playerValue is Map
+        ? playerValue['status']?.toString()
+        : null;
+    if (!playerSnapshot.exists || playerStatus != 'active') return false;
+
+    final snapshots = await Future.wait([
+      _readWithRetry(realtime.ref('rooms/$code/status')),
+      _readWithRetry(realtime.ref('rooms/$code/selectedGame')),
+      _readWithRetry(realtime.ref('rooms/$code/game/public/status')),
+      _readWithRetry(realtime.ref('rooms/$code/game/private/${user.uid}')),
+    ]);
+    return isRestorablePlayerSessionState(
+      playerExists: true,
+      playerStatus: playerStatus,
+      roomStatus: snapshots[0].value?.toString(),
+      selectedGameId: snapshots[1].value?.toString(),
+      gameStatus: snapshots[2].value?.toString(),
+      privateGameDataExists: snapshots[3].exists,
+    );
   }
 
   Future<void> heartbeatPlayer(String roomCode) async {
@@ -322,22 +363,22 @@ class RoomService {
     );
   }
 
-  /// 이미 참가한 플레이어의 닉네임과 UI 색상만 갱신합니다.
+  /// 이미 참가한 플레이어의 닉네임과 방 캐릭터를 갱신합니다.
   Future<void> updateRoomPlayerProfile(
     String roomCode,
     String nickname, {
-    required String accentColor,
+    required String characterId,
   }) => _joinRoomWithRetry(
     roomCode: roomCode.trim().toUpperCase(),
     nickname: nickname,
-    accentColor: accentColor,
+    characterId: characterId,
     preserveProfile: false,
   );
 
   Future<void> _joinRoomWithRetry({
     required String roomCode,
     required String nickname,
-    required String accentColor,
+    required String characterId,
     required bool preserveProfile,
   }) async {
     FirebaseFunctionsException? lastError;
@@ -347,7 +388,7 @@ class RoomService {
         await _functions.httpsCallable('joinRealtimeRoom').call({
           'roomCode': roomCode,
           'nickname': nickname,
-          'accentColor': accentColor,
+          'characterId': characterId,
           'preserveProfile': preserveProfile,
         });
         return;
@@ -355,8 +396,7 @@ class RoomService {
         lastError = error;
         final shouldRetry =
             attempt < _functionOperationAttempts - 1 &&
-            (error.code == 'not-found' ||
-                error.code == 'aborted' ||
+            (error.code == 'aborted' ||
                 error.code == 'internal' ||
                 error.code == 'unavailable' ||
                 error.code == 'deadline-exceeded');
@@ -497,24 +537,17 @@ class RoomService {
     }
   }
 
-  Future<void> _registerDisconnectPresenceWithRetry(
-    DatabaseReference playerRef,
+  Future<void> _registerControllerDisconnectPresence(
+    DatabaseReference presenceRef,
   ) async {
-    Object? lastError;
-    for (var attempt = 0; attempt < _databaseOperationAttempts; attempt += 1) {
-      try {
-        await playerRef.onDisconnect().update({
-          'isConnected': false,
-          'lastSeen': ServerValue.timestamp,
-        });
-        return;
-      } catch (error) {
-        lastError = error;
-        if (attempt == _databaseOperationAttempts - 1) break;
-        await Future<void>.delayed(Duration(milliseconds: 180 * (attempt + 1)));
-      }
+    try {
+      await presenceRef.onDisconnect().update({
+        'connected': false,
+        'lastSeen': ServerValue.timestamp,
+      });
+    } catch (_) {
+      // controller heartbeat와 scheduled cleanup이 최종 상태를 정리합니다.
     }
-    throw RoomCommandException(_databaseErrorMessage(lastError));
   }
 
   bool _isTransientDatabaseError(Object error) {

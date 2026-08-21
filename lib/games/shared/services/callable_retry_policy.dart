@@ -35,8 +35,6 @@ class CallableRetryPolicy {
     'cancelled',
     'deadline-exceeded',
     'internal',
-    'not-found',
-    'resource-exhausted',
     'unavailable',
     'unknown',
   };

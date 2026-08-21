@@ -4,7 +4,7 @@ export interface PublicGameInterruption {
   id: string;
   playerUid: string;
   playerNickname: string;
-  playerProfileImageUrl: string;
+  playerCharacterId: string;
   reason: GameInterruptionReason;
   startedAt: number;
   deadlineAt: number;

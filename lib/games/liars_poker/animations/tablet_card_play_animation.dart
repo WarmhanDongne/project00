@@ -2,36 +2,13 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
+import 'package:project00/games/shared/widgets/game_card_face.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
-
-// final playKey = GlobalKey<CardPlayAnimationState>();
-
-// CardPlayAnimation(
-//   key: playKey,
-//   playerCount: 5,
-//   fromPlayerIndex: 2,
-//   frontCardAssets: [
-//     Assets.games.liarsPoker.images.cards.whiteQ,
-//     Assets.games.liarsPoker.images.cards.whiteQ,
-//     Assets.games.liarsPoker.images.cards.whiteJoker,
-//   ],
-//   onCardsPlayed: () {
-//     // 다음 플레이어 차례
-//   },
-//   onRevealed: () {
-//     // 라이어 판정
-//   },
-// )
-
-// 라이어 외쳤을때
-// playKey.currentState?.reveal();
-
-//CardPlayAnimation(
-//   revealCards: isLiarCalled,
-// )
+import 'package:project00/core/assets/game_image.dart';
 
 /// 플레이어 자리에서 패를 뒷면으로 중앙에 던지고, 라이어 선언 시 공개합니다.
 class CardPlayAnimation extends StatefulWidget {
@@ -42,7 +19,6 @@ class CardPlayAnimation extends StatefulWidget {
     this.playerCount = 5,
     this.playerSeatIndexes,
     this.fromPlayerIndex = 0,
-    this.fromPosition,
     this.tableAlignment = Alignment.center,
     this.cardWidth = 245,
     this.throwDuration = const Duration(milliseconds: 540),
@@ -51,7 +27,6 @@ class CardPlayAnimation extends StatefulWidget {
     this.autoplay = true,
     this.initiallyPlayed = false,
     this.revealCards = false,
-    this.revealOnTap = true,
     this.onCardsPlayed,
     this.onRevealed,
   }) : assert(frontCardAssets.length > 0),
@@ -67,16 +42,13 @@ class CardPlayAnimation extends StatefulWidget {
        assert(revealDuration > Duration.zero);
 
   /// 실제로 낸 카드의 앞면입니다. 던질 때는 [backCardAsset]만 보입니다.
-  final List<AssetGenImage> frontCardAssets;
-  final AssetGenImage? backCardAsset;
+  final List<GameImage> frontCardAssets;
+  final GameImage? backCardAsset;
 
   /// 공통 플레이어 배치에서 패를 던지는 플레이어입니다.
   final int playerCount;
   final List<int>? playerSeatIndexes;
   final int fromPlayerIndex;
-
-  /// 직접 지정할 경우 사용하는 플레이어 중심 정규화 좌표입니다.
-  final Offset? fromPosition;
 
   final Alignment tableAlignment;
   final double cardWidth;
@@ -91,9 +63,6 @@ class CardPlayAnimation extends StatefulWidget {
   /// false에서 true로 변경하면 뒷면으로 놓인 카드가 공개됩니다.
   final bool revealCards;
 
-  /// 중앙에 놓인 카드 더미를 직접 눌러 공개할지 여부입니다.
-  final bool revealOnTap;
-
   final VoidCallback? onCardsPlayed;
   final VoidCallback? onRevealed;
 
@@ -104,29 +73,14 @@ class CardPlayAnimation extends StatefulWidget {
 class CardPlayAnimationState extends State<CardPlayAnimation>
     with TickerProviderStateMixin {
   /// 카드가 살짝 들렸다가 테이블에 닿는 순간 짧게 눌리는 크기 변화입니다.
-  static final Animatable<double> _throwScaleMotion = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 0.86,
-        end: 1.035,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 68,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.035,
-        end: 0.975,
-      ).chain(CurveTween(curve: Curves.easeInCubic)),
-      weight: 16,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 0.975,
-        end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 16,
-    ),
-  ]);
+  static final Animatable<double> _throwScaleMotion = overshootSettle(
+    begin: 0.86,
+    peak: 1.035,
+    dip: 0.975,
+    riseWeight: 68,
+    dipWeight: 16,
+    settleWeight: 16,
+  );
 
   /// 던진 카드가 테이블에 닿는 시점입니다(카드 한 장의 비행 구간 기준).
   ///
@@ -145,8 +99,8 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   late final AnimationController _throwController;
   late final AnimationController _revealController;
 
-  bool _throwLandingSoundPlayed = false;
-  bool _revealLandingSoundPlayed = false;
+  final _throwLandingCue = ProgressSoundCue();
+  final _revealLandingCue = ProgressSoundCue();
 
   Duration get _totalThrowDuration {
     final lastCardDelay =
@@ -179,8 +133,8 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
 
     // 재접속·화면 재구성으로 이미 놓인 패를 복원할 때는 소리를 내지 않습니다.
     if (widget.initiallyPlayed) {
-      _throwLandingSoundPlayed = true;
-      if (widget.revealCards) _revealLandingSoundPlayed = true;
+      _throwLandingCue.markPlayed();
+      if (widget.revealCards) _revealLandingCue.markPlayed();
     }
 
     if (widget.autoplay && !widget.initiallyPlayed) {
@@ -228,48 +182,39 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   }
 
   /// 현재 플레이어 자리에서 중앙 테이블로 패를 던집니다.
-  Future<void> playCards({bool restart = false}) async {
-    if (restart) {
-      _revealController.reset();
-      _throwLandingSoundPlayed = false;
-      _revealLandingSoundPlayed = false;
-      await _throwController.forward(from: 0);
-      return;
-    }
+  Future<void> playCards() async {
     if (!_throwController.isCompleted) {
       await _throwController.forward();
     }
   }
 
   /// 던져진 패를 펼치면서 뒷면에서 앞면으로 공개합니다.
-  Future<void> reveal({bool restart = false}) async {
+  Future<void> reveal() async {
     if (!_throwController.isCompleted) {
       await playCards();
     }
     if (!mounted ||
-        (!restart &&
-            (_revealController.isAnimating || _revealController.isCompleted))) {
+        _revealController.isAnimating ||
+        _revealController.isCompleted) {
       return;
     }
-    if (restart) _revealLandingSoundPlayed = false;
-    await _revealController.forward(from: restart ? 0 : null);
+    await _revealController.forward();
   }
 
   /// 던진 패가 테이블에 닿는 순간에 맞춰 효과음을 재생합니다.
   ///
   /// [_throwScaleMotion]에서 카드가 눌리기 시작하는 지점이 착지 순간입니다.
   void _playThrowLandingSound() {
-    if (!mounted || _throwLandingSoundPlayed) return;
-
+    if (!mounted) return;
     final totalMilliseconds = _totalThrowDuration.inMilliseconds;
     if (totalMilliseconds <= 0) return;
 
-    final elapsed = _throwController.value * totalMilliseconds;
-    final impactAt = widget.throwDuration.inMilliseconds * _throwImpactProgress;
-    if (elapsed < impactAt) return;
-
-    _throwLandingSoundPlayed = true;
-    SoundEffects.play(context, LiarsPokerSounds.submit);
+    _throwLandingCue.maybePlay(
+      context,
+      LiarsPokerSounds.submit,
+      value: _throwController.value * totalMilliseconds,
+      threshold: widget.throwDuration.inMilliseconds * _throwImpactProgress,
+    );
   }
 
   /// 뒤집던 카드가 테이블에 다시 내려앉는 순간에 맞춰 효과음을 재생합니다.
@@ -278,21 +223,13 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   /// 바닥에 놓입니다. 연출 시작에 재생하면 첫 장이 내려앉기까지 남은 시간만큼
   /// (기본 900ms 기준 약 650ms) 소리가 먼저 들립니다.
   void _playRevealLandingSound() {
-    if (!mounted || _revealLandingSoundPlayed) return;
-    if (_revealController.value < _flipEndOf(0)) return;
-
-    _revealLandingSoundPlayed = true;
-    SoundEffects.play(context, LiarsPokerSounds.submit);
-  }
-
-  /// 공개된 패를 다시 뒷면 상태로 되돌립니다.
-  Future<void> conceal() => _revealController.reverse();
-
-  void reset() {
-    _throwController.reset();
-    _revealController.reset();
-    _throwLandingSoundPlayed = false;
-    _revealLandingSoundPlayed = false;
+    if (!mounted) return;
+    _revealLandingCue.maybePlay(
+      context,
+      LiarsPokerSounds.submit,
+      value: _revealController.value,
+      threshold: _flipEndOf(0),
+    );
   }
 
   @override
@@ -332,7 +269,6 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
                       cardIndex++
                     )
                       _buildAnimatedCard(size: size, cardIndex: cardIndex),
-                    if (widget.revealOnTap) _buildRevealTapTarget(size),
                   ],
                 ),
               );
@@ -343,61 +279,19 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     );
   }
 
-  Widget _buildRevealTapTarget(Size size) {
-    const cardAspectRatio = 512 / 350;
-    final cardWidth = _effectiveCardWidth(size);
-    final cardHeight = cardWidth * cardAspectRatio;
-    final extraCards = math.max(0, widget.frontCardAssets.length - 1);
-    final tapWidth = cardWidth + cardWidth * 0.18 * extraCards + 36;
-    final tapHeight = cardHeight + cardHeight * 0.055 * extraCards + 36;
-    final tableCenter = Offset(
-      (widget.tableAlignment.x + 1) * size.width / 2,
-      (widget.tableAlignment.y + 1) * size.height / 2,
-    );
-    final canReveal =
-        !_revealController.isAnimating && !_revealController.isCompleted;
-
-    return Positioned(
-      left: tableCenter.dx - tapWidth / 2,
-      top: tableCenter.dy - tapHeight / 2,
-      width: tapWidth,
-      height: tapHeight,
-      child: Semantics(
-        button: canReveal,
-        label: '낸 카드 공개',
-        child: MouseRegion(
-          cursor: canReveal
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: canReveal ? () => reveal() : null,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildAnimatedCard({required Size size, required int cardIndex}) {
-    const cardAspectRatio = 512 / 350;
     final cardCount = widget.frontCardAssets.length;
     final cardWidth = _effectiveCardWidth(size);
-    final cardHeight = cardWidth * cardAspectRatio;
+    final cardHeight = cardWidth * kCardAspectRatio;
     final centeredIndex = cardIndex - (cardCount - 1) / 2;
 
-    final customSource = widget.fromPosition;
     final seatIndex =
         widget.playerSeatIndexes?[widget.fromPlayerIndex] ??
         widget.fromPlayerIndex;
-    final source = customSource == null
-        ? playerCentersForBoard(
-            playerCount: widget.playerCount,
-            boardSize: size,
-          )[seatIndex]
-        : playerCenterFromNormalized(
-            normalizedCenter: customSource,
-            boardSize: size,
-          );
+    final source = playerCentersForBoard(
+      playerCount: widget.playerCount,
+      boardSize: size,
+    )[seatIndex];
     final tableCenter = Offset(
       (widget.tableAlignment.x + 1) * size.width / 2,
       (widget.tableAlignment.y + 1) * size.height / 2,
@@ -429,7 +323,12 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
             .clamp(0.0, 1.0)
             .toDouble();
     // 전체 시간의 앞부분에 이동을 끝내고, 남은 시간은 짧은 착지에 사용합니다.
-    final easedThrow = _interval(throwProgress, 0, 0.76, Curves.easeOutQuart);
+    final easedThrow = intervalProgress(
+      throwProgress,
+      0,
+      0.76,
+      Curves.easeOutQuart,
+    );
 
     final curveSide = seatIndex.isEven ? 1.0 : -1.0;
     final controlPoint =
@@ -442,7 +341,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
       easedThrow,
     );
 
-    final spreadProgress = _interval(
+    final spreadProgress = intervalProgress(
       _revealController.value,
       0,
       0.46,
@@ -452,7 +351,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
 
     final flipStart = _flipStartOf(cardIndex);
     final flipEnd = _flipEndOf(cardIndex);
-    final flipProgress = _interval(
+    final flipProgress = intervalProgress(
       _revealController.value,
       flipStart,
       flipEnd,
@@ -482,7 +381,12 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     final scale = throwScale * (1 + flipLift * 0.07);
     final throwLift = math.sin(throwProgress * math.pi).clamp(0.0, 1.0);
     final visualLift = math.max(throwLift, flipLift);
-    final throwOpacity = _interval(throwProgress, 0, 0.1, Curves.easeOut);
+    final throwOpacity = intervalProgress(
+      throwProgress,
+      0,
+      0.1,
+      Curves.easeOut,
+    );
 
     return Positioned(
       left: position.dx - cardWidth / 2,
@@ -504,7 +408,7 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
                 isFrontVisible
                     ? widget.frontCardAssets[cardIndex]
                     : widget.backCardAsset ??
-                          Assets.games.liarsPoker.images.cards.whiteBack,
+                          Assets.games.liarsPoker.images.cards.whiteBack.game,
                 lift: visualLift,
               ),
             ),
@@ -514,25 +418,15 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     );
   }
 
-  Widget _buildCard(AssetGenImage asset, {required double lift}) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x66000000),
-            blurRadius: 7 + lift * 9,
-            offset: Offset(0, 5 + lift * 7),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
-        child: asset.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
+  Widget _buildCard(GameImage asset, {required double lift}) {
+    return GameCardFace(
+      asset: asset,
+      radius: 9,
+      // 공중에 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
+      shadow: BoxShadow(
+        color: const Color(0x66000000),
+        blurRadius: 7 + lift * 9,
+        offset: Offset(0, 5 + lift * 7),
       ),
     );
   }
@@ -555,10 +449,5 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     return start * (inverse * inverse) +
         control * (2 * inverse * progress) +
         end * (progress * progress);
-  }
-
-  double _interval(double value, double begin, double end, Curve curve) {
-    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
-    return curve.transform(progress);
   }
 }

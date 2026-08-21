@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/final_call/final_call_copy.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// 휴대폰 내 턴 조작부와 다른 플레이어 턴 정보를 같은 자리에서 교체합니다.
 class FinalCallTurnActionSwitcher extends StatelessWidget {
@@ -79,7 +80,7 @@ class _TurnPlayerIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (player == null) return const SizedBox.shrink();
-    final profile = player!.profileImageUrl;
+    final characterId = player!.characterId;
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -92,19 +93,10 @@ class _TurnPlayerIndicator extends StatelessWidget {
               child: SizedBox(
                 width: 78,
                 height: 78,
-                child: profile.isEmpty
-                    ? const ColoredBox(
-                        color: Colors.black12,
-                        child: Icon(Icons.person),
-                      )
-                    : Image.network(
-                        profile,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const ColoredBox(
-                          color: Colors.black12,
-                          child: Icon(Icons.person),
-                        ),
-                      ),
+                child: Image.asset(
+                  roomCharacterAssetPath(characterId),
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ],

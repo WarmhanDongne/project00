@@ -6,7 +6,10 @@ import 'package:project00/games/final_call/screens/phone_game.dart';
 import 'package:project00/games/final_call/screens/tablet_game.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/tablet_preview_artworks.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/core/network/critical_network_guard.dart';
 
 class FinalCallGame extends TemplateGame {
   const FinalCallGame();
@@ -26,13 +29,16 @@ class FinalCallGame extends TemplateGame {
   Color get tableColor => const Color(0xFFF2F0EB);
   @override
   ImageProvider get tableBackgroundImage =>
-      Assets.games.finalCall.images.background.background.provider();
+      Assets.games.finalCall.images.background.background.game.provider();
   @override
   ImageProvider get layoutTableImage =>
-      Assets.games.finalCall.images.layout.layoutTable.provider();
+      Assets.games.finalCall.images.layout.layoutTable.game.provider();
   @override
   ImageProvider get layoutChairImage =>
-      Assets.games.finalCall.images.layout.layoutChair.provider();
+      Assets.games.finalCall.images.layout.layoutChair.game.provider();
+
+  @override
+  Widget buildTabletPreviewArtwork() => const FinalCallPreviewArtwork();
 
   @override
   Future<void> startGame(String roomCode) =>
@@ -46,12 +52,19 @@ class FinalCallGame extends TemplateGame {
   @override
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   }) {
-    return FinalCallPhoneGame(
-      roomCode: roomCode,
-      gameService: FinalCallService(),
-      onExitRoom: onExitRoom,
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        child: FinalCallPhoneGame(
+          roomCode: roomCode,
+          gameService: FinalCallService(),
+          onExitRoom: onExitRoom,
+        ),
+      ),
     );
   }
 
@@ -62,10 +75,17 @@ class FinalCallGame extends TemplateGame {
     required String roomCode,
   }) {
     // Final Call 태블릿 화면은 좌석 배치를 쓰지 않아 playerLayout을 사용하지 않습니다.
-    return FinalCallTabletGame(
-      roomCode: roomCode,
-      gameService: FinalCallService(),
-      provider: provider,
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        exitLabel: '대기실로',
+        onExit: () => Navigator.of(context).maybePop(),
+        child: FinalCallTabletGame(
+          roomCode: roomCode,
+          gameService: FinalCallService(),
+          provider: provider,
+        ),
+      ),
     );
   }
 }

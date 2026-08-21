@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/time/server_clock.dart';
@@ -9,6 +10,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
+import 'package:project00/core/diagnostics/dev_error_overlay.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +19,8 @@ import 'package:provider/provider.dart';
 void main() async {
   // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화 보장
   WidgetsFlutterBinding.ensureInitialized();
+  // 첫 프레임보다 먼저 만들어 콜드 스타트 이메일 링크를 놓치지 않습니다.
+  final appLinks = AppLinks();
 
   //=======================플랫폼 기본 방향==============================
   // 게임이 직접 방향을 변경하기 전까지 플랫폼 화면은 휴대폰에서 세로,
@@ -31,6 +36,19 @@ void main() async {
   final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  //=======================오류 수집 시작==============================
+  // Firebase 초기화 바로 뒤에 붙입니다. 이 뒤에 나는 위젯·비동기 오류는
+  // 개발 중에는 화면(오른쪽 아래 빨간 표시)에서 보고, 릴리스에서는
+  // Crashlytics로 올라갑니다.
+  installDevErrorWidgetBuilder();
+  await CrashReporting.initialize();
+  Uri? initialEmailLink;
+  try {
+    initialEmailLink = await appLinks.getInitialLink();
+  } catch (error, stack) {
+    CrashReporting.recordError(error, stack, reason: '초기 이메일 링크 읽기');
+  }
 
   //=======================서버 시각 보정 시작==============================
   // 턴 마감은 서버 시각 기준이므로, 기기 시계 오차·수동 변경·백그라운드 복귀에
@@ -48,7 +66,10 @@ void main() async {
     ProviderScope(
       child: ChangeNotifierProvider.value(
         value: soundProvider,
-        child: const App(),
+        child: App(
+          emailLinks: appLinks.uriLinkStream,
+          initialEmailLink: initialEmailLink,
+        ),
       ),
     ),
   );

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:project00/games/final_call/loading/final_call_loading.dart';
 import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
@@ -15,12 +17,14 @@ import 'package:project00/games/final_call/screens/phone/phone_game_screen.dart'
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/final_call/widgets/phone/card_change_dialog.dart';
 import 'package:project00/games/final_call/widgets/phone/top_bar.dart';
+import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Final Call 휴대폰 화면의 진입점입니다.
 class FinalCallPhoneGame extends ConsumerStatefulWidget {
@@ -58,6 +62,10 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   String? replacingCardId;
   String? _automaticCardChangeKey;
   bool _isLeavingRoom = false;
+  bool _wasMyTurn = false;
+
+  /// 에셋 사전 준비는 첫 상태 수신 때 한 번만 합니다(캐릭터 목록이 필요).
+  bool _hasPreloadedAssets = false;
 
   @override
   void initState() {
@@ -72,6 +80,10 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     // 조건에 따라 게임 종류와 관계없이 항상 가로 고정됩니다.
     unawaited(
       AppOrientation.applyPhoneGame(PhoneGameOrientation.landscapeOnly),
+    );
+    // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행합니다.
+    unawaited(
+      GameAssetStore.instance.prepareGame('final_call').catchError((_) {}),
     );
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
@@ -95,6 +107,16 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   void _handleState() {
     final game = controller;
     if (game == null || !mounted) return;
+    // 첫 스냅샷이 오면 이미지·캐릭터를 미리 디코딩합니다(LP와 같은 규약).
+    if (!_hasPreloadedAssets && game.players.isNotEmpty) {
+      _hasPreloadedAssets = true;
+      unawaited(
+        preloadFinalCallAssets(
+          context,
+          characterIds: game.players.values.map((player) => player.characterId),
+        ),
+      );
+    }
     if (previousStatus == 'finished' && !game.isFinished) {
       gameStartCompleted = false;
       announcedRound = null;
@@ -118,6 +140,12 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       return;
     }
     hasScheduledManualExit = false;
+    // 내 턴이 시작되면 화면을 보고 있지 않아도 알 수 있게 진동을 울립니다.
+    final wasMyTurn = _wasMyTurn;
+    _wasMyTurn = game.isMyTurn;
+    if (!wasMyTurn && game.isMyTurn && !game.isFinished) {
+      GameFeedback.alert();
+    }
     if (selectedCardId != null &&
         !game.hand.any((card) => card.id == selectedCardId)) {
       selectedCardId = null;
@@ -134,6 +162,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     } else if (game.callerUid != observedCallerUid) {
       observedCallerUid = game.callerUid;
       visibleCallerUid = game.callerUid;
+      // 다른 플레이어의 CALL 선언은 진동으로도 알립니다. 선언한 본인은
+      // 버튼을 누를 때 이미 declare 진동을 받았습니다.
+      if (game.callerUid != game.uid) GameFeedback.alert();
       callNoticeTimer?.cancel();
       callNoticeTimer = Timer(FinalCallFlowTiming.callNotice, () {
         if (!mounted) return;
@@ -198,7 +229,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   Future<void> _leaveRoom() async {
     final leave = await SharedPhoneExitModal.show(
       context,
-      doorImage: Assets.games.finalCall.images.modal.modalImageDoor.image(
+      doorImage: Assets.games.finalCall.images.modal.modalImageDoor.game.image(
         fit: BoxFit.contain,
       ),
       surfaceColor: Colors.white,
@@ -395,7 +426,13 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           roundNumber: game.round,
           closingMessage: closingMessage,
           introTextColor: Colors.black,
-          background: Assets.games.finalCall.images.background.phoneBackground
+          background: Assets
+              .games
+              .finalCall
+              .images
+              .background
+              .phoneBackground
+              .game
               .image(fit: BoxFit.cover),
           // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
           contentReady: game.hand.isNotEmpty,
@@ -406,6 +443,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           onRoundIntroCompleted: () {
             if (mounted) setState(() => announcedRound = game.round);
           },
+          // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
+          onConnectingExit: () => unawaited(_leaveRoom()),
           topBar: FinalCallPhoneTopBar(
             controller: game,
             onExitRoom: () => unawaited(_leaveRoom()),
@@ -417,7 +456,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           result: game.isNaturalResult
               ? PhoneResultDialog(
                   nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
-                  profileImageUrl: resultProfile?.profileImageUrl ?? '',
+                  characterId: resultProfile?.characterId ?? 'frog',
                   resultLabel: resultLabel,
                 )
               : const SizedBox.shrink(),

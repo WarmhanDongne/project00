@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 
 import 'package:flutter/material.dart';
 
@@ -20,11 +21,22 @@ class _PhoneTimerState extends State<PhoneTimer> {
   bool _hasFiredTimeout = false;
   Duration _remaining = Duration.zero;
 
+  /// 마지막 5초 초읽기 소리입니다. 이 위젯은 내 턴에만 그려지므로, 소리도
+  /// 지금 패를 내야 하는 사람의 기기에서만 납니다.
+  final CountdownTickCue _tickCue = CountdownTickCue();
+
   @override
   void initState() {
     super.initState();
     _remaining = _calculateRemaining();
-    _startTimerIfNeeded();
+    _startTimer();
+    _tickCue.schedule(widget.expiresAt);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tickCue.attach(context);
   }
 
   @override
@@ -33,14 +45,19 @@ class _PhoneTimerState extends State<PhoneTimer> {
     if (widget.expiresAt != oldWidget.expiresAt) {
       _hasFiredTimeout = false;
       _updateRemaining();
-      _startTimerIfNeeded();
+      _startTimer();
+      _tickCue.schedule(widget.expiresAt);
     }
   }
 
-  void _startTimerIfNeeded() {
+  /// 남은 시간과 무관하게 항상 주기 타이머를 유지합니다.
+  ///
+  /// 마운트 시점에 ServerClock 보정이 아직 도착하지 않아 남은 시간이 0으로
+  /// 계산되면, 예전에는 타이머가 생성되지 않아 화면이 00.00에 고착되고
+  /// onTimeout도 영원히 발화하지 않았습니다. 타이머를 계속 돌리면 보정이
+  /// 도착하는 즉시 실제 남은 시간으로 스스로 복구됩니다.
+  void _startTimer() {
     _timer?.cancel();
-    if (_remaining <= Duration.zero) return;
-
     _timer = Timer.periodic(_refreshInterval, (_) => _updateRemaining());
   }
 
@@ -48,11 +65,18 @@ class _PhoneTimerState extends State<PhoneTimer> {
     final nextRemaining = _calculateRemaining();
 
     if (nextRemaining <= Duration.zero) {
-      _timer?.cancel();
-      _timer = null;
-      if (!_hasFiredTimeout) {
+      // 서버 시각 보정 전의 0은 기기 시계 오차일 수 있으므로 자동 행동을
+      // 확정하지 않습니다. 보정이 도착하면 다음 tick에서 판정합니다.
+      if (!_hasFiredTimeout && ServerClock.hasSynced) {
         _hasFiredTimeout = true;
-        widget.onTimeout?.call();
+        final onTimeout = widget.onTimeout;
+        if (onTimeout != null) {
+          // didUpdateWidget(빌드 도중) 경로에서 부모 상태 변경이 일어나지
+          // 않도록 현재 빌드가 끝난 뒤 호출합니다.
+          Future<void>.microtask(() {
+            if (mounted) onTimeout();
+          });
+        }
       }
       if (_remaining != Duration.zero) {
         setState(() {
@@ -60,6 +84,8 @@ class _PhoneTimerState extends State<PhoneTimer> {
         });
       }
     } else {
+      // 뒤늦게 도착한 시계 보정으로 만료가 취소되면 타임아웃도 다시 무장합니다.
+      _hasFiredTimeout = false;
       if (nextRemaining.inSeconds == _remaining.inSeconds) {
         return;
       }
@@ -78,6 +104,9 @@ class _PhoneTimerState extends State<PhoneTimer> {
   @override
   void dispose() {
     _timer?.cancel();
+    // 제한시간 전에 패를 내면 이 위젯이 사라집니다. 초읽기도 그때 멈춰야
+    // 다음 사람 차례까지 소리가 이어지지 않습니다.
+    _tickCue.stop();
     super.dispose();
   }
 

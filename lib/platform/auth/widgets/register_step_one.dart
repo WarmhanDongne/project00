@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
@@ -12,12 +13,14 @@ class RegisterStepOne extends StatelessWidget {
     required this.confirmPasswordController,
     required this.emailDomain,
     required this.isCustomDomain,
-    required this.isLoading,
-    this.errorMessage,
-    required this.verificationState,
+    required this.step,
+    required this.action,
+    required this.cooldownSeconds,
     required this.onDomainChanged,
-    required this.onProcessRegistration,
-    required this.onResendVerification,
+    required this.onSendEmail,
+    required this.onResendEmail,
+    required this.onSetPassword,
+    this.errorMessage,
     super.key,
   });
 
@@ -28,236 +31,333 @@ class RegisterStepOne extends StatelessWidget {
   final TextEditingController confirmPasswordController;
   final String emailDomain;
   final bool isCustomDomain;
-  final bool isLoading;
+  final RegisterStep step;
+  final RegisterAction? action;
+  final int cooldownSeconds;
   final String? errorMessage;
-  final VerificationState verificationState;
   final ValueChanged<String?> onDomainChanged;
-  final VoidCallback onProcessRegistration;
-  final VoidCallback onResendVerification;
+  final VoidCallback onSendEmail;
+  final VoidCallback onResendEmail;
+  final VoidCallback onSetPassword;
 
-  bool get isFieldsEnabled => verificationState == VerificationState.initial;
-
-  String get buttonLabel {
-    if (isLoading && verificationState == VerificationState.initial) {
-      return '확인 중...';
-    }
-    switch (verificationState) {
-      case VerificationState.initial:
-        return '인증하기';
-      case VerificationState.waiting:
-        return '재전송';
-      case VerificationState.verified:
-        return '완료';
-    }
-  }
-
-  VoidCallback? get onButtonPressed {
-    if (isLoading) return null;
-    switch (verificationState) {
-      case VerificationState.initial:
-        return onProcessRegistration;
-      case VerificationState.waiting:
-        return onResendVerification;
-      case VerificationState.verified:
-        return null;
-    }
-  }
-
-  PlatformButtonStyle get buttonStyle {
-    if (verificationState == VerificationState.verified) {
-      return PlatformButtonStyle.secondary;
-    }
-    return PlatformButtonStyle.primary;
-  }
-
-  String get noticeMessage {
-    if (errorMessage != null) return errorMessage!;
-    switch (verificationState) {
-      case VerificationState.initial:
-        return '';
-      case VerificationState.waiting:
-        return '인증 메일을 보냈습니다. 메일함을 확인해 주세요.';
-      case VerificationState.verified:
-        return '인증이 완료되었습니다.';
-    }
-  }
-
-  PlatformNoticeStyle get noticeStyle {
-    if (errorMessage != null) return PlatformNoticeStyle.danger;
-    switch (verificationState) {
-      case VerificationState.initial:
-        return PlatformNoticeStyle.warning;
-      case VerificationState.waiting:
-        return PlatformNoticeStyle.warning;
-      case VerificationState.verified:
-        return PlatformNoticeStyle.success;
-    }
-  }
+  bool get _emailEditable =>
+      step == RegisterStep.emailInput ||
+      (step == RegisterStep.emailLinkFailed &&
+          emailController.text.trim().isEmpty);
+  bool get _isWaiting => step == RegisterStep.awaitingEmailLink;
+  bool get _isFailed => step == RegisterStep.emailLinkFailed;
+  bool get _isSettingPassword => step == RegisterStep.settingPassword;
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = action != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '이메일',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 6),
+        const Text('이메일', style: TextStyle(fontSize: 13)),
+        const SizedBox(height: 7),
         Row(
           children: [
             Expanded(
-              flex: 4,
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: emailController,
-                      enabled: isFieldsEnabled,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(hintText: '이메일을 입력하세요'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: isCustomDomain
-                        ? TextField(
-                            controller: customDomainController,
-                            focusNode: customDomainFocusNode,
-                            enabled: isFieldsEnabled,
-                            decoration: InputDecoration(
-                              hintText: '직접 입력',
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              suffixIcon: isFieldsEnabled
-                                  ? IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_drop_down,
-                                        size: 20,
-                                      ),
-                                      onPressed: () =>
-                                          onDomainChanged('gmail.com'),
-                                    )
-                                  : null,
-                            ),
-                          )
-                        : DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            initialValue: emailDomain == 'custom'
-                                ? 'gmail.com'
-                                : emailDomain,
-                            decoration: const InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'gmail.com',
-                                child: Text(
-                                  'gmail.com',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'naver.com',
-                                child: Text(
-                                  'naver.com',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'daum.net',
-                                child: Text(
-                                  'daum.net',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'hanmail.net',
-                                child: Text(
-                                  'hanmail.net',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'custom',
-                                child: Text(
-                                  '직접 입력',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                            onChanged: isFieldsEnabled ? onDomainChanged : null,
-                          ),
-                  ),
-                ],
+              child: TextField(
+                controller: emailController,
+                enabled: _emailEditable && !isBusy,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(hintText: '이메일'),
               ),
             ),
+            if (_emailEditable) ...[
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 112,
+                child: isCustomDomain
+                    ? TextField(
+                        controller: customDomainController,
+                        focusNode: customDomainFocusNode,
+                        enabled: !isBusy,
+                        decoration: InputDecoration(
+                          hintText: '직접 입력',
+                          suffixIcon: IconButton(
+                            onPressed: () => onDomainChanged('gmail.com'),
+                            icon: const Icon(Icons.arrow_drop_down, size: 20),
+                          ),
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: emailDomain,
+                        decoration: const InputDecoration(),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'gmail.com',
+                            child: Text('gmail.com'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'naver.com',
+                            child: Text('naver.com'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'daum.net',
+                            child: Text('daum.net'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'custom',
+                            child: Text('직접 입력'),
+                          ),
+                        ],
+                        onChanged: isBusy ? null : onDomainChanged,
+                      ),
+              ),
+            ],
             const SizedBox(width: 8),
             SizedBox(
-              width: 96,
+              width: 72,
               child: PlatformButton(
-                label: buttonLabel,
-                style: buttonStyle,
-                onPressed: onButtonPressed,
+                label: action == RegisterAction.resendEmail
+                    ? '재전송 중…'
+                    : _emailEditable
+                    ? '인증'
+                    : (_isSettingPassword ? '완료' : '재전송'),
+                height: 48,
+                loading: action == RegisterAction.sendEmail,
+                onPressed: switch (step) {
+                  RegisterStep.emailInput => isBusy ? null : onSendEmail,
+                  RegisterStep.awaitingEmailLink ||
+                  RegisterStep.emailLinkFailed => isBusy ? null : onResendEmail,
+                  RegisterStep.settingPassword => null,
+                },
+                style: _isSettingPassword
+                    ? PlatformButtonStyle.secondary
+                    : PlatformButtonStyle.primary,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          child:
-              (verificationState == VerificationState.initial &&
-                  errorMessage == null)
-              ? const SizedBox.shrink()
-              : PlatformNotice(
-                  message: noticeMessage,
-                  style: noticeStyle,
-                  leading:
-                      (verificationState == VerificationState.waiting &&
-                          errorMessage == null)
-                      ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: context.platformColors.warning,
-                          ),
-                        )
-                      : null,
-                ),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          '비밀번호',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: passwordController,
-          enabled: isFieldsEnabled,
-          obscureText: true,
-          decoration: const InputDecoration(hintText: ''),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          '비밀번호 재입력',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: confirmPasswordController,
-          enabled: isFieldsEnabled,
-          obscureText: true,
-          decoration: const InputDecoration(hintText: ''),
-        ),
+        if (!_emailEditable || errorMessage != null) ...[
+          const SizedBox(height: 10),
+          PlatformNotice(
+            message:
+                errorMessage ??
+                (_isSettingPassword
+                    ? '인증이 완료되었습니다.'
+                    : _isFailed
+                    ? '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.'
+                    : cooldownSeconds > 0
+                    ? '인증 메일을 보냈습니다. 메일함을 확인해 주세요. '
+                          '(${_formatCooldown(cooldownSeconds)}, 재전송 가능)'
+                    : '메일이 오지 않았다면 인증 메일을 다시 전송해 주세요.'),
+            style: errorMessage != null || _isFailed
+                ? PlatformNoticeStyle.danger
+                : _isSettingPassword
+                ? PlatformNoticeStyle.success
+                : PlatformNoticeStyle.warning,
+            leading: _isWaiting && action == RegisterAction.completeLink
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.platformColors.warning,
+                    ),
+                  )
+                : null,
+          ),
+        ],
+        if (_isSettingPassword) ...[
+          const SizedBox(height: 18),
+          _PasswordFields(
+            passwordController: passwordController,
+            controller: confirmPasswordController,
+            isBusy: isBusy,
+            isSaving: action == RegisterAction.setPassword,
+            onSetPassword: onSetPassword,
+          ),
+        ] else ...[
+          const SizedBox(height: 24),
+          const PlatformButton(label: '다음', onPressed: null),
+        ],
       ],
+    );
+  }
+
+  String _formatCooldown(int totalSeconds) {
+    final seconds = totalSeconds.clamp(0, 5999);
+    return '${(seconds ~/ 60).toString().padLeft(2, '0')}:'
+        '${(seconds % 60).toString().padLeft(2, '0')}';
+  }
+}
+
+class _PasswordFields extends StatefulWidget {
+  const _PasswordFields({
+    required this.passwordController,
+    required this.controller,
+    required this.isBusy,
+    required this.isSaving,
+    required this.onSetPassword,
+  });
+
+  final TextEditingController passwordController;
+  final TextEditingController controller;
+  final bool isBusy;
+  final bool isSaving;
+  final VoidCallback onSetPassword;
+
+  @override
+  State<_PasswordFields> createState() => _PasswordFieldsState();
+}
+
+class _PasswordFieldsState extends State<_PasswordFields> {
+  bool _obscurePassword = true;
+  bool _obscureConfirmation = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        widget.passwordController,
+        widget.controller,
+      ]),
+      builder: (context, child) {
+        final password = widget.passwordController.text;
+        final confirmation = widget.controller.text;
+        final passwordStarted = password.isNotEmpty;
+        final confirmationStarted = confirmation.isNotEmpty;
+        final passwordsMatch = confirmationStarted && password == confirmation;
+        final canSetPassword =
+            PasswordPolicy.isValid(password) && passwordsMatch;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('비밀번호', style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 7),
+            TextField(
+              controller: widget.passwordController,
+              enabled: !widget.isBusy,
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  tooltip: _obscurePassword ? '비밀번호 보기' : '비밀번호 숨기기',
+                  onPressed: widget.isBusy
+                      ? null
+                      : () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _PasswordRequirement(
+              label: '6자 이상입니다.',
+              met: PasswordPolicy.hasMinimumLength(password),
+              evaluated: passwordStarted,
+            ),
+            _PasswordRequirement(
+              label: '영문이 1개 이상 포함되었습니다.',
+              met: PasswordPolicy.hasLetter(password),
+              evaluated: passwordStarted,
+            ),
+            _PasswordRequirement(
+              label: '숫자가 1개 이상 포함되었습니다.',
+              met: PasswordPolicy.hasNumber(password),
+              evaluated: passwordStarted,
+            ),
+            _PasswordRequirement(
+              label: '특수문자가 1개 이상 포함되었습니다.',
+              met: PasswordPolicy.hasSpecialCharacter(password),
+              evaluated: passwordStarted,
+            ),
+            const SizedBox(height: 14),
+            const Text('비밀번호 재입력', style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 7),
+            TextField(
+              controller: widget.controller,
+              enabled: !widget.isBusy,
+              obscureText: _obscureConfirmation,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                if (canSetPassword && !widget.isBusy) widget.onSetPassword();
+              },
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  tooltip: _obscureConfirmation ? '비밀번호 확인 보기' : '비밀번호 확인 숨기기',
+                  onPressed: widget.isBusy
+                      ? null
+                      : () => setState(
+                          () => _obscureConfirmation = !_obscureConfirmation,
+                        ),
+                  icon: Icon(
+                    _obscureConfirmation
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _PasswordRequirement(
+              label: passwordsMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치해야 합니다.',
+              met: passwordsMatch,
+              evaluated: confirmationStarted,
+            ),
+            const SizedBox(height: 24),
+            PlatformButton(
+              label: '다음',
+              loading: widget.isSaving,
+              onPressed: !widget.isBusy && canSetPassword
+                  ? widget.onSetPassword
+                  : null,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PasswordRequirement extends StatelessWidget {
+  const _PasswordRequirement({
+    required this.label,
+    required this.met,
+    required this.evaluated,
+  });
+
+  final String label;
+  final bool met;
+  final bool evaluated;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    final color = met
+        ? colors.success
+        : evaluated
+        ? colors.danger
+        : colors.textMuted;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            met ? Icons.check_rounded : Icons.close_rounded,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(label, style: TextStyle(color: color, fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 }

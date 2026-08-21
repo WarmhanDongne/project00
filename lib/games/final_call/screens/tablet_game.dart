@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'package:project00/games/final_call/loading/final_call_loading.dart';
 import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/final_call/final_call_flow_config.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
@@ -15,6 +18,7 @@ import 'package:project00/games/final_call/screens/tablet/tablet_game_animation.
 import 'package:project00/games/final_call/screens/tablet/tablet_game_layer.dart';
 import 'package:project00/games/final_call/screens/tablet/tablet_game_overlay.dart';
 import 'package:project00/games/final_call/services/final_call_service.dart';
+import 'package:project00/games/final_call/sound/final_call_sounds.dart';
 import 'package:project00/games/final_call/widgets/tablet/result_overlay.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/sound/game_background_music.dart';
@@ -22,6 +26,7 @@ import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// Final Call 태블릿 진행 화면의 진입점입니다.
 class FinalCallTabletGame extends ConsumerStatefulWidget {
@@ -57,6 +62,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic backgroundMusic = GameBackgroundMusic();
 
+  /// 우승 발표마다 승리음을 한 번만 재생하기 위한 플래그입니다.
+  bool hasPlayedWinSound = false;
+
   /// 설정에서 게임 종료를 누른 뒤 홈으로 나가는 중인지 여부입니다.
   bool isEndingGame = false;
 
@@ -67,6 +75,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   /// 프로필이 사라진 빈 화면이 한 번 보였습니다. 나가는 동안에는 이 단계를
   /// 그대로 유지해 정리되는 장면을 보여주지 않습니다.
   FinalCallTabletStage? stageBeforeExit;
+
+  /// 에셋 사전 준비는 첫 상태 수신 때 한 번만 합니다(캐릭터 목록이 필요).
+  bool _hasPreloadedAssets = false;
 
   @override
   void initState() {
@@ -80,6 +91,10 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     // 게임 종류와 관계없이 모든 태블릿 게임은 항상 가로 고정입니다.
     // 휴대폰 게임별 방향 정책을 이 화면에 적용하지 마세요.
     unawaited(AppOrientation.lockTabletGameLandscape());
+    // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행합니다.
+    unawaited(
+      GameAssetStore.instance.prepareGame('final_call').catchError((_) {}),
+    );
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       initializationError = '게임 진행 기기 인증을 확인할 수 없습니다.';
@@ -102,12 +117,24 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   void _handleState() {
     final game = controller;
     if (game == null || !mounted) return;
+    // 첫 스냅샷이 오면 이미지·캐릭터를 미리 디코딩합니다(LP와 같은 규약).
+    if (!_hasPreloadedAssets && game.players.isNotEmpty) {
+      _hasPreloadedAssets = true;
+      unawaited(
+        preloadFinalCallAssets(
+          context,
+          characterIds: game.players.values.map((player) => player.characterId),
+        ),
+      );
+    }
     final enteredPhase = previousPhase != game.phase;
     previousPhase = game.phase;
 
     // 카드 분배가 시작되면 배경음악을 켭니다. 라운드마다 분배가 반복되지만
     // start가 한 번만 실행되므로 곡이 처음으로 되감기지 않습니다.
-    if (game.phase == 'dealing') backgroundMusic.start();
+    if (game.phase == 'dealing') {
+      backgroundMusic.start(FinalCallSounds.background);
+    }
 
     if (game.isFinished && !game.isNaturalResult) {
       turnTimer?.cancel();
@@ -147,6 +174,29 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
         }),
       );
     }
+
+    _celebrateWinIfNeeded(game);
+  }
+
+  /// 우승 발표 오버레이가 화면에 뜨는 순간 승리음을 한 번 재생합니다.
+  ///
+  /// 결과 화면은 두 경로로 열립니다 — 마지막 라운드 공개 연출이 끝난 뒤
+  /// ([_handleRoundRevealCompleted]), 또는 공개 없이 승자가 확정된 스냅샷
+  /// 직후([_handleState]). 두 곳 모두 이 함수를 지나며, 오버레이가 실제로
+  /// 보이는 조건과 같은 시점에만 냅니다. 배경음악은 발표와 함께 멈춥니다.
+  void _celebrateWinIfNeeded(FinalCallController game) {
+    if (!game.isFinished || !game.isNaturalResult) {
+      // 다시하기로 새 판이 시작되면 다음 우승 발표에서 다시 재생합니다.
+      hasPlayedWinSound = false;
+      return;
+    }
+    // 마지막 라운드의 카드 공개·하트 소멸 연출이 끝나기 전에는 결과
+    // 오버레이가 뜨지 않으므로 소리도 내지 않습니다.
+    if (game.roundResult != null && completedRevealRound != game.round) return;
+    if (hasPlayedWinSound) return;
+    hasPlayedWinSound = true;
+    backgroundMusic.stop();
+    SoundEffects.play(context, FinalCallSounds.win);
   }
 
   // ============================================================================
@@ -165,6 +215,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     completedRevealRound = game.round;
     setState(() {});
     if (game.isFinished) {
+      _celebrateWinIfNeeded(game);
       unawaited(game.completeResultReveal());
       return;
     }
@@ -332,7 +383,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
           // ---------------------------------------------------------------------------
           // 공통 배경
           // ---------------------------------------------------------------------------
-          Assets.games.finalCall.images.background.background.image(
+          Assets.games.finalCall.images.background.background.game.image(
             fit: BoxFit.cover,
           ),
           // 단계별 카드·하트·판정 화면입니다. 화면 표시 여부는 Flow Config에서

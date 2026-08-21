@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/games/shared/animations/board_element_entrance.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.
 class RoundStartReveal extends StatefulWidget {
@@ -14,11 +15,8 @@ class RoundStartReveal extends StatefulWidget {
     required this.remainingCardCounts,
     this.activePlayerIndex,
     this.playerSeatIndexes,
-    this.playerPositions,
     this.tableWidth = 200,
-    this.cardCountAsset,
     this.duration = const Duration(milliseconds: 980),
-    this.orbitScale = 1,
     this.onCompleted,
   }) : assert(playerCount > 0),
        assert(remainingCardCounts.length == playerCount),
@@ -30,28 +28,16 @@ class RoundStartReveal extends StatefulWidget {
        assert(
          playerSeatIndexes == null || playerSeatIndexes.length == playerCount,
          'playerSeatIndexes의 개수는 playerCount와 같아야 합니다.',
-       ),
-       assert(orbitScale > 0),
-       assert(
-         playerPositions == null || playerPositions.length == playerCount,
-         'playerPositions의 개수는 playerCount와 같아야 합니다.',
        );
 
-  final AssetGenImage tableAsset;
+  final GameImage tableAsset;
   final int playerCount;
   final List<int> remainingCardCounts;
   final int? activePlayerIndex;
   final List<int>? playerSeatIndexes;
 
-  /// `player_layouts`에서 저장한 플레이어 영역의 좌측 상단 정규화 좌표입니다.
-  final List<Offset>? playerPositions;
-
   final double tableWidth;
-  final AssetGenImage? cardCountAsset;
   final Duration duration;
-
-  /// 기본 플레이어 위치를 중앙 원 바깥 방향으로 확장하는 비율입니다.
-  final double orbitScale;
 
   final VoidCallback? onCompleted;
 
@@ -61,10 +47,6 @@ class RoundStartReveal extends StatefulWidget {
 
 class _RoundStartRevealState extends State<RoundStartReveal>
     with SingleTickerProviderStateMixin {
-  // 등장 곡선은 다른 게임 보드와 공유합니다. (BoardEntranceCurves)
-  static final Animatable<double> _depthScale = BoardEntranceCurves.depthScale;
-  static final Animatable<double> _elevation = BoardEntranceCurves.elevation;
-
   late final AnimationController _controller;
 
   @override
@@ -109,8 +91,11 @@ class _RoundStartRevealState extends State<RoundStartReveal>
             builder: (context, _) {
               final progress = _controller.value;
               final opacity = BoardEntranceCurves.opacityFor(progress);
-              final scale = _depthScale.transform(progress);
-              final elevation = _elevation.transform(progress);
+              // 등장 곡선은 다른 게임 보드와 공유합니다. (BoardEntranceCurves)
+              final scale = BoardEntranceCurves.depthScale.transform(progress);
+              final elevation = BoardEntranceCurves.elevation.transform(
+                progress,
+              );
               final shadowBlur = 7 + (22 * elevation);
               final shadowSpread = 1 + (5 * elevation);
               final shadowOpacity = 0.34 + (0.16 * elevation);
@@ -220,9 +205,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
                 ),
                 _RemainingCardCounter(
                   key: ValueKey(playerIndex),
-                  asset:
-                      widget.cardCountAsset ??
-                      Assets.games.liarsPoker.images.cards.cardCount,
+                  asset: Assets.games.liarsPoker.images.cards.cardCount.game,
                   count: widget.remainingCardCounts[playerIndex],
                   isCurrentTurn: isCurrentTurn,
                 ),
@@ -235,20 +218,10 @@ class _RoundStartRevealState extends State<RoundStartReveal>
   }
 
   Offset _playerCenter(Size size, int playerIndex) {
-    final positions = widget.playerPositions;
-    if (positions != null && playerIndex < positions.length) {
-      const playerSlotSize = 160.0;
-      final position = positions[playerIndex];
-      return Offset(
-        position.dx * size.width + playerSlotSize / 2,
-        position.dy * size.height + playerSlotSize / 2,
-      );
-    }
-
     final centers = playerCentersForBoard(
       playerCount: widget.playerCount,
       boardSize: size,
-      radiusFactor: defaultPlayerOrbitRadiusFactor * widget.orbitScale,
+      radiusFactor: defaultPlayerOrbitRadiusFactor,
     );
     final seatIndex = widget.playerSeatIndexes?[playerIndex] ?? playerIndex;
     return centers[seatIndex];
@@ -285,7 +258,13 @@ class _TurnCircleLight extends StatelessWidget {
               children: [
                 Opacity(
                   opacity: 0.82,
-                  child: Assets.games.liarsPoker.images.background.background
+                  child: Assets
+                      .games
+                      .liarsPoker
+                      .images
+                      .background
+                      .background
+                      .game
                       .image(
                         fit: BoxFit.cover,
                         alignment: Alignment.center,
@@ -365,7 +344,7 @@ class _RemainingCardCounter extends StatefulWidget {
     required this.isCurrentTurn,
   });
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final int count;
   final bool isCurrentTurn;
 

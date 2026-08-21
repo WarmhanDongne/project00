@@ -74,6 +74,16 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
     }
     final gameId = roomProvider.selectedGameId;
     final game = gameId == null ? null : GameRegistry.find(gameId);
+    // 이 빌드가 모르는 게임(스토어 배포 후 추가된 게임)이면 재시도해도
+    // 영원히 열 수 없습니다. 무한 재시도 대신 복원을 포기하고 안내합니다.
+    if (gameId != null && game == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('진행 중인 게임을 열려면 앱을 업데이트해 주세요.')),
+        );
+      return;
+    }
     if (game == null || roomProvider.players.isEmpty) {
       Future<void>.delayed(
         const Duration(milliseconds: 150),
@@ -95,7 +105,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                 (player) => PlayerLayoutPlayer(
                   uid: player.uid,
                   nickname: player.nickname,
-                  profileImageUrl: player.profileImageUrl,
+                  characterId: player.characterId,
                   seatIndex: player.seatIndex,
                 ),
               ),

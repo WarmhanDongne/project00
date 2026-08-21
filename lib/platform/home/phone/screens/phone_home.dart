@@ -39,9 +39,14 @@ class _PhoneHomeState extends State<PhoneHome> {
       if (!mounted) return;
       _connectionSubscription = _restoredRoomProvider
           .watchServerConnection()
-          .listen((connected) {
-            if (connected) unawaited(_restorePreviousRoom());
-          });
+          .listen(
+            (connected) {
+              if (connected) unawaited(_restorePreviousRoom());
+            },
+            // 연결 상태 스트림 오류가 unhandled exception으로 앱을 멈추지
+            // 않게 합니다. 복원은 아래의 직접 호출로 한 번은 시도됩니다.
+            onError: (_) {},
+          );
       unawaited(_restorePreviousRoom());
     });
   }

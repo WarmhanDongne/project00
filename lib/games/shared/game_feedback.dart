@@ -19,4 +19,13 @@ abstract final class GameFeedback {
   static void select() {
     HapticFeedback.selectionClick();
   }
+
+  /// 내 턴 시작, 다른 플레이어의 LIAR·CALL 선언처럼 화면을 보고 있지 않아도
+  /// 알아채야 하는 순간입니다. 짧은 햅틱이 아니라 기기 진동을 울립니다.
+  ///
+  /// 선언한 본인은 버튼을 누를 때 [declare]를 받으므로 여기서 다시 울리지
+  /// 않습니다.
+  static void alert() {
+    HapticFeedback.vibrate();
+  }
 }

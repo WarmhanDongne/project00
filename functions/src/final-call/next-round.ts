@@ -3,7 +3,7 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {nextFinalCallPlayer, prepareFinalCallRound} from "./game.js";
+import {nextFinalCallRoundStarter, prepareFinalCallRound} from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {assertFinalCallController, FINAL_CALL_REGION, finalCallRoomCode,
   finalCallUid, requireFinalCallGame} from "./validation.js";
@@ -25,7 +25,10 @@ export const game_final_call_start_next_round = onCall<Data>(
       if (game.public.phase !== "roundResult" || game.public.status !== "playing") {
         throw new HttpsError("failed-precondition", "다음 라운드를 시작할 수 없습니다.");
       }
-      const starter = nextFinalCallPlayer(game.public.players, game.server.roundStarterUid);
+      // 직전 라운드에서 생명을 잃은(여러 명이면 남은 생명이 가장 적은)
+      // 플레이어가 새 라운드를 시작합니다. roundResult는 prepareFinalCallRound가
+      // 지우므로 시작자 결정을 먼저 합니다.
+      const starter = nextFinalCallRoundStarter(game);
       prepareFinalCallRound(game, starter, game.public.round + 1, Date.now());
       response = {success: true, round: game.public.round, turnUid: starter};
       return room;

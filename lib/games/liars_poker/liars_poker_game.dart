@@ -6,7 +6,10 @@ import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/games/liars_poker/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/tablet_preview_artworks.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/core/network/critical_network_guard.dart';
 
 class LiarsPokerGame extends TemplateGame {
   const LiarsPokerGame();
@@ -24,13 +27,16 @@ class LiarsPokerGame extends TemplateGame {
   Color get tableColor => const Color(0xFF6E2A82);
   @override
   ImageProvider get tableBackgroundImage =>
-      Assets.games.liarsPoker.images.background.background.provider();
+      Assets.games.liarsPoker.images.background.background.game.provider();
   @override
   ImageProvider get layoutTableImage =>
-      Assets.games.liarsPoker.images.layout.layoutTable.provider();
+      Assets.games.liarsPoker.images.layout.layoutTable.game.provider();
   @override
   ImageProvider get layoutChairImage =>
-      Assets.games.liarsPoker.images.layout.layoutChair.provider();
+      Assets.games.liarsPoker.images.layout.layoutChair.game.provider();
+
+  @override
+  Widget buildTabletPreviewArtwork() => const LiarsPokerPreviewArtwork();
 
   @override
   Future<void> startGame(String roomCode) =>
@@ -44,12 +50,19 @@ class LiarsPokerGame extends TemplateGame {
   @override
   Widget buildPhoneScreen({
     required String roomCode,
+    required RoomProvider provider,
     required Future<bool> Function() onExitRoom,
   }) {
-    return LiarsPokerPhoneGame(
-      roomCode: roomCode,
-      gameService: LiarsPokerService(),
-      onExitRoom: onExitRoom,
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        child: LiarsPokerPhoneGame(
+          roomCode: roomCode,
+          gameService: LiarsPokerService(),
+          onExitRoom: onExitRoom,
+        ),
+      ),
     );
   }
 
@@ -59,11 +72,18 @@ class LiarsPokerGame extends TemplateGame {
     required RoomProvider provider,
     required String roomCode,
   }) {
-    return LiarsPokerTabletGame(
-      playerLayout: playerLayout,
-      provider: provider,
-      roomCode: roomCode,
-      gameService: LiarsPokerService(),
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        exitLabel: '대기실로',
+        onExit: () => Navigator.of(context).maybePop(),
+        child: LiarsPokerTabletGame(
+          playerLayout: playerLayout,
+          provider: provider,
+          roomCode: roomCode,
+          gameService: LiarsPokerService(),
+        ),
+      ),
     );
   }
 }

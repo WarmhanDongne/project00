@@ -1,8 +1,17 @@
 import {
   FieldValue,
+  Timestamp,
   getFirestore,
 } from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+
+import {
+  INCOMPLETE_ACCOUNT_TTL_MS,
+  ONBOARDING_SCHEMA_VERSION,
+  isValidNickname,
+  parseOnboardingStatus,
+  resolveGoogleSyncStatus,
+} from "./onboarding-types.js";
 
 const REGION = "asia-northeast3";
 
@@ -61,24 +70,66 @@ export const syncGoogleUserProfile = onCall<SyncGoogleProfileData>(
       optionalProfileUrl(token.picture);
     const email = optionalText(token.email);
 
-    const userRef = getFirestore().collection("users").doc(uid);
-    const userSnapshot = await userRef.get();
-    const userData: Record<string, unknown> = {
-      uid,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+    const onboardingRef = db.collection("userOnboarding").doc(uid);
+    let status: "settingPassword" | "settingProfile" | "complete" =
+      "settingProfile";
+    await db.runTransaction(async (transaction) => {
+      const [userSnapshot, onboardingSnapshot] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(onboardingRef),
+      ]);
+      const existingStatus = parseOnboardingStatus(
+        onboardingSnapshot.data()?.status,
+      );
+      status = resolveGoogleSyncStatus({
+        existingStatus,
+        hasExistingUser: userSnapshot.exists,
+        hasValidExistingNickname: isValidNickname(
+          userSnapshot.data()?.nickname,
+        ),
+      });
 
-    if (email) userData.email = email;
-    if (nickname) userData.nickname = nickname;
-    if (profileImageUrl) userData.profileImageUrl = profileImageUrl;
-    if (!userSnapshot.exists) {
-      userData.createdAt = FieldValue.serverTimestamp();
-    }
+      const userData: Record<string, unknown> = {
+        uid,
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (email) userData.email = email;
+      if (nickname) userData.nickname = nickname;
+      if (profileImageUrl) userData.profileImageUrl = profileImageUrl;
+      if (!userSnapshot.exists) {
+        userData.createdAt = FieldValue.serverTimestamp();
+      }
 
-    await userRef.set(userData, {merge: true});
+      const onboardingData: Record<string, unknown> = {
+        uid,
+        status,
+        provider: "google",
+        schemaVersion: ONBOARDING_SCHEMA_VERSION,
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (!onboardingSnapshot.exists) {
+        onboardingData.startedAt = FieldValue.serverTimestamp();
+      }
+      if (status === "complete") {
+        onboardingData.expiresAt = FieldValue.delete();
+        if (existingStatus !== "complete") {
+          onboardingData.completedAt = FieldValue.serverTimestamp();
+        }
+      } else {
+        onboardingData.expiresAt = Timestamp.fromMillis(
+          Date.now() + INCOMPLETE_ACCOUNT_TTL_MS,
+        );
+      }
+
+      transaction.set(userRef, userData, {merge: true});
+      transaction.set(onboardingRef, onboardingData, {merge: true});
+    });
 
     return {
       success: true,
+      status,
       nickname: nickname ?? null,
       profileImageUrl: profileImageUrl ?? null,
     };

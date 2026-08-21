@@ -8,7 +8,9 @@ import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
+import 'package:project00/games/shared/widgets/game_card_face.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/core/assets/game_image.dart';
 
 /// 손패 선택 상태를 버튼에 전달하고 외부 SUBMIT 버튼으로 제출을 시작합니다.
 class PhoneHandCardStackController extends ChangeNotifier {
@@ -117,7 +119,7 @@ class PhoneHandCardStack extends StatefulWidget {
   }) : assert(maxSelection > 0);
 
   final bool isLandscape;
-  final List<AssetGenImage>? cards;
+  final List<GameImage>? cards;
   final PhoneHandCardStackController? controller;
   final bool enabled;
   final bool submissionEnabled;
@@ -173,7 +175,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   bool _showMaxSelectionMessage = false;
   int? _draggingCardId;
   double _dragOffsetY = 0;
-  List<AssetGenImage>? _pendingCards;
+  List<GameImage>? _pendingCards;
   Timer? _maxSelectionMessageTimer;
 
   @override
@@ -204,7 +206,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       // 제출 중 서버 손패가 먼저 갱신되어도 화면을 즉시 바꾸지 않습니다.
       // 카드가 화면 밖으로 이동한 다음 새 손패를 반영해야 중간 끊김이 없습니다.
       if (_isSubmitting) {
-        _pendingCards = List<AssetGenImage>.of(widget.cards!);
+        _pendingCards = List<GameImage>.of(widget.cards!);
       } else if (_sameCardAssets(_renderCardAssets, widget.cards!)) {
         // 낙관적으로 먼저 제거한 손패와 서버 손패가 같으면 카드 State와
         // 재배치 애니메이션을 유지합니다.
@@ -248,15 +250,15 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     super.dispose();
   }
 
-  List<AssetGenImage> get _defaultCards => [
-    Assets.games.liarsPoker.images.cards.whiteK,
-    Assets.games.liarsPoker.images.cards.whiteQ,
-    Assets.games.liarsPoker.images.cards.whiteA,
-    Assets.games.liarsPoker.images.cards.whiteA,
-    Assets.games.liarsPoker.images.cards.whiteJoker,
+  List<GameImage> get _defaultCards => [
+    Assets.games.liarsPoker.images.cards.whiteK.game,
+    Assets.games.liarsPoker.images.cards.whiteQ.game,
+    Assets.games.liarsPoker.images.cards.whiteA.game,
+    Assets.games.liarsPoker.images.cards.whiteA.game,
+    Assets.games.liarsPoker.images.cards.whiteJoker.game,
   ];
 
-  void _replaceCards(List<AssetGenImage> cards) {
+  void _replaceCards(List<GameImage> cards) {
     _renderCards = [
       for (final card in cards) _HandCardEntry(id: _nextCardId++, asset: card),
     ];
@@ -266,7 +268,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _dragOffsetY = 0;
   }
 
-  bool _sameCardAssets(List<AssetGenImage>? left, List<AssetGenImage> right) {
+  bool _sameCardAssets(List<GameImage>? left, List<GameImage> right) {
     if (identical(left, right)) return true;
     if (left == null || left.length != right.length) return false;
 
@@ -276,7 +278,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     return true;
   }
 
-  List<AssetGenImage> get _renderCardAssets =>
+  List<GameImage> get _renderCardAssets =>
       _renderCards.map((card) => card.asset).toList(growable: false);
 
   List<int> get _selectedIndexes => [
@@ -570,8 +572,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
         final layout = _resolveLayout(constraints);
         final centerX = size.width / 2;
         final centerY = size.height / 2;
-        const cardAspectRatio = 512 / 350;
-        final cardHeight = layout.cardWidth * cardAspectRatio;
+        final cardHeight = layout.cardWidth * kCardAspectRatio;
         final cardCount = _renderCards.length;
 
         // 선택 여부와 관계없이 원래 손패 순서대로 겹쳐서 그립니다.
@@ -726,7 +727,6 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   /// 실제 손패 영역에 맞춰 카드가 잘리거나 다른 조작부를 침범하지 않게 합니다.
   _HandLayout _resolveLayout(BoxConstraints constraints) {
-    const cardAspectRatio = 512 / 350;
     final boundedWidth = constraints.hasBoundedWidth
         ? constraints.maxWidth
         : 400.0;
@@ -737,9 +737,9 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     final availableHeight = math.max(150.0, boundedHeight - 16);
     final cardCount = math.max(1, _renderCards.length);
 
-    final maxByHeight = availableHeight / cardAspectRatio;
+    final maxByHeight = availableHeight / kCardAspectRatio;
     final portraitStackHeight =
-        cardAspectRatio * widget.preferredCardWidth +
+        kCardAspectRatio * widget.preferredCardWidth +
         math.max(0, cardCount - 1) * widget.preferredSpreadStepY;
     final portraitScale = widget.isLandscape || portraitStackHeight <= 0
         ? 1.0
@@ -758,7 +758,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
           );
     final verticalCapacity = math.max(
       0.0,
-      availableHeight - cardWidth * cardAspectRatio,
+      availableHeight - cardWidth * kCardAspectRatio,
     );
     final spreadStepY = widget.isLandscape || cardCount <= 1
         ? 0.0
@@ -827,7 +827,7 @@ class _HandCardEntry {
   const _HandCardEntry({required this.id, required this.asset});
 
   final int id;
-  final AssetGenImage asset;
+  final GameImage asset;
 }
 
 class _StaticCardFace extends StatelessWidget {
@@ -841,41 +841,33 @@ class _StaticCardFace extends StatelessWidget {
   static const Color _selectedBorderColor = Color(0xFF8CA695);
   static const Color _selectedShadowColor = Color(0x66394F42);
 
-  final AssetGenImage asset;
+  final GameImage asset;
   final double cardWidth;
   final double cardHeight;
   final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GameCardFace(
+      asset: asset,
       width: cardWidth,
       height: cardHeight,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected ? _selectedShadowColor : const Color(0x66000000),
-            blurRadius: isSelected ? 14 : 7,
-            spreadRadius: isSelected ? 1 : 0,
-            offset: isSelected ? const Offset(0, 8) : const Offset(0, 5),
-          ),
-        ],
-      ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: isSelected
-            ? Border.all(color: _selectedBorderColor, width: 2.4)
-            : null,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: asset.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
-      ),
+      radius: 8,
+      shadow: isSelected
+          ? const BoxShadow(
+              color: _selectedShadowColor,
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: Offset(0, 8),
+            )
+          : const BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 7,
+              offset: Offset(0, 5),
+            ),
+      border: isSelected
+          ? Border.all(color: _selectedBorderColor, width: 2.4)
+          : null,
     );
   }
 }

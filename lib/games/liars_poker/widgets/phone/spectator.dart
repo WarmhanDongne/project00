@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
 import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
@@ -11,6 +12,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
 import 'package:project00/gen/assets.gen.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 
 /// 화면 방향에 맞게 생존 플레이어를 표시하는 휴대폰 관전 화면입니다.
 class PhoneSpectator extends StatelessWidget {
@@ -149,21 +151,17 @@ class PhoneSpectator extends StatelessWidget {
             ),
             SizedBox(height: 16.h),
             ...players.map((player) {
-              final hasProfileImage = player.profileImageUrl.isNotEmpty;
-
               return Padding(
                 padding: EdgeInsets.only(bottom: 12.h),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16.r,
-                      backgroundColor: Colors.grey.shade300,
-                      backgroundImage: hasProfileImage
-                          ? NetworkImage(player.profileImageUrl)
-                          : null,
-                      child: hasProfileImage
-                          ? null
-                          : Icon(Icons.person, size: 20.r, color: Colors.white),
+                    SizedBox(
+                      width: 32.r,
+                      height: 32.r,
+                      child: Image.asset(
+                        roomCharacterAssetPath(player.characterId),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                     SizedBox(width: 12.w),
                     Expanded(
@@ -218,25 +216,17 @@ class PhoneSpectator extends StatelessWidget {
               spacing: 16,
               runSpacing: 12,
               children: players.map((player) {
-                final hasProfileImage = player.profileImageUrl.isNotEmpty;
-
                 return SizedBox(
                   width: 150,
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Colors.grey.shade300,
-                        backgroundImage: hasProfileImage
-                            ? NetworkImage(player.profileImageUrl)
-                            : null,
-                        child: hasProfileImage
-                            ? null
-                            : const Icon(
-                                Icons.person,
-                                size: 18,
-                                color: Colors.white,
-                              ),
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Image.asset(
+                          roomCharacterAssetPath(player.characterId),
+                          fit: BoxFit.contain,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -262,8 +252,8 @@ class PhoneSpectator extends StatelessWidget {
 
   Widget _buildBackground({required bool isLandscape}) {
     final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background
-        : Assets.games.liarsPoker.images.background.backgroundPhone;
+        ? Assets.games.liarsPoker.images.background.background.game
+        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
     return background.image(
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,
@@ -316,11 +306,11 @@ class PhoneSpectator extends StatelessWidget {
       ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
   }
 
-  AssetGenImage _tableAsset(String rank) {
+  GameImage _tableAsset(String rank) {
     return switch (rank.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite,
+      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
+      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
+      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
     };
   }
 }
