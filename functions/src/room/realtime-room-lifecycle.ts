@@ -10,6 +10,7 @@ import {
   assertControllerSession,
   ControllerSessionRoom,
 } from "./controller-session.js";
+import {decideRoomSeating} from "./room-seating-policy.js";
 
 const REGION = "asia-northeast3";
 const DATABASE_REGION = "asia-southeast1";
@@ -332,35 +333,41 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
         uid,
         request.data?.controllerSessionId,
       );
-      if (currentRoom.status === "seating" &&
-          currentRoom.selectedGame === selectedGame) {
+      const count = activePlayerCount(currentRoom);
+      const decision = decideRoomSeating({
+        roomStatus: currentRoom.status,
+        gameStatus: currentRoom.game?.public?.status,
+        selectedGame: currentRoom.selectedGame,
+        expectedGame: selectedGame,
+        activePlayerCount: count,
+        minPlayers,
+        maxPlayers,
+      });
+      switch (decision) {
+      case "already-seating":
         return currentRoom;
-      }
-      if (currentRoom.status !== "waiting" ||
-          currentRoom.game?.public?.status === "playing") {
+      case "invalid-status":
         rejection = new HttpsError(
           "failed-precondition",
           "현재 자리 배치를 시작할 수 없습니다.",
         );
         return;
-      }
-      if (currentRoom.selectedGame !== selectedGame) {
+      case "game-changed":
         rejection = new HttpsError(
           "aborted",
           "선택된 게임이 변경되었습니다. 다시 시도해주세요.",
         );
         return;
-      }
-      const count = activePlayerCount(currentRoom);
-      if (count < minPlayers || count > maxPlayers) {
+      case "invalid-player-count":
         rejection = new HttpsError(
           "failed-precondition",
           `게임 참가 인원은 ${minPlayers}~${maxPlayers}명이어야 합니다.`,
         );
         return;
+      case "begin":
+        currentRoom.status = "seating";
+        return currentRoom;
       }
-      currentRoom.status = "seating";
-      return currentRoom;
     });
     if (!result.committed) {
       if (rejection) throw rejection;

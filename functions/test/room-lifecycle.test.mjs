@@ -10,6 +10,7 @@ import {
   shouldDeleteRoom,
 } from "../lib/room/realtime-room-lifecycle.js";
 import {decideRoomJoin} from "../lib/room/room-join-policy.js";
+import {decideRoomSeating} from "../lib/room/room-seating-policy.js";
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
   const sessionId = createControllerSessionId();
@@ -96,5 +97,54 @@ test("기존 active UID는 seating과 playing에서도 재접속할 수 있다",
       playerStatus: "inactive",
     }),
     "inactive-player",
+  );
+});
+
+test("waiting 방의 선택 게임과 인원이 유효할 때만 seating을 시작한다", () => {
+  const validState = {
+    roomStatus: "waiting",
+    selectedGame: "mafia",
+    expectedGame: "mafia",
+    activePlayerCount: 4,
+    minPlayers: 4,
+    maxPlayers: 12,
+  };
+
+  assert.equal(decideRoomSeating(validState), "begin");
+  assert.equal(
+    decideRoomSeating({...validState, activePlayerCount: 3}),
+    "invalid-player-count",
+  );
+  assert.equal(
+    decideRoomSeating({...validState, activePlayerCount: 13}),
+    "invalid-player-count",
+  );
+});
+
+test("자리 배치 시작과 경합한 상태·게임 변경을 거부한다", () => {
+  const validState = {
+    roomStatus: "waiting",
+    selectedGame: "mafia",
+    expectedGame: "mafia",
+    activePlayerCount: 4,
+    minPlayers: 4,
+    maxPlayers: 12,
+  };
+
+  assert.equal(
+    decideRoomSeating({...validState, roomStatus: "playing"}),
+    "invalid-status",
+  );
+  assert.equal(
+    decideRoomSeating({...validState, gameStatus: "playing"}),
+    "invalid-status",
+  );
+  assert.equal(
+    decideRoomSeating({...validState, selectedGame: "final_call"}),
+    "game-changed",
+  );
+  assert.equal(
+    decideRoomSeating({...validState, roomStatus: "seating"}),
+    "already-seating",
   );
 });
