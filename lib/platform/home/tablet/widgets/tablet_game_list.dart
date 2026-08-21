@@ -42,7 +42,8 @@ class _GameListState extends State<GameList> {
           final matchesSearch =
               query.isEmpty ||
               game.name.toLowerCase().contains(query) ||
-              game.description.toLowerCase().contains(query);
+              game.description.toLowerCase().contains(query) ||
+              game.tabletDescription.toLowerCase().contains(query);
           final matchesGenre =
               selectedGenre == '전체' ||
               game.genres.any(
@@ -210,7 +211,9 @@ class _GameListState extends State<GameList> {
                           final textScale =
                               (MediaQuery.textScalerOf(context).scale(14) / 14)
                                   .clamp(1.0, 2.0);
-                          final cardHeight = cardWidth + 140 * textScale;
+                          // 1.3배처럼 태그가 한 줄 더 감기는 경계 배율에서도
+                          // 실제 iPad의 RenderFlex 경고가 나지 않도록 여유를 둡니다.
+                          final cardHeight = cardWidth + 150 * textScale;
                           return GridView.builder(
                             padding: EdgeInsets.zero,
                             itemCount: games.length,

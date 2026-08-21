@@ -3,8 +3,7 @@ export 'package:project00/platform/home/room/models/room_device.dart';
 export 'package:project00/platform/home/room/models/room_player.dart';
 
 abstract final class RoomLimits {
-  static const int defaultMaxPlayers =
-      6; // 무조건 디폴트로 방 인원 제한하지 말고 보드게임 최대 인원대로 제한해야 할 듯
+  static const int defaultMaxPlayers = 12;
 }
 
 class RoomCommandException implements Exception {

@@ -9,6 +9,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_factory.dart
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -34,12 +35,24 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
   bool _isPlayingVideo = false;
   bool _isClosing = false;
   bool _isStarting = false;
+  bool _allowPop = false;
+  bool _videoControllerClosed = false;
+  int _dismissRequestId = 0;
+  Future<void>? _dismissFuture;
   YoutubePlayerController? _youtubeController;
 
   @override
   void dispose() {
-    _youtubeController?.close();
+    _dismissRequestId++;
+    _closeVideoController();
     super.dispose();
+  }
+
+  void _closeVideoController() {
+    if (_videoControllerClosed) return;
+    _videoControllerClosed = true;
+    _youtubeController?.close();
+    _youtubeController = null;
   }
 
   String? _extractVideoId(String url) {
@@ -58,6 +71,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     final videoId = _extractVideoId(widget.game.ruleVideoUrl);
 
     if (videoId != null && videoId.isNotEmpty) {
+      _videoControllerClosed = false;
       _youtubeController = YoutubePlayerController.fromVideoId(
         videoId: videoId,
         autoPlay: true,
@@ -95,25 +109,39 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _dismiss() async {
-    if (_isClosing) return;
-    if (!widget.selectionActive) {
-      Navigator.of(context).pop();
+  Future<void> _dismiss() {
+    final inFlight = _dismissFuture;
+    if (inFlight != null) return inFlight;
+
+    final requestId = ++_dismissRequestId;
+    final future = _performDismiss(requestId);
+    _dismissFuture = future;
+    return future;
+  }
+
+  Future<void> _performDismiss(int requestId) async {
+    if (!mounted) return;
+    setState(() => _isClosing = true);
+
+    final cleared =
+        !widget.selectionActive ||
+        await widget.roomProvider.clearSelectedGame();
+    if (!mounted || requestId != _dismissRequestId) return;
+    if (!cleared) {
+      setState(() => _isClosing = false);
+      _dismissFuture = null;
+      _showMessage(
+        context,
+        widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
+      );
       return;
     }
 
-    setState(() => _isClosing = true);
-    final cleared = await widget.roomProvider.clearSelectedGame();
-    if (!mounted) return;
-    if (cleared) {
-      Navigator.of(context).pop();
-      return;
-    }
-    setState(() => _isClosing = false);
-    _showMessage(
-      context,
-      widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
-    );
+    setState(() => _allowPop = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || requestId != _dismissRequestId) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    Navigator.of(context).pop();
   }
 
   void _handleBack() {
@@ -126,7 +154,9 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
         .toList(growable: false);
     final currentPlayerCount = players.length;
     final minPlayers = widget.game.minPlayers > 0 ? widget.game.minPlayers : 2;
-    final maxPlayers = widget.game.maxPlayers > 0 ? widget.game.maxPlayers : 6;
+    final maxPlayers = widget.game.maxPlayers > 0
+        ? widget.game.maxPlayers
+        : RoomLimits.defaultMaxPlayers;
 
     if (widget.game.id.isEmpty) {
       _showMessage(context, '게임 정보를 확인할 수 없습니다.');
@@ -146,17 +176,29 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     }
     final fixedPlayerCount = templateGame.fixedPlayerCount;
     if (fixedPlayerCount != null && currentPlayerCount != fixedPlayerCount) {
-      _showMessage(context, '이 게임은 정확히 $fixedPlayerCount명이 필요합니다.');
+      _showMessage(
+        context,
+        '이 게임은 $fixedPlayerCount명이 모이면 시작할 수 있어요. '
+        '현재 $currentPlayerCount명이 참여 중입니다.',
+      );
       return;
     }
 
     if (currentPlayerCount < minPlayers) {
-      _showMessage(context, '이 게임을 시작하려면 최소 $minPlayers명이 필요합니다.');
+      _showMessage(
+        context,
+        '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. '
+        '현재 $currentPlayerCount명이 참여 중입니다.',
+      );
       return;
     }
 
     if (currentPlayerCount > maxPlayers) {
-      _showMessage(context, '이 게임은 최대 $maxPlayers명까지 플레이할 수 있습니다.');
+      _showMessage(
+        context,
+        '이 게임은 최대 $maxPlayers명까지 함께할 수 있어요. '
+        '현재 $currentPlayerCount명이 참여 중입니다.',
+      );
       return;
     }
 
@@ -251,18 +293,23 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     final activePlayerCount = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .length;
-    final fixedPlayerCount = GameRegistry.find(
-      widget.game.id,
-    )?.fixedPlayerCount;
+    final templateGame = GameRegistry.find(widget.game.id);
+    final fixedPlayerCount = templateGame?.fixedPlayerCount;
     final minPlayers = widget.game.minPlayers > 0 ? widget.game.minPlayers : 2;
-    final maxPlayers = widget.game.maxPlayers > 0 ? widget.game.maxPlayers : 6;
-    final hasRecommendedPlayers = fixedPlayerCount == null
-        ? activePlayerCount >= minPlayers && activePlayerCount <= maxPlayers
-        : activePlayerCount == fixedPlayerCount;
+    final warningMessage =
+        fixedPlayerCount != null && activePlayerCount != fixedPlayerCount
+        ? '이 게임은 $fixedPlayerCount명이 모이면 시작할 수 있어요. '
+              '현재 $activePlayerCount명이 참여 중입니다.'
+        : fixedPlayerCount == null && activePlayerCount < minPlayers
+        ? '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. '
+              '현재 $activePlayerCount명이 참여 중입니다.'
+        : null;
 
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (_, _) => _handleBack(),
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
       child: Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.all(24),
@@ -339,9 +386,11 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.game.description.isEmpty
+                              widget.game.effectiveTabletDescription.isEmpty
                                   ? '게임 설명이 없습니다.'
-                                  : widget.game.description,
+                                  : widget.game.effectiveTabletDescription,
+                              maxLines: 7,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: colors.textMuted,
                                 fontSize: 13,
@@ -351,9 +400,9 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                             const SizedBox(height: 14),
                             AspectRatio(
                               aspectRatio: 4 / 3,
-                              child: _PosterImage(
-                                imageUrl: widget.game.imageUrl,
-                              ),
+                              child:
+                                  templateGame?.buildTabletPreviewArtwork() ??
+                                  const _UnavailablePreviewArtwork(),
                             ),
                           ],
                         ),
@@ -374,17 +423,16 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Expanded(
-                                  child: PlatformNotice(
-                                    message: hasRecommendedPlayers
-                                        ? '현 인원이 권장 인원과 같습니다.'
-                                        : '현 인원이 권장 인원과 다릅니다.',
-                                    style: hasRecommendedPlayers
-                                        ? PlatformNoticeStyle.success
-                                        : PlatformNoticeStyle.warning,
+                                if (warningMessage != null) ...[
+                                  Expanded(
+                                    child: PlatformNotice(
+                                      message: warningMessage,
+                                      style: PlatformNoticeStyle.warning,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
+                                  const SizedBox(width: 10),
+                                ] else
+                                  const Spacer(),
                                 SizedBox(
                                   width: 140,
                                   child: PlatformButton(
@@ -412,33 +460,30 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
   }
 }
 
-class _PosterImage extends StatelessWidget {
-  const _PosterImage({required this.imageUrl});
-
-  final String imageUrl;
+class _UnavailablePreviewArtwork extends StatelessWidget {
+  const _UnavailablePreviewArtwork();
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
     return ClipRRect(
+      key: const Key('unknown-game-preview-artwork'),
       borderRadius: BorderRadius.circular(10),
       child: ColoredBox(
         color: colors.surfaceMuted,
-        child: imageUrl.isEmpty
-            ? Center(
-                child: Text(
-                  'poster 4:3',
-                  style: TextStyle(color: colors.textMuted, fontSize: 10),
-                ),
-              )
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) =>
-                    progress == null ? child : const SizedBox.shrink(),
-                errorBuilder: (_, _, _) =>
-                    Icon(Icons.broken_image_outlined, color: colors.textMuted),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.extension_outlined, color: colors.textMuted, size: 34),
+              const SizedBox(height: 8),
+              Text(
+                '게임 구성 요소를 준비 중입니다.',
+                style: TextStyle(color: colors.textMuted, fontSize: 12),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }
