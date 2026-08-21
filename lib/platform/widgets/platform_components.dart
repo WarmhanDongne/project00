@@ -82,9 +82,15 @@ class PlatformButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: style == PlatformButtonStyle.secondary
-                ? BorderSide(color: colors.border)
-                : BorderSide.none,
+            // dangerSoft는 옅은 배경만으로는 면이 흐려 보여
+            // danger를 옅게 깐 테두리로 윤곽을 잡습니다.
+            side: switch (style) {
+              PlatformButtonStyle.secondary => BorderSide(color: colors.border),
+              PlatformButtonStyle.dangerSoft => BorderSide(
+                color: colors.danger.withValues(alpha: 0.3),
+              ),
+              _ => BorderSide.none,
+            },
           ),
           elevation: 0,
         ),

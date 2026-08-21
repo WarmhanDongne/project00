@@ -143,16 +143,17 @@ class MafiaDayDiscussionView extends StatelessWidget {
                 ),
               ),
             ),
-            // 확정 흐름: 아무도 안 눌렀으면 원래 문구, 한 명이라도 누르면
-            // 시안(986:266)대로 빨간 `n/m` 실시간 집계로 바뀝니다. 과반수가
-            // 되는 순간 서버가 투표로 넘깁니다.
+            // 확정(2026-08): **내가 누르기 전까지는** 원래 문구를 그대로 두고,
+            // 누른 뒤에는 빨간 `동의한 사람/살아 있는 사람` 집계로 바뀌며
+            // 버튼이 비활성됩니다. 남이 누른 것 때문에 내 버튼 문구가 먼저
+            // 바뀌면, 아직 눌러야 하는지 헷갈립니다.
+            //
+            // 집계는 비활성된 뒤에도 계속 올라갑니다. 과반수가 되는 순간
+            // 서버가 투표로 넘깁니다.
             MafiaPhoneActionButton(
-              label: skipVoteCount > 0
-                  ? '$skipVoteCount/$aliveCount'
-                  : endLabel,
-              labelColor: skipVoteCount > 0 ? const Color(0xFFFF0000) : null,
+              label: hasVotedToSkip ? '$skipVoteCount/$aliveCount' : endLabel,
+              labelColor: hasVotedToSkip ? const Color(0xFFFF0000) : null,
               onTap: onEndDiscussion,
-              // 이미 누른 사람은 다시 누를 수 없지만 집계는 계속 보입니다.
               enabled:
                   canEndDiscussion &&
                   !hasVotedToSkip &&

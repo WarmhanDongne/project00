@@ -84,7 +84,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   bool _isNightMusic = false;
 
   //=======================밤 시작 안내 (확정 흐름)==============================
-  // 전원 확인 → 10초 대기 → '밤이 됐습니다' 안내 2.5초 → 서버에 밤 시작.
+  // 전원 확인 → 10초 대기 → '밤이 되었습니다' 안내 2.5초 → 서버에 밤 시작.
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
   /// 밤 총성까지의 지연입니다(배경 전환 0.9초 + 한 박자).
   static const Duration _nightGunshotDelay = Duration(milliseconds: 1500);
@@ -212,7 +212,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _nightNoticeTimer = Timer(_nightNoticeDelay, _showNightNotice);
   }
 
-  /// '밤이 됐습니다'를 잠시 보여 준 뒤 서버에 밤 시작을 알립니다.
+  /// '밤이 되었습니다'를 잠시 보여 준 뒤 서버에 밤 시작을 알립니다.
   void _showNightNotice() {
     if (!mounted || _stage != MafiaTabletStage.roleDeal) return;
     setState(() => _showsNightNotice = true);
@@ -232,7 +232,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     final deadline = game.turnDeadlineAt;
     final stage = _stage;
     // 역할 확인의 제한시간(서버 1분)이 끝나면 곧바로 넘기지 않고 같은
-    // '밤이 됐습니다' 안내를 거칩니다.
+    // '밤이 되었습니다' 안내를 거칩니다.
     if (stage == MafiaTabletStage.roleDeal) {
       if (deadline == null || _nightNoticeScheduled) return;
       if (ServerClock.hasPassed(deadline)) {

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
@@ -61,8 +63,22 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
   static const double _slotGap = 26;
   static const double _slotMaxSize = 258;
 
-  /// 닉네임·득표수가 차지하는 높이입니다(프로필 크기에 비례합니다).
-  static const double _slotLabelRatio = 46 / 136;
+  /// 프로필 아래 닉네임이 차지하는 높이입니다(프로필 크기에 비례).
+  ///
+  /// 확정(2026-08): 득표수는 '2표' 같은 **글자로 적지 않고**, 받은 표를
+  /// 프로필 위로 쌓아 보여 줍니다. 그래서 아래에는 닉네임 한 줄만 둡니다.
+  static const double _nicknameRatio = 36 / 136;
+  static const double _slotLabelRatio = _nicknameRatio;
+
+  //=======================쌓이는 표==============================
+  /// 표 한 장의 폭입니다(프로필 크기에 비례).
+  static const double _paperWidthRatio = 0.5;
+
+  /// 표 종이의 가로:세로 비율입니다(투표 중 날아가는 종이와 같은 46 : 34).
+  static const double _paperAspectRatio = 34 / 46;
+
+  /// 한 장 쌓일 때마다 위로 올라가는 높이입니다(종이 높이에 대한 비율).
+  static const double _paperStackStep = 0.46;
 
   /// 칸 수가 바뀔 때 새 배치로 옮겨가는 시간입니다.
   static const Duration _layoutShift = Duration(milliseconds: 420);
@@ -243,6 +259,64 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     );
   }
 
+  /// 표 한 장의 크기입니다.
+  Size get _paperSize {
+    final width = _slotSize * _paperWidthRatio;
+    return Size(width, width * _paperAspectRatio);
+  }
+
+  /// [rankIndex]번째 사람의 [ballotIndex]번째 표가 놓이는 자리(가운데)입니다.
+  ///
+  /// 프로필 바로 위에서 시작해 한 장씩 위로 쌓입니다. 그래서 표 수가 많은
+  /// 사람의 더미가 더 높아 보이고, 숫자를 읽지 않아도 누가 앞서는지 보입니다.
+  Offset _ballotRestCenter(int rankIndex, int ballotIndex) {
+    final slot = _slotRect(rankIndex);
+    final paper = _paperSize;
+    return Offset(
+      // 자연스러운 더미가 되도록 좌우로 아주 조금 흩어 놓습니다.
+      slot.center.dx + _stackJitter(rankIndex, ballotIndex) * paper.width,
+      slot.top -
+          paper.height * 0.62 -
+          paper.height * _paperStackStep * ballotIndex,
+    );
+  }
+
+  /// 쌓인 표 한 장의 좌우 흔들림·기울기를 정하는 값입니다(-0.5 ~ 0.5).
+  ///
+  /// 무작위로 뽑으면 매 프레임 다른 자리에 그려지므로, 두 번호로부터 늘 같은
+  /// 값이 나오게 계산합니다.
+  double _stackJitter(int rankIndex, int ballotIndex) {
+    final seed =
+        math.sin((rankIndex * 37 + ballotIndex * 91) * 12.9898) * 43758;
+    return (seed - seed.floor()) - 0.5;
+  }
+
+  /// 프로필 위에 쌓인 표들입니다.
+  List<Widget> _buildStackedBallots() {
+    final paper = _paperSize;
+    final stacked = <Widget>[];
+    for (var rank = 0; rank < _ranked.length; rank += 1) {
+      final landed = _landedCountOf(rank);
+      for (var ballot = 0; ballot < landed; ballot += 1) {
+        final center = _ballotRestCenter(rank, ballot);
+        stacked.add(
+          MafiaTabletBox(
+            rect: Rect.fromCenter(
+              center: center,
+              width: paper.width,
+              height: paper.height,
+            ),
+            child: Transform.rotate(
+              angle: _stackJitter(rank, ballot) * 0.16,
+              child: MafiaBallotPaper(width: paper.width, height: paper.height),
+            ),
+          ),
+        );
+      }
+    }
+    return stacked;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -284,6 +358,8 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
             for (var index = 0; index < _ranked.length; index += 1)
               if (_landedCountOf(index) > 0)
                 _buildTallyEntry(index, _landedCountOf(index)),
+            // 착지한 표는 프로필 위에 그대로 쌓여 남습니다.
+            ..._buildStackedBallots(),
             // 함에서 나와 각 칸으로 날아가는 표들입니다.
             ..._buildFlyingBallots(),
           ],
@@ -294,15 +370,21 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
 
   List<Widget> _buildFlyingBallots() {
     final flying = <Widget>[];
+    // 같은 사람에게 가는 표가 몇 번째인지 세어, 쌓일 자리로 정확히 내려앉게
+    // 합니다. 착지점과 쌓이는 자리가 어긋나면 표가 순간이동해 보입니다.
+    final placed = List<int>.filled(_ranked.length, 0);
     for (var index = 0; index < _ballotOrder.length; index += 1) {
+      final rank = _ballotOrder[index];
+      final ballotIndex = placed[rank];
+      placed[rank] += 1;
       final progress = _ballotProgress(index);
       if (progress <= 0 || progress >= 1) continue;
-      final slot = _slotRect(_ballotOrder[index]);
       flying.add(
         _FlyingBallot(
           from: MafiaBallotBoxRects.tallyCenter,
-          to: slot.center,
+          to: _ballotRestCenter(rank, ballotIndex),
           progress: progress,
+          size: _paperSize,
         ),
       );
     }
@@ -328,18 +410,19 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
               ),
             ),
           ),
-          // 지금까지 착지한 표 수입니다. 누가 찍었는지는 담지 않습니다.
+          // 표 아래에 누구인지 적습니다(확정 2026-08). 사진만으로는 멀리서
+          // 누구인지 알기 어렵습니다. 득표수는 프로필 위에 쌓인 표로 보입니다.
           Expanded(
-            flex: 46,
+            flex: 36,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                '$landedCount표',
+                player?.nickname ?? '플레이어',
                 maxLines: 1,
                 style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF444444),
+                  fontSize: 26,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -356,11 +439,15 @@ class _FlyingBallot extends StatelessWidget {
     required this.from,
     required this.to,
     required this.progress,
+    required this.size,
   });
 
   final Offset from;
   final Offset to;
   final double progress;
+
+  /// 종이 크기입니다(설계 좌표). 쌓일 때와 같은 크기여야 착지가 자연스럽습니다.
+  final Size size;
 
   @override
   Widget build(BuildContext context) {
@@ -372,8 +459,8 @@ class _FlyingBallot extends StatelessWidget {
         // 함에서 튀어나오듯 살짝 솟았다가 내려앉습니다.
         final lift = -70 * (1 - (2 * eased - 1).abs());
         final position = projection.toScreen(design + Offset(0, lift));
-        final width = 46 * projection.scale;
-        final height = 34 * projection.scale;
+        final width = size.width * projection.scale;
+        final height = size.height * projection.scale;
 
         // [MafiaTabletBox]와 같은 방식입니다 — Positioned는 자기 Stack 안에
         // 있어야 합니다(LayoutBuilder 바로 아래에 두면 부모가 Stack이 아닙니다).

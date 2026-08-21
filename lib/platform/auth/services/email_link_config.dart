@@ -24,7 +24,7 @@ class EmailLinkConfig {
       // (2026-08). Android는 아직 com.example.project00입니다.
       iOSBundleId: String.fromEnvironment(
         'IOS_BUNDLE_ID',
-        defaultValue: 'com.warmhandong.msg',
+        defaultValue: 'com.warmhandongne.msg',
       ),
       linkDomain: linkDomain == '' ? null : linkDomain,
     );

@@ -8,10 +8,13 @@ import {
 const REGION = "asia-northeast3";
 
 /**
- * Google 로그인 사용자의 닉네임과 프로필 사진을 Firestore에 병합합니다.
- * 실제 저장은 syncSocialProfile이 담당합니다.
+ * Apple 로그인 사용자의 닉네임과 프로필 사진을 Firestore에 병합합니다.
+ *
+ * Apple은 이름을 최초 승인 때 한 번만 내려주고 프로필 사진은 아예 주지
+ * 않습니다. 그래서 값이 비어 있는 것이 정상이며, 그 경우 온보딩은
+ * settingProfile 단계로 이어져 사용자가 직접 입력합니다.
  */
-export const syncGoogleUserProfile = onCall<SocialProfileData>(
+export const syncAppleUserProfile = onCall<SocialProfileData>(
   {region: REGION},
   async (request) => {
     const auth = request.auth;
@@ -21,7 +24,7 @@ export const syncGoogleUserProfile = onCall<SocialProfileData>(
 
     const result = await syncSocialProfile({
       uid: auth.uid,
-      provider: "google",
+      provider: "apple",
       token: auth.token,
       data: request.data,
     });

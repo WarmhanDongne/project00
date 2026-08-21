@@ -10,7 +10,11 @@ class ProgressSoundCue {
   /// 오디오 출력 지연을 감안해 화면 접촉보다 앞서 재생을 요청하는 표준
   /// 선행 시간입니다. 화면(접촉 시점)은 그대로 두고 소리만 앞당기므로,
   /// 아직 늦게 들리면 이 값을 키우고 너무 빠르면 줄이세요.
-  static const Duration lead = Duration(milliseconds: 60);
+  ///
+  /// 지연은 소리 종류가 아니라 기기 출력에서 생기므로, 카드 분배·도장·하트
+  /// 파열음이 이 값 하나를 함께 씁니다. 실기기에서 분배와 도장이 모두 늦게
+  /// 들려 60ms에서 올렸습니다(2026-08).
+  static const Duration lead = Duration(milliseconds: 120);
 
   bool _played = false;
 

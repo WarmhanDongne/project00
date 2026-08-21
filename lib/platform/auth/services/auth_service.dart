@@ -151,16 +151,37 @@ class FirebaseAuthService {
   /// Firestore의 users 쓰기는 클라이언트에 허용되지 않으므로 인증된 서버가
   /// 기존 사용자 문서에 필요한 필드만 병합합니다.
   Future<void> syncGoogleUserProfile(User user) async {
+    await _syncSocialUserProfile(
+      user,
+      callable: 'syncGoogleUserProfile',
+      failureMessage: 'Google 프로필을 저장하지 못했습니다.',
+    );
+  }
+
+  /// 현재 Apple 계정의 닉네임과 프로필 사진을 Cloud Function으로 저장합니다.
+  ///
+  /// Apple은 이름을 최초 승인 때만 내려주고 사진은 주지 않으므로 값이 비어
+  /// 있는 것이 정상입니다. 서버가 빈 값으로 기존 프로필을 덮지 않습니다.
+  Future<void> syncAppleUserProfile(User user) async {
+    await _syncSocialUserProfile(
+      user,
+      callable: 'syncAppleUserProfile',
+      failureMessage: 'Apple 프로필을 저장하지 못했습니다.',
+    );
+  }
+
+  Future<void> _syncSocialUserProfile(
+    User user, {
+    required String callable,
+    required String failureMessage,
+  }) async {
     try {
-      await _functions.httpsCallable('syncGoogleUserProfile').call({
+      await _functions.httpsCallable(callable).call({
         'nickname': user.displayName,
         'profileImageUrl': user.photoURL,
       });
     } on FirebaseFunctionsException catch (error) {
-      throw AuthServiceException(
-        error.code,
-        error.message ?? 'Google 프로필을 저장하지 못했습니다.',
-      );
+      throw AuthServiceException(error.code, error.message ?? failureMessage);
     }
   }
 

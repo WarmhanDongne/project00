@@ -9,6 +9,7 @@ export type OnboardingStatus = typeof ONBOARDING_STATUSES[number];
 export const ONBOARDING_PROVIDERS = [
   "emailLink",
   "google",
+  "apple",
   "legacyPassword",
 ] as const;
 
@@ -68,18 +69,21 @@ export function resolveLegacyStatus(input: {
 }
 
 /**
- * Resolves the onboarding state after a Google sign-in profile sync.
+ * Resolves the onboarding state after a social sign-in profile sync.
  *
- * A Google display name is useful as a profile-step default, but it is not
+ * A provider display name is useful as a profile-step default, but it is not
  * evidence that this app's profile step was completed. Existing onboarding
  * state is authoritative; only pre-onboarding users with a saved app profile
  * are treated as completed legacy users.
+ *
+ * Apple sends no name at all after the first authorization, so an empty
+ * provider profile must still resolve to settingProfile rather than complete.
  * @param {{existingStatus: (OnboardingStatus|undefined),
  * hasExistingUser: boolean, hasValidExistingNickname: boolean}} input
  * Existing app account facts.
  * @return {OnboardingStatus} The authoritative onboarding state.
  */
-export function resolveGoogleSyncStatus(input: {
+export function resolveSocialSyncStatus(input: {
   existingStatus?: OnboardingStatus;
   hasExistingUser: boolean;
   hasValidExistingNickname: boolean;

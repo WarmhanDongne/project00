@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
 
 class PhoneHeader extends StatelessWidget {
-  final VoidCallback onPressed;
-  final String buttonText;
-
-  const PhoneHeader({
-    super.key,
-    required this.onPressed,
-    required this.buttonText,
-  });
+  const PhoneHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,16 +27,7 @@ class PhoneHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          SizedBox(
-            width: 108,
-            child: PlatformButton(
-              label: buttonText,
-              height: 40,
-              expand: false,
-              onPressed: onPressed,
-            ),
-          ),
-          const SizedBox(width: 8),
+          // 그룹 참여 버튼은 화면 하단 고정 바(PhoneHome)로 옮겼습니다.
           const PhoneProfile(),
         ],
       ),

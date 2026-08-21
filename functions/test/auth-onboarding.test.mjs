@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ONBOARDING_PROVIDERS,
   canAdvanceToProfile,
   isExpiredIncompleteCandidate,
   isValidNickname,
   parseOnboardingStatus,
   resolveProtectedAccess,
-  resolveGoogleSyncStatus,
+  resolveSocialSyncStatus,
   resolveLegacyStatus,
 } from "../lib/auth/onboarding-types.js";
 
@@ -105,16 +106,16 @@ test("nickname and password-step transitions are constrained", () => {
   assert.equal(canAdvanceToProfile("emailInput"), false);
 });
 
-test("Google profile data does not skip a new user's profile step", () => {
+test("social profile data does not skip a new user's profile step", () => {
   assert.equal(
-    resolveGoogleSyncStatus({
+    resolveSocialSyncStatus({
       hasExistingUser: false,
       hasValidExistingNickname: false,
     }),
     "settingProfile",
   );
   assert.equal(
-    resolveGoogleSyncStatus({
+    resolveSocialSyncStatus({
       existingStatus: "settingProfile",
       hasExistingUser: true,
       hasValidExistingNickname: true,
@@ -122,7 +123,7 @@ test("Google profile data does not skip a new user's profile step", () => {
     "settingProfile",
   );
   assert.equal(
-    resolveGoogleSyncStatus({
+    resolveSocialSyncStatus({
       existingStatus: "complete",
       hasExistingUser: true,
       hasValidExistingNickname: true,
@@ -130,10 +131,50 @@ test("Google profile data does not skip a new user's profile step", () => {
     "complete",
   );
   assert.equal(
-    resolveGoogleSyncStatus({
+    resolveSocialSyncStatus({
       hasExistingUser: true,
       hasValidExistingNickname: true,
     }),
     "complete",
   );
+});
+
+//=======================Apple 소셜 로그인==============================
+// Apple은 이름을 최초 승인 때만 주고 사진은 주지 않습니다. 프로필 값이
+// 비어 있다고 온보딩을 건너뛰거나, 비밀번호 단계로 되돌리면 안 됩니다.
+test("Apple sign-in lands on the profile step, never the password step", () => {
+  assert.equal(
+    resolveSocialSyncStatus({
+      hasExistingUser: false,
+      hasValidExistingNickname: false,
+    }),
+    "settingProfile",
+  );
+  // 두 번째 로그인. 이름이 안 와도 저장된 닉네임이 있으면 완료 상태입니다.
+  assert.equal(
+    resolveSocialSyncStatus({
+      existingStatus: "complete",
+      hasExistingUser: true,
+      hasValidExistingNickname: true,
+    }),
+    "complete",
+  );
+});
+
+test("legacy recovery treats Apple accounts as credentialed", () => {
+  // isSocial이 hasPasswordCredential로 들어가는 경로입니다. 이 값이 false면
+  // 소셜 사용자가 비밀번호 설정 화면으로 떨어집니다.
+  assert.equal(
+    resolveLegacyStatus({
+      hasValidNickname: false,
+      emailVerified: true,
+      hasPasswordCredential: true,
+    }),
+    "settingProfile",
+  );
+});
+
+test("apple is a stored onboarding provider", () => {
+  assert.ok(ONBOARDING_PROVIDERS.includes("apple"));
+  assert.ok(ONBOARDING_PROVIDERS.includes("google"));
 });

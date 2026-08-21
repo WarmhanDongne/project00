@@ -178,7 +178,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('expanded-room-qr-dialog')), findsOneWidget);
-      expect(find.text('참여 QR'), findsOneWidget);
+      expect(find.text('참여 QR'), findsNothing);
       expect(find.text('ABCDE'), findsNWidgets(2));
       expect(
         tester.getSize(find.byKey(const Key('expanded-room-qr'))).width,

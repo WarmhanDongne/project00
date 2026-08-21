@@ -30,6 +30,8 @@ void main() {
   Color? timerColorOf(WidgetTester tester, String text) =>
       tester.widget<Text>(find.text(text)).style?.color;
 
+  group('토론 종료 버튼', _skipVoteTests);
+
   group('남은 시간 표기', () {
     test('1분 이상은 분·초를, 1분 미만은 초만 보여 준다', () {
       expect(MafiaDayDiscussionView.formatRemaining(150), '2m 30s');
@@ -82,5 +84,64 @@ void main() {
       find.byType(MafiaPhoneActionButton),
     );
     expect(button.enabled, isFalse);
+  });
+}
+
+//=======================토론 종료 버튼 (확정 2026-08)==============================
+// 내가 누르기 전까지는 원래 문구를 두고, 누른 뒤에는 '동의한 사람/살아 있는
+// 사람' 집계로 바뀌며 버튼이 비활성됩니다. 남이 눌렀다고 내 버튼 문구가 먼저
+// 바뀌면 아직 눌러야 하는지 헷갈립니다.
+void _skipVoteTests() {
+  Future<void> pumpButton(
+    WidgetTester tester, {
+    required bool hasVotedToSkip,
+    int skipVoteCount = 0,
+    int aliveCount = 6,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MafiaDayDiscussionView(
+          role: MafiaRoles.find('citizen'),
+          remainingSeconds: 120,
+          canEndDiscussion: true,
+          skipVoteCount: skipVoteCount,
+          aliveCount: aliveCount,
+          hasVotedToSkip: hasVotedToSkip,
+          onEndDiscussion: () {},
+        ),
+      ),
+    );
+  }
+
+  MafiaPhoneActionButton buttonOf(WidgetTester tester) => tester
+      .widget<MafiaPhoneActionButton>(find.byType(MafiaPhoneActionButton));
+
+  testWidgets('누르기 전에는 원래 문구이고 누를 수 있다', (tester) async {
+    // 남이 둘 눌렀어도 내 버튼은 그대로입니다.
+    await pumpButton(tester, hasVotedToSkip: false, skipVoteCount: 2);
+
+    final button = buttonOf(tester);
+    expect(button.label, '토론 종료 하기');
+    expect(button.enabled, isTrue);
+    expect(find.text('2/6'), findsNothing);
+  });
+
+  testWidgets('누른 뒤에는 집계 숫자로 바뀌고 비활성된다', (tester) async {
+    await pumpButton(tester, hasVotedToSkip: true, skipVoteCount: 3);
+
+    final button = buttonOf(tester);
+    expect(button.label, '3/6');
+    expect(button.enabled, isFalse);
+    expect(button.labelColor, const Color(0xFFFF0000));
+  });
+
+  testWidgets('비활성된 뒤에도 집계는 계속 올라간다', (tester) async {
+    await pumpButton(tester, hasVotedToSkip: true, skipVoteCount: 3);
+    expect(buttonOf(tester).label, '3/6');
+
+    // 남이 한 명 더 누르면 숫자만 올라갑니다.
+    await pumpButton(tester, hasVotedToSkip: true, skipVoteCount: 4);
+    expect(buttonOf(tester).label, '4/6');
+    expect(buttonOf(tester).enabled, isFalse);
   });
 }

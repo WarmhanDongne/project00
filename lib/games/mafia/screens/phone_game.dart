@@ -14,7 +14,7 @@ import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
 import 'package:project00/games/mafia/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
-import 'package:project00/games/mafia/widgets/phone/result_view.dart';
+import 'package:project00/games/mafia/widgets/phone/result_sequence.dart';
 import 'package:project00/games/mafia/widgets/phone/top_bar.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
@@ -176,8 +176,17 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
             onExitRoom: () => unawaited(_leaveRoom()),
             onRulesPressed: (origin) => showMafiaRules(context, origin),
           ),
+          // 확정(2026-08): 승리 그림 2초 → 전원 신분 명단.
           result: game.isNaturalResult
-              ? MafiaResultView(winner: game.winnerFaction)
+              ? MafiaPhoneResultSequence(
+                  winner: game.winnerFaction,
+                  players: game.orderedPlayers,
+                  revealedRoles: {
+                    for (final player in game.orderedPlayers)
+                      player.uid: game.revealedRoleOf(player.uid),
+                  },
+                  myRole: game.myRole,
+                )
               : const SizedBox.shrink(),
           content: Stack(
             fit: StackFit.expand,
