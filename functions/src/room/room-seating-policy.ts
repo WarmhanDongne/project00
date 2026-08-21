@@ -37,3 +37,28 @@ export function decideRoomSeating(
   }
   return "begin";
 }
+
+type MutableRoomSelection = {
+  status?: string;
+  selectedGame?: string;
+  game?: unknown;
+  finishedAt?: number;
+  retainUntil?: number;
+};
+
+/**
+ * 대기실에서 게임 선택을 바꿀 때 이전 게임의 종료 데이터를 제거합니다.
+ * @param {MutableRoomSelection} room 변경할 방 상태입니다.
+ * @param {string|null} gameId 새로 선택할 게임 ID입니다.
+ */
+export function applyWaitingGameSelection(
+  room: MutableRoomSelection,
+  gameId: string | null,
+): void {
+  if (gameId === null) delete room.selectedGame;
+  else room.selectedGame = gameId;
+  delete room.game;
+  delete room.finishedAt;
+  delete room.retainUntil;
+  room.status = "waiting";
+}

@@ -10,7 +10,10 @@ import {
   assertControllerSession,
   ControllerSessionRoom,
 } from "./controller-session.js";
-import {decideRoomSeating} from "./room-seating-policy.js";
+import {
+  applyWaitingGameSelection,
+  decideRoomSeating,
+} from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
 
 const REGION = "asia-northeast3";
@@ -277,9 +280,7 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
             "현재 게임을 선택할 수 없습니다.",
           );
         }
-        if (gameId === null) delete currentRoom.selectedGame;
-        else currentRoom.selectedGame = gameId;
-        currentRoom.status = "waiting";
+        applyWaitingGameSelection(currentRoom, gameId);
         return currentRoom;
       });
       if (!result.committed) {

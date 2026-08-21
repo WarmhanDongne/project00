@@ -10,7 +10,10 @@ import {
   shouldDeleteRoom,
 } from "../lib/room/realtime-room-lifecycle.js";
 import {decideRoomJoin} from "../lib/room/room-join-policy.js";
-import {decideRoomSeating} from "../lib/room/room-seating-policy.js";
+import {
+  applyWaitingGameSelection,
+  decideRoomSeating,
+} from "../lib/room/room-seating-policy.js";
 import {runPrimedTransaction} from "../lib/room/room-transaction.js";
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
@@ -67,6 +70,14 @@ test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에�
 
 test("신규 참가자는 waiting에서만 허용한다", () => {
   assert.equal(decideRoomJoin({roomStatus: "waiting", playerExists: false}), "new-player");
+  assert.equal(
+    decideRoomJoin({
+      roomStatus: "waiting",
+      gameStatus: "finished",
+      playerExists: false,
+    }),
+    "new-player",
+  );
   assert.equal(decideRoomJoin({roomStatus: "seating", playerExists: false}), "game-preparing");
   assert.equal(decideRoomJoin({roomStatus: "playing", playerExists: false}), "game-preparing");
   assert.equal(decideRoomJoin({roomStatus: "closed", playerExists: false}), "room-closed");
@@ -74,6 +85,15 @@ test("신규 참가자는 waiting에서만 허용한다", () => {
 });
 
 test("기존 active UID는 seating과 playing에서도 재접속할 수 있다", () => {
+  assert.equal(
+    decideRoomJoin({
+      roomStatus: "waiting",
+      gameStatus: "finished",
+      playerExists: true,
+      playerStatus: "active",
+    }),
+    "reconnect",
+  );
   assert.equal(
     decideRoomJoin({
       roomStatus: "seating",
@@ -99,6 +119,22 @@ test("기존 active UID는 seating과 playing에서도 재접속할 수 있다",
     }),
     "inactive-player",
   );
+});
+
+test("게임 선택 변경은 이전 종료 게임 데이터를 제거하고 waiting으로 전환한다", () => {
+  const room = {
+    status: "finished",
+    selectedGame: "liars_poker",
+    game: {public: {status: "finished"}},
+    finishedAt: 100,
+    retainUntil: 200,
+  };
+
+  applyWaitingGameSelection(room, "mafia");
+  assert.deepEqual(room, {status: "waiting", selectedGame: "mafia"});
+
+  applyWaitingGameSelection(room, null);
+  assert.deepEqual(room, {status: "waiting"});
 });
 
 test("waiting 방의 선택 게임과 인원이 유효할 때만 seating을 시작한다", () => {

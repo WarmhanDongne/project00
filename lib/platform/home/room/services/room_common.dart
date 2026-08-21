@@ -31,12 +31,15 @@ bool isRestorablePlayerSessionState({
   if (!playerExists || playerStatus != 'active') return false;
   if (roomStatus == 'closed' || roomStatus == 'finished') return false;
 
+  // 방 상태가 다시 waiting/seating으로 전환됐다면 이전 게임의 finished 데이터는
+  // 낡은 잔여값입니다. 방의 권위 상태를 우선해 기존 참가자 복구를 허용합니다.
+  if (roomStatus == 'waiting' || roomStatus == 'seating') return true;
+
   if (gameStatus == 'playing') {
     return selectedGameId != null &&
         selectedGameId.trim().isNotEmpty &&
         privateGameDataExists;
   }
 
-  return (roomStatus == 'waiting' || roomStatus == 'seating') &&
-      gameStatus != 'finished';
+  return false;
 }

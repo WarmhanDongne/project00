@@ -31,6 +31,22 @@ void main() {
       );
     });
 
+    test('ignores stale finished game data in waiting and seating rooms', () {
+      for (final roomStatus in ['waiting', 'seating']) {
+        expect(
+          isRestorablePlayerSessionState(
+            playerExists: true,
+            playerStatus: 'active',
+            roomStatus: roomStatus,
+            selectedGameId: null,
+            gameStatus: 'finished',
+            privateGameDataExists: false,
+          ),
+          isTrue,
+        );
+      }
+    });
+
     test(
       'allows return only when an active game has complete authority data',
       () {

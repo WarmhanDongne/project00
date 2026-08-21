@@ -23,7 +23,11 @@ type RoomJoinState = {
  */
 export function decideRoomJoin(state: RoomJoinState): RoomJoinDecision {
   if (state.roomStatus === "closed") return "room-closed";
-  if (state.roomStatus === "finished" || state.gameStatus === "finished") {
+  const roomStatus = state.roomStatus ?? "waiting";
+  const roomIsWaitingOrSeating =
+    roomStatus === "waiting" || roomStatus === "seating";
+  if (roomStatus === "finished" ||
+      (!roomIsWaitingOrSeating && state.gameStatus === "finished")) {
     return "room-finished";
   }
 
@@ -33,7 +37,6 @@ export function decideRoomJoin(state: RoomJoinState): RoomJoinDecision {
       "inactive-player";
   }
 
-  const roomStatus = state.roomStatus ?? "waiting";
   if (roomStatus !== "waiting" || state.gameStatus === "playing") {
     return "game-preparing";
   }
