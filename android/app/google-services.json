@@ -49,6 +49,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:93097008048:android:0ccdec23053fc259d49475",
+        "android_client_info": {
+          "package_name": "com.warmhandongne.msg"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "93097008048-lo2cumkr5ombd0863qadcs62uipgss4r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_klPq9yspgkyoLD1rs-w9OmIJExx4MBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "93097008048-lo2cumkr5ombd0863qadcs62uipgss4r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "93097008048-l7ovteo187vpqe8ppime2ck350nvqigi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.project00"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
