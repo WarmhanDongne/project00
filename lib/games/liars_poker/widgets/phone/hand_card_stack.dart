@@ -8,6 +8,7 @@ import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_card_receive_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
+import 'package:project00/games/shared/widgets/game_card_face.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/core/assets/game_image.dart';
 
@@ -571,8 +572,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
         final layout = _resolveLayout(constraints);
         final centerX = size.width / 2;
         final centerY = size.height / 2;
-        const cardAspectRatio = 512 / 350;
-        final cardHeight = layout.cardWidth * cardAspectRatio;
+        final cardHeight = layout.cardWidth * kCardAspectRatio;
         final cardCount = _renderCards.length;
 
         // 선택 여부와 관계없이 원래 손패 순서대로 겹쳐서 그립니다.
@@ -727,7 +727,6 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   /// 실제 손패 영역에 맞춰 카드가 잘리거나 다른 조작부를 침범하지 않게 합니다.
   _HandLayout _resolveLayout(BoxConstraints constraints) {
-    const cardAspectRatio = 512 / 350;
     final boundedWidth = constraints.hasBoundedWidth
         ? constraints.maxWidth
         : 400.0;
@@ -738,9 +737,9 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     final availableHeight = math.max(150.0, boundedHeight - 16);
     final cardCount = math.max(1, _renderCards.length);
 
-    final maxByHeight = availableHeight / cardAspectRatio;
+    final maxByHeight = availableHeight / kCardAspectRatio;
     final portraitStackHeight =
-        cardAspectRatio * widget.preferredCardWidth +
+        kCardAspectRatio * widget.preferredCardWidth +
         math.max(0, cardCount - 1) * widget.preferredSpreadStepY;
     final portraitScale = widget.isLandscape || portraitStackHeight <= 0
         ? 1.0
@@ -759,7 +758,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
           );
     final verticalCapacity = math.max(
       0.0,
-      availableHeight - cardWidth * cardAspectRatio,
+      availableHeight - cardWidth * kCardAspectRatio,
     );
     final spreadStepY = widget.isLandscape || cardCount <= 1
         ? 0.0
@@ -849,34 +848,26 @@ class _StaticCardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GameCardFace(
+      asset: asset,
       width: cardWidth,
       height: cardHeight,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected ? _selectedShadowColor : const Color(0x66000000),
-            blurRadius: isSelected ? 14 : 7,
-            spreadRadius: isSelected ? 1 : 0,
-            offset: isSelected ? const Offset(0, 8) : const Offset(0, 5),
-          ),
-        ],
-      ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: isSelected
-            ? Border.all(color: _selectedBorderColor, width: 2.4)
-            : null,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: asset.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
-      ),
+      radius: 8,
+      shadow: isSelected
+          ? const BoxShadow(
+              color: _selectedShadowColor,
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: Offset(0, 8),
+            )
+          : const BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 7,
+              offset: Offset(0, 5),
+            ),
+      border: isSelected
+          ? Border.all(color: _selectedBorderColor, width: 2.4)
+          : null,
     );
   }
 }

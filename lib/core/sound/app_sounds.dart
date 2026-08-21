@@ -3,9 +3,13 @@
 /// 게임 전용 사운드는 `lib/games/<game>/sound/`에 따로 둡니다. 여기에는
 /// `assets/sounds/`에 있는 것만 모읍니다.
 abstract final class AppSounds {
-  // 배경음악은 여기 없습니다. 게임마다 다른 곡을 쓸 수 있어야 하므로
-  // 각 게임의 `sound/<game>_sounds.dart`에 두고 `GameBackgroundMusic.start`에
-  // 넘깁니다. 마피아는 낮·밤 두 곡을 씁니다.
+  /// 게임 공용 배경음악입니다(확정 2026-08: 라이어스 포커·파이널콜은 같은
+  /// 곡을 씁니다. 마피아 낮 곡도 전용 곡이 들어올 때까지 이 곡입니다).
+  ///
+  /// 재생은 각 게임의 `sound/<game>_sounds.dart`가 이 값을 참조해
+  /// `GameBackgroundMusic.start`에 넘깁니다. 어떤 게임에 전용 곡이 생기면
+  /// **그 게임의 상수만** 새 파일로 바꾸면 됩니다.
+  static const background = 'assets/sounds/background.mp3';
 
   /// 카드가 한 장씩 날아갈 때마다 재생하는 짧은 효과음입니다.
   static const dealing = 'assets/sounds/dealing.mp3';

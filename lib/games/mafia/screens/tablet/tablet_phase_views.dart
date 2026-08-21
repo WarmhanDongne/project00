@@ -6,10 +6,10 @@ import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_execution_view.dart';
+import 'package:project00/games/mafia/animations/role_deal_toss_animation.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_night_bird.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_tally_view.dart';
-import 'package:project00/games/shared/animations/card_deal.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 //=======================T1 역할 배분==============================
@@ -54,17 +54,13 @@ class MafiaTabletRoleDealView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 분배음은 카드가 착지하는 순간에 이 연출이 알아서 재생합니다.
+        // 확정(2026-08): 마피아는 1장씩 — 중앙 더미에서 각 좌석 방향으로
+        // 날아가 화면 밖(그 사람의 휴대폰)으로 나갑니다. 분배음은 발사 순간.
         // 첫 공개 상태가 아직 없으면 나눠 줄 사람도 없으므로 그리지 않습니다.
         if (players.isNotEmpty)
-          CardDealAnimation(
-            playerCount: players.length,
-            boardSeatCount: boardSeatCount,
+          MafiaRoleDealTossAnimation(
             playerSeatIndexes: seatIndexes,
-            cardsPerPlayer: 1,
-            cardAsset: Assets.games.mafia.images.cards.roleBack.game,
-            autoplay: true,
-            backgroundColor: Colors.transparent,
+            boardSeatCount: boardSeatCount,
           ),
         MafiaTabletHeadline(
           text: '확인 $confirmedCount / ${players.length}',

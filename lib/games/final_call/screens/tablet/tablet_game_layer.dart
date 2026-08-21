@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
+import 'package:project00/games/final_call/sound/final_call_sounds.dart';
 import 'package:project00/games/shared/animations/board_element_entrance.dart';
 import 'package:project00/games/shared/animations/card_deal.dart';
 import 'package:project00/games/shared/animations/one_shot_timeline.dart';
@@ -161,28 +163,33 @@ class _RevealedTable extends StatefulWidget {
   State<_RevealedTable> createState() => _RevealedTableState();
 }
 
+// 라운드 결과 연출의 구간 시간입니다. 부모(_RevealedTable)의 전체 타임라인
+// 계산과 자식(_SequencedRevealedHand)의 카드별 진행도 계산이 같은 값을
+// 쓰므로 파일 상단에 한 번만 둡니다.
+final int _initialHoldMs =
+    FinalCallFlowTiming.roundResultInitialHold.inMilliseconds;
+final int _focusMs = FinalCallFlowTiming.roundResultFocus.inMilliseconds;
+final int _cardStepMs = FinalCallFlowTiming.roundResultCardStep.inMilliseconds;
+final int _cardFlipMs = FinalCallFlowTiming.roundResultCardFlip.inMilliseconds;
+final int _settleMs = FinalCallFlowTiming.roundResultSettle.inMilliseconds;
+final int _heartMs = FinalCallFlowTiming.roundResultHeartLoss.inMilliseconds;
+
 class _RevealedTableState extends State<_RevealedTable> {
-  static final int _initialHoldMs =
-      FinalCallFlowTiming.roundResultInitialHold.inMilliseconds;
-  static final int _focusMs =
-      FinalCallFlowTiming.roundResultFocus.inMilliseconds;
-  static final int _cardStepMs =
-      FinalCallFlowTiming.roundResultCardStep.inMilliseconds;
-  static final int _cardFlipMs =
-      FinalCallFlowTiming.roundResultCardFlip.inMilliseconds;
-  static final int _settleMs =
-      FinalCallFlowTiming.roundResultSettle.inMilliseconds;
-  static final int _heartMs =
-      FinalCallFlowTiming.roundResultHeartLoss.inMilliseconds;
+  /// [_BreakingHeart]가 하트를 실제로 가르기 시작하는 진행도입니다.
+  /// 그쪽 임계값(0.22)을 바꾸면 여기도 같이 바꿔야 소리와 화면이 맞습니다.
+  static const double _heartShatterProgress = 0.22;
 
   late final List<FinalCallPlayer> _players;
   late final List<int> _playerStarts;
   late final int _heartStart;
   late final int _totalDurationMs;
+  late final bool _hasLifeLoss;
+  final _heartbreakCue = ProgressSoundCue();
 
   @override
   void initState() {
     super.initState();
+    _hasLifeLoss = widget.result.lifeLosses.values.any((loss) => loss > 0);
     _players =
         widget.controller.players.values
             .where(
@@ -230,6 +237,7 @@ class _RevealedTableState extends State<_RevealedTable> {
               0.0,
               1.0,
             );
+            _playHeartbreakSound(context, elapsed);
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -253,6 +261,22 @@ class _RevealedTableState extends State<_RevealedTable> {
     );
   }
 
+  /// 하트가 갈라지기 시작하는 순간에 맞춰 파열음을 한 번 재생합니다.
+  ///
+  /// 라운드 결과에서 실제로 하트를 잃은 플레이어가 있을 때만 냅니다.
+  void _playHeartbreakSound(BuildContext context, double elapsedMs) {
+    if (!_hasLifeLoss) return;
+    _heartbreakCue.maybePlay(
+      context,
+      FinalCallSounds.heartbreak,
+      value: elapsedMs,
+      threshold:
+          _heartStart +
+          _heartMs * _heartShatterProgress -
+          ProgressSoundCue.lead.inMilliseconds,
+    );
+  }
+
   Widget _buildPositionedHand({
     required FinalCallPlayer player,
     required Offset desiredCenter,
@@ -266,9 +290,6 @@ class _RevealedTableState extends State<_RevealedTable> {
     final handScale = _revealedHandScale(
       elapsedMs: elapsedMs,
       cardCount: cards.length,
-      focusMs: _focusMs,
-      cardStepMs: _cardStepMs,
-      settleMs: _settleMs,
     );
     final rotation = finalCallSeatRotationForCenter(
       center: desiredCenter,
@@ -298,10 +319,7 @@ class _RevealedTableState extends State<_RevealedTable> {
             cardWidth: cardWidth,
             elapsedMs: elapsedMs,
             entryElapsedMs: entryElapsedMs,
-            focusMs: _focusMs,
-            cardStepMs: _cardStepMs,
-            cardFlipMs: _cardFlipMs,
-            settleMs: _settleMs,
+            scale: handScale,
             player: player,
             lifeLoss: widget.result.lifeLosses[player.uid] ?? 0,
             heartProgress: heartProgress,
@@ -350,10 +368,7 @@ class _SequencedRevealedHand extends StatelessWidget {
     required this.cardWidth,
     required this.elapsedMs,
     required this.entryElapsedMs,
-    required this.focusMs,
-    required this.cardStepMs,
-    required this.cardFlipMs,
-    required this.settleMs,
+    required this.scale,
     required this.player,
     required this.lifeLoss,
     required this.heartProgress,
@@ -367,10 +382,9 @@ class _SequencedRevealedHand extends StatelessWidget {
   /// 공개 시작부터의 전체 경과 시간입니다. 뒷면 카드가 좌석 쪽에서 밀려
   /// 나오는 최초 등장에만 씁니다.
   final double entryElapsedMs;
-  final int focusMs;
-  final int cardStepMs;
-  final int cardFlipMs;
-  final int settleMs;
+
+  /// 부모가 화면 밖 보정에 쓰려고 이미 계산한 [_revealedHandScale] 값입니다.
+  final double scale;
   final FinalCallPlayer player;
   final int lifeLoss;
   final double heartProgress;
@@ -378,21 +392,14 @@ class _SequencedRevealedHand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cards.isEmpty) return const SizedBox.shrink();
-    final revealEnd = focusMs + cards.length * cardStepMs;
-    final segmentEnd = revealEnd + settleMs;
-    final scale = _revealedHandScale(
-      elapsedMs: elapsedMs,
-      cardCount: cards.length,
-      focusMs: focusMs,
-      cardStepMs: cardStepMs,
-      settleMs: settleMs,
-    );
+    final revealEnd = _focusMs + cards.length * _cardStepMs;
+    final segmentEnd = revealEnd + _settleMs;
 
     final progresses = <double>[];
     final revealedCards = <FinalCallCard>[];
     for (var index = 0; index < cards.length; index++) {
-      final cardStart = focusMs + index * cardStepMs;
-      final progress = ((elapsedMs - cardStart) / cardFlipMs).clamp(0.0, 1.0);
+      final cardStart = _focusMs + index * _cardStepMs;
+      final progress = ((elapsedMs - cardStart) / _cardFlipMs).clamp(0.0, 1.0);
       progresses.add(progress);
       if (progress >= 0.5) revealedCards.add(cards[index]);
     }
@@ -473,23 +480,19 @@ class _SequencedRevealedHand extends StatelessWidget {
   }
 }
 
-double _revealedHandScale({
-  required double elapsedMs,
-  required int cardCount,
-  required int focusMs,
-  required int cardStepMs,
-  required int settleMs,
-}) {
-  final revealEnd = focusMs + cardCount * cardStepMs;
-  final segmentEnd = revealEnd + settleMs;
-  if (elapsedMs > 0 && elapsedMs < focusMs) {
-    return 1 + 0.22 * Curves.easeOutCubic.transform(elapsedMs / focusMs);
+double _revealedHandScale({required double elapsedMs, required int cardCount}) {
+  final revealEnd = _focusMs + cardCount * _cardStepMs;
+  final segmentEnd = revealEnd + _settleMs;
+  if (elapsedMs > 0 && elapsedMs < _focusMs) {
+    return 1 + 0.22 * Curves.easeOutCubic.transform(elapsedMs / _focusMs);
   }
-  if (elapsedMs >= focusMs && elapsedMs < revealEnd) return 1.22;
+  if (elapsedMs >= _focusMs && elapsedMs < revealEnd) return 1.22;
   if (elapsedMs >= revealEnd && elapsedMs < segmentEnd) {
     return 1.22 -
         0.22 *
-            Curves.easeInOutCubic.transform((elapsedMs - revealEnd) / settleMs);
+            Curves.easeInOutCubic.transform(
+              (elapsedMs - revealEnd) / _settleMs,
+            );
   }
   return 1;
 }

@@ -4,6 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:project00/core/sound/app_sounds.dart';
 import 'package:project00/core/sound/sound_effects.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
+import 'package:project00/games/shared/widgets/game_card_face.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/core/assets/game_image.dart';
@@ -23,16 +26,13 @@ class CardDealAnimation extends StatefulWidget {
     this.playerCount = 4,
     this.boardSeatCount,
     this.playerSeatIndexes,
-    this.playerPositions,
     this.cardsPerPlayer = 5,
     this.cardAsset,
     this.cardBuilder,
     this.cardWidth = 168,
     this.duration = const Duration(milliseconds: 2800),
-    this.deckEntryDuration = const Duration(milliseconds: 620),
     this.autoplay = false,
     this.tapToStart = true,
-    this.loop = false,
     this.backgroundColor,
     this.onCompleted,
   }) : assert(playerCount > 0),
@@ -40,10 +40,6 @@ class CardDealAnimation extends StatefulWidget {
        assert(
          playerSeatIndexes == null || playerSeatIndexes.length == playerCount,
          'playerSeatIndexes의 개수는 playerCount와 같아야 합니다.',
-       ),
-       assert(
-         playerPositions == null || playerPositions.length == playerCount,
-         'playerPositions의 개수는 playerCount와 같아야 합니다.',
        ),
        assert(cardsPerPlayer > 0),
        assert(cardWidth > 0);
@@ -62,12 +58,6 @@ class CardDealAnimation extends StatefulWidget {
   /// 예: `[2, 0, 1]`이면 첫 번째 플레이어는 2번 좌석으로 분배됩니다.
   final List<int>? playerSeatIndexes;
 
-  /// 각 플레이어 영역의 좌측 상단 정규화 좌표입니다.
-  ///
-  /// `player_layouts`에서 저장한 실제 자리 좌표가 있다면 그대로 전달할 수
-  /// 있습니다. 생략하면 인원 수에 맞는 기본 `slotPositions`를 사용합니다.
-  final List<Offset>? playerPositions;
-
   /// 플레이어 한 명이 받는 카드 수입니다.
   final int cardsPerPlayer;
 
@@ -83,17 +73,11 @@ class CardDealAnimation extends StatefulWidget {
   /// 등장, 분배, 잠시 대기, 퇴장을 모두 포함한 전체 재생 시간입니다.
   final Duration duration;
 
-  /// 분배 전에 카드 더미가 화면 위에서 중앙으로 내려오는 시간입니다.
-  final Duration deckEntryDuration;
-
   /// 위젯이 화면에 나타나면 바로 재생할지 여부입니다.
   final bool autoplay;
 
   /// 중앙 카드 더미를 눌렀을 때 분배를 시작할지 여부입니다.
   final bool tapToStart;
-
-  /// 전체 동작을 계속 반복할지 여부입니다.
-  final bool loop;
 
   /// 지정하지 않으면 아무 배경도 그리지 않아 뒤쪽 게임 화면이 그대로 보입니다.
   final Color? backgroundColor;
@@ -107,6 +91,9 @@ class CardDealAnimationState extends State<CardDealAnimation>
     with TickerProviderStateMixin {
   /// 마지막 카드가 도착하는 진행도입니다.
   static const double _dealEnd = 0.72;
+
+  /// 분배 전에 카드 더미가 화면 위에서 중앙으로 내려오는 시간입니다.
+  static const Duration _deckEntryDuration = Duration(milliseconds: 620);
 
   late final AnimationController _controller;
 
@@ -125,7 +112,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
       ..addListener(_playDealingSounds);
     _deckEntryController = AnimationController(
       vsync: this,
-      duration: widget.deckEntryDuration,
+      duration: _deckEntryDuration,
     );
 
     // 카드 더미가 자리를 잡은 뒤에 분배가 시작되도록 순서를 지킵니다.
@@ -151,18 +138,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
   }
 
   void _onStatusChanged(AnimationStatus status) {
-    if (status != AnimationStatus.completed) {
-      return;
-    }
-
-    widget.onCompleted?.call();
-
-    if (widget.loop) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _controller.forward(from: 0);
-        }
-      });
+    if (status == AnimationStatus.completed) {
+      widget.onCompleted?.call();
     }
   }
 
@@ -188,10 +165,6 @@ class CardDealAnimationState extends State<CardDealAnimation>
       _controller.forward();
     }
   }
-
-  void pause() => _controller.stop();
-
-  void reset() => _controller.reset();
 
   @override
   void dispose() {
@@ -249,8 +222,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
   Widget _buildDeckTapTarget(Size size) {
     final cardWidth = _effectiveCardWidth(size);
-    const cardAspectRatio = 512 / 350;
-    final cardHeight = cardWidth * cardAspectRatio;
+    final cardHeight = cardWidth * kCardAspectRatio;
 
     return Positioned(
       left: (size.width - cardWidth) / 2,
@@ -298,22 +270,14 @@ class CardDealAnimationState extends State<CardDealAnimation>
       _dealStartOf(dealIndex, totalCards) +
       _flightLength(totalCards) * _dealLandingFraction;
 
-  /// 효과음을 화면보다 얼마나 먼저 요청할지입니다.
-  ///
-  /// 기기 오디오 출력에는 짧은 지연이 남습니다. 닿는 순간에 요청을 보내면 그만큼
-  /// 늦게 들리므로 조금 앞서 보냅니다.
-  ///
-  /// 아직 늦게 들리면 이 값을 키우고, 너무 빠르면 줄이세요. 여기만 고치면 됩니다.
-  static const Duration _dealSoundLead = Duration(milliseconds: 60);
-
   /// 카드가 한 장 플레이어 앞에 닿을 때마다 분배 효과음을 한 번 재생합니다.
   ///
   /// 출발이 아니라 도착에 맞춥니다. 출발에 재생하면 카드가 아직 날아가는
   /// 중인데 소리가 먼저 나서 한 장의 비행시간만큼(수백 ms) 앞서 들립니다.
   ///
   /// 화면에 그리는 것과 같은 [_dealStartOf], [_flightLength]로 계산하므로
-  /// 연출 시간을 바꿔도 소리가 따로 어긋나지 않습니다. 되감기(loop)로 진행도가
-  /// 뒤로 갈 때는 다시 세어 재생합니다.
+  /// 연출 시간을 바꿔도 소리가 따로 어긋나지 않습니다. 처음부터 다시
+  /// 재생해 진행도가 뒤로 갈 때는 다시 세어 재생합니다.
   void _playDealingSounds() {
     if (!mounted) return;
     final totalCards = widget.playerCount * widget.cardsPerPlayer;
@@ -326,7 +290,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
     final totalMilliseconds = widget.duration.inMilliseconds;
     final leadProgress = totalMilliseconds <= 0
         ? 0.0
-        : _dealSoundLead.inMilliseconds / totalMilliseconds;
+        : ProgressSoundCue.lead.inMilliseconds / totalMilliseconds;
 
     while (_dealtSoundCount < totalCards &&
         progress >=
@@ -342,11 +306,10 @@ class CardDealAnimationState extends State<CardDealAnimation>
     int dealIndex,
     int totalCards,
   ) {
-    const cardAspectRatio = 512 / 350;
     const exitStart = 0.84;
 
     final cardWidth = _effectiveCardWidth(size);
-    final cardHeight = cardWidth * cardAspectRatio;
+    final cardHeight = cardWidth * kCardAspectRatio;
     final center = Offset(size.width / 2, size.height / 2);
 
     final playerIndex = dealIndex % widget.playerCount;
@@ -364,13 +327,13 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
     final flightLength = _flightLength(totalCards);
     final dealStart = _dealStartOf(dealIndex, totalCards);
-    final dealProgress = _intervalProgress(
+    final dealProgress = intervalProgress(
       _controller.value,
       dealStart,
       dealStart + flightLength,
       Curves.easeOutCubic,
     );
-    final exitProgress = _intervalProgress(
+    final exitProgress = intervalProgress(
       _controller.value,
       exitStart,
       1,
@@ -441,31 +404,17 @@ class CardDealAnimationState extends State<CardDealAnimation>
   }
 
   Widget _buildCard(BuildContext context, int playerIndex, int cardIndex) {
-    final customCard = widget.cardBuilder?.call(
-      context,
-      playerIndex,
-      cardIndex,
-    );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(7),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
+    return GameCardFace(
+      asset:
+          widget.cardAsset ?? Assets.games.liarsPoker.images.cards.whiteBack.game,
+      radius: 7,
+      backgroundColor: null,
+      shadow: const BoxShadow(
+        color: Color(0x66000000),
+        blurRadius: 5,
+        offset: Offset(0, 3),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(7),
-        child:
-            customCard ??
-            (widget.cardAsset ??
-                    Assets.games.liarsPoker.images.cards.whiteBack.game)
-                .image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
-      ),
+      child: widget.cardBuilder?.call(context, playerIndex, cardIndex),
     );
   }
 
@@ -520,18 +469,6 @@ class CardDealAnimationState extends State<CardDealAnimation>
   }
 
   Offset _playerTarget({required Size size, required int playerIndex}) {
-    final positions = widget.playerPositions;
-    if (positions != null && playerIndex < positions.length) {
-      const playerSlotSize = 160.0;
-      final position = positions[playerIndex];
-
-      // player_layouts의 좌측 상단 좌표를 160x160 플레이어 영역의 중심으로 변환합니다.
-      return Offset(
-        position.dx * size.width + playerSlotSize / 2,
-        position.dy * size.height + playerSlotSize / 2,
-      );
-    }
-
     final centers = playerCentersForBoard(
       playerCount: widget.boardSeatCount ?? widget.playerCount,
       boardSize: size,
@@ -543,15 +480,5 @@ class CardDealAnimationState extends State<CardDealAnimation>
     );
     final safeSeatIndex = seatIndex.clamp(0, centers.length - 1);
     return centers[safeSeatIndex];
-  }
-
-  double _intervalProgress(
-    double value,
-    double begin,
-    double end,
-    Curve curve,
-  ) {
-    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
-    return curve.transform(progress);
   }
 }

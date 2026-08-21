@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -94,13 +96,65 @@ class MafiaTabletBox extends StatelessWidget {
 }
 
 /// 태블릿 배경입니다. 낮은 종이, 밤은 어두운 배경을 씁니다.
-class MafiaTabletBackground extends StatelessWidget {
+class MafiaTabletBackground extends StatefulWidget {
   const MafiaTabletBackground({super.key, required this.isNight});
 
   final bool isNight;
 
   @override
-  Widget build(BuildContext context) {
+  State<MafiaTabletBackground> createState() => _MafiaTabletBackgroundState();
+}
+
+class _MafiaTabletBackgroundState extends State<MafiaTabletBackground>
+    with SingleTickerProviderStateMixin {
+  /// 낮↔밤이 바뀔 때 새 배경이 12시부터 시계 방향으로 쓸려 들어오는
+  /// 라디얼 와이프 시간입니다(확정 2026-08).
+  static const Duration _wipeDuration = Duration(milliseconds: 900);
+
+  late final AnimationController _controller;
+
+  /// 지금 그리려는(새) 배경과, 전환 동안 밑에 깔려 있는 직전 배경입니다.
+  late bool _currentIsNight;
+  bool? _previousIsNight;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIsNight = widget.isNight;
+    _controller = AnimationController(
+      vsync: this,
+      duration: _wipeDuration,
+      // 첫 화면은 전환 없이 바로 보입니다.
+      value: 1,
+    )..addStatusListener(_handleStatus);
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && _previousIsNight != null) {
+      setState(() => _previousIsNight = null);
+    }
+  }
+
+  @override
+  void didUpdateWidget(MafiaTabletBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isNight == _currentIsNight) return;
+    // 밤↔낮이 바뀌면 옛 배경을 깔아 두고 새 배경을 쓸어 넣습니다.
+    _previousIsNight = _currentIsNight;
+    _currentIsNight = widget.isNight;
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeStatusListener(_handleStatus)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// 낮 또는 밤 배경 한 겹입니다.
+  Widget _buildLayer(bool isNight) {
     final background = Assets.games.mafia.images.background;
     final image = isNight
         ? background.backgroundNight.game
@@ -110,6 +164,65 @@ class MafiaTabletBackground extends StatelessWidget {
       child: image.image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final previous = _previousIsNight;
+    if (previous == null) return _buildLayer(_currentIsNight);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final progress = Curves.easeInOut.transform(_controller.value);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildLayer(previous),
+            ClipPath(
+              clipper: _RadialWipeClipper(progress),
+              child: _buildLayer(_currentIsNight),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 12시 방향에서 시작해 시계 방향으로 쓸어 내는 부채꼴 클리퍼입니다.
+class _RadialWipeClipper extends CustomClipper<Path> {
+  const _RadialWipeClipper(this.progress);
+
+  /// 0 = 아무것도 안 보임, 1 = 전부 보임.
+  final double progress;
+
+  @override
+  Path getClip(Size size) {
+    if (progress >= 1) {
+      return Path()..addRect(Offset.zero & size);
+    }
+    final path = Path();
+    if (progress <= 0) return path;
+    final center = Offset(size.width / 2, size.height / 2);
+    // 화면 모서리까지 확실히 덮는 반지름입니다.
+    final radius = size.longestSide;
+    const startAngle = -math.pi / 2;
+    path
+      ..moveTo(center.dx, center.dy)
+      ..lineTo(center.dx, center.dy - radius)
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        math.pi * 2 * progress,
+        false,
+      )
+      ..close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_RadialWipeClipper oldClipper) =>
+      oldClipper.progress != progress;
 }
 
 /// 낮 화면 가운데의 햇살입니다. 시안에서 발표·투표 화면의 시선이 모이는 곳입니다.

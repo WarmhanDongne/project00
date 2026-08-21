@@ -6,10 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:project00/games/mafia/models/mafia_composition.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
+import 'package:project00/games/mafia/dev/mafia_practice_fakes.dart';
 import 'package:project00/games/mafia/services/mafia_command_service.dart';
 import 'package:project00/games/mafia/services/mafia_query_service.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
-import 'package:project00/games/shared/services/game_interruption_command_service.dart';
 
 //=======================마피아 연습장 엔진 (개발 전용)==============================
 // Firebase 없이 마피아 한 판을 통째로 돌리는 **로컬 가짜 서버**입니다.
@@ -36,16 +36,21 @@ class MafiaPracticeBot {
 class MafiaPracticeEngine {
   MafiaPracticeEngine({
     required this.playerCount,
-    required this.myUid,
-    String? myRoleId,
+    this.humanUids = const ['me'],
+    this.preferredRoleId,
     this.botDelay = const Duration(seconds: 2),
-  }) : _myPreferredRoleId = myRoleId {
+  }) {
     _start();
   }
 
   final int playerCount;
-  final String myUid;
-  final String? _myPreferredRoleId;
+
+  /// 봇이 대신 조작하지 **않는** 사람 자리입니다. 혼자 연습이면 ['me'],
+  /// 여러 기기 모드면 ['p1', 'p2']처럼 접속할 폰 수만큼 둡니다.
+  final List<String> humanUids;
+
+  /// 첫 번째 사람에게 우선 배정할 역할입니다.
+  final String? preferredRoleId;
 
   /// 봇이 행동하기까지의 기본 지연입니다. 사람처럼 약간 뜸을 들입니다.
   final Duration botDelay;
@@ -102,8 +107,8 @@ class MafiaPracticeEngine {
         for (var i = 0; i < entry.value; i += 1) entry.key,
     ]..shuffle(_random);
 
-    // 내가 원하는 역할이 있으면 내 몫으로 빼 둡니다.
-    final preferred = _myPreferredRoleId;
+    // 첫 번째 사람이 원하는 역할이 있으면 그 몫으로 빼 둡니다.
+    final preferred = preferredRoleId;
     if (preferred != null && pool.contains(preferred)) {
       pool
         ..remove(preferred)
@@ -112,11 +117,17 @@ class MafiaPracticeEngine {
 
     _players = {};
     _roles = {};
+    final humans = humanUids.take(playerCount).toList();
     for (var i = 0; i < playerCount; i += 1) {
-      final uid = i == 0 ? myUid : 'bot$i';
+      final isHuman = i < humans.length;
+      final uid = isHuman ? humans[i] : 'bot$i';
+      // 혼자 연습이면 '나', 여러 기기 모드면 접속 순서대로 '폰1'·'폰2'입니다.
+      final nickname = !isHuman
+          ? '봇$i'
+          : (humans.length == 1 ? '나' : '폰${i + 1}');
       _players[uid] = {
         'uid': uid,
-        'nickname': i == 0 ? '나' : '봇$i',
+        'nickname': nickname,
         'profileImageUrl': '',
         'seatIndex': i,
         'status': 'alive',
@@ -148,12 +159,18 @@ class MafiaPracticeEngine {
   int get _now => DateTime.now().millisecondsSinceEpoch;
 
   //=======================MafiaService 흉내==============================
-  /// 실제 컨트롤러에 꽂을 가짜 서비스입니다.
-  MafiaService get practiceService => MafiaService(
-    command: _PracticeCommands(this),
+  /// 실제 컨트롤러에 꽂을 가짜 서비스입니다. [uid]가 조작 명령의 주인입니다.
+  MafiaService practiceServiceFor(String uid) => MafiaService(
+    command: _PracticeCommands(this, uid),
     query: _PracticeQuery(this),
-    interruption: _NoopInterruption(),
+    interruption: MafiaPracticeNoopInterruption(),
   );
+
+  /// 현재 상태를 모든 구독자에게 다시 흘립니다(원격 서버가 접속 직후 씁니다).
+  void publishNow() => _publish();
+
+  /// 자리의 별명입니다(원격 서버가 접속 인사에 씁니다).
+  String? nicknameOf(String uid) => _players[uid]?['nickname'] as String?;
 
   Stream<DatabaseEvent> watchPublic() => _publicController.stream;
 
@@ -163,9 +180,9 @@ class MafiaPracticeEngine {
 
   void _publish() {
     _revision += 1;
-    _publicController.add(_FakeEvent(_publicMap()));
+    _publicController.add(MafiaPracticeFakeEvent(_publicMap()));
     for (final entry in _privateControllers.entries) {
-      entry.value.add(_FakeEvent(_private[entry.key]));
+      entry.value.add(MafiaPracticeFakeEvent(_private[entry.key]));
     }
   }
 
@@ -518,11 +535,11 @@ class MafiaPracticeEngine {
 
     switch (_phase) {
       case 'roleReveal':
-        for (final uid in _uids.where((uid) => uid != myUid)) {
+        for (final uid in _uids.where((uid) => !humanUids.contains(uid))) {
           if (!_confirmed.contains(uid)) run(() => confirmRole(uid));
         }
       case 'night':
-        for (final uid in _aliveUids.where((uid) => uid != myUid)) {
+        for (final uid in _aliveUids.where((uid) => !humanUids.contains(uid))) {
           final role = _roleOf(uid);
           if (role == null || !role.actsAtNight) continue;
           if (_nightActions.containsKey(uid)) continue;
@@ -541,7 +558,7 @@ class MafiaPracticeEngine {
           run(() => submitNightAction(uid, target));
         }
       case 'voting':
-        for (final uid in _aliveUids.where((uid) => uid != myUid)) {
+        for (final uid in _aliveUids.where((uid) => !humanUids.contains(uid))) {
           if (_votes.containsKey(uid)) continue;
           final targets = _aliveUids.where((target) => target != uid).toList();
           final target = targets[_random.nextInt(targets.length)];
@@ -555,7 +572,7 @@ class MafiaPracticeEngine {
 
   /// 살아 있는 봇들이 토론 조기 종료에 동의합니다(과반까지).
   void botsSkipDiscussion() {
-    for (final uid in _aliveUids.where((uid) => uid != myUid)) {
+    for (final uid in _aliveUids.where((uid) => !humanUids.contains(uid))) {
       if (_phase != 'day') return;
       endDiscussion(uid);
     }
@@ -575,32 +592,6 @@ class MafiaPracticeEngine {
 }
 
 //=======================가짜 서비스 부품==============================
-class _FakeSnapshot implements DataSnapshot {
-  _FakeSnapshot(this._value);
-  final Object? _value;
-
-  @override
-  Object? get value => _value;
-
-  @override
-  bool get exists => _value != null;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName}');
-}
-
-class _FakeEvent implements DatabaseEvent {
-  _FakeEvent(Object? value) : snapshot = _FakeSnapshot(value);
-
-  @override
-  final DataSnapshot snapshot;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName}');
-}
-
 class _PracticeQuery implements MafiaQueryService {
   _PracticeQuery(this.engine);
   final MafiaPracticeEngine engine;
@@ -623,7 +614,7 @@ class _PracticeQuery implements MafiaQueryService {
 
   @override
   Future<DataSnapshot> readPublicGame(String roomCode) async =>
-      _FakeSnapshot(engine._publicMap());
+      MafiaPracticeFakeSnapshot(engine._publicMap());
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -631,12 +622,15 @@ class _PracticeQuery implements MafiaQueryService {
 }
 
 class _PracticeCommands implements MafiaCommandService {
-  _PracticeCommands(this.engine);
+  _PracticeCommands(this.engine, this.uid);
   final MafiaPracticeEngine engine;
+
+  /// 이 서비스로 보내는 조작 명령의 주인입니다.
+  final String uid;
 
   @override
   Future<Map<String, dynamic>> confirmRole({required String roomCode}) async {
-    engine.confirmRole(engine.myUid);
+    engine.confirmRole(uid);
     return const {'success': true};
   }
 
@@ -653,7 +647,7 @@ class _PracticeCommands implements MafiaCommandService {
     required String roomCode,
     required String targetUid,
   }) async {
-    engine.submitNightAction(engine.myUid, targetUid);
+    engine.submitNightAction(uid, targetUid);
     return const {'success': true};
   }
 
@@ -673,7 +667,7 @@ class _PracticeCommands implements MafiaCommandService {
 
   @override
   Future<Map<String, dynamic>> endDiscussion({required String roomCode}) async {
-    engine.endDiscussion(engine.myUid);
+    engine.endDiscussion(uid);
     return const {'success': true};
   }
 
@@ -688,7 +682,7 @@ class _PracticeCommands implements MafiaCommandService {
     required String roomCode,
     required String targetUid,
   }) async {
-    engine.submitVote(engine.myUid, targetUid);
+    engine.submitVote(uid, targetUid);
     return const {'success': true};
   }
 
@@ -722,12 +716,6 @@ class _PracticeCommands implements MafiaCommandService {
   Future<Map<String, dynamic>> endGame({required String roomCode}) async =>
       const {'success': true};
 
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName}');
-}
-
-class _NoopInterruption implements GameInterruptionCommandService {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName}');

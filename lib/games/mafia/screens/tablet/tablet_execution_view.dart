@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/widgets/mafia_flip_card.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -169,44 +169,13 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
   }
 
   Widget _buildCard(MafiaPlayer executed, double progress) {
-    final back = Assets.games.mafia.images.cards.roleBack.game;
-    final front = widget.executedRole?.card;
-    // 절반을 지나면 앞면으로 바꿔, 뒤집히는 도중에 글자가 반사되어 보이지
-    // 않게 합니다.
-    final showsFront = progress >= 0.5 && front != null;
-    final angle = showsFront ? math.pi * (1 - progress) : math.pi * progress;
-
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.0012)
-        ..rotateY(angle),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x4D000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              (showsFront ? front : back).image(
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
-              ),
-              // 뒷면 위에 얹힌 대상의 원형 사진입니다. 뒤집기 전반부에 사라집니다.
-              if (!showsFront) _buildPortrait(progress),
-            ],
-          ),
-        ),
-      ),
+    return MafiaFlipCard(
+      progress: progress,
+      front: widget.executedRole?.card,
+      back: Assets.games.mafia.images.cards.roleBack.game,
+      borderRadius: BorderRadius.circular(20),
+      // 뒷면 위에 얹힌 대상의 원형 사진입니다. 뒤집기 전반부에 사라집니다.
+      backOverlay: _buildPortrait(progress),
     );
   }
 

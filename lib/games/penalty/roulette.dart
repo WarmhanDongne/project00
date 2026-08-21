@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -41,7 +40,7 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   static const double _designHeight = 900;
 
   final RouletteController _controller = RouletteController();
-  final Random _random = Random.secure();
+  final math.Random _random = math.Random.secure();
 
   bool _isSpinning = false;
   bool _isLeverLocked = false;
@@ -578,35 +577,13 @@ class _SilverRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: SizedBox.square(
-        dimension: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [_RingBorder(size: size, width: width)],
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xfffafafa), width: width),
         ),
-      ),
-    );
-  }
-}
-
-// ================================================================
-// 실버 링 한 줄
-// ================================================================
-
-class _RingBorder extends StatelessWidget {
-  const _RingBorder({required this.size, required this.width});
-
-  final double size;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xfffafafa), width: width),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:project00/games/mafia/loading/mafia_loading.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/mafia_copy.dart';
@@ -76,6 +78,10 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   //=======================밤 시작 안내 (확정 흐름)==============================
   // 전원 확인 → 10초 대기 → '밤이 됐습니다' 안내 2.5초 → 서버에 밤 시작.
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
+  /// 밤 총성까지의 지연입니다(배경 전환 0.9초 + 한 박자).
+  static const Duration _nightGunshotDelay = Duration(milliseconds: 1500);
+  Timer? _gunshotTimer;
+
   static const Duration _nightNoticeDelay = Duration(seconds: 10);
   static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
   Timer? _nightNoticeTimer;
@@ -88,6 +94,11 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.lockTabletGameLandscape());
     unawaited(GameAssetStore.instance.prepareGame('mafia').catchError((_) {}));
+    // 배경·달·새 등 첫 연출 이미지를 미리 디코딩합니다. context가 필요한
+    // 작업이라 첫 프레임 뒤로 미룹니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(preloadMafiaAssets(context, isPhone: false));
+    });
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final args = MafiaSessionArgs(
@@ -113,6 +124,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     _stageTimer?.cancel();
     _nightNoticeTimer?.cancel();
+    _gunshotTimer?.cancel();
     _bgm.stop();
     _subscription?.close();
     unawaited(AppOrientation.lockPlatformPortrait());
@@ -143,6 +155,15 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 단계에 처음 들어온 순간 한 번만 하는 일입니다.
   void _onStageEntered(MafiaController game, MafiaTabletStage stage) {
     _stageTimer?.cancel();
+    _gunshotTimer?.cancel();
+    if (stage == MafiaTabletStage.night) {
+      // 확정(2026-08): 밤이 되면 마피아의 총성이 태블릿에서 울립니다.
+      // 배경 라디얼 와이프(0.9초)가 끝나고 한 박자 쉰 뒤에 울립니다.
+      _gunshotTimer = Timer(_nightGunshotDelay, () {
+        if (!mounted || _stage != MafiaTabletStage.night) return;
+        SoundEffects.play(context, MafiaSounds.gunshot);
+      });
+    }
     final hold = stage.announcementHold;
     if (hold == null) return;
 

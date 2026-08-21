@@ -33,6 +33,9 @@ class $AssetsImagesGen {
   /// Directory path: assets/images/button
   $AssetsImagesButtonGen get button => const $AssetsImagesButtonGen();
 
+  /// Directory path: assets/images/character
+  $AssetsImagesCharacterGen get character => const $AssetsImagesCharacterGen();
+
   /// Directory path: assets/images/logo
   $AssetsImagesLogoGen get logo => const $AssetsImagesLogoGen();
 
@@ -66,6 +69,9 @@ class $AssetsLottieGen {
 class $AssetsSoundsGen {
   const $AssetsSoundsGen();
 
+  /// File path: assets/sounds/background.mp3
+  String get background => 'assets/sounds/background.mp3';
+
   /// File path: assets/sounds/dealing.mp3
   String get dealing => 'assets/sounds/dealing.mp3';
 
@@ -79,7 +85,7 @@ class $AssetsSoundsGen {
   String get stamp => 'assets/sounds/stamp.mp3';
 
   /// List of all assets
-  List<String> get values => [dealing, lever, roulette, stamp];
+  List<String> get values => [background, dealing, lever, roulette, stamp];
 }
 
 class $AssetsGamesFinalCallGen {
@@ -123,8 +129,105 @@ class $AssetsImagesButtonGen {
   AssetGenImage get googleLoginButton =>
       const AssetGenImage('assets/images/button/googleLoginButton.png');
 
+  /// File path: assets/images/button/google_g_logo.svg
+  SvgGenImage get googleGLogo =>
+      const SvgGenImage('assets/images/button/google_g_logo.svg');
+
   /// List of all assets
-  List<AssetGenImage> get values => [googleLoginButton];
+  List<dynamic> get values => [googleLoginButton, googleGLogo];
+}
+
+class $AssetsImagesCharacterGen {
+  const $AssetsImagesCharacterGen();
+
+  /// File path: assets/images/character/bear.png
+  AssetGenImage get bear =>
+      const AssetGenImage('assets/images/character/bear.png');
+
+  /// File path: assets/images/character/bee.png
+  AssetGenImage get bee =>
+      const AssetGenImage('assets/images/character/bee.png');
+
+  /// File path: assets/images/character/cat.png
+  AssetGenImage get cat =>
+      const AssetGenImage('assets/images/character/cat.png');
+
+  /// File path: assets/images/character/crab.png
+  AssetGenImage get crab =>
+      const AssetGenImage('assets/images/character/crab.png');
+
+  /// File path: assets/images/character/deer.png
+  AssetGenImage get deer =>
+      const AssetGenImage('assets/images/character/deer.png');
+
+  /// File path: assets/images/character/elephant.png
+  AssetGenImage get elephant =>
+      const AssetGenImage('assets/images/character/elephant.png');
+
+  /// File path: assets/images/character/frog.png
+  AssetGenImage get frog =>
+      const AssetGenImage('assets/images/character/frog.png');
+
+  /// File path: assets/images/character/giraffe.png
+  AssetGenImage get giraffe =>
+      const AssetGenImage('assets/images/character/giraffe.png');
+
+  /// File path: assets/images/character/hedgehog.png
+  AssetGenImage get hedgehog =>
+      const AssetGenImage('assets/images/character/hedgehog.png');
+
+  /// File path: assets/images/character/kindbear.png
+  AssetGenImage get kindbear =>
+      const AssetGenImage('assets/images/character/kindbear.png');
+
+  /// File path: assets/images/character/octopus.png
+  AssetGenImage get octopus =>
+      const AssetGenImage('assets/images/character/octopus.png');
+
+  /// File path: assets/images/character/owl.png
+  AssetGenImage get owl =>
+      const AssetGenImage('assets/images/character/owl.png');
+
+  /// File path: assets/images/character/penguin.png
+  AssetGenImage get penguin =>
+      const AssetGenImage('assets/images/character/penguin.png');
+
+  /// File path: assets/images/character/rabbit.png
+  AssetGenImage get rabbit =>
+      const AssetGenImage('assets/images/character/rabbit.png');
+
+  /// File path: assets/images/character/shark.png
+  AssetGenImage get shark =>
+      const AssetGenImage('assets/images/character/shark.png');
+
+  /// File path: assets/images/character/snake.png
+  AssetGenImage get snake =>
+      const AssetGenImage('assets/images/character/snake.png');
+
+  /// File path: assets/images/character/whale.png
+  AssetGenImage get whale =>
+      const AssetGenImage('assets/images/character/whale.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    bear,
+    bee,
+    cat,
+    crab,
+    deer,
+    elephant,
+    frog,
+    giraffe,
+    hedgehog,
+    kindbear,
+    octopus,
+    owl,
+    penguin,
+    rabbit,
+    shark,
+    snake,
+    whale,
+  ];
 }
 
 class $AssetsImagesLogoGen {
@@ -203,9 +306,17 @@ class $AssetsGamesFinalCallImagesGen {
 class $AssetsGamesFinalCallSoundsGen {
   const $AssetsGamesFinalCallSoundsGen();
 
-  /// Directory path: assets/games/final_call/sounds/background
-  $AssetsGamesFinalCallSoundsBackgroundGen get background =>
-      const $AssetsGamesFinalCallSoundsBackgroundGen();
+  /// File path: assets/games/final_call/sounds/.gitkeep
+  String get aGitkeep => 'assets/games/final_call/sounds/.gitkeep';
+
+  /// File path: assets/games/final_call/sounds/heartbreak.mp3
+  String get heartbreak => 'assets/games/final_call/sounds/heartbreak.mp3';
+
+  /// File path: assets/games/final_call/sounds/win.mp3
+  String get win => 'assets/games/final_call/sounds/win.mp3';
+
+  /// List of all assets
+  List<String> get values => [aGitkeep, heartbreak, win];
 }
 
 class $AssetsGamesLiarsPokerImagesGen {
@@ -249,10 +360,6 @@ class $AssetsGamesLiarsPokerSoundsGen {
 
   /// File path: assets/games/liars_poker/sounds/.gitkeep
   String get aGitkeep => 'assets/games/liars_poker/sounds/.gitkeep';
-
-  /// Directory path: assets/games/liars_poker/sounds/background
-  $AssetsGamesLiarsPokerSoundsBackgroundGen get background =>
-      const $AssetsGamesLiarsPokerSoundsBackgroundGen();
 
   /// File path: assets/games/liars_poker/sounds/submit.mp3
   String get submit => 'assets/games/liars_poker/sounds/submit.mp3';
@@ -782,17 +889,6 @@ class $AssetsGamesFinalCallImagesOtherGen {
   List<AssetGenImage> get values => [blockNumberHolder];
 }
 
-class $AssetsGamesFinalCallSoundsBackgroundGen {
-  const $AssetsGamesFinalCallSoundsBackgroundGen();
-
-  /// File path: assets/games/final_call/sounds/background/background.mp3
-  String get background =>
-      'assets/games/final_call/sounds/background/background.mp3';
-
-  /// List of all assets
-  List<String> get values => [background];
-}
-
 class $AssetsGamesLiarsPokerImagesBackgroundGen {
   const $AssetsGamesLiarsPokerImagesBackgroundGen();
 
@@ -1061,17 +1157,6 @@ class $AssetsGamesLiarsPokerImagesTableGen {
     tableQueenBlack,
     tableQueenWhite,
   ];
-}
-
-class $AssetsGamesLiarsPokerSoundsBackgroundGen {
-  const $AssetsGamesLiarsPokerSoundsBackgroundGen();
-
-  /// File path: assets/games/liars_poker/sounds/background/background.mp3
-  String get background =>
-      'assets/games/liars_poker/sounds/background/background.mp3';
-
-  /// List of all assets
-  List<String> get values => [background];
 }
 
 class $AssetsGamesMafiaImagesBackgroundGen {
@@ -1456,16 +1541,12 @@ class $AssetsGamesMafiaImagesOtherGen {
 class $AssetsGamesMafiaSoundsBackgroundGen {
   const $AssetsGamesMafiaSoundsBackgroundGen();
 
-  /// File path: assets/games/mafia/sounds/background/background.mp3
-  String get background =>
-      'assets/games/mafia/sounds/background/background.mp3';
-
   /// File path: assets/games/mafia/sounds/background/background_night.mp3
   String get backgroundNight =>
       'assets/games/mafia/sounds/background/background_night.mp3';
 
   /// List of all assets
-  List<String> get values => [background, backgroundNight];
+  List<String> get values => [backgroundNight];
 }
 
 class $AssetsGamesMafiaImagesBackgroundBirdGen {

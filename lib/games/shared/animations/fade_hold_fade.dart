@@ -32,41 +32,30 @@ class _FadeHoldFadeState extends State<FadeHoldFade>
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration)
       ..addStatusListener(_handleStatus);
-    _opacity = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(
-          begin: 0.0,
-          end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 18,
-      ),
-      TweenSequenceItem(tween: ConstantTween(1.0), weight: 58),
-      TweenSequenceItem(
-        tween: Tween(
-          begin: 1.0,
-          end: 0.0,
-        ).chain(CurveTween(curve: Curves.easeInCubic)),
-        weight: 24,
-      ),
-    ]).animate(_controller);
-    _scale = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(
-          begin: widget.beginScale,
-          end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 18,
-      ),
-      TweenSequenceItem(tween: ConstantTween(1.0), weight: 58),
-      TweenSequenceItem(
-        tween: Tween(
-          begin: 1.0,
-          end: widget.endScale,
-        ).chain(CurveTween(curve: Curves.easeInCubic)),
-        weight: 24,
-      ),
-    ]).animate(_controller);
+    _opacity = _inHoldOut(from: 0, to: 0);
+    _scale = _inHoldOut(from: widget.beginScale, to: widget.endScale);
     _controller.forward();
+  }
+
+  /// [from]에서 1로 들어와 잠시 유지한 뒤 [to]로 빠지는 공통 구간입니다.
+  Animation<double> _inHoldOut({required double from, required double to}) {
+    return TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: from,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 18,
+      ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 58),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: to,
+        ).chain(CurveTween(curve: Curves.easeInCubic)),
+        weight: 24,
+      ),
+    ]).animate(_controller);
   }
 
   void _handleStatus(AnimationStatus status) {

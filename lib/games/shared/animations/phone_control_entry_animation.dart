@@ -1,6 +1,7 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
 
 /// 카드 공개가 끝난 뒤 나타나는 휴대폰 게임 조작 요소의 등장 방식입니다.
 enum PhoneControlEntryStyle {
@@ -29,53 +30,26 @@ class PhoneControlEntryAnimation extends StatelessWidget {
   final double begin;
   final double end;
 
-  static final Animatable<double> _heavyDropOffset = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: -1.0,
-        end: 0.075,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 72,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: 0.075,
-        end: -0.018,
-      ).chain(CurveTween(curve: Curves.easeInOutCubic)),
-      weight: 12,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: -0.018,
-        end: 0.0,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 16,
-    ),
-  ]);
+  static final Animatable<double> _heavyDropOffset = overshootSettle(
+    begin: -1.0,
+    peak: 0.075,
+    dip: -0.018,
+    end: 0.0,
+    riseWeight: 72,
+    dipWeight: 12,
+    settleWeight: 16,
+    dipCurve: Curves.easeInOutCubic,
+  );
 
-  static final Animatable<double> _heavyDropScale = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: 0.93,
-        end: 1.025,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 72,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: 1.025,
-        end: 0.992,
-      ).chain(CurveTween(curve: Curves.easeInOutCubic)),
-      weight: 12,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(
-        begin: 0.992,
-        end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 16,
-    ),
-  ]);
+  static final Animatable<double> _heavyDropScale = overshootSettle(
+    begin: 0.93,
+    peak: 1.025,
+    dip: 0.992,
+    riseWeight: 72,
+    dipWeight: 12,
+    settleWeight: 16,
+    dipCurve: Curves.easeInOutCubic,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +57,7 @@ class PhoneControlEntryAnimation extends StatelessWidget {
       animation: animation,
       child: child,
       builder: (context, child) {
-        final progress = _intervalProgress(animation.value);
+        final progress = intervalProgress(animation.value, begin, end);
         final opacity = Curves.easeOutCubic.transform(
           (progress / 0.34).clamp(0.0, 1.0),
         );
@@ -127,9 +101,5 @@ class PhoneControlEntryAnimation extends StatelessWidget {
       offset: Offset(0, offsetY),
       child: Transform.scale(scale: scale, child: child),
     );
-  }
-
-  double _intervalProgress(double value) {
-    return ((value - begin) / (end - begin)).clamp(0.0, 1.0);
   }
 }

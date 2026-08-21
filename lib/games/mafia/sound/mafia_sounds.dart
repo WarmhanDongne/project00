@@ -1,3 +1,5 @@
+import 'package:project00/core/sound/app_sounds.dart';
+
 /// 마피아 전용 효과음 경로입니다.
 ///
 /// 여러 게임이 함께 쓰는 소리(카드 분배·룰렛 등)는
@@ -23,8 +25,10 @@ abstract final class MafiaSounds {
   /// 효과음이 아니라 **BGM 채널**로 재생합니다
   /// (`shared/sound/game_background_music.dart`). 반복 재생이므로 화면을 떠날 때
   /// 반드시 멈춰야 합니다. 그래서 [preloadTargets]에 넣지 않습니다.
-  static const background =
-      'assets/games/mafia/sounds/background/background.mp3';
+  ///
+  /// ⚠️ 지금은 공용 곡과 같은 파일이라 임시로 공용 상수를 참조합니다(용량
+  /// 절약). 마피아 전용 낮 곡이 들어오면 파일을 넣고 이 상수만 바꾸세요.
+  static const background = AppSounds.background;
 
   /// 밤 동안 깔리는 배경음악입니다. 낮과 곡을 갈아 끼워 분위기를 바꿉니다.
   ///

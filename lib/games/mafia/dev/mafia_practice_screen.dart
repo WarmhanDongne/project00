@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_engine.dart';
+import 'package:project00/games/mafia/dev/mafia_practice_remote_screen.dart';
+import 'package:project00/games/mafia/dev/mafia_practice_server.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
 import 'package:project00/games/mafia/screens/phone/phone_game_screen.dart';
@@ -32,13 +34,17 @@ class MafiaPracticeScreen extends ConsumerStatefulWidget {
 }
 
 class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
-  static const String _myUid = 'me';
-
   MafiaPracticeEngine? _engine;
   int _sessionSerial = 0;
   int _playerCount = 6;
   String? _myRoleId = 'mafia';
   bool _showsTablet = false;
+
+  /// 봇 대신 실제 폰 시뮬레이터가 조작할 자리 수입니다(0 = 혼자 연습).
+  int _humanPhoneCount = 0;
+
+  /// 폰 시뮬레이터들이 붙는 연습 서버입니다. '사람 폰'이 1대 이상이면 켭니다.
+  final MafiaPracticeServer _server = MafiaPracticeServer();
 
   MafiaSessionArgs? _phoneArgs;
   MafiaSessionArgs? _tabletArgs;
@@ -59,24 +65,35 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
   void _restart() {
     _engine?.dispose();
     _sessionSerial += 1;
+    // 사람 자리: 혼자면 'me', 폰 시뮬레이터를 붙이면 접속 순서대로 p1·p2.
+    final humanUids = _humanPhoneCount == 0
+        ? const ['me']
+        : [for (var i = 0; i < _humanPhoneCount; i += 1) 'p${i + 1}'];
     final engine = MafiaPracticeEngine(
       playerCount: _playerCount,
-      myUid: _myUid,
-      myRoleId: _myRoleId,
+      humanUids: humanUids,
+      preferredRoleId: _myRoleId,
     );
-    final service = engine.practiceService;
+    if (_humanPhoneCount > 0) {
+      // 서버는 켠 채 새 엔진으로 갈아 끼웁니다. 폰은 재접속할 필요 없습니다.
+      unawaited(_server.start(engine));
+    } else {
+      unawaited(_server.stop());
+    }
     setState(() {
       _engine = engine;
       _phoneArgs = MafiaSessionArgs(
         roomCode: 'DEV$_sessionSerial',
-        uid: _myUid,
-        service: service,
+        // 왼쪽 미리보기는 첫 사람 자리를 봅니다. 폰 모드에서는 폰1과 같은
+        // 화면이라, 폰 시뮬레이터와 나란히 비교할 때 씁니다.
+        uid: humanUids.first,
+        service: engine.practiceServiceFor(humanUids.first),
         watchPrivate: true,
       );
       _tabletArgs = MafiaSessionArgs(
         roomCode: 'DEV$_sessionSerial',
         uid: 'dev-tablet',
-        service: service,
+        service: engine.practiceServiceFor('dev-tablet'),
         // 태블릿과 같은 조건: 신분을 받지 않습니다.
         watchPrivate: false,
       );
@@ -86,6 +103,7 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
+    unawaited(_server.stop());
     _engine?.dispose();
     super.dispose();
   }
@@ -230,6 +248,49 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
       child: ListView(
         padding: const EdgeInsets.all(12),
         children: [
+          _sectionLabel('여러 기기 (시뮬레이터)'),
+          // 폰 시뮬레이터에서는 이 버튼으로 호스트(태블릿)에 접속합니다.
+          _controlButton(
+            '이 기기를 폰으로 접속',
+            () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const MafiaPracticeRemoteScreen(),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              const Text('사람 폰', style: TextStyle(color: Colors.white70)),
+              const SizedBox(width: 8),
+              DropdownButton<int>(
+                value: _humanPhoneCount,
+                dropdownColor: const Color(0xFF222630),
+                style: const TextStyle(color: Colors.white),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('없음 (혼자)')),
+                  DropdownMenuItem(value: 1, child: Text('1대')),
+                  DropdownMenuItem(value: 2, child: Text('2대')),
+                ],
+                onChanged: (value) =>
+                    setState(() => _humanPhoneCount = value ?? 0),
+              ),
+            ],
+          ),
+          ValueListenableBuilder<List<String>>(
+            valueListenable: _server.connectedNames,
+            builder: (context, names, _) {
+              if (!_server.isRunning) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '서버 ws://127.0.0.1:${_server.port} · 접속: '
+                  '${names.isEmpty ? '없음' : names.join(', ')}',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
           _sectionLabel('보기'),
           SegmentedButton<bool>(
             segments: const [

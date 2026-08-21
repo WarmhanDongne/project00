@@ -107,7 +107,6 @@ flutter:
     - assets/games/liars_poker/images/modal/
     - assets/games/liars_poker/images/other/
     - assets/games/liars_poker/sounds/
-    - assets/games/liars_poker/sounds/background/
     - assets/games/mafia/images/background/
     - assets/games/mafia/images/background/bird/
     - assets/games/mafia/images/banner/
@@ -123,7 +122,7 @@ flutter:
     - assets/games/final_call/images/layout/
     - assets/games/final_call/images/modal/
     - assets/games/final_call/images/other/
-    - assets/games/final_call/sounds/background/
+    - assets/games/final_call/sounds/
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/
