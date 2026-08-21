@@ -11,6 +11,7 @@ import {
 } from "../lib/room/realtime-room-lifecycle.js";
 import {decideRoomJoin} from "../lib/room/room-join-policy.js";
 import {decideRoomSeating} from "../lib/room/room-seating-policy.js";
+import {runPrimedTransaction} from "../lib/room/room-transaction.js";
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
   const sessionId = createControllerSessionId();
@@ -147,4 +148,35 @@ test("자리 배치 시작과 경합한 상태·게임 변경을 거부한다", 
     decideRoomSeating({...validState, roomStatus: "seating"}),
     "already-seating",
   );
+});
+
+test("RTDB 트랜잭션은 첫 서버 값을 받은 뒤 실행하고 리스너를 해제한다", async () => {
+  const calls = [];
+  let emitValue;
+  const expectedResult = {committed: true, snapshot: {val: () => ({})}};
+  const ref = {
+    on(event, listener) {
+      calls.push(`on:${event}`);
+      emitValue = listener;
+    },
+    off(event, listener) {
+      calls.push(`off:${event}:${listener === emitValue}`);
+    },
+    async transaction(update) {
+      calls.push("transaction");
+      assert.deepEqual(update({status: "waiting"}), {status: "seating"});
+      return expectedResult;
+    },
+  };
+
+  const pending = runPrimedTransaction(ref, (room) => ({
+    ...room,
+    status: "seating",
+  }));
+  await Promise.resolve();
+  assert.deepEqual(calls, ["on:value"]);
+
+  emitValue({val: () => ({status: "waiting"})});
+  assert.equal(await pending, expectedResult);
+  assert.deepEqual(calls, ["on:value", "transaction", "off:value:true"]);
 });

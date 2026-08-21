@@ -11,6 +11,7 @@ import {
   ControllerSessionRoom,
 } from "./controller-session.js";
 import {decideRoomSeating} from "./room-seating-policy.js";
+import {runPrimedTransaction} from "./room-transaction.js";
 
 const REGION = "asia-northeast3";
 const DATABASE_REGION = "asia-southeast1";
@@ -150,7 +151,7 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
       throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
     }
 
-    const result = await roomRef.transaction((raw) => {
+    const result = await runPrimedTransaction(roomRef, (raw) => {
       if (raw === null) return;
       const room = raw as RealtimeRoom;
       assertControllerSession(room, uid, request.data?.controllerSessionId);
@@ -324,7 +325,7 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
       rawMaxPlayers : 12;
 
     let rejection: HttpsError | null = null;
-    const result = await roomRef.transaction((raw) => {
+    const result = await runPrimedTransaction(roomRef, (raw) => {
       rejection = null;
       if (raw === null || typeof raw !== "object") return;
       const currentRoom = raw as RealtimeRoom;

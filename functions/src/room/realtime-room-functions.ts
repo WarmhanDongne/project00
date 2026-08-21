@@ -25,6 +25,7 @@ import {
   GAME_PREPARATION_STARTED_MESSAGE,
   RoomJoinDecision,
 } from "./room-join-policy.js";
+import {runPrimedTransaction} from "./room-transaction.js";
 
 const REGION = "asia-northeast3";
 
@@ -326,7 +327,8 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
     let reconnected = false;
     let savedNickname = nickname;
 
-    const transaction = await roomRef.transaction(
+    const transaction = await runPrimedTransaction(
+      roomRef,
       (currentValue) => {
         rejection = null;
         reconnected = false;
@@ -515,7 +517,7 @@ export const saveRealtimePlayerSeatIndexes =
       const seatEntries =
         Object.entries(rawSeatIndexes);
       let rejection: HttpsError | null = null;
-      const transaction = await roomRef.transaction((currentValue) => {
+      const updateSeatIndexes = (currentValue: unknown) => {
         rejection = null;
         if (currentValue === null || typeof currentValue !== "object") return;
         const room = currentValue as Record<string, unknown> & {
@@ -580,7 +582,11 @@ export const saveRealtimePlayerSeatIndexes =
         }
         room.players = players;
         return room;
-      });
+      };
+      const transaction = await runPrimedTransaction(
+        roomRef,
+        updateSeatIndexes,
+      );
       if (!transaction.committed) {
         if (rejection) throw rejection;
         throw new HttpsError("aborted", "플레이어 자리를 저장하지 못했습니다.");
