@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 
 import 'package:flutter/material.dart';
 
@@ -15,6 +16,11 @@ class FinalCallTimer extends StatefulWidget {
 class _FinalCallTimerState extends State<FinalCallTimer> {
   Timer? _timer;
   bool _didNotifyTimeout = false;
+
+  /// 마지막 5초 초읽기 소리입니다. 이 위젯은 내 턴에만 그려지므로, 소리도
+  /// 지금 행동해야 하는 사람의 기기에서만 납니다.
+  final CountdownTickCue _tickCue = CountdownTickCue();
+
   int get seconds =>
       (ServerClock.remainingUntil(widget.deadline).inMilliseconds / 1000)
           .ceil()
@@ -28,6 +34,13 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
       setState(() {});
       _notifyTimeoutIfNeeded();
     });
+    _tickCue.schedule(widget.deadline);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tickCue.attach(context);
   }
 
   @override
@@ -35,6 +48,7 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.deadline != widget.deadline) {
       _didNotifyTimeout = false;
+      _tickCue.schedule(widget.deadline);
     }
   }
 
@@ -55,6 +69,9 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
   @override
   void dispose() {
     _timer?.cancel();
+    // 제한시간 전에 행동을 마치면 이 위젯이 사라집니다. 초읽기도 그때 멈춰야
+    // 다음 사람 차례까지 소리가 이어지지 않습니다.
+    _tickCue.stop();
     super.dispose();
   }
 

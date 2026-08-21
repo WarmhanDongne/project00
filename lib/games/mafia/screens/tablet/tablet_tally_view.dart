@@ -41,15 +41,31 @@ class MafiaTabletTallyView extends StatefulWidget {
 }
 
 class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   //=======================시안 기준 좌표==============================
   static const Rect _board = Rect.fromLTWH(37, 50, 822, 748);
 
-  /// 프로필 한 칸입니다. 시안은 136 × 136, top 595, left 140부터 160 간격입니다.
-  static const double _avatarTop = 595;
-  static const double _avatarSize = 136;
-  static const double _avatarFirstLeft = 140;
-  static const double _avatarStep = 160;
+  //=======================프로필 칸 (반응형)==============================
+  // 확정(2026-08): 표를 받은 사람이 적으면 프로필·닉네임을 **크게** 보여 주고,
+  // 표를 받은 사람이 늘어날수록 부드럽게 줄어들며 자리를 나눠 갖습니다.
+  // 시안(136 × 136 · 160 간격 · top 595)은 네 명일 때의 모습입니다.
+
+  /// 칸이 놓이는 띠입니다. 개표판(37~859) 안쪽으로 여백을 둡니다.
+  static const double _slotsLeft = 77;
+  static const double _slotsRight = 819;
+
+  /// 칸 묶음의 아래 끝입니다. 크기가 커지면 위로 자랍니다.
+  static const double _slotsBottom = 777;
+
+  /// 칸 사이 여백과 프로필 한 변의 최대 크기입니다.
+  static const double _slotGap = 26;
+  static const double _slotMaxSize = 258;
+
+  /// 닉네임·득표수가 차지하는 높이입니다(프로필 크기에 비례합니다).
+  static const double _slotLabelRatio = 46 / 136;
+
+  /// 칸 수가 바뀔 때 새 배치로 옮겨가는 시간입니다.
+  static const Duration _layoutShift = Duration(milliseconds: 420);
 
   //=======================연출 시간==============================
   /// 투표함이 투표 시간 자리에서 개표 자리로 이동하는 시간입니다.
@@ -70,6 +86,13 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
   /// 지금까지 착지 소리를 낸 표 수입니다.
   int _landedSoundCount = 0;
 
+  /// 칸 수가 바뀔 때 옛 배치에서 새 배치로 옮겨가는 연출입니다.
+  late final AnimationController _layout;
+
+  /// 배치 계산에 쓰는 칸 수입니다. 소수를 허용해 크기가 부드럽게 변합니다.
+  double _layoutFrom = 1;
+  int _layoutTo = 1;
+
   @override
   void initState() {
     super.initState();
@@ -81,8 +104,13 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
         _boxTravel +
         _ballotGap * (_ballotOrder.isEmpty ? 0 : _ballotOrder.length - 1) +
         _ballotFlight;
+    _layout = AnimationController(
+      vsync: this,
+      duration: _layoutShift,
+      value: 1,
+    );
     _controller = AnimationController(vsync: this, duration: total)
-      ..addListener(_playLandingSounds);
+      ..addListener(_handleTick);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.forward();
     });
@@ -106,9 +134,42 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
   @override
   void dispose() {
     _controller
-      ..removeListener(_playLandingSounds)
+      ..removeListener(_handleTick)
       ..dispose();
+    _layout.dispose();
     super.dispose();
+  }
+
+  /// 매 프레임 하는 일입니다: 착지 소리, 그리고 칸 수가 늘었는지 확인.
+  void _handleTick() {
+    if (!mounted) return;
+    _playLandingSounds();
+    _syncLayoutCount();
+  }
+
+  /// 표를 받은 사람이 늘면 새 배치로 부드럽게 옮겨갑니다.
+  void _syncLayoutCount() {
+    final visible = _visibleCount;
+    if (visible == _layoutTo) return;
+    // 지금 화면에 보이는 칸 수(소수)에서 새 칸 수로 이어 갑니다.
+    _layoutFrom = _layoutCount;
+    _layoutTo = visible;
+    _layout.forward(from: 0);
+  }
+
+  /// 표가 한 장이라도 착지한 사람 수입니다.
+  int get _visibleCount {
+    var count = 0;
+    for (var index = 0; index < _ranked.length; index += 1) {
+      if (_landedCountOf(index) > 0) count += 1;
+    }
+    return count;
+  }
+
+  /// 배치에 쓰는 칸 수입니다(옮겨가는 중에는 소수입니다).
+  double get _layoutCount {
+    final eased = Curves.easeOutCubic.transform(_layout.value);
+    return _layoutFrom + (_layoutTo - _layoutFrom) * eased;
   }
 
   /// 표가 개표판에 닿는 순간마다 소리를 냅니다.
@@ -153,25 +214,39 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     return count;
   }
 
-  /// [rankIndex]번째 사람 칸의 시안 사각형입니다.
+  /// 지금 배치에서 프로필 한 변의 크기입니다.
+  ///
+  /// 칸이 적으면 크게, 많아지면 띠 안에 나눠 담기게 줄어듭니다.
+  double get _slotSize {
+    final count = _layoutCount.clamp(1.0, 12.0);
+    final band = _slotsRight - _slotsLeft;
+    final size = (band - _slotGap * (count - 1)) / count;
+    return size.clamp(0.0, _slotMaxSize);
+  }
+
+  /// [rankIndex]번째 사람 칸의 사각형입니다. 묶음은 늘 가운데에 옵니다.
   Rect _slotRect(int rankIndex) {
-    final total = _ranked.length;
-    // 시안은 네 칸 기준입니다. 그보다 많으면 같은 폭 안에서 간격만 줄입니다.
-    final step = total <= 4
-        ? _avatarStep
-        : (_avatarStep * 3 + _avatarSize) / (total - 1);
+    final size = _slotSize;
+    final count = _layoutCount.clamp(1.0, 12.0);
+    final step = size + _slotGap;
+    // 묶음 전체 폭을 띠 가운데에 맞춥니다.
+    final groupWidth = step * count - _slotGap;
+    final bandCenter = (_slotsLeft + _slotsRight) / 2;
+    final first = bandCenter - groupWidth / 2;
+    final labelHeight = size * _slotLabelRatio;
     return Rect.fromLTWH(
-      _avatarFirstLeft + step * rankIndex,
-      _avatarTop,
-      _avatarSize,
-      _avatarSize + 46,
+      first + step * rankIndex,
+      // 아래를 고정하고 위로 자랍니다(개표판을 넘지 않습니다).
+      _slotsBottom - size - labelHeight,
+      size,
+      size + labelHeight,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: Listenable.merge([_controller, _layout]),
       builder: (context, _) {
         final boxProgress = Curves.easeInOut.transform(_boxProgress);
         final boxRect = Rect.lerp(

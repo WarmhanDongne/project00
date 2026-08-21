@@ -22,6 +22,17 @@ abstract final class MafiaCopy {
   static String executed(String nickname) => '$nickname님이 처형되었습니다.';
 
   /// 처형자 발표 화면의 제목입니다. 당사자와 나머지 사람이 다른 문구를 봅니다.
+  //=======================단계 안내 문구==============================
+  // 단계가 바뀔 때 화면 가운데에 잠깐 띄우는 안내입니다(확정 2026-08).
+  /// 아침 발표를 시작하며 띄웁니다.
+  static const String morningNotice = '아침이 되었습니다';
+
+  /// 사망자 발표가 끝나고 토론 화면으로 넘어가기 전에 띄웁니다.
+  static const String discussionNotice = '토론을 시작합니다';
+
+  /// 밤으로 넘어가기 전에 띄웁니다. 이 안내 뒤에 배경이 밤으로 바뀝니다.
+  static const String nightNotice = '밤이 되었습니다';
+
   static const String executedOtherTitle = '오늘의 처형자';
   static const String executedSelfTitle = '당신은 처형 당했습니다';
 

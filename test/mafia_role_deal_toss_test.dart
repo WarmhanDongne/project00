@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/mafia/animations/role_deal_toss_animation.dart';
+import 'package:project00/games/mafia/models/mafia_player.dart';
+import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
 
 //=======================T1 나눠 주기 연출==============================
 // 중앙 더미 → 좌석 방향으로 1장씩 → 화면 밖. 흩어진 좌석(12인 방에 4명)
@@ -40,5 +42,56 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(find.byType(Image), findsNothing);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('확인 현황은 카드가 다 날아갈 때까지 카드 뒤에 숨는다', (tester) async {
+    tester.view.physicalSize = const Size(1194, 834);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MafiaTabletRoleDealView(
+          players: [
+            for (var i = 0; i < 4; i += 1)
+              MafiaPlayer(
+                uid: 'u$i',
+                nickname: '플레이어$i',
+                profileImageUrl: '',
+                seatIndex: i,
+              ),
+          ],
+          confirmedCount: 2,
+        ),
+      ),
+    );
+
+    // 나눠 주는 동안에는 자리만 잡아 두고 보이지 않습니다.
+    await tester.pump();
+    expect(find.text('2 / 4'), findsOneWidget);
+    expect(
+      tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity,
+      0,
+    );
+
+    // 더미 등장 뒤 마지막 장까지 날아가면 그 자리에 드러납니다.
+    // (연출 단계마다 틱 시작 프레임이 끼어들어 정확한 시각은 프레임마다 다릅니다)
+    var revealed = false;
+    for (var i = 0; i < 16 && !revealed; i += 1) {
+      await tester.pump(const Duration(milliseconds: 200));
+      revealed =
+          tester
+              .widget<AnimatedOpacity>(find.byType(AnimatedOpacity))
+              .opacity ==
+          1;
+    }
+    expect(revealed, isTrue, reason: '카드가 다 날아갔는데 문구가 드러나지 않았습니다');
+
+    // 드러난 문구는 화면 가운데(더미가 있던 자리)에 남습니다.
+    await tester.pumpAndSettle();
+    final textCenter = tester.getCenter(find.text('2 / 4'));
+    expect(textCenter.dx, closeTo(1194 / 2, 1));
+    expect(textCenter.dy, greaterThan(834 / 2));
+    expect(textCenter.dy, lessThan(540));
   });
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_asset_store.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/sound/liars_poker_sounds.dart';
@@ -40,7 +41,10 @@ Future<void> preloadLiarsPokerAssets(
   // 폴백으로 진행하므로 게임 진입을 막지 않습니다.
   try {
     await GameAssetStore.instance.prepareGame('liars_poker');
-  } catch (_) {}
+  } catch (error, stack) {
+    // 실패해도 번들 폴백으로 게임은 진행됩니다. 다만 원인은 남깁니다.
+    CrashReporting.recordError(error, stack, reason: '라이어스 포커 에셋 준비');
+  }
   if (!context.mounted) return;
 
   // 첫 카드 제출·공개 소리가 늦지 않도록 게임 전용 효과음을 먼저 준비합니다.

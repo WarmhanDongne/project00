@@ -19,6 +19,7 @@ import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/games/shared/widgets/tablet_game_rulebook_dialog.dart';
@@ -65,6 +66,13 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   MafiaController? _controller;
   ProviderSubscription<MafiaGameState>? _subscription;
   final GameBackgroundMusic _bgm = GameBackgroundMusic();
+
+  /// 밤·토론·투표의 마지막 5초 초읽기 소리입니다.
+  ///
+  /// 마피아의 제한시간은 같은 순간에 모두의 휴대폰에 함께 뜹니다. 기기마다
+  /// 울리면 방 안에서 여러 번 겹쳐 들리므로, 우승 발표와 같이 방 가운데
+  /// 태블릿에서만 냅니다.
+  final CountdownTickCue _countdownTick = CountdownTickCue();
 
   /// 지금 화면에 보여 주는 단계입니다. 서버 단계를 연출 단위로 옮긴 값입니다.
   MafiaTabletStage _stage = MafiaTabletStage.connecting;
@@ -117,6 +125,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _bgm.attach(context);
+    _countdownTick.attach(context);
   }
 
   @override
@@ -126,6 +135,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _nightNoticeTimer?.cancel();
     _gunshotTimer?.cancel();
     _bgm.stop();
+    _countdownTick.stop();
     _subscription?.close();
     unawaited(AppOrientation.lockPlatformPortrait());
     unawaited(AppSystemUi.showPlatformSystemBars());
@@ -149,6 +159,9 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _maybeScheduleNightNotice(game);
     _syncBackgroundMusic(game);
     _scheduleDeadlineCheck(game);
+    // 제한시간이 있는 단계(밤·토론·투표)에서만 초읽기를 겁니다. 역할 확인은
+    // 마감이 있어도 화면에 남은 시간을 보여 주지 않으므로 제외합니다.
+    _countdownTick.schedule(_stage.hasDeadline ? game.turnDeadlineAt : null);
     setState(() {});
   }
 

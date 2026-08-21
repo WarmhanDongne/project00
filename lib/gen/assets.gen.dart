@@ -84,8 +84,18 @@ class $AssetsSoundsGen {
   /// File path: assets/sounds/stamp.mp3
   String get stamp => 'assets/sounds/stamp.mp3';
 
+  /// File path: assets/sounds/timer.mp3
+  String get timer => 'assets/sounds/timer.mp3';
+
   /// List of all assets
-  List<String> get values => [background, dealing, lever, roulette, stamp];
+  List<String> get values => [
+    background,
+    dealing,
+    lever,
+    roulette,
+    stamp,
+    timer,
+  ];
 }
 
 class $AssetsGamesFinalCallGen {

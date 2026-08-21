@@ -33,6 +33,17 @@ abstract final class MafiaPhoneDesign {
   static const double storedCardTop = 776;
   static const double storedCardAspectRatio = 286 / 419.39;
 
+  //=======================내용 띠==============================
+  // 상단 안내·타이머 아래부터 하단 버튼 위까지가 화면별 내용(그림·문구·격자)이
+  // 놓이는 자리입니다. 확정(2026-08): 화면마다 내용이 이 띠 **가운데**에
+  // 오도록 맞춥니다. 그러지 않으면 단계가 바뀔 때 내용이 위아래로 튑니다.
+  static const double contentBandTop = 190;
+  static const double contentBandBottom = 640;
+
+  /// 내용 띠의 가운데입니다(시안 기준 좌표).
+  static const double contentBandCenter =
+      (contentBandTop + contentBandBottom) / 2;
+
   /// 시안의 top 값을 실제 높이에 맞춘 값으로 바꿉니다.
   static double top(Size actual, double designTop) =>
       actual.height * (designTop / size.height);
@@ -68,11 +79,19 @@ abstract final class MafiaPhoneStatusText {
   static const double timerTop = 142;
   static const double timerFontSize = 36;
 
-  /// 제출 뒤 대기 문구 자리(시안 P5의 top 325·377)와 크기입니다.
-  static const double waitingTop = 325;
+  /// 제출 뒤 대기 문구 자리와 크기입니다.
+  ///
+  /// 확정(2026-08): 문구 묶음이 내용 띠([MafiaPhoneDesign.contentBandCenter])
+  /// 가운데에 오게 내렸습니다(시안은 325·377이라 화면 위쪽으로 치우쳤습니다).
+  static const double waitingTop = 377;
   static const double waitingFontSize = 24;
-  static const double waitingSubTop = 377;
+  static const double waitingSubTop = 429;
   static const double waitingSubFontSize = 20;
+
+  /// 발표 한 줄만 있는 화면(아침·처형 없음)의 문구 자리입니다.
+  ///
+  /// 한 줄이라 띠 가운데에 그대로 맞춥니다.
+  static const double announcementTop = 400;
 }
 
 //=======================격자 규격==============================
@@ -224,6 +243,18 @@ class MafiaPhoneActionButton extends StatelessWidget {
                       borderRadius: BorderRadius.circular(
                         MafiaPhoneDesign.buttonRadius * scale,
                       ),
+                      // 배경과 버튼이 구분되게 그림자를 깔습니다(확정 2026-08).
+                      // 무색 상태(대상을 고르기 전)에는 버튼이 없는 것처럼
+                      // 보여야 하므로 그림자도 두지 않습니다.
+                      boxShadow: enabled || !colorlessWhenDisabled
+                          ? [
+                              BoxShadow(
+                                color: const Color(0x73000000),
+                                blurRadius: 10 * scale,
+                                offset: Offset(0, 5 * scale),
+                              ),
+                            ]
+                          : null,
                     ),
                     child: Center(
                       child: Text(

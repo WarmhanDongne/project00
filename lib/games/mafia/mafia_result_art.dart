@@ -35,6 +35,9 @@ abstract final class MafiaResultArt {
   }
 
   /// 태블릿 명단 화면 **왼쪽** 배너입니다(승리 진영).
+  /// ⚠️ 2026-08 새 결과 시안(1113:13·16)은 배너를 쓰지 않습니다. 명단이 반투명
+  /// 판 위에 세 칸으로 올라가는 구성으로 바뀌었습니다. 이 표는 배너를 다시 쓸
+  /// 때를 위해 남겨 둔 것이라, 지금 화면에서 부르는 곳은 없습니다.
   static GameImage? winnerBanner(MafiaFaction? winner) {
     final banner = Assets.games.mafia.images.banner;
     return switch (winner) {

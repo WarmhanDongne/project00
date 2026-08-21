@@ -24,6 +24,7 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
     required this.playerSeatIndexes,
     required this.boardSeatCount,
     this.cardWidth = 168,
+    this.onDeckCleared,
   }) : assert(boardSeatCount > 0);
 
   /// 카드를 받을 사람들의 실제 좌석 번호입니다(빈 좌석이 섞여 있어도 됩니다).
@@ -35,6 +36,16 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
 
   final double cardWidth;
 
+  /// 마지막 장이 더미를 떠나 **가운데가 비는 순간** 한 번 호출됩니다.
+  ///
+  /// 카드 더미에 가려 두었던 문구를 그때 드러내는 데 씁니다.
+  final VoidCallback? onDeckCleared;
+
+  /// 카드 더미가 놓이는 자리의 크기입니다(가운데 기준).
+  ///
+  /// 더미 뒤에 무엇을 숨길지 계산할 때 화면 쪽에서 참고합니다.
+  static const double cardAspectRatio = 286 / 419.39;
+
   @override
   State<MafiaRoleDealTossAnimation> createState() =>
       _MafiaRoleDealTossAnimationState();
@@ -42,9 +53,6 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
 
 class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
     with TickerProviderStateMixin {
-  /// 역할 카드의 가로:세로 비율입니다(휴대폰 P1과 같은 시안 값).
-  static const double _cardAspectRatio = 286 / 419.39;
-
   /// 더미가 화면 위에서 중앙으로 내려오는 시간입니다(공용 분배와 같은 리듬).
   static const Duration _deckEntry = Duration(milliseconds: 620);
 
@@ -61,6 +69,9 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
   /// 지금까지 분배음을 재생한 카드 수입니다.
   int _playedSoundCount = 0;
 
+  /// 더미가 비었다고 이미 알렸는지입니다. 알림은 한 번뿐입니다.
+  bool _hasClearedDeck = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +79,7 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
     final total = _launchGap * math.max(0, _order.length - 1) + _flight;
     _entryController = AnimationController(vsync: this, duration: _deckEntry);
     _tossController = AnimationController(vsync: this, duration: total)
-      ..addListener(_playLaunchSounds);
+      ..addListener(_handleTossTick);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -82,7 +93,7 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
   void dispose() {
     _entryController.dispose();
     _tossController
-      ..removeListener(_playLaunchSounds)
+      ..removeListener(_handleTossTick)
       ..dispose();
     super.dispose();
   }
@@ -97,7 +108,10 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
   }
 
   /// 분배음은 각 카드가 더미를 떠나는 순간에 한 번씩 재생합니다.
-  void _playLaunchSounds() {
+  ///
+  /// 마지막 장이 떠나 더미가 비면 [MafiaRoleDealTossAnimation.onDeckCleared]도
+  /// 함께 알립니다.
+  void _handleTossTick() {
     if (!mounted) return;
     var launched = 0;
     for (var i = 0; i < _order.length; i += 1) {
@@ -106,6 +120,10 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
     while (_playedSoundCount < launched) {
       _playedSoundCount += 1;
       SoundEffects.play(context, AppSounds.dealing);
+    }
+    if (!_hasClearedDeck && _order.isNotEmpty && launched >= _order.length) {
+      _hasClearedDeck = true;
+      widget.onDeckCleared?.call();
     }
   }
 
@@ -116,7 +134,8 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final center = Offset(size.width / 2, size.height / 2);
         final cardWidth = widget.cardWidth;
-        final cardHeight = cardWidth / _cardAspectRatio;
+        final cardHeight =
+            cardWidth / MafiaRoleDealTossAnimation.cardAspectRatio;
         // 어느 방향이든 확실히 화면을 벗어나는 이동 거리입니다.
         final travel = size.longestSide * 0.8 + cardHeight;
         final seatCenters = normalizedPlayerCenters(widget.boardSeatCount);

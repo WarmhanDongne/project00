@@ -16,8 +16,13 @@ import 'package:project00/games/shared/player_layouts/player_slot_positions.dart
 /// 확정(2026-08): 개표는 **투표함이 그 자리에서 이동해** 시작합니다. 그래서
 /// 두 좌표를 한곳에 두고 두 화면이 함께 참조합니다.
 abstract final class MafiaBallotBoxRects {
-  /// 투표 시간(시안 `tablet-p7 투표 시간`)의 투표함입니다.
-  static const Rect voting = Rect.fromLTWH(544, 322, 124.44, 122);
+  /// 투표 시간의 투표함입니다.
+  ///
+  /// 확정(2026-08): 토론 삽화가 **크기를 유지한 채** 그대로 있고, 그 삽화의
+  /// 가운데에서 투표함이 떠오릅니다. 삽화는 Rect(126, 0, 943, 943)이라
+  /// 가운데가 (597.5, 471.5)입니다. 시안(544, 322)에서 그 자리로 옮겼고,
+  /// 그 뒤 지시대로 조금 키우고(1.3배) 조금 올렸습니다(40).
+  static const Rect voting = Rect.fromLTWH(516.6, 351.7, 161.8, 158.6);
 
   /// 개표(시안 `tablet-p7 개표`)의 투표함입니다.
   static const Rect tally = Rect.fromLTWH(886, 528, 277, 270);

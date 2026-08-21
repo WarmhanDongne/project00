@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:project00/core/diagnostics/dev_error_overlay.dart';
 import 'package:project00/core/layout/device_layout.dart';
 import 'package:project00/core/network/app_network_guard.dart';
 import 'package:project00/platform/auth/widgets/auth_gate.dart';
@@ -42,8 +43,11 @@ class App extends StatelessWidget {
         theme: PlatformTheme.light(),
         darkTheme: PlatformTheme.dark(),
         themeMode: ThemeMode.light,
-        builder: (context, child) =>
-            AppNetworkGuard(child: child ?? const SizedBox.shrink()),
+        // 개발 중 오류 표시는 가장 바깥에 둡니다. 어떤 화면에서 오류가 나도
+        // 같은 자리에서 볼 수 있습니다(릴리스에서는 통과만 합니다).
+        builder: (context, child) => DevErrorOverlay(
+          child: AppNetworkGuard(child: child ?? const SizedBox.shrink()),
+        ),
         home: AuthGate(
           userChanges: userChanges,
           emailLinks: emailLinks,

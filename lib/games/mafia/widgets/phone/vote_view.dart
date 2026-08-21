@@ -123,7 +123,10 @@ class MafiaVoteView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, MafiaPlayerSelectGrid.designTop),
+        top: MafiaPhoneDesign.top(
+          size,
+          MafiaPlayerSelectGrid.topFor(players.length),
+        ),
         child: MafiaPlayerSelectGrid(
           players: players,
           selectedUid: selectedUid,

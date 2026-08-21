@@ -3,10 +3,12 @@ import 'dart:math';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import 'package:project00/games/mafia/mafia_timing.dart';
 import 'package:project00/games/mafia/models/mafia_composition.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_fakes.dart';
+import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
 import 'package:project00/games/mafia/services/mafia_command_service.dart';
 import 'package:project00/games/mafia/services/mafia_query_service.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
@@ -342,15 +344,17 @@ class MafiaPracticeEngine {
     if (_phase != 'morning') return;
     if (_checkWinner()) return;
     _phase = 'day';
-    _deadlineAt = _now + 150000;
+    // 토론 시간은 생존 인원에 따라 다릅니다(서버 mafiaDiscussionMs와 같은 표).
+    final discussion = MafiaTiming.discussion(_aliveUids.length);
+    _deadlineAt = _now + discussion.inMilliseconds;
     _skipVotes.clear();
     for (final map in _private.values) {
       map.remove('discussionSkipVoted');
     }
     _publish();
     _scheduleBots();
-    // 토론 시간(150초)이 지나면 투표로 넘어갑니다(timeout_day).
-    _schedulePhase(const Duration(milliseconds: 150250), () {
+    // 토론 시간이 지나면 투표로 넘어갑니다(timeout_day).
+    _schedulePhase(discussion + const Duration(milliseconds: 250), () {
       if (_phase == 'day') _beginVoting();
     });
   }
@@ -441,8 +445,9 @@ class MafiaPracticeEngine {
     _deadlineAt = null;
     _nightActions.clear();
     _publish();
-    // 확정: 아침 발표 8초 뒤 낮으로.
-    _schedulePhase(const Duration(seconds: 8), completeMorning);
+    // 확정: '아침이 되었습니다'(2.5초) → 사망자 발표(8초) →
+    // '토론을 시작합니다'(2.5초) 뒤 낮으로.
+    _schedulePhase(MafiaTabletMorningSequence.totalHold, completeMorning);
   }
 
   void _resolveVoting() {
@@ -478,8 +483,8 @@ class MafiaPracticeEngine {
     _deadlineAt = null;
     _votes.clear();
     _publish();
-    // 확정: 개표·처형 발표 13초 뒤 다음 밤으로.
-    _schedulePhase(const Duration(seconds: 13), completeVoteResult);
+    // 확정: 개표(4초) → 처형 발표(9초) → '밤이 되었습니다'(2.5초) 뒤 다음 밤으로.
+    _schedulePhase(MafiaTabletVoteResultSequence.totalHold, completeVoteResult);
   }
 
   void _kill(String uid, String cause) {

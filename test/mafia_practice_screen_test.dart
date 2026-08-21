@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_screen.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/night_action_view.dart';
-import 'package:project00/games/mafia/widgets/phone/role_reveal_view.dart';
+import 'package:project00/games/mafia/widgets/phone/role_card_layer.dart';
 
 //=======================마피아 연습장 연기 테스트==============================
 // 연습장이 실제 화면·컨트롤러·엔진을 묶어 한 판을 굴릴 수 있는지 봅니다.
@@ -21,16 +21,18 @@ void main() {
     // 첫 발행(마이크로태스크)을 받아 역할 확인 화면이 뜹니다.
     await tester.pump();
     await tester.pump();
-    expect(find.byType(MafiaRoleRevealView), findsOneWidget);
+    expect(find.byType(MafiaPhoneRoleCardLayer), findsOneWidget);
 
-    // 내 카드를 눌러 확인합니다. 카드는 화면 아래에 꽂혀 있으므로(확정 흐름)
-    // 미리보기 좌표계에서 그 자리를 계산해 누릅니다.
-    final phone = tester.getRect(find.byType(MafiaRoleRevealView));
+    // 신분을 처음 받을 때는 카드가 화면 위에서 내려와 가운데에 섭니다.
+    // 다 내려온 뒤에 눌러야 확인이 됩니다(확정 흐름).
+    await tester.pump(MafiaPhoneRoleCardLayer.travelDuration);
+    await tester.pump(const Duration(milliseconds: 16));
+    final phone = tester.getRect(find.byType(MafiaPhoneRoleCardLayer));
     await tester.tapAt(
-      Offset(phone.center.dx, phone.top + phone.height * 0.93),
+      Offset(phone.center.dx, phone.top + phone.height * 0.45),
     );
-    // 올라오기(520ms) → 뒤집기(620ms) → 3초 보여 주기 → 보관 연출까지.
-    for (var i = 0; i < 8; i += 1) {
+    // 뒤집기(620ms) → 문구(0.3초 뒤) 까지 돌립니다.
+    for (var i = 0; i < 3; i += 1) {
       await tester.pump(const Duration(seconds: 1));
     }
 
