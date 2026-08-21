@@ -20,9 +20,11 @@ class EmailLinkConfig {
         'ANDROID_APPLICATION_ID',
         defaultValue: 'com.example.project00',
       ),
+      // iOS는 유료 개발자 계정으로 옮기면서 실제 번들 ID로 바꿨습니다
+      // (2026-08). Android는 아직 com.example.project00입니다.
       iOSBundleId: String.fromEnvironment(
         'IOS_BUNDLE_ID',
-        defaultValue: 'com.example.project00',
+        defaultValue: 'com.warmhandong.msg',
       ),
       linkDomain: linkDomain == '' ? null : linkDomain,
     );
