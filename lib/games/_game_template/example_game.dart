@@ -33,6 +33,11 @@ class TemplateExampleGame extends TemplateGame {
   ImageProvider? get tableBackgroundImage => null;
 
   @override
+  // 새 게임의 카드·토큰 등 대표 구성 요소를 조합한 4:3 미리보기로 교체하세요.
+  Widget buildTabletPreviewArtwork() =>
+      const Center(child: Text('게임 구성 요소 미리보기'));
+
+  @override
   Future<void> startGame(String roomCode) =>
       TemplateService().command.startGame(roomCode: roomCode);
 

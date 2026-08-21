@@ -155,6 +155,52 @@ void main() {
       expect(find.text('아직 아무도 없습니다'), findsOneWidget);
       provider.dispose();
     });
+
+    testWidgets('구성원 참여 후 작은 QR을 누르면 중앙에 확대한다', (tester) async {
+      final service = _FakeRoomService();
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..players = const [
+          RoomPlayer(
+            uid: 'player-1',
+            nickname: '플레이어1',
+            characterId: 'frog',
+            isConnected: true,
+            seatIndex: 0,
+            role: 'player',
+            status: 'active',
+            penaltyAttemptCount: 0,
+          ),
+        ];
+      await _pumpPanel(tester, provider);
+
+      await tester.tap(find.byKey(const Key('active-room-qr-expand')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('expanded-room-qr-dialog')), findsOneWidget);
+      expect(find.text('참여 QR'), findsOneWidget);
+      expect(find.text('ABCDE'), findsNWidgets(2));
+      expect(
+        tester.getSize(find.byKey(const Key('expanded-room-qr'))).width,
+        greaterThan(92),
+      );
+      expect(service.createCalls, 0);
+      expect(service.closeCalls, 0);
+
+      await tester.tap(find.byTooltip('QR 확대 닫기'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('expanded-room-qr-dialog')), findsNothing);
+      provider.dispose();
+    });
+
+    testWidgets('구성원이 없을 때 큰 초대 QR은 확대 버튼이 아니다', (tester) async {
+      final provider = _provider(_FakeRoomService())..roomCode = 'ABCDE';
+      await _pumpPanel(tester, provider);
+
+      expect(find.byKey(const Key('active-room-qr-expand')), findsNothing);
+      expect(find.byTooltip('QR 코드 확대'), findsNothing);
+      provider.dispose();
+    });
   });
 }
 

@@ -6,6 +6,7 @@ import 'package:project00/games/liars_poker/screens/phone_game.dart';
 import 'package:project00/games/liars_poker/screens/tablet_game.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/tablet_preview_artworks.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/network/critical_network_guard.dart';
@@ -33,6 +34,9 @@ class LiarsPokerGame extends TemplateGame {
   @override
   ImageProvider get layoutChairImage =>
       Assets.games.liarsPoker.images.layout.layoutChair.game.provider();
+
+  @override
+  Widget buildTabletPreviewArtwork() => const LiarsPokerPreviewArtwork();
 
   @override
   Future<void> startGame(String roomCode) =>

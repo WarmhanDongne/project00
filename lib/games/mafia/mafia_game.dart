@@ -6,6 +6,7 @@ import 'package:project00/games/mafia/screens/phone_game.dart';
 import 'package:project00/games/mafia/screens/tablet_game.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/tablet_preview_artworks.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -43,6 +44,9 @@ class MafiaGame extends TemplateGame {
   @override
   ImageProvider get tableBackgroundImage =>
       Assets.games.mafia.images.background.backgroundMorning.game.provider();
+
+  @override
+  Widget buildTabletPreviewArtwork() => const MafiaPreviewArtwork();
 
   @override
   Future<void> startGame(String roomCode) =>

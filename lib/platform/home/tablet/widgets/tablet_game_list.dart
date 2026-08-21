@@ -42,7 +42,8 @@ class _GameListState extends State<GameList> {
           final matchesSearch =
               query.isEmpty ||
               game.name.toLowerCase().contains(query) ||
-              game.description.toLowerCase().contains(query);
+              game.description.toLowerCase().contains(query) ||
+              game.tabletDescription.toLowerCase().contains(query);
           final matchesGenre =
               selectedGenre == '전체' ||
               game.genres.any(
@@ -194,12 +195,25 @@ class _GameListState extends State<GameList> {
                     : LayoutBuilder(
                         builder: (context, constraints) {
                           final availableWidth = constraints.maxWidth;
-                          // 200px 기준, 최대 5열, 최소 1열
-                          final columns = (availableWidth / 200).floor().clamp(
-                            1,
-                            5,
-                          );
                           const spacing = 10.0;
+                          const minimumCardWidth = 200.0;
+                          // 간격까지 포함해 계산해야 실제 카드 너비가 200px 아래로
+                          // 줄어들지 않습니다. 고정 종횡비 대신 이미지와 상세 영역의
+                          // 높이를 따로 확보해 iPad 글자 크기에서도 넘침을 막습니다.
+                          final columns =
+                              ((availableWidth + spacing) /
+                                      (minimumCardWidth + spacing))
+                                  .floor()
+                                  .clamp(1, 5);
+                          final cardWidth =
+                              (availableWidth - spacing * (columns - 1)) /
+                              columns;
+                          final textScale =
+                              (MediaQuery.textScalerOf(context).scale(14) / 14)
+                                  .clamp(1.0, 2.0);
+                          // 1.3배처럼 태그가 한 줄 더 감기는 경계 배율에서도
+                          // 실제 iPad의 RenderFlex 경고가 나지 않도록 여유를 둡니다.
+                          final cardHeight = cardWidth + 150 * textScale;
                           return GridView.builder(
                             padding: EdgeInsets.zero,
                             itemCount: games.length,
@@ -208,7 +222,7 @@ class _GameListState extends State<GameList> {
                                   crossAxisCount: columns,
                                   crossAxisSpacing: spacing,
                                   mainAxisSpacing: spacing,
-                                  childAspectRatio: 168 / 276,
+                                  mainAxisExtent: cardHeight,
                                 ),
                             itemBuilder: (context, index) {
                               final game = games[index];
@@ -249,6 +263,7 @@ class GameCard extends StatelessWidget {
       onTap: loading ? null : onTap,
       borderRadius: BorderRadius.circular(10),
       child: Stack(
+        fit: StackFit.expand,
         children: [
           PlatformPanel(
             padding: const EdgeInsets.all(7),
@@ -307,10 +322,13 @@ class GameCard extends StatelessWidget {
             ),
           ),
           if (loading)
-            const Positioned.fill(
-              child: ColoredBox(
-                color: Color(0x66FFFFFF),
-                child: Center(child: CircularProgressIndicator()),
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: const ColoredBox(
+                  color: Color(0x66FFFFFF),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
               ),
             ),
         ],

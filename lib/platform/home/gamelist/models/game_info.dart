@@ -14,6 +14,7 @@ class GameInfo {
     required this.id,
     required this.name,
     required this.description,
+    this.tabletDescription = '',
     this.rules = '',
     required this.imageUrl,
     required this.enabled,
@@ -46,6 +47,7 @@ class GameInfo {
       id: firestoreString(json['id']),
       name: firestoreString(json['name'], fallback: '이름 없음'),
       description: firestoreString(json['description']),
+      tabletDescription: firestoreString(json['tabletDescription']),
       rules: firestoreString(json['rules']),
       imageUrl: firestoreString(json['imageUrl']),
       enabled: json['enabled'] as bool? ?? true,
@@ -66,6 +68,7 @@ class GameInfo {
   final String id;
   final String name;
   final String description;
+  final String tabletDescription;
   final String rules;
   final String imageUrl;
   final bool enabled;
@@ -91,4 +94,9 @@ class GameInfo {
   final DateTime? updatedAt;
 
   String get genresText => genres.join(', ');
+
+  String get effectiveTabletDescription {
+    final tabletText = tabletDescription.trim();
+    return tabletText.isEmpty ? description : tabletText;
+  }
 }
