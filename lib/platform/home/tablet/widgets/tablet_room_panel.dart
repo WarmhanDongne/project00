@@ -278,7 +278,19 @@ class _ActiveRoom extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              RoomQrCard(roomCode: roomCode, size: 92),
+              Tooltip(
+                message: 'QR 코드 확대',
+                child: Semantics(
+                  button: true,
+                  label: 'QR 코드 확대',
+                  child: InkWell(
+                    key: const Key('active-room-qr-expand'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _showExpandedQr(context, roomCode),
+                    child: RoomQrCard(roomCode: roomCode, size: 92),
+                  ),
+                ),
+              ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
@@ -300,6 +312,100 @@ class _ActiveRoom extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+Future<void> _showExpandedQr(BuildContext context, String roomCode) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) => _ExpandedRoomQrDialog(roomCode: roomCode),
+  );
+}
+
+class _ExpandedRoomQrDialog extends StatelessWidget {
+  const _ExpandedRoomQrDialog({required this.roomCode});
+
+  final String roomCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
+    final qrSize = (shortestSide * 0.52).clamp(240.0, 360.0);
+    return Dialog(
+      key: const Key('expanded-room-qr-dialog'),
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 420,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 30,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '참여 QR',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'QR 확대 닫기',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, size: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                RoomQrCard(
+                  key: const Key('expanded-room-qr'),
+                  roomCode: roomCode,
+                  size: qrSize,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  '참여 코드',
+                  style: TextStyle(color: colors.textMuted, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                _CopyableRoomCode(
+                  roomCode: roomCode,
+                  fontSize: 40,
+                  alignment: Alignment.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'QR을 스캔하거나 참여 코드를 눌러 복사하세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.textMuted, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -467,10 +573,15 @@ class RoomQrCard extends StatelessWidget {
 }
 
 class _CopyableRoomCode extends StatelessWidget {
-  const _CopyableRoomCode({required this.roomCode, required this.fontSize});
+  const _CopyableRoomCode({
+    required this.roomCode,
+    required this.fontSize,
+    this.alignment = Alignment.centerLeft,
+  });
 
   final String roomCode;
   final double fontSize;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -484,7 +595,7 @@ class _CopyableRoomCode extends StatelessWidget {
       },
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
+        alignment: alignment,
         child: Text(
           roomCode,
           style: TextStyle(

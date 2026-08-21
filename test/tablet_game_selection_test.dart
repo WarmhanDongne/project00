@@ -7,6 +7,7 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
 void main() {
@@ -100,7 +101,100 @@ void main() {
     expect(find.byType(Dialog), findsOneWidget);
     expect(find.text('게임 선택을 해제하지 못했습니다.'), findsOneWidget);
   });
+
+  testWidgets('iPad 크기와 큰 글자에서도 게임 카드가 넘치지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final gameService = _CatalogGameService();
+    final roomProvider =
+        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_longGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    for (final size in const [
+      Size(1024, 768),
+      Size(1133, 744),
+      Size(1180, 820),
+      Size(1194, 834),
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: PlatformTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: GameList(
+              gameProvider: gameProvider,
+              roomProvider: roomProvider,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull, reason: 'iPad size: $size');
+      expect(find.text(_longGame.name), findsOneWidget);
+    }
+  });
+
+  testWidgets('팝업은 권장 인원 일치와 불일치 상태를 구분한다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final matchingProvider = RoomProvider(
+      service: _SelectionRoomService(),
+      gameService: _CatalogGameService(),
+    )..players = List.generate(4, _player);
+    addTearDown(matchingProvider.dispose);
+    await _pumpPreview(tester, matchingProvider);
+    expect(find.text('현 인원이 권장 인원과 같습니다.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final warningProvider = RoomProvider(
+      service: _SelectionRoomService(),
+      gameService: _CatalogGameService(),
+    )..players = List.generate(3, _player);
+    addTearDown(warningProvider.dispose);
+    await _pumpPreview(tester, warningProvider);
+    expect(find.text('현 인원이 권장 인원과 다릅니다.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+Future<void> _pumpPreview(WidgetTester tester, RoomProvider provider) {
+  return tester.pumpWidget(
+    MaterialApp(
+      theme: PlatformTheme.light(),
+      home: Scaffold(
+        body: GamePreviewDialog(game: _game, roomProvider: provider),
+      ),
+    ),
+  );
+}
+
+RoomPlayer _player(int index) => RoomPlayer(
+  uid: 'player-$index',
+  nickname: '플레이어$index',
+  characterId: 'frog',
+  isConnected: true,
+  seatIndex: index,
+  role: 'player',
+  status: 'active',
+  penaltyAttemptCount: 0,
+);
 
 const _game = GameInfo(
   id: 'final_call',
@@ -132,6 +226,21 @@ const _paidGame = GameInfo(
   ruleVideoUrl: '',
   isOwned: true,
   accessType: GameAccessType.paid,
+);
+
+const _longGame = GameInfo(
+  id: 'long_game',
+  name: '아주 긴 이름을 가진 태블릿 게임 카드',
+  description: '태블릿 카드 오버플로를 검증하는 게임입니다.',
+  imageUrl: '',
+  enabled: true,
+  genres: ['psychology', 'cooperative'],
+  minPlayers: 10,
+  maxPlayers: 12,
+  playTime: 120,
+  order: 3,
+  ruleVideoUrl: '',
+  isOwned: true,
 );
 
 class _SelectionRoomService implements RoomService {
