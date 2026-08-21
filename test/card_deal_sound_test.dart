@@ -18,7 +18,6 @@ void main() {
             cardsPerPlayer: 5,
             autoplay: true,
             duration: const Duration(milliseconds: 300),
-            deckEntryDuration: const Duration(milliseconds: 60),
             cardBuilder: (context, playerIndex, cardIndex) =>
                 const ColoredBox(color: Colors.white),
             onCompleted: () => completed = true,

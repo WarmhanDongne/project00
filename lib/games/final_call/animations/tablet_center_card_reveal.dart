@@ -15,17 +15,11 @@ class FinalCallCenterCardReveal extends StatefulWidget {
     super.key,
     required this.card,
     this.cardWidth = 92,
-    this.gap = 10,
-    this.startDelay = const Duration(milliseconds: 400),
-    this.duration = const Duration(milliseconds: 680),
     this.showRevealedCard = true,
   });
 
   final FinalCallCard? card;
   final double cardWidth;
-  final double gap;
-  final Duration startDelay;
-  final Duration duration;
   final bool showRevealedCard;
 
   @override
@@ -34,16 +28,20 @@ class FinalCallCenterCardReveal extends StatefulWidget {
 }
 
 class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
+  static const Duration _startDelay = Duration(milliseconds: 400);
+  static const Duration _duration = Duration(milliseconds: 680);
+  static const double _gap = 10;
+
   Timer? startTimer;
   bool started = false;
 
   double get cardHeight => widget.cardWidth * 1518 / 1036;
-  double get travelDistance => widget.cardWidth + widget.gap;
+  double get travelDistance => widget.cardWidth + _gap;
 
   @override
   void initState() {
     super.initState();
-    startTimer = Timer(widget.startDelay, () {
+    startTimer = Timer(_startDelay, () {
       if (mounted) setState(() => started = true);
     });
   }
@@ -57,7 +55,7 @@ class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: widget.cardWidth * 2 + widget.gap,
+      width: widget.cardWidth * 2 + _gap,
       height: cardHeight,
       child: Stack(
         clipBehavior: Clip.none,
@@ -76,7 +74,7 @@ class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
               duration: const Duration(milliseconds: 180),
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: started ? 1 : 0),
-                duration: widget.duration,
+                duration: _duration,
                 curve: Curves.easeInOutCubic,
                 builder: (context, progress, _) {
                   final showFront = progress >= 0.5;

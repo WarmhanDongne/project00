@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
 
 /// 탑뷰 보드 위의 물체가 바닥에서 카메라 쪽으로 솟아오르는 공통 등장 곡선입니다.
 ///
@@ -8,29 +9,14 @@ abstract final class BoardEntranceCurves {
   static const Duration duration = Duration(milliseconds: 980);
 
   /// 작게 솟아올라 살짝 지나쳤다가 제자리에 안착합니다.
-  static final Animatable<double> depthScale = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 0.58,
-        end: 1.045,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 64,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.045,
-        end: 0.978,
-      ).chain(CurveTween(curve: Curves.easeInCubic)),
-      weight: 14,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 0.978,
-        end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-      weight: 22,
-    ),
-  ]);
+  static final Animatable<double> depthScale = overshootSettle(
+    begin: 0.58,
+    peak: 1.045,
+    dip: 0.978,
+    riseWeight: 64,
+    dipWeight: 14,
+    settleWeight: 22,
+  );
 
   /// 공중에 떠 있을 때 그림자를 넓히고 착지 순간 다시 단단하게 모읍니다.
   static final Animatable<double> elevation = TweenSequence<double>([
@@ -63,14 +49,10 @@ class BoardElementEntrance extends StatefulWidget {
     super.key,
     required this.child,
     this.duration = BoardEntranceCurves.duration,
-    this.delay = Duration.zero,
   });
 
   final Widget child;
   final Duration duration;
-
-  /// 여러 요소를 조금씩 시차를 두고 띄울 때 씁니다.
-  final Duration delay;
 
   @override
   State<BoardElementEntrance> createState() => _BoardElementEntranceState();
@@ -83,14 +65,8 @@ class _BoardElementEntranceState extends State<BoardElementEntrance>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    if (widget.delay == Duration.zero) {
-      _controller.forward();
-    } else {
-      Future<void>.delayed(widget.delay, () {
-        if (mounted) _controller.forward();
-      });
-    }
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..forward();
   }
 
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:project00/games/final_call/animations/phone_card_receive_animation.dart';
+import 'package:project00/games/final_call/animations/final_call_card_receive_animation.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
 import 'package:project00/games/final_call/widgets/final_call_card_view.dart';
 

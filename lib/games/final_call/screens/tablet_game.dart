@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:project00/games/final_call/loading/final_call_loading.dart';
 import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -71,6 +72,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   /// 그대로 유지해 정리되는 장면을 보여주지 않습니다.
   FinalCallTabletStage? stageBeforeExit;
 
+  /// 에셋 사전 준비는 첫 상태 수신 때 한 번만 합니다(캐릭터 목록이 필요).
+  bool _hasPreloadedAssets = false;
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +113,16 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   void _handleState() {
     final game = controller;
     if (game == null || !mounted) return;
+    // 첫 스냅샷이 오면 이미지·캐릭터를 미리 디코딩합니다(LP와 같은 규약).
+    if (!_hasPreloadedAssets && game.players.isNotEmpty) {
+      _hasPreloadedAssets = true;
+      unawaited(
+        preloadFinalCallAssets(
+          context,
+          characterIds: game.players.values.map((player) => player.characterId),
+        ),
+      );
+    }
     final enteredPhase = previousPhase != game.phase;
     previousPhase = game.phase;
 

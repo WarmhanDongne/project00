@@ -63,7 +63,6 @@ class LiarsPokerTabletGameAnimation extends StatelessWidget {
       tableAlignment: _pileAlignment(pileIndex, boardSize),
       initiallyPlayed: !play.animateEntry,
       revealCards: play.isRevealed,
-      revealOnTap: false,
       onCardsPlayed: isActivePlay ? onCardsPlayed : null,
       onRevealed: isActivePlay && play.isRevealed ? onCardsRevealed : null,
     );

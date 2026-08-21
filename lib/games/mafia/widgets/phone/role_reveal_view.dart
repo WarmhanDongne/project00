@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/widgets/mafia_flip_card.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/gen/assets.gen.dart';
 
@@ -206,9 +206,6 @@ class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
 
   //=======================카드==============================
   Widget _buildCard({required double cardWidth}) {
-    final back = Assets.games.mafia.images.cards.roleBack.game;
-    final front = widget.role?.card;
-
     return Semantics(
       button: !_hasTapped,
       label: _hasTapped ? '내 역할 카드' : '역할 카드 확인하기',
@@ -222,37 +219,12 @@ class _MafiaRoleRevealViewState extends State<MafiaRoleRevealView>
             final progress = Curves.easeInOutCubic.transform(
               _flipController.value,
             );
-            // 절반을 지나면 앞면으로 바꿔, 뒤집히는 도중에 글자가 거울처럼
-            // 반사되어 보이지 않게 합니다.
-            final showsFront = progress >= 0.5 && front != null;
-            final angle = showsFront
-                ? math.pi * (1 - progress)
-                : math.pi * progress;
 
-            return Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.0012)
-                ..rotateY(angle),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x4D000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: (showsFront ? front : back).image(
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-              ),
+            return MafiaFlipCard(
+              progress: progress,
+              front: widget.role?.card,
+              back: Assets.games.mafia.images.cards.roleBack.game,
+              borderRadius: BorderRadius.circular(10),
             );
           },
         ),

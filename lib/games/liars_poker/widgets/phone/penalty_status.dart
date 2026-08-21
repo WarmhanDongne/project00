@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/sound/app_sounds.dart';
-import 'package:project00/core/sound/sound_effects.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
 import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/shared/animations/fade_hold_fade.dart';
 import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
@@ -35,7 +35,7 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
   late final AnimationController _waitingExitController;
   late final AnimationController _stampController;
   bool _didPrecacheStamp = false;
-  bool _stampSoundPlayed = false;
+  final _stampCue = ProgressSoundCue();
 
   bool get _hasResolvedResult =>
       widget.result == 'safe' || widget.result == 'eliminated';
@@ -71,17 +71,10 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
     }
 
     if (oldWidget.result != widget.result && _hasResolvedResult) {
-      _stampSoundPlayed = false;
+      _stampCue.reset();
       _stampController.forward(from: 0);
     }
   }
-
-  /// 도장 효과음을 화면보다 얼마나 먼저 요청할지입니다.
-  ///
-  /// 기기 오디오 출력에는 짧은 지연이 남습니다. 닿는 순간에 요청을 보내면 그만큼
-  /// 늦게 들리므로 조금 앞서 보냅니다. 화면(접촉 시점)은 그대로 두고 소리만
-  /// 앞당기므로, 아직 늦으면 이 값만 키우세요.
-  static const Duration _stampSoundLead = Duration(milliseconds: 60);
 
   /// 도장이 프로필에 닿는 순간에 맞춰 효과음을 한 번 재생합니다.
   ///
@@ -89,19 +82,17 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
   /// 내려오기 시작할 때 재생하면 닿기까지 남은 시간만큼(1580ms 기준 약 470ms)
   /// 소리가 먼저 들립니다.
   void _playStampSound() {
-    if (!mounted || _stampSoundPlayed) return;
-
+    if (!mounted) return;
     final totalMilliseconds = _stampController.duration?.inMilliseconds ?? 0;
     final leadProgress = totalMilliseconds <= 0
         ? 0.0
-        : _stampSoundLead.inMilliseconds / totalMilliseconds;
-    if (_stampController.value <
-        _StampedProfile.stampHitProgress - leadProgress) {
-      return;
-    }
-
-    _stampSoundPlayed = true;
-    SoundEffects.play(context, AppSounds.stamp);
+        : ProgressSoundCue.lead.inMilliseconds / totalMilliseconds;
+    _stampCue.maybePlay(
+      context,
+      AppSounds.stamp,
+      value: _stampController.value,
+      threshold: _StampedProfile.stampHitProgress - leadProgress,
+    );
   }
 
   @override

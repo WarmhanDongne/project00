@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/animations/curve_intervals.dart';
 
 /// 게임 화면 진입 시 GAME START를 부드럽게 등장·퇴장시킵니다.
 ///
@@ -63,13 +64,13 @@ class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
-          final entry = _interval(
+          final entry = intervalProgress(
             _controller.value,
             0,
             0.22,
             Curves.easeOutBack,
           );
-          final exit = _interval(
+          final exit = intervalProgress(
             _controller.value,
             0.66,
             1,
@@ -103,10 +104,5 @@ class _PhoneGameStartAnimationState extends State<PhoneGameStartAnimation>
         },
       ),
     );
-  }
-
-  double _interval(double value, double begin, double end, Curve curve) {
-    final progress = ((value - begin) / (end - begin)).clamp(0.0, 1.0);
-    return curve.transform(progress);
   }
 }

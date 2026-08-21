@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:project00/games/mafia/loading/mafia_loading.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,13 +8,11 @@ import 'package:project00/core/assets/game_asset_store.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
-import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/providers/mafia_game_state.dart';
 import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
 import 'package:project00/games/mafia/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
-import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/result_view.dart';
 import 'package:project00/games/mafia/widgets/phone/top_bar.dart';
@@ -79,16 +78,11 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     controller = ref.read(provider.notifier);
     // 첫 조작이 콜드스타트로 늦지 않게 서버를 미리 깨웁니다.
     unawaited(controller!.warmUp());
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 짧은 효과음을 미리 풀어 둡니다. 하지 않으면 첫 재생이 화면보다 늦습니다.
-    final sound = SoundEffects.of(context);
-    if (sound != null) {
-      unawaited(sound.preloadEffects(MafiaSounds.preloadTargets));
-    }
+    // 첫 화면(P1) 이미지와 효과음을 미리 준비합니다. context가 필요한
+    // 작업이라 첫 프레임 뒤로 미룹니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(preloadMafiaAssets(context, isPhone: true));
+    });
   }
 
   void _handleState() {

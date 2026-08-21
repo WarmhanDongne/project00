@@ -15,6 +15,7 @@ import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
 import 'package:project00/games/shared/animations/game_entry_unroll.dart';
+import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -52,6 +53,9 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   String? _shownWinnerUid;
   BuildContext? _resultDialogContext;
   int _resultDialogGeneration = 0;
+  bool _wasMyTurn = false;
+  bool _wasPenaltyPhase = false;
+  String? _previousTurnUid;
 
   @override
   void initState() {
@@ -122,6 +126,8 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     final controller = _controller;
     if (controller == null || !mounted) return;
 
+    _notifyTurnAndLiarFeedback(controller);
+
     if (!controller.isFinished) {
       _hasScheduledGameExit = false;
       _closeResultDialog();
@@ -151,6 +157,36 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       if (!mounted) return;
       Navigator.of(context).maybePop();
     });
+  }
+
+  /// 내 턴 시작과 다른 플레이어의 LIAR 선언을 진동으로 알립니다.
+  ///
+  /// 컨트롤러 알림은 판정 문구 타이머 같은 로컬 커밋에도 오므로, 직전 값과의
+  /// 전이를 비교해 각각 한 번만 울립니다. penalty 전환 직전의 turnUid가 LIAR를
+  /// 외친 플레이어이며, 선언한 본인은 버튼을 누를 때 이미 declare 진동을
+  /// 받았으므로 제외합니다.
+  void _notifyTurnAndLiarFeedback(LiarsPokerController controller) {
+    final wasMyTurn = _wasMyTurn;
+    final wasPenaltyPhase = _wasPenaltyPhase;
+    final previousTurnUid = _previousTurnUid;
+    _wasMyTurn = controller.isMyTurn;
+    _wasPenaltyPhase = controller.phase == 'penalty';
+    _previousTurnUid = controller.turnUid;
+
+    if (controller.isFinished) return;
+
+    // 내 턴이 시작되면 화면을 보고 있지 않아도 알 수 있게 진동을 울립니다.
+    if (!wasMyTurn && controller.isMyTurn) {
+      GameFeedback.alert();
+      return;
+    }
+
+    if (!wasPenaltyPhase &&
+        controller.phase == 'penalty' &&
+        previousTurnUid != null &&
+        previousTurnUid != controller.uid) {
+      GameFeedback.alert();
+    }
   }
 
   void _showResultDialog(LiarsPokerController controller) {
