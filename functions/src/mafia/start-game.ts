@@ -38,6 +38,12 @@ export const game_mafia_start_game = onCall<StartData>(
     if (room.selectedGame !== "mafia") {
       throw new HttpsError("failed-precondition", "마피아가 선택되지 않았습니다.");
     }
+    if (!restart && room.status !== "seating") {
+      throw new HttpsError(
+        "failed-precondition",
+        "자리 배치를 시작한 뒤 게임을 시작해주세요.",
+      );
+    }
 
     const players = await createMafiaPlayers(room.players);
     const count = Object.keys(players).length;

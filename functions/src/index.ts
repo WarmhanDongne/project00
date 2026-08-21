@@ -20,6 +20,7 @@ export {
 } from "./room/realtime-room-functions.js";
 
 export {
+  beginRealtimeRoomSeating,
   cleanupStaleRealtimeRooms,
   closeRoom,
   leaveRealtimeRoom,

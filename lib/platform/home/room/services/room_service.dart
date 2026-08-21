@@ -215,6 +215,14 @@ class RoomService {
         .call(controllerCommandData(roomCode, {'gameId': gameId}));
   }
 
+  /// 서버에서 `waiting → seating`을 확정한 뒤 잠긴 최신 참가자 명단을 반환합니다.
+  Future<List<RoomPlayer>> beginPlayerSeating(String roomCode) async {
+    await _functions
+        .httpsCallable('beginRealtimeRoomSeating')
+        .call(controllerCommandData(roomCode));
+    return getRoomPlayers(roomCode);
+  }
+
   List<RoomPlayer> _playersFromSnapshot(DataSnapshot snapshot) {
     final value = snapshot.value;
     if (!snapshot.exists || value is! Map) {

@@ -20,6 +20,12 @@ import {
   assertControllerSession,
   createControllerSessionId,
 } from "./controller-session.js";
+import {
+  decideRoomJoin,
+  GAME_PREPARATION_STARTED_MESSAGE,
+  RoomJoinDecision,
+} from "./room-join-policy.js";
+import {runPrimedTransaction} from "./room-transaction.js";
 
 const REGION = "asia-northeast3";
 
@@ -67,6 +73,25 @@ type JoinRealtimeRoomData = {
 type ValidateRealtimeRoomData = {
   roomCode?: unknown;
 };
+
+/** 참가 판정 결과를 클라이언트용 callable 오류로 변환합니다. */
+function joinDecisionError(decision: RoomJoinDecision): HttpsError | null {
+  switch (decision) {
+  case "room-closed":
+    return new HttpsError("failed-precondition", "종료된 방입니다.");
+  case "room-finished":
+    return new HttpsError("failed-precondition", "이미 종료된 게임입니다.");
+  case "inactive-player":
+    return new HttpsError("failed-precondition", "이 방에는 다시 참가할 수 없습니다.");
+  case "game-preparing":
+    return new HttpsError(
+      "failed-precondition",
+      GAME_PREPARATION_STARTED_MESSAGE,
+    );
+  default:
+    return null;
+  }
+}
 
 /**
  * 중복 가능성이 낮은 5자리 방 코드를 생성합니다.
@@ -219,25 +244,22 @@ export const validateRealtimeRoom = onCall<ValidateRealtimeRoomData>(
       throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
     }
     const room = snapshot.val() as Record<string, unknown>;
-    if (room.status === "closed") {
-      throw new HttpsError("failed-precondition", "종료된 방입니다.");
-    }
     const publicGame = room.game as
       {public?: {status?: unknown}} | undefined;
-    if (
-      room.status === "finished" ||
-      publicGame?.public?.status === "playing"
-    ) {
-      throw new HttpsError(
-        "failed-precondition",
-        "이미 진행 중인 게임에는 새로 참가할 수 없습니다.",
-      );
-    }
 
     const players = room.players !== null &&
       typeof room.players === "object" &&
       !Array.isArray(room.players) ?
-      room.players as Record<string, unknown> : {};
+      room.players as Record<string, Record<string, unknown>> : {};
+    const existingPlayer = players[uid];
+    const decision = decideRoomJoin({
+      roomStatus: room.status,
+      gameStatus: publicGame?.public?.status,
+      playerExists: existingPlayer !== undefined,
+      playerStatus: existingPlayer?.status,
+    });
+    const decisionError = joinDecisionError(decision);
+    if (decisionError) throw decisionError;
     const maxPlayers = typeof room.maxPlayers === "number" ?
       room.maxPlayers : DEFAULT_MAX_PLAYERS;
     if (!(uid in players) && Object.keys(players).length >= maxPlayers) {
@@ -301,32 +323,42 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       );
     }
 
-    const room = roomSnapshot.val() as Record<string, unknown>;
-    if (room.status === "closed") {
-      throw new HttpsError("failed-precondition", "종료된 방입니다.");
-    }
-    const maxPlayers = typeof room.maxPlayers === "number" ?
-      room.maxPlayers : DEFAULT_MAX_PLAYERS;
-    const playersRef = roomRef.child("players");
-
     let rejection: HttpsError | null = null;
     let reconnected = false;
     let savedNickname = nickname;
 
-    const transaction = await playersRef.transaction(
+    const transaction = await runPrimedTransaction(
+      roomRef,
       (currentValue) => {
         rejection = null;
         reconnected = false;
-        const players = currentValue !== null &&
-          typeof currentValue === "object" &&
-          !Array.isArray(currentValue) ?
-          currentValue as Record<string, Record<string, unknown>> : {};
+        if (currentValue === null || typeof currentValue !== "object") return;
+        const currentRoom = currentValue as Record<string, unknown> & {
+          players?: Record<string, Record<string, unknown>>;
+          game?: {public?: {status?: unknown}};
+        };
+        const players = currentRoom.players ?? {};
 
         const existingPlayer = players[uid];
-        const effectiveNickname = preserveProfile &&
+        const decision = decideRoomJoin({
+          roomStatus: currentRoom.status,
+          gameStatus: currentRoom.game?.public?.status,
+          playerExists: existingPlayer !== undefined,
+          playerStatus: existingPlayer?.status,
+        });
+        const decisionError = joinDecisionError(decision);
+        if (decisionError) {
+          rejection = decisionError;
+          return;
+        }
+
+        const roomIsWaiting = (currentRoom.status ?? "waiting") === "waiting" &&
+          currentRoom.game?.public?.status !== "playing";
+        const keepExistingProfile = preserveProfile || !roomIsWaiting;
+        const effectiveNickname = keepExistingProfile &&
           existingPlayer && typeof existingPlayer.nickname === "string" ?
           existingPlayer.nickname : nickname;
-        const effectiveCharacterId = preserveProfile &&
+        const effectiveCharacterId = keepExistingProfile &&
           existingPlayer && typeof existingPlayer.characterId === "string" &&
           ROOM_CHARACTER_IDS.has(existingPlayer.characterId) ?
           existingPlayer.characterId : characterId;
@@ -366,22 +398,19 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           delete updatedPlayer.profileImageUrl;
           delete updatedPlayer.accentColor;
           players[uid] = updatedPlayer;
-          return players;
-        }
-
-        const publicGame = room.game as
-          {public?: {status?: unknown}} | undefined;
-        if (
-          room.status === "finished" ||
-          publicGame?.public?.status === "playing"
-        ) {
-          rejection = new HttpsError(
-            "failed-precondition",
-            "이미 진행 중인 게임에는 새로 참가할 수 없습니다.",
+          currentRoom.players = players;
+          reconcileGamePlayerConnection(
+            currentRoom as unknown as InterruptibleRoom,
+            uid,
+            false,
+            true,
+            Date.now(),
           );
-          return;
+          return currentRoom;
         }
 
+        const maxPlayers = typeof currentRoom.maxPlayers === "number" ?
+          currentRoom.maxPlayers : DEFAULT_MAX_PLAYERS;
         if (Object.keys(players).length >= maxPlayers) {
           rejection = new HttpsError(
             "resource-exhausted",
@@ -402,7 +431,8 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           penaltyAttemptCount: 0,
           joinedAt: Date.now(),
         };
-        return players;
+        currentRoom.players = players;
+        return currentRoom;
       },
     );
 
@@ -412,33 +442,6 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
         "aborted",
         "방 참가 요청이 충돌했습니다. 다시 시도해주세요.",
       );
-    }
-
-    // =======================게임 중 재접속 확정==============================
-    // players 하위 트랜잭션과 연결 이벤트 트리거의 실행 순서가 엇갈려도 현재
-    // presence와 게임 중단 해제를 한 방 트랜잭션에서 다시 확정합니다. seat와
-    // game/private는 UID 경로를 그대로 유지하므로 절대 새로 만들지 않습니다.
-    if (reconnected) {
-      await roomRef.transaction((currentValue) => {
-        if (currentValue === null || typeof currentValue !== "object") {
-          return currentValue;
-        }
-        const currentRoom = currentValue as Record<string, unknown> & {
-          players?: Record<string, Record<string, unknown>>;
-        };
-        const currentPlayer = currentRoom.players?.[uid];
-        if (!currentPlayer) return currentValue;
-        currentPlayer.isConnected = true;
-        currentPlayer.lastSeen = Date.now();
-        reconcileGamePlayerConnection(
-          currentRoom as unknown as InterruptibleRoom,
-          uid,
-          false,
-          true,
-          Date.now(),
-        );
-        return currentRoom;
-      });
     }
 
     return {
@@ -511,93 +514,83 @@ export const saveRealtimePlayerSeatIndexes =
         );
       }
 
-      const room = roomSnapshot.val() as Record<
-        string,
-        unknown
-      >;
-
-      assertControllerSession(
-        room,
-        requesterUid,
-        request.data?.controllerSessionId,
-      );
-
-      const players = room.players;
-
-      if (
-        typeof players !== "object" ||
-        players === null ||
-        Array.isArray(players)
-      ) {
-        throw new HttpsError(
-          "failed-precondition",
-          "참가 플레이어가 없습니다.",
-        );
-      }
-
-      const playerIds = Object.keys(players);
       const seatEntries =
         Object.entries(rawSeatIndexes);
-
-      if (playerIds.length < 2) {
-        throw new HttpsError(
-          "failed-precondition",
-          "게임을 시작하려면 최소 2명이 필요합니다.",
+      let rejection: HttpsError | null = null;
+      const updateSeatIndexes = (currentValue: unknown) => {
+        rejection = null;
+        if (currentValue === null || typeof currentValue !== "object") return;
+        const room = currentValue as Record<string, unknown> & {
+          controllerUid?: string;
+          hostUid?: string;
+          controllerSessionId?: string;
+          players?: Record<string, Record<string, unknown>>;
+        };
+        assertControllerSession(
+          room,
+          requesterUid,
+          request.data?.controllerSessionId,
         );
-      }
+        if (room.status !== "seating") {
+          rejection = new HttpsError(
+            "failed-precondition",
+            "자리 배치 중에만 플레이어 자리를 저장할 수 있습니다.",
+          );
+          return;
+        }
+        const players = room.players;
+        if (!players) {
+          rejection = new HttpsError(
+            "failed-precondition",
+            "참가 플레이어가 없습니다.",
+          );
+          return;
+        }
+        const playerIds = Object.keys(players);
+        if (playerIds.length < 2) {
+          rejection = new HttpsError(
+            "failed-precondition",
+            "게임을 시작하려면 최소 2명이 필요합니다.",
+          );
+          return;
+        }
+        if (playerIds.length > DEFAULT_MAX_PLAYERS) {
+          rejection = new HttpsError(
+            "failed-precondition",
+            `플레이어는 최대 ${DEFAULT_MAX_PLAYERS}명입니다.`,
+          );
+          return;
+        }
 
-      if (playerIds.length > DEFAULT_MAX_PLAYERS) {
-        throw new HttpsError(
-          "failed-precondition",
-          `플레이어는 최대 ${DEFAULT_MAX_PLAYERS}명입니다.`,
-        );
-      }
-
-      // 전달된 UID가 실제 참가자와 정확히 일치하는지 확인
-      const seatPlayerIds = new Set(
-        seatEntries.map(([uid]) => uid),
+        const seatPlayerIds = new Set(seatEntries.map(([uid]) => uid));
+        const validPlayers = seatEntries.length === playerIds.length &&
+          playerIds.every((uid) => seatPlayerIds.has(uid));
+        const seats = seatEntries.map(([, seatIndex]) => seatIndex);
+        const validSeats = seats.every(Number.isInteger) &&
+          new Set(seats).size === seats.length &&
+          seats.every((seat) => typeof seat === "number" &&
+            seat >= 0 && seat < playerIds.length);
+        if (!validPlayers || !validSeats) {
+          rejection = new HttpsError(
+            "invalid-argument",
+            "모든 플레이어의 자리는 중복 없이 지정해야 합니다.",
+          );
+          return;
+        }
+        for (const [playerId, seatIndex] of seatEntries) {
+          players[playerId].seatIndex = seatIndex;
+        }
+        room.players = players;
+        return room;
+      };
+      const transaction = await runPrimedTransaction(
+        roomRef,
+        updateSeatIndexes,
       );
-
-      const validPlayers =
-        seatEntries.length === playerIds.length &&
-        playerIds.every(
-          (uid) => seatPlayerIds.has(uid),
-        );
-
-      // 모든 좌석이 정수이고 0~인원수-1 범위이며
-      // 중복되지 않았는지 확인
-      const seats = seatEntries.map(
-        ([, seatIndex]) => seatIndex,
-      );
-
-      const validSeats =
-        seats.every(Number.isInteger) &&
-        new Set(seats).size === seats.length &&
-        seats.every(
-          (seat) =>
-            typeof seat === "number" &&
-            seat >= 0 &&
-            seat < playerIds.length,
-        );
-
-      if (!validPlayers || !validSeats) {
-        throw new HttpsError(
-          "invalid-argument",
-          "모든 플레이어의 자리는 중복 없이 지정해야 합니다.",
-        );
+      if (!transaction.committed) {
+        if (rejection) throw rejection;
+        throw new HttpsError("aborted", "플레이어 자리를 저장하지 못했습니다.");
       }
-
-      const updates: Record<string, number> = {};
-
-      for (
-        const [playerId, seatIndex] of seatEntries
-      ) {
-        updates[
-          `players/${playerId}/seatIndex`
-        ] = seatIndex as number;
-      }
-
-      await roomRef.update(updates);
 
       return {
         success: true,

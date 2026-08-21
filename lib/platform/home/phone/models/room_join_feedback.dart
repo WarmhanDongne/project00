@@ -25,6 +25,12 @@ RoomJoinFeedback roomJoinFeedbackFor(String? rawMessage) {
       tone: RoomJoinFeedbackTone.warning,
     );
   }
+  if (message.contains('게임 준비') || message.contains('준비가 시작')) {
+    return const RoomJoinFeedback(
+      message: '이미 게임 준비가 시작된 방입니다.',
+      tone: RoomJoinFeedbackTone.warning,
+    );
+  }
   if (message.contains('방을 찾을 수 없') ||
       message.contains('존재하지 않는') ||
       normalized.contains('not-found')) {

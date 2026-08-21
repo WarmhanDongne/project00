@@ -233,6 +233,30 @@ void main() {
     expect(find.byType(PlayerLayoutEditor), findsNothing);
   });
 
+  testWidgets('서버의 자리 배치 잠금이 실패하면 편집 화면을 열지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final service = _SelectionRoomService(failOnBeginSeating: true);
+    final provider = RoomProvider(
+      service: service,
+      gameService: _CatalogGameService(),
+    )
+      ..roomCode = 'ABCDE'
+      ..players = List.generate(2, _player);
+    addTearDown(provider.dispose);
+
+    await _pumpPreviewGame(tester, provider, _liarsPokerGame);
+    await tester.tap(find.text('시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(service.beginSeatingCalls, 1);
+    expect(find.byType(PlayerLayoutEditor), findsNothing);
+    expect(find.text('자리 배치를 시작하지 못했습니다.'), findsOneWidget);
+  });
+
   testWidgets('등록 게임은 구성 요소 미리보기를, 미등록 게임은 대체 패널을 표시한다', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);
@@ -511,11 +535,17 @@ const _longGame = GameInfo(
 );
 
 class _SelectionRoomService implements RoomService {
-  _SelectionRoomService({this.failOnClear = false, this.clearCompleter});
+  _SelectionRoomService({
+    this.failOnClear = false,
+    this.failOnBeginSeating = false,
+    this.clearCompleter,
+  });
 
   final bool failOnClear;
+  final bool failOnBeginSeating;
   final Completer<void>? clearCompleter;
   final List<String?> selectedGameIds = [];
+  int beginSeatingCalls = 0;
 
   @override
   Future<void> selectGame({
@@ -529,6 +559,15 @@ class _SelectionRoomService implements RoomService {
     if (failOnClear && gameId == null) {
       throw const RoomCommandException('게임 선택을 해제하지 못했습니다.');
     }
+  }
+
+  @override
+  Future<List<RoomPlayer>> beginPlayerSeating(String roomCode) async {
+    beginSeatingCalls += 1;
+    if (failOnBeginSeating) {
+      throw const RoomCommandException('자리 배치를 시작하지 못했습니다.');
+    }
+    return const [];
   }
 
   @override
