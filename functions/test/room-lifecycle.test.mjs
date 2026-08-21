@@ -9,6 +9,7 @@ import {
   isGameAccessibleToGroup,
   shouldDeleteRoom,
 } from "../lib/room/realtime-room-lifecycle.js";
+import {decideRoomJoin} from "../lib/room/room-join-policy.js";
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
   const sessionId = createControllerSessionId();
@@ -59,5 +60,41 @@ test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에�
   assert.equal(
     isGameAccessibleToGroup("paid", "paid_game", [["another_game"]]),
     false,
+  );
+});
+
+test("신규 참가자는 waiting에서만 허용한다", () => {
+  assert.equal(decideRoomJoin({roomStatus: "waiting", playerExists: false}), "new-player");
+  assert.equal(decideRoomJoin({roomStatus: "seating", playerExists: false}), "game-preparing");
+  assert.equal(decideRoomJoin({roomStatus: "playing", playerExists: false}), "game-preparing");
+  assert.equal(decideRoomJoin({roomStatus: "closed", playerExists: false}), "room-closed");
+  assert.equal(decideRoomJoin({roomStatus: "finished", playerExists: false}), "room-finished");
+});
+
+test("기존 active UID는 seating과 playing에서도 재접속할 수 있다", () => {
+  assert.equal(
+    decideRoomJoin({
+      roomStatus: "seating",
+      playerExists: true,
+      playerStatus: "active",
+    }),
+    "reconnect",
+  );
+  assert.equal(
+    decideRoomJoin({
+      roomStatus: "playing",
+      gameStatus: "playing",
+      playerExists: true,
+      playerStatus: "active",
+    }),
+    "reconnect",
+  );
+  assert.equal(
+    decideRoomJoin({
+      roomStatus: "seating",
+      playerExists: true,
+      playerStatus: "inactive",
+    }),
+    "inactive-player",
   );
 });

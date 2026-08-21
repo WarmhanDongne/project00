@@ -148,7 +148,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     unawaited(_dismiss());
   }
 
-  Future<void> _startGame(BuildContext context) async {
+  Future<void> _startGame() async {
     final players = widget.roomProvider.players
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
@@ -208,9 +208,22 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       return;
     }
 
-    final initialLayout = PlayerLayoutFactory.create(players);
-
     setState(() => _isStarting = true);
+    final seatingStarted = await widget.roomProvider.beginPlayerSeating();
+    if (!mounted) return;
+    if (!seatingStarted) {
+      setState(() => _isStarting = false);
+      _showMessage(
+        context,
+        widget.roomProvider.errorMessage ?? '자리 배치를 시작하지 못했습니다.',
+      );
+      return;
+    }
+    final lockedPlayers = widget.roomProvider.players
+        .where((player) => player.isActive && player.isPlayer)
+        .toList(growable: false);
+    final initialLayout = PlayerLayoutFactory.create(lockedPlayers);
+
     //================상태바 표시=================
     // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
     unawaited(AppSystemUi.enterGameFullscreen());
@@ -440,7 +453,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                                     loading: _isStarting,
                                     onPressed: _isClosing || _isStarting
                                         ? null
-                                        : () => _startGame(context),
+                                        : _startGame,
                                   ),
                                 ),
                               ],

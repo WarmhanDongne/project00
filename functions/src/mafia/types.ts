@@ -273,6 +273,7 @@ export interface MafiaRoom {
   controllerUid?: string;
   controllerSessionId?: string;
   hostUid?: string;
+  status?: string;
   selectedGame?: string;
   players?: Record<string, Record<string, unknown>>;
   game?: MafiaGameState;

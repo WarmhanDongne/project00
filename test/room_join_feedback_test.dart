@@ -25,6 +25,13 @@ void main() {
       );
     });
 
+    test('maps seating rooms to the game preparation message', () {
+      final feedback = roomJoinFeedbackFor('이미 게임 준비가 시작된 방입니다.');
+
+      expect(feedback.message, '이미 게임 준비가 시작된 방입니다.');
+      expect(feedback.tone, RoomJoinFeedbackTone.warning);
+    });
+
     test('does not expose unknown server details', () {
       final feedback = roomJoinFeedbackFor('sensitive internal detail');
 

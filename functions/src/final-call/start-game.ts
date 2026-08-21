@@ -31,6 +31,12 @@ export const game_final_call_start_game = onCall<StartData>(
     if (room.selectedGame !== "final_call") {
       throw new HttpsError("failed-precondition", "Final Call이 선택되지 않았습니다.");
     }
+    if (!restart && room.status !== "seating") {
+      throw new HttpsError(
+        "failed-precondition",
+        "자리 배치를 시작한 뒤 게임을 시작해주세요.",
+      );
+    }
     const players = await createFinalCallPlayers(room.players);
     const game = createInitialFinalCallGame(players, Date.now());
     const transaction = await roomRef.child("game").transaction((current) => {

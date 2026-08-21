@@ -17,6 +17,20 @@ void main() {
       );
     });
 
+    test('allows an active player to return while seating is in progress', () {
+      expect(
+        isRestorablePlayerSessionState(
+          playerExists: true,
+          playerStatus: 'active',
+          roomStatus: 'seating',
+          selectedGameId: 'liars_poker',
+          gameStatus: null,
+          privateGameDataExists: false,
+        ),
+        isTrue,
+      );
+    });
+
     test(
       'allows return only when an active game has complete authority data',
       () {

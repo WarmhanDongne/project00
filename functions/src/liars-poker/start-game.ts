@@ -66,6 +66,12 @@ export const game_liars_poker_start_game =
           "Liar's Poker 게임이 선택되지 않았습니다.",
         );
       }
+      if (!restart && room.status !== "seating") {
+        throw new HttpsError(
+          "failed-precondition",
+          "자리 배치를 시작한 뒤 게임을 시작해주세요.",
+        );
+      }
 
       const players = await createPublicPlayers(
         room.players,

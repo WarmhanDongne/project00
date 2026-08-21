@@ -328,6 +328,21 @@ class RoomProvider extends ChangeNotifier {
     return result ?? false;
   }
 
+  Future<bool> beginPlayerSeating() async {
+    final code = roomCode;
+    if (code == null) {
+      errorMessage = '방 정보를 확인할 수 없습니다.';
+      notifyListeners();
+      return false;
+    }
+    final result = await _runCommand<bool>(() async {
+      players = await _service.beginPlayerSeating(code);
+      notifyListeners();
+      return true;
+    });
+    return result ?? false;
+  }
+
   void listenRoom() {
     final listenedRoomCode = roomCode;
     if (listenedRoomCode == null) return;

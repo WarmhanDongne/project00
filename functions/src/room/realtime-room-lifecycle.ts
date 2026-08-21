@@ -46,6 +46,15 @@ interface RealtimeRoomPlayer {
   status?: string;
 }
 
+function activePlayerCount(room: RealtimeRoom): number {
+  return Object.values(room.players ?? {}).filter((rawPlayer) => {
+    if (!rawPlayer || typeof rawPlayer !== "object") return false;
+    const player = rawPlayer as RealtimeRoomPlayer;
+    return (player.role ?? "player") === "player" &&
+      (player.status ?? "active") === "active";
+  }).length;
+}
+
 function requireUid(uid: string | undefined): string {
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   return uid;
@@ -147,6 +156,9 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
       if (room.status === "closed") {
         throw new HttpsError("failed-precondition", "이미 종료된 방입니다.");
       }
+      // 자리 배치 초안은 태블릿 메모리에만 있으므로 프로세스가 완전히 재시작된
+      // 경우에는 선택 게임을 유지한 채 다시 시작할 수 있는 대기 상태로 돌립니다.
+      if (room.status === "seating") room.status = "waiting";
       room.controllerConnected = true;
       room.controllerPresence = {
         connected: true,
@@ -255,6 +267,7 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
         if (
           currentRoom.status === "playing" ||
           currentRoom.status === "closed" ||
+          (currentRoom.status === "seating" && gameId !== null) ||
           currentRoom.game?.public?.status === "playing"
         ) {
           throw new HttpsError(
@@ -274,6 +287,92 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
     } finally {
       roomRef.off("value", roomValueListener);
     }
+  },
+);
+
+/** 선택된 게임의 자리 배치를 시작하고 신규 참가자 명단을 잠급니다. */
+export const beginRealtimeRoomSeating = onCall<RoomData>(
+  {region: REGION},
+  async (request) => {
+    const uid = requireUid(request.auth?.uid);
+    const roomCode = parseRoomCode(request.data?.roomCode);
+    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+    const roomSnapshot = await roomRef.get();
+    if (!roomSnapshot.exists()) {
+      throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
+    }
+    const room = roomSnapshot.val() as RealtimeRoom;
+    assertControllerSession(room, uid, request.data?.controllerSessionId);
+    const selectedGame = room.selectedGame;
+    if (!selectedGame) {
+      throw new HttpsError("failed-precondition", "선택된 게임이 없습니다.");
+    }
+
+    const gameSnapshot = await getFirestore()
+      .collection("games")
+      .doc(selectedGame)
+      .get();
+    if (!gameSnapshot.exists || gameSnapshot.data()?.enabled === false) {
+      throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
+    }
+    const rawMinPlayers = gameSnapshot.data()?.minPlayers;
+    const rawMaxPlayers = gameSnapshot.data()?.maxPlayers;
+    const minPlayers = typeof rawMinPlayers === "number" && rawMinPlayers > 0 ?
+      rawMinPlayers : 2;
+    const maxPlayers = typeof rawMaxPlayers === "number" && rawMaxPlayers > 0 ?
+      rawMaxPlayers : 12;
+
+    let rejection: HttpsError | null = null;
+    const result = await roomRef.transaction((raw) => {
+      rejection = null;
+      if (raw === null || typeof raw !== "object") return;
+      const currentRoom = raw as RealtimeRoom;
+      assertControllerSession(
+        currentRoom,
+        uid,
+        request.data?.controllerSessionId,
+      );
+      if (currentRoom.status === "seating" &&
+          currentRoom.selectedGame === selectedGame) {
+        return currentRoom;
+      }
+      if (currentRoom.status !== "waiting" ||
+          currentRoom.game?.public?.status === "playing") {
+        rejection = new HttpsError(
+          "failed-precondition",
+          "현재 자리 배치를 시작할 수 없습니다.",
+        );
+        return;
+      }
+      if (currentRoom.selectedGame !== selectedGame) {
+        rejection = new HttpsError(
+          "aborted",
+          "선택된 게임이 변경되었습니다. 다시 시도해주세요.",
+        );
+        return;
+      }
+      const count = activePlayerCount(currentRoom);
+      if (count < minPlayers || count > maxPlayers) {
+        rejection = new HttpsError(
+          "failed-precondition",
+          `게임 참가 인원은 ${minPlayers}~${maxPlayers}명이어야 합니다.`,
+        );
+        return;
+      }
+      currentRoom.status = "seating";
+      return currentRoom;
+    });
+    if (!result.committed) {
+      if (rejection) throw rejection;
+      throw new HttpsError("aborted", "자리 배치를 시작하지 못했습니다.");
+    }
+    const committedRoom = result.snapshot.val() as RealtimeRoom;
+    return {
+      success: true,
+      roomCode,
+      status: "seating",
+      playerUids: Object.keys(committedRoom.players ?? {}),
+    };
   },
 );
 

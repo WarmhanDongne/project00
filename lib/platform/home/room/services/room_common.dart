@@ -37,5 +37,6 @@ bool isRestorablePlayerSessionState({
         privateGameDataExists;
   }
 
-  return roomStatus == 'waiting' && gameStatus != 'finished';
+  return (roomStatus == 'waiting' || roomStatus == 'seating') &&
+      gameStatus != 'finished';
 }
