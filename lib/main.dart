@@ -10,6 +10,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/core/app/app.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
+import 'package:project00/core/diagnostics/dev_error_overlay.dart';
 import 'package:project00/core/sound/providers/sound_provider.dart';
 import 'package:project00/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
@@ -34,11 +36,18 @@ void main() async {
   final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  //=======================오류 수집 시작==============================
+  // Firebase 초기화 바로 뒤에 붙입니다. 이 뒤에 나는 위젯·비동기 오류는
+  // 개발 중에는 화면(오른쪽 아래 빨간 표시)에서 보고, 릴리스에서는
+  // Crashlytics로 올라갑니다.
+  installDevErrorWidgetBuilder();
+  await CrashReporting.initialize();
   Uri? initialEmailLink;
   try {
     initialEmailLink = await appLinks.getInitialLink();
-  } catch (error) {
-    debugPrint('초기 이메일 링크를 읽지 못했습니다: $error');
+  } catch (error, stack) {
+    CrashReporting.recordError(error, stack, reason: '초기 이메일 링크 읽기');
   }
 
   //=======================서버 시각 보정 시작==============================

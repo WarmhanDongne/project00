@@ -10,37 +10,42 @@ import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 import 'package:project00/gen/assets.gen.dart';
 
-/// 처형자 발표 화면의 좌표입니다. 당사자와 나머지 사람이 다릅니다.
+/// 처형자 발표 화면의 좌표입니다.
+///
+/// 확정(2026-08): 제목은 다른 단계 화면의 안내 문구와 **같은 자리·크기**를
+/// 씁니다([MafiaPhoneStatusText]). 예전에는 제목만 36px에 168/218이라 단계가
+/// 바뀔 때 글자 크기가 튀어 보였습니다.
 @immutable
 class _ResultLayout {
   const _ResultLayout({
-    required this.titleTop,
     required this.portraitTop,
     required this.nicknameWeight,
   });
 
-  final double titleTop;
   final double portraitTop;
 
   /// 닉네임 굵기입니다. 시안이 당사자는 Light, 나머지는 Regular로 그렸습니다.
   final FontWeight nicknameWeight;
+
+  /// 제목은 다른 화면의 안내 문구와 같은 자리입니다.
+  double get titleTop => MafiaPhoneStatusText.promptTop;
 
   /// 닉네임은 두 시안 모두 사진 아래 10px에 있습니다.
   double get nicknameTop => portraitTop + _portraitSize + 10;
 
   static const double _portraitSize = 178;
 
-  /// 당사자용입니다. 아래 문구가 없어 전체가 위로 올라갑니다.
+  /// 당사자용입니다. 아래 문구가 없어 사진 묶음만 띠 가운데에 옵니다.
   static const _ResultLayout self = _ResultLayout(
-    titleTop: 168,
-    portraitTop: 259,
+    portraitTop: 288,
     nicknameWeight: FontWeight.w300,
   );
 
   /// 나머지 사람용입니다. 아래에 "○○님이 처형되었습니다." 문구가 붙습니다.
+  ///
+  /// 사진·닉네임·아래 문구를 합한 묶음이 내용 띠 가운데에 오는 자리입니다.
   static const _ResultLayout other = _ResultLayout(
-    titleTop: 218,
-    portraitTop: 321,
+    portraitTop: 300,
     nicknameWeight: FontWeight.w400,
   );
 }
@@ -82,6 +87,9 @@ class MafiaExecutionResultView extends StatelessWidget {
   static const double _portraitSize = 178;
   static const double _sentenceTop = 674;
 
+  /// 아무도 처형되지 않았을 때의 문구 자리입니다(아침 발표와 같은 높이).
+  static const double _noExecutionTop = MafiaPhoneStatusText.announcementTop;
+
   /// 시안이 문구에 남겨 둔 좌우 여백입니다(당사자 시안의 제목 묶음 기준).
   static const double _sideMargin = 27;
 
@@ -110,15 +118,16 @@ class MafiaExecutionResultView extends StatelessWidget {
               text: layout == _ResultLayout.self
                   ? MafiaCopy.executedSelfTitle
                   : MafiaCopy.executedOtherTitle,
-              fontSize: 36,
+              fontSize: MafiaPhoneStatusText.promptFontSize,
               scale: scale,
             ),
             if (target == null)
+              // 아침 발표(사망자 없음)와 같은 자리·크기로 알립니다.
               _buildCenteredText(
                 size,
-                top: layout.nicknameTop,
+                top: _noExecutionTop,
                 text: MafiaCopy.noExecution,
-                fontSize: 36,
+                fontSize: MafiaPhoneStatusText.waitingFontSize,
                 scale: scale,
               )
             else ...[
@@ -138,7 +147,7 @@ class MafiaExecutionResultView extends StatelessWidget {
                 size,
                 top: layout.nicknameTop,
                 text: target.nickname,
-                fontSize: 36,
+                fontSize: 32,
                 scale: scale,
                 fontWeight: layout.nicknameWeight,
               ),

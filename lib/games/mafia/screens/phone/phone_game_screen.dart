@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/mafia_phase_transition.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/widgets/phone/day_discussion_view.dart';
+import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:project00/games/mafia/widgets/phone/role_card_layer.dart';
 import 'package:project00/games/mafia/widgets/phone/morning_announcement_view.dart';
 import 'package:project00/games/mafia/widgets/phone/execution_view.dart';
 import 'package:project00/games/mafia/widgets/phone/night_action_view.dart';
-import 'package:project00/games/mafia/widgets/phone/role_reveal_view.dart';
 import 'package:project00/games/mafia/widgets/phone/spectator_roster_view.dart';
 import 'package:project00/games/mafia/widgets/phone/vote_view.dart';
 
@@ -113,6 +115,59 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   Widget build(BuildContext context) {
     final game = widget.controller;
 
+    // 확정(2026-08): 단계가 바뀔 때 화면 전체가 새로 그려지는 느낌을 없애려고
+    // **배경과 내 보관 카드는 셸이 계속 그립니다.** 바뀌는 내용만 전환합니다.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 낮·밤 배경은 부드럽게 바뀝니다(태블릿은 방사형 전환, 휴대폰은 겹침).
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: KeyedSubtree(
+            key: ValueKey(game.isNight),
+            child: MafiaPhoneBackground(isNight: game.isNight),
+          ),
+        ),
+        MafiaPhoneShellChrome(
+          child: MafiaPhaseTransition(
+            child: KeyedSubtree(
+              key: ValueKey(_pageKey(game)),
+              child: _buildPage(game),
+            ),
+          ),
+        ),
+        // 내 신분 카드는 **모든 단계에 걸쳐 한 장**입니다. 아래에 놓여 있다가
+        // 누르면 가운데로 올라와 열리고 다시 내려갑니다(확정 2026-08).
+        // 결과 화면부터는 카드가 필요 없어 얹지 않습니다.
+        if (_showsRoleCard(game))
+          MafiaPhoneRoleCardLayer(
+            role: game.myRole,
+            phaseKey: _pageKey(game),
+            // 아직 확인하지 않았으면 화면 위에서 내려오는 첫 확인 연출입니다.
+            isFirstReveal: game.phase == 'roleReveal' && !game.hasConfirmedRole,
+            onRevealed: game.confirmRole,
+          ),
+      ],
+    );
+  }
+
+  /// 지금 보여 줄 화면을 가리키는 값입니다. 이 값이 바뀔 때만 전환합니다.
+  ///
+  /// 같은 화면 안의 상태 변화(선택·집계·타이머)로는 바뀌지 않아야 합니다.
+  String _pageKey(MafiaController game) {
+    if (game.isVoteResult && _executionStage != _ExecutionStage.done) {
+      return 'execution';
+    }
+    if (game.isSpectating) return 'spectator';
+    return game.phase;
+  }
+
+  /// 신분 카드를 얹을 단계인지입니다.
+  ///
+  /// 결과 화면부터는 승패가 다 드러나 카드를 볼 이유가 없습니다.
+  bool _showsRoleCard(MafiaController game) => !game.isFinished;
+
+  Widget _buildPage(MafiaController game) {
     // 처형 발표는 사망 여부보다 먼저 봅니다. 자기가 처형된 사람도 발표를
     // 봐야 하기 때문입니다.
     if (game.isVoteResult && _executionStage != _ExecutionStage.done) {
@@ -135,11 +190,8 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     }
 
     return switch (game.phase) {
-      'roleReveal' => MafiaRoleRevealView(
-        role: game.myRole,
-        initiallyRevealed: game.hasConfirmedRole,
-        onRevealed: game.confirmRole,
-      ),
+      // 신분 확인은 카드 레이어가 전부 그립니다(카드·화살표·문구).
+      'roleReveal' => const SizedBox.shrink(),
       'night' => _buildNight(game),
       // 아침은 태블릿과 같은 발표 문구를 보여 줍니다(확정).
       'morning' => MafiaMorningAnnouncementView(

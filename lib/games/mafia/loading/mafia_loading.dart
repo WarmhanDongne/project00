@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_asset_store.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/mafia/sound/mafia_sounds.dart';
@@ -28,7 +29,10 @@ Future<void> preloadMafiaAssets(
   // 진입을 막지 않습니다. (initState의 호출과 중복돼도 안전합니다)
   try {
     await GameAssetStore.instance.prepareGame('mafia');
-  } catch (_) {}
+  } catch (error, stack) {
+    // 실패해도 번들 폴백으로 게임은 진행됩니다. 다만 원인은 남깁니다.
+    CrashReporting.recordError(error, stack, reason: '마피아 에셋 준비');
+  }
   if (!context.mounted) return;
 
   // 총성·투표·승리 효과음. 미리 풀지 않으면 첫 재생이 화면보다 늦습니다.

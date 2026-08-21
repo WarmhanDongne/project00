@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_asset_store.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/final_call/sound/final_call_sounds.dart';
@@ -24,7 +25,10 @@ Future<void> preloadFinalCallAssets(
   // 진입을 막지 않습니다. (initState의 호출과 중복돼도 안전합니다)
   try {
     await GameAssetStore.instance.prepareGame('final_call');
-  } catch (_) {}
+  } catch (error, stack) {
+    // 실패해도 번들 폴백으로 게임은 진행됩니다. 다만 원인은 남깁니다.
+    CrashReporting.recordError(error, stack, reason: '파이널콜 에셋 준비');
+  }
   if (!context.mounted) return;
 
   // 하트 파열음처럼 한 라운드에 한 번만 나는 소리가 화면보다 늦지 않도록

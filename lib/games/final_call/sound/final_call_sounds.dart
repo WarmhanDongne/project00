@@ -14,9 +14,15 @@ abstract final class FinalCallSounds {
   /// 라운드 결과에서 하트가 네 조각으로 갈라지는 순간 재생합니다.
   static const heartbreak = 'assets/games/final_call/sounds/heartbreak.mp3';
 
+  /// 우승 팀 발표(태블릿 결과 화면)가 뜨는 순간 한 번 재생합니다.
+  ///
+  /// 폰에서는 재생하지 않습니다. 같은 방의 여러 기기가 동시에 울리면
+  /// 소리가 겹치므로 방 중앙의 태블릿만 냅니다.
+  static const win = 'assets/games/final_call/sounds/win.mp3';
+
   /// 게임 진입 준비 단계에서 미리 풀어 둘 효과음입니다.
   ///
-  /// 하트 파열음은 라운드에 한 번만 나는 소리라 미리 준비하지 않으면 첫
-  /// 재생이 화면보다 늦습니다.
-  static const preloadTargets = [heartbreak];
+  /// 하트 파열음·승리음처럼 한 판에 한 번만 나는 소리는 미리 준비하지
+  /// 않으면 첫 재생이 화면보다 늦습니다.
+  static const preloadTargets = [heartbreak, win];
 }

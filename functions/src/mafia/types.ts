@@ -27,8 +27,34 @@ export const MAFIA_ROLE_REVEAL_MS = 60000;
  */
 export const MAFIA_NIGHT_MS = 180000;
 
-/** 낮 자유 토론 제한시간입니다. 시안의 `2m 30s`에서 가져왔습니다. */
-export const MAFIA_DAY_MS = 150000;
+/**
+ * 낮 자유 토론 제한시간입니다(확정 2026-08: **생존 인원**에 따라 다릅니다).
+ *
+ * | 생존 | 시간 |
+ * |---|---|
+ * | 2~3명 | 90초 |
+ * | 4명 | 120초 |
+ * | 5명 | 150초 |
+ * | 6명 | 180초 |
+ * | 7명 | 210초 |
+ * | 8명 | 240초 |
+ * | 9명 이상 | 300초 |
+ *
+ * 사람이 줄면 할 말도 줄어듭니다. 인원과 무관하게 같은 시간을 주면 적은
+ * 인원에서는 침묵이 길어집니다.
+ *
+ * ⚠️ 이 표가 원본입니다. 연습장(lib/games/mafia/mafia_timing.dart)이 같은
+ * 값을 따라야 하고, functions/test/mafia-discussion-parity.test.mjs가 그것을
+ * 확인합니다.
+ *
+ * @param {number} aliveCount 지금 살아 있는 사람 수
+ * @return {number} 낮 토론에 줄 시간(밀리초)
+ */
+export function mafiaDiscussionMs(aliveCount: number): number {
+  if (aliveCount <= 3) return 90000;
+  if (aliveCount >= 9) return 300000;
+  return aliveCount * 30000;
+}
 
 /** 투표 제한시간입니다. 시안의 `30초`에서 가져왔습니다. */
 export const MAFIA_VOTE_MS = 30000;
@@ -139,8 +165,18 @@ export interface MafiaPublicState {
    */
   discussionSkipCount: number;
 
-  /** 투표를 마친 인원수입니다. 누가 마쳤는지는 넣지 않습니다. */
+  /** 투표를 마친 인원수입니다. */
   voteSubmittedCount: number;
+
+  /**
+   * 투표를 마친 사람의 uid 목록입니다(**표를 어디에 냈는지는 없습니다**).
+   *
+   * 태블릿이 그 사람 좌석에서 투표지가 날아가는 연출을 그리는 데 씁니다.
+   * 실제 게임에서도 누가 투표함에 넣었는지는 모두가 보므로 공개해도 무해합니다.
+   * 밤 행동은 사정이 달라 [nightSubmittedCount]처럼 **수만** 공개합니다 —
+   * 누가 행동했는지가 드러나면 특수직이 노출됩니다.
+   */
+  voteSubmittedUids: string[];
   /** 이번 투표에 참여할 수 있는 인원수입니다. */
   voteEligibleCount: number;
 

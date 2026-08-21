@@ -91,6 +91,14 @@ class MafiaNightActionView extends StatelessWidget {
   static const double _promptTop = MafiaPhoneStatusText.promptTop;
   static const double _timerTop = MafiaPhoneStatusText.timerTop;
 
+  /// 내가 밤에 실제로 행동을 제출했는지입니다.
+  ///
+  /// 밤에 하는 일이 없는 신분은 제출할 것도 없으므로 false입니다.
+  bool get _hasSubmittedAction => isSubmitted && (role?.actsAtNight ?? false);
+
+  /// 밤에 대상을 고르는 신분인지입니다(제출 여부와 무관).
+  bool get _isNightActor => (role?.actsAtNight ?? false) && players.isNotEmpty;
+
   /// 대상을 고르는 화면인지입니다.
   bool get _showsSelection {
     final current = role;
@@ -117,6 +125,23 @@ class MafiaNightActionView extends StatelessWidget {
               ..._buildSelectionLayer(size, scale)
             else
               ..._buildWaiting(size, scale),
+            // 확정(2026-08): '선택 완료' 버튼은 제출한 뒤 **부드럽게 사라집니다.**
+            // 두 상태에 걸쳐 남겨 두어야 사라지는 모습이 보입니다.
+            if (_isNightActor && result == null)
+              IgnorePointer(
+                ignoring: isSubmitted,
+                child: AnimatedOpacity(
+                  opacity: isSubmitted ? 0 : 1,
+                  duration: const Duration(milliseconds: 360),
+                  curve: Curves.easeOut,
+                  child: MafiaPhoneActionButton(
+                    label: '선택 완료',
+                    onTap: onConfirm,
+                    enabled: selectedUid != null && onConfirm != null,
+                    colorlessWhenDisabled: true,
+                  ),
+                ),
+              ),
             MafiaStoredRoleCard(role: role),
           ],
         );
@@ -173,7 +198,10 @@ class MafiaNightActionView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, MafiaPlayerSelectGrid.designTop),
+        top: MafiaPhoneDesign.top(
+          size,
+          MafiaPlayerSelectGrid.topFor(players.length),
+        ),
         child: MafiaPlayerSelectGrid(
           players: players,
           selectedUid: selectedUid,
@@ -181,14 +209,6 @@ class MafiaNightActionView extends StatelessWidget {
           selectionColor: current.nightAction.accentColor,
           onSelect: onSelect,
         ),
-      ),
-      // 확정 흐름: 대상을 고르기 전에는 버튼이 **무색**, 고르면 색이 생기며
-      // 활성됩니다. 누르면 서버로 제출됩니다.
-      MafiaPhoneActionButton(
-        label: '선택 완료',
-        onTap: onConfirm,
-        enabled: selectedUid != null && onConfirm != null,
-        colorlessWhenDisabled: true,
       ),
     ];
   }
@@ -288,22 +308,26 @@ class MafiaNightActionView extends StatelessWidget {
   /// 누가 특수직인지 드러나지 않습니다.
   List<Widget> _buildWaiting(Size size, double scale) {
     return [
-      Positioned(
-        left: 0,
-        right: 0,
-        top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop),
-        child: IgnorePointer(
-          child: Text(
-            '선택을 완료했습니다',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
-              fontWeight: FontWeight.w700,
+      // 확정(2026-08): **밤에 할 일이 없는 신분**(시민 등)에게는 이 문구를
+      // 띄우지 않습니다. 고른 것이 없는데 '완료했습니다'는 말이 맞지 않고,
+      // 옆에서 보면 아무 것도 안 하는 신분임이 드러납니다.
+      if (_hasSubmittedAction)
+        Positioned(
+          left: 0,
+          right: 0,
+          top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop),
+          child: IgnorePointer(
+            child: Text(
+              '선택을 완료했습니다',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
-      ),
       Positioned(
         left: 0,
         right: 0,
@@ -326,8 +350,6 @@ class MafiaNightActionView extends StatelessWidget {
           ),
         ),
       ),
-      // 시안처럼 비활성 상태의 버튼을 남겨 둡니다(40% 불투명).
-      const MafiaPhoneActionButton(label: '선택 완료', onTap: null, enabled: false),
     ];
   }
 }

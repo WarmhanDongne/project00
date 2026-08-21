@@ -66,6 +66,7 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   crypto: ^3.0.7
   wakelock_plus: ^1.7.0
+  firebase_crashlytics: ^5.2.7
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -13,19 +13,19 @@ void main() {
     test('휴대폰·태블릿 포스터가 승리 진영과 맞는다', () {
       expect(
         MafiaResultArt.phonePoster(MafiaFaction.mafia)?.path,
-        contains('background_phone_mafia_win'),
+        contains('background_mafia_win_phone'),
       );
       expect(
         MafiaResultArt.phonePoster(MafiaFaction.citizen)?.path,
-        contains('background_phone_sitizen_win'),
+        contains('background_citizen_win_phone'),
       );
       expect(
         MafiaResultArt.tabletPoster(MafiaFaction.mafia)?.path,
-        contains('background_tablet_mafia_win'),
+        contains('background_mafia_win.png'),
       );
       expect(
         MafiaResultArt.tabletPoster(MafiaFaction.citizen)?.path,
-        contains('background_tablet_sitizen_win'),
+        contains('background_citizen_win.png'),
       );
     });
 

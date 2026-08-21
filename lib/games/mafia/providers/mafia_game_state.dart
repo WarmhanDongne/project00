@@ -29,6 +29,7 @@ class MafiaGameState {
     required this.nightActorCount,
     required this.discussionSkipCount,
     required this.voteSubmittedCount,
+    required this.voteSubmittedUids,
     required this.voteEligibleCount,
     required this.morningResult,
     required this.voteResult,
@@ -62,6 +63,7 @@ class MafiaGameState {
     nightActorCount: 0,
     discussionSkipCount: 0,
     voteSubmittedCount: 0,
+    voteSubmittedUids: <String>[],
     voteEligibleCount: 0,
     morningResult: null,
     voteResult: null,
@@ -107,6 +109,12 @@ class MafiaGameState {
   final int discussionSkipCount;
 
   final int voteSubmittedCount;
+
+  /// 투표를 마친 사람들입니다(**표를 어디에 냈는지는 없습니다**).
+  ///
+  /// 태블릿이 그 좌석에서 투표지가 날아가는 연출을 그리는 데 씁니다.
+  final List<String> voteSubmittedUids;
+
   final int voteEligibleCount;
 
   final MafiaMorningResult? morningResult;
@@ -163,6 +171,7 @@ class MafiaGameState {
     int? nightActorCount,
     int? discussionSkipCount,
     int? voteSubmittedCount,
+    List<String>? voteSubmittedUids,
     int? voteEligibleCount,
     Object? morningResult = _notProvided,
     Object? voteResult = _notProvided,
@@ -203,6 +212,9 @@ class MafiaGameState {
       nightActorCount: nightActorCount ?? this.nightActorCount,
       discussionSkipCount: discussionSkipCount ?? this.discussionSkipCount,
       voteSubmittedCount: voteSubmittedCount ?? this.voteSubmittedCount,
+      voteSubmittedUids: List.unmodifiable(
+        voteSubmittedUids ?? this.voteSubmittedUids,
+      ),
       voteEligibleCount: voteEligibleCount ?? this.voteEligibleCount,
       morningResult: identical(morningResult, _notProvided)
           ? this.morningResult

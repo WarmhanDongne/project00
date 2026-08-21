@@ -12,7 +12,7 @@ import {
   mafiaRole,
 } from "./roles.js";
 import {
-  MAFIA_DAY_MS,
+  mafiaDiscussionMs,
   MAFIA_NIGHT_MS,
   MAFIA_ROLE_REVEAL_MS,
   MAFIA_VOTE_MS,
@@ -189,6 +189,7 @@ export function createInitialMafiaGame(
       nightActorCount: 0,
       discussionSkipCount: 0,
       voteSubmittedCount: 0,
+      voteSubmittedUids: [],
       voteEligibleCount: 0,
       winner: null,
       winnerUids: [],
@@ -227,7 +228,9 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
 /** 낮 토론을 시작합니다. 지난 낮의 조기 종료 동의를 지웁니다. */
 export function beginMafiaDay(game: MafiaGameState, now: number): void {
   game.public.phase = "day";
-  game.public.turnDeadlineAt = now + MAFIA_DAY_MS;
+  // 토론 시간은 지금 살아 있는 사람 수로 정합니다(확정 2026-08).
+  game.public.turnDeadlineAt =
+    now + mafiaDiscussionMs(alivePlayers(game.public.players).length);
   game.public.discussionSkipCount = 0;
   delete game.server.discussionSkipVotes;
   for (const entry of Object.values(game.private)) {
@@ -241,6 +244,7 @@ export function beginMafiaVoting(game: MafiaGameState, now: number): void {
   game.public.phase = "voting";
   game.public.turnDeadlineAt = now + MAFIA_VOTE_MS;
   game.public.voteSubmittedCount = 0;
+  game.public.voteSubmittedUids = [];
   game.public.voteEligibleCount = alivePlayers(game.public.players).length;
   delete game.server.votes;
   for (const entry of Object.values(game.private)) {

@@ -30,8 +30,6 @@ class MafiaTabletExecutionView extends StatefulWidget {
     required this.executed,
     required this.executedRole,
     required this.isTie,
-    this.onRulebookPressed,
-    this.onSettingsPressed,
   });
 
   /// 처형된 사람입니다. 동표로 무처형이면 null입니다.
@@ -42,9 +40,6 @@ class MafiaTabletExecutionView extends StatefulWidget {
 
   /// 동표로 아무도 처형되지 않았는지입니다.
   final bool isTie;
-
-  final VoidCallback? onRulebookPressed;
-  final VoidCallback? onSettingsPressed;
 
   //=======================연출 시간==============================
   /// 이름을 보여 주는 시간입니다(확정: 4초). 이 뒤에 카드가 나옵니다.
@@ -123,10 +118,6 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
           MafiaTabletHeadline(text: executed.nickname, top: _nameTop)
         else
           ..._buildCardStage(executed),
-        MafiaTabletChrome(
-          onRulebookPressed: widget.onRulebookPressed,
-          onSettingsPressed: widget.onSettingsPressed,
-        ),
       ],
     );
   }

@@ -78,6 +78,20 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
   /// 시안에서 그리드가 시작하는 top 값입니다.
   static double get designTop => _firstTop;
 
+  /// [playerCount]명일 때 격자가 놓일 top입니다(시안 기준 좌표).
+  ///
+  /// 확정(2026-08): 인원이 적으면 격자가 짧아 시안 자리(226)에 두면 화면
+  /// 위쪽으로 치우칩니다. 그래서 내용 띠 **가운데**에 맞춥니다. 인원이 많아
+  /// 격자가 길어지면 띠 위쪽까지만 올라갑니다.
+  static double topFor(int playerCount) {
+    final spec = MafiaTileGridSpec.of(playerCount);
+    final height = spec.cellHeight * spec.rowsFor(playerCount);
+    final centered = MafiaPhoneDesign.contentBandCenter - height / 2;
+    return centered < MafiaPhoneDesign.contentBandTop
+        ? MafiaPhoneDesign.contentBandTop
+        : centered;
+  }
+
   /// 시안 기준으로 그리드가 끝나는 top 값입니다.
   ///
   /// 하단 버튼(top 652)을 덮지 않아야 합니다.

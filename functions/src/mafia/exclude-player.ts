@@ -63,6 +63,7 @@ export function excludeMafiaPlayer(
   } else if (game.public.phase === "voting") {
     game.public.voteEligibleCount = alive.length;
     game.public.voteSubmittedCount = Object.keys(game.server.votes ?? {}).length;
+    game.public.voteSubmittedUids = Object.keys(game.server.votes ?? {});
     if (game.public.voteSubmittedCount >= game.public.voteEligibleCount) {
       resolveMafiaVoting(game, now);
       return;

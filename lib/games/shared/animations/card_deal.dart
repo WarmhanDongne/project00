@@ -406,7 +406,8 @@ class CardDealAnimationState extends State<CardDealAnimation>
   Widget _buildCard(BuildContext context, int playerIndex, int cardIndex) {
     return GameCardFace(
       asset:
-          widget.cardAsset ?? Assets.games.liarsPoker.images.cards.whiteBack.game,
+          widget.cardAsset ??
+          Assets.games.liarsPoker.images.cards.whiteBack.game,
       radius: 7,
       backgroundColor: null,
       shadow: const BoxShadow(

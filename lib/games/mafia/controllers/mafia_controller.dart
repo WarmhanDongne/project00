@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:project00/core/diagnostics/crash_reporting.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
@@ -116,6 +117,10 @@ class MafiaController extends Notifier<MafiaGameState> {
   int get nightSubmittedCount => state.nightSubmittedCount;
   int get nightActorCount => state.nightActorCount;
   int get voteSubmittedCount => state.voteSubmittedCount;
+
+  /// 투표를 마친 사람들입니다. 태블릿 투표지 연출이 씁니다(어디에 냈는지는
+  /// 서버가 보내지 않습니다).
+  List<String> get voteSubmittedUids => state.voteSubmittedUids;
   int get voteEligibleCount => state.voteEligibleCount;
 
   /// 밤에 대상을 골라야 하는 역할인지입니다.
@@ -320,6 +325,7 @@ class MafiaController extends Notifier<MafiaGameState> {
       nightSubmittedCount: (map['nightSubmittedCount'] as num?)?.toInt() ?? 0,
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
       voteSubmittedCount: (map['voteSubmittedCount'] as num?)?.toInt() ?? 0,
+      voteSubmittedUids: mafiaStringList(map['voteSubmittedUids']),
       voteEligibleCount: (map['voteEligibleCount'] as num?)?.toInt() ?? 0,
       morningResult: rawMorning is Map
           ? MafiaMorningResult.fromMap(Map<Object?, Object?>.from(rawMorning))
@@ -475,7 +481,11 @@ class MafiaController extends Notifier<MafiaGameState> {
     try {
       await command();
       return true;
-    } catch (error) {
+    } catch (error, stack) {
+      // 사용자에게는 짧은 안내만 보여 주고, 실제 원인은 따로 남깁니다.
+      // 개발 중에는 화면 오른쪽 아래 표시로, 출시 뒤에는 Crashlytics로
+      // 올라가 어떤 명령이 실패했는지 추적할 수 있습니다.
+      CrashReporting.recordError(error, stack, reason: '마피아 서버 명령');
       _setError(
         error is FirebaseFunctionsException
             ? (error.message ?? '요청을 처리하지 못했습니다.')

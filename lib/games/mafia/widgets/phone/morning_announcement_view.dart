@@ -50,7 +50,10 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
             Positioned(
               left: MafiaPhoneDesign.left(size, 27),
               right: MafiaPhoneDesign.left(size, 27),
-              top: MafiaPhoneDesign.top(size, 380),
+              top: MafiaPhoneDesign.top(
+                size,
+                MafiaPhoneStatusText.announcementTop,
+              ),
               child: IgnorePointer(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,

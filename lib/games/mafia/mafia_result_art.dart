@@ -12,15 +12,13 @@ import 'package:project00/gen/assets.gen.dart';
 /// 중립 역할은 개별 승리 조건을 가지고(광대·처형자·생존자 등) 전용 그림이
 /// 없습니다. 그때는 null을 돌려주고, 화면이 문구로 대신 알립니다.
 ///
-/// 배경 파일 이름의 `sitizen`은 오타가 아니라 **에셋 파일명 그대로**입니다.
-/// (배너는 `citizen`으로 되어 있어 둘이 다릅니다)
 abstract final class MafiaResultArt {
   /// 휴대폰 결과 포스터입니다. 시안은 이 그림 한 장이 화면 전부입니다.
   static GameImage? phonePoster(MafiaFaction? winner) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
-      MafiaFaction.mafia => background.backgroundPhoneMafiaWin.game,
-      MafiaFaction.citizen => background.backgroundPhoneSitizenWin.game,
+      MafiaFaction.mafia => background.backgroundMafiaWinPhone.game,
+      MafiaFaction.citizen => background.backgroundCitizenWinPhone.game,
       // 중립 승리 포스터는 아직 없습니다.
       MafiaFaction.neutral || null => null,
     };
@@ -30,13 +28,16 @@ abstract final class MafiaResultArt {
   static GameImage? tabletPoster(MafiaFaction? winner) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
-      MafiaFaction.mafia => background.backgroundTabletMafiaWin.game,
-      MafiaFaction.citizen => background.backgroundTabletSitizenWin.game,
+      MafiaFaction.mafia => background.backgroundMafiaWin.game,
+      MafiaFaction.citizen => background.backgroundCitizenWin.game,
       MafiaFaction.neutral || null => null,
     };
   }
 
   /// 태블릿 명단 화면 **왼쪽** 배너입니다(승리 진영).
+  /// ⚠️ 2026-08 새 결과 시안(1113:13·16)은 배너를 쓰지 않습니다. 명단이 반투명
+  /// 판 위에 세 칸으로 올라가는 구성으로 바뀌었습니다. 이 표는 배너를 다시 쓸
+  /// 때를 위해 남겨 둔 것이라, 지금 화면에서 부르는 곳은 없습니다.
   static GameImage? winnerBanner(MafiaFaction? winner) {
     final banner = Assets.games.mafia.images.banner;
     return switch (winner) {

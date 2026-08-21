@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 
 import 'package:flutter/material.dart';
 
@@ -20,11 +21,22 @@ class _PhoneTimerState extends State<PhoneTimer> {
   bool _hasFiredTimeout = false;
   Duration _remaining = Duration.zero;
 
+  /// 마지막 5초 초읽기 소리입니다. 이 위젯은 내 턴에만 그려지므로, 소리도
+  /// 지금 패를 내야 하는 사람의 기기에서만 납니다.
+  final CountdownTickCue _tickCue = CountdownTickCue();
+
   @override
   void initState() {
     super.initState();
     _remaining = _calculateRemaining();
     _startTimer();
+    _tickCue.schedule(widget.expiresAt);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tickCue.attach(context);
   }
 
   @override
@@ -34,6 +46,7 @@ class _PhoneTimerState extends State<PhoneTimer> {
       _hasFiredTimeout = false;
       _updateRemaining();
       _startTimer();
+      _tickCue.schedule(widget.expiresAt);
     }
   }
 
@@ -91,6 +104,9 @@ class _PhoneTimerState extends State<PhoneTimer> {
   @override
   void dispose() {
     _timer?.cancel();
+    // 제한시간 전에 패를 내면 이 위젯이 사라집니다. 초읽기도 그때 멈춰야
+    // 다음 사람 차례까지 소리가 이어지지 않습니다.
+    _tickCue.stop();
     super.dispose();
   }
 
