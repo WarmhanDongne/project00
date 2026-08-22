@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_leave_intent.dart';
@@ -186,7 +187,7 @@ class _CopyRoomService implements RoomService {
   Stream<bool> watchServerConnection() => const Stream.empty();
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
       const Stream.empty();
 
   @override

@@ -8,6 +8,7 @@ import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
 import 'package:project00/core/network/realtime_connection_monitor.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 class RoomService {
@@ -195,14 +196,19 @@ class RoomService {
   /// `false`는 백그라운드·강제 종료·순간적인 네트워크 단절을 뜻할 수 있으므로
   /// 방 종료 신호로 사용하지 않습니다. 값이 없으면 방 삭제와 초기 캐시 미수신을
   /// 구분할 수 없으므로 `null`을 유지하고 별도의 방 생존 마커로 확인합니다.
-  Stream<bool?> watchControllerConnected(String roomCode) {
+  /// 태블릿의 접속 표시와 마지막 heartbeat 시각을 **함께** 구독합니다.
+  ///
+  /// `connected`만 보면 태블릿이 강제 종료·크래시·전원 차단으로
+  /// `markControllerDisconnected`를 보낼 기회조차 없었던 경우를 영원히 알 수
+  /// 없습니다. 그 값이 `true`로 굳어 참가자에게 아무 안내도 뜨지 않습니다.
+  ///
+  /// `lastSeen`은 `ServerValue.timestamp`로 기록되므로 서버 시각입니다.
+  /// 판정에는 반드시 `ServerClock.nowMillis()`를 쓰세요.
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) {
     return realtime
-        .ref('rooms/$roomCode/controllerPresence/connected')
+        .ref('rooms/${roomCode.trim().toUpperCase()}/controllerPresence')
         .onValue
-        .map((event) {
-          final value = event.snapshot.value;
-          return value is bool ? value : null;
-        });
+        .map((event) => ControllerPresence.fromValue(event.snapshot.value));
   }
 
   Stream<String?> watchRoomStatus(String roomCode) => realtime
