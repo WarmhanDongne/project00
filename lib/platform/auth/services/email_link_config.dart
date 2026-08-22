@@ -18,10 +18,10 @@ class EmailLinkConfig {
       ),
       androidPackageName: String.fromEnvironment(
         'ANDROID_APPLICATION_ID',
-        defaultValue: 'com.example.project00',
+        defaultValue: 'com.warmhandongne.msg',
       ),
-      // iOS는 유료 개발자 계정으로 옮기면서 실제 번들 ID로 바꿨습니다
-      // (2026-08). Android는 아직 com.example.project00입니다.
+      // 양 플랫폼 모두 정식 식별자입니다(2026-08). Android applicationId와
+      // iOS 번들 ID가 같아야 이메일 링크가 두 플랫폼에서 같은 앱을 엽니다.
       iOSBundleId: String.fromEnvironment(
         'IOS_BUNDLE_ID',
         defaultValue: 'com.warmhandongne.msg',

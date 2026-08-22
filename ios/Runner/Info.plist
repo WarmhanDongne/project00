@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Project00</string>
+	<string>모시겜</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,13 +32,17 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>app-1-93097008048-ios-09b7ee6976bbf5cdd49475</string>
-				<string>com.googleusercontent.apps.93097008048-l7ovteo187vpqe8ppime2ck350nvqigi</string>
+				<string>app-1-93097008048-ios-7cc378f1a02877ffd49475</string>
+				<string>com.googleusercontent.apps.93097008048-m72v2b01l0kpidn3nkah94mt7om8ub3g</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- HTTPS 등 Apple 면제 대상 암호화만 사용합니다. 이 키가 있으면
+	     제출할 때마다 수출 규정 질문에 답하지 않아도 됩니다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>

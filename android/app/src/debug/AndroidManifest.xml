@@ -4,4 +4,11 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <application>
+        <!-- 일부 에뮬레이터에서 Impeller가 크래시하므로 디버그 빌드에서만
+             비활성화합니다. 릴리즈는 Impeller를 사용합니다(기본값). -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
+    </application>
 </manifest>
