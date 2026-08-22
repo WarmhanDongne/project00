@@ -271,6 +271,7 @@ class MafiaRole {
     this.defenseCharges = 0,
     this.voteWeight = 1,
     this.blocksTargetVote = false,
+    this.blocksAbility = false,
     this.selfDestructsOnAllyKill = false,
     this.convertsTargetTo,
     this.nightPromptVerb = '',
@@ -329,10 +330,15 @@ class MafiaRole {
   /// 낮 투표에서 이 사람의 표가 몇 표로 세어지는지입니다(정치인 2).
   final int voteWeight;
 
-  /// 밤에 지목한 대상의 **다음 낮 투표권**까지 막는지입니다(마담).
-  ///
-  /// 능력 차단([MafiaNightAction.roleblock])에 더해 적용됩니다.
+  /// 밤에 지목한 대상의 **다음 낮 투표권**을 막는지입니다(마담·건달).
   final bool blocksTargetVote;
+
+  /// 밤에 지목한 대상의 **밤 능력**을 막는지입니다(마담).
+  ///
+  /// 확정(2026-08): 건달은 능력이 아니라 **투표권만** 막습니다. 그래서
+  /// "지목해서 막는다"를 두 값으로 나눴습니다 — 마담은 둘 다, 건달은 투표권만.
+  /// 이 값이 true인 역할만 밤의 **앞 구간**(차단)에 움직입니다.
+  final bool blocksAbility;
 
   /// 같은 편을 제거했을 때 자신도 함께 죽는지입니다(자경단원 오발).
   final bool selfDestructsOnAllyKill;

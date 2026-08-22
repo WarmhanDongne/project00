@@ -24,6 +24,7 @@ class MafiaTabletRoleDealView extends StatefulWidget {
     required this.players,
     required this.confirmedCount,
     this.showsNightNotice = false,
+    this.showsGameStartNotice = false,
   });
 
   final List<MafiaPlayer> players;
@@ -33,6 +34,11 @@ class MafiaTabletRoleDealView extends StatefulWidget {
 
   /// '밤이 됐습니다' 안내를 덮어 보여 줄지입니다(확정: 전원 확인 10초 뒤).
   final bool showsNightNotice;
+
+  /// '게임을 시작하겠습니다' 안내를 덮어 보여 줄지입니다.
+  ///
+  /// 확정(2026-08): 전원이 신분을 확인한 **그 순간** 소리와 함께 띄웁니다.
+  final bool showsGameStartNotice;
 
   //=======================확인 현황 문구 자리==============================
   /// 확인 현황('5 / 6')이 놓이는 자리입니다(시안 좌표 기준).
@@ -103,6 +109,14 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
             onDeckCleared: () {
               if (mounted) setState(() => _deckCleared = true);
             },
+          ),
+        // 전원이 신분을 확인하면 곧바로 게임 시작을 알립니다(소리는 화면이
+        // 냅니다). 밤 안내가 시작되면 이 안내는 이미 물러나 있습니다.
+        if (widget.showsGameStartNotice && !widget.showsNightNotice)
+          const Positioned.fill(
+            child: MafiaAnnouncementReveal(
+              child: MafiaTabletNotice.day(text: MafiaCopy.gameStartNotice),
+            ),
           ),
         // 전원 확인 뒤 10초가 지나면 어두워지며 밤을 알립니다. 이 안내가 끝나면
         // 화면(tablet_game.dart)이 서버에 밤 시작을 알립니다.
@@ -225,10 +239,16 @@ class MafiaTabletMorningSequence extends StatelessWidget {
     super.key,
     required this.result,
     required this.players,
+    this.exposedRole,
   });
 
   final MafiaMorningResult? result;
   final Map<String, MafiaPlayer> players;
+
+  /// 기자가 취재한 사람의 신분입니다. 취재가 없었으면 null입니다.
+  ///
+  /// 서버가 `revealedRoles`에 공개한 값을 그대로 받습니다.
+  final MafiaRole? exposedRole;
 
   /// '아침이 되었습니다'를 보여 주는 시간입니다.
   static const Duration openingHold = Duration(milliseconds: 2500);
@@ -236,10 +256,13 @@ class MafiaTabletMorningSequence extends StatelessWidget {
   /// 사망자 발표를 읽을 시간입니다(확정: 8초).
   static const Duration announcementHold = Duration(milliseconds: 8000);
 
+  /// 기자의 취재 공개를 보여 주는 시간입니다(처형 공개와 같은 9초).
+  static const Duration exposureHold = Duration(milliseconds: 9000);
+
   /// '토론을 시작합니다'를 보여 주는 시간입니다.
   static const Duration closingHold = Duration(milliseconds: 2500);
 
-  /// 세 박자를 합한 아침 전체 시간입니다.
+  /// 세 박자를 합한 아침 전체 시간입니다(취재 공개 없음).
   static Duration get totalHold => openingHold + announcementHold + closingHold;
 
   /// 이 결과로 실제로 보여 줄 시간입니다.
@@ -247,11 +270,30 @@ class MafiaTabletMorningSequence extends StatelessWidget {
   /// 확정(2026-08): 사망자 발표로 게임이 끝나면 **'토론을 시작합니다'를 건너뛰고
   /// 곧바로** 결과 화면으로 갑니다. 이미 끝난 판에서 다음 단계를 예고하면 게임이
   /// 계속되는 것처럼 보입니다.
-  static Duration holdOf(MafiaMorningResult? result) =>
-      (result?.endsGame ?? false) ? openingHold + announcementHold : totalHold;
+  ///
+  /// 기자의 취재가 성공한 아침은 카드 공개 박자가 하나 더 들어갑니다. 이 값이
+  /// 실제 연출보다 짧으면 발표가 잘린 채 단계가 넘어갑니다.
+  static Duration holdOf(MafiaMorningResult? result) {
+    final ends = result?.endsGame ?? false;
+    // 취재 공개는 게임이 끝나는 아침에도 보여 줍니다 — 이미 공개된 신분이라
+    // 승패를 앞당겨 알려 주는 것이 아닙니다.
+    final exposure = (result?.hasExposure ?? false)
+        ? exposureHold
+        : Duration.zero;
+    final base = openingHold + announcementHold + exposure;
+    return ends ? base : base + closingHold;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final exposedUid = result?.exposedUid;
+    final exposed = exposedUid == null ? null : players[exposedUid];
+    // 취재 대상이 명단에서 사라진 경우(퇴장)에는 박자를 건너뜁니다.
+    final showsExposure = exposed != null;
+    final afterAnnouncement = openingHold + announcementHold;
+    final afterExposure =
+        afterAnnouncement + (showsExposure ? exposureHold : Duration.zero);
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -266,11 +308,24 @@ class MafiaTabletMorningSequence extends StatelessWidget {
           visibleFor: announcementHold,
           child: MafiaTabletMorningView(result: result, players: players),
         ),
-        // 3박자: 토론 시작 안내입니다. 단계가 넘어갈 때까지 남습니다.
+        // 3박자(있을 때만): 기자의 취재 공개입니다. **처형 공개와 같은 연출**을
+        // 그대로 씁니다 — 카드가 뒤집혀 신분이 드러나고, 그 사람은 죽지 않습니다.
+        if (showsExposure)
+          MafiaAnnouncementReveal(
+            delay: afterAnnouncement,
+            visibleFor: exposureHold,
+            child: MafiaTabletExecutionView(
+              executed: exposed,
+              executedRole: exposedRole,
+              isTie: false,
+              headlineBeats: MafiaCopy.exposureBeats,
+            ),
+          ),
+        // 마지막 박자: 토론 시작 안내입니다. 단계가 넘어갈 때까지 남습니다.
         // 이 발표로 게임이 끝나면 띄우지 않습니다.
         if (!(result?.endsGame ?? false))
           MafiaAnnouncementReveal(
-            delay: openingHold + announcementHold,
+            delay: afterExposure,
             child: const MafiaTabletNotice.day(
               text: MafiaCopy.discussionNotice,
             ),

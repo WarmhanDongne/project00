@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 //=======================플레이어 선택 그리드==============================
@@ -24,6 +25,7 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
     this.nicknameColor = Colors.white,
     this.dimsUnselected = false,
     this.enabled = true,
+    this.selectsDead = false,
   });
 
   final List<MafiaPlayer> players;
@@ -56,6 +58,13 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
 
   final ValueChanged<String>? onSelect;
   final bool enabled;
+
+  /// 고를 대상이 **사망자**인지입니다(영매의 교신, 도둑의 절도).
+  ///
+  /// 기본값에서는 죽은 사람을 누를 수 없습니다 — 밤 지목·낮 투표의 대상은 늘
+  /// 살아 있는 사람이니까요. 영매·도둑은 그 반대라, 이 값이 없어서 **명단이
+  /// 보이는데도 아무도 고를 수 없었습니다**(2026-08).
+  final bool selectsDead;
 
   /// 시안의 흐린 상태 불투명도입니다.
   static const double _dimmedOpacity = 0.4;
@@ -149,13 +158,17 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
     final borderWidth = isMine
         ? selectionBorderWidth
         : (isAlly ? selectionBorderWidth - 1 : 0.0);
-    final canTap = enabled && player.isAlive && onSelect != null;
+    // 고를 수 있는 상태는 대상 범위와 함께 봅니다. 영매·도둑은 사망자를
+    // 고르므로 살아 있는 사람이 눌리지 않습니다.
+    final isTargetable = selectsDead ? !player.isAlive : player.isAlive;
+    final canTap = enabled && isTargetable && onSelect != null;
     final tile = spec.tile * scale;
     final radius = BorderRadius.circular(spec.cornerRadius * scale);
 
-    // 고른 뒤에는 시안대로 나머지를 흐립니다. 사망자는 그보다 더 어둡습니다.
+    // 고른 뒤에는 시안대로 나머지를 흐립니다. **고를 수 없는 사람**은 그보다
+    // 더 어둡습니다(평소에는 사망자, 영매·도둑의 밤에는 살아 있는 사람).
     final isDimmed = dimsUnselected && selectedUid != null && !isMine;
-    final opacity = !player.isAlive
+    final opacity = !isTargetable
         ? _deadOpacity
         : (isDimmed ? _dimmedOpacity : 1.0);
 
@@ -194,7 +207,10 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
                   borderRadius: radius,
                   child: Opacity(
                     opacity: opacity,
-                    child: MafiaProfileImage(url: player.profileImageUrl),
+                    child: MafiaProfileImage(
+                      url: player.profileImageUrl,
+                      characterId: player.characterId,
+                    ),
                   ),
                 ),
               ),
@@ -221,23 +237,43 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
 
 /// 프로필 사진입니다. URL이 없거나 실패하면 기본 이미지로 대체합니다.
 class MafiaProfileImage extends StatelessWidget {
-  const MafiaProfileImage({super.key, required this.url});
+  const MafiaProfileImage({super.key, required this.url, this.characterId});
 
   final String url;
 
+  /// 로비에서 고른 동물 아이콘 id입니다.
+  ///
+  /// 사진을 올리지 않은 사람은 이 아이콘으로 보입니다. 이 값을 넘기지 않아
+  /// 마피아 화면에서만 카드 뒷면이 나왔습니다(2026-08).
+  final String? characterId;
+
   @override
   Widget build(BuildContext context) {
-    final fallback = Assets.games.mafia.images.cards.roleBack.game.image(
-      fit: BoxFit.cover,
-    );
-    if (url.trim().isEmpty) return fallback;
+    if (url.trim().isEmpty) return _buildFallback();
 
     return Image.network(
       url,
       fit: BoxFit.cover,
       // 프로필 서버가 느리거나 실패해도 게임 진행을 막지 않습니다.
-      errorBuilder: (_, _, _) => fallback,
+      errorBuilder: (_, _, _) => _buildFallback(),
       gaplessPlayback: true,
     );
   }
+
+  /// 사진이 없을 때 그릴 그림입니다. 로비에서 고른 동물이 있으면 그것을,
+  /// 없으면 카드 뒷면을 씁니다.
+  Widget _buildFallback() {
+    final id = characterId?.trim() ?? '';
+    if (id.isNotEmpty) {
+      return Image.asset(
+        roomCharacterAssetPath(id),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildCardBack(),
+      );
+    }
+    return _buildCardBack();
+  }
+
+  Widget _buildCardBack() =>
+      Assets.games.mafia.images.cards.roleBack.game.image(fit: BoxFit.cover);
 }

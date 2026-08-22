@@ -20,6 +20,16 @@ import {PublicGameInterruption, ServerGameInterruption} from "../game-interrupti
 export const MAFIA_ROLE_REVEAL_MS = 60000;
 
 /**
+ * 밤의 **앞 구간**입니다 — 능력을 막는 역할만 움직입니다(확정 2026-08: 1분).
+ *
+ * 마담이 막으면 그 사람의 능력은 무효입니다. 그러니 **마담 판정이 끝나야**
+ * 뒤 역할들이 실제로 행동할 수 있는지 정해집니다. 그래서 밤을 두 구간으로
+ * 나눕니다. 막는 역할이 일찍 고르면 남은 시간을 버리고 곧바로 뒤 구간으로
+ * 넘어갑니다([MafiaNightStageId]).
+ */
+export const MAFIA_NIGHT_BLOCK_MS = 60000;
+
+/**
  * 밤에 **행동을 고를 수 있는** 시간입니다(확정 2026-08: 1분).
  *
  * 이 시간이 지나면 더 제출할 수 없고, 모두 함께 기다립니다.
@@ -27,15 +37,42 @@ export const MAFIA_ROLE_REVEAL_MS = 60000;
 export const MAFIA_NIGHT_ACTION_MS = 60000;
 
 /**
- * 행동 시간이 끝난 뒤 **다같이 기다리는** 시간입니다(확정 2026-08: 30초).
+ * 행동이 모두 끝난 뒤 **아침이 오기까지** 기다리는 시간입니다(확정 2026-08: 10초).
  *
- * 전원이 일찍 제출해도 밤을 바로 끝내지 않는 이유와 같습니다 — 끝나는
- * 시점이 제출 속도에 따라 달라지면 특수직 수가 드러납니다.
+ * 행동할 사람이 전원 제출하면 남은 행동 시간을 버리고 이 시간만 기다립니다.
+ * 곧바로 아침으로 넘기면 마지막에 제출한 사람의 화면이 튕기듯 바뀝니다.
  */
-export const MAFIA_NIGHT_WAIT_MS = 30000;
+export const MAFIA_NIGHT_WAIT_MS = 10000;
 
-/** 밤 전체 제한시간입니다(행동 1분 + 대기 30초). */
-export const MAFIA_NIGHT_MS = MAFIA_NIGHT_ACTION_MS + MAFIA_NIGHT_WAIT_MS;
+/** 밤 전체 제한시간입니다(차단 1분 + 행동 1분 + 마무리 10초). */
+export const MAFIA_NIGHT_MS =
+  MAFIA_NIGHT_BLOCK_MS + MAFIA_NIGHT_ACTION_MS + MAFIA_NIGHT_WAIT_MS;
+
+/**
+ * 밤의 어느 구간인지입니다.
+ *
+ * | 값 | 누가 고를 수 있나 |
+ * |---|---|
+ * | `block` | 능력을 막는 역할만(마담). 나머지는 대기 화면입니다 |
+ * | `action` | 그 밖의 모든 밤 역할 |
+ * | `wrapUp` | 아무도 고를 수 없습니다. 아침을 기다리는 10초입니다 |
+ *
+ * **구간 이름은 신분을 알려 주지 않습니다.** 어느 구간이든 화면 모습은 같고,
+ * 고를 수 있는 사람에게만 격자가 보입니다.
+ */
+export type MafiaNightStageId = "block" | "action" | "wrapUp";
+
+/** 토론이 끝난 이유입니다. 투표로 끝났으면 태블릿이 그 안내를 띄웁니다. */
+export type MafiaDayEndReasonId = "timeout" | "vote";
+
+/**
+ * 투표로 토론을 끝냈을 때 **안내를 보여 주는** 시간입니다(확정 2026-08: 2.5초).
+ *
+ * 과반수가 눌린 순간 곧바로 투표로 넘기면 무슨 일이 일어났는지 모른 채 화면이
+ * 바뀝니다. 토론 단계의 마감을 이만큼으로 줄여, 기존 마감 처리 흐름이 그대로
+ * 투표를 시작하게 합니다.
+ */
+export const MAFIA_DAY_SKIP_NOTICE_MS = 2500;
 
 /**
  * 낮 자유 토론 제한시간입니다(확정 2026-08: **생존 인원**에 따라 다릅니다).
@@ -115,6 +152,13 @@ export interface MafiaPublicPlayer {
   uid: string;
   nickname: string;
   profileImageUrl: string;
+  /**
+   * 로비에서 고른 동물 아이콘 id입니다(예: `frog`).
+   *
+   * 프로필 사진을 올리지 않은 사람은 이 아이콘으로 보여야 합니다. 이 값을
+   * 빼먹어서 마피아 화면에서만 카드 뒷면이 나왔습니다(2026-08).
+   */
+  characterId: string;
   seatIndex: number;
   status: "alive" | "dead";
   /**
@@ -146,6 +190,13 @@ export interface MafiaMorningResult {
    * '토론을 시작합니다'가 떠오르면 게임이 계속되는 것처럼 보입니다.
    */
   endsGame?: boolean;
+  /**
+   * 기자가 취재에 성공해 **신분이 공개되는** 사람입니다.
+   *
+   * 공개된 신분 자체는 [MafiaPublicState.revealedRoles]에 있습니다. 이 값은
+   * 아침 발표가 "누구의 카드를 뒤집어 보여 줄지"를 알기 위한 것입니다.
+   */
+  exposedUid?: string;
   resolvedAt: number;
 }
 
@@ -218,6 +269,28 @@ export interface MafiaPublicState {
   nightSubmittedCount: number;
   /** 이번 밤에 행동해야 하는 인원수입니다. */
   nightActorCount: number;
+
+  /**
+   * 밤의 어느 구간인지입니다([MafiaNightStageId]).
+   *
+   * 구간마다 고를 수 있는 역할이 다릅니다. 인원수만 담는 다른 값들처럼 이
+   * 값도 **누구인지는 알려 주지 않습니다.**
+   */
+  nightStage?: MafiaNightStageId;
+
+  /**
+   * 이번 구간에 행동해야 하는 인원수입니다.
+   *
+   * `nightActorCount`는 그 밤 전체 인원이고, 이 값은 지금 구간에서 기다리는
+   * 인원입니다. 두 값이 필요해야 "차단 역할이 다 골랐다"를 알 수 있습니다.
+   */
+  nightStageActorCount?: number;
+
+  /** 이번 구간에 제출한 인원수입니다. */
+  nightStageSubmittedCount?: number;
+
+  /** 낮 토론이 끝난 이유입니다([MafiaDayEndReasonId]). */
+  dayEndReason?: MafiaDayEndReasonId;
 
   /**
    * 방금 제출된 밤 행동의 소리 신호입니다([MafiaNightActionCue]).

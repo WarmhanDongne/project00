@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
 
-import {mafiaDiscussionMs} from "../lib/mafia/types.js";
+import {
+  MAFIA_NIGHT_ACTION_MS,
+  MAFIA_NIGHT_BLOCK_MS,
+  MAFIA_NIGHT_WAIT_MS,
+  mafiaDiscussionMs,
+} from "../lib/mafia/types.js";
 
 // =========================================================================
 // Dart ↔ TypeScript 토론 시간 대조
@@ -56,4 +61,29 @@ test("확정된 값 그대로다", () => {
   assert.equal(mafiaDiscussionMs(10), 300000);
   // 방 최대(12명)까지는 9~10명과 같은 시간을 씁니다. 표에 없던 구간입니다.
   assert.equal(mafiaDiscussionMs(12), 300000);
+});
+
+// =========================================================================
+// 밤 구간 시간 대조
+//
+// 밤은 차단(1분) → 행동(1분) → 마무리(10초)입니다(확정 2026-08). 연습장이 이
+// 흐름을 재현하므로 두 파일의 값이 같아야 합니다.
+// =========================================================================
+
+/** Dart의 `static const Duration <이름> = Duration(seconds: n);`을 읽습니다. */
+function dartDurationSeconds(name) {
+  const match = source.match(
+    new RegExp(`${name} = Duration\\(seconds: (\\d+)\\)`),
+  );
+  assert.ok(match, `${name}을 찾지 못했습니다.`);
+  return Number(match[1]);
+}
+
+test("밤 구간 시간이 서버와 같다", () => {
+  assert.equal(dartDurationSeconds("nightBlock") * 1000, MAFIA_NIGHT_BLOCK_MS);
+  assert.equal(
+    dartDurationSeconds("nightAction") * 1000,
+    MAFIA_NIGHT_ACTION_MS,
+  );
+  assert.equal(dartDurationSeconds("nightWait") * 1000, MAFIA_NIGHT_WAIT_MS);
 });

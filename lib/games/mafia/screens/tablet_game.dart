@@ -123,10 +123,20 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   final MafiaNightCueSpeaker _nightCueSpeaker = MafiaNightCueSpeaker();
 
   //=======================밤 시작 안내 (확정 흐름)==============================
-  // 전원 확인 → 10초 대기 → '밤이 되었습니다' 안내 2.5초 → 서버에 밤 시작.
+  // 전원 확인 → '게임을 시작하겠습니다'(2.5초, 소리 한 방) → 10초 대기
+  // → '밤이 되었습니다' 안내 2.5초 → 서버에 밤 시작.
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
   static const Duration _nightNoticeDelay = Duration(seconds: 10);
   static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
+
+  /// '게임을 시작하겠습니다'를 보여 주는 시간입니다(확정 2026-08).
+  static const Duration _gameStartNoticeHold = Duration(milliseconds: 2500);
+
+  /// 승리 효과음 뒤에 나레이션을 이어 내기까지의 간격입니다.
+  static const Duration _winVoiceDelay = Duration(milliseconds: 800);
+  Timer? _winVoiceTimer;
+  Timer? _gameStartNoticeTimer;
+  bool _showsGameStartNotice = false;
 
   /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
   ///
@@ -179,6 +189,8 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _stageTimer?.cancel();
     _howlTimer?.cancel();
     _nightNoticeTimer?.cancel();
+    _gameStartNoticeTimer?.cancel();
+    _winVoiceTimer?.cancel();
     _bgm.stop();
     _countdownTick.stop();
     _subscription?.close();
@@ -200,6 +212,8 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       _nightNoticeTimer?.cancel();
       _showsNightNotice = false;
       _nightNoticeScheduled = false;
+      _gameStartNoticeTimer?.cancel();
+      _showsGameStartNotice = false;
     }
     _maybeScheduleNightNotice(game);
     _playNightActionCue(game);
@@ -216,7 +230,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _stageTimer?.cancel();
     _howlTimer?.cancel();
     if (stage == MafiaTabletStage.night) _scheduleWolfHowl(game);
-    if (stage == MafiaTabletStage.finished) _playWinVoice(game);
+    if (stage == MafiaTabletStage.finished) _playWinSounds(game);
     final hold = stage.announcementHoldOf(game);
     if (hold == null) return;
 
@@ -249,14 +263,27 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     });
   }
 
-  /// 승리 발표에 이긴 진영 나레이션을 한 번 냅니다.
+  /// 승리 발표에 효과음과 나레이션을 냅니다.
   ///
   /// 방 가운데 태블릿에서만 냅니다 — 휴대폰까지 같이 울리면 말이 겹칩니다.
-  /// 중립 개별 승리는 아직 파일이 없어 조용히 지나갑니다.
-  void _playWinVoice(MafiaController game) {
-    final voice = MafiaSounds.winVoiceFor(game.winnerFaction);
+  ///
+  /// 확정(2026-08): 효과음이 먼저 한 방 울리고, [_winVoiceDelay] 뒤에 나레이션이
+  /// 이어집니다. 동시에 내면 말이 효과음에 묻힙니다. 파일이 없는 진영은 그
+  /// 자리를 조용히 지나갑니다(시민·중립 효과음은 아직 없습니다).
+  void _playWinSounds(MafiaController game) {
+    final faction = game.winnerFaction;
+    final effect = MafiaSounds.winEffectFor(faction);
+    if (effect != null) SoundEffects.play(context, effect);
+
+    final voice = MafiaSounds.winVoiceFor(faction);
     if (voice == null) return;
-    SoundEffects.play(context, voice);
+    if (effect == null) {
+      SoundEffects.play(context, voice);
+      return;
+    }
+    _winVoiceTimer = Timer(_winVoiceDelay, () {
+      if (mounted) SoundEffects.play(context, voice);
+    });
   }
 
   /// 누군가 밤 행동을 마친 순간 그 직업의 효과음을 냅니다.
@@ -290,14 +317,29 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _bgm.start(target);
   }
 
-  /// 전원이 역할을 확인하면 10초 뒤 밤 안내를 예약합니다(확정 흐름).
+  /// 전원이 역할을 확인하면 게임 시작을 알리고, 10초 뒤 밤 안내를 예약합니다.
+  ///
+  /// 확정(2026-08): 전원이 확인한 순간 '게임을 시작하겠습니다'를 소리와 함께
+  /// 띄웁니다. 그 뒤 남은 10초는 카드를 한 번 더 볼 시간이고, 이어서 '밤이
+  /// 되었습니다'로 넘어갑니다.
   void _maybeScheduleNightNotice(MafiaController game) {
     if (_stage != MafiaTabletStage.roleDeal || _nightNoticeScheduled) return;
     final total = game.players.length;
     if (total == 0 || game.roleConfirmedCount < total) return;
 
     _nightNoticeScheduled = true;
+    _showGameStartNotice();
     _nightNoticeTimer = Timer(_nightNoticeDelay, _showNightNotice);
+  }
+
+  /// '게임을 시작하겠습니다'를 소리와 함께 잠깐 띄웁니다.
+  void _showGameStartNotice() {
+    if (!mounted) return;
+    setState(() => _showsGameStartNotice = true);
+    SoundEffects.play(context, MafiaSounds.gameStart);
+    _gameStartNoticeTimer = Timer(_gameStartNoticeHold, () {
+      if (mounted) setState(() => _showsGameStartNotice = false);
+    });
   }
 
   /// '밤이 되었습니다'를 잠시 보여 준 뒤 서버에 밤 시작을 알립니다.
@@ -415,6 +457,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
               playerLayout: widget.playerLayout,
               remainingSeconds: remaining?.inSeconds,
               showsNightNotice: _showsNightNotice,
+              showsGameStartNotice: _showsGameStartNotice,
               onRulebookPressed: _openRulebook,
               onSettingsPressed: () => _openSettings(game),
               onRestart: () => unawaited(game.restartGame()),

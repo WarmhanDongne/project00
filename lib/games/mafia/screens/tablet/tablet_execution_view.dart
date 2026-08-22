@@ -30,7 +30,15 @@ class MafiaTabletExecutionView extends StatefulWidget {
     required this.executed,
     required this.executedRole,
     required this.isTie,
+    this.headlineBeats,
   });
+
+  /// 카드가 나오기 전에 찍는 머리말입니다. null이면 그 사람의 닉네임입니다.
+  ///
+  /// 확정(2026-08): 기자의 취재 공개가 **이 연출을 그대로** 씁니다. 카드가
+  /// 뒤집혀 신분이 드러나는 흐름은 같고, 앞에 찍는 말과 죽지 않는다는 점만
+  /// 다릅니다. 그래서 연출을 복사하지 않고 머리말만 갈아 끼웁니다.
+  final List<String>? headlineBeats;
 
   /// 처형된 사람입니다. 동표로 무처형이면 null입니다.
   final MafiaPlayer? executed;
@@ -138,7 +146,13 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
           )
         else if (!_showsCard)
           // 처형자 이름 한 방입니다. 이 게임에서 가장 센 순간입니다.
-          MafiaTabletAnnouncement(beats: [executed.nickname], top: _nameTop)
+          // (기자의 취재 공개는 머리말을 받아 그 자리에 찍습니다)
+          MafiaTabletAnnouncement(
+            beats: widget.headlineBeats ?? [executed.nickname],
+            top: _nameTop,
+            // 닉네임 한 방은 64px 그대로, 문장 머리말은 화면에 담기게 줄입니다.
+            fontSize: widget.headlineBeats == null ? 64 : 40,
+          )
         else
           ..._buildCardStage(executed),
       ],
@@ -208,6 +222,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
                 child: ClipOval(
                   child: MafiaProfileImage(
                     url: widget.executed?.profileImageUrl ?? '',
+                    characterId: widget.executed?.characterId,
                   ),
                 ),
               ),

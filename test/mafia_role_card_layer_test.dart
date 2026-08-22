@@ -57,6 +57,13 @@ void main() {
   Future<void> tapCenter(WidgetTester tester) =>
       tester.tapAt(const Offset(201, 400));
 
+  /// 어두운 막의 목표 불투명도입니다. 막이 아예 없으면 0입니다.
+  double scrimOpacity(WidgetTester tester) {
+    final finder = find.byType(AnimatedOpacity);
+    if (finder.evaluate().isEmpty) return 0;
+    return tester.widget<AnimatedOpacity>(finder.first).opacity;
+  }
+
   testWidgets('처음에는 화면 위에서 내려와 가운데에 뒷면으로 선다', (tester) async {
     await pumpLayer(tester, isFirstReveal: true);
 
@@ -175,6 +182,37 @@ void main() {
     await runStep(tester, MafiaPhoneRoleCardLayer.flipDuration);
     await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
     expect(cardTop(tester), closeTo(storedTop, 1));
+  });
+
+  //=======================확인하지 않은 카드도 내려갑니다==============================
+  // 신분을 확인하지 않은 채 밤으로 넘어가면, 뒷면 그대로 떠 있던 카드가 화면
+  // 가운데에 그대로 멈춰 밤 화면을 막았습니다(2026-08 실기기). 뒤집지 않은
+  // 카드는 되돌릴 것이 없어 내려가는 이동이 시작되지 않던 것이 원인입니다.
+  testWidgets('신분을 확인하지 않고 밤이 되면 카드가 내려간다', (tester) async {
+    await pumpLayer(tester, isFirstReveal: true);
+    await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
+    expect(cardTop(tester), closeTo(centerTop, 8), reason: '뒷면으로 가운데에 있다');
+
+    // 누르지 않은 채 밤으로 넘어갑니다.
+    await pumpLayer(tester, phaseKey: 'night');
+    await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
+    expect(cardTop(tester), closeTo(storedTop, 1), reason: '아래로 내려간다');
+  });
+
+  //=======================누르는 순간 어두워집니다==============================
+  // 처음 확인에서 카드를 열었는데 **서버 응답이 온 뒤에야** 막이 깔려 뒤늦게 툭
+  // 어두워졌습니다(2026-08). 막은 카드가 열리기 시작하는 순간부터 깔립니다.
+  testWidgets('카드를 여는 순간 배경이 어두워진다', (tester) async {
+    await pumpLayer(tester, isFirstReveal: true);
+    await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
+
+    // 아직 뒷면으로 떠 있는 동안에는 막이 없습니다(시안의 밝은 P1).
+    expect(scrimOpacity(tester), 0);
+
+    await tapCenter(tester);
+    await tester.pump();
+    // 누른 프레임부터 막이 켜집니다(불투명도 목표가 1).
+    expect(scrimOpacity(tester), 1);
   });
 
   //=======================분배가 끝난 뒤에 들어옵니다==============================

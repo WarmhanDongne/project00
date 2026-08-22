@@ -5,14 +5,16 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
 import {
+  advanceMafiaNightStage,
+  beginMafiaNightStage,
   bumpNightActionCue,
+  canActInNightStage,
   mafiaAbilityUsesLeft,
   recordImmediateInvestigation,
   resolveMafiaNight,
 } from "./game.js";
 import {mafiaRole} from "./roles.js";
 import {
-  MAFIA_NIGHT_WAIT_MS,
   MafiaGameState,
   MafiaRoom,
 } from "./types.js";
@@ -47,6 +49,12 @@ function assertValidNightTarget(
   const role = mafiaRole(game.server.roles[actorUid]);
   if (!role || role.nightAction === "none") {
     throw new HttpsError("failed-precondition", "밤에 할 수 있는 행동이 없습니다.");
+  }
+
+  // 확정(2026-08): 밤은 차단 구간 → 행동 구간으로 흐릅니다. 앞 구간에는 능력을
+  // 막는 역할만 고를 수 있습니다.
+  if (!canActInNightStage(game, actorUid)) {
+    throw new HttpsError("failed-precondition", "아직 고를 수 없습니다.");
   }
 
   // 남은 사용 횟수가 없으면 이 밤에는 아무것도 할 수 없습니다(자경단원).
@@ -132,10 +140,10 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       assertValidNightTarget(game, uid, targetUid);
 
       const now = Date.now();
-      // 확정(2026-08): 행동은 밤의 앞 1분 안에만 받습니다. 남은 30초는
-      // 모두가 함께 기다리는 시간입니다.
+      // 구간의 마감이 지났으면 더 받지 않습니다. 구간을 넘기는 일은 태블릿의
+      // timeout_night 호출이 합니다.
       const deadline = game.public.turnDeadlineAt;
-      if (deadline !== null && now > deadline - MAFIA_NIGHT_WAIT_MS) {
+      if (deadline !== null && now > deadline) {
         throw new HttpsError(
           "failed-precondition",
           "행동 시간이 끝났습니다.",
@@ -158,14 +166,18 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       game.public.revision += 1;
       game.public.updatedAt = now;
 
-      // 확정(2026-08): 전원이 제출해도 밤을 일찍 끝내지 않습니다. 밤은
-      // MAFIA_NIGHT_MS를 채우고, 해결은 timeout_night(마감)이 합니다.
+      // 확정(2026-08): 이 구간에서 기다릴 사람이 다 냈으면 남은 시간을 버리고
+      // 다음 구간을 엽니다(마담이 일찍 고르면 곧바로 행동 구간, 행동이 다
+      // 끝나면 10초 뒤 아침). 밤 자체를 여기서 끝내지는 않습니다 — 해결은
+      // 마감을 받은 timeout_night이 합니다.
+      advanceMafiaNightStage(game, now);
 
       response = {
         success: true,
         targetUid,
         submittedCount: submitted,
         actorCount: game.public.nightActorCount,
+        nightStage: game.public.nightStage ?? null,
         phase: game.public.phase,
       };
       recordMafiaCommand(game, commandId, uid, "nightAction", now, response);
@@ -209,6 +221,23 @@ export const game_mafia_timeout_night = onCall<TimeoutData>(
       // 마감 전 호출은 무시합니다. 태블릿 시계가 앞서가도 밤이 잘리지 않습니다.
       if (deadline !== null && now < deadline) {
         response = {success: false, reason: "notExpired", phase: "night"};
+        return room;
+      }
+      // 구간의 마감입니다. 아직 마무리 구간이 아니면 다음 구간을 엽니다.
+      const stage = game.public.nightStage ?? "wrapUp";
+      if (stage !== "wrapUp") {
+        beginMafiaNightStage(
+          game,
+          stage === "block" ? "action" : "wrapUp",
+          now,
+        );
+        // 다음 구간에 기다릴 사람이 없으면 곧장 더 넘어갑니다.
+        advanceMafiaNightStage(game, now);
+        response = {
+          success: true,
+          phase: game.public.phase,
+          nightStage: game.public.nightStage ?? null,
+        };
         return room;
       }
       resolveMafiaNight(game, now);
