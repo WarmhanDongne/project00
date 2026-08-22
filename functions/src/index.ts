@@ -132,3 +132,9 @@ export {
   cleanupExpiredGameInterruptions,
   cleanupGhostRoomPlayers,
 } from "./game-interruption/expire-scheduler.js";
+
+// 태블릿 단절 동안 서버 턴 마감을 멈춥니다(C-14). RTDB 트리거이므로 리전이
+// asia-southeast1입니다. 신규 추가이므로 삭제할 구 함수가 없습니다.
+export {
+  game_common_controller_presence_changed,
+} from "./game-interruption/controller-presence.js";
