@@ -70,6 +70,16 @@ class RoomProvider extends ChangeNotifier {
 
   bool wasKicked = false;
   bool wasRoomClosed = false;
+
+  /// 서버가 관리하는 방 상태입니다(`waiting`/`seating`/`playing`/`finished`/`closed`).
+  ///
+  /// 화면이 `selectedGame`만 보고 판단하면 게임이 끝난 뒤에도 룰북과
+  /// `곧 시작합니다`가 남습니다. 종료 경로 어디에서도 `selectedGame`을 지우지
+  /// 않기 때문입니다(P-02). 아직 아무 값도 받지 못했으면 null입니다.
+  String? roomStatus;
+
+  /// 이 방의 게임이 끝나 대기실로 돌아가야 하는 상태입니다.
+  bool get isRoomFinished => roomStatus == 'finished';
   ControllerPresenceState controllerPresenceState =
       ControllerPresenceState.unknown;
   RoomTerminationReason? roomTerminationReason;
@@ -455,6 +465,7 @@ class RoomProvider extends ChangeNotifier {
     _controllerPresence = ControllerPresence.unknown;
     _controllerPresenceTimer?.cancel();
     _controllerPresenceTimer = null;
+    roomStatus = null;
     roomTerminationReason = null;
     _roomMissingCandidate = false;
     _roomDeletionConfirmation = null;
@@ -503,6 +514,10 @@ class RoomProvider extends ChangeNotifier {
     statusSubscription = _service.watchRoomStatus(listenedRoomCode).listen(
       (status) {
         if (roomCode != listenedRoomCode) return;
+        if (roomStatus != status) {
+          roomStatus = status;
+          notifyListeners();
+        }
         // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
         // status의 null은 초기 캐시 미수신일 수 있으므로 방 종료로 보지 않고,
         // 실제 삭제는 roomCode 생존 마커를 서버에서 재확인해 판정합니다.
@@ -1302,6 +1317,7 @@ class RoomProvider extends ChangeNotifier {
     _joinedNickname = null;
     _joinedCharacterId = null;
     controllerPresenceState = ControllerPresenceState.unknown;
+    roomStatus = null;
     if (!preserveTerminationReason) roomTerminationReason = null;
     notifyListeners();
   }
