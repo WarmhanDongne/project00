@@ -7,9 +7,11 @@ import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
 import 'package:project00/core/diagnostics/dev_error_log.dart';
 import 'package:project00/core/error/user_error_message.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_leave_intent.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -50,7 +52,7 @@ class RoomProvider extends ChangeNotifier {
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
   StreamSubscription<bool>? connectionSubscription;
   StreamSubscription<String?>? statusSubscription;
-  StreamSubscription<bool?>? controllerPresenceSubscription;
+  StreamSubscription<ControllerPresence>? controllerPresenceSubscription;
   StreamSubscription<bool>? roomExistenceSubscription;
 
   List<RoomPlayer> players = [];
@@ -85,6 +87,14 @@ class RoomProvider extends ChangeNotifier {
   Future<void>? _connectionRecoveryFuture;
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
+
+  /// 태블릿 heartbeat가 유예를 넘겼는지 다시 판정하는 타이머입니다.
+  ///
+  /// heartbeat가 끊기면 RTDB 이벤트도 함께 끊기므로, 구독만으로는 "값이 오지
+  /// 않는 상태"를 알 수 없습니다. 마지막으로 받은 lastSeen을 들고 시계를
+  /// 직접 돌려야 합니다.
+  Timer? _controllerPresenceTimer;
+  ControllerPresence _controllerPresence = ControllerPresence.unknown;
   String? _joinedNickname;
   String? _joinedCharacterId;
   List<String>? _lastGroupGameUids;
@@ -213,11 +223,6 @@ class RoomProvider extends ChangeNotifier {
   Stream<String?> watchGameStatus(String code) =>
       _service.watchGameStatus(code.trim().toUpperCase());
 
-  /// 태블릿의 접속 표시를 구독합니다. false는 재접속 대기 UI에만 사용하고
-  /// 방 퇴장 조건으로 사용하지 않습니다.
-  Stream<bool?> watchControllerConnected(String code) =>
-      _service.watchControllerConnected(code.trim().toUpperCase());
-
   Stream<String?> watchRoomStatus(String code) =>
       _service.watchRoomStatus(code.trim().toUpperCase());
 
@@ -295,6 +300,50 @@ class RoomProvider extends ChangeNotifier {
         );
       }
     }
+  }
+
+  /// 마지막 heartbeat가 유예를 넘겼는지 주기적으로 다시 판정합니다.
+  ///
+  /// 유예의 절반을 주기로 씁니다. 유예와 같은 주기로 돌리면 최악의 경우 판정이
+  /// 유예의 두 배만큼 늦습니다.
+  void _syncControllerPresenceTimer() {
+    _controllerPresenceTimer?.cancel();
+    // 이미 끊긴 것으로 확정됐거나 값이 없으면 시계를 돌릴 이유가 없습니다.
+    // 복구는 새 heartbeat 이벤트가 알려 줍니다.
+    if (_controllerPresence.isEmpty ||
+        _controllerPresence.connected == false ||
+        _controllerPresence.lastSeen == null) {
+      return;
+    }
+    _controllerPresenceTimer = Timer.periodic(
+      Duration(
+        milliseconds: controllerPresenceDisplayGrace.inMilliseconds ~/ 2,
+      ),
+      (_) => _applyControllerPresenceVerdict(),
+    );
+  }
+
+  void _applyControllerPresenceVerdict() {
+    final verdict = judgeControllerPresence(
+      _controllerPresence,
+      // lastSeen은 ServerValue.timestamp라 서버 시각입니다. 기기 시계로
+      // 비교하면 시계 오차만큼 오탐하거나 장애를 놓칩니다.
+      nowMillis: ServerClock.nowMillis(),
+    );
+    final nextState = switch (verdict) {
+      ControllerPresenceVerdict.connected => ControllerPresenceState.connected,
+      ControllerPresenceVerdict.reconnecting =>
+        ControllerPresenceState.reconnecting,
+      ControllerPresenceVerdict.unknown => ControllerPresenceState.unknown,
+    };
+    if (nextState == ControllerPresenceState.reconnecting) {
+      // 더 볼 것이 없습니다. 복구는 새 heartbeat 이벤트가 알려 줍니다.
+      _controllerPresenceTimer?.cancel();
+      _controllerPresenceTimer = null;
+    }
+    if (controllerPresenceState == nextState) return;
+    controllerPresenceState = nextState;
+    notifyListeners();
   }
 
   Future<void> resumeControllerPresence() async {
@@ -400,8 +449,12 @@ class RoomProvider extends ChangeNotifier {
     controllerPresenceSubscription?.cancel();
     roomExistenceSubscription?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
 
     controllerPresenceState = ControllerPresenceState.unknown;
+    _controllerPresence = ControllerPresence.unknown;
+    _controllerPresenceTimer?.cancel();
+    _controllerPresenceTimer = null;
     roomTerminationReason = null;
     _roomMissingCandidate = false;
     _roomDeletionConfirmation = null;
@@ -411,19 +464,17 @@ class RoomProvider extends ChangeNotifier {
       onError: (_) => _handleServerConnection(false),
     );
 
+    // connected와 lastSeen을 함께 받습니다. connected만 보면 태블릿이 강제
+    // 종료·크래시·전원 차단으로 markControllerDisconnected를 보낼 기회조차
+    // 없었던 경우를 영원히 알 수 없습니다(값이 true로 굳습니다).
     controllerPresenceSubscription = _service
-        .watchControllerConnected(listenedRoomCode)
+        .watchControllerPresence(listenedRoomCode)
         .listen(
-          (connected) {
+          (presence) {
             if (roomCode != listenedRoomCode) return;
-            final nextState = switch (connected) {
-              true => ControllerPresenceState.connected,
-              false => ControllerPresenceState.reconnecting,
-              null => ControllerPresenceState.unknown,
-            };
-            if (controllerPresenceState == nextState) return;
-            controllerPresenceState = nextState;
-            notifyListeners();
+            _controllerPresence = presence;
+            _syncControllerPresenceTimer();
+            _applyControllerPresenceVerdict();
           },
           onError: (Object error) => _handleSubscriptionError(
             error,
@@ -1217,6 +1268,9 @@ class RoomProvider extends ChangeNotifier {
     roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
+    _controllerPresenceTimer = null;
+    _controllerPresence = ControllerPresence.unknown;
     roomSubscription = null;
     playerSubscription = null;
     connectionSubscription = null;
@@ -1263,6 +1317,7 @@ class RoomProvider extends ChangeNotifier {
     roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
     super.dispose();
   }
 }

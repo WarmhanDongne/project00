@@ -4,7 +4,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,7 +31,10 @@ void main() {
 
       service.serverConnection.add(true);
       service.roomExistsChanges.add(true);
-      service.controllerConnected.add(false);
+      // 태블릿이 스스로 내려간다고 알린 경우입니다. 유예 없이 즉시 표시합니다.
+      service.controllerPresence.add(
+        ControllerPresence(connected: false, lastSeen: ServerClock.nowMillis()),
+      );
       service.roomStatus.add(null);
       await _flushEvents();
 
@@ -45,7 +50,9 @@ void main() {
       await _flushEvents();
       expect(provider.roomCode, 'ABCDE');
 
-      service.controllerConnected.add(true);
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: ServerClock.nowMillis()),
+      );
       await _flushEvents();
       expect(
         provider.controllerPresenceState,
@@ -112,7 +119,7 @@ RoomProvider _provider(_LifecycleRoomService service) =>
 
 class _LifecycleRoomService implements RoomService {
   final serverConnection = StreamController<bool>.broadcast();
-  final controllerConnected = StreamController<bool?>.broadcast();
+  final controllerPresence = StreamController<ControllerPresence>.broadcast();
   final roomExistsChanges = StreamController<bool>.broadcast();
   final roomStatus = StreamController<String?>.broadcast();
   bool confirmedRoomExists = true;
@@ -122,8 +129,8 @@ class _LifecycleRoomService implements RoomService {
   Stream<bool> watchServerConnection() => serverConnection.stream;
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
-      controllerConnected.stream;
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
+      controllerPresence.stream;
 
   @override
   Stream<bool> watchRoomExists(String roomCode) => roomExistsChanges.stream;
@@ -147,7 +154,7 @@ class _LifecycleRoomService implements RoomService {
   Future<void> dispose() async {
     await Future.wait([
       serverConnection.close(),
-      controllerConnected.close(),
+      controllerPresence.close(),
       roomExistsChanges.close(),
       roomStatus.close(),
     ]);
