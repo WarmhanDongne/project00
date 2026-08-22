@@ -33,6 +33,8 @@ class MafiaSpectatorRosterView extends StatelessWidget {
     required this.myRole,
     required this.revealed,
     required this.isNight,
+    this.myUid,
+    this.isFinished = false,
   });
 
   /// 내 역할입니다. 아래 보관 카드에만 씁니다.
@@ -43,6 +45,17 @@ class MafiaSpectatorRosterView extends StatelessWidget {
 
   /// 지금이 밤인지입니다. 배경과 글자색을 정합니다.
   final bool isNight;
+
+  /// 내 uid입니다. 명단에서 **내 닉네임만 빨간색**으로 표시합니다.
+  ///
+  /// 사람이 많으면 격자에서 자기 자리를 찾기 어렵습니다.
+  final String? myUid;
+
+  /// 게임이 끝난 뒤인지입니다.
+  ///
+  /// 끝난 뒤에는 관전이 아니라 **결과를 보는 화면**입니다. 제목을 '신분 정보'로
+  /// 바꾸고, '비밀로 유지하세요' 안내는 지웁니다(더 숨길 것이 없습니다).
+  final bool isFinished;
 
   //=======================시안 기준 좌표==============================
   static const double _titleTop = 125;
@@ -58,6 +71,15 @@ class MafiaSpectatorRosterView extends StatelessWidget {
   static const String _guidance =
       '이제 모든 플레이어의 신분을 확인할 수 있습니다.\n'
       '확인한 정보는 게임이 끝날 때까지 비밀로 유지하세요.';
+
+  /// 관전 중일 때의 제목입니다.
+  static const String spectatingTitle = '관전자 정보';
+
+  /// 게임이 끝난 뒤의 제목입니다.
+  static const String finishedTitle = '신분 정보';
+
+  /// 내 닉네임 색입니다.
+  static const Color myNicknameColor = Color(0xFFFF0000);
 
   @override
   Widget build(BuildContext context) {
@@ -76,25 +98,27 @@ class MafiaSpectatorRosterView extends StatelessWidget {
               size,
               left: MafiaTileGridSpec.firstLeft,
               top: _titleTop,
-              text: '관전자 정보',
+              text: isFinished ? finishedTitle : spectatingTitle,
               style: TextStyle(
                 color: textColor,
                 fontSize: 24 * scale,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            _buildLeftAlignedText(
-              size,
-              left: _bodyLeft,
-              top: _bodyTop,
-              text: _guidance,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13 * scale,
-                fontWeight: FontWeight.w400,
-                height: 1.25,
+            // 끝난 뒤에는 숨길 것이 없어 안내를 지웁니다.
+            if (!isFinished)
+              _buildLeftAlignedText(
+                size,
+                left: _bodyLeft,
+                top: _bodyTop,
+                text: _guidance,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 13 * scale,
+                  fontWeight: FontWeight.w400,
+                  height: 1.25,
+                ),
               ),
-            ),
             Positioned(
               left: 0,
               right: 0,
@@ -195,7 +219,10 @@ class MafiaSpectatorRosterView extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: textColor,
+                  // 격자에서 나를 바로 찾을 수 있게 내 이름만 빨간색입니다.
+                  color: entry.player.uid == myUid
+                      ? myNicknameColor
+                      : textColor,
                   fontSize: spec.nicknameFontSize * scale,
                   fontWeight: FontWeight.w400,
                   height: 1.1,

@@ -101,14 +101,29 @@ test("영매가 살아 있는 사람을 고르면 아무 결과도 없다", () =
 
 // ===== 건달 — 능력 차단 =====
 
-test("건달이 차단한 의사는 보호에 실패한다", () => {
+// 확정(2026-08): 건달은 **밤 능력을 막지 않습니다.** 낮 투표권만 막습니다.
+// 예전에는 마담과 같은 차단이라 협박당한 의사의 보호가 불발됐습니다.
+test("건달이 협박한 의사는 밤에 평소대로 보호한다", () => {
   const game = makeGame({m1: "mafia", g1: "gangster", d1: "doctor",
     c1: "citizen", c2: "citizen"});
   game.server.nightActions = {g1: "d1", d1: "c1", m1: "c1"};
   resolveMafiaNight(game, 1000);
 
-  assert.deepEqual(game.public.morningResult.deadUids, ["c1"]);
-  assert.equal(game.public.morningResult.savedCount, 0);
+  assert.deepEqual(game.public.morningResult.deadUids, [], "보호가 통한다");
+  assert.equal(game.public.morningResult.savedCount, 1);
+});
+
+test("건달이 협박한 사람은 다음 낮에 표를 낼 수 없다", () => {
+  const game = makeGame({m1: "mafia", g1: "gangster", d1: "doctor",
+    c1: "citizen", c2: "citizen"});
+  game.server.nightActions = {g1: "c1"};
+  resolveMafiaNight(game, 1000);
+
+  assert.equal(game.server.voteBans.c1, true);
+  beginMafiaVoting(game, 2000);
+  assert.equal(game.private.c1.voteBanned, true);
+  // 표를 못 내는 사람은 참여 인원에서 빠집니다(살아 있는 5명 중 1명 제외).
+  assert.equal(game.public.voteEligibleCount, 4);
 });
 
 // ===== 마담 — 능력 + 다음 낮 투표권 차단 =====
@@ -172,9 +187,10 @@ test("자경단원이 시민을 쏘면 오발로 함께 죽는다", () => {
 });
 
 test("차단당한 자경단원은 사용 횟수를 잃지 않는다", () => {
-  const game = makeGame({v1: "vigilante", g1: "gangster", m1: "mafia",
+  // 능력을 막는 역할은 마담입니다(건달은 투표권만 막습니다).
+  const game = makeGame({v1: "vigilante", mad: "madam", m1: "mafia",
     c1: "citizen", c2: "citizen"});
-  game.server.nightActions = {g1: "v1", v1: "m1"};
+  game.server.nightActions = {mad: "v1", v1: "m1"};
   resolveMafiaNight(game, 1000);
 
   assert.deepEqual(game.public.morningResult.deadUids, [], "총이 불발된다");

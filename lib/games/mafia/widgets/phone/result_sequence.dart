@@ -27,6 +27,7 @@ class MafiaPhoneResultSequence extends StatefulWidget {
     required this.winner,
     required this.players,
     required this.revealedRoles,
+    this.myUid,
     this.myRole,
     this.winnerRoleIds = const {},
     this.winnerLabel,
@@ -41,6 +42,9 @@ class MafiaPhoneResultSequence extends StatefulWidget {
 
   /// 전원 신분입니다. 게임이 끝나면 서버가 모두 공개합니다.
   final Map<String, MafiaRole?> revealedRoles;
+
+  /// 내 uid입니다. 명단에서 내 닉네임을 빨간색으로 표시합니다.
+  final String? myUid;
 
   /// 내 신분입니다. 명단 화면의 아래 카드에 씁니다.
   final MafiaRole? myRole;
@@ -101,6 +105,9 @@ class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence> {
           MafiaAnnouncementReveal(
             child: MafiaSpectatorRosterView(
               myRole: widget.myRole,
+              myUid: widget.myUid,
+              // 게임이 끝난 뒤의 명단입니다('신분 정보', 안내 문구 없음).
+              isFinished: true,
               // 결과 화면은 낮 배경으로 둡니다. 밤에 끝났더라도 게임이 끝난
               // 뒤이므로 어두운 배경을 유지할 이유가 없습니다.
               isNight: false,

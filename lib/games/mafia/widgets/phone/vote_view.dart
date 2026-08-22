@@ -230,6 +230,8 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         label: '선택 완료',
         onTap: _handleConfirm,
         enabled: widget.selectedUid != null && widget.onConfirm != null,
+        // 확정(2026-08): 아무도 고르지 않았으면 버튼을 **보이지 않게** 둡니다.
+        hiddenWhenDisabled: true,
       ),
     ];
   }

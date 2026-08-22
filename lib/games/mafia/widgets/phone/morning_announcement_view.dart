@@ -37,9 +37,14 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
               .map((uid) => players[uid]?.nickname ?? '플레이어')
               .toList(growable: false);
     // 확정(2026-08): 태블릿과 같은 말투로 내려찍고, 두 박자로 나눠 띄웁니다.
-    final beats = deadNames.isEmpty
-        ? MafiaCopy.noDeathBeats
-        : MafiaCopy.deathBeats(deadNames.join(' · '));
+    final beats = <String>[
+      ...deadNames.isEmpty
+          ? MafiaCopy.noDeathBeats
+          : MafiaCopy.deathBeats(deadNames.join(' · ')),
+      // 기자가 취재에 성공한 아침이면 그 사실도 알립니다. 카드를 뒤집어
+      // 보여 주는 것은 방 가운데 태블릿이 맡습니다.
+      if (current?.hasExposure ?? false) ...MafiaCopy.exposureBeats,
+    ];
 
     return Stack(
       fit: StackFit.expand,

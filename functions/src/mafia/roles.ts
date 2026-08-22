@@ -45,8 +45,16 @@ export interface MafiaServerRole {
   defenseCharges: number;
   /** 낮 투표에서 이 사람의 표가 몇 표인지입니다(정치인 2). */
   voteWeight: number;
-  /** 지목한 대상의 다음 낮 투표권까지 막는지입니다(마담). */
+  /** 지목한 대상의 다음 낮 투표권까지 막는지입니다(마담·건달). */
   blocksTargetVote: boolean;
+  /**
+   * 지목한 대상의 **밤 능력**을 막는지입니다.
+   *
+   * 확정(2026-08): 건달은 밤 능력이 아니라 **낮 투표권**만 막습니다. 그래서
+   * "지목해서 막는다"를 두 값으로 나눴습니다 — 마담은 둘 다 막고, 건달은
+   * 투표권만 막습니다.
+   */
+  blocksAbility: boolean;
   /** 같은 편을 제거하면 자신도 죽는지입니다(자경단원 오발). */
   selfDestructsOnAllyKill: boolean;
   /** 전향에 성공한 대상이 되는 역할 id입니다(교주 → cultist). */
@@ -67,6 +75,7 @@ const BASE = {
   defenseCharges: 0,
   voteWeight: 1,
   blocksTargetVote: false,
+  blocksAbility: false,
   selfDestructsOnAllyKill: false,
   convertsTargetTo: null,
   isImplemented: true,
@@ -109,10 +118,13 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
     nightAction: "investigateRole", nightPhase: "investigate",
     nightTargetScope: "dead",
   },
-  // 건달은 역할 차단자와 같은 동작입니다.
+  // 확정(2026-08): 건달은 **낮 투표권**을 막습니다. 밤 능력은 막지 않습니다.
+  // 그래서 해결 단계도 차단(roleblock)이 아니라 상태 부여(statusEffect)입니다 —
+  // 뒤 역할의 행동 가능 여부를 바꾸지 않으므로 먼저 처리할 이유가 없습니다.
   gangster: {
     ...BASE, id: "gangster", displayName: "건달", faction: "citizen",
-    nightAction: "roleblock", nightPhase: "roleblock",
+    nightAction: "roleblock", nightPhase: "statusEffect",
+    blocksTargetVote: true,
   },
   // 자경단원은 게임당 1회. 시민팀을 쏘면 오발로 자신도 함께 죽습니다.
   vigilante: {
@@ -157,7 +169,7 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
   madam: {
     ...BASE, id: "madam", displayName: "마담", faction: "mafia",
     nightAction: "roleblock", nightPhase: "roleblock",
-    blocksTargetVote: true, knowsAllies: true,
+    blocksTargetVote: true, blocksAbility: true, knowsAllies: true,
   },
   // 도둑은 사망자의 직업을 훔쳐 그 직업이 됩니다(진영까지 바뀝니다).
   thief: {
@@ -251,6 +263,16 @@ export function mafiaRole(roleId: string): MafiaServerRole | null {
 export function actsAtNight(roleId: string): boolean {
   const role = mafiaRole(roleId);
   return role !== null && role.nightAction !== "none";
+}
+
+/**
+ * 밤의 **앞 구간**(차단)에 움직이는 역할인지입니다.
+ *
+ * 능력을 막는 역할만 먼저 움직입니다. 막힌 사람은 능력이 무효라, 이 판정이
+ * 끝나야 뒤 역할들의 행동 가능 여부가 정해집니다.
+ */
+export function actsInBlockStage(roleId: string): boolean {
+  return mafiaRole(roleId)?.blocksAbility === true;
 }
 
 /**

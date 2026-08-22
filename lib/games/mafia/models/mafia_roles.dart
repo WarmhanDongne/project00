@@ -153,9 +153,11 @@ abstract final class MafiaRoles {
     isImplemented: true,
   );
 
-  /// 밤에 지목한 사람의 능력을 막습니다(마피아42 건달).
+  /// 밤에 지목한 사람의 **다음 낮 투표권**을 막습니다(마피아42 건달).
   ///
-  /// 역할 차단자([roleblocker])와 같은 동작입니다. 시안 이름만 다릅니다.
+  /// 확정(2026-08): 건달은 밤 능력을 막지 않습니다. 협박당한 사람은 밤에는
+  /// 평소대로 움직이고, **낮에 표를 낼 수 없습니다.** 그래서 마담과 달리
+  /// 해결 단계가 차단이 아니라 상태 부여이고, 밤의 앞 구간에도 끼지 않습니다.
   static final gangster = MafiaRole(
     id: 'gangster',
     nightPromptVerb: '협박',
@@ -164,11 +166,12 @@ abstract final class MafiaRoles {
     tier: MafiaRoleTier.advanced,
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.roleblock,
-    nightPhase: MafiaNightPhase.roleblock,
+    nightPhase: MafiaNightPhase.statusEffect,
     accentColor: _citizenColor,
     description:
         '밤마다 한 명을 협박해\n'
-        '그 사람의 능력을 막습니다.',
+        '다음 낮의 투표권을 막습니다.',
+    blocksTargetVote: true,
     card: Assets.games.mafia.images.cards.roleGangster.game,
     icon: Assets.games.mafia.images.roles.roleIconGangster.game,
     isImplemented: true,
@@ -176,7 +179,8 @@ abstract final class MafiaRoles {
 
   static final vigilante = MafiaRole(
     id: 'vigilante',
-    nightPromptVerb: '제거',
+    // 확정(2026-08): 자경단원의 밤 문구는 '제거'가 아니라 '처형'입니다.
+    nightPromptVerb: '처형',
     displayName: '자경단원',
     faction: MafiaFaction.citizen,
     tier: MafiaRoleTier.extended,
@@ -184,6 +188,10 @@ abstract final class MafiaRoles {
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.independentAttack,
     accentColor: _citizenColor,
+    description:
+        '밤에 한 명을 처형합니다.\n'
+        '능력은 게임당 1번만 쓸 수 있고,\n'
+        '시민을 공격하면 자신도 죽습니다.',
     card: Assets.games.mafia.images.cards.roleVigilante.game,
     // 마피아42 기준: 게임당 1회. 시민팀을 쏘면 오발로 자신도 함께 죽습니다.
     maxUses: 1,
@@ -294,6 +302,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.roleblock,
+    blocksAbility: true,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleRoleblocker.game,
   );
@@ -423,6 +432,7 @@ abstract final class MafiaRoles {
         '능력과 다음 낮의 투표권을\n'
         '함께 막습니다.',
     blocksTargetVote: true,
+    blocksAbility: true,
     knowsAllies: true,
     card: Assets.games.mafia.images.cards.roleMadam.game,
     icon: Assets.games.mafia.images.roles.roleIconMadam.game,
@@ -531,6 +541,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.roleblock,
+    blocksAbility: true,
     accentColor: _mafiaColor,
     card: Assets.games.mafia.images.cards.roleMafiaRoleblocker.game,
     knowsAllies: true,

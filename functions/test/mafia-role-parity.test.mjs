@@ -143,6 +143,12 @@ test("서버 역할 표가 Dart 카탈로그와 같다", () => {
       dartBoolField(body, "blocksTargetVote", false),
       `${roleId}: 투표권 차단 여부가 다릅니다`,
     );
+    // 확정(2026-08): 무엇을 막는지가 마담(둘 다)과 건달(투표권만)로 갈립니다.
+    assert.equal(
+      role.blocksAbility,
+      dartBoolField(body, "blocksAbility", false),
+      `${roleId}: 능력 차단 여부가 다릅니다`,
+    );
     assert.equal(
       role.selfDestructsOnAllyKill,
       dartBoolField(body, "selfDestructsOnAllyKill", false),
