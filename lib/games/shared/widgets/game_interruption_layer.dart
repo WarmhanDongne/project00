@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
 import 'package:project00/core/time/server_clock.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_interruption.dart';
 
 enum GameInterruptionPresentation { player, tabletController }
@@ -19,6 +20,7 @@ class GameInterruptionLayer extends StatefulWidget {
     this.presentation = GameInterruptionPresentation.player,
     this.onVote,
     this.onContinue,
+    this.onFinishNow,
     this.onExpired,
     this.isSubmitting = false,
     this.scrimColor = const Color(0xE8000000),
@@ -29,6 +31,13 @@ class GameInterruptionLayer extends StatefulWidget {
   final GameInterruptionPresentation presentation;
   final Future<void> Function()? onVote;
   final Future<void> Function()? onContinue;
+
+  /// 남은 인원이 부족해 계속할 수 없을 때 게임을 즉시 정상 종료합니다.
+  ///
+  /// [onExpired]와 같은 `Future<bool>` 모양이라 컨트롤러 메서드를 그대로 넘길
+  /// 수 있습니다. 성공(true)이면 서버가 게임을 끝내며 화면이 곧 닫히고,
+  /// 실패(false)면 버튼을 다시 켜 마감 뒤 자동 만료가 이어받게 합니다.
+  final Future<bool> Function()? onFinishNow;
   final Future<bool> Function()? onExpired;
   final bool isSubmitting;
   final Color scrimColor;
@@ -42,6 +51,12 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
   int _remainingSeconds = 0;
   String? _expiredInterruptionId;
 
+  /// 즉시 종료 확인 문구를 보여 주는 중입니다.
+  bool _isConfirmingFinish = false;
+
+  /// 즉시 종료 요청이 서버로 가 있는 중입니다.
+  bool _isFinishingNow = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +68,10 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.interruption?.id != widget.interruption?.id) {
       _expiredInterruptionId = null;
+      // 새 중단은 새 판단입니다. 여기서 되돌리지 않으면 앞선 중단에서 실패한
+      // 요청 때문에 다음 중단의 버튼이 영구 비활성으로 남습니다.
+      _isConfirmingFinish = false;
+      _isFinishingNow = false;
       _syncTimer();
     }
   }
@@ -80,7 +99,11 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
     if (_remainingSeconds != seconds) {
       setState(() => _remainingSeconds = seconds);
     }
+    // 즉시 종료 요청이 날아가 있는 동안에는 자동 만료를 쏘지 않습니다. 같은
+    // 최종 상태를 만드는 명령을 겹쳐 보내서 얻는 것이 없습니다. 실패하면
+    // _finishNow가 잠금을 풀어 다음 tick의 만료가 이어받습니다.
     if (seconds == 0 &&
+        !_isFinishingNow &&
         _expiredInterruptionId != interruption.id &&
         widget.onExpired != null) {
       _expiredInterruptionId = interruption.id;
@@ -99,6 +122,29 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
       // callable 자체의 재전송까지 모두 실패한 경우에도 다음 timer tick에서
       // 다시 시도해 0초 화면에 영구 정지하지 않게 합니다.
       _expiredInterruptionId = null;
+    }
+  }
+
+  Future<void> _finishNow() async {
+    if (_isFinishingNow) return;
+    final handler = widget.onFinishNow;
+    if (handler == null) return;
+    setState(() => _isFinishingNow = true);
+    var succeeded = false;
+    try {
+      succeeded = await handler();
+    } catch (_) {
+      succeeded = false;
+    }
+    if (!mounted) return;
+    // 성공하면 서버가 게임을 끝내며 화면이 곧 닫히므로 잠금을 유지해 닫히는
+    // 동안의 추가 탭을 막습니다. 실패하면 되돌려야 다시 누를 수 있고, 마감이
+    // 지났다면 다음 tick의 자동 만료가 이어받습니다.
+    if (!succeeded) {
+      setState(() {
+        _isFinishingNow = false;
+        _isConfirmingFinish = false;
+      });
     }
   }
 
@@ -179,33 +225,53 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                         height: 1.45,
                       ),
                     ),
-                    if (isTabletController) ...[
+                    // ---------------------------------------------------------
+                    // 버튼 영역은 presentation이 아니라 canContinue로 **먼저**
+                    // 갈립니다. 계속할 수 없는 중단은 휴대폰·태블릿이 할 수
+                    // 있는 일이 같기 때문입니다(종료뿐).
+                    //
+                    // ⚠️ 순서를 바꾸지 마세요. 아래 태블릿 분기에서
+                    // canContinue 검사를 생략할 수 있는 근거가 "이 분기가
+                    // 먼저 걸러진다"는 사실입니다.
+                    // ---------------------------------------------------------
+                    if (!interruption.canContinue) ...[
                       const SizedBox(height: 26),
-                      FilledButton(
-                        onPressed:
-                            interruption.canContinue &&
-                                !widget.isSubmitting &&
-                                widget.onContinue != null
-                            ? () => unawaited(widget.onContinue!())
-                            : null,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          disabledBackgroundColor: const Color(0xFF777777),
-                          disabledForegroundColor: const Color(0xFFBBBBBB),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 14,
+                      if (_isConfirmingFinish)
+                        _FinishNowConfirm(
+                          message: GameFlowCopy.interruptionFinishNowConfirm(
+                            interruption.playerNickname,
+                            _remainingSeconds,
                           ),
-                          elevation: interruption.canContinue ? 8 : 0,
-                          shadowColor: Colors.black,
+                          isSubmitting: widget.isSubmitting || _isFinishingNow,
+                          onCancel: () =>
+                              setState(() => _isConfirmingFinish = false),
+                          onAccept: () => unawaited(_finishNow()),
+                        )
+                      else
+                        _InterruptionActionButton(
+                          label: GameFlowCopy.interruptionFinishNow,
+                          isEmphasized: isTabletController,
+                          onPressed:
+                              widget.onFinishNow == null ||
+                                  widget.isSubmitting ||
+                                  _isFinishingNow
+                              ? null
+                              // 0초가 지난 뒤에도 활성으로 둡니다. 자동 만료가
+                              // 계속 실패하는 상황에서 유일한 탈출구입니다.
+                              : () =>
+                                    setState(() => _isConfirmingFinish = true),
                         ),
-                        child: const Text(
-                          '제외하고 계속하기',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                    ] else if (isTabletController) ...[
+                      const SizedBox(height: 26),
+                      _InterruptionActionButton(
+                        label: '제외하고 계속하기',
+                        isEmphasized: true,
+                        onPressed:
+                            widget.isSubmitting || widget.onContinue == null
+                            ? null
+                            : () => unawaited(widget.onContinue!()),
                       ),
-                    ] else if (interruption.canContinue) ...[
+                    ] else ...[
                       const SizedBox(height: 8),
                       Text(
                         '동의 ${interruption.voteCount} / ${interruption.requiredVotes}',
@@ -217,27 +283,15 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                       ),
                       const SizedBox(height: 26),
                       if (canVote)
-                        FilledButton(
+                        _InterruptionActionButton(
+                          label: hasVoted ? '동의 완료' : '제외하고 계속하기',
+                          isEmphasized: false,
                           onPressed:
                               hasVoted ||
                                   widget.isSubmitting ||
                                   widget.onVote == null
                               ? null
                               : () => unawaited(widget.onVote!()),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            disabledBackgroundColor: const Color(0xFFAAAAAA),
-                            disabledForegroundColor: const Color(0xFF444444),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 14,
-                            ),
-                          ),
-                          child: Text(
-                            hasVoted ? '동의 완료' : '제외하고 계속하기',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
                         )
                       else
                         const Text(
@@ -282,6 +336,110 @@ class _PlayerAvatar extends StatelessWidget {
         roomCharacterAssetPath(characterId),
         fit: BoxFit.contain,
       ),
+    );
+  }
+}
+
+/// 중단 레이어의 흰 배경 액션 버튼입니다.
+///
+/// [isEmphasized]는 태블릿 진행자용 강조(그림자와 진한 비활성 색)입니다.
+/// 기존 두 버튼의 차이가 elevation과 비활성 색뿐이라 하나로 묶었습니다.
+class _InterruptionActionButton extends StatelessWidget {
+  const _InterruptionActionButton({
+    required this.label,
+    required this.isEmphasized,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool isEmphasized;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        disabledBackgroundColor: isEmphasized
+            ? const Color(0xFF777777)
+            : const Color(0xFFAAAAAA),
+        disabledForegroundColor: isEmphasized
+            ? const Color(0xFFBBBBBB)
+            : const Color(0xFF444444),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+        elevation: isEmphasized ? 8 : 0,
+        shadowColor: Colors.black,
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+/// 즉시 종료 확인 문구와 취소·종료 버튼입니다.
+///
+/// ⚠️ **showDialog로 만들지 마세요.** 게임 라우트 위에 다이얼로그를 쌓으면
+/// 종료가 반영될 때 화면이 스스로 부르는 `maybePop`이 다이얼로그만 닫아
+/// 게임 화면에 갇힙니다(`game_route_exit.dart` 참고). 같은 레이어 안에서
+/// 상태만 바꾸면 라우트가 쌓이지 않아 그 사고가 구조적으로 불가능합니다.
+class _FinishNowConfirm extends StatelessWidget {
+  const _FinishNowConfirm({
+    required this.message,
+    required this.isSubmitting,
+    required this.onCancel,
+    required this.onAccept,
+  });
+
+  final String message;
+  final bool isSubmitting;
+  final VoidCallback onCancel;
+  final VoidCallback onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OutlinedButton(
+              onPressed: isSubmitting ? null : onCancel,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: const Color(0xFF888888),
+                side: const BorderSide(color: Color(0x55FFFFFF)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+              ),
+              child: const Text(
+                GameFlowCopy.interruptionFinishNowCancel,
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _InterruptionActionButton(
+              label: GameFlowCopy.interruptionFinishNowAccept,
+              isEmphasized: true,
+              onPressed: isSubmitting ? null : onAccept,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
