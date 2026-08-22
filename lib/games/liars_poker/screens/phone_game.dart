@@ -355,6 +355,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             interruption: controller.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
             isSubmitting: controller.isCommandInFlight,
+            failureMessage: controller.errorMessage,
             onVote: () async {
               await controller.voteToContinueInterruption();
             },

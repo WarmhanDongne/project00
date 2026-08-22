@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 
@@ -269,7 +270,7 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
       const Stream.empty();
 
   @override

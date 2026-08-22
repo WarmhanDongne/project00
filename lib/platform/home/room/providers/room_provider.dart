@@ -7,9 +7,11 @@ import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
 import 'package:project00/core/diagnostics/dev_error_log.dart';
 import 'package:project00/core/error/user_error_message.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_leave_intent.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -50,7 +52,7 @@ class RoomProvider extends ChangeNotifier {
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
   StreamSubscription<bool>? connectionSubscription;
   StreamSubscription<String?>? statusSubscription;
-  StreamSubscription<bool?>? controllerPresenceSubscription;
+  StreamSubscription<ControllerPresence>? controllerPresenceSubscription;
   StreamSubscription<bool>? roomExistenceSubscription;
 
   List<RoomPlayer> players = [];
@@ -68,6 +70,16 @@ class RoomProvider extends ChangeNotifier {
 
   bool wasKicked = false;
   bool wasRoomClosed = false;
+
+  /// 서버가 관리하는 방 상태입니다(`waiting`/`seating`/`playing`/`finished`/`closed`).
+  ///
+  /// 화면이 `selectedGame`만 보고 판단하면 게임이 끝난 뒤에도 룰북과
+  /// `곧 시작합니다`가 남습니다. 종료 경로 어디에서도 `selectedGame`을 지우지
+  /// 않기 때문입니다(P-02). 아직 아무 값도 받지 못했으면 null입니다.
+  String? roomStatus;
+
+  /// 이 방의 게임이 끝나 대기실로 돌아가야 하는 상태입니다.
+  bool get isRoomFinished => roomStatus == 'finished';
   ControllerPresenceState controllerPresenceState =
       ControllerPresenceState.unknown;
   RoomTerminationReason? roomTerminationReason;
@@ -85,6 +97,14 @@ class RoomProvider extends ChangeNotifier {
   Future<void>? _connectionRecoveryFuture;
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
+
+  /// 태블릿 heartbeat가 유예를 넘겼는지 다시 판정하는 타이머입니다.
+  ///
+  /// heartbeat가 끊기면 RTDB 이벤트도 함께 끊기므로, 구독만으로는 "값이 오지
+  /// 않는 상태"를 알 수 없습니다. 마지막으로 받은 lastSeen을 들고 시계를
+  /// 직접 돌려야 합니다.
+  Timer? _controllerPresenceTimer;
+  ControllerPresence _controllerPresence = ControllerPresence.unknown;
   String? _joinedNickname;
   String? _joinedCharacterId;
   List<String>? _lastGroupGameUids;
@@ -213,11 +233,6 @@ class RoomProvider extends ChangeNotifier {
   Stream<String?> watchGameStatus(String code) =>
       _service.watchGameStatus(code.trim().toUpperCase());
 
-  /// 태블릿의 접속 표시를 구독합니다. false는 재접속 대기 UI에만 사용하고
-  /// 방 퇴장 조건으로 사용하지 않습니다.
-  Stream<bool?> watchControllerConnected(String code) =>
-      _service.watchControllerConnected(code.trim().toUpperCase());
-
   Stream<String?> watchRoomStatus(String code) =>
       _service.watchRoomStatus(code.trim().toUpperCase());
 
@@ -295,6 +310,50 @@ class RoomProvider extends ChangeNotifier {
         );
       }
     }
+  }
+
+  /// 마지막 heartbeat가 유예를 넘겼는지 주기적으로 다시 판정합니다.
+  ///
+  /// 유예의 절반을 주기로 씁니다. 유예와 같은 주기로 돌리면 최악의 경우 판정이
+  /// 유예의 두 배만큼 늦습니다.
+  void _syncControllerPresenceTimer() {
+    _controllerPresenceTimer?.cancel();
+    // 이미 끊긴 것으로 확정됐거나 값이 없으면 시계를 돌릴 이유가 없습니다.
+    // 복구는 새 heartbeat 이벤트가 알려 줍니다.
+    if (_controllerPresence.isEmpty ||
+        _controllerPresence.connected == false ||
+        _controllerPresence.lastSeen == null) {
+      return;
+    }
+    _controllerPresenceTimer = Timer.periodic(
+      Duration(
+        milliseconds: controllerPresenceDisplayGrace.inMilliseconds ~/ 2,
+      ),
+      (_) => _applyControllerPresenceVerdict(),
+    );
+  }
+
+  void _applyControllerPresenceVerdict() {
+    final verdict = judgeControllerPresence(
+      _controllerPresence,
+      // lastSeen은 ServerValue.timestamp라 서버 시각입니다. 기기 시계로
+      // 비교하면 시계 오차만큼 오탐하거나 장애를 놓칩니다.
+      nowMillis: ServerClock.nowMillis(),
+    );
+    final nextState = switch (verdict) {
+      ControllerPresenceVerdict.connected => ControllerPresenceState.connected,
+      ControllerPresenceVerdict.reconnecting =>
+        ControllerPresenceState.reconnecting,
+      ControllerPresenceVerdict.unknown => ControllerPresenceState.unknown,
+    };
+    if (nextState == ControllerPresenceState.reconnecting) {
+      // 더 볼 것이 없습니다. 복구는 새 heartbeat 이벤트가 알려 줍니다.
+      _controllerPresenceTimer?.cancel();
+      _controllerPresenceTimer = null;
+    }
+    if (controllerPresenceState == nextState) return;
+    controllerPresenceState = nextState;
+    notifyListeners();
   }
 
   Future<void> resumeControllerPresence() async {
@@ -400,8 +459,13 @@ class RoomProvider extends ChangeNotifier {
     controllerPresenceSubscription?.cancel();
     roomExistenceSubscription?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
 
     controllerPresenceState = ControllerPresenceState.unknown;
+    _controllerPresence = ControllerPresence.unknown;
+    _controllerPresenceTimer?.cancel();
+    _controllerPresenceTimer = null;
+    roomStatus = null;
     roomTerminationReason = null;
     _roomMissingCandidate = false;
     _roomDeletionConfirmation = null;
@@ -411,19 +475,17 @@ class RoomProvider extends ChangeNotifier {
       onError: (_) => _handleServerConnection(false),
     );
 
+    // connected와 lastSeen을 함께 받습니다. connected만 보면 태블릿이 강제
+    // 종료·크래시·전원 차단으로 markControllerDisconnected를 보낼 기회조차
+    // 없었던 경우를 영원히 알 수 없습니다(값이 true로 굳습니다).
     controllerPresenceSubscription = _service
-        .watchControllerConnected(listenedRoomCode)
+        .watchControllerPresence(listenedRoomCode)
         .listen(
-          (connected) {
+          (presence) {
             if (roomCode != listenedRoomCode) return;
-            final nextState = switch (connected) {
-              true => ControllerPresenceState.connected,
-              false => ControllerPresenceState.reconnecting,
-              null => ControllerPresenceState.unknown,
-            };
-            if (controllerPresenceState == nextState) return;
-            controllerPresenceState = nextState;
-            notifyListeners();
+            _controllerPresence = presence;
+            _syncControllerPresenceTimer();
+            _applyControllerPresenceVerdict();
           },
           onError: (Object error) => _handleSubscriptionError(
             error,
@@ -452,6 +514,10 @@ class RoomProvider extends ChangeNotifier {
     statusSubscription = _service.watchRoomStatus(listenedRoomCode).listen(
       (status) {
         if (roomCode != listenedRoomCode) return;
+        if (roomStatus != status) {
+          roomStatus = status;
+          notifyListeners();
+        }
         // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
         // status의 null은 초기 캐시 미수신일 수 있으므로 방 종료로 보지 않고,
         // 실제 삭제는 roomCode 생존 마커를 서버에서 재확인해 판정합니다.
@@ -1009,6 +1075,52 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  /// 저장 세션으로 무엇을 복원할 수 있는지 **서버에 쓰지 않고** 확인합니다.
+  ///
+  /// [restorePlayerRoom]은 참가자 노드를 되살리고 heartbeat를 시작합니다.
+  /// 복귀 여부를 사용자에게 물으려면 그 전에 판정만 필요하므로 두 단계로
+  /// 나눕니다. 묻기도 전에 서버에 참가자를 만들면, 사용자가 거절해도 이미
+  /// 방에 들어가 있게 됩니다(P-01).
+  Future<RestorableSession> detectRestorableSession() async {
+    if (roomCode != null || _isLeaving) return RestorableSession.none;
+    final uid = _currentUid();
+    if (uid == null || uid.isEmpty) return RestorableSession.none;
+    final store = PlayerRoomSessionStore.instance;
+    final session = await store.load();
+    if (session == null) return RestorableSession.none;
+    if (session.uid != uid) {
+      await store.clear(onlyRoomCode: session.roomCode);
+      return RestorableSession.none;
+    }
+    // 사용자가 이미 나갔거나 나가는 중인 방은 되살리지 않습니다.
+    if (RoomLeaveIntent.blocksRestore(session.roomCode)) {
+      await store.clear(onlyRoomCode: session.roomCode);
+      return RestorableSession.none;
+    }
+    try {
+      final restorable = await _service.restorableSession(session.roomCode);
+      if (restorable == RestorableSession.none) {
+        await store.clear(onlyRoomCode: session.roomCode);
+      }
+      return restorable;
+    } on RoomCommandException {
+      // 네트워크 오류라면 저장값을 유지해 연결이 돌아온 뒤 다시 확인합니다.
+      return RestorableSession.none;
+    }
+  }
+
+  /// 사용자가 복귀를 거절했습니다. 저장 세션을 지워 다시 묻지 않습니다.
+  ///
+  /// 서버에는 아직 아무것도 쓰지 않았으므로 참가자 노드를 지울 필요가
+  /// 없습니다. 방에 남아 있는 노드는 서버 정리가 담당합니다(C-10).
+  Future<void> declineRestorableSession() async {
+    final session = await PlayerRoomSessionStore.instance.load();
+    if (session == null) return;
+    RoomLeaveIntent.complete(session.roomCode);
+    await PlayerRoomSessionStore.instance.clear(onlyRoomCode: session.roomCode);
+    notifyListeners();
+  }
+
   /// 앱이 완전히 종료된 뒤에도 같은 Firebase UID의 기존 참가자 상태를 복원합니다.
   /// 직접 나가기·강퇴된 사용자는 저장 세션이 지워지므로 자동 입장하지 않습니다.
   Future<bool> restorePlayerRoom() async {
@@ -1039,9 +1151,9 @@ class RoomProvider extends ChangeNotifier {
         !RoomLeaveIntent.blocksRestore(session.roomCode);
 
     try {
-      final exists = await _service.hasExistingPlayer(session.roomCode);
+      final restorable = await _service.restorableSession(session.roomCode);
       if (!stillRestoring()) return false;
-      if (!exists) {
+      if (restorable == RestorableSession.none) {
         await store.clear(onlyRoomCode: session.roomCode);
         return false;
       }
@@ -1217,6 +1329,9 @@ class RoomProvider extends ChangeNotifier {
     roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
+    _controllerPresenceTimer = null;
+    _controllerPresence = ControllerPresence.unknown;
     roomSubscription = null;
     playerSubscription = null;
     connectionSubscription = null;
@@ -1248,6 +1363,7 @@ class RoomProvider extends ChangeNotifier {
     _joinedNickname = null;
     _joinedCharacterId = null;
     controllerPresenceState = ControllerPresenceState.unknown;
+    roomStatus = null;
     if (!preserveTerminationReason) roomTerminationReason = null;
     notifyListeners();
   }
@@ -1263,6 +1379,7 @@ class RoomProvider extends ChangeNotifier {
     roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
+    _controllerPresenceTimer?.cancel();
     super.dispose();
   }
 }

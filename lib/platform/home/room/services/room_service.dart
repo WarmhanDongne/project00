@@ -8,6 +8,7 @@ import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
 import 'package:project00/core/network/realtime_connection_monitor.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 
 class RoomService {
@@ -195,14 +196,19 @@ class RoomService {
   /// `false`는 백그라운드·강제 종료·순간적인 네트워크 단절을 뜻할 수 있으므로
   /// 방 종료 신호로 사용하지 않습니다. 값이 없으면 방 삭제와 초기 캐시 미수신을
   /// 구분할 수 없으므로 `null`을 유지하고 별도의 방 생존 마커로 확인합니다.
-  Stream<bool?> watchControllerConnected(String roomCode) {
+  /// 태블릿의 접속 표시와 마지막 heartbeat 시각을 **함께** 구독합니다.
+  ///
+  /// `connected`만 보면 태블릿이 강제 종료·크래시·전원 차단으로
+  /// `markControllerDisconnected`를 보낼 기회조차 없었던 경우를 영원히 알 수
+  /// 없습니다. 그 값이 `true`로 굳어 참가자에게 아무 안내도 뜨지 않습니다.
+  ///
+  /// `lastSeen`은 `ServerValue.timestamp`로 기록되므로 서버 시각입니다.
+  /// 판정에는 반드시 `ServerClock.nowMillis()`를 쓰세요.
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) {
     return realtime
-        .ref('rooms/$roomCode/controllerPresence/connected')
+        .ref('rooms/${roomCode.trim().toUpperCase()}/controllerPresence')
         .onValue
-        .map((event) {
-          final value = event.snapshot.value;
-          return value is bool ? value : null;
-        });
+        .map((event) => ControllerPresence.fromValue(event.snapshot.value));
   }
 
   Stream<String?> watchRoomStatus(String roomCode) => realtime
@@ -356,13 +362,16 @@ class RoomService {
     unawaited(_registerDisconnectPresence(playerRef));
   }
 
-  /// 저장된 세션이 실제로 현재 UID의 복원 가능한 방/게임을 가리키는지 확인합니다.
+  /// 저장된 세션으로 무엇을 복원할 수 있는지 확인합니다.
+  ///
+  /// 대기실과 진행 중 게임을 구분해 돌려줍니다. 화면이 `그룹 다시 참여`와
+  /// `게임 다시 참여` 중 무엇을 보여 줄지 정하는 근거입니다(P-01).
   ///
   /// 이 확인 없이 join callable을 호출하면 대기 중인 방에서 강퇴된 사용자를 새
   /// 참가자로 다시 만들 수 있으므로, 자동 재접속 경로에서는 반드시 선행합니다.
-  Future<bool> hasExistingPlayer(String roomCode) async {
+  Future<RestorableSession> restorableSession(String roomCode) async {
     final user = _auth.currentUser;
-    if (user == null) return false;
+    if (user == null) return RestorableSession.none;
     final code = roomCode.trim().toUpperCase();
     // players는 인증 사용자에게 독립적으로 읽기가 허용됩니다. 먼저 참가자 노드를
     // 확인해야, 이미 제거된 사용자가 status/game을 읽다가 permission-denied가 나
@@ -374,7 +383,9 @@ class RoomService {
     final playerStatus = playerValue is Map
         ? playerValue['status']?.toString()
         : null;
-    if (!playerSnapshot.exists || playerStatus != 'active') return false;
+    if (!playerSnapshot.exists || playerStatus != 'active') {
+      return RestorableSession.none;
+    }
 
     final snapshots = await Future.wait([
       _readWithRetry(realtime.ref('rooms/$code/status')),
@@ -382,7 +393,7 @@ class RoomService {
       _readWithRetry(realtime.ref('rooms/$code/game/public/status')),
       _readWithRetry(realtime.ref('rooms/$code/game/private/${user.uid}')),
     ]);
-    return isRestorablePlayerSessionState(
+    return restorablePlayerSession(
       playerExists: true,
       playerStatus: playerStatus,
       roomStatus: snapshots[0].value?.toString(),

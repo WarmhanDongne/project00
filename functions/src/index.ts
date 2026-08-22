@@ -125,3 +125,16 @@ export {
 export {
   game_common_interruption_finish_now,
 } from "./game-interruption/finish-now.js";
+
+// 화면이 살아 있어야만 중단이 만료되던 구멍을 서버가 막습니다(C-03/C-10).
+// 위의 game_common_interruption_expire는 즉시 반응 경로로 **그대로 둡니다.**
+export {
+  cleanupExpiredGameInterruptions,
+  cleanupGhostRoomPlayers,
+} from "./game-interruption/expire-scheduler.js";
+
+// 태블릿 단절 동안 서버 턴 마감을 멈춥니다(C-14). RTDB 트리거이므로 리전이
+// asia-southeast1입니다. 신규 추가이므로 삭제할 구 함수가 없습니다.
+export {
+  game_common_controller_presence_changed,
+} from "./game-interruption/controller-presence.js";

@@ -489,17 +489,16 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
               onHome: () => unawaited(_endGameAndLeave(game)),
             ),
           ),
+          // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
+          // 그래서 진행자 화면에는 투표 UI를 띄우지 않고, presentation으로
+          // 진행자용 분기를 고릅니다(라이어스 포커·파이널 콜과 동일).
           GameInterruptionLayer(
             interruption: game.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            presentation: GameInterruptionPresentation.tabletController,
             isSubmitting: game.commandInFlight,
-            // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
-            // 그래서 이 콜백은 실제로 호출되지 않고, 계속 가능한 중단에서는
-            // '다른 플레이어의 투표를 기다리고 있습니다'만 표시됩니다. 진행자용
-            // `제외하고 계속하기` 배선은 별도 작업입니다.
-            onVote: () async {
-              await game.voteToContinueInterruption();
-            },
+            failureMessage: game.errorMessage,
+            onContinue: game.excludeInterruptedPlayerAndContinue,
             onFinishNow: game.finishInterruptedGameNow,
             onExpired: game.expireInterruption,
           ),

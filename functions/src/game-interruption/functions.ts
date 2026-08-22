@@ -4,21 +4,13 @@ import {getDatabase} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {
-  excludeFinalCallPlayer,
-  finishFinalCallForInsufficientPlayers,
-} from "../final-call/exclude-player.js";
+import {excludeFinalCallPlayer} from "../final-call/exclude-player.js";
 import {FinalCallGameState} from "../final-call/types.js";
-import {
-  excludeLiarsPokerPlayer,
-  finishLiarsPokerForInsufficientPlayers,
-} from "../liars-poker/exclude-player.js";
-import {
-  excludeMafiaPlayer,
-  finishMafiaForInsufficientPlayers,
-} from "../mafia/exclude-player.js";
+import {excludeLiarsPokerPlayer} from "../liars-poker/exclude-player.js";
+import {excludeMafiaPlayer} from "../mafia/exclude-player.js";
 import {MafiaGameState} from "../mafia/types.js";
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
+import {resolveExpiredInterruption} from "./expire-resolution.js";
 import {
   completeGameInterruption,
   InterruptibleRoom,
@@ -173,19 +165,28 @@ export const game_common_interruption_expire = onCall<Data>(
       if (uid === room.controllerUid || uid === room.hostUid) {
         assertControllerSession(room, uid, request.data?.controllerSessionId);
       }
-      const now = Date.now();
-      if (now < interruption.deadlineAt) {
+      // 만료 처리 자체는 순수 함수가 소유합니다. 서버 스케줄
+      // (cleanupExpiredGameInterruptions)이 같은 함수를 쓰므로, 화면이 끝낸
+      // 게임과 서버가 끝낸 게임의 최종 상태가 갈리지 않습니다.
+      const result = resolveExpiredInterruption(
+        room,
+        Date.now(),
+        excludePlayer,
+      );
+      if (result.outcome === "not-expired") {
         throw new HttpsError("failed-precondition", "아직 투표 시간이 남아 있습니다.");
       }
-      const canContinue = interruption.canContinue;
-      completeGameInterruption(game, interruption.id, now);
-      delete room.players?.[interruption.playerUid];
-      if (canContinue) {
-        excludePlayer(room, interruption.playerUid, now);
-      } else {
-        finishForInsufficientPlayers(room, now);
+      if (result.outcome === "unsupported-game") {
+        throw new HttpsError(
+          "failed-precondition",
+          "이 게임은 인원 부족 종료를 지원하지 않습니다.",
+        );
       }
-      response = {success: true, expired: true, continued: canContinue};
+      response = {
+        success: true,
+        expired: true,
+        continued: result.outcome === "continued",
+      };
       return room;
     });
 
@@ -237,22 +238,6 @@ function excludePlayer(room: GameRoom, uid: string, now: number): void {
   }
   if (room.selectedGame === "mafia") {
     excludeMafiaPlayer(room.game as unknown as MafiaGameState, uid, now);
-  }
-}
-
-function finishForInsufficientPlayers(room: GameRoom, now: number): void {
-  if (room.selectedGame === "final_call") {
-    const game = room.game as unknown as FinalCallGameState;
-    finishFinalCallForInsufficientPlayers(game, now);
-    return;
-  }
-  if (room.selectedGame === "liars_poker") {
-    const game = room.game as unknown as LiarsPokerGameState;
-    finishLiarsPokerForInsufficientPlayers(game, now);
-    return;
-  }
-  if (room.selectedGame === "mafia") {
-    finishMafiaForInsufficientPlayers(room.game as unknown as MafiaGameState, now);
   }
 }
 

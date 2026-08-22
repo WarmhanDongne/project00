@@ -622,8 +622,10 @@ class MafiaController extends Notifier<MafiaGameState> {
     );
   }
 
-  /// ⚠️ 아직 호출부가 없습니다. 마피아 태블릿에는 진행자용 `제외하고 계속하기`
-  /// 버튼이 없습니다(다른 두 게임과 다릅니다). 진행자 권한 통일은 별도 작업입니다.
+  /// 태블릿 진행자가 중단된 참가자를 제외하고 게임을 계속합니다.
+  ///
+  /// 호출부는 마피아 태블릿 화면의 `GameInterruptionLayer.onContinue`입니다.
+  /// 라이어스 포커·파이널 콜과 같은 자리, 같은 문구입니다.
   Future<bool> excludeInterruptedPlayerAndContinue() {
     final current = interruption;
     if (current == null || !current.canContinue) return Future.value(false);

@@ -6,6 +6,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_leave_intent.dart';
@@ -271,7 +272,7 @@ Future<void> _flushEvents() async {
 
 class _LeaveRoomService implements RoomService {
   final serverConnection = StreamController<bool>.broadcast();
-  final controllerConnected = StreamController<bool?>.broadcast();
+  final controllerPresence = StreamController<ControllerPresence>.broadcast();
   final roomExistsChanges = StreamController<bool>.broadcast();
   final roomStatus = StreamController<String?>.broadcast();
   final players = StreamController<List<RoomPlayer>>.broadcast();
@@ -322,9 +323,9 @@ class _LeaveRoomService implements RoomService {
       activePlayerNodeResult;
 
   @override
-  Future<bool> hasExistingPlayer(String roomCode) async {
+  Future<RestorableSession> restorableSession(String roomCode) async {
     existingPlayerReads += 1;
-    return true;
+    return RestorableSession.waitingRoom;
   }
 
   @override
@@ -343,8 +344,8 @@ class _LeaveRoomService implements RoomService {
   Stream<bool> watchServerConnection() => serverConnection.stream;
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
-      controllerConnected.stream;
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
+      controllerPresence.stream;
 
   @override
   Stream<bool> watchRoomExists(String roomCode) => roomExistsChanges.stream;
@@ -361,7 +362,7 @@ class _LeaveRoomService implements RoomService {
   Future<void> dispose() async {
     await Future.wait([
       serverConnection.close(),
-      controllerConnected.close(),
+      controllerPresence.close(),
       roomExistsChanges.close(),
       roomStatus.close(),
       players.close(),

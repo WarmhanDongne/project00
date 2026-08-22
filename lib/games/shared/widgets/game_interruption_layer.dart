@@ -22,6 +22,7 @@ class GameInterruptionLayer extends StatefulWidget {
     this.onContinue,
     this.onFinishNow,
     this.onExpired,
+    this.failureMessage,
     this.isSubmitting = false,
     this.scrimColor = const Color(0xE8000000),
   });
@@ -30,7 +31,13 @@ class GameInterruptionLayer extends StatefulWidget {
   final String currentUid;
   final GameInterruptionPresentation presentation;
   final Future<void> Function()? onVote;
-  final Future<void> Function()? onContinue;
+
+  /// 태블릿 진행자가 중단된 참가자를 제외하고 게임을 계속합니다.
+  ///
+  /// [onFinishNow]와 같은 `Future<bool>` 모양입니다. 컨트롤러가 실패를 예외가
+  /// 아니라 false로 알리므로(`_run`·`_runMenuCommand` 모두 catch합니다), 반환값을
+  /// 받지 않으면 실패를 감지할 방법이 없습니다.
+  final Future<bool> Function()? onContinue;
 
   /// 남은 인원이 부족해 계속할 수 없을 때 게임을 즉시 정상 종료합니다.
   ///
@@ -39,6 +46,17 @@ class GameInterruptionLayer extends StatefulWidget {
   /// 실패(false)면 버튼을 다시 켜 마감 뒤 자동 만료가 이어받게 합니다.
   final Future<bool> Function()? onFinishNow;
   final Future<bool> Function()? onExpired;
+
+  /// 즉시 종료 또는 제외하고 계속하기가 실패했을 때 레이어 안에 보여 줄 문구입니다.
+  ///
+  /// 이 레이어는 `Positioned.fill` + scrim으로 화면 전체를 덮으므로, 그 아래에
+  /// 그린 오류 표시는 사용자에게 보이지 않습니다. 실패를 알리려면 레이어 안에서
+  /// 그려야 합니다.
+  ///
+  /// null이면 실패해도 아무것도 표시하지 않습니다. 화면이 이미 다른 방법으로
+  /// 알리고 있으면(라이어스 포커 태블릿의 SnackBar) 넘기지 마세요.
+  final String? failureMessage;
+
   final bool isSubmitting;
   final Color scrimColor;
 
@@ -57,6 +75,15 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
   /// 즉시 종료 요청이 서버로 가 있는 중입니다.
   bool _isFinishingNow = false;
 
+  /// 제외하고 계속하기 요청이 서버로 가 있는 중입니다.
+  bool _isContinuing = false;
+
+  /// 이 중단에서 마지막으로 보낸 요청이 실패했습니다.
+  ///
+  /// 실패 문구를 화면 전체가 아니라 이 레이어 안에서 보여 주기 위한 상태입니다.
+  /// 다음 시도를 시작할 때와 중단이 바뀔 때 지웁니다.
+  bool _actionFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +99,8 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
       // 요청 때문에 다음 중단의 버튼이 영구 비활성으로 남습니다.
       _isConfirmingFinish = false;
       _isFinishingNow = false;
+      _isContinuing = false;
+      _actionFailed = false;
       _syncTimer();
     }
   }
@@ -129,7 +158,10 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
     if (_isFinishingNow) return;
     final handler = widget.onFinishNow;
     if (handler == null) return;
-    setState(() => _isFinishingNow = true);
+    setState(() {
+      _isFinishingNow = true;
+      _actionFailed = false;
+    });
     var succeeded = false;
     try {
       succeeded = await handler();
@@ -144,6 +176,34 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
       setState(() {
         _isFinishingNow = false;
         _isConfirmingFinish = false;
+        _actionFailed = true;
+      });
+    }
+  }
+
+  /// 태블릿 진행자의 `제외하고 계속하기`입니다.
+  ///
+  /// [_finishNow]와 같은 이유로 실패를 레이어 안에서 알립니다. 성공하면 서버가
+  /// 중단을 지우며 이 위젯이 사라지므로 잠금을 유지합니다.
+  Future<void> _continue() async {
+    if (_isContinuing) return;
+    final handler = widget.onContinue;
+    if (handler == null) return;
+    setState(() {
+      _isContinuing = true;
+      _actionFailed = false;
+    });
+    var succeeded = false;
+    try {
+      succeeded = await handler();
+    } catch (_) {
+      succeeded = false;
+    }
+    if (!mounted) return;
+    if (!succeeded) {
+      setState(() {
+        _isContinuing = false;
+        _actionFailed = true;
       });
     }
   }
@@ -267,9 +327,11 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                         label: '제외하고 계속하기',
                         isEmphasized: true,
                         onPressed:
-                            widget.isSubmitting || widget.onContinue == null
+                            widget.isSubmitting ||
+                                _isContinuing ||
+                                widget.onContinue == null
                             ? null
-                            : () => unawaited(widget.onContinue!()),
+                            : () => unawaited(_continue()),
                       ),
                     ] else ...[
                       const SizedBox(height: 8),
@@ -299,6 +361,15 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Color(0xFFCECECE)),
                         ),
+                    ],
+                    // 실패 안내는 버튼 분기 **밖**에 둡니다. 즉시 종료와
+                    // 제외하고 계속하기가 같은 자리에 같은 모양으로 알려야
+                    // 하고, 분기 안에 넣으면 둘 중 하나만 표시됩니다.
+                    if (_actionFailed && widget.failureMessage != null) ...[
+                      const SizedBox(height: 16),
+                      _InterruptionFailureNotice(
+                        message: widget.failureMessage!,
+                      ),
                     ],
                   ],
                 ),
@@ -373,6 +444,42 @@ class _InterruptionActionButton extends StatelessWidget {
         shadowColor: Colors.black,
       ),
       child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+/// 중단 레이어 안에서 실패를 알리는 문구입니다.
+///
+/// 이 레이어는 화면 전체를 덮으므로 SnackBar 외에는 바깥에서 알릴 방법이
+/// 없고, SnackBar는 몇 초 뒤 사라져 무엇이 실패했는지 남지 않습니다. 다시
+/// 시도할 수 있는 버튼 바로 아래에 남겨 두는 편이 읽힙니다.
+class _InterruptionFailureNotice extends StatelessWidget {
+  const _InterruptionFailureNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0x33FF6B6B),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0x66FF6B6B)),
+        ),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFFFFD8D8),
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            height: 1.4,
+          ),
+        ),
+      ),
     );
   }
 }
