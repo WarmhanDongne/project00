@@ -4,15 +4,15 @@
       "android": {
         "default": {
           "projectId": "project0000-ec01e",
-          "appId": "1:93097008048:android:ba00391987c6630dd49475",
+          "appId": "1:93097008048:android:0ccdec23053fc259d49475",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "ios": {
         "default": {
           "projectId": "project0000-ec01e",
-          "appId": "1:93097008048:ios:09b7ee6976bbf5cdd49475",
-          "uploadDebugSymbols": false,
+          "appId": "1:93097008048:ios:7cc378f1a02877ffd49475",
+          "uploadDebugSymbols": true,
           "fileOutput": "ios/Runner/GoogleService-Info.plist"
         }
       },
@@ -20,8 +20,8 @@
         "lib/firebase/firebase_options.dart": {
           "projectId": "project0000-ec01e",
           "configurations": {
-            "android": "1:93097008048:android:ba00391987c6630dd49475",
-            "ios": "1:93097008048:ios:09b7ee6976bbf5cdd49475",
+            "android": "1:93097008048:android:0ccdec23053fc259d49475",
+            "ios": "1:93097008048:ios:7cc378f1a02877ffd49475",
             "web": "1:93097008048:web:0f1a8474555be068d49475"
           }
         }
@@ -63,6 +63,19 @@
     "headers": [
       {
         "source": "/.well-known/assetlinks.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=300"
+          }
+        ]
+      },
+      {
+        "source": "/.well-known/apple-app-site-association",
         "headers": [
           {
             "key": "Content-Type",

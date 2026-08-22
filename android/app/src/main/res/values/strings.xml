@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 런처와 시스템 화면에 표시되는 앱 이름입니다.
+         스토어 등록 정보의 앱 이름과 같게 유지하세요. -->
+    <string name="app_name">모시겜</string>
+</resources>

@@ -54,22 +54,28 @@ List<Offset> playerCentersForBoard({
   }, growable: false);
 }
 
-/// 중심 좌표를 `player_layouts`에서 사용하는 슬롯 좌측 상단 좌표로 변환합니다.
-List<Offset> normalizedPlayerSlotTopLeftPositions({
+/// 자리 배치 화면 카드의 좌측 상단 정규화 좌표입니다.
+///
+/// 카드는 가로가 긴 직사각형이라 가로·세로 크기를 따로 받습니다. 궤도는
+/// [normalizedPlayerCenters]와 같은 **타원**입니다. 원형 궤도(=짧은 변 기준)로
+/// 두면 가로가 긴 태블릿에서 좌우가 비고 위아래는 좁아져, 12인처럼 카드가
+/// 많을 때 서로 겹칩니다.
+List<Offset> seatingCardTopLeftPositions({
   required int playerCount,
   required Size boardSize,
-  double slotSize = 160,
+  required Size cardSize,
 }) {
-  final centers = playerCentersForBoard(
-    playerCount: playerCount,
-    boardSize: boardSize,
-  );
-
-  return centers
+  return normalizedPlayerCenters(playerCount)
+      .map(
+        (normalized) => playerCenterFromNormalized(
+          normalizedCenter: normalized,
+          boardSize: boardSize,
+        ),
+      )
       .map(
         (center) => Offset(
-          (center.dx - slotSize / 2) / boardSize.width,
-          (center.dy - slotSize / 2) / boardSize.height,
+          (center.dx - cardSize.width / 2) / boardSize.width,
+          (center.dy - cardSize.height / 2) / boardSize.height,
         ),
       )
       .toList(growable: false);

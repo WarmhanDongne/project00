@@ -9,7 +9,7 @@ abstract final class AppSounds {
   /// 재생은 각 게임의 `sound/<game>_sounds.dart`가 이 값을 참조해
   /// `GameBackgroundMusic.start`에 넘깁니다. 어떤 게임에 전용 곡이 생기면
   /// **그 게임의 상수만** 새 파일로 바꾸면 됩니다.
-  static const background = 'assets/sounds/background.mp3';
+  static const background = 'assets/sounds/background.m4a';
 
   /// 카드가 한 장씩 날아갈 때마다 재생하는 짧은 효과음입니다.
   static const dealing = 'assets/sounds/dealing.mp3';

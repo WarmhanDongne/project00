@@ -584,6 +584,32 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   }
 }
 
+//=======================아이콘 색 입히기==============================
+/// 역할 아이콘에 입힐 색 행렬입니다. [t]가 1이면 원색, 0이면 옅은 회색조입니다.
+///
+/// ⚠️ **투명도를 [Opacity]로 따로 겹치지 않습니다.** 색 필터 위에 투명도를
+/// 겹치면 Impeller가 `SetInheritedOpacity ... CanAcceptOpacity returns false`로
+/// 경고를 쏟습니다 — 색 필터는 투명도를 물려받을 수 없습니다. 그래서 투명도까지
+/// 이 행렬의 알파 칸에 함께 넣어 **필터 한 겹**으로 끝냅니다.
+@visibleForTesting
+List<double> mafiaRoleIconTint(double t) {
+  // 사람 눈이 느끼는 밝기 비율입니다(회색조로 만들 때 씁니다).
+  const red = 0.2126;
+  const green = 0.7152;
+  const blue = 0.0722;
+  // 고르지 않은 아이콘은 옅게 그립니다.
+  const unselectedOpacity = 0.72;
+
+  double toColor(double gray, double identity) => gray + (identity - gray) * t;
+  final alpha = unselectedOpacity + (1 - unselectedOpacity) * t;
+  return <double>[
+    toColor(red, 1), toColor(green, 0), toColor(blue, 0), 0, 0, //
+    toColor(red, 0), toColor(green, 1), toColor(blue, 0), 0, 0, //
+    toColor(red, 0), toColor(green, 0), toColor(blue, 1), 0, 0, //
+    0, 0, 0, alpha, 0, //
+  ];
+}
+
 //=======================역할 한 칸==============================
 /// 아이콘 + 이름입니다. 확정(2026-08): **고르면 색이 들어오고, 고르지 않으면
 /// 회색**입니다. 이름도 고르면 검정, 아니면 회색입니다.
@@ -611,14 +637,6 @@ class _RoleTile extends StatelessWidget {
   /// 끌 수 없는 필수 신분인지입니다.
   final bool isRequired;
 
-  /// 색을 완전히 빼는 행렬입니다(회색조).
-  static const List<double> _grayscale = <double>[
-    0.2126, 0.7152, 0.0722, 0, 0, //
-    0.2126, 0.7152, 0.0722, 0, 0, //
-    0.2126, 0.7152, 0.0722, 0, 0, //
-    0, 0, 0, 1, 0, //
-  ];
-
   static const Duration _fade = Duration(milliseconds: 180);
 
   @override
@@ -644,15 +662,16 @@ class _RoleTile extends StatelessWidget {
               height: side,
               child: icon == null
                   ? const SizedBox.shrink()
-                  : AnimatedOpacity(
-                      opacity: selected ? 1 : 0.72,
+                  // 고른 상태·안 고른 상태 모두 같은 필터 한 겹을 유지합니다.
+                  // 겹 구조가 바뀌면 그림이 한 프레임 튑니다.
+                  : TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: selected ? 1 : 0),
                       duration: _fade,
-                      child: selected
-                          ? icon.image(fit: BoxFit.contain)
-                          : ColorFiltered(
-                              colorFilter: const ColorFilter.matrix(_grayscale),
-                              child: icon.image(fit: BoxFit.contain),
-                            ),
+                      builder: (context, t, child) => ColorFiltered(
+                        colorFilter: ColorFilter.matrix(mafiaRoleIconTint(t)),
+                        child: child,
+                      ),
+                      child: icon.image(fit: BoxFit.contain),
                     ),
             ),
             SizedBox(width: (labelGap - iconSize) * scale),

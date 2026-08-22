@@ -75,6 +75,17 @@ class LiarsPokerCommandService {
     }, retryTransientFailure: true);
   }
 
+  // 마감이 지난 턴을 태블릿(컨트롤러)이 강제로 해결합니다.
+  //
+  // 평소 타임아웃은 턴 플레이어 휴대폰이 처리하지만, 그 기기가 화면 잠금·
+  // 백그라운드로 멈추면 아무도 턴을 넘기지 못합니다. 이 명령이 그 백스톱입니다.
+  // 마감 전 호출은 서버가 {success: false, reason: notExpired}로 거절합니다.
+  Future<Map<String, dynamic>> forceTimeout({required String roomCode}) {
+    return _call('game_liars_poker_force_timeout', {
+      'roomCode': roomCode,
+    }, retryTransientFailure: true);
+  }
+
   // 카드를 펼쳐 최초 턴 타이머 시작
   Future<Map<String, dynamic>> readyTurn({required String roomCode}) {
     return _call('game_liars_poker_ready_turn', {

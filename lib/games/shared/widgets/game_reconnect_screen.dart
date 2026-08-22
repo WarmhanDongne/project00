@@ -38,10 +38,10 @@ class GameReconnectScreen extends StatefulWidget {
 
   /// 조이스틱 그림 자리입니다. 파일을 넣으면 자동으로 보입니다.
   static const String defaultIllustrationAsset =
-      'assets/images/reconnect/game_controller.png';
+      'assets/images/reconnect/game_controller.webp';
 
   /// 별 그림 자리입니다. 파일을 넣으면 자동으로 보입니다.
-  static const String defaultSparkleAsset = 'assets/images/reconnect/star.png';
+  static const String defaultSparkleAsset = 'assets/images/reconnect/star.webp';
 
   /// 이 시간이 지나도 접속되지 않으면 아래 기다림 표시가 **홈으로 버튼**으로
   /// 바뀝니다(확정 2026-08).

@@ -265,6 +265,7 @@ class MafiaPhoneActionButton extends StatelessWidget {
     this.top = MafiaPhoneDesign.buttonTop,
     this.colorlessWhenDisabled = false,
     this.labelColor,
+    this.backgroundColor,
   });
 
   final String label;
@@ -277,8 +278,14 @@ class MafiaPhoneActionButton extends StatelessWidget {
   /// 활성됩니다. 기본값(false)은 기존처럼 40% 불투명입니다.
   final bool colorlessWhenDisabled;
 
-  /// 글자 색을 덮어씁니다(예: 토론 조기 종료의 빨간 `n/m`).
+  /// 글자 색을 덮어씁니다(예: 토론 조기 종료의 흰 `n/m`).
   final Color? labelColor;
+
+  /// 배경색을 덮어씁니다(예: 토론 종료에 동의한 뒤의 검은 버튼).
+  ///
+  /// 비활성이어도 이 색을 그대로 씁니다. 눌러서 상태가 바뀐 버튼과, 아직
+  /// 누를 수 없는 버튼은 다르게 보여야 합니다.
+  final Color? backgroundColor;
 
   /// 시안 기준 top입니다. 기본값은 공용 버튼 위치입니다.
   final double top;
@@ -305,18 +312,23 @@ class MafiaPhoneActionButton extends StatelessWidget {
                   onTap: enabled ? onTap : null,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: enabled
-                          ? const Color(0xFFECEBEB)
-                          : colorlessWhenDisabled
-                          ? Colors.transparent
-                          : const Color(0x66ECEBEB),
+                      color:
+                          backgroundColor ??
+                          (enabled
+                              ? const Color(0xFFECEBEB)
+                              : colorlessWhenDisabled
+                              ? Colors.transparent
+                              : const Color(0x66ECEBEB)),
                       borderRadius: BorderRadius.circular(
                         MafiaPhoneDesign.buttonRadius * scale,
                       ),
                       // 배경과 버튼이 구분되게 그림자를 깔습니다(확정 2026-08).
                       // 무색 상태(대상을 고르기 전)에는 버튼이 없는 것처럼
                       // 보여야 하므로 그림자도 두지 않습니다.
-                      boxShadow: enabled || !colorlessWhenDisabled
+                      boxShadow:
+                          enabled ||
+                              backgroundColor != null ||
+                              !colorlessWhenDisabled
                           ? [
                               BoxShadow(
                                 color: const Color(0x73000000),

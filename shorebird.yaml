@@ -1,0 +1,17 @@
+# This file is used to configure the Shorebird updater used by your app.
+# Learn more at https://docs.shorebird.dev
+# This file does not contain any sensitive information and should be checked into version control.
+
+# Your app_id is the unique identifier assigned to your app.
+# It is used to identify your app when requesting patches from Shorebird's servers.
+# It is not a secret and can be shared publicly.
+app_id: 80ba3e1b-b2c8-4f7a-98c7-0ce41923f413
+
+# auto_update controls if Shorebird should automatically update in the background on launch.
+# If auto_update: false, you will need to use package:shorebird_code_push to trigger updates.
+# https://pub.dev/packages/shorebird_code_push
+# 이 앱은 ShorebirdPatchGate(lib/core/update/shorebird_patch_gate.dart)에서
+# package:shorebird_code_push로 직접 확인·내려받기를 합니다. 자동 업데이트를
+# 켜 두면 네이티브 업데이터가 실행 시 몰래 먼저 받아 가서, 패치 화면과
+# 건너뛰기 버튼이 무의미해지고 두 경로가 겹칩니다.
+auto_update: false

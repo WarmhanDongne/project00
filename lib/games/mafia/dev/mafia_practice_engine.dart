@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:project00/games/mafia/mafia_flow_config.dart';
 import 'package:project00/games/mafia/models/mafia_composition.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/models/mafia_state_models.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_fakes.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
@@ -645,6 +646,8 @@ class MafiaPracticeEngine {
     _morningResult = {
       'deadUids': deadUids.toList(),
       'savedCount': savedCount,
+      // 서버와 같은 힌트입니다. 태블릿이 '토론을 시작합니다'를 건너뜁니다.
+      'endsGame': _checkWinner(apply: false),
       'resolvedAt': _now,
     };
     _phase = 'morning';
@@ -653,7 +656,12 @@ class MafiaPracticeEngine {
     _publish();
     // 확정: '아침이 되었습니다'(2.5초) → 사망자 발표(8초) →
     // '토론을 시작합니다'(2.5초) 뒤 낮으로.
-    _schedulePhase(MafiaTabletMorningSequence.totalHold, completeMorning);
+    _schedulePhase(
+      MafiaTabletMorningSequence.holdOf(
+        MafiaMorningResult.fromMap(_morningResult!),
+      ),
+      completeMorning,
+    );
   }
 
   /// 게임 중에 신분을 바꿉니다(교주의 전향, 도둑의 절도).
@@ -727,6 +735,8 @@ class MafiaPracticeEngine {
       'executedUid': executed,
       'tie': tie,
       'abstainCount': max(0, eligible - _votes.length),
+      // 서버와 같은 힌트입니다. 태블릿이 '밤이 되었습니다'를 건너뜁니다.
+      'endsGame': _checkWinner(apply: false),
       'resolvedAt': _now,
     };
     _phase = 'voteResult';
@@ -734,7 +744,12 @@ class MafiaPracticeEngine {
     _votes.clear();
     _publish();
     // 확정: 개표(4초) → 처형 발표(9초) → '밤이 되었습니다'(2.5초) 뒤 다음 밤으로.
-    _schedulePhase(MafiaTabletVoteResultSequence.totalHold, completeVoteResult);
+    _schedulePhase(
+      MafiaTabletVoteResultSequence.holdOf(
+        MafiaVoteResult.fromMap(_voteResult!),
+      ),
+      completeVoteResult,
+    );
   }
 
   /// 이 처형으로 단독 승리한 사람입니다(광대·처형자).
@@ -761,10 +776,18 @@ class MafiaPracticeEngine {
     _private[uid]?['spectatorRoles'] = Map<String, Object?>.from(_roles);
   }
 
-  bool _checkWinner() {
+  /// 승패를 판정합니다. 끝났으면 true입니다.
+  ///
+  /// [apply]가 false면 **끝내지 않고 판정만** 합니다. 발표에 담는
+  /// `endsGame` 힌트(서버의 `mafiaAnnouncementEndsGame`과 같은 값)를 만들 때
+  /// 씁니다.
+  bool _checkWinner({bool apply = true}) {
+    bool finish(String winner, List<String> winnerUids) =>
+        apply ? _finish(winner, winnerUids) : true;
+
     // 처형으로 정해진 단독 승리를 가장 먼저 봅니다(광대·처형자).
     if (_pendingNeutralWinUids.isNotEmpty) {
-      return _finish('neutral', _pendingNeutralWinUids.toList());
+      return finish('neutral', _pendingNeutralWinUids.toList());
     }
 
     var mafia = 0;
@@ -784,7 +807,7 @@ class MafiaPracticeEngine {
     final others = alive - mafia;
 
     if (cult > 0 && cult == alive) {
-      return _finish(
+      return finish(
         'neutral',
         _uids
             .where(
@@ -796,13 +819,13 @@ class MafiaPracticeEngine {
       );
     }
     if (killers > 0 && killers == alive) {
-      return _finish('neutral', _aliveUids);
+      return finish('neutral', _aliveUids);
     }
     // 판을 뒤집을 사람이 남아 있으면 진영 승리가 확정되지 않습니다.
     if (cult > 0 || killers > 0) return false;
 
     if (mafia == 0) {
-      return _finish(
+      return finish(
         'citizen',
         _uids
             .where((uid) => _roleOf(uid)?.faction == MafiaFaction.citizen)
@@ -810,7 +833,7 @@ class MafiaPracticeEngine {
       );
     }
     if (mafia >= others) {
-      return _finish(
+      return finish(
         'mafia',
         _uids
             .where((uid) => _roleOf(uid)?.faction == MafiaFaction.mafia)

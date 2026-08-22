@@ -1,0 +1,13 @@
+# 릴리즈 업로드 키 설정 예시입니다.
+# 이 파일을 android/key.properties 로 복사한 뒤 실제 값을 채우세요.
+# key.properties 와 keystore 파일(.jks)은 .gitignore 대상입니다 — 커밋하지 마세요.
+#
+# keystore 생성:
+#   keytool -genkey -v -keystore ~/upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# storeFile 은 android/ 디렉터리 기준 상대경로 또는 절대경로입니다.
+storeFile=/Users/사용자명/upload-keystore.jks
+storePassword=키스토어_비밀번호
+keyAlias=upload
+keyPassword=키_비밀번호
