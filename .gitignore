@@ -41,3 +41,6 @@ main_loby_and_game_modal/
 docs/
 design/
 work-items/
+
+# AI assistant local context
+CLAUDE.md
