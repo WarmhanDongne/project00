@@ -84,6 +84,13 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 이미 서버에 넘긴 단계입니다. 같은 단계를 두 번 넘기지 않게 막습니다.
   String? _advancedPhaseKey;
   Timer? _deadlineTimer;
+
+  /// 진행 명령이 실패·드롭됐을 때 다시 시도하는 타이머입니다.
+  ///
+  /// 아침·개표 같은 발표 단계는 마감이 없어 [_scheduleDeadlineCheck]가 아무
+  /// 일도 하지 않습니다. 이 타이머가 없으면 한 번 실패한 단계는 영원히
+  /// 넘어가지 않습니다(진행자가 수동 재시작해야 복구).
+  Timer? _advanceRetryTimer;
   Timer? _stageTimer;
 
   //=======================밤 늑대 하울링 (확정 2026-08)==============================
@@ -120,6 +127,15 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
   static const Duration _nightNoticeDelay = Duration(seconds: 10);
   static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
+
+  /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
+  ///
+  /// 서버가 '아직 마감 전'이라고 답한 경우에도 이 간격으로 다시 물어보므로,
+  /// 시계 오차만큼만 짧게 반복하고 마감이 지나면 곧바로 넘어갑니다.
+  static const Duration _advanceRetryDelay = Duration(seconds: 3);
+
+  /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
+  static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
   Timer? _nightNoticeTimer;
   bool _showsNightNotice = false;
   bool _nightNoticeScheduled = false;
@@ -159,6 +175,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   @override
   void dispose() {
     _deadlineTimer?.cancel();
+    _advanceRetryTimer?.cancel();
     _stageTimer?.cancel();
     _howlTimer?.cancel();
     _nightNoticeTimer?.cancel();
@@ -302,6 +319,18 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     final deadline = game.turnDeadlineAt;
     final stage = _stage;
+    // 서버 시각 보정이 도착하기 전의 '마감 지남' 판단은 기기 시계 오차일 수
+    // 있습니다. 그 상태로 진행 명령을 보내면 서버가 아직 마감 전이라고
+    // 응답하고, 그 단계는 재시도 없이 멈춥니다([ServerClock.hasSynced] 주석
+    // 참고). 보정이 올 때까지 판단을 미룹니다.
+    if (deadline != null && !ServerClock.hasSynced) {
+      _deadlineTimer = Timer(_clockSyncRecheck, () {
+        if (!mounted) return;
+        final current = _controller;
+        if (current != null) _scheduleDeadlineCheck(current);
+      });
+      return;
+    }
     // 역할 확인의 제한시간(서버 1분)이 끝나면 곧바로 넘기지 않고 같은
     // '밤이 되었습니다' 안내를 거칩니다.
     if (stage == MafiaTabletStage.roleDeal) {
@@ -344,10 +373,17 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (command == null) return;
     unawaited(
       command().then((success) {
-        // 실패하면 다시 시도할 수 있게 표시를 풀어 줍니다.
-        if (!success && mounted && _advancedPhaseKey == key) {
-          _advancedPhaseKey = null;
-        }
+        if (success || !mounted || _advancedPhaseKey != key) return;
+        // 실패·드롭·'아직 마감 전' 응답이면 표시를 풀고 다시 시도합니다.
+        // 다른 명령이 진행 중이라 드롭된 경우(commandInFlight)와 발표 단계처럼
+        // 마감이 없어 재시도 경로가 없는 경우를 모두 이 타이머가 받습니다.
+        _advancedPhaseKey = null;
+        _advanceRetryTimer?.cancel();
+        _advanceRetryTimer = Timer(_advanceRetryDelay, () {
+          if (!mounted || _stage != stage) return;
+          final current = _controller;
+          if (current != null) _advance(current, stage);
+        });
       }),
     );
   }

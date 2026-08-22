@@ -20,6 +20,7 @@ import 'package:project00/games/final_call/screens/tablet/tablet_game_overlay.da
 import 'package:project00/games/final_call/services/final_call_service.dart';
 import 'package:project00/games/final_call/sound/final_call_sounds.dart';
 import 'package:project00/games/final_call/widgets/tablet/result_overlay.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_announcement_layer.dart';
@@ -58,6 +59,12 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   int? completedRevealRound;
   bool resultRevealSignalInFlight = false;
   Timer? closingExitTimer;
+
+  /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
+  static const Duration _advanceRetryDelay = Duration(seconds: 3);
+
+  /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
+  static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
 
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic backgroundMusic = GameBackgroundMusic();
@@ -154,7 +161,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
       turnTimer?.cancel();
       phaseTimer?.cancel();
       closingExitTimer ??= Timer(FinalCallFlowTiming.closingRouteDelay, () {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted) exitGameRoute(context);
       });
       setState(() {});
       return;
@@ -163,14 +170,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     final deadline = game.turnDeadlineAt;
     if (deadline != null && deadline != scheduledDeadline) {
       scheduledDeadline = deadline;
-      turnTimer?.cancel();
-      final delay = Duration(
-        milliseconds: (deadline - ServerClock.nowMillis()).clamp(0, 30000),
-      );
-      turnTimer = Timer(delay, () async {
-        if (!mounted || controller?.turnDeadlineAt != deadline) return;
-        await controller?.timeoutTurn();
-      });
+      _scheduleTurnTimeout(deadline);
     }
 
     if (enteredPhase && game.phase != 'roundResult') phaseTimer?.cancel();
@@ -227,6 +227,53 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   //
   // 카드 순차 공개와 최하위 생명 소멸이 모두 끝난 뒤에만 다음 라운드를
   // 시작합니다. 고정 타이머로 연출 중 화면이 바뀌는 문제를 막습니다.
+  // ============================================================================
+  // 턴 마감과 라운드 전환 — 실패하면 반드시 다시 시도합니다
+  // ============================================================================
+  //
+  // 이 두 명령은 게임을 앞으로 밀어 주는 유일한 주체입니다(휴대폰 타이머는
+  // 표시만 하고 서버에는 마감을 강제하는 스케줄러가 없습니다). 한 번 보내고
+  // 잊으면 다음 두 경우에 게임이 그 자리에서 영구히 멈춥니다.
+  //
+  // 1. 다른 명령이 진행 중이어서 컨트롤러가 조용히 드롭한 경우
+  // 2. 일시적인 연결 문제나 중단(interruption)으로 서버가 거절한 경우
+
+  /// 턴 마감 시각에 맞춰 타임아웃을 예약합니다.
+  void _scheduleTurnTimeout(int deadline) {
+    turnTimer?.cancel();
+    // 보정 전 계산은 기기 시계 오차일 수 있어 마감 판단을 미룹니다.
+    if (!ServerClock.hasSynced) {
+      turnTimer = Timer(_clockSyncRecheck, () {
+        if (!mounted || controller?.turnDeadlineAt != deadline) return;
+        _scheduleTurnTimeout(deadline);
+      });
+      return;
+    }
+    turnTimer = Timer(ServerClock.remainingUntil(deadline), () async {
+      if (!mounted || controller?.turnDeadlineAt != deadline) return;
+      final success = await controller?.timeoutTurn() ?? false;
+      // 아직 같은 턴이면 다시 시도합니다.
+      if (success || !mounted || controller?.turnDeadlineAt != deadline) return;
+      _scheduleRetry(() => _scheduleTurnTimeout(deadline));
+    });
+  }
+
+  /// 라운드 결과 공개가 끝난 뒤 다음 라운드를 시작합니다.
+  void _advanceRound() async {
+    if (!mounted || controller?.phase != 'roundResult') return;
+    final success = await controller?.nextRound() ?? false;
+    if (success || !mounted || controller?.phase != 'roundResult') return;
+    _scheduleRetry(_advanceRound);
+  }
+
+  /// 진행 명령 재시도를 예약합니다(phaseTimer를 공유해 중복 예약을 막습니다).
+  void _scheduleRetry(void Function() action) {
+    phaseTimer?.cancel();
+    phaseTimer = Timer(_advanceRetryDelay, () {
+      if (mounted) action();
+    });
+  }
+
   void _handleRoundRevealCompleted() {
     final game = controller;
     if (game == null ||
@@ -243,10 +290,10 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     }
     if (game.phase != 'roundResult') return;
     phaseTimer?.cancel();
-    phaseTimer = Timer(FinalCallFlowTiming.roundResultAfterDelay, () async {
-      if (!mounted || controller?.phase != 'roundResult') return;
-      await controller?.nextRound();
-    });
+    phaseTimer = Timer(
+      FinalCallFlowTiming.roundResultAfterDelay,
+      _advanceRound,
+    );
   }
 
   // ---------------------------------------------------------------------------

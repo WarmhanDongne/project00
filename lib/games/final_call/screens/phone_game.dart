@@ -10,6 +10,7 @@ import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/final_call/final_call_flow_config.dart';
 import 'package:project00/games/final_call/providers/final_call_game_state.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
 import 'package:project00/games/final_call/controllers/final_call_controller.dart';
@@ -135,7 +136,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       if (hasScheduledManualExit) return;
       hasScheduledManualExit = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted) exitGameRoute(context);
       });
       return;
     }
