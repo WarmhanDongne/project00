@@ -511,7 +511,10 @@ test("투표를 시작해도 밤 선택·표가 초기화된다 (기존 규칙 �
 
 // ===== 제출 즉시 조사 결과 =====
 
-import {recordImmediateInvestigation} from "../lib/mafia/game.js";
+import {
+  finalizeMafiaInvestigations,
+  recordImmediateInvestigation,
+} from "../lib/mafia/game.js";
 
 test("경찰은 제출한 순간 결과를 받는다", () => {
   const game = makeGame(SIX);
@@ -521,16 +524,32 @@ test("경찰은 제출한 순간 결과를 받는다", () => {
   assert.equal(game.private.p1.investigations.r1.verdict, "마피아");
 });
 
-test("탐정의 즉시 결과는 잠정값이고 밤 해결이 최종값으로 덮어쓴다", () => {
+// 확정(2026-08): 추적 결과는 **제출 즉시 알려 주지 않습니다.**
+//
+// 대상이 나보다 늦게 고르면 그 순간에는 "방문 없음"이고, 그 값을 보여 주면
+// 거짓말이 됩니다(2026-08 실기기에서 탐정 결과가 이상하다는 지적). 그래서 행동
+// 구간이 닫혀 모든 제출이 확정된 뒤(마무리 구간 시작)에 처음 알려 줍니다.
+test("탐정은 제출 즉시 결과를 받지 않는다", () => {
   const roles = {...SIX, c3: "detective"};
   const game = makeGame(roles);
   // 탐정이 먼저 제출한 시점에는 마피아가 아직 아무도 안 골랐습니다.
   game.server.nightActions = {c3: "m1"};
   recordImmediateInvestigation(game, "c3", "m1", 1000);
-  assert.equal(game.private.c3.investigations.r1.verdict, "방문 없음");
+  assert.equal(game.private.c3.investigations, undefined);
+});
 
-  // 그 뒤 마피아가 c1을 고르고 밤이 끝나면 최종값이 덮어씁니다.
+test("탐정 결과는 행동이 모두 끝난 뒤 최종값으로 생긴다", () => {
+  const roles = {...SIX, c3: "detective"};
+  const game = makeGame(roles);
+  game.server.nightActions = {c3: "m1"};
+  recordImmediateInvestigation(game, "c3", "m1", 1000);
+
+  // 그 뒤 마피아가 c1을 골랐습니다.
   game.server.nightActions.m1 = "c1";
+  finalizeMafiaInvestigations(game);
+  assert.equal(game.private.c3.investigations.r1.verdict, "c1");
+
+  // 밤 해결도 같은 값을 유지합니다.
   resolveMafiaNight(game, 2000);
   assert.equal(game.private.c3.investigations.r1.verdict, "c1");
 });

@@ -27,6 +27,12 @@ abstract final class MafiaCopy {
   /// 사망자 발표가 끝나고 토론 화면으로 넘어가기 전에 띄웁니다.
   static const String discussionNotice = '토론을 시작합니다';
 
+  /// 모두가 신분을 확인한 뒤, 첫 밤으로 넘어가기 전에 띄웁니다.
+  static const String gameStartNotice = '게임을 시작하겠습니다';
+
+  /// 토론이 과반수 투표로 끝났을 때 띄웁니다(확정 2026-08).
+  static const String discussionSkippedNotice = '토론이 투표로 종료되었습니다';
+
   /// 밤으로 넘어가기 전에 띄웁니다. 이 안내 뒤에 배경이 밤으로 바뀝니다.
   static const String nightNotice = '밤이 되었습니다';
 
@@ -55,6 +61,15 @@ abstract final class MafiaCopy {
   static List<String> executedBeats(String nickname) => [
     '$nickname님이',
     '처형되었습니다',
+  ];
+
+  /// 기자의 취재가 성공한 아침입니다. 대상의 카드가 뒤집혀 공개됩니다.
+  ///
+  /// 처형 공개와 **같은 연출**을 씁니다. 다른 점은 그 사람이 죽지 않는다는
+  /// 것뿐입니다(확정 2026-08).
+  static const List<String> exposureBeats = [
+    '기자가 어젯밤에 취재에 성공했습니다',
+    '대상의 신분이 공개됩니다',
   ];
 
   /// 동표로 아무도 처형되지 않았습니다.

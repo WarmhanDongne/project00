@@ -264,6 +264,7 @@ class MafiaPhoneActionButton extends StatelessWidget {
     required this.enabled,
     this.top = MafiaPhoneDesign.buttonTop,
     this.colorlessWhenDisabled = false,
+    this.hiddenWhenDisabled = false,
     this.labelColor,
     this.backgroundColor,
   });
@@ -277,6 +278,12 @@ class MafiaPhoneActionButton extends StatelessWidget {
   /// 대상을 고르기 전에는 버튼이 없는 것처럼 보이고, 고르면 색이 생기며
   /// 활성됩니다. 기본값(false)은 기존처럼 40% 불투명입니다.
   final bool colorlessWhenDisabled;
+
+  /// 비활성일 때 버튼을 **아예 감춥니다**(확정 2026-08: 낮 투표 화면).
+  ///
+  /// 아무도 고르지 않았으면 누를 것이 없으니 보이지 않는 편이 낫습니다. 자리를
+  /// 그대로 두고 투명하게만 만들어, 고른 순간 같은 자리에 떠오릅니다.
+  final bool hiddenWhenDisabled;
 
   /// 글자 색을 덮어씁니다(예: 토론 조기 종료의 흰 `n/m`).
   final Color? labelColor;
@@ -297,6 +304,10 @@ class MafiaPhoneActionButton extends StatelessWidget {
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
 
+        // 감출 버튼은 자리만 남기고 투명하게 둡니다. 눌리지도 않고 읽히지도
+        // 않아야 하므로 IgnorePointer와 Semantics 제외를 함께 씁니다.
+        final hidden = hiddenWhenDisabled && !enabled;
+
         return Stack(
           children: [
             Positioned(
@@ -304,53 +315,56 @@ class MafiaPhoneActionButton extends StatelessWidget {
               top: MafiaPhoneDesign.top(size, top),
               width: MafiaPhoneDesign.contentWidth * scale,
               height: MafiaPhoneDesign.buttonHeight * scale,
-              child: Semantics(
-                button: true,
-                enabled: enabled,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: enabled ? onTap : null,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color:
-                          backgroundColor ??
-                          (enabled
-                              ? const Color(0xFFECEBEB)
-                              : colorlessWhenDisabled
-                              ? Colors.transparent
-                              : const Color(0x66ECEBEB)),
-                      borderRadius: BorderRadius.circular(
-                        MafiaPhoneDesign.buttonRadius * scale,
+              child: _MafiaButtonVisibility(
+                hidden: hidden,
+                child: Semantics(
+                  button: true,
+                  enabled: enabled,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: enabled ? onTap : null,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color:
+                            backgroundColor ??
+                            (enabled
+                                ? const Color(0xFFECEBEB)
+                                : colorlessWhenDisabled
+                                ? Colors.transparent
+                                : const Color(0x66ECEBEB)),
+                        borderRadius: BorderRadius.circular(
+                          MafiaPhoneDesign.buttonRadius * scale,
+                        ),
+                        // 배경과 버튼이 구분되게 그림자를 깔습니다(확정 2026-08).
+                        // 무색 상태(대상을 고르기 전)에는 버튼이 없는 것처럼
+                        // 보여야 하므로 그림자도 두지 않습니다.
+                        boxShadow:
+                            enabled ||
+                                backgroundColor != null ||
+                                !colorlessWhenDisabled
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0x73000000),
+                                  blurRadius: 10 * scale,
+                                  offset: Offset(0, 5 * scale),
+                                ),
+                              ]
+                            : null,
                       ),
-                      // 배경과 버튼이 구분되게 그림자를 깔습니다(확정 2026-08).
-                      // 무색 상태(대상을 고르기 전)에는 버튼이 없는 것처럼
-                      // 보여야 하므로 그림자도 두지 않습니다.
-                      boxShadow:
-                          enabled ||
-                              backgroundColor != null ||
-                              !colorlessWhenDisabled
-                          ? [
-                              BoxShadow(
-                                color: const Color(0x73000000),
-                                blurRadius: 10 * scale,
-                                offset: Offset(0, 5 * scale),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          color:
-                              labelColor ??
-                              (enabled
-                                  ? const Color(0xFF212730)
-                                  : colorlessWhenDisabled
-                                  ? const Color(0x33ECEBEB)
-                                  : const Color(0x66212730)),
-                          fontSize: 32 * scale,
-                          fontWeight: FontWeight.w700,
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color:
+                                labelColor ??
+                                (enabled
+                                    ? const Color(0xFF212730)
+                                    : colorlessWhenDisabled
+                                    ? const Color(0x33ECEBEB)
+                                    : const Color(0x66212730)),
+                            fontSize: 32 * scale,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -361,6 +375,31 @@ class MafiaPhoneActionButton extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// 버튼을 부드럽게 감추고 드러냅니다.
+///
+/// 감출 때는 자리를 남긴 채 투명하게만 만듭니다. 자리에서 빼면 다른 요소가
+/// 밀려 화면이 흔들립니다.
+class _MafiaButtonVisibility extends StatelessWidget {
+  const _MafiaButtonVisibility({required this.hidden, required this.child});
+
+  final bool hidden;
+  final Widget child;
+
+  static const Duration _fade = Duration(milliseconds: 200);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: hidden ? 0 : 1,
+      duration: _fade,
+      child: ExcludeSemantics(
+        excluding: hidden,
+        child: IgnorePointer(ignoring: hidden, child: child),
+      ),
     );
   }
 }

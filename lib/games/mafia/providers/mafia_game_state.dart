@@ -28,6 +28,10 @@ class MafiaGameState {
     required this.nightSubmittedCount,
     required this.nightActorCount,
     required this.nightActionCue,
+    required this.nightStage,
+    required this.nightStageActorCount,
+    required this.nightStageSubmittedCount,
+    required this.dayEndReason,
     required this.discussionSkipCount,
     required this.voteSubmittedCount,
     required this.voteSubmittedUids,
@@ -67,6 +71,10 @@ class MafiaGameState {
     nightSubmittedCount: 0,
     nightActorCount: 0,
     nightActionCue: null,
+    nightStage: null,
+    nightStageActorCount: 0,
+    nightStageSubmittedCount: 0,
+    dayEndReason: null,
     discussionSkipCount: 0,
     voteSubmittedCount: 0,
     voteSubmittedUids: <String>[],
@@ -120,6 +128,26 @@ class MafiaGameState {
   /// 태블릿이 이 신호가 바뀔 때 그 직업의 효과음을 냅니다
   /// ([MafiaNightActionCue]). 아무도 제출하지 않았으면 null입니다.
   final MafiaNightActionCue? nightActionCue;
+
+  //=======================밤의 두 구간==============================
+  /// 밤의 어느 구간인지입니다 — `block` · `action` · `wrapUp`.
+  ///
+  /// 확정(2026-08): 밤은 **능력을 막는 역할(마담)이 먼저** 움직이고, 그 판정이
+  /// 끝난 뒤 나머지가 움직입니다. 마지막 `wrapUp`은 아무도 고를 수 없는
+  /// 10초로, 아침을 기다리는 시간입니다. 이 빌드가 모르는 값이면 null입니다.
+  final String? nightStage;
+
+  /// 이번 구간에 행동해야 하는 인원수입니다.
+  final int nightStageActorCount;
+
+  /// 이번 구간에 제출한 인원수입니다.
+  final int nightStageSubmittedCount;
+
+  /// 낮 토론이 끝난 이유입니다 — `vote`면 과반수 투표로 끝났습니다.
+  ///
+  /// 이 값이 `vote`가 되면 낮 마감이 짧게 줄어들고, 태블릿이 "토론이 투표로
+  /// 종료되었습니다" 안내를 띄운 뒤 투표로 넘어갑니다.
+  final String? dayEndReason;
 
   /// 토론 조기 종료에 동의한 인원수입니다. 버튼이 `n/m`으로 표시합니다.
   final int discussionSkipCount;
@@ -204,6 +232,10 @@ class MafiaGameState {
     List<String>? roleRevealedUids,
     int? nightSubmittedCount,
     int? nightActorCount,
+    String? nightStage,
+    int? nightStageActorCount,
+    int? nightStageSubmittedCount,
+    String? dayEndReason,
     MafiaNightActionCue? nightActionCue,
     int? discussionSkipCount,
     int? voteSubmittedCount,
@@ -250,6 +282,12 @@ class MafiaGameState {
       ),
       nightSubmittedCount: nightSubmittedCount ?? this.nightSubmittedCount,
       nightActorCount: nightActorCount ?? this.nightActorCount,
+      // 구간·토론 종료 이유는 **서버가 지우면 함께 사라져야** 합니다. 그래서
+      // `?? this.` 로 이어 두지 않고 받은 값을 그대로 씁니다.
+      nightStage: nightStage,
+      nightStageActorCount: nightStageActorCount ?? 0,
+      nightStageSubmittedCount: nightStageSubmittedCount ?? 0,
+      dayEndReason: dayEndReason,
       nightActionCue: nightActionCue ?? this.nightActionCue,
       discussionSkipCount: discussionSkipCount ?? this.discussionSkipCount,
       voteSubmittedCount: voteSubmittedCount ?? this.voteSubmittedCount,

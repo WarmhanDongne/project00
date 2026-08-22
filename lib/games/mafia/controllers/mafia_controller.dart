@@ -83,9 +83,16 @@ class MafiaController extends Notifier<MafiaGameState> {
   /// 승자가 정해져 정상적으로 끝났는지입니다.
   ///
   /// 수동 종료·인원 부족은 '나가야 하는 종료'라 결과 화면을 띄우지 않습니다.
+  /// 승부가 나서 끝난 판인지입니다(결과 화면을 보여 줄지의 기준).
+  ///
+  /// ⚠️ **중립 단독 승리(`neutralWin`)도 정상 결과입니다.** 이 값이 빠져 있어
+  /// 광대·처형자·연쇄살인마가 이기면 휴대폰이 결과 화면을 만들지 않고 로비로
+  /// 튕겼습니다(2026-08). 포스터는 이미 준비돼 있었습니다.
   bool get isNaturalResult =>
       isFinished &&
-      (finishReason == 'citizenWin' || finishReason == 'mafiaWin');
+      (finishReason == 'citizenWin' ||
+          finishReason == 'mafiaWin' ||
+          finishReason == 'neutralWin');
 
   //=======================플레이어==============================
   List<MafiaPlayer> get orderedPlayers =>
@@ -130,6 +137,30 @@ class MafiaController extends Notifier<MafiaGameState> {
 
   /// 밤에 대상을 골라야 하는 역할인지입니다.
   bool get actsAtNight => myRole?.actsAtNight ?? false;
+
+  //=======================밤의 두 구간==============================
+  /// 밤의 어느 구간인지입니다. 서버가 보내지 않으면(구버전) null입니다.
+  String? get nightStage => state.nightStage;
+
+  /// 지금 이 구간에 내가 고를 수 있는지입니다.
+  ///
+  /// 확정(2026-08): 앞 구간(`block`)에는 **능력을 막는 역할만** 움직입니다.
+  /// 마지막 `wrapUp`은 아무도 고를 수 없습니다. 서버 `canActInNightStage`와
+  /// 같은 규칙입니다 — 여기서 막아 두지 않으면 눌러도 거절만 돌아옵니다.
+  bool get canActInNightStage {
+    final stage = nightStage;
+    // 구간을 모르는 서버(구버전)에서는 예전처럼 그냥 고를 수 있습니다.
+    if (stage == null) return true;
+    if (stage == 'wrapUp') return false;
+    if (stage == 'block') return myRole?.blocksAbility ?? false;
+    return true;
+  }
+
+  /// 이번 밤에 내 차례가 아직 오지 않았는지입니다(대기 화면으로 보냅니다).
+  bool get nightStageClosed => !canActInNightStage;
+
+  /// 낮 토론이 과반수 투표로 끝났는지입니다.
+  bool get isDayEndedByVote => state.dayEndReason == 'vote';
 
   /// 내가 이번 밤에 고른 대상입니다. 아직 안 골랐으면 null입니다.
   String? get nightTargetUid => state.nightTargetUid;
@@ -179,6 +210,17 @@ class MafiaController extends Notifier<MafiaGameState> {
 
   /// 동료가 고른 대상입니다. 마피아끼리 서로의 선택을 봅니다.
   Set<String> get allySelectedUids => state.allySelections.values.toSet();
+
+  /// 서로를 아는 동료들입니다(마피아·스파이·마담·도둑·교단).
+  ///
+  /// 서버가 그 사람의 private에만 넣어 주는 값입니다. **이 명단을 어디엔가
+  /// 보여 주지 않으면 스파이처럼 밤에 하는 일이 없는 역할은 누가 마피아인지
+  /// 끝까지 알 수 없습니다**(2026-08). 지금은 신분 카드의 안내 한 줄에 적습니다
+  /// — 카드는 본인만 열어 보는 자리라 옆 사람에게 새지 않습니다.
+  List<MafiaPlayer> get allyPlayers => [
+    for (final allyUid in state.allyUids)
+      if (players[allyUid] != null) players[allyUid]!,
+  ];
 
   /// 이번 라운드의 조사·추적 결과입니다. 라운드가 지나면 보여주지 않습니다.
   MafiaInvestigation? get currentInvestigation {
@@ -288,7 +330,8 @@ class MafiaController extends Notifier<MafiaGameState> {
       isNight &&
       actsAtNight &&
       !hasSubmittedNight &&
-      !abilityExhausted;
+      !abilityExhausted &&
+      canActInNightStage;
   bool get canVote => canAct && isVoting && !hasVoted && !isVoteBanned;
   bool get canEndDiscussion => canAct && isDay && !hasVotedToSkipDiscussion;
 
@@ -428,6 +471,13 @@ class MafiaController extends Notifier<MafiaGameState> {
       nightSubmittedCount: (map['nightSubmittedCount'] as num?)?.toInt() ?? 0,
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
       nightActionCue: MafiaNightActionCue.fromMap(map['nightActionCue']),
+      // 밤의 구간입니다(확정 2026-08: 차단 → 행동 → 마무리).
+      nightStage: map['nightStage']?.toString(),
+      nightStageActorCount: (map['nightStageActorCount'] as num?)?.toInt() ?? 0,
+      nightStageSubmittedCount:
+          (map['nightStageSubmittedCount'] as num?)?.toInt() ?? 0,
+      // 낮 토론이 투표로 끝났으면 태블릿이 그 안내를 띄웁니다.
+      dayEndReason: map['dayEndReason']?.toString(),
       voteSubmittedCount: (map['voteSubmittedCount'] as num?)?.toInt() ?? 0,
       // 토론 조기 종료에 동의한 사람 수입니다(서버 day.ts가 갱신).
       // 이 줄이 없어 폰의 'n/m' 실시간 집계가 항상 0으로 보였습니다.

@@ -7,17 +7,22 @@ import {HttpsError} from "firebase-functions/v2/https";
 
 import {
   actsAtNight,
+  actsInBlockStage,
   MAFIA_NIGHT_PHASE_ORDER,
   mafiaCompositionFor,
   mafiaRole,
 } from "./roles.js";
 import {
   mafiaDiscussionMs,
-  MAFIA_NIGHT_MS,
+  MAFIA_DAY_SKIP_NOTICE_MS,
+  MAFIA_NIGHT_ACTION_MS,
+  MAFIA_NIGHT_BLOCK_MS,
+  MAFIA_NIGHT_WAIT_MS,
   MAFIA_ROLE_REVEAL_MS,
   MAFIA_VOTE_MS,
   MafiaFactionId,
   MafiaGameState,
+  MafiaNightStageId,
   MafiaPrivatePlayer,
   MafiaPublicPlayer,
   MafiaPublicState,
@@ -69,6 +74,10 @@ export async function createMafiaPlayers(
       uid,
       nickname: typeof value.nickname === "string" ? value.nickname : "Player",
       profileImageUrl: profileUrls.get(uid) ?? "",
+      // 로비에서 고른 동물 아이콘입니다. 사진을 올리지 않은 사람은 게임
+      // 화면에서도 이 아이콘으로 보여야 합니다(라이어스 포커와 같은 규약).
+      characterId: typeof value.characterId === "string" && value.characterId ?
+        value.characterId : "frog",
       seatIndex: value.seatIndex as number,
       status: "alive",
     };
@@ -336,17 +345,127 @@ export function bumpNightActionCue(
   };
 }
 
+// ===== 밤의 두 구간 =====
+//
+// 확정(2026-08): 밤은 **차단 구간 → 행동 구간 → 마무리**로 흐릅니다.
+// 마담이 막은 사람의 능력은 무효라, 막는 역할의 판정이 끝나야 뒤 역할들의
+// 행동이 의미를 가집니다. 앞 구간이 일찍 끝나면 남은 시간을 버리고 곧바로
+// 다음 구간을 엽니다.
+
+/**
+ * 이번 밤에 행동해야 하는 사람들입니다.
+ *
+ * [inBlockStage]를 주면 그 구간에 움직이는 사람만 돌려줍니다.
+ */
+function nightActorUids(
+  game: MafiaGameState,
+  inBlockStage?: boolean,
+): string[] {
+  return alivePlayers(game.public.players)
+    .filter((player) => {
+      const roleId = game.server.roles[player.uid];
+      if (!actsAtNight(roleId)) return false;
+      if (inBlockStage === undefined) return true;
+      return actsInBlockStage(roleId) === inBlockStage;
+    })
+    .map((player) => player.uid);
+}
+
+/** 이번 구간에 제출을 기다리는 사람들입니다. */
+function nightStageActorUids(game: MafiaGameState): string[] {
+  switch (game.public.nightStage) {
+  case "block":
+    return nightActorUids(game, true);
+  case "action":
+    return nightActorUids(game, false);
+  default:
+    return [];
+  }
+}
+
+/** 구간별 제한시간입니다. */
+function nightStageDurationMs(stage: MafiaNightStageId): number {
+  switch (stage) {
+  case "block":
+    return MAFIA_NIGHT_BLOCK_MS;
+  case "action":
+    return MAFIA_NIGHT_ACTION_MS;
+  default:
+    return MAFIA_NIGHT_WAIT_MS;
+  }
+}
+
+/** 이번 구간의 인원수를 다시 셉니다. */
+function refreshNightStageCounts(game: MafiaGameState): void {
+  const actions = game.server.nightActions ?? {};
+  const stageActors = nightStageActorUids(game);
+  game.public.nightStageActorCount = stageActors.length;
+  game.public.nightStageSubmittedCount =
+    stageActors.filter((uid) => actions[uid] !== undefined).length;
+}
+
+/** 이 사람이 지금 구간에 고를 수 있는지입니다. */
+export function canActInNightStage(
+  game: MafiaGameState,
+  uid: string,
+): boolean {
+  const stage = game.public.nightStage ?? "action";
+  if (stage === "wrapUp") return false;
+  // 앞 구간에는 막는 역할만 움직입니다. 뒤 구간에는 아직 안 낸 사람 전부입니다
+  // (앞 구간에서 넘긴 마담도 여기서 낼 수 있습니다).
+  if (stage === "block") return actsInBlockStage(game.server.roles[uid]);
+  return true;
+}
+
+/** 밤의 한 구간을 시작합니다. */
+export function beginMafiaNightStage(
+  game: MafiaGameState,
+  stage: MafiaNightStageId,
+  now: number,
+): void {
+  game.public.nightStage = stage;
+  game.public.turnDeadlineAt = now + nightStageDurationMs(stage);
+  refreshNightStageCounts(game);
+  // 마무리 구간에 들어서면 조사·추적 결과를 최종값으로 확정합니다.
+  if (stage === "wrapUp") finalizeMafiaInvestigations(game);
+  touch(game, now);
+}
+
+/**
+ * 지금 구간에서 기다릴 사람이 없으면 다음 구간으로 넘깁니다.
+ *
+ * @param {MafiaGameState} game 지금 게임 상태
+ * @param {number} now 서버 시각
+ * @return {boolean} 구간이 넘어갔으면 true
+ */
+export function advanceMafiaNightStage(
+  game: MafiaGameState,
+  now: number,
+): boolean {
+  const stage = game.public.nightStage ?? "action";
+  if (stage === "wrapUp") return false;
+
+  const actions = game.server.nightActions ?? {};
+  const pending = nightStageActorUids(game)
+    .filter((uid) => actions[uid] === undefined);
+  if (pending.length > 0) return false;
+
+  beginMafiaNightStage(game, stage === "block" ? "action" : "wrapUp", now);
+  // 앞 구간이 비어 있으면(마담이 없는 판) 뒤 구간도 비어 있을 수 있습니다.
+  advanceMafiaNightStage(game, now);
+  return true;
+}
+
 /** 밤을 시작합니다. 지난 밤의 선택을 모두 지웁니다. */
 export function beginMafiaNight(game: MafiaGameState, now: number): void {
-  const actors = alivePlayers(game.public.players)
-    .filter((player) => actsAtNight(game.server.roles[player.uid]));
+  const actors = nightActorUids(game);
 
   game.public.phase = "night";
-  game.public.turnDeadlineAt = now + MAFIA_NIGHT_MS;
   game.public.nightSubmittedCount = 0;
   game.public.nightActorCount = actors.length;
   delete game.public.morningResult;
   delete game.public.voteResult;
+  delete game.public.dayEndReason;
   delete game.server.nightActions;
   delete game.server.votes;
 
@@ -358,7 +477,9 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
     delete entry.voteBanned;
     delete entry.roleChangedRound;
   }
-  touch(game, now);
+  // 능력을 막는 역할부터 움직입니다. 없으면 곧바로 행동 구간이 열립니다.
+  beginMafiaNightStage(game, "block", now);
+  advanceMafiaNightStage(game, now);
 }
 
 /** 낮 토론을 시작합니다. 지난 낮의 조기 종료 동의를 지웁니다. */
@@ -368,10 +489,26 @@ export function beginMafiaDay(game: MafiaGameState, now: number): void {
   game.public.turnDeadlineAt =
     now + mafiaDiscussionMs(alivePlayers(game.public.players).length);
   game.public.discussionSkipCount = 0;
+  delete game.public.dayEndReason;
   delete game.server.discussionSkipVotes;
   for (const entry of Object.values(game.private)) {
     delete entry.discussionSkipVoted;
   }
+  touch(game, now);
+}
+
+/**
+ * 투표로 토론을 끝냅니다 — 안내를 보여 줄 만큼만 남기고 마감을 줄입니다.
+ *
+ * 확정(2026-08): 과반수가 눌린 순간 곧바로 투표로 넘기지 않고 "토론이 투표로
+ * 종료되었습니다"를 보여 줍니다. 새 단계를 만들지 않고 **낮의 마감을
+ * 2.5초로 줄여**, 기존 마감 처리(timeout_day)가 그대로 투표를 시작하게
+ * 합니다. 다시 눌려도 마감이 밀리지 않도록 이유가 이미 적혀 있으면 넘어갑니다.
+ */
+export function endMafiaDayByVote(game: MafiaGameState, now: number): void {
+  if (game.public.dayEndReason === "vote") return;
+  game.public.dayEndReason = "vote";
+  game.public.turnDeadlineAt = now + MAFIA_DAY_SKIP_NOTICE_MS;
   touch(game, now);
 }
 
@@ -403,6 +540,7 @@ export function beginMafiaVoting(game: MafiaGameState, now: number): void {
     game.private[uid].voteBanned = true;
   }
   delete game.server.voteBans;
+  delete game.public.dayEndReason;
   touch(game, now);
 }
 
@@ -501,19 +639,55 @@ export function recordImmediateInvestigation(
     recordInvestigation(game, actorUid, targetUid, verdict, round);
     break;
   }
-  case "track": {
-    const visitedUid = game.server.nightActions?.[targetUid];
-    const verdict = visitedUid ?
-      game.public.players[visitedUid]?.nickname ?? "알 수 없음" :
-      "방문 없음";
-    recordInvestigation(game, actorUid, targetUid, verdict, round);
+  case "track":
+    // 추적은 **여기서 알려 줄 수 없습니다.** 대상이 나보다 늦게 고르면 그
+    // 순간에는 "방문 없음"이고, 그 값을 보여 주면 거짓말이 됩니다. 행동
+    // 구간이 닫힐 때 [finalizeMafiaInvestigations]가 최종값을 넣습니다.
     break;
-  }
   default:
     break;
   }
   // touch는 호출부(제출 트랜잭션)가 이미 합니다. now는 서명 일관성용입니다.
   void now;
+}
+
+/**
+ * 조사·추적 결과를 **최종값으로** 확정합니다(밤의 마무리 구간 시작 시점).
+ *
+ * 이 시점에는 모든 제출이 끝나 있어, 대상이 누구를 찾아갔는지가 확정됩니다.
+ * 그래서 사립탐정의 결과는 여기서 처음 생깁니다. 경찰의 진영 조사는 제출 즉시
+ * 알려 준 값과 같지만, 같은 자리(`r{round}`)에 한 번 더 덮어써 두 경로가
+ * 어긋나지 않게 합니다.
+ */
+export function finalizeMafiaInvestigations(game: MafiaGameState): void {
+  const actions = game.server.nightActions ?? {};
+  const round = game.public.round;
+  for (const [actorUid, targetUid] of Object.entries(actions)) {
+    if (game.public.players[actorUid]?.status !== "alive") continue;
+    const role = mafiaRole(game.server.roles[actorUid]);
+    if (!role) continue;
+    switch (role.nightAction) {
+    case "investigate":
+      recordInvestigation(
+        game,
+        actorUid,
+        targetUid,
+        mafiaInvestigationVerdict(game.server.roles[targetUid], false),
+        round,
+      );
+      break;
+    case "track": {
+      const visitedUid = actions[targetUid];
+      const verdict = visitedUid ?
+        game.public.players[visitedUid]?.nickname ?? "알 수 없음" :
+        "방문 없음";
+      recordInvestigation(game, actorUid, targetUid, verdict, round);
+      break;
+    }
+    default:
+      break;
+    }
+  }
 }
 
 /**
@@ -568,6 +742,8 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
   const attacks = new Map<string, string[]>();
   const deadUids = new Set<string>();
   let savedCount = 0;
+  /** 기자가 취재에 성공한 대상입니다. 없으면 undefined입니다. */
+  let exposedUid: string | undefined;
 
   // 살아 있는 사람의 행동만, 단계 순서대로 처리합니다.
   // flatMap으로 걸러 role·phase가 null이 아닌 것만 남기면 아래에서 단정(!)이
@@ -602,8 +778,9 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
 
     switch (role.nightAction) {
     case "roleblock":
-      blockedUids.add(entry.targetUid);
-      // 마담은 능력에 더해 **다음 낮의 투표권**까지 막습니다.
+      // 확정(2026-08): 무엇을 막는지는 역할이 정합니다. 마담은 밤 능력과
+      // 다음 낮 투표권을 함께, 건달은 **투표권만** 막습니다.
+      if (role.blocksAbility) blockedUids.add(entry.targetUid);
       if (role.blocksTargetVote) {
         game.server.voteBans ??= {};
         game.server.voteBans[entry.targetUid] = true;
@@ -662,6 +839,9 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
       // 기자입니다. 경찰과 달리 **모두가** 보므로 public에 씁니다.
       game.public.revealedRoles ??= {};
       game.public.revealedRoles[entry.targetUid] = roles[entry.targetUid];
+      // 아침 발표가 이 사람의 카드를 뒤집어 보여 줍니다(처형 공개와 같은
+      // 연출, 죽지는 않습니다).
+      exposedUid = entry.targetUid;
       usedAbility.add(entry.actorUid);
       break;
     case "steal": {
@@ -753,9 +933,13 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
     deadUids: [...deadUids],
     savedCount,
     endsGame: mafiaAnnouncementEndsGame(game),
+    ...(exposedUid ? {exposedUid} : {}),
     resolvedAt: now,
   };
   game.public.phase = "morning";
+  delete game.public.nightStage;
+  delete game.public.nightStageActorCount;
+  delete game.public.nightStageSubmittedCount;
   // 아침 발표는 태블릿 연출이 끝나면 넘어갑니다. 제한시간을 두지 않습니다.
   game.public.turnDeadlineAt = null;
   delete game.server.nightActions;

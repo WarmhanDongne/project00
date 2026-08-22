@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -28,6 +29,7 @@ class MafiaDayDiscussionView extends StatelessWidget {
     this.aliveCount = 0,
     this.hasVotedToSkip = false,
     this.endLabel = '토론 종료 하기',
+    this.endedByVote = false,
   });
 
   /// 내 역할입니다. 아래 보관 카드에만 씁니다. null이면 뒷면을 그립니다.
@@ -55,6 +57,12 @@ class MafiaDayDiscussionView extends StatelessWidget {
   final bool hasVotedToSkip;
 
   final String endLabel;
+
+  /// 과반수 투표로 토론이 끝났는지입니다(확정 2026-08).
+  ///
+  /// 이때는 타이머·버튼을 지우고 안내만 남깁니다. 곧 투표로 넘어가는데 남은
+  /// 초가 3, 2, 1로 줄어드는 것을 보여 주면 아직 토론할 수 있는 것처럼 보입니다.
+  final bool endedByVote;
 
   //=======================시안 기준 좌표==============================
   // 제목·타이머는 다른 단계와 같은 크기를 씁니다(2026-08 통일 지시.
@@ -91,7 +99,8 @@ class MafiaDayDiscussionView extends StatelessWidget {
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
-        final seconds = remainingSeconds;
+        // 투표로 끝난 낮은 남은 초를 보여 주지 않습니다(아래 endedByVote 주석).
+        final seconds = endedByVote ? null : remainingSeconds;
         final illustration = _illustrationSize * scale;
 
         return Stack(
@@ -104,14 +113,17 @@ class MafiaDayDiscussionView extends StatelessWidget {
               right: 0,
               top: MafiaPhoneDesign.top(size, _titleTop),
               child: IgnorePointer(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: MafiaPhoneStatusText.promptFontSize * scale,
-                    fontWeight: FontWeight.w700,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    endedByVote ? MafiaCopy.discussionSkippedNotice : title,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: MafiaPhoneStatusText.promptFontSize * scale,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -158,19 +170,21 @@ class MafiaDayDiscussionView extends StatelessWidget {
             //
             // 집계는 비활성된 뒤에도 계속 올라갑니다. 과반수가 되는 순간
             // 서버가 투표로 넘깁니다.
-            MafiaPhoneActionButton(
-              label: hasVotedToSkip ? '$skipVoteCount/$aliveCount' : endLabel,
-              // 확정(2026-08): 누른 뒤에는 옅은 회색으로 빠지지 않고 **검은
-              // 버튼 + 흰 글자**로 남습니다. 집계가 계속 올라가는 자리라
-              // 흐려지면 잘 읽히지 않습니다.
-              backgroundColor: hasVotedToSkip ? _votedButtonColor : null,
-              labelColor: hasVotedToSkip ? Colors.white : null,
-              onTap: onEndDiscussion,
-              enabled:
-                  canEndDiscussion &&
-                  !hasVotedToSkip &&
-                  onEndDiscussion != null,
-            ),
+            // 이미 끝난 토론에는 버튼을 두지 않습니다.
+            if (!endedByVote)
+              MafiaPhoneActionButton(
+                label: hasVotedToSkip ? '$skipVoteCount/$aliveCount' : endLabel,
+                // 확정(2026-08): 누른 뒤에는 옅은 회색으로 빠지지 않고 **검은
+                // 버튼 + 흰 글자**로 남습니다. 집계가 계속 올라가는 자리라
+                // 흐려지면 잘 읽히지 않습니다.
+                backgroundColor: hasVotedToSkip ? _votedButtonColor : null,
+                labelColor: hasVotedToSkip ? Colors.white : null,
+                onTap: onEndDiscussion,
+                enabled:
+                    canEndDiscussion &&
+                    !hasVotedToSkip &&
+                    onEndDiscussion != null,
+              ),
             MafiaStoredRoleCard(role: role),
           ],
         );
