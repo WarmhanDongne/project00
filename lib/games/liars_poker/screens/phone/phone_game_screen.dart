@@ -8,7 +8,8 @@ import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
 import 'package:project00/games/shared/animations/phone_control_entry_animation.dart';
 import 'package:project00/games/shared/game_flow/game_announcement.dart';
-import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/game_flow/leave_failure_notice.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
 import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
 import 'package:project00/games/liars_poker/widgets/phone/liar_accusation.dart';
@@ -33,11 +34,13 @@ class LiarsPokerPhoneGameScreen extends StatefulWidget {
   const LiarsPokerPhoneGameScreen({
     super.key,
     this.controller,
+    this.provider,
     this.onExitRoom,
     this.showSpectatorTopBar = false,
   });
 
   final LiarsPokerController? controller;
+  final RoomProvider? provider;
   final Future<bool> Function()? onExitRoom;
 
   /// 탈락한 관전자가 판정·벌칙 화면을 보고 있을 때도 상단바를 유지합니다.
@@ -50,6 +53,7 @@ class LiarsPokerPhoneGameScreen extends StatefulWidget {
 
 class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     with SingleTickerProviderStateMixin {
+  bool _isExitModalOpen = false;
   late final AnimationController _controlsEntryController;
   final PhoneHandCardStackController _handCardStackController =
       PhoneHandCardStackController();
@@ -211,7 +215,12 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   }
 
   Future<void> _showExitModal({Offset? origin}) async {
+    // 모달을 열기 전에 판정합니다. 가드가 없으면 빠른 두 번 탭에 확인 모달이
+    // 두 개 쌓입니다.
+    if (_isExitModalOpen) return;
+    _isExitModalOpen = true;
     final shouldExit = await PhoneExitModal.show(context, origin: origin);
+    _isExitModalOpen = false;
     if (!mounted || shouldExit != true) return;
 
     // 퇴장에 성공하면 화면 방향 복원과 화면 전환은 라우트를 가진 상위
@@ -220,9 +229,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     final left = await widget.onExitRoom?.call() ?? false;
     if (!mounted || left) return;
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+    showLeaveFailureNotice(context, widget.provider);
   }
 
   @override

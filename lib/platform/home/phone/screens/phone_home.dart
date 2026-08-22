@@ -54,13 +54,22 @@ class _PhoneHomeState extends State<PhoneHome> {
 
   Future<void> _restorePreviousRoom() async {
     if (_restoreInFlight || _waitingRoomOpen || !mounted) return;
+    if (_restoredRoomProvider.isLeaving) return;
+    // 라우트 확인을 복원 호출보다 먼저 합니다. restorePlayerRoom()은 서버에
+    // 참가자를 다시 만들고 heartbeat를 시작하므로, 결과를 버릴 상황이면 애초에
+    // 부르지 않아야 합니다. 예전에는 호출 뒤에 확인해, 버려진 복원이 남긴
+    // roomCode 때문에 다음 호출이 방금 나온 방의 대기 화면을 다시 띄웠습니다.
+    if (ModalRoute.of(context)?.isCurrent != true) return;
     setState(() => _restoreInFlight = true);
     final restored =
         _restoredRoomProvider.isInRoom ||
         await _restoredRoomProvider.restorePlayerRoom();
     if (!mounted) return;
     setState(() => _restoreInFlight = false);
-    if (!restored || ModalRoute.of(context)?.isCurrent != true) {
+    if (!restored ||
+        !_restoredRoomProvider.isInRoom ||
+        _waitingRoomOpen ||
+        ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
 

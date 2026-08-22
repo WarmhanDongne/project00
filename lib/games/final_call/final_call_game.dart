@@ -61,6 +61,7 @@ class FinalCallGame extends TemplateGame {
         onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
         child: FinalCallPhoneGame(
           roomCode: roomCode,
+          provider: provider,
           gameService: FinalCallService(),
           onExitRoom: onExitRoom,
         ),

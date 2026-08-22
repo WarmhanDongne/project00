@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_leave_intent.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -20,12 +21,27 @@ enum ControllerPresenceState { unknown, connected, reconnecting }
 enum RoomTerminationReason { closed, deleted }
 
 class RoomProvider extends ChangeNotifier {
-  RoomProvider({RoomService? service, GameService? gameService})
-    : _service = service ?? RoomService(),
-      _gameService = gameService ?? GameService();
+  RoomProvider({
+    RoomService? service,
+    GameService? gameService,
+    @visibleForTesting String? Function()? currentUidReader,
+  }) : _service = service ?? RoomService(),
+       _gameService = gameService ?? GameService(),
+       _currentUid = currentUidReader ?? _firebaseUid;
+
+  /// Firebase를 초기화하지 않는 순수 위젯·단위 테스트에서도 참가자 판정 코드가
+  /// 그대로 실행되도록, 현재 UID 조회를 한곳으로 모읍니다.
+  static String? _firebaseUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   final RoomService _service;
   final GameService _gameService;
+  final String? Function() _currentUid;
 
   String? roomCode;
   StreamSubscription<DatabaseEvent>? roomSubscription;
@@ -45,6 +61,9 @@ class RoomProvider extends ChangeNotifier {
   bool isRemovingPlayer(String uid) => _removingPlayerUids.contains(uid);
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
+  /// 퇴장 요청이 진행 중입니다. 나가기 버튼 비활성화와 중복 탭 판정에 씁니다.
+  bool get isLeaving => _isLeaving;
+
   bool wasKicked = false;
   bool wasRoomClosed = false;
   ControllerPresenceState controllerPresenceState =
@@ -52,6 +71,10 @@ class RoomProvider extends ChangeNotifier {
   RoomTerminationReason? roomTerminationReason;
   bool _hasJoined = false;
   bool _isLeaving = false;
+
+  /// 방 세션 세대입니다. 저장 세션 복원처럼 여러 await를 거치는 작업이 그동안
+  /// 방이 바뀌었는지 판정하는 데 씁니다.
+  int _sessionEpoch = 0;
   bool _wasServerDisconnected = false;
   bool _isServerConnected = false;
   bool _roomMissingCandidate = false;
@@ -201,7 +224,7 @@ class RoomProvider extends ChangeNotifier {
       if (roomCode != null) return;
       players = value;
       notifyListeners();
-    }, onError: _handleSubscriptionError);
+    }, onError: (Object error) => _handleSubscriptionError(error));
   }
 
   void stopRoomPreview() {
@@ -380,29 +403,41 @@ class RoomProvider extends ChangeNotifier {
 
     controllerPresenceSubscription = _service
         .watchControllerConnected(listenedRoomCode)
-        .listen((connected) {
-          if (roomCode != listenedRoomCode) return;
-          final nextState = switch (connected) {
-            true => ControllerPresenceState.connected,
-            false => ControllerPresenceState.reconnecting,
-            null => ControllerPresenceState.unknown,
-          };
-          if (controllerPresenceState == nextState) return;
-          controllerPresenceState = nextState;
-          notifyListeners();
-        }, onError: _handleSubscriptionError);
+        .listen(
+          (connected) {
+            if (roomCode != listenedRoomCode) return;
+            final nextState = switch (connected) {
+              true => ControllerPresenceState.connected,
+              false => ControllerPresenceState.reconnecting,
+              null => ControllerPresenceState.unknown,
+            };
+            if (controllerPresenceState == nextState) return;
+            controllerPresenceState = nextState;
+            notifyListeners();
+          },
+          onError: (Object error) => _handleSubscriptionError(
+            error,
+            expectedRoomCode: listenedRoomCode,
+          ),
+        );
 
     roomExistenceSubscription = _service
         .watchRoomExists(listenedRoomCode)
-        .listen((exists) {
-          if (roomCode != listenedRoomCode) return;
-          if (exists) {
-            _roomMissingCandidate = false;
-            return;
-          }
-          _roomMissingCandidate = true;
-          unawaited(_confirmRoomDeleted(listenedRoomCode));
-        }, onError: _handleSubscriptionError);
+        .listen(
+          (exists) {
+            if (roomCode != listenedRoomCode) return;
+            if (exists) {
+              _roomMissingCandidate = false;
+              return;
+            }
+            _roomMissingCandidate = true;
+            unawaited(_confirmRoomDeleted(listenedRoomCode));
+          },
+          onError: (Object error) => _handleSubscriptionError(
+            error,
+            expectedRoomCode: listenedRoomCode,
+          ),
+        );
 
     statusSubscription = _service
         .watchRoomStatus(listenedRoomCode)
@@ -425,7 +460,7 @@ class RoomProvider extends ChangeNotifier {
             // 구독이 담당하므로 여기서는 unhandled exception만 막습니다.
             final message = error.toString().toLowerCase();
             if (message.contains('permission')) return;
-            _handleSubscriptionError(error);
+            _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode);
           },
         );
 
@@ -433,59 +468,64 @@ class RoomProvider extends ChangeNotifier {
       _startPlayerHeartbeat(listenedRoomCode);
     }
 
-    roomSubscription = _service.watchRoom(listenedRoomCode).listen((event) {
-      if (roomCode != listenedRoomCode) return;
-      final gameId = event.snapshot.value as String?;
+    roomSubscription = _service.watchRoom(listenedRoomCode).listen(
+      (event) {
+        if (roomCode != listenedRoomCode) return;
+        final gameId = event.snapshot.value as String?;
 
-      if (gameId != selectedGameId) {
-        selectedGameId = gameId;
-        selectedGame = null;
-        selectedGameError = null;
-        _selectedGameRequestId += 1;
-        selectedGameLoadStatus = gameId == null || gameId.isEmpty
-            ? RoomDataLoadStatus.idle
-            : RoomDataLoadStatus.loading;
-        // 게임 시작 판단에 필요한 ID는 Firestore 메타데이터보다 먼저 전달합니다.
+        if (gameId != selectedGameId) {
+          selectedGameId = gameId;
+          selectedGame = null;
+          selectedGameError = null;
+          _selectedGameRequestId += 1;
+          selectedGameLoadStatus = gameId == null || gameId.isEmpty
+              ? RoomDataLoadStatus.idle
+              : RoomDataLoadStatus.loading;
+          // 게임 시작 판단에 필요한 ID는 Firestore 메타데이터보다 먼저 전달합니다.
+          notifyListeners();
+
+          if (gameId != null && gameId.isNotEmpty) {
+            unawaited(
+              _loadSelectedGame(gameId, expectedRoomCode: listenedRoomCode),
+            );
+          }
+        }
+      },
+      onError: (Object error) =>
+          _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode),
+    );
+    playerSubscription = _service.watchRoomPlayers(listenedRoomCode).listen(
+      (roomPlayer) {
+        if (roomCode != listenedRoomCode) return;
+        players = roomPlayer;
+
+        final myUid = _currentUid();
+        if (myUid != null && myUid.isNotEmpty) {
+          final isMeInPlayers = roomPlayer.any(
+            (p) => p.uid == myUid && p.isActive,
+          );
+          if (isMeInPlayers) {
+            _hasJoined = true;
+          } else if (_hasJoined && !_isLeaving) {
+            unawaited(
+              _verifyCurrentPlayerRemoval(listenedRoomCode, expectedUid: myUid),
+            );
+            return;
+          }
+        }
+        // players 변경(heartbeat 포함)은 Firestore 조회를 기다리지 않고 즉시
+        // 화면에 반영합니다.
         notifyListeners();
 
-        if (gameId != null && gameId.isNotEmpty) {
-          unawaited(
-            _loadSelectedGame(gameId, expectedRoomCode: listenedRoomCode),
-          );
-        }
-      }
-    }, onError: _handleSubscriptionError);
-    playerSubscription = _service.watchRoomPlayers(listenedRoomCode).listen((
-      roomPlayer,
-    ) {
-      if (roomCode != listenedRoomCode) return;
-      players = roomPlayer;
-
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        final myUid = currentUser.uid;
-        final isMeInPlayers = roomPlayer.any(
-          (p) => p.uid == myUid && p.isActive,
+        // 활성화된 유저의 uids 추출
+        final activeUids = _groupMemberUids();
+        unawaited(
+          _refreshGroupGames(activeUids, expectedRoomCode: listenedRoomCode),
         );
-        if (isMeInPlayers) {
-          _hasJoined = true;
-        } else if (_hasJoined && !_isLeaving) {
-          unawaited(
-            _verifyCurrentPlayerRemoval(listenedRoomCode, expectedUid: myUid),
-          );
-          return;
-        }
-      }
-      // players 변경(heartbeat 포함)은 Firestore 조회를 기다리지 않고 즉시
-      // 화면에 반영합니다.
-      notifyListeners();
-
-      // 활성화된 유저의 uids 추출
-      final activeUids = _groupMemberUids();
-      unawaited(
-        _refreshGroupGames(activeUids, expectedRoomCode: listenedRoomCode),
-      );
-    }, onError: _handleSubscriptionError);
+      },
+      onError: (Object error) =>
+          _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode),
+    );
   }
 
   /// 그룹 보유 게임은 활성 참가자 구성이 실제로 바뀔 때만 다시 조회합니다.
@@ -555,12 +595,7 @@ class RoomProvider extends ChangeNotifier {
         .map((player) => player.uid)
         .where((uid) => uid.isNotEmpty)
         .toSet();
-    String? currentUid;
-    try {
-      currentUid = FirebaseAuth.instance.currentUser?.uid;
-    } catch (_) {
-      // Firebase를 초기화하지 않는 순수 위젯/단위 테스트에서는 참가자 UID만 사용합니다.
-    }
+    final currentUid = _currentUid();
     if (currentUid != null && currentUid.isNotEmpty) uids.add(currentUid);
     return uids.toList(growable: false);
   }
@@ -600,6 +635,7 @@ class RoomProvider extends ChangeNotifier {
     }
     if (!_wasServerDisconnected) return;
     _wasServerDisconnected = false;
+    if (_isLeaving) return;
     unawaited(retryConnectionRecovery().catchError((Object _) {}));
   }
 
@@ -749,6 +785,10 @@ class RoomProvider extends ChangeNotifier {
     if (code == null) {
       throw const RoomCommandException('복구할 방 정보가 없습니다.');
     }
+    // 나가는 중이거나 이미 나간 방은 복구하지 않습니다. 이 확인이 없으면
+    // 네트워크가 돌아오는 순간 참가자를 다시 join시켜, 사용자의 첫 재시도가
+    // "다시 들어간 방에서 나가기"가 됩니다.
+    if (_isLeaving || RoomLeaveIntent.blocksRestore(code)) return;
 
     final controllerSessionId = ControllerRoomSessionStore.instance
         .sessionIdForRoom(code);
@@ -762,13 +802,13 @@ class RoomProvider extends ChangeNotifier {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final uid = _currentUid();
+    if (uid == null || uid.isEmpty) {
       throw const RoomCommandException('인증 정보가 없습니다.');
     }
     RoomPlayer? currentPlayer;
     for (final player in players) {
-      if (player.uid == user.uid) {
+      if (player.uid == uid) {
         currentPlayer = player;
         break;
       }
@@ -786,7 +826,7 @@ class RoomProvider extends ChangeNotifier {
           characterId: characterId,
         )
         .timeout(const Duration(seconds: 8));
-    if (roomCode != code) return;
+    if (roomCode != code || _isLeaving) return;
     _startPlayerHeartbeat(code);
     errorMessage = null;
     notifyListeners();
@@ -849,7 +889,12 @@ class RoomProvider extends ChangeNotifier {
     await _loadSelectedGame(gameId, expectedRoomCode: code);
   }
 
-  void _handleSubscriptionError(Object error) {
+  void _handleSubscriptionError(Object error, {String? expectedRoomCode}) {
+    // clearRoom은 구독 cancel을 await하지 않으므로 취소한 뒤에도 오류가 도착할
+    // 수 있습니다. 이미 다른 방으로 넘어갔거나 퇴장 중이면 사용자 오류로
+    // 표시하지 않습니다.
+    if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
+    if (_isLeaving) return;
     final message = error.toString().toLowerCase();
     // Realtime Database 스트림은 네트워크 복구 시 자동으로 다시 연결됩니다.
     // iOS 플러그인의 native unknown Stacktrace는 화면에 노출하지 않습니다.
@@ -891,6 +936,9 @@ class RoomProvider extends ChangeNotifier {
 
     // return 분기
     if (result == true) {
+      // 같은 방 코드로 다시 들어왔으므로 이전 퇴장 기록을 지웁니다.
+      RoomLeaveIntent.forget(code);
+      _sessionEpoch += 1;
       wasKicked = false;
       // 직전 방이 닫히며 세워진 플래그가 새 방 입장으로 넘어오지 않게 합니다.
       wasRoomClosed = false;
@@ -940,8 +988,8 @@ class RoomProvider extends ChangeNotifier {
     required String nickname,
     required String characterId,
   }) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    final uid = _currentUid();
+    if (uid == null || uid.isEmpty) return;
     try {
       await PlayerRoomSessionStore.instance.save(
         uid: uid,
@@ -958,18 +1006,34 @@ class RoomProvider extends ChangeNotifier {
   /// 직접 나가기·강퇴된 사용자는 저장 세션이 지워지므로 자동 입장하지 않습니다.
   Future<bool> restorePlayerRoom() async {
     if (roomCode != null || _isLeaving) return false;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
+    final uid = _currentUid();
+    if (uid == null || uid.isEmpty) return false;
     final store = PlayerRoomSessionStore.instance;
     final session = await store.load();
     if (session == null) return false;
-    if (session.uid != user.uid) {
+    if (session.uid != uid) {
+      await store.clear(onlyRoomCode: session.roomCode);
+      return false;
+    }
+    // 사용자가 이미 나갔거나 나가는 중인 방은 되살리지 않습니다. 휴대폰은 홈과
+    // 참여 화면이 서로 다른 RoomProvider를 쓰므로 이 판단은 인스턴스 필드가
+    // 아니라 프로세스 전역 마커로만 가능합니다.
+    if (RoomLeaveIntent.blocksRestore(session.roomCode)) {
       await store.clear(onlyRoomCode: session.roomCode);
       return false;
     }
 
+    final epoch = _sessionEpoch;
+    bool stillRestoring() =>
+        !_isDisposed &&
+        _sessionEpoch == epoch &&
+        roomCode == null &&
+        !_isLeaving &&
+        !RoomLeaveIntent.blocksRestore(session.roomCode);
+
     try {
       final exists = await _service.hasExistingPlayer(session.roomCode);
+      if (!stillRestoring()) return false;
       if (!exists) {
         await store.clear(onlyRoomCode: session.roomCode);
         return false;
@@ -979,7 +1043,14 @@ class RoomProvider extends ChangeNotifier {
         nickname: session.nickname,
         characterId: session.characterId,
       );
-      if (_isDisposed) return false;
+      if (!stillRestoring()) {
+        // 복원 요청 도중에 퇴장이 확정됐습니다. 방금 서버에 되살린 참가자
+        // 노드를 그대로 두면 유령이 되므로 최선 노력으로 다시 내보냅니다.
+        unawaited(
+          _service.leaveRoom(session.roomCode).catchError((Object _) {}),
+        );
+        return false;
+      }
       wasKicked = false;
       wasRoomClosed = false;
       roomTerminationReason = null;
@@ -1004,40 +1075,121 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> leaveRoom() async {
+  Future<bool> leaveRoom() {
     final code = roomCode;
-    if (code == null) return false;
-
-    _isLeaving = true;
-    final result = await _runCommand<bool>(() async {
-      await _service.leaveRoom(code);
-      return true;
-    });
-    if (result == true) {
-      await PlayerRoomSessionStore.instance.clear(onlyRoomCode: code);
-      clearRoom();
-    }
-    return result ?? false;
+    if (code == null) return Future.value(false);
+    return _runLeave(code, () => _service.leaveRoom(code));
   }
 
   /// 게임 중 퇴장: 서버가 다음 턴 또는 인원 부족 종료까지 결정합니다.
-  Future<bool> leaveGame(String gameId) async {
+  Future<bool> leaveGame(String gameId) {
     final code = roomCode;
     final game = GameRegistry.find(gameId);
-    if (code == null || game == null) return false;
-
-    final result = await _runCommand<bool>(() async {
-      await _service.leaveGame(
+    if (code == null || game == null) return Future.value(false);
+    return _runLeave(
+      code,
+      () => _service.leaveGame(
         cloudFunctionName: game.leaveFunctionName,
         roomCode: code,
-      );
-      return true;
-    });
-    if (result == true) {
-      await PlayerRoomSessionStore.instance.clear(onlyRoomCode: code);
-      clearRoom();
+      ),
+    );
+  }
+
+  /// 대기실 퇴장과 게임 중 퇴장의 성공·실패 처리를 한곳에 둡니다.
+  ///
+  /// `_runCommand`를 쓰지 않는 이유: `_runCommand`는 `isLoading`이면 try 앞에서
+  /// 곧바로 반환하므로, 그 앞에서 `_isLeaving`을 세우면 요청도 보내지 않은 채
+  /// 플래그만 래치됩니다. 중복 탭 판정을 플래그 대입보다 먼저 두어 그 경로를
+  /// 구조적으로 없앱니다.
+  ///
+  /// 반환값 false에는 두 가지가 있습니다.
+  /// 1. 실제 실패 — [errorMessage]가 채워지고 [isLeaving]은 false입니다.
+  /// 2. 이미 다른 퇴장이 진행 중 — [isLeaving]이 true로 남습니다.
+  /// 호출자는 `!left && isLeaving`이면 아무 오류도 표시하지 않아야 합니다.
+  Future<bool> _runLeave(String code, Future<void> Function() request) async {
+    if (_isLeaving) return false;
+
+    _isLeaving = true;
+    RoomLeaveIntent.begin(code);
+    // RTDB update는 방금 지워진 경로를 되살립니다. 이미 진행 중인 heartbeat가
+    // 퇴장 직후 유령 참가자 노드를 만들지 못하게 타이머를 먼저 끊습니다.
+    _playerHeartbeatTimer?.cancel();
+    _playerHeartbeatTimer = null;
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    var left = false;
+    try {
+      try {
+        await request();
+        left = true;
+      } catch (error) {
+        // 서버가 실패로 답했어도 방이 사라졌거나 내 참가자 노드가 이미 없으면
+        // 사용자는 실제로 퇴장한 상태입니다. 게임별 leave callable은 방이
+        // 삭제된 뒤에는 언제나 aborted로 답하므로 이 판정 없이는 확실히 나간
+        // 사용자에게 실패 문구가 뜹니다.
+        left = await _hasLeftDespiteFailure(code);
+        if (!left) {
+          errorMessage = _leaveFailureMessage(error);
+          RoomLeaveIntent.fail(code);
+          // 방을 계속 사용하므로 presence를 즉시 되살립니다.
+          if (roomCode == code && _joinedNickname != null) {
+            _startPlayerHeartbeat(code);
+          }
+        }
+      }
+
+      if (left) {
+        // 정리는 _isLeaving이 아직 true인 동안 끝냅니다. players 구독의 강퇴
+        // 판정이 본인 퇴장을 가로채지 못하게 하는 것이 이 순서의 목적입니다.
+        RoomLeaveIntent.complete(code);
+        wasKicked = false;
+        _hasJoined = false;
+        await PlayerRoomSessionStore.instance.clear(onlyRoomCode: code);
+        clearRoom(expectedRoomCode: code);
+      }
+    } finally {
+      // 성공·실패·예외 어느 경로에서도 여기서 복원됩니다. 예전에는 성공했을
+      // 때만 clearRoom이 복원해, 실패한 퇴장이 heartbeat와 강퇴 감지를
+      // 영구히 끈 상태로 남겼습니다.
+      _isLeaving = false;
+      isLoading = false;
+      notifyListeners();
     }
-    return result ?? false;
+    return left;
+  }
+
+  /// 실패로 답한 퇴장이 실제로는 이미 완료됐는지 서버에 한 번 확인합니다.
+  ///
+  /// 확인 자체가 실패하면 "아직 방에 있다"로 봅니다. 사용자가 다시 시도할 수
+  /// 있는 상태를 남기는 편이, 남아 있는 방에서 나간 것처럼 보이게 하는 것보다
+  /// 안전합니다.
+  Future<bool> _hasLeftDespiteFailure(String code) async {
+    try {
+      return await Future(() async {
+        if (!await _service.roomExists(code)) return true;
+        return !await _service.hasActivePlayerNode(code);
+      }).timeout(const Duration(seconds: 4));
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=leave_completion_check_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+      return false;
+    }
+  }
+
+  /// 퇴장 실패 문구입니다. 예외 원문을 사용자 화면에 넣지 않습니다.
+  String _leaveFailureMessage(Object error) {
+    if (error is RoomCommandException) return error.message;
+    if (error is FirebaseFunctionsException) {
+      final message = error.message;
+      if (message != null && message.isNotEmpty) return message;
+    }
+    return '방에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.';
   }
 
   // 메모리 초기화 leaveRoom에서 사용
@@ -1078,6 +1230,7 @@ class RoomProvider extends ChangeNotifier {
     _groupGamesRequestId += 1;
     _hasJoined = false;
     _isLeaving = false;
+    _sessionEpoch += 1;
     _wasServerDisconnected = false;
     _isServerConnected = false;
     _roomMissingCandidate = false;

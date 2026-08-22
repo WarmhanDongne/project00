@@ -107,6 +107,7 @@ class MafiaGame extends TemplateGame {
         onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
         child: MafiaPhoneGame(
           roomCode: roomCode,
+          provider: provider,
           gameService: MafiaService(),
           onExitRoom: onExitRoom,
         ),
