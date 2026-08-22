@@ -121,6 +121,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   /// 모두 준비되는 순간 한 번만 게임 화면을 엽니다.
   void _openGameIfReady(String roomCode) {
     if (_latestGameStatus != 'playing' || _isOpeningGame || !mounted) return;
+    // 방이 이미 끝났으면 낡은 playing 값입니다. 종료된 게임을 다시 열지 않습니다.
+    if (widget.provider.isRoomFinished) return;
     final selectedGameId = widget.provider.selectedGameId;
     if (selectedGameId == null) return;
     final game = GameRegistry.find(selectedGameId);
@@ -200,6 +202,28 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   Widget build(BuildContext context) {
+    // 시스템 뒤로가기로 이 화면만 닫히면 사용자는 로비에 있는데 서버에는
+    // 참가자로 남습니다. 그 뒤 홈의 저장 세션 복원이 대기 화면을 다시 띄워
+    // 방을 나온 것도 들어간 것도 아닌 상태가 됩니다. 나가려면 `그룹 나가기`를
+    // 써야 하므로 뒤로가기는 삼킵니다(P-02).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || !mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('그룹에서 나가려면 화면 위쪽의 나가기를 눌러주세요.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+      },
+      child: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     return CriticalNetworkGuard(
       provider: widget.provider,
       onExit: () {
@@ -210,8 +234,15 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
         animation: widget.provider,
         builder: (context, _) {
           final selectedGameId = widget.provider.selectedGameId;
+          // 게임이 끝난 방은 selectedGame이 그대로 남습니다. 종료 경로 어디에서도
+          // 지우지 않기 때문입니다. 그 값만 보고 그리면 룰북과 `곧 시작합니다`가
+          // 영원히 남아 대기실로 돌아오지 못합니다(P-02).
+          //
+          // 태블릿이 정리하기 전에도 화면이 갇히지 않도록 방 상태를 우선합니다.
           final hasSelectedGame =
-              selectedGameId != null && selectedGameId.isNotEmpty;
+              selectedGameId != null &&
+              selectedGameId.isNotEmpty &&
+              !widget.provider.isRoomFinished;
           final players = widget.provider.players
               .where((player) => player.isActive)
               .toList(growable: false);
@@ -336,7 +367,11 @@ class _GroupWaitingContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
-        const _WaitingStatusBanner(message: '태블릿에서 게임을 선택하는 중입니다'),
+        _WaitingStatusBanner(
+          message: provider.isRoomFinished
+              ? '게임이 끝났습니다. 태블릿에서 다음 게임을 고르는 중입니다'
+              : '태블릿에서 게임을 선택하는 중입니다',
+        ),
         const SizedBox(height: 20),
         PhoneRoomParticipantList(players: players),
         const SizedBox(height: 24),

@@ -9,6 +9,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/howtoplay/widgets/how_to_play_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
@@ -128,7 +129,11 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
             ),
           ),
         )
-        .whenComplete(() => _isOpeningRestoredGame = false);
+        .whenComplete(() {
+          _isOpeningRestoredGame = false;
+          // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
+          unawaited(restoreRoomToWaiting(roomProvider));
+        });
   }
 
   @override

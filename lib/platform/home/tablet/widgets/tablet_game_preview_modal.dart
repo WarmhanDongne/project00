@@ -15,6 +15,7 @@ import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -352,17 +353,28 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
       // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
       // 바꿔서 하나의 연출처럼 이어지게 합니다.
-      Navigator.of(layoutContext).pushReplacement(
-        PageRouteBuilder<void>(
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-          pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
-            playerLayout: completedLayout,
-            provider: widget.roomProvider,
-            roomCode: roomCode,
-          ),
-        ),
-      );
+      Navigator.of(layoutContext)
+          .pushReplacement(
+            PageRouteBuilder<void>(
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
+                playerLayout: completedLayout,
+                provider: widget.roomProvider,
+                roomCode: roomCode,
+              ),
+            ),
+          )
+          // 게임 화면이 닫힌 뒤에 방을 대기 상태로 되돌립니다. 게임이 끝나도
+          // selectedGame이 남아 휴대폰이 룰북 화면에 갇히고, 방 status가
+          // finished라 신규 참가와 재접속이 모두 막혔습니다(P-02).
+          //
+          // ⚠️ **게임 화면이 닫힌 뒤여야 합니다.** 선택 해제는 game 노드를
+          // 통째로 지우므로(applyWaitingGameSelection), 결과 화면이 열려 있는
+          // 동안 부르면 결과가 사라집니다.
+          .whenComplete(
+            () => unawaited(restoreRoomToWaiting(widget.roomProvider)),
+          );
     }
 
     // 공용 자리 배치와 게임별 준비 화면을 **여기서 한 번** 감쌉니다. 두 화면을
