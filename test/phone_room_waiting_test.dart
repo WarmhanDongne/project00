@@ -87,6 +87,78 @@ void main() {
   });
 
   group('PhoneRoomWaiting Figma states', () {
+    testWidgets('controller reconnecting shows a non-blocking waiting banner', (
+      tester,
+    ) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..controllerPresenceState = ControllerPresenceState.reconnecting;
+
+      await _pumpWaiting(tester, provider);
+
+      expect(find.text('태블릿 재접속 대기 중'), findsOneWidget);
+      provider.dispose();
+    });
+
+    testWidgets('closed room exits even when another route covers waiting', (
+      tester,
+    ) async {
+      final provider = _provider()..roomCode = 'ABCDE';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              key: const Key('phone-home-root'),
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PhoneRoomWaiting(
+                      provider: provider,
+                      headerForTesting: const SizedBox(height: 72),
+                    ),
+                  ),
+                ),
+                child: const Text('대기실 열기'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('대기실 열기'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final waitingContext = tester.element(find.byType(PhoneRoomWaiting));
+      unawaited(
+        Navigator.of(waitingContext).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(
+              key: Key('fake-game-route'),
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byKey(const Key('fake-game-route')), findsOneWidget);
+
+      provider.wasRoomClosed = true;
+      provider.roomTerminationReason = RoomTerminationReason.closed;
+      provider.clearRoom(preserveTerminationReason: true);
+      await tester.pump();
+      // popUntil은 위의 게임 라우트와 대기실 라우트를 차례로 닫으므로 두 번의
+      // 기본 MaterialPageRoute 역전환 시간을 모두 진행시킵니다.
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(find.byKey(const Key('phone-home-root')), findsOneWidget);
+      expect(find.byType(PhoneRoomWaiting), findsNothing);
+      expect(provider.wasRoomClosed, isFalse);
+      expect(provider.roomTerminationReason, isNull);
+      provider.dispose();
+    });
+
     testWidgets('739 shows all owned games without a read-only badge', (
       tester,
     ) async {

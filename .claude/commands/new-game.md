@@ -14,7 +14,7 @@ argument-hint: [게임 이름 또는 설명]
 ## 시작 전 필독
 
 1. `AGENTS.md` — 변경 전 필수 원칙 10가지
-2. `docs/AI_GAME_DEVELOPMENT_GUIDE.md` — 상태 머신·Riverpod·Cloud Functions 상세
+2. `AI_GAME_DEVELOPMENT_GUIDE.md` — 상태 머신·Riverpod·Cloud Functions 상세
 3. `lib/games/_game_template/README.md` — 스캐폴드
 4. `lib/games/mafia/README.md` — **결정 기록의 모범.** 인터뷰 결과를 게임별
    README에 이런 식으로 남긴다(확정 표 + ⚠️ 미결 항목)
@@ -55,6 +55,8 @@ argument-hint: [게임 이름 또는 설명]
 7. **검증은 위젯 테스트로.** 색·좌표·타이밍을 회전된 스크린샷 눈대중으로
    판정하지 마라(회색으로 오독한 전례). 테스트로 값을 찍는 게 정확하고,
    수정 라운드마다 회귀를 잡아 준다.
+
+2번 문서는 저장소에 포함되지 않는다. 없으면 건너뛰고 `AGENTS.md`와 코드를 기준으로 한다.
 
 ## 구조 기준
 

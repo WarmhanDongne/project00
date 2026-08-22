@@ -11,6 +11,7 @@ import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
+import 'package:project00/platform/home/phone/widgets/controller_reconnect_guard.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -34,6 +35,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
+  bool _isHandlingForcedExit = false;
 
   @override
   void initState() {
@@ -57,23 +59,30 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     final wasKicked = widget.provider.wasKicked;
     final wasRoomClosed = widget.provider.wasRoomClosed;
 
-    if (wasKicked || wasRoomClosed) {
-      widget.provider.wasKicked = false;
-      widget.provider.wasRoomClosed = false;
+    if ((wasKicked || wasRoomClosed) && !_isHandlingForcedExit) {
       if (!mounted) return;
-      // 방 대기 화면에서만 추방/해체를 감지하고 게임 중(isOpeningGame)일 때는 무시합니다.
-      if (_isOpeningGame || ModalRoute.of(context)?.isCurrent != true) return;
+      _isHandlingForcedExit = true;
+      final terminationReason = widget.provider.roomTerminationReason;
+      widget.provider.acknowledgeRoomExit();
 
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(wasRoomClosed ? '방을 찾을 수 없습니다' : '방에서 추방되었습니다.'),
+            content: Text(
+              wasKicked
+                  ? '방에서 추방되었습니다.'
+                  : terminationReason == RoomTerminationReason.closed
+                  ? '방장이 방을 종료했습니다.'
+                  : '방을 찾을 수 없습니다',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
       //================상태바 표시=================
       unawaited(AppSystemUi.showPlatformSystemBars());
+      // 게임 라우트가 현재 화면이어도 대기 화면의 context는 같은 Navigator에
+      // 남아 있습니다. 종료 신호를 버리지 않고 게임·대기 경로를 한 번에 닫습니다.
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
@@ -135,10 +144,16 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => game.buildPhoneScreen(
-          roomCode: roomCode,
+        builder: (gameContext) => ControllerReconnectGuard(
           provider: widget.provider,
-          onExitRoom: () => widget.provider.leaveGame(game.id),
+          onExit: () => unawaited(
+            _leaveGameFromReconnect(gameContext: gameContext, game: game),
+          ),
+          child: game.buildPhoneScreen(
+            roomCode: roomCode,
+            provider: widget.provider,
+            onExitRoom: () => widget.provider.leaveGame(game.id),
+          ),
         ),
       ),
     );
@@ -155,6 +170,15 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     // 않게 합니다. 방향 복원은 플랫폼 채널 응답을 기다리지 않습니다.
     unawaited(AppSystemUi.showPlatformSystemBars());
     unawaited(_lockPlatformPortrait());
+  }
+
+  Future<void> _leaveGameFromReconnect({
+    required BuildContext gameContext,
+    required TemplateGame game,
+  }) async {
+    final left = await widget.provider.leaveGame(game.id);
+    if (!gameContext.mounted || !left) return;
+    Navigator.of(gameContext).pop(true);
   }
 
   @override
@@ -198,6 +222,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                           ).popUntil((route) => route.isFirst);
                         },
                       ),
+                  if (widget.provider.controllerPresenceState ==
+                      ControllerPresenceState.reconnecting)
+                    const _ControllerReconnectBanner(),
                   if (hasSelectedGame) ...[
                     Expanded(
                       child: _SelectedGameContent(provider: widget.provider),
@@ -215,6 +242,46 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ControllerReconnectBanner extends StatelessWidget {
+  const _ControllerReconnectBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.platformColors;
+    return Semantics(
+      liveRegion: true,
+      label: '태블릿 재접속 대기 중',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        color: colors.primary.withValues(alpha: 0.12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '태블릿 재접속 대기 중',
+              style: TextStyle(
+                color: colors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

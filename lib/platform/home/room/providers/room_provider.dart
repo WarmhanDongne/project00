@@ -15,6 +15,10 @@ import 'package:project00/platform/home/room/services/room_service.dart';
 
 enum RoomDataLoadStatus { idle, loading, loaded, failure }
 
+enum ControllerPresenceState { unknown, connected, reconnecting }
+
+enum RoomTerminationReason { closed, deleted }
+
 class RoomProvider extends ChangeNotifier {
   RoomProvider({RoomService? service, GameService? gameService})
     : _service = service ?? RoomService(),
@@ -28,6 +32,8 @@ class RoomProvider extends ChangeNotifier {
   StreamSubscription<List<RoomPlayer>>? playerSubscription;
   StreamSubscription<bool>? connectionSubscription;
   StreamSubscription<String?>? statusSubscription;
+  StreamSubscription<bool?>? controllerPresenceSubscription;
+  StreamSubscription<bool>? roomExistenceSubscription;
 
   List<RoomPlayer> players = [];
   List<GameInfo> groupGames = [];
@@ -41,9 +47,16 @@ class RoomProvider extends ChangeNotifier {
 
   bool wasKicked = false;
   bool wasRoomClosed = false;
+  ControllerPresenceState controllerPresenceState =
+      ControllerPresenceState.unknown;
+  RoomTerminationReason? roomTerminationReason;
   bool _hasJoined = false;
   bool _isLeaving = false;
   bool _wasServerDisconnected = false;
+  bool _isServerConnected = false;
+  bool _roomMissingCandidate = false;
+  Future<void>? _roomDeletionConfirmation;
+  int _playerRemovalCheckId = 0;
   Future<void>? _connectionRecoveryFuture;
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
@@ -168,8 +181,8 @@ class RoomProvider extends ChangeNotifier {
   Stream<String?> watchGameStatus(String code) =>
       _service.watchGameStatus(code.trim().toUpperCase());
 
-  /// 태블릿이 방을 열고 있는지 구독합니다. 휴대폰이 무한 대기하지 않도록
-  /// 태블릿이 사라지면 알려 줍니다.
+  /// 태블릿의 접속 표시를 구독합니다. false는 재접속 대기 UI에만 사용하고
+  /// 방 퇴장 조건으로 사용하지 않습니다.
   Stream<bool?> watchControllerConnected(String code) =>
       _service.watchControllerConnected(code.trim().toUpperCase());
 
@@ -351,30 +364,59 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
+    controllerPresenceSubscription?.cancel();
+    roomExistenceSubscription?.cancel();
     _playerHeartbeatTimer?.cancel();
+
+    controllerPresenceState = ControllerPresenceState.unknown;
+    roomTerminationReason = null;
+    _roomMissingCandidate = false;
+    _roomDeletionConfirmation = null;
 
     connectionSubscription = _service.watchServerConnection().listen(
       _handleServerConnection,
       onError: (_) => _handleServerConnection(false),
     );
 
+    controllerPresenceSubscription = _service
+        .watchControllerConnected(listenedRoomCode)
+        .listen((connected) {
+          if (roomCode != listenedRoomCode) return;
+          final nextState = switch (connected) {
+            true => ControllerPresenceState.connected,
+            false => ControllerPresenceState.reconnecting,
+            null => ControllerPresenceState.unknown,
+          };
+          if (controllerPresenceState == nextState) return;
+          controllerPresenceState = nextState;
+          notifyListeners();
+        }, onError: _handleSubscriptionError);
+
+    roomExistenceSubscription = _service
+        .watchRoomExists(listenedRoomCode)
+        .listen((exists) {
+          if (roomCode != listenedRoomCode) return;
+          if (exists) {
+            _roomMissingCandidate = false;
+            return;
+          }
+          _roomMissingCandidate = true;
+          unawaited(_confirmRoomDeleted(listenedRoomCode));
+        }, onError: _handleSubscriptionError);
+
     statusSubscription = _service
         .watchRoomStatus(listenedRoomCode)
         .listen(
           (status) {
             if (roomCode != listenedRoomCode) return;
-            // Realtime Database는 삭제된 노드를 null로 전달합니다. cleanup으로
-            // 방 노드가 삭제됐거나 status 없이 players만 남은 깨진 방은 종료된
-            // 방과 동일하게 처리해, heartbeat가 유령 방을 되살리지 않게 합니다.
-            if (status == 'closed' || status == null) {
-              _hasJoined = false;
-              wasRoomClosed = true;
-              unawaited(
-                PlayerRoomSessionStore.instance.clear(
-                  onlyRoomCode: listenedRoomCode,
-                ),
+            // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
+            // status의 null은 초기 캐시 미수신일 수 있으므로 방 종료로 보지 않고,
+            // 실제 삭제는 roomCode 생존 마커를 서버에서 재확인해 판정합니다.
+            if (status == 'closed') {
+              _terminateRoom(
+                RoomTerminationReason.closed,
+                expectedRoomCode: listenedRoomCode,
               );
-              clearRoom(expectedRoomCode: listenedRoomCode);
             }
           },
           onError: (Object error) {
@@ -428,14 +470,9 @@ class RoomProvider extends ChangeNotifier {
         if (isMeInPlayers) {
           _hasJoined = true;
         } else if (_hasJoined && !_isLeaving) {
-          _hasJoined = false;
-          wasKicked = true;
           unawaited(
-            PlayerRoomSessionStore.instance.clear(
-              onlyRoomCode: listenedRoomCode,
-            ),
+            _verifyCurrentPlayerRemoval(listenedRoomCode, expectedUid: myUid),
           );
-          clearRoom(expectedRoomCode: listenedRoomCode);
           return;
         }
       }
@@ -552,13 +589,137 @@ class RoomProvider extends ChangeNotifier {
   }
 
   void _handleServerConnection(bool isConnected) {
+    _isServerConnected = isConnected;
     if (!isConnected) {
       _wasServerDisconnected = true;
       return;
     }
+    if (_roomMissingCandidate) {
+      final code = roomCode;
+      if (code != null) unawaited(_confirmRoomDeleted(code));
+    }
     if (!_wasServerDisconnected) return;
     _wasServerDisconnected = false;
     unawaited(retryConnectionRecovery().catchError((Object _) {}));
+  }
+
+  Future<void> _confirmRoomDeleted(String expectedRoomCode) async {
+    if (!_roomMissingCandidate ||
+        !_isServerConnected ||
+        roomCode != expectedRoomCode) {
+      return;
+    }
+    final activeConfirmation = _roomDeletionConfirmation;
+    if (activeConfirmation != null) {
+      await activeConfirmation;
+      return;
+    }
+
+    final confirmation = _performRoomDeletionConfirmation(expectedRoomCode);
+    _roomDeletionConfirmation = confirmation;
+    try {
+      await confirmation;
+    } finally {
+      if (identical(_roomDeletionConfirmation, confirmation)) {
+        _roomDeletionConfirmation = null;
+      }
+    }
+  }
+
+  Future<void> _performRoomDeletionConfirmation(String expectedRoomCode) async {
+    try {
+      final exists = await _service
+          .roomExists(expectedRoomCode)
+          .timeout(const Duration(seconds: 8));
+      if (roomCode != expectedRoomCode) return;
+      if (exists) {
+        _roomMissingCandidate = false;
+        return;
+      }
+      _terminateRoom(
+        RoomTerminationReason.deleted,
+        expectedRoomCode: expectedRoomCode,
+      );
+    } catch (error) {
+      // 네트워크나 권한 오류를 방 삭제로 오인하지 않습니다. RTDB가 다시 연결되면
+      // connection listener가 같은 후보를 재확인합니다.
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=room_deletion_confirmation_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+    }
+  }
+
+  Future<void> _verifyCurrentPlayerRemoval(
+    String expectedRoomCode, {
+    required String expectedUid,
+  }) async {
+    final checkId = ++_playerRemovalCheckId;
+    try {
+      final exists = await _service
+          .roomExists(expectedRoomCode)
+          .timeout(const Duration(seconds: 8));
+      if (checkId != _playerRemovalCheckId ||
+          roomCode != expectedRoomCode ||
+          _isLeaving) {
+        return;
+      }
+      if (players.any(
+        (player) => player.uid == expectedUid && player.isActive,
+      )) {
+        return;
+      }
+      if (!exists) {
+        _terminateRoom(
+          RoomTerminationReason.deleted,
+          expectedRoomCode: expectedRoomCode,
+        );
+        return;
+      }
+
+      _hasJoined = false;
+      wasKicked = true;
+      roomTerminationReason = null;
+      unawaited(
+        PlayerRoomSessionStore.instance.clear(onlyRoomCode: expectedRoomCode),
+      );
+      clearRoom(expectedRoomCode: expectedRoomCode);
+    } catch (error) {
+      // 확인 실패 시 참가자를 성급하게 강퇴 처리하지 않습니다. players 구독이
+      // 복구되면 현재 값을 다시 받아 재판정합니다.
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=player_removal_confirmation_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+    }
+  }
+
+  void _terminateRoom(
+    RoomTerminationReason reason, {
+    required String expectedRoomCode,
+  }) {
+    if (roomCode != expectedRoomCode || roomTerminationReason != null) return;
+    _hasJoined = false;
+    wasKicked = false;
+    wasRoomClosed = true;
+    roomTerminationReason = reason;
+    unawaited(
+      PlayerRoomSessionStore.instance.clear(onlyRoomCode: expectedRoomCode),
+    );
+    clearRoom(
+      expectedRoomCode: expectedRoomCode,
+      preserveTerminationReason: true,
+    );
+  }
+
+  void acknowledgeRoomExit() {
+    wasKicked = false;
+    wasRoomClosed = false;
+    roomTerminationReason = null;
   }
 
   /// 네트워크 모달의 재시도 버튼에서 현재 세션을 실제로 복원합니다.
@@ -733,6 +894,7 @@ class RoomProvider extends ChangeNotifier {
       wasKicked = false;
       // 직전 방이 닫히며 세워진 플래그가 새 방 입장으로 넘어오지 않게 합니다.
       wasRoomClosed = false;
+      roomTerminationReason = null;
       _hasJoined = false;
       _joinedNickname = nickname;
       _joinedCharacterId = characterId;
@@ -820,6 +982,7 @@ class RoomProvider extends ChangeNotifier {
       if (_isDisposed) return false;
       wasKicked = false;
       wasRoomClosed = false;
+      roomTerminationReason = null;
       _hasJoined = true;
       _joinedNickname = session.nickname;
       _joinedCharacterId = session.characterId;
@@ -878,7 +1041,10 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // 메모리 초기화 leaveRoom에서 사용
-  void clearRoom({String? expectedRoomCode}) {
+  void clearRoom({
+    String? expectedRoomCode,
+    bool preserveTerminationReason = false,
+  }) {
     // 이전 방의 늦은 closed/players 이벤트가 새 방 상태를 지우지
     // 못하게 구독을 시작한 방 identity를 검증합니다.
     if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
@@ -887,12 +1053,16 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
+    controllerPresenceSubscription?.cancel();
+    roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     roomSubscription = null;
     playerSubscription = null;
     connectionSubscription = null;
     statusSubscription = null;
+    controllerPresenceSubscription = null;
+    roomExistenceSubscription = null;
     roomCode = null;
     players = [];
     _removingPlayerUids.clear();
@@ -909,9 +1079,15 @@ class RoomProvider extends ChangeNotifier {
     _hasJoined = false;
     _isLeaving = false;
     _wasServerDisconnected = false;
+    _isServerConnected = false;
+    _roomMissingCandidate = false;
+    _roomDeletionConfirmation = null;
+    _playerRemovalCheckId += 1;
     _connectionRecoveryFuture = null;
     _joinedNickname = null;
     _joinedCharacterId = null;
+    controllerPresenceState = ControllerPresenceState.unknown;
+    if (!preserveTerminationReason) roomTerminationReason = null;
     notifyListeners();
   }
 
@@ -922,6 +1098,8 @@ class RoomProvider extends ChangeNotifier {
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
     statusSubscription?.cancel();
+    controllerPresenceSubscription?.cancel();
+    roomExistenceSubscription?.cancel();
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     super.dispose();
