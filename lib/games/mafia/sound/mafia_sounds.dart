@@ -110,6 +110,12 @@ abstract final class MafiaSounds {
   static const nightBackground =
       'assets/games/mafia/sounds/background/background_night.m4a';
 
+  /// '지금부터 토론을 시작합니다' 안내에 맞춰 냅니다(아침 발표의 마지막 박자).
+  ///
+  /// 길이 2.24초로, 안내가 머무는 시간(`closingHold` 2.5초)에 들어갑니다.
+  static const voiceDiscussion =
+      'assets/games/mafia/sounds/voice_discussion.m4a';
+
   /// 모두가 신분을 확인한 뒤 '게임을 시작하겠습니다' 안내에 맞춰 냅니다.
   ///
   /// ⚠️ **전용 음성이 아직 없어 공용 도장 소리를 씁니다.** 안내가 내려찍히는
@@ -128,5 +134,10 @@ abstract final class MafiaSounds {
   /// 한 번에 하나만 나는 안내 음성입니다. **[preloadTargets]와 나눠 둡니다** —
   /// 겹칠 일이 없어 사본 하나로 충분하고, 사본을 아껴야 기기 디코더가 모자라
   /// 준비가 실패하는 일이 없습니다(2026-08 iOS 사고).
-  static const narrationTargets = [voiceNight, voiceWinCitizen, voiceWinMafia];
+  static const narrationTargets = [
+    voiceNight,
+    voiceDiscussion,
+    voiceWinCitizen,
+    voiceWinMafia,
+  ];
 }

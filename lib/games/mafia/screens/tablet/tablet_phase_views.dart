@@ -4,6 +4,7 @@ import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
+import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_execution_view.dart';
 import 'package:project00/games/mafia/animations/announcement_reveal.dart';
 import 'package:project00/games/mafia/animations/role_deal_toss_animation.dart';
@@ -328,6 +329,8 @@ class MafiaTabletMorningSequence extends StatelessWidget {
             delay: afterExposure,
             child: const MafiaTabletNotice.day(
               text: MafiaCopy.discussionNotice,
+              // '지금부터 토론을 시작합니다' 음성(2.24초)이 2.5초 안내에 맞습니다.
+              voice: MafiaSounds.voiceDiscussion,
             ),
           ),
       ],

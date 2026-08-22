@@ -17,7 +17,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 //=======================나레이션 파일==============================
-// 2026-08-22에 받은 사람 목소리 8개입니다. 경로를 한 글자만 틀려도 **소리가
+// 2026-08-22에 받은 사람 목소리 9개입니다. 경로를 한 글자만 틀려도 **소리가
 // 조용히 안 나기만** 하고 화면은 정상으로 보입니다(재생 실패는 삼킵니다).
 // 그래서 파일이 번들에 실제로 있는지, 미리 준비 목록에 올랐는지 확인합니다.
 void main() {
@@ -30,11 +30,12 @@ void main() {
     '레드팀 승리': FinalCallSounds.voiceWinRed,
     '무승부': FinalCallSounds.voiceDraw,
     '밤이 되었습니다': MafiaSounds.voiceNight,
+    '지금부터 토론을 시작합니다': MafiaSounds.voiceDiscussion,
     '시민팀 승리': MafiaSounds.voiceWinCitizen,
     '마피아팀 승리': MafiaSounds.voiceWinMafia,
   };
 
-  test('나레이션 8개가 모두 번들에 들어 있다', () async {
+  test('나레이션 9개가 모두 번들에 들어 있다', () async {
     for (final entry in narrations.entries) {
       final data = await rootBundle.load(entry.value);
       expect(
@@ -62,6 +63,7 @@ void main() {
     }
     for (final path in [
       MafiaSounds.voiceNight,
+      MafiaSounds.voiceDiscussion,
       MafiaSounds.voiceWinCitizen,
       MafiaSounds.voiceWinMafia,
     ]) {
@@ -139,9 +141,32 @@ void main() {
       expect(sound.played.length, 1);
     });
 
-    testWidgets('낮 안내는 나레이션을 내지 않는다', (tester) async {
+    testWidgets('낮 안내는 그 안내의 음성만 낸다', (tester) async {
+      // 아침 안내에는 음성이 없습니다.
       final sound = await pumpNotice(tester, isNight: false);
       expect(sound.played, isEmpty);
+    });
+
+    testWidgets('토론 시작 안내는 그 음성을 낸다', (tester) async {
+      // 안내마다 음성이 따로 있습니다. 문구로 추측하지 않고 받아서 냅니다.
+      final sound = _RecordingSound();
+      tester.view.physicalSize = const Size(1194, 834);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SoundProvider>.value(
+          value: sound,
+          child: const MaterialApp(
+            home: MafiaTabletNotice.day(
+              text: '토론을 시작합니다',
+              voice: MafiaSounds.voiceDiscussion,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(sound.played, [MafiaSounds.voiceDiscussion]);
     });
   });
 
