@@ -18,9 +18,6 @@ abstract final class MafiaCopy {
     return (code - 0xAC00) % 28 != 0;
   }
 
-  /// 처형된 사람을 알리는 문구입니다.
-  static String executed(String nickname) => '$nickname님이 처형되었습니다.';
-
   /// 처형자 발표 화면의 제목입니다. 당사자와 나머지 사람이 다른 문구를 봅니다.
   //=======================단계 안내 문구==============================
   // 단계가 바뀔 때 화면 가운데에 잠깐 띄우는 안내입니다(확정 2026-08).
@@ -39,13 +36,43 @@ abstract final class MafiaCopy {
   /// 아무도 처형되지 않았을 때의 문구입니다(동표가 무효 처리되는 규칙일 때).
   static const String noExecution = '처형된 사람이 없습니다';
 
-  /// 처형된 사람의 신분을 알리는 문구입니다.
-  ///
-  /// 받침에 따라 조사가 달라집니다. `시민이었습니다` / `마피아였습니다`.
-  static String wasRole(String nickname, String roleName) {
+  //=======================두 박자로 나눠 찍는 문구==============================
+  // 확정(2026-08): 안내 문구는 어몽어스 추방 발표처럼 내려찍고
+  // ([MafiaEjectionText]), **너무 긴 문장은 두 박자로 나눠** 띄웁니다.
+  // 한 줄로 길게 흐르는 것보다 짧게 두 번 박히는 쪽이 훨씬 세게 읽힙니다.
+  //
+  // 나누는 자리는 문장마다 손으로 정합니다. 글자수로 기계적으로 자르면
+  // '표가 같아 아무도 / 처형되지 않았습니다'처럼 어색한 데서 끊깁니다.
+  // 찍는 말투라 마침표는 넣지 않습니다.
+
+  /// 밤 사이 죽은 사람을 알립니다.
+  static List<String> deathBeats(String names) => ['$names님은', '밤을 넘기지 못했습니다'];
+
+  /// 아무도 죽지 않은 아침입니다.
+  static const List<String> noDeathBeats = ['어제 밤,', '아무도 죽지 않았습니다'];
+
+  /// 처형된 사람을 알립니다.
+  static List<String> executedBeats(String nickname) => [
+    '$nickname님이',
+    '처형되었습니다',
+  ];
+
+  /// 동표로 아무도 처형되지 않았습니다.
+  static const List<String> tieBeats = ['표가 같아', '아무도 처형되지 않았습니다'];
+
+  /// 처형된 사람의 신분을 공개합니다. 이 게임에서 가장 센 한 방입니다.
+  static List<String> wasRoleBeats(String nickname, String roleName) {
     final suffix = hasFinalConsonant(roleName) ? '이었습니다' : '였습니다';
-    return '$nickname님은 $roleName$suffix.';
+    return ['$nickname님은', '$roleName$suffix'];
   }
+
+  /// 이 빌드가 모르는 신분일 때입니다.
+  ///
+  /// 새 역할을 서버가 먼저 배포한 뒤 구버전 앱이 붙는 경우를 막기 위한 것입니다.
+  static List<String> unknownRoleBeats(String nickname) => [
+    '$nickname님의',
+    '신분을 확인할 수 없습니다',
+  ];
 
   //=======================룰 다이얼로그==============================
   /// 휴대폰 상단바의 룰(팁) 버튼이 보여 주는 문구입니다.
@@ -92,9 +119,4 @@ abstract final class MafiaCopy {
 - 마피아가 모두 사라지면 **시민 팀** 승리
 - 마피아 수가 남은 사람 수와 같아지면 **마피아 팀** 승리
 ''';
-
-  /// 이 빌드가 모르는 신분일 때의 문구입니다.
-  ///
-  /// 새 역할을 서버가 먼저 배포한 뒤 구버전 앱이 붙는 경우를 막기 위한 것입니다.
-  static String unknownRole(String nickname) => '$nickname님의 신분을 확인할 수 없습니다.';
 }

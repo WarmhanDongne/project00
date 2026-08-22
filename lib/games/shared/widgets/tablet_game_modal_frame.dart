@@ -49,7 +49,14 @@ class TabletGameModalFrame extends StatelessWidget {
                   ),
                 ],
               ),
-              child: child,
+              // Material을 한 겹 둡니다. Slider·InkWell 같은 머티리얼 위젯은
+              // 위쪽에 Material이 없으면 그리다가 터집니다
+              // (`No Material widget found`). 화면 안에 끼워 쓸 때는 Scaffold의
+              // Material이 있어 드러나지 않지만, showDialog로 띄우면 없습니다.
+              // 실제로 마피아 설정 다이얼로그가 이 때문에 터졌습니다(2026-08).
+              //
+              // transparency 형이라 배경은 위 Container가 그린 그대로입니다.
+              child: Material(type: MaterialType.transparency, child: child),
             ),
           ),
         );

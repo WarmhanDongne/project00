@@ -32,6 +32,7 @@ export {
 
 // ---------------------------------------------- 인증
 export {checkEmailDuplicate} from "./auth/check-email.js";
+export {deleteAccount} from "./auth/delete-account.js";
 export {syncGoogleUserProfile} from "./auth/sync-google-profile.js";
 export {syncAppleUserProfile} from "./auth/sync-apple-profile.js";
 

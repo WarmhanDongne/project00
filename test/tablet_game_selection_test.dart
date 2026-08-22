@@ -83,12 +83,13 @@ void main() {
     roomProvider.notifyListeners();
     await tester.pump();
     expect(find.text('유료 게임'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
+    // 제목 옆 개수 표시는 없앴습니다.
+    expect(find.text('2'), findsNothing);
     roomProvider.dispose();
     gameProvider.dispose();
   });
 
-  testWidgets('선택 해제에 실패하면 모달을 유지하고 오류를 표시한다', (tester) async {
+  testWidgets('선택 해제에 실패하면 닫힌 뒤 오류를 알린다', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -124,7 +125,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(roomService.selectedGameIds, ['final_call', null]);
-    expect(find.byType(Dialog), findsOneWidget);
+    // 닫기는 서버 응답을 기다리지 않으므로 모달은 이미 사라져 있습니다.
+    expect(find.byType(Dialog), findsNothing);
     expect(find.text('게임 선택을 해제하지 못했습니다.'), findsOneWidget);
   });
 
@@ -240,12 +242,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final service = _SelectionRoomService(failOnBeginSeating: true);
-    final provider = RoomProvider(
-      service: service,
-      gameService: _CatalogGameService(),
-    )
-      ..roomCode = 'ABCDE'
-      ..players = List.generate(2, _player);
+    final provider =
+        RoomProvider(service: service, gameService: _CatalogGameService())
+          ..roomCode = 'ABCDE'
+          ..players = List.generate(2, _player);
     addTearDown(provider.dispose);
 
     await _pumpPreviewGame(tester, provider, _liarsPokerGame);
@@ -320,26 +320,321 @@ void main() {
     tester.view.physicalSize = const Size(1024, 768);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
-    final clearCompleter = Completer<void>();
-    final service = _SelectionRoomService(clearCompleter: clearCompleter);
-    final provider = RoomProvider(
-      service: service,
-      gameService: _CatalogGameService(),
-    )..roomCode = 'ABCDE';
-    addTearDown(provider.dispose);
 
-    await _pumpDialogRoute(tester, provider, selectionActive: true);
+    final gameService = _CatalogGameService();
+    final service = _SelectionRoomService();
+    final roomProvider =
+        RoomProvider(service: service, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Final Call'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byTooltip('닫기'));
     await tester.tap(find.byTooltip('닫기'), warnIfMissed: false);
     unawaited(tester.binding.handlePopRoute());
+    await tester.pumpAndSettle();
+
+    // 선택 해제는 한 번만, pop도 한 번만 일어납니다.
+    expect(service.selectedGameIds, ['final_call', null]);
+    expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('닫기는 선택 해제 응답을 기다리지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final clearCompleter = Completer<void>();
+    final gameService = _CatalogGameService();
+    final service = _SelectionRoomService(clearCompleter: clearCompleter);
+    final roomProvider =
+        RoomProvider(service: service, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
     await tester.pump();
-    expect(service.selectedGameIds, [null]);
+
+    await tester.tap(find.text('Final Call'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+
+    // 해제 요청은 아직 서버에 머물러 있는데도 모달은 이미 닫혔습니다.
+    expect(clearCompleter.isCompleted, isFalse);
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.text('Final Call'), findsOneWidget);
 
     clearCompleter.complete();
     await tester.pumpAndSettle();
-    expect(service.selectedGameIds, [null]);
+    expect(service.selectedGameIds, ['final_call', null]);
+  });
+
+  testWidgets('닫고 바로 다른 게임을 고르면 새 선택을 해제하지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final selectCompleter = Completer<void>();
+    final gameService = _CatalogGameService();
+    final service = _SelectionRoomService(selectCompleter: selectCompleter);
+    final roomProvider =
+        RoomProvider(service: service, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game, _liarsPokerGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // 첫 선택이 아직 서버에 머무는 사이에 닫고 다른 게임을 고릅니다.
+    await tester.tap(find.text('Final Call'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Liar's Poker"));
+    await tester.pumpAndSettle();
+
+    selectCompleter.complete();
+    await tester.pumpAndSettle();
+
+    // 뒤늦은 해제가 새 선택을 지우면 시작하기가 막힙니다.
+    expect(service.selectedGameIds, ['final_call', 'liars_poker']);
+    expect(find.byType(Dialog), findsOneWidget);
+  });
+
+  testWidgets('카드를 누르면 서버 응답을 기다리지 않고 미리보기가 열린다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final selectCompleter = Completer<void>();
+    final gameService = _CatalogGameService();
+    final service = _SelectionRoomService(
+      selectCompleter: selectCompleter,
+      failOnBeginSeating: true,
+    );
+    final roomProvider =
+        RoomProvider(service: service, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..players = List.generate(2, _player)
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_liarsPokerGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text("Liar's Poker"));
+    // 모달 전환만 진행시킵니다. 선택 요청은 아직 서버에 머물러 있습니다.
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(selectCompleter.isCompleted, isFalse);
+    expect(service.selectedGameIds, ['liars_poker']);
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('시작하기'), findsOneWidget);
+
+    // 응답보다 먼저 시작하기를 눌러도 선택이 끝난 뒤에 자리 배치를 요청합니다.
+    await tester.tap(find.text('시작하기'));
+    await tester.pump();
+    expect(service.beginSeatingCalls, 0);
+
+    selectCompleter.complete();
+    await tester.pumpAndSettle();
+    expect(service.beginSeatingCalls, 1);
+  });
+
+  testWidgets('선택이 실패하면 닫을 때 해제를 호출하지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final gameService = _CatalogGameService();
+    final service = _SelectionRoomService(failOnSelect: true);
+    final roomProvider =
+        RoomProvider(service: service, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..players = List.generate(2, _player)
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_liarsPokerGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text("Liar's Poker"));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+
+    // 서버에 선택이 남지 않았으므로 해제(null)를 보내지 않습니다.
+    expect(service.selectedGameIds, ['liars_poker']);
     expect(find.byType(Dialog), findsNothing);
-    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('보유한 게임에 없는 장르 칩은 보이지 않는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final gameService = _CatalogGameService();
+    final roomProvider =
+        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          // 전략(Final Call) + 추리(마피아)만 보유한 상태입니다.
+          ..groupGames = const [_game, _mafiaGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.widgetWithText(ChoiceChip, '전체'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '전략'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '추리'), findsOneWidget);
+    for (final missing in ['재미', '액션', '심리', '수학', '공간', '협동']) {
+      expect(find.widgetWithText(ChoiceChip, missing), findsNothing);
+    }
+
+    // 영문 장르 코드도 한글 칩으로 맞춥니다(psychology, cooperative).
+    roomProvider.groupGames = const [_longGame];
+    roomProvider.notifyListeners();
+    await tester.pump();
+    expect(find.widgetWithText(ChoiceChip, '심리'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '협동'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '전략'), findsNothing);
+  });
+
+  testWidgets('고른 장르가 사라지면 전체로 돌아간다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final gameService = _CatalogGameService();
+    final roomProvider =
+        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game, _mafiaGame];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '추리'));
+    await tester.pump();
+    expect(find.text('Final Call'), findsNothing);
+    expect(find.text('마피아'), findsOneWidget);
+
+    // 추리 게임이 빠지면 빈 목록에 갇히지 않고 전체가 다시 보입니다.
+    roomProvider.groupGames = const [_game];
+    roomProvider.notifyListeners();
+    await tester.pump();
+    expect(find.widgetWithText(ChoiceChip, '추리'), findsNothing);
+    expect(find.text('Final Call'), findsOneWidget);
+    expect(find.text('조건에 맞는 게임이 없습니다.'), findsNothing);
   });
 
   testWidgets('방이 없는 모달도 X로 한 번만 닫힌다', (tester) async {
@@ -538,12 +833,16 @@ class _SelectionRoomService implements RoomService {
   _SelectionRoomService({
     this.failOnClear = false,
     this.failOnBeginSeating = false,
+    this.failOnSelect = false,
     this.clearCompleter,
+    this.selectCompleter,
   });
 
   final bool failOnClear;
   final bool failOnBeginSeating;
+  final bool failOnSelect;
   final Completer<void>? clearCompleter;
+  final Completer<void>? selectCompleter;
   final List<String?> selectedGameIds = [];
   int beginSeatingCalls = 0;
 
@@ -556,8 +855,14 @@ class _SelectionRoomService implements RoomService {
     if (gameId == null && clearCompleter != null) {
       await clearCompleter!.future;
     }
+    if (gameId != null && selectCompleter != null) {
+      await selectCompleter!.future;
+    }
     if (failOnClear && gameId == null) {
       throw const RoomCommandException('게임 선택을 해제하지 못했습니다.');
+    }
+    if (failOnSelect && gameId != null) {
+      throw const RoomCommandException('게임을 선택하지 못했습니다.');
     }
   }
 

@@ -28,6 +28,7 @@ class MafiaPhoneResultSequence extends StatefulWidget {
     required this.players,
     required this.revealedRoles,
     this.myRole,
+    this.winnerRoleIds = const {},
     this.winnerLabel,
     this.posterHold = defaultPosterHold,
   });
@@ -44,7 +45,15 @@ class MafiaPhoneResultSequence extends StatefulWidget {
   /// 내 신분입니다. 명단 화면의 아래 카드에 씁니다.
   final MafiaRole? myRole;
 
+  /// 이긴 사람들의 역할 id입니다. 중립 포스터를 고르는 데 씁니다.
+  ///
+  /// 중립은 진영이 같아도 이긴 역할에 따라 그림이 다릅니다(광대/처형자/
+  /// 연쇄살인마/교단).
+  final Set<String> winnerRoleIds;
+
   /// 승리 문구를 덮어쓸 때 씁니다(예: `광대 승리`).
+  ///
+  /// 포스터가 있는 승리는 그림에 문구가 들어 있어 쓰이지 않습니다.
   final String? winnerLabel;
 
   /// 승리 그림을 보여 주는 시간입니다.
@@ -85,6 +94,7 @@ class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence> {
         if (!_showsRoster)
           MafiaResultView(
             winner: widget.winner,
+            winnerRoleIds: widget.winnerRoleIds,
             winnerLabel: widget.winnerLabel,
           )
         else

@@ -7,6 +7,7 @@ import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
+import 'package:project00/platform/home/howtoplay/widgets/how_to_play_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
@@ -227,7 +228,7 @@ class _HomeHeader extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 170,
+              width: 210,
               child: Text(
                 '모시겜',
                 style: TextStyle(
@@ -246,10 +247,14 @@ class _HomeHeader extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 170,
+              width: 210,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [const Profile()],
+                children: [
+                  const HowToPlayButton(compact: false),
+                  const SizedBox(width: 12),
+                  const Profile(),
+                ],
               ),
             ),
           ],

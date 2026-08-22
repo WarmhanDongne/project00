@@ -8,6 +8,8 @@ import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 import 'package:project00/games/mafia/widgets/phone/spectator_roster_view.dart';
 import 'package:project00/games/mafia/widgets/phone/vote_view.dart';
 
+import 'support/ejection_beats.dart';
+
 /// 낮 단계 화면들(P7 투표·처형, P8 관전)입니다.
 ///
 /// 시안이 정한 규칙 중 **틀리면 게임이 어긋나는 것**만 확인합니다. 좌표는
@@ -111,7 +113,9 @@ void main() {
 
       expect(find.text('오늘의 처형자'), findsOneWidget);
       expect(find.text('플레이어0'), findsOneWidget);
-      expect(find.text('플레이어0님이 처형되었습니다.'), findsOneWidget);
+      // 확정(2026-08): 긴 발표는 두 박자로 나뉘어 내려찍힙니다.
+      expect(find.text('플레이어0님이'), findsOneWidget);
+      await pumpUntilText(tester, '처형되었습니다');
     });
 
     testWidgets('당사자는 다른 문구를 보고 아래 문구가 없다', (tester) async {
@@ -190,13 +194,16 @@ void main() {
         ),
       );
 
-      expect(find.text('플레이어0님은 마피아였습니다.'), findsOneWidget);
+      // 카드가 절반 돌아가기 전에는 신분 문구가 아직 없습니다.
+      expect(find.text('플레이어0님은'), findsNothing);
       expect(revealed, isFalse);
 
       await tester.pump(MafiaExecutionRevealView.revealDelay);
       await tester.pump(MafiaExecutionRevealView.flipDuration);
-      await tester.pumpAndSettle();
 
+      // 뒤집힌 뒤 두 박자로 찍힙니다.
+      await pumpUntilText(tester, '플레이어0님은');
+      await pumpUntilText(tester, '마피아였습니다');
       expect(revealed, isTrue);
     });
 
@@ -213,8 +220,8 @@ void main() {
       );
 
       // 연출 시간이 지나기 전에 이미 공개된 상태여야 합니다.
-      expect(find.text('플레이어0님은 마피아였습니다.'), findsOneWidget);
-      await tester.pumpAndSettle();
+      expect(find.text('플레이어0님은'), findsOneWidget);
+      await pumpUntilText(tester, '마피아였습니다');
     });
 
     testWidgets('이 빌드가 모르는 신분이면 확인할 수 없다고 알린다', (tester) async {
@@ -228,8 +235,10 @@ void main() {
         ),
       );
 
-      expect(find.text('플레이어0님의 신분을 확인할 수 없습니다.'), findsOneWidget);
-      await tester.pumpAndSettle();
+      await tester.pump(MafiaExecutionRevealView.revealDelay);
+      await tester.pump(MafiaExecutionRevealView.flipDuration);
+      await pumpUntilText(tester, '플레이어0님의');
+      await pumpUntilText(tester, '신분을 확인할 수 없습니다');
     });
   });
 

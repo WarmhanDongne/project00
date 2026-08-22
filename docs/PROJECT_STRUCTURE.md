@@ -132,6 +132,7 @@ lib/main.dart
 | `home/phone/screens/` | 휴대폰 홈, 방 참여, 닉네임, 대기 화면 |
 | `home/tablet/screens/tablet_home.dart` | 태블릿 홈(방 생성·게임 선택) |
 | `home/gamelist/` | Firestore `games` 목록과 보유 게임 조회 |
+| `home/howtoplay/` | 홈의 안내 아이콘에서 펼쳐지는 플레이 방식 안내(태블릿 위치·자리 배치 연출) |
 | `home/room/models/` | 방·플레이어·기기 모델 |
 | `home/room/services/room_service.dart` | 방 생성·입장·퇴장 callable 호출 |
 | `home/room/services/*_session_store.dart` | 재접속용 로컬 세션 저장 |

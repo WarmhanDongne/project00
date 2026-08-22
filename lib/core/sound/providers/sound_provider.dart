@@ -173,6 +173,15 @@ class SoundProvider extends ChangeNotifier {
     return _service.stopBgm();
   }
 
+  /// 현재 BGM을 **서서히 줄이며** 정지합니다.
+  ///
+  /// 사용자의 볼륨 설정은 그대로 둡니다(재생 볼륨에 곱하는 배율만 내립니다).
+  Future<void> fadeOutBgm({
+    Duration duration = const Duration(milliseconds: 1200),
+  }) {
+    return _service.fadeOutBgm(duration: duration);
+  }
+
   /// 현재 BGM을 일시정지합니다.
   Future<void> pauseBgm() {
     return _service.pauseBgm();

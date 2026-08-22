@@ -1,8 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/mafia/animations/mafia_phase_transition.dart';
+import 'package:project00/games/mafia/animations/role_deal_toss_animation.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
+import 'package:project00/games/mafia/mafia_flow_config.dart';
+import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/shared/widgets/game_turn_countdown.dart';
 import 'package:project00/games/mafia/widgets/phone/day_discussion_view.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/role_card_layer.dart';
@@ -132,7 +137,12 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
           child: MafiaPhaseTransition(
             child: KeyedSubtree(
               key: ValueKey(_pageKey(game)),
-              child: _buildPage(game),
+              // 타이머가 1초마다 움직여야 하므로 남은 시간을 여기서 셉니다.
+              // 서버 상태만 보고 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다.
+              child: GameTurnCountdown(
+                expiresAt: game.turnDeadlineAt,
+                builder: (context, remaining) => _buildPage(game, remaining),
+              ),
             ),
           ),
         ),
@@ -145,10 +155,54 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             phaseKey: _pageKey(game),
             // 아직 확인하지 않았으면 화면 위에서 내려오는 첫 확인 연출입니다.
             isFirstReveal: game.phase == 'roleReveal' && !game.hasConfirmedRole,
+            // 태블릿의 분배 연출이 끝난 뒤에 카드가 들어옵니다(확정 2026-08).
+            entranceDelay: _dealEntranceDelay(game),
+            // 그 사람만의 안내입니다(처형자의 목표, 신분이 바뀌었다는 알림).
+            notice: _roleNotice(game),
             onRevealed: game.confirmRole,
           ),
       ],
     );
+  }
+
+  /// 신분 카드 아래에 한 줄 더 붙일 **그 사람만의 안내**입니다.
+  ///
+  /// 역할 이름으로 분기하지 않습니다. 서버가 그 사람의 private에 값을 넣어
+  /// 줬을 때만 문구가 생깁니다.
+  ///
+  /// - **처형자** — 목표를 모르면 역할이 성립하지 않습니다. 계속 보여 줍니다.
+  /// - **도둑·전향된 사람** — 카드 그림은 이미 새 신분으로 바뀌지만, 바뀐 줄
+  ///   모르고 지나칠 수 있어 그 라운드 동안 한 줄로 알려 줍니다.
+  static String? _roleNotice(MafiaController game) {
+    final target = game.executionerTarget;
+    if (target != null) return '목표 · ${target.nickname}';
+    if (game.roleChangedThisRound) return '지난밤 신분이 바뀌었습니다';
+    return null;
+  }
+
+  /// 태블릿에서 카드를 다 나눠 줄 때까지 남은 시간입니다.
+  ///
+  /// 확정(2026-08): 휴대폰의 신분 카드는 **분배 연출이 끝난 뒤에** 화면 위에서
+  /// 들어옵니다. 태블릿에서 카드가 아직 날아가는 중인데 휴대폰에 이미 카드가
+  /// 있으면 카드를 건네받는 느낌이 사라집니다.
+  ///
+  /// 서버가 신호를 따로 보내지 않으므로 **마감 시각으로 되짚어** 계산합니다.
+  /// 신분 확인 단계의 마감은 `시작 + MafiaTiming.roleReveal`이라,
+  /// `마감 − roleReveal`이 분배가 시작된 시각입니다. 재접속처럼 이미 지난
+  /// 경우에는 0이 되어 곧바로 들어옵니다.
+  Duration _dealEntranceDelay(MafiaController game) {
+    if (game.phase != 'roleReveal' || game.hasConfirmedRole) {
+      return Duration.zero;
+    }
+    final deadline = game.turnDeadlineAt;
+    if (deadline == null) return Duration.zero;
+
+    final dealStartAt = deadline - MafiaTiming.roleReveal.inMilliseconds;
+    final dealMs = MafiaRoleDealTossAnimation.totalDuration(
+      game.players.length,
+    ).inMilliseconds;
+    final remaining = dealStartAt + dealMs - ServerClock.nowMillis();
+    return remaining <= 0 ? Duration.zero : Duration(milliseconds: remaining);
   }
 
   /// 지금 보여 줄 화면을 가리키는 값입니다. 이 값이 바뀔 때만 전환합니다.
@@ -167,7 +221,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   /// 결과 화면부터는 승패가 다 드러나 카드를 볼 이유가 없습니다.
   bool _showsRoleCard(MafiaController game) => !game.isFinished;
 
-  Widget _buildPage(MafiaController game) {
+  Widget _buildPage(MafiaController game, Duration? remaining) {
     // 처형 발표는 사망 여부보다 먼저 봅니다. 자기가 처형된 사람도 발표를
     // 봐야 하기 때문입니다.
     if (game.isVoteResult && _executionStage != _ExecutionStage.done) {
@@ -192,7 +246,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     return switch (game.phase) {
       // 신분 확인은 카드 레이어가 전부 그립니다(카드·화살표·문구).
       'roleReveal' => const SizedBox.shrink(),
-      'night' => _buildNight(game),
+      'night' => _buildNight(game, remaining),
       // 아침은 태블릿과 같은 발표 문구를 보여 줍니다(확정).
       'morning' => MafiaMorningAnnouncementView(
         role: game.myRole,
@@ -201,20 +255,20 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       ),
       'day' => MafiaDayDiscussionView(
         role: game.myRole,
-        remainingSeconds: _remainingSeconds(game),
+        remainingSeconds: remaining?.inSeconds,
         canEndDiscussion: game.canEndDiscussion,
         skipVoteCount: game.discussionSkipCount,
         aliveCount: game.alivePlayers.length,
         hasVotedToSkip: game.hasVotedToSkipDiscussion,
         onEndDiscussion: game.endDiscussion,
       ),
-      'voting' => _buildVoting(game),
+      'voting' => _buildVoting(game, remaining),
       // 그 밖의 단계(연결 중·종료)는 셸이 처리합니다.
       _ => MafiaDayDiscussionView(role: game.myRole, title: '잠시만 기다려 주세요'),
     };
   }
 
-  Widget _buildNight(MafiaController game) {
+  Widget _buildNight(MafiaController game, Duration? remaining) {
     // 라운드가 바뀌면 지난 밤의 선택·확인 기록을 버립니다.
     if (_nightSelectionRound != game.round) {
       _nightSelectionRound = game.round;
@@ -231,27 +285,40 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         target != null &&
         _acknowledgedInvestigationRound != game.round;
 
+    // 확정(2026-08): 밤의 앞 1분만 고를 수 있고, 남은 30초는 다같이
+    // 기다립니다. 남은 시간이 대기 구간에 들어서면 화면을 대기로 넘깁니다.
+    final actionWindowClosed =
+        remaining != null && remaining <= MafiaTiming.nightWait;
+
     return MafiaNightActionView(
       role: game.myRole,
+      actionWindowClosed: actionWindowClosed,
+      // 능력을 다 쓴 밤은 대기 화면입니다(자경단원의 한 발).
+      abilityExhausted: game.abilityExhausted,
       players: game.nightTargets,
       selectedUid: game.hasSubmittedNight
           ? game.nightTargetUid
           : _nightSelection,
       allySelectedUids: game.allySelectedUids,
-      remainingSeconds: _remainingSeconds(game),
+      remainingSeconds: remaining?.inSeconds,
       isSubmitted: game.hasSubmittedNight,
       // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
-      onSelect: game.canSubmitNightAction
+      onSelect: game.canSubmitNightAction && !actionWindowClosed
           ? (uid) => setState(() => _nightSelection = uid)
           : null,
-      onConfirm: game.canSubmitNightAction && _nightSelection != null
+      onConfirm:
+          game.canSubmitNightAction &&
+              !actionWindowClosed &&
+              _nightSelection != null
           ? () => unawaited(game.submitNightAction(_nightSelection!))
           : null,
       investigationResult: showsResult
           ? MafiaNightInvestigationResult(
               target: target,
               verdict: investigation.verdict,
-              title: game.myRole?.nightPromptVerb == '추적' ? '추적 결과' : '조사 결과',
+              // 제목은 역할의 동사에서 만듭니다. 조사·추적·교신·절도가
+              // 모두 같은 자리를 쓰므로 역할 이름으로 분기하지 않습니다.
+              title: _investigationTitle(game.myRole),
             )
           : null,
       onConfirmResult: showsResult
@@ -260,7 +327,13 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     );
   }
 
-  Widget _buildVoting(MafiaController game) {
+  /// 밤 결과 화면의 제목입니다. 예: `조사 결과`·`교신 결과`.
+  static String _investigationTitle(MafiaRole? role) {
+    final verb = role?.nightPromptVerb ?? '';
+    return verb.isEmpty ? '조사 결과' : '$verb 결과';
+  }
+
+  Widget _buildVoting(MafiaController game, Duration? remaining) {
     // 라운드가 바뀌면 지난 투표의 선택을 버립니다.
     if (_voteSelectionRound != game.round) {
       _voteSelectionRound = game.round;
@@ -271,8 +344,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       role: game.myRole,
       players: game.voteTargets,
       selectedUid: game.hasVoted ? game.voteTargetUid : _voteSelection,
-      remainingSeconds: _remainingSeconds(game),
+      remainingSeconds: remaining?.inSeconds,
       isSubmitted: game.hasVoted,
+      // 마담에게 유혹당하면 이번 낮에는 표를 낼 수 없습니다.
+      voteBanned: game.isVoteBanned,
       // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
       onSelect: game.canVote
           ? (uid) => setState(() => _voteSelection = uid)
@@ -297,15 +372,5 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       executed: executed,
       executedRole: game.revealedRoleOf(executed.uid),
     );
-  }
-
-  /// 남은 시간(초)입니다. 마감이 없는 단계면 null입니다.
-  ///
-  /// 서버 시계와 기기 시계가 어긋날 수 있어 음수는 0으로 눌러 보여 줍니다.
-  int? _remainingSeconds(MafiaController game) {
-    final deadline = game.turnDeadlineAt;
-    if (deadline == null) return null;
-    final remaining = (deadline - DateTime.now().millisecondsSinceEpoch) / 1000;
-    return remaining <= 0 ? 0 : remaining.ceil();
   }
 }

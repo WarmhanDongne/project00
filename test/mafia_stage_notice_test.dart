@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/mafia/animations/announcement_reveal.dart';
 import 'package:project00/games/mafia/mafia_copy.dart';
-import 'package:project00/games/mafia/mafia_timing.dart';
+import 'package:project00/games/mafia/mafia_flow_config.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
+
+import 'support/ejection_beats.dart';
 
 //=======================단계 안내 순서==============================
 // 확정(2026-08): 아침은 '아침이 되었습니다' → 사망자 발표 → '토론을 시작합니다'
@@ -40,22 +42,28 @@ void main() {
     // 1박자: 아침 안내만 떠오릅니다. 사망자 발표는 아직 나오지 않습니다.
     await tester.pump();
     expect(find.text(MafiaCopy.morningNotice), findsOneWidget);
-    expect(find.textContaining('밤을 넘기지 못했습니다'), findsNothing);
+    expect(find.text('가나님은'), findsNothing);
 
     // 2박자: 안내가 물러난 뒤 사망자 발표가 떠오릅니다.
-    // (물러나기는 프레임 경계에서 시작하므로 그 시간만큼 더 돌립니다)
-    await tester.pump(MafiaTabletMorningSequence.openingHold);
-    await tester.pump(MafiaAnnouncementReveal.exitDuration);
-    await tester.pump(MafiaAnnouncementReveal.enterDuration);
+    // 확정(2026-08): 긴 발표는 '가나님은' → '밤을 넘기지 못했습니다' 두 방으로
+    // 나뉘어 내려찍힙니다.
+    await pumpUntilText(tester, '가나님은');
+    // 발표가 붙는 프레임과 안내가 걷히는 프레임이 겹칠 수 있어 한 박 둡니다.
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text(MafiaCopy.morningNotice), findsNothing);
-    expect(find.textContaining('밤을 넘기지 못했습니다'), findsOneWidget);
+    await pumpUntilText(tester, '밤을 넘기지 못했습니다');
 
     // 3박자: 발표가 물러나고 토론 시작 안내가 떠오릅니다.
-    await tester.pump(MafiaTabletMorningSequence.announcementHold);
-    await tester.pump(MafiaAnnouncementReveal.exitDuration);
-    await tester.pump(MafiaAnnouncementReveal.enterDuration);
-    expect(find.textContaining('밤을 넘기지 못했습니다'), findsNothing);
-    expect(find.text(MafiaCopy.discussionNotice), findsOneWidget);
+    await pumpUntilText(
+      tester,
+      MafiaCopy.discussionNotice,
+      limit:
+          MafiaTabletMorningSequence.announcementHold +
+          MafiaAnnouncementReveal.exitDuration +
+          MafiaAnnouncementReveal.enterDuration,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('밤을 넘기지 못했습니다'), findsNothing);
   });
 
   testWidgets('개표 발표는 밤 안내로 끝난다', (tester) async {

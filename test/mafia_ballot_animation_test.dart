@@ -5,6 +5,7 @@ import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_day_view.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_tally_view.dart';
+import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 
 //=======================투표지·개표 연출==============================
 // 확정(2026-08): 투표하면 그 좌석에서 투표지가 투표함으로 날아가 사라지고,
@@ -109,14 +110,16 @@ void main() {
       }
       expect(sawBallot, isTrue, reason: '표가 한 장도 개표되지 않았습니다');
 
-      // 확정(2026-08): 연출이 끝나면 세 장(2 + 1)이 **쌓인 채 남습니다.**
+      // 확정(2026-08): 표는 닿는 순간 사라지고 **프로필 블럭이 한 칸 올라갑니다.**
+      // 그래서 연출이 끝나면 남은 표는 없고, 블럭이 세 칸(2 + 1) 쌓여 있습니다.
       // '2표' 같은 숫자 문구는 쓰지 않습니다.
       await tester.pump(const Duration(seconds: 2));
-      expect(find.byType(MafiaBallotPaper), findsNWidgets(3));
+      expect(find.byType(MafiaBallotPaper), findsNothing);
+      expect(find.byType(MafiaProfileImage), findsNWidgets(3));
       expect(find.textContaining('표'), findsNothing);
     });
 
-    testWidgets('표는 프로필 위로 한 장씩 쌓인다', (tester) async {
+    testWidgets('프로필 블럭이 표 수만큼 위로 쌓인다', (tester) async {
       tester.view.physicalSize = const Size(1194, 834);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -138,24 +141,23 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
 
-      // 세 장이 쌓이고, 위로 갈수록 y가 작아집니다(= 위에 놓입니다).
-      final papers = tester
-          .widgetList<MafiaBallotPaper>(find.byType(MafiaBallotPaper))
-          .toList();
-      expect(papers.length, 3);
-      final tops =
+      // 세 표를 받았으니 블럭이 세 칸입니다.
+      final blocks = find.byType(MafiaProfileImage);
+      expect(blocks, findsNWidgets(3));
+
+      final centers =
           tester
-              .widgetList(find.byType(MafiaBallotPaper))
-              .map((w) => tester.getCenter(find.byWidget(w)).dy)
+              .widgetList(blocks)
+              .map((widget) => tester.getCenter(find.byWidget(widget)).dy)
               .toList()
             ..sort();
-      // 장마다 확실히 다른 높이에 놓입니다(겹쳐 쌓인 더미).
-      expect(tops[0], lessThan(tops[1]));
-      expect(tops[1], lessThan(tops[2]));
+      // 칸마다 확실히 다른 높이에 놓입니다(위로 쌓인 탑).
+      expect(centers[0], lessThan(centers[1]));
+      expect(centers[1], lessThan(centers[2]));
 
-      // 가장 아래 표도 프로필(닉네임) 위쪽에 있습니다.
+      // 맨 아래 블럭도 닉네임보다 위에 있습니다.
       final nickname = tester.getCenter(find.text('플레이어0')).dy;
-      expect(tops[2], lessThan(nickname));
+      expect(centers[2], lessThan(nickname));
     });
 
     testWidgets('프로필 아래에 닉네임을 적는다', (tester) async {

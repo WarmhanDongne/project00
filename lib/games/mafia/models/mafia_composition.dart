@@ -53,28 +53,81 @@ abstract final class MafiaComposition {
   static const Map<int, Map<String, int>> recommended = {
     4: {'mafia': 1, 'police': 1, 'citizen': 2},
     5: {'mafia': 1, 'police': 1, 'doctor': 1, 'citizen': 2},
-    6: {'mafia': 1, 'police': 1, 'doctor': 1, 'citizen': 3},
-    7: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 3},
-    8: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 4},
-    9: {'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 5},
-    10: {'mafia_boss': 1, 'mafia': 2, 'police': 1, 'doctor': 1, 'citizen': 5},
-    11: {
-      'mafia_boss': 1,
+    6: {'mafia': 1, 'police': 1, 'doctor': 1, 'soldier': 1, 'citizen': 2},
+    7: {'mafia': 2, 'police': 1, 'doctor': 1, 'soldier': 1, 'citizen': 2},
+    8: {
       'mafia': 2,
       'police': 1,
       'doctor': 1,
-      'bodyguard': 1,
-      'citizen': 5,
+      'soldier': 1,
+      'politician': 1,
+      'citizen': 2,
+    },
+    9: {
+      'mafia': 2,
+      'spy': 1,
+      'police': 1,
+      'doctor': 1,
+      'soldier': 1,
+      'reporter': 1,
+      'citizen': 2,
+    },
+    10: {
+      'mafia': 2,
+      'spy': 1,
+      'police': 1,
+      'doctor': 1,
+      'soldier': 1,
+      'reporter': 1,
+      'detective': 1,
+      'citizen': 2,
+    },
+    11: {
+      'mafia': 2,
+      'spy': 1,
+      'madam': 1,
+      'police': 1,
+      'doctor': 1,
+      'soldier': 1,
+      'reporter': 1,
+      'detective': 1,
+      'politician': 1,
+      'citizen': 1,
     },
     12: {
-      'mafia_boss': 1,
       'mafia': 2,
+      'spy': 1,
+      'madam': 1,
       'police': 1,
       'doctor': 1,
-      'bodyguard': 1,
-      'citizen': 6,
+      'soldier': 1,
+      'reporter': 1,
+      'detective': 1,
+      'politician': 1,
+      'gangster': 1,
+      'jester': 1,
     },
   };
+
+  /// 배분표에는 없지만 **구현은 끝난** 역할입니다.
+  ///
+  /// 연습장(`mafia_practice_screen.dart`)에서 직접 골라 시험할 수 있습니다.
+  /// 기본 구성에 넣지 않은 이유는 각각 다릅니다.
+  ///   - `beast`(짐승인간)·`serial_killer`(연쇄살인마) — 밤 사망자가 둘로 늘어
+  ///     기본 구성의 균형이 무너집니다.
+  ///   - `thief`(도둑)·`medium`(영매) — 사망자가 나온 뒤에야 능력을 씁니다.
+  ///   - `executioner`(처형자)·`cult_leader`(교주) — 개별 승리 조건이 판을
+  ///     크게 바꿉니다.
+  ///   - `cultist`(광신도) — 전향으로만 생기므로 배분 대상이 아닙니다.
+  static const List<String> playableOutsideComposition = [
+    'beast',
+    'serial_killer',
+    'thief',
+    'medium',
+    'executioner',
+    'cult_leader',
+    'cultist',
+  ];
 
   /// [playerCount]에 쓸 구성입니다. 지원 인원 밖이면 null입니다.
   static Map<String, int>? recommendedFor(int playerCount) =>

@@ -87,7 +87,7 @@ void main() {
   });
 
   group('PhoneRoomWaiting Figma states', () {
-    testWidgets('739 shows all owned games and the read-only badge', (
+    testWidgets('739 shows all owned games without a read-only badge', (
       tester,
     ) async {
       final provider = _provider()
@@ -103,7 +103,8 @@ void main() {
       await _pumpWaiting(tester, provider);
 
       expect(find.text('태블릿에서 게임을 선택하는 중입니다'), findsOneWidget);
-      expect(find.text('보기 전용'), findsOneWidget);
+      // 휴대폰에서는 보기 전용 배지를 쓰지 않습니다.
+      expect(find.text('보기 전용'), findsNothing);
       expect(find.text('마피아'), findsOneWidget);
       expect(find.text('라이어스 포커'), findsOneWidget);
       expect(find.text('Final Call'), findsOneWidget);
@@ -172,6 +173,47 @@ void main() {
       provider.dispose();
     });
 
+    testWidgets('작은 화면과 큰 글자에서도 대기 화면이 넘치지 않는다', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..players = const [_player]
+        ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+        ..groupGames = [
+          _game('mafia', '마피아'),
+          _game('final_call', 'Final Call'),
+        ];
+
+      await _pumpWaiting(
+        tester,
+        provider,
+        size: const Size(320, 640),
+        textScale: 3,
+      );
+
+      expect(find.text('그룹이 보유 중인 게임'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      provider.dispose();
+    });
+
+    testWidgets('곧 시작합니다 줄도 큰 글자에서 넘치지 않는다', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..selectedGameId = 'final_call'
+        ..selectedGameLoadStatus = RoomDataLoadStatus.loaded
+        ..selectedGame = _game('final_call', 'Final Call', rules: '첫 줄');
+
+      await _pumpWaiting(
+        tester,
+        provider,
+        size: const Size(320, 640),
+        textScale: 3,
+      );
+
+      expect(find.text('곧 시작합니다'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      provider.dispose();
+    });
+
     testWidgets('waiting indicator advances from left to center to right', (
       tester,
     ) async {
@@ -228,6 +270,7 @@ Future<void> _pumpWaiting(
   WidgetTester tester,
   RoomProvider provider, {
   Size size = const Size(390, 844),
+  double textScale = 1,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -236,8 +279,15 @@ Future<void> _pumpWaiting(
   await tester.pumpWidget(
     MaterialApp(
       theme: PlatformTheme.light(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: PhoneRoomWaiting(
         provider: provider,
+        // 실제 머리말은 Firebase 사용자를 읽으므로 시험에서는 자리만 둡니다.
         headerForTesting: const SizedBox(height: 72),
       ),
     ),

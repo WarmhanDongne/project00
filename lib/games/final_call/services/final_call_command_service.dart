@@ -14,6 +14,19 @@ class FinalCallCommandService {
   final FirebaseFunctions _functions;
   final CallableRetryPolicy retryPolicy;
 
+  //=======================콜드스타트 예열==============================
+  /// 게임에 들어갈 때 첫 조작 함수들을 미리 깨웁니다.
+  ///
+  /// 서버는 `warmup: true`를 받으면 아무 일도 하지 않고 즉시 돌아옵니다. 이걸
+  /// 하지 않으면 그 판의 **첫 카드 뽑기와 첫 CALL**이 콜드스타트를 그대로
+  /// 맞습니다(라이어스 포커·마피아와 같은 방식).
+  Future<void> warmUpGameplayCommands() async {
+    await Future.wait([
+      _call('game_final_call_draw_card', const {'warmup': true}),
+      _call('game_final_call_declare', const {'warmup': true}),
+    ]);
+  }
+
   //=======================게임 수명주기==============================
   Future<Map<String, dynamic>> startGame({required String roomCode}) {
     return _call('game_final_call_start_game', {'roomCode': roomCode});

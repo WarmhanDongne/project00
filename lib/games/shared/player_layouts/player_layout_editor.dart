@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
+import 'package:project00/games/shared/widgets/game_setup_back_button.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
 
 typedef PlayerLayoutPrepared =
@@ -374,28 +375,18 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
             children: [
               if (!_isCompleting)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: GameSetupBackButton.rowPadding,
                   child: SizedBox(
-                    height: 48,
+                    height: GameSetupBackButton.rowHeight,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: IconButton.filledTonal(
-                            tooltip: '뒤로가기',
-                            onPressed: _isCancelling
-                                ? null
-                                : () => unawaited(_cancel()),
-                            icon: _isCancelling
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.arrow_back),
+                          // 역할 배치 화면과 같은 버튼입니다.
+                          child: GameSetupBackButton(
+                            isBusy: _isCancelling,
+                            onPressed: () => unawaited(_cancel()),
                           ),
                         ),
                         const Padding(

@@ -4,7 +4,11 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
-import {advanceMafiaAfterDeaths, resolveMafiaVoting} from "./game.js";
+import {
+  advanceMafiaAfterDeaths,
+  isMafiaVoteBanned,
+  resolveMafiaVoting,
+} from "./game.js";
 import {MafiaRoom} from "./types.js";
 import {
   assertMafiaAlive,
@@ -56,6 +60,13 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
       assertMafiaAlive(game, uid);
       if (game.server.votes?.[uid]) {
         throw new HttpsError("failed-precondition", "이미 투표했습니다.");
+      }
+      // 마담에게 유혹당하면 이번 낮에는 투표할 수 없습니다.
+      if (isMafiaVoteBanned(game, uid)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "이번 낮에는 투표할 수 없습니다.",
+        );
       }
       if (game.public.players[targetUid]?.status !== "alive") {
         throw new HttpsError("failed-precondition", "살아 있는 대상만 고를 수 있습니다.");

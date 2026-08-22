@@ -786,6 +786,21 @@ CALL한 사람이 최저면 2 감소, 공동 최저는 모두 감소한다. 마�
 - `SharedPhoneExitModal`: 게임별 문/색을 주입하는 퇴장 UI
 - `PhoneRippleDialog`: 아이콘 위치에서 퍼지고 돌아가는 오버레이
 - `PhoneResultDialog`: 휴대폰 승자 발표
+- `GameSetupBackButton`: 시작 전 준비 화면(자리 배치·역할 배치)의 뒤로가기
+
+**턴 타이머는 반드시 `GameTurnCountdown`으로 셉니다**
+(`games/shared/widgets/game_turn_countdown.dart`). 게임마다 직접 세면 같은 함정을
+각자 다시 만듭니다 — 서버 시각 보정이 도착하기 전의 0을 만료로 확정해 턴을
+잘라먹거나, 남은 시간이 0일 때 타이머를 세워 화면이 굳는 문제입니다. 세 게임
+모두 이 위젯에 세는 일을 맡기고 **생김새만** 각자 가집니다
+(`liars_poker/widgets/phone/turn_timer.dart`,
+`final_call/widgets/phone/turn_timer.dart`, 마피아는 화면에서 직접 감쌉니다).
+
+**첫 조작 함수는 게임 진입 때 예열합니다.** 진행 기기(태블릿)가 그 게임의 첫
+조작 callable을 `{warmup: true}`로 한 번 부르고, 서버는 아무 일도 하지 않고 즉시
+돌아옵니다. 하지 않으면 그 판의 첫 조작이 콜드스타트를 그대로 맞습니다
+(라이어스 포커 `warmUpGameplayCommands`, 파이널 콜 `warmUpGameplayCommands`,
+마피아 `MafiaController.warmUp`).
 
 ### 9.2 `PhoneGameShell` 표준 순서
 

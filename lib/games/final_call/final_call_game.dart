@@ -41,7 +41,7 @@ class FinalCallGame extends TemplateGame {
   Widget buildTabletPreviewArtwork() => const FinalCallPreviewArtwork();
 
   @override
-  Future<void> startGame(String roomCode) =>
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>
       FinalCallService().command.startGame(roomCode: roomCode);
 
   @override

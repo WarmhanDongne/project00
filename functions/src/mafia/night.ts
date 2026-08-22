@@ -5,11 +5,17 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
 import {
+  bumpNightActionCue,
+  mafiaAbilityUsesLeft,
   recordImmediateInvestigation,
   resolveMafiaNight,
 } from "./game.js";
 import {mafiaRole} from "./roles.js";
-import {MafiaGameState, MafiaRoom} from "./types.js";
+import {
+  MAFIA_NIGHT_WAIT_MS,
+  MafiaGameState,
+  MafiaRoom,
+} from "./types.js";
 import {
   assertMafiaAlive,
   assertMafiaController,
@@ -25,7 +31,13 @@ import {
 /**
  * 고른 대상이 규칙에 맞는지 확인합니다.
  *
- * 역할 이름으로 분기하지 않고 행동 종류와 진영만 봅니다.
+ * 역할 이름으로 분기하지 않고 행동 종류·대상 범위·진영만 봅니다.
+ *
+ * ⚠️ **거절 메시지로 신분이 새지 않게** 주의해야 합니다. "같은 편을 고를 수
+ * 없습니다"는 동료를 이미 아는 역할(마피아)에게만 보낼 수 있습니다. 동료를
+ * 모르는 역할(짐승인간·연쇄살인마)에게 같은 말을 하면 그 순간 대상의 진영을
+ * 알려 주는 셈입니다. 그런 경우는 제출을 받아 두고 밤 해결에서 조용히
+ * 불발시킵니다([resolveMafiaNight]).
  */
 function assertValidNightTarget(
   game: MafiaGameState,
@@ -36,7 +48,20 @@ function assertValidNightTarget(
   if (!role || role.nightAction === "none") {
     throw new HttpsError("failed-precondition", "밤에 할 수 있는 행동이 없습니다.");
   }
-  if (game.public.players[targetUid]?.status !== "alive") {
+
+  // 남은 사용 횟수가 없으면 이 밤에는 아무것도 할 수 없습니다(자경단원).
+  const usesLeft = mafiaAbilityUsesLeft(game, actorUid);
+  if (usesLeft !== null && usesLeft <= 0) {
+    throw new HttpsError("failed-precondition", "능력을 모두 사용했습니다.");
+  }
+
+  // 대상 범위는 역할이 정합니다. 영매·도둑은 **사망자**를 고릅니다.
+  const targetStatus = game.public.players[targetUid]?.status;
+  if (role.nightTargetScope === "dead") {
+    if (targetStatus !== "dead") {
+      throw new HttpsError("failed-precondition", "죽은 사람만 고를 수 있습니다.");
+    }
+  } else if (targetStatus !== "alive") {
     throw new HttpsError("failed-precondition", "살아 있는 대상만 고를 수 있습니다.");
   }
 
@@ -45,8 +70,8 @@ function assertValidNightTarget(
     throw new HttpsError("failed-precondition", "자신을 고를 수 없습니다.");
   }
 
-  // 같은 편을 제거 대상으로 고를 수 없습니다.
-  if (role.nightAction === "eliminate") {
+  // 동료를 **이미 아는** 역할만 같은 편 제거를 막습니다(위 주의 참고).
+  if (role.nightAction === "eliminate" && role.knowsAllies) {
     const targetFaction = mafiaRole(game.server.roles[targetUid])?.faction;
     if (targetFaction === role.faction) {
       throw new HttpsError("failed-precondition", "같은 편을 고를 수 없습니다.");
@@ -107,6 +132,18 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       assertValidNightTarget(game, uid, targetUid);
 
       const now = Date.now();
+      // 확정(2026-08): 행동은 밤의 앞 1분 안에만 받습니다. 남은 30초는
+      // 모두가 함께 기다리는 시간입니다.
+      const deadline = game.public.turnDeadlineAt;
+      if (deadline !== null && now > deadline - MAFIA_NIGHT_WAIT_MS) {
+        throw new HttpsError(
+          "failed-precondition",
+          "행동 시간이 끝났습니다.",
+        );
+      }
+      // 확정(2026-08): 직업 효과음은 **선택을 완료한 순간** 태블릿에서 울립니다.
+      // 넣기 전에 불러야 '첫 제출'인지 알 수 있습니다.
+      bumpNightActionCue(game, uid);
       game.server.nightActions ??= {};
       game.server.nightActions[uid] = targetUid;
       game.private[uid] ??= {roleId: game.server.roles[uid]};

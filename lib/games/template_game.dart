@@ -60,7 +60,32 @@ abstract class TemplateGame {
   ImageProvider? get layoutChairImage => null;
 
   /// 좌석 배치가 끝난 뒤 실제 게임을 시작합니다.
-  Future<void> startGame(String roomCode);
+  ///
+  /// [options]는 **게임별 시작 설정**입니다. [buildStartSetupScreen]이 만든
+  /// 준비 화면이 고른 값을 그대로 넘겨 줍니다(마피아: `composition` =
+  /// `역할 id → 인원수`). 준비 화면이 없는 게임은 null입니다.
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options});
+
+  /// 자리 배치 **대신** 쓸 게임별 준비 화면입니다. null이면 자리 배치를 씁니다.
+  ///
+  /// 확정(2026-08): 마피아는 누가 어디 앉는지보다 **이번 판에 어떤 신분이
+  /// 들어가는지**가 판을 좌우해서, 이 자리에 역할 배치 화면을 넣습니다.
+  ///
+  /// 플랫폼 화면이 게임 id로 분기하지 않도록 이 자리를 만들었습니다. 게임을
+  /// 추가할 때 플랫폼 코드는 손대지 않습니다.
+  ///
+  /// [onPrepare]는 자리를 저장하고 [startGame]까지 부릅니다(실패하면 false).
+  /// [onComplete]는 게임 화면으로 넘어갑니다. [onCancel]은 게임 선택을 풉니다.
+  Widget? buildStartSetupScreen({
+    required PlayerLayoutModel layout,
+    required Future<bool> Function(
+      PlayerLayoutModel layout, {
+      Map<String, Object?>? options,
+    })
+    onPrepare,
+    required void Function(PlayerLayoutModel layout) onComplete,
+    required Future<bool> Function() onCancel,
+  }) => null;
 
   /// Realtime Database의 게임 status(`waiting`/`playing`/...)를 흘려보냅니다.
   /// `playing`이 되는 시점에 화면을 엽니다.

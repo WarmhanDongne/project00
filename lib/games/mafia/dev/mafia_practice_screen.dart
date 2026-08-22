@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_engine.dart';
 import 'package:project00/games/mafia/dev/mafia_practice_remote_screen.dart';
@@ -13,6 +12,7 @@ import 'package:project00/games/mafia/screens/phone/phone_game_screen.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/widgets/game_turn_countdown.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
 
 //=======================마피아 연습장 (개발 전용)==============================
@@ -201,14 +201,19 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
         fit: StackFit.expand,
         children: [
           MafiaTabletBackground(isNight: controller.isNight),
-          MafiaTabletStageView(
-            stage: stage,
-            controller: controller,
-            playerLayout: _layoutOf(controller),
-            remainingSeconds: _remainingSeconds(controller),
-            showsNightNotice: showsNightNotice,
-            onRestart: _restart,
-            onHome: () => Navigator.of(context).maybePop(),
+          // 실기기(tablet_game.dart)와 같은 방식으로 1초마다 남은 시간을
+          // 다시 셉니다. 서버 상태만 보고 그리면 연습장 타이머도 굳습니다.
+          GameTurnCountdown(
+            expiresAt: controller.turnDeadlineAt,
+            builder: (context, remaining) => MafiaTabletStageView(
+              stage: stage,
+              controller: controller,
+              playerLayout: _layoutOf(controller),
+              remainingSeconds: remaining?.inSeconds,
+              showsNightNotice: showsNightNotice,
+              onRestart: _restart,
+              onHome: () => Navigator.of(context).maybePop(),
+            ),
           ),
         ],
       ),
@@ -230,14 +235,6 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
           ),
       ],
     );
-  }
-
-  /// 남은 시간(초)입니다. 실제 태블릿(tablet_game.dart)과 같은 계산입니다.
-  int? _remainingSeconds(MafiaController controller) {
-    final deadline = controller.turnDeadlineAt;
-    if (deadline == null) return null;
-    final remaining = ServerClock.remainingUntil(deadline);
-    return remaining.isNegative ? 0 : remaining.inSeconds;
   }
 
   //=======================오른쪽: 조종판==============================
@@ -331,7 +328,9 @@ class _MafiaPracticeScreenState extends ConsumerState<MafiaPracticeScreen> {
                   style: const TextStyle(color: Colors.white),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('무작위')),
-                    for (final role in MafiaRoles.implemented)
+                    // 전향으로만 생기는 역할(광신도)은 빠집니다. 교주 없이
+                    // 시작하면 교단 승리 조건이 성립하지 않습니다.
+                    for (final role in MafiaRoles.distributable)
                       DropdownMenuItem(
                         value: role.id,
                         child: Text(role.displayName),

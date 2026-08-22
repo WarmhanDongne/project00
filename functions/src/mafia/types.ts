@@ -20,12 +20,22 @@ import {PublicGameInterruption, ServerGameInterruption} from "../game-interrupti
 export const MAFIA_ROLE_REVEAL_MS = 60000;
 
 /**
- * 밤 제한시간입니다(확정 2026-08: 최소 3분).
+ * 밤에 **행동을 고를 수 있는** 시간입니다(확정 2026-08: 1분).
  *
- * 전원이 행동을 끝내도 밤은 이 시간을 채웁니다. 일찍 끝내면 제출 속도로
- * 특수직 수가 드러날 수 있고, 밤의 긴장감도 사라지기 때문입니다.
+ * 이 시간이 지나면 더 제출할 수 없고, 모두 함께 기다립니다.
  */
-export const MAFIA_NIGHT_MS = 180000;
+export const MAFIA_NIGHT_ACTION_MS = 60000;
+
+/**
+ * 행동 시간이 끝난 뒤 **다같이 기다리는** 시간입니다(확정 2026-08: 30초).
+ *
+ * 전원이 일찍 제출해도 밤을 바로 끝내지 않는 이유와 같습니다 — 끝나는
+ * 시점이 제출 속도에 따라 달라지면 특수직 수가 드러납니다.
+ */
+export const MAFIA_NIGHT_WAIT_MS = 30000;
+
+/** 밤 전체 제한시간입니다(행동 1분 + 대기 30초). */
+export const MAFIA_NIGHT_MS = MAFIA_NIGHT_ACTION_MS + MAFIA_NIGHT_WAIT_MS;
 
 /**
  * 낮 자유 토론 제한시간입니다(확정 2026-08: **생존 인원**에 따라 다릅니다).
@@ -43,7 +53,7 @@ export const MAFIA_NIGHT_MS = 180000;
  * 사람이 줄면 할 말도 줄어듭니다. 인원과 무관하게 같은 시간을 주면 적은
  * 인원에서는 침묵이 길어집니다.
  *
- * ⚠️ 이 표가 원본입니다. 연습장(lib/games/mafia/mafia_timing.dart)이 같은
+ * ⚠️ 이 표가 원본입니다. 연습장(lib/games/mafia/mafia_flow_config.dart)이 같은
  * 값을 따라야 하고, functions/test/mafia-discussion-parity.test.mjs가 그것을
  * 확인합니다.
  *
@@ -75,7 +85,24 @@ export type MafiaNightPhaseId =
 export type MafiaNightActionId =
   | "none" | "eliminate" | "protect" | "investigate" | "investigateRole"
   | "roleblock" | "frame" | "convert" | "silence" | "watch" | "track"
-  | "mark" | "expose";
+  | "mark" | "expose" | "steal";
+
+/**
+ * 밤에 고를 수 있는 대상의 범위입니다. Dart `MafiaNightTargetScope`와 같습니다.
+ *
+ * 영매·도둑만 "dead"입니다. 사망자를 고르는 역할이 있어서, 밤 대상 검증은
+ * "살아 있는 사람"으로 고정할 수 없습니다.
+ */
+export type MafiaNightTargetScopeId = "alive" | "dead";
+
+/**
+ * 승리 조건입니다. Dart `MafiaWinCondition`과 같습니다.
+ *
+ * "faction"이 아닌 역할은 진영 승패와 **별도로** 판정합니다.
+ */
+export type MafiaWinConditionId =
+  | "faction" | "lynchedSelf" | "lynchTarget" | "surviveToEnd"
+  | "lastStanding" | "factionDominance";
 
 /** 조사에 어떻게 보이는지입니다. */
 export type MafiaInvestigationAppearanceId = "actual" | "asMafia" | "asCitizen";
@@ -127,11 +154,30 @@ export interface MafiaVoteResult {
   resolvedAt: number;
 }
 
+/**
+ * 밤 행동이 **제출된 순간** 태블릿이 낼 소리 신호입니다.
+ *
+ * 확정(2026-08): 총성 같은 직업 효과음은 밤이 시작될 때 자동으로 울리지 않고,
+ * 그 직업이 **선택을 완료한 순간** 방 가운데 태블릿에서 울립니다.
+ *
+ * **누가 했는지는 넣지 않습니다.** 행동의 종류만 넣습니다. 소리는 어차피 모두가
+ * 함께 듣는 연출이지만, uid가 들어가면 그 사람의 신분이 그대로 드러납니다.
+ */
+export interface MafiaNightActionCue {
+  /**
+   * 신호 번호입니다. 이 값이 바뀔 때만 태블릿이 소리를 냅니다.
+   *
+   * 마감 전에 대상을 바꿔 다시 제출해도 **그 밤에 한 번만** 올라갑니다.
+   */
+  id: number;
+  action: MafiaNightActionId;
+}
+
 export interface MafiaPublicState {
   gameType: "mafia";
   status: "playing" | "finished";
-  finishReason?: "citizenWin" | "mafiaWin" | "manual" | "insufficientPlayers" |
-    "interruptionVoteExpired";
+  finishReason?: "citizenWin" | "mafiaWin" | "neutralWin" | "manual" |
+    "insufficientPlayers" | "interruptionVoteExpired";
   phase: MafiaPhase;
   /** 밤/낮 한 바퀴를 1로 셉니다. */
   round: number;
@@ -157,6 +203,13 @@ export interface MafiaPublicState {
   nightSubmittedCount: number;
   /** 이번 밤에 행동해야 하는 인원수입니다. */
   nightActorCount: number;
+
+  /**
+   * 방금 제출된 밤 행동의 소리 신호입니다([MafiaNightActionCue]).
+   *
+   * 아직 아무도 제출하지 않았으면 없습니다.
+   */
+  nightActionCue?: MafiaNightActionCue;
 
   /**
    * 토론 조기 종료에 동의한 인원수입니다(확정 규칙: 과반수 투표).
@@ -197,6 +250,13 @@ export interface MafiaPublicState {
    */
   revealedRoles?: Record<string, string>;
 
+  /**
+   * 승리 진영입니다. 아직 끝나지 않았으면 null입니다.
+   *
+   * 중립의 **개별 승리**(광대·처형자·연쇄살인마·교단)도 "neutral"로 보냅니다.
+   * 누가 이겼는지는 [winnerUids]에 있고, 끝나는 순간 전원 신분이 공개되므로
+   * 화면이 "광대 승리"처럼 이름을 붙일 수 있습니다.
+   */
   winner: MafiaFactionId | null;
   winnerUids: string[];
   startedAt: number;
@@ -231,6 +291,31 @@ export interface MafiaPrivatePlayer {
   investigations?: Record<string, MafiaInvestigationRecord>;
   /** 내가 투표한 대상입니다. */
   voteTargetUid?: string;
+  /**
+   * 처형자에게 지정된 목표입니다. 처형자 본인에게만 넣습니다.
+   *
+   * 목표가 **낮 투표로** 처형되면 그 자리에서 처형자가 단독 승리합니다.
+   */
+  executionerTargetUid?: string;
+  /**
+   * 남은 능력 사용 횟수입니다. 제한이 있는 역할(자경단원)에만 넣습니다.
+   *
+   * 0이면 더 쓸 수 없습니다. 밤 화면이 이 값으로 버튼을 잠급니다.
+   */
+  abilityUsesLeft?: number;
+  /**
+   * 이번 낮에 투표할 수 없는지입니다(마담에게 유혹당함).
+   *
+   * 밤 해결에서 정해지고, 그 낮의 투표가 시작될 때 본인에게만 알려 줍니다.
+   */
+  voteBanned?: boolean;
+  /**
+   * 지난밤 결과로 내 신분이 바뀌었는지입니다(도둑의 절도, 교주의 전향).
+   *
+   * 바뀐 신분 자체는 [roleId]에 이미 반영돼 있습니다. 이 값은 화면이 "당신은
+   * 이제 ○○입니다" 안내를 띄울지 판단하는 데만 씁니다.
+   */
+  roleChangedRound?: number;
   /** 토론 조기 종료에 동의했는지입니다. 재접속해도 버튼 상태가 유지됩니다. */
   discussionSkipVoted?: boolean;
   /**
@@ -253,12 +338,43 @@ export interface MafiaProcessedCommand {
 export interface MafiaServerState {
   /** 역할 배분표입니다. `uid → 역할 id`. 클라이언트는 읽을 수 없습니다. */
   roles: Record<string, string>;
+  /**
+   * 이 판을 만들 때 쓴 역할 구성입니다(`역할 id → 인원수`).
+   *
+   * **다시하기에서 그대로 다시 씁니다.** 태블릿이 역할 배치 화면에서 고른
+   * 구성은 그 판의 규칙이므로, 다시하기 때 추천 표로 되돌아가면 안 됩니다.
+   * 인원이 바뀌어 합이 맞지 않으면 추천 표로 돌아갑니다.
+   */
+  composition?: Record<string, number>;
   /** 이번 밤의 선택입니다. `uid → 대상 uid`. */
   nightActions?: Record<string, string>;
   /** 이번 투표의 표입니다. `uid → 대상 uid`. */
   votes?: Record<string, string>;
   /** 토론 조기 종료에 동의한 사람입니다. `uid → true`. */
   discussionSkipVotes?: Record<string, true>;
+  /**
+   * 능력을 쓴 횟수입니다. `uid → 횟수`. 제한이 있는 역할만 쌓입니다.
+   *
+   * 실제로 **효과가 발생한** 밤만 셉니다. 차단당해 불발된 밤은 세지 않습니다.
+   */
+  abilityUses?: Record<string, number>;
+  /** 자기 방어를 이미 쓴 사람입니다(군인). `uid → true`. */
+  defenseUsed?: Record<string, true>;
+  /**
+   * 다음 낮에 투표할 수 없는 사람입니다(마담에게 유혹당함). `uid → true`.
+   *
+   * 그 낮의 투표가 시작될 때 소모하고 지웁니다.
+   */
+  voteBans?: Record<string, true>;
+  /** 처형자의 목표입니다. `처형자 uid → 목표 uid`. */
+  executionerTargets?: Record<string, string>;
+  /**
+   * 처형으로 확정된 단독 승리자입니다(광대·처형자).
+   *
+   * 처형이 정해지는 순간 예약하고, 태블릿의 처형 발표 연출이 끝난 뒤에 게임을
+   * 끝냅니다. 즉시 끝내면 처형 장면을 보여 주지 못하고 결과 화면으로 튕깁니다.
+   */
+  pendingNeutralWinUids?: string[];
   processedCommands?: Record<string, MafiaProcessedCommand>;
   interruption?: ServerGameInterruption;
 }
