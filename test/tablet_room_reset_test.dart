@@ -269,6 +269,13 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();
 
   @override
+  Stream<bool?> watchControllerConnected(String roomCode) =>
+      const Stream.empty();
+
+  @override
+  Stream<bool> watchRoomExists(String roomCode) => const Stream.empty();
+
+  @override
   Stream<bool> watchServerConnection() => const Stream.empty();
 
   @override
