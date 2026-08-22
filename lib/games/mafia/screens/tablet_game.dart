@@ -12,6 +12,7 @@ import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/mafia_copy.dart';
+import 'package:project00/games/mafia/mafia_flow_config.dart';
 import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/games/mafia/providers/mafia_game_state.dart';
 import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
@@ -25,6 +26,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/shared/widgets/game_turn_countdown.dart';
 import 'package:project00/games/shared/widgets/tablet_game_rulebook_dialog.dart';
 import 'package:project00/games/shared/widgets/tablet_game_settings_dialog.dart';
@@ -92,6 +94,9 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 넘어가지 않습니다(진행자가 수동 재시작해야 복구).
   Timer? _advanceRetryTimer;
   Timer? _stageTimer;
+
+  /// 승부 없이 끝난 판에서 게임 화면을 닫는 타이머입니다.
+  Timer? _closingExitTimer;
 
   //=======================밤 늑대 하울링 (확정 2026-08)==============================
   // 밤마다 한 번, 무작위 시각에 멀리서 늑대가 웁니다. 정해진 시각이면 몇 판만
@@ -187,6 +192,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     _advanceRetryTimer?.cancel();
     _stageTimer?.cancel();
+    _closingExitTimer?.cancel();
     _howlTimer?.cancel();
     _nightNoticeTimer?.cancel();
     _gameStartNoticeTimer?.cancel();
@@ -203,6 +209,25 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   void _handleState() {
     final game = _controller;
     if (game == null || !mounted) return;
+
+    // 승부가 나지 않은 종료(수동 종료·인원 부족·즉시 종료)는 결과 화면을 띄우지
+    // 않고 대기실로 돌아갑니다. 사유를 나열하지 않고 '정상 결과가 아니면
+    // 나간다'로 판단합니다(휴대폰 3게임·파이널 콜 태블릿과 같은 규칙).
+    //
+    // 이 분기가 없으면 인원 부족 종료 시 태블릿이 승자 없는 결과 화면에 머물러,
+    // 진행자가 HOME을 직접 누를 때까지 대기실로 돌아가지 못했습니다.
+    if (game.isFinished && !game.isNaturalResult) {
+      _deadlineTimer?.cancel();
+      _advanceRetryTimer?.cancel();
+      _stageTimer?.cancel();
+      _closingExitTimer ??= Timer(MafiaTiming.closingRouteDelay, () {
+        // maybePop은 위에 쌓인 설정·룰북 다이얼로그만 닫아 게임 화면에
+        // 갇힙니다(game_route_exit.dart 참고).
+        if (mounted) exitGameRoute(context);
+      });
+      setState(() {});
+      return;
+    }
 
     final nextStage = resolveMafiaTabletStage(game);
     if (nextStage != _stage) {
@@ -468,9 +493,14 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
             interruption: game.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
             isSubmitting: game.commandInFlight,
+            // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
+            // 그래서 이 콜백은 실제로 호출되지 않고, 계속 가능한 중단에서는
+            // '다른 플레이어의 투표를 기다리고 있습니다'만 표시됩니다. 진행자용
+            // `제외하고 계속하기` 배선은 별도 작업입니다.
             onVote: () async {
               await game.voteToContinueInterruption();
             },
+            onFinishNow: game.finishInterruptedGameNow,
             onExpired: game.expireInterruption,
           ),
         ],

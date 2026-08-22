@@ -72,6 +72,14 @@ abstract final class MafiaTiming {
   /// 서버 원본은 `MAFIA_NIGHT_WAIT_MS`입니다.
   static const Duration nightWait = Duration(seconds: 10);
 
+  //=======================종료 후 화면 닫기==============================
+  /// 승부 없이 끝난 판에서 태블릿 게임 화면을 닫기 전 대기시간입니다.
+  ///
+  /// ⚠️ 위의 값들과 달리 이것은 **서버 사본이 아니라 클라이언트 연출 시간**입니다.
+  /// 라이어스 포커 `LiarsPokerFlowTiming.closingRouteDelay`, 파이널 콜
+  /// `FinalCallFlowTiming.closingRouteDelay`와 같은 1초로 맞춥니다.
+  static const Duration closingRouteDelay = Duration(seconds: 1);
+
   /// 밤 전체 시간입니다(차단 + 행동 + 마무리).
   static Duration get night => nightBlock + nightAction + nightWait;
 

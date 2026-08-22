@@ -710,6 +710,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 onContinue: () async {
                   await game.excludeInterruptedPlayerAndContinue();
                 },
+                onFinishNow: game.finishInterruptedGameNowFromController,
                 onExpired: game.expireInterruptionFromController,
               ),
             ],

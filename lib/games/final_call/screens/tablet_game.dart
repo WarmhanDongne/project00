@@ -523,6 +523,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
             onContinue: () async {
               await game.excludeInterruptedPlayerAndContinue();
             },
+            onFinishNow: game.finishInterruptedGameNow,
             onExpired: game.expireInterruption,
           ),
           if (game.commandInFlight)

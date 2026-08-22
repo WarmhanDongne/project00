@@ -222,6 +222,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           onVote: () async {
             await game.voteToContinueInterruption();
           },
+          onFinishNow: game.finishInterruptedGameNow,
           onExpired: game.expireInterruption,
         ),
       ],

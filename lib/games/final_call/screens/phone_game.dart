@@ -514,6 +514,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           onVote: () async {
             await game.voteToContinueInterruption();
           },
+          onFinishNow: game.finishInterruptedGameNow,
           onExpired: game.expireInterruption,
         ),
       ],

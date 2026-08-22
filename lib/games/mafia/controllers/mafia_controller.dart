@@ -622,11 +622,28 @@ class MafiaController extends Notifier<MafiaGameState> {
     );
   }
 
+  /// ⚠️ 아직 호출부가 없습니다. 마피아 태블릿에는 진행자용 `제외하고 계속하기`
+  /// 버튼이 없습니다(다른 두 게임과 다릅니다). 진행자 권한 통일은 별도 작업입니다.
   Future<bool> excludeInterruptedPlayerAndContinue() {
     final current = interruption;
     if (current == null || !current.canContinue) return Future.value(false);
     return _run(
       () => service.interruption.excludeAndContinue(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
+  /// 남은 인원이 부족한 중단을 마감 전에 즉시 종료합니다.
+  ///
+  /// [excludeInterruptedPlayerAndContinue]의 거울상입니다. 계속할 수 있는
+  /// 중단은 투표·제외 흐름의 몫이므로 여기서 끝내지 않습니다.
+  Future<bool> finishInterruptedGameNow() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _run(
+      () => service.interruption.finishNow(
         roomCode: roomCode,
         interruptionId: current.id,
       ),

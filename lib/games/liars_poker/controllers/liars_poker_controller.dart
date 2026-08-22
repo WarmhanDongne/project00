@@ -806,6 +806,21 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
     );
   }
 
+  /// 남은 인원이 부족한 중단을 마감 전에 즉시 종료합니다.
+  ///
+  /// [excludeInterruptedPlayerAndContinue]의 거울상입니다. 계속할 수 있는
+  /// 중단은 투표·제외 흐름의 몫이므로 여기서 끝내지 않습니다.
+  Future<bool> finishInterruptedGameNow() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _runCommand(
+      () => service.interruption.finishNow(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
   //=======================태블릿(진행 기기) 게임 명령==============================
   /// 현재 방과 좌석은 유지하고 게임 데이터만 새로 만듭니다.
   Future<bool> restartGame() => _runMenuCommand(
@@ -841,6 +856,23 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
         interruptionId: current.id,
       ),
       failureMessage: '플레이어를 제외하고 게임을 계속하지 못했습니다.',
+    );
+  }
+
+  /// 태블릿에서 인원 부족 중단을 즉시 종료합니다.
+  ///
+  /// 휴대폰용 [finishInterruptedGameNow]와 같은 명령이지만 잠금이 다릅니다.
+  /// 태블릿 화면이 `isMenuCommandInFlight`를 보고 버튼을 잠그므로 여기서도
+  /// 메뉴 잠금을 써야 합니다. 다른 잠금을 쓰면 표시 없이 조용히 드롭됩니다.
+  Future<bool> finishInterruptedGameNowFromController() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _runMenuCommand(
+      () => service.interruption.finishNow(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+      failureMessage: GameFlowCopy.interruptionFinishNowFailed,
     );
   }
 

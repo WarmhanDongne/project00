@@ -358,6 +358,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             onVote: () async {
               await controller.voteToContinueInterruption();
             },
+            onFinishNow: controller.finishInterruptedGameNow,
             onExpired: controller.expireInterruption,
           ),
           // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
