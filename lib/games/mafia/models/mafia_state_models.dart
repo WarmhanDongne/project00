@@ -9,7 +9,11 @@ import 'package:flutter/foundation.dart';
 /// 아침 발표에 쓰는 밤 결과입니다.
 @immutable
 class MafiaMorningResult {
-  const MafiaMorningResult({required this.deadUids, required this.savedCount});
+  const MafiaMorningResult({
+    required this.deadUids,
+    required this.savedCount,
+    this.endsGame = false,
+  });
 
   /// 밤에 사망한 사람입니다. 비어 있으면 아무도 죽지 않았습니다.
   final List<String> deadUids;
@@ -20,10 +24,18 @@ class MafiaMorningResult {
   /// 드러나기 때문입니다.
   final int savedCount;
 
+  /// 이 발표가 끝나면 게임이 끝나는지입니다(서버가 알려 주는 힌트).
+  ///
+  /// 승패 판정은 서버가 합니다. 이 값은 발표 뒤에 **'토론을 시작합니다' 안내를
+  /// 띄우지 않기 위한** 것입니다. 이미 끝난 판에서 다음 단계를 예고하면 게임이
+  /// 계속되는 것처럼 보입니다.
+  final bool endsGame;
+
   factory MafiaMorningResult.fromMap(Map<Object?, Object?> map) {
     return MafiaMorningResult(
       deadUids: _stringList(map['deadUids']),
       savedCount: (map['savedCount'] as num?)?.toInt() ?? 0,
+      endsGame: map['endsGame'] == true,
     );
   }
 
@@ -69,6 +81,7 @@ class MafiaVoteResult {
     required this.executedUid,
     required this.tie,
     required this.abstainCount,
+    this.endsGame = false,
   });
 
   /// `대상 uid → 득표수`입니다. 누가 찍었는지는 서버가 보내지 않습니다.
@@ -82,6 +95,12 @@ class MafiaVoteResult {
 
   /// 기권(미투표) 인원입니다.
   final int abstainCount;
+
+  /// 이 처형으로 게임이 끝나는지입니다(서버가 알려 주는 힌트).
+  ///
+  /// 승패 판정은 서버가 합니다. 이 값은 발표 뒤에 **'밤이 되었습니다' 안내를
+  /// 띄우지 않기 위한** 것입니다.
+  final bool endsGame;
 
   factory MafiaVoteResult.fromMap(Map<Object?, Object?> map) {
     final rawTally = map['tally'];
@@ -97,6 +116,7 @@ class MafiaVoteResult {
       executedUid: map['executedUid']?.toString(),
       tie: map['tie'] == true,
       abstainCount: (map['abstainCount'] as num?)?.toInt() ?? 0,
+      endsGame: map['endsGame'] == true,
     );
   }
 

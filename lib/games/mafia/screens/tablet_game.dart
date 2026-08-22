@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:project00/games/mafia/loading/mafia_loading.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,6 +19,7 @@ import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/mafia/sound/mafia_bgm_plan.dart';
+import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/mafia/sound/mafia_night_cue_speaker.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
@@ -82,7 +84,29 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 이미 서버에 넘긴 단계입니다. 같은 단계를 두 번 넘기지 않게 막습니다.
   String? _advancedPhaseKey;
   Timer? _deadlineTimer;
+
+  /// 진행 명령이 실패·드롭됐을 때 다시 시도하는 타이머입니다.
+  ///
+  /// 아침·개표 같은 발표 단계는 마감이 없어 [_scheduleDeadlineCheck]가 아무
+  /// 일도 하지 않습니다. 이 타이머가 없으면 한 번 실패한 단계는 영원히
+  /// 넘어가지 않습니다(진행자가 수동 재시작해야 복구).
+  Timer? _advanceRetryTimer;
   Timer? _stageTimer;
+
+  //=======================밤 늑대 하울링 (확정 2026-08)==============================
+  // 밤마다 한 번, 무작위 시각에 멀리서 늑대가 웁니다. 정해진 시각이면 몇 판만
+  // 해도 박자가 읽혀 분위기가 죽습니다.
+  /// 밤이 시작되고 이만큼 지난 뒤부터 울릴 수 있습니다.
+  static const Duration _howlEarliest = Duration(seconds: 10);
+
+  /// 밤이 끝나기 이만큼 전까지만 울립니다.
+  ///
+  /// 하울링은 약 6초입니다. 여유를 두지 않으면 소리가 아침 발표로 넘어가거나
+  /// 마지막 5초 초읽기와 겹칩니다.
+  static const Duration _howlLatestBeforeEnd = Duration(seconds: 12);
+
+  Timer? _howlTimer;
+  final math.Random _howlRandom = math.Random();
 
   /// 지금 깔아 둔 곡입니다. null이면 아무것도 깔지 않은 상태입니다.
   String? _bgmAsset;
@@ -103,6 +127,15 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
   static const Duration _nightNoticeDelay = Duration(seconds: 10);
   static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
+
+  /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
+  ///
+  /// 서버가 '아직 마감 전'이라고 답한 경우에도 이 간격으로 다시 물어보므로,
+  /// 시계 오차만큼만 짧게 반복하고 마감이 지나면 곧바로 넘어갑니다.
+  static const Duration _advanceRetryDelay = Duration(seconds: 3);
+
+  /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
+  static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
   Timer? _nightNoticeTimer;
   bool _showsNightNotice = false;
   bool _nightNoticeScheduled = false;
@@ -142,12 +175,14 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   @override
   void dispose() {
     _deadlineTimer?.cancel();
+    _advanceRetryTimer?.cancel();
     _stageTimer?.cancel();
+    _howlTimer?.cancel();
     _nightNoticeTimer?.cancel();
     _bgm.stop();
     _countdownTick.stop();
     _subscription?.close();
-    unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }
@@ -179,7 +214,10 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 단계에 처음 들어온 순간 한 번만 하는 일입니다.
   void _onStageEntered(MafiaController game, MafiaTabletStage stage) {
     _stageTimer?.cancel();
-    final hold = stage.announcementHold;
+    _howlTimer?.cancel();
+    if (stage == MafiaTabletStage.night) _scheduleWolfHowl(game);
+    if (stage == MafiaTabletStage.finished) _playWinVoice(game);
+    final hold = stage.announcementHoldOf(game);
     if (hold == null) return;
 
     // 발표 연출은 정해진 시간만 보여 준 뒤 서버에 완료를 알립니다.
@@ -187,6 +225,38 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       if (!mounted) return;
       _advance(game, stage);
     });
+  }
+
+  /// 이번 밤의 늑대 하울링을 무작위 시각에 한 번 예약합니다.
+  ///
+  /// 밤은 조기 종료가 없어 마감까지 반드시 이어지므로, 마감 기준으로 잡으면
+  /// 밤 길이가 바뀌어도 알아서 따라갑니다. 남은 시간이 창(窓)보다 짧으면
+  /// (재접속으로 밤 끝자락에 붙은 경우) 이번 밤은 건너뜁니다.
+  void _scheduleWolfHowl(MafiaController game) {
+    final deadline = game.turnDeadlineAt;
+    if (deadline == null) return;
+
+    final latest = ServerClock.remainingUntil(deadline) - _howlLatestBeforeEnd;
+    if (latest <= _howlEarliest) return;
+
+    final spanMs = (latest - _howlEarliest).inMilliseconds;
+    final delay =
+        _howlEarliest + Duration(milliseconds: _howlRandom.nextInt(spanMs + 1));
+    _howlTimer = Timer(delay, () {
+      // 밤을 벗어났으면 울리지 않습니다.
+      if (!mounted || _stage != MafiaTabletStage.night) return;
+      SoundEffects.play(context, MafiaSounds.wolfHowl);
+    });
+  }
+
+  /// 승리 발표에 이긴 진영 나레이션을 한 번 냅니다.
+  ///
+  /// 방 가운데 태블릿에서만 냅니다 — 휴대폰까지 같이 울리면 말이 겹칩니다.
+  /// 중립 개별 승리는 아직 파일이 없어 조용히 지나갑니다.
+  void _playWinVoice(MafiaController game) {
+    final voice = MafiaSounds.winVoiceFor(game.winnerFaction);
+    if (voice == null) return;
+    SoundEffects.play(context, voice);
   }
 
   /// 누군가 밤 행동을 마친 순간 그 직업의 효과음을 냅니다.
@@ -249,6 +319,18 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     final deadline = game.turnDeadlineAt;
     final stage = _stage;
+    // 서버 시각 보정이 도착하기 전의 '마감 지남' 판단은 기기 시계 오차일 수
+    // 있습니다. 그 상태로 진행 명령을 보내면 서버가 아직 마감 전이라고
+    // 응답하고, 그 단계는 재시도 없이 멈춥니다([ServerClock.hasSynced] 주석
+    // 참고). 보정이 올 때까지 판단을 미룹니다.
+    if (deadline != null && !ServerClock.hasSynced) {
+      _deadlineTimer = Timer(_clockSyncRecheck, () {
+        if (!mounted) return;
+        final current = _controller;
+        if (current != null) _scheduleDeadlineCheck(current);
+      });
+      return;
+    }
     // 역할 확인의 제한시간(서버 1분)이 끝나면 곧바로 넘기지 않고 같은
     // '밤이 되었습니다' 안내를 거칩니다.
     if (stage == MafiaTabletStage.roleDeal) {
@@ -291,10 +373,17 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (command == null) return;
     unawaited(
       command().then((success) {
-        // 실패하면 다시 시도할 수 있게 표시를 풀어 줍니다.
-        if (!success && mounted && _advancedPhaseKey == key) {
-          _advancedPhaseKey = null;
-        }
+        if (success || !mounted || _advancedPhaseKey != key) return;
+        // 실패·드롭·'아직 마감 전' 응답이면 표시를 풀고 다시 시도합니다.
+        // 다른 명령이 진행 중이라 드롭된 경우(commandInFlight)와 발표 단계처럼
+        // 마감이 없어 재시도 경로가 없는 경우를 모두 이 타이머가 받습니다.
+        _advancedPhaseKey = null;
+        _advanceRetryTimer?.cancel();
+        _advanceRetryTimer = Timer(_advanceRetryDelay, () {
+          if (!mounted || _stage != stage) return;
+          final current = _controller;
+          if (current != null) _advance(current, stage);
+        });
       }),
     );
   }

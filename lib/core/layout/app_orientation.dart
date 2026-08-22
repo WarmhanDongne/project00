@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:project00/core/layout/device_layout.dart';
 
 /// 휴대폰 게임이 허용하는 화면 방향입니다.
 ///
@@ -36,6 +37,16 @@ abstract final class AppOrientation {
 
   /// 게임 선택·방 참여·자리 배치 등 플랫폼 화면은 태블릿에서 가로로 고정합니다.
   static Future<void> lockPlatformLandscape() => _apply(_landscape);
+
+  /// 게임을 나와 플랫폼 화면(로비·대기실)으로 돌아올 때의 방향입니다.
+  ///
+  /// **게임 화면은 이 함수만 부르세요.** 기기를 보고 정합니다 — 휴대폰은 세로,
+  /// 태블릿은 가로. 화면마다 어느 쪽인지 적어 두면 한 곳만 틀려도 로비가
+  /// 엉뚱한 방향으로 잠깁니다(마피아 태블릿이 세로로 되돌려, 게임을 끝내고
+  /// 나온 로비가 세로로 고정되던 문제).
+  static Future<void> restorePlatform() => DeviceLayout.isTabletDevice()
+      ? lockPlatformLandscape()
+      : lockPlatformPortrait();
 
   /// 모든 태블릿 게임 화면을 가로로 고정합니다.
   ///

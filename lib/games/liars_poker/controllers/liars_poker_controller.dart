@@ -762,6 +762,13 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
     return false;
   }
 
+  /// 마감이 지난 턴을 태블릿이 대신 해결합니다(휴대폰 타이머 백스톱).
+  ///
+  /// 판정 정책은 휴대폰 타임아웃과 같고 서버가 수행합니다. 마감 전 호출은
+  /// 서버가 success:false로 거절하므로 _runCommand가 false를 돌려줍니다.
+  Future<bool> forceTurnTimeout() =>
+      _runCommand(() => service.command.forceTimeout(roomCode: roomCode));
+
   Future<bool> callLiar() {
     if (!canCallLiar) return Future.value(_reject('현재 라이어를 선언할 수 없습니다.'));
     return _runCommand(() => service.command.callLiar(roomCode: roomCode));
@@ -877,7 +884,12 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
     _commit();
 
     try {
-      await command();
+      final result = await command();
+      // 서버는 "아직 할 일이 아니다"를 예외가 아니라 정상 응답으로 알립니다
+      // (예: 마감 전 타임아웃 호출 → {success: false, reason: "notExpired"}).
+      // 이를 성공으로 넘기면 호출자가 재시도하지 않아 진행이 멈춥니다.
+      // 명시적인 success:false만 실패로 봅니다(success 필드가 없는 명령도 있음).
+      if (result is Map && result['success'] == false) return false;
       return true;
     } catch (error) {
       errorMessage = error.toString();

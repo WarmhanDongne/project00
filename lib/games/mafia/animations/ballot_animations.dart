@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:project00/core/sound/sound_effects.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
@@ -129,6 +129,13 @@ class _MafiaBallotTossLayerState extends State<MafiaBallotTossLayer>
   /// 투표지 한 장이 날아가는 시간입니다.
   static const Duration _flight = Duration(milliseconds: 720);
 
+  /// 소리를 낼 진행도입니다.
+  ///
+  /// 화면은 끝(1.0)에서 투표함에 들어가지만, 기기 출력 지연이 있어 그때
+  /// 요청하면 늦게 들립니다. 표준 선행 시간만큼 앞서 요청합니다.
+  static final double _soundThreshold =
+      1 - ProgressSoundCue.lead.inMilliseconds / _flight.inMilliseconds;
+
   /// 이미 연출을 보여 준 사람들입니다. 재접속·재빌드로 다시 날지 않게 합니다.
   late Set<String> _seen;
   final List<_BallotFlight> _flights = [];
@@ -159,11 +166,24 @@ class _MafiaBallotTossLayerState extends State<MafiaBallotTossLayer>
       controller: controller,
     );
     _flights.add(flight);
+    // 투표함에 들어가는 순간에 맞춰 소리를 냅니다.
+    final soundCue = ProgressSoundCue();
+    void playLanding() {
+      if (!mounted) return;
+      soundCue.maybePlay(
+        context,
+        MafiaSounds.vote,
+        value: controller.value,
+        threshold: _soundThreshold,
+      );
+    }
+
+    controller.addListener(playLanding);
     controller.addStatusListener((status) {
       if (status != AnimationStatus.completed) return;
-      // 투표함에 들어가는 순간 소리를 냅니다.
-      if (mounted) SoundEffects.play(context, MafiaSounds.vote);
-      controller.dispose();
+      controller
+        ..removeListener(playLanding)
+        ..dispose();
       if (!mounted) return;
       setState(() => _flights.remove(flight));
     });

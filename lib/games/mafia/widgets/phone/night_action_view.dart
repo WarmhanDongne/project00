@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 
@@ -25,6 +26,21 @@ class MafiaNightInvestigationResult {
 
   /// 상단 제목입니다.
   final String title;
+
+  /// 결과가 **마피아**로 나왔는지입니다. 테두리를 진영 색(빨강)으로 바꿉니다.
+  ///
+  /// 진영을 다시 계산하지 않고 서버가 보낸 결과 문구만 읽습니다. 경찰은
+  /// `마피아`·`시민` 두 값만 받고, 정보원은 역할 이름을 받으므로(`마피아 보스`
+  /// 등) 역할 표에서 그 이름의 진영을 찾습니다. 밀러(시민인데 마피아로 보임)와
+  /// 마피아 보스(마피아인데 시민으로 보임)도 서버가 보낸 값대로 칠해집니다.
+  bool get showsMafia {
+    final text = verdict.trim();
+    if (text.isEmpty) return false;
+    if (text == MafiaFaction.mafia.displayName) return true;
+    return MafiaRoles.all.any(
+      (role) => role.displayName == text && role.faction.isMafia,
+    );
+  }
 }
 
 //=======================P2~P5 밤 화면==============================
@@ -110,9 +126,8 @@ class MafiaNightActionView extends StatelessWidget {
   /// 밤에 하는 일이 없는 신분은 제출할 것도 없으므로 false입니다.
   bool get _hasSubmittedAction => isSubmitted && (role?.actsAtNight ?? false);
 
-  /// 밤에 대상을 고르는 신분인지입니다(제출 여부와 무관).
-  bool get _isNightActor =>
-      (role?.actsAtNight ?? false) && players.isNotEmpty && !abilityExhausted;
+  /// 화면이 바뀔 때 두 화면이 겹쳐 오가는 시간입니다.
+  static const Duration modeFadeDuration = Duration(milliseconds: 360);
 
   /// 대상을 고르는 화면인지입니다.
   bool get _showsSelection {
@@ -130,34 +145,56 @@ class MafiaNightActionView extends StatelessWidget {
         final scale = MafiaPhoneDesign.scaleOf(size);
         final result = investigationResult;
 
+        // 결과 > 선택 > 대기 중 하나만 그립니다.
+        final mode = result != null
+            ? _NightViewMode.result
+            : _showsSelection
+            ? _NightViewMode.selection
+            : _NightViewMode.waiting;
+
         return Stack(
           fit: StackFit.expand,
           children: [
             const Positioned.fill(child: MafiaPhoneBackground.night()),
-            // 결과 > 선택 > 대기 순으로 하나만 그립니다.
-            if (result != null)
-              ..._buildInvestigationResult(size, scale, result)
-            else if (_showsSelection)
-              ..._buildSelectionLayer(size, scale)
-            else
-              ..._buildWaiting(size, scale),
-            // 확정(2026-08): '선택 완료' 버튼은 제출한 뒤 **부드럽게 사라집니다.**
-            // 두 상태에 걸쳐 남겨 두어야 사라지는 모습이 보입니다.
-            if (_isNightActor && result == null)
-              IgnorePointer(
-                ignoring: isSubmitted || actionWindowClosed,
-                child: AnimatedOpacity(
-                  opacity: isSubmitted || actionWindowClosed ? 0 : 1,
-                  duration: const Duration(milliseconds: 360),
-                  curve: Curves.easeOut,
-                  child: MafiaPhoneActionButton(
-                    label: '선택 완료',
-                    onTap: onConfirm,
-                    enabled: selectedUid != null && onConfirm != null,
-                    colorlessWhenDisabled: true,
+            // 확정(2026-08): 화면이 바뀔 때 **안내 문구·선택 그리드·버튼이 한
+            // 덩어리로 함께** 흐려지고, 다음 화면이 겹쳐 들어옵니다. 예전에는
+            // 버튼만 따로 흐려져서 문구는 툭 끊기고 버튼만 남아 보였습니다.
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: modeFadeDuration,
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeOut,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  // 사라지는 중인 화면은 눌리지 않게 합니다.
+                  child: IgnorePointer(
+                    ignoring: animation.status == AnimationStatus.reverse,
+                    child: child,
                   ),
                 ),
+                child: Stack(
+                  key: ValueKey(mode),
+                  fit: StackFit.expand,
+                  children: switch (mode) {
+                    _NightViewMode.result => _buildInvestigationResult(
+                      size,
+                      scale,
+                      result!,
+                    ),
+                    _NightViewMode.selection => [
+                      ..._buildSelectionLayer(size, scale),
+                      MafiaPhoneActionButton(
+                        label: '선택 완료',
+                        onTap: onConfirm,
+                        enabled: selectedUid != null && onConfirm != null,
+                        colorlessWhenDisabled: true,
+                      ),
+                    ],
+                    _NightViewMode.waiting => _buildWaiting(size, scale),
+                  },
+                ),
               ),
+            ),
             MafiaStoredRoleCard(role: role),
           ],
         );
@@ -240,6 +277,9 @@ class MafiaNightActionView extends StatelessWidget {
     MafiaNightInvestigationResult result,
   ) {
     final accent = role?.nightAction.accentColor ?? const Color(0xFF44ABFF);
+    // 확정(2026-08): 조사 결과가 마피아면 테두리를 마피아 진영 색으로 칠합니다.
+    // 문구를 읽기 전에 색만으로 결과가 먼저 읽힙니다.
+    final borderColor = result.showsMafia ? MafiaFactionColors.mafia : accent;
     const profileSize = 188.0;
 
     return [
@@ -287,7 +327,7 @@ class MafiaNightActionView extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10 * scale),
-              border: Border.all(color: accent, width: 3 * scale),
+              border: Border.all(color: borderColor, width: 3 * scale),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10 * scale),
@@ -369,3 +409,6 @@ class MafiaNightActionView extends StatelessWidget {
     ];
   }
 }
+
+/// 밤 화면이 지금 무엇을 보여 주는지입니다. 이 값이 바뀌면 화면이 교차됩니다.
+enum _NightViewMode { result, selection, waiting }

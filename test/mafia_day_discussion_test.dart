@@ -149,7 +149,18 @@ void _skipVoteTests() {
     final button = buttonOf(tester);
     expect(button.label, '3/6');
     expect(button.enabled, isFalse);
-    expect(button.labelColor, const Color(0xFFFF0000));
+    // 확정(2026-08): 옅은 회색으로 빠지지 않고 검은 버튼 + 흰 글자로 남습니다.
+    expect(button.labelColor, Colors.white);
+    expect(button.backgroundColor, const Color(0xFF212730));
+  });
+
+  testWidgets('누르기 전에는 기본 버튼 색을 쓴다', (tester) async {
+    await pumpButton(tester, hasVotedToSkip: false);
+
+    final button = buttonOf(tester);
+    expect(button.label, '토론 종료 하기');
+    expect(button.backgroundColor, isNull);
+    expect(button.labelColor, isNull);
   });
 
   testWidgets('비활성된 뒤에도 집계는 계속 올라간다', (tester) async {

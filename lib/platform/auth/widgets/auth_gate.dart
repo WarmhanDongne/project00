@@ -18,12 +18,18 @@ class AuthGate extends StatefulWidget {
     this.emailLinks,
     this.initialEmailLink,
     this.onboardingService,
+    this.onAuthRestoreTimeout,
   });
 
   final Stream<User?>? userChanges;
   final Stream<Uri>? emailLinks;
   final Uri? initialEmailLink;
   final OnboardingService? onboardingService;
+
+  /// 저장된 로그인 정보를 제때 복원하지 못했을 때 할 일입니다.
+  ///
+  /// 기본값은 세션 비우기(로그아웃)입니다. 시험에서 갈아 끼웁니다.
+  final VoidCallback? onAuthRestoreTimeout;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -90,7 +96,12 @@ class _AuthGateState extends State<AuthGate> {
       stream: _userChanges,
       builder: (context, authSnapshot) {
         if (authSnapshot.connectionState == ConnectionState.waiting) {
-          return const _AppInitializingView();
+          // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
+          // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
+          return _AppInitializingView(
+            step: '로그인 상태 확인',
+            onTimeout: _handleAuthRestoreTimeout,
+          );
         }
         final user = authSnapshot.data;
         if (user == null) {
@@ -121,7 +132,9 @@ class _AuthGateState extends State<AuthGate> {
           }
           return const LoginScreen();
         }
-        if (_emailLink != null) return const _AppInitializingView();
+        if (_emailLink != null) {
+          return const _AppInitializingView(step: '이메일 링크 처리');
+        }
 
         _ensureOnboardingWatch(user.uid);
         if (_onboardingFailed) {
@@ -130,7 +143,17 @@ class _AuthGateState extends State<AuthGate> {
             onRetry: _retryOnboardingWatch,
           );
         }
-        if (!_onboardingLoaded) return const _AppInitializingView();
+        if (!_onboardingLoaded) {
+          // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
+          // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
+          // 대신 다시 시도할 화면을 보여 줍니다.
+          return _AppInitializingView(
+            step: '회원가입 상태 확인',
+            onTimeout: () {
+              if (mounted) setState(() => _onboardingFailed = true);
+            },
+          );
+        }
         final onboarding = _onboarding;
         if (onboarding == null) {
           return _LegacyRecoveryView(service: _onboardingService);
@@ -180,6 +203,21 @@ class _AuthGateState extends State<AuthGate> {
             setState(() => _onboardingFailed = true);
           },
         );
+  }
+
+  /// 저장된 로그인 정보를 복원하지 못하고 멈춘 경우입니다.
+  ///
+  /// 기기 키체인에 남은 세션을 읽을 수 없을 때(앱 번들 id·서명 팀이 바뀐 뒤에
+  /// 일어납니다) 스트림이 아무 값도 주지 않고 멈춥니다. 그대로 두면 영원히
+  /// 스피너라, 세션을 비워 로그인 화면으로 되돌립니다.
+  void _handleAuthRestoreTimeout() {
+    debugPrint('[auth_gate] 로그인 상태 복원이 지연됩니다. 저장된 세션을 비웁니다.');
+    final onTimeout = widget.onAuthRestoreTimeout;
+    if (onTimeout != null) {
+      onTimeout();
+      return;
+    }
+    unawaited(FirebaseAuth.instance.signOut());
   }
 
   void _retryOnboardingWatch() {
@@ -269,16 +307,32 @@ class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
     }
   }
 
+  /// 복구를 부르고도 상태가 바뀌지 않으면(문서를 앱이 못 읽는 값으로 쓰는 등)
+  /// 여기서 멈춥니다. 그래서 시간 제한을 두고 다시 시도 화면으로 넘깁니다.
+  bool _timedOut = false;
+
   @override
   Widget build(BuildContext context) {
-    if (_error == null) return const _AppInitializingView();
+    if (_error == null && !_timedOut) {
+      return _AppInitializingView(
+        step: '계정 상태 복구',
+        onTimeout: () {
+          if (mounted) setState(() => _timedOut = true);
+        },
+      );
+    }
     final message = _error is AuthServiceException
         ? (_error! as AuthServiceException).message
         : '계정 진행 상태를 복구하지 못했습니다.';
     return _GateErrorView(
-      message: message,
+      message: _timedOut && _error == null
+          ? '계정 진행 상태를 확인하지 못했습니다. 다시 시도하거나 로그아웃해 주세요.'
+          : message,
       onRetry: () {
-        setState(() => _error = null);
+        setState(() {
+          _error = null;
+          _timedOut = false;
+        });
         unawaited(_recover());
       },
     );
@@ -302,7 +356,9 @@ class _GateErrorView extends StatelessWidget {
           PlatformButton(label: '다시 시도', onPressed: onRetry),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: FirebaseAuth.instance.signOut,
+            // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
+            // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
+            onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
             child: const Text('로그아웃'),
           ),
         ],
@@ -311,11 +367,97 @@ class _GateErrorView extends StatelessWidget {
   }
 }
 
-class _AppInitializingView extends StatelessWidget {
-  const _AppInitializingView();
+/// 앱을 준비하는 동안 보여 주는 화면입니다.
+///
+/// [onTimeout]을 주면 [timeout] 뒤에 한 번 알려 줍니다. **스피너가 영원히 도는
+/// 상태를 남기지 않기 위한 장치입니다** — 무엇을 기다리다 멈췄는지는 [step]으로
+/// 화면에 적어, 기기에서 바로 원인을 알 수 있게 합니다.
+class _AppInitializingView extends StatefulWidget {
+  const _AppInitializingView({required this.step, this.onTimeout});
+
+  /// 지금 기다리는 일입니다(예: `회원가입 상태 확인`).
+  final String step;
+
+  final VoidCallback? onTimeout;
+
+  /// 이 시간이 지나면 기다리기를 멈춥니다.
+  static const Duration timeout = Duration(seconds: 8);
+
+  @override
+  State<_AppInitializingView> createState() => _AppInitializingViewState();
+}
+
+class _AppInitializingViewState extends State<_AppInitializingView> {
+  Timer? _timer;
+  Timer? _slowTimer;
+
+  /// 오래 걸리는 중임을 알리는 문구를 띄울지입니다.
+  bool _isSlow = false;
+
+  /// 문구를 띄우기까지 기다리는 시간입니다.
+  static const Duration _slowAfter = Duration(seconds: 3);
+
+  @override
+  void initState() {
+    super.initState();
+    _startWaiting();
+  }
+
+  /// 기다리는 일이 바뀌면 **시계를 처음부터 다시 셉니다.**
+  ///
+  /// 같은 자리에 이 화면이 연달아 나오면(로그인 확인 → 회원가입 확인) Flutter가
+  /// 같은 State를 그대로 씁니다. 그때 시계를 새로 세지 않으면 앞 단계에서 켠
+  /// 시계가 다음 단계에서 터지고, 앞 단계의 할 일(세션 비우기)이 엉뚱하게
+  /// 실행됩니다. 실제로 회원가입 상태를 기다리던 중에 로그아웃이 됐습니다.
+  @override
+  void didUpdateWidget(covariant _AppInitializingView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.step == oldWidget.step) return;
+    _timer?.cancel();
+    _slowTimer?.cancel();
+    _isSlow = false;
+    _startWaiting();
+  }
+
+  void _startWaiting() {
+    _slowTimer = Timer(_slowAfter, () {
+      if (mounted) setState(() => _isSlow = true);
+    });
+    _timer = null;
+    final onTimeout = widget.onTimeout;
+    if (onTimeout == null) return;
+    // 시계가 터지는 순간의 할 일을 씁니다(위젯이 갈아 끼워질 수 있습니다).
+    _timer = Timer(
+      _AppInitializingView.timeout,
+      () => widget.onTimeout?.call(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _slowTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (_isSlow) ...[
+              const SizedBox(height: 16),
+              Text(
+                '${widget.step} 중…',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

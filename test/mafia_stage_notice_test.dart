@@ -5,7 +5,6 @@ import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/mafia_flow_config.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
 
 import 'support/ejection_beats.dart';
@@ -95,19 +94,106 @@ void main() {
   });
 
   test('단계 시간이 연출 박자의 합과 같다', () {
-    // 한쪽만 바꾸면 안내가 잘리거나 빈 화면이 남습니다.
-    expect(
-      MafiaTabletStage.morning.announcementHold,
-      MafiaTabletMorningSequence.totalHold,
-    );
-    expect(
-      MafiaTabletStage.voteResult.announcementHold,
-      MafiaTabletVoteResultSequence.totalHold,
-    );
     // 아침은 2.5 + 8 + 2.5 = 13초입니다.
     expect(MafiaTabletMorningSequence.totalHold.inMilliseconds, 13000);
     // 개표는 4 + 9 + 2.5 = 15.5초입니다.
     expect(MafiaTabletVoteResultSequence.totalHold.inMilliseconds, 15500);
+  });
+
+  //=======================게임이 끝나는 발표 (확정 2026-08)==============
+  // 이 발표로 게임이 끝나면 **다음 단계 예고를 건너뛰고** 곧바로 결과 화면으로
+  // 갑니다. 이겼는데 '밤이 되었습니다'가 떠오르면 게임이 계속되는 것처럼
+  // 보입니다.
+  test('끝나는 발표는 마지막 예고만큼 짧다', () {
+    expect(
+      MafiaTabletMorningSequence.holdOf(
+        const MafiaMorningResult(deadUids: ['u0'], savedCount: 0),
+      ),
+      MafiaTabletMorningSequence.totalHold,
+    );
+    expect(
+      MafiaTabletMorningSequence.holdOf(
+        const MafiaMorningResult(
+          deadUids: ['u0'],
+          savedCount: 0,
+          endsGame: true,
+        ),
+      ),
+      MafiaTabletMorningSequence.totalHold -
+          MafiaTabletMorningSequence.closingHold,
+    );
+    expect(
+      MafiaTabletVoteResultSequence.holdOf(
+        const MafiaVoteResult(
+          tally: {'u0': 1},
+          executedUid: 'u0',
+          tie: false,
+          abstainCount: 0,
+        ),
+      ),
+      MafiaTabletVoteResultSequence.totalHold,
+    );
+    expect(
+      MafiaTabletVoteResultSequence.holdOf(
+        const MafiaVoteResult(
+          tally: {'u0': 1},
+          executedUid: 'u0',
+          tie: false,
+          abstainCount: 0,
+          endsGame: true,
+        ),
+      ),
+      MafiaTabletVoteResultSequence.totalHold -
+          MafiaTabletVoteResultSequence.nightNoticeHold,
+    );
+  });
+
+  testWidgets('끝나는 아침에는 토론 안내를 띄우지 않는다', (tester) async {
+    await pumpTablet(
+      tester,
+      MafiaTabletMorningSequence(
+        result: const MafiaMorningResult(
+          deadUids: ['u0'],
+          savedCount: 0,
+          endsGame: true,
+        ),
+        players: players,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(MafiaTabletMorningSequence.openingHold);
+    await tester.pump(MafiaAnnouncementReveal.exitDuration);
+    await tester.pump(MafiaTabletMorningSequence.announcementHold);
+    await tester.pump(MafiaAnnouncementReveal.exitDuration);
+    await tester.pump(MafiaAnnouncementReveal.enterDuration);
+    expect(find.text(MafiaCopy.discussionNotice), findsNothing);
+  });
+
+  testWidgets('끝나는 처형에는 밤 안내를 띄우지 않는다', (tester) async {
+    await pumpTablet(
+      tester,
+      MafiaTabletVoteResultSequence(
+        result: const MafiaVoteResult(
+          tally: {'u0': 1},
+          executedUid: 'u0',
+          tie: false,
+          abstainCount: 0,
+          endsGame: true,
+        ),
+        players: players,
+        executed: players['u0'],
+        executedRole: null,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(MafiaTabletVoteResultSequence.tallyHold);
+    await tester.pump(MafiaAnnouncementReveal.exitDuration);
+    await tester.pump(MafiaTabletVoteResultSequence.executionHold);
+    await tester.pump(MafiaAnnouncementReveal.exitDuration);
+    await tester.pump(MafiaAnnouncementReveal.enterDuration);
+    expect(find.text(MafiaCopy.nightNotice), findsNothing);
   });
 
   test('토론 시간은 생존 인원을 따른다', () {

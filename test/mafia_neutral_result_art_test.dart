@@ -14,7 +14,12 @@ void main() {
 
   test('중립은 이긴 역할마다 다른 포스터를 쓴다', () {
     final posters = <String, String>{};
-    for (final id in ['jester', 'executioner', 'serial_killer', 'cult_leader']) {
+    for (final id in [
+      'jester',
+      'executioner',
+      'serial_killer',
+      'cult_leader',
+    ]) {
       final phone = MafiaResultArt.phonePoster(neutral, winnerRoleIds: {id});
       final tablet = MafiaResultArt.tabletPoster(neutral, winnerRoleIds: {id});
       expect(phone, isNotNull, reason: '$id: 휴대폰 포스터가 없습니다');
@@ -82,7 +87,10 @@ void main() {
     );
     // 승자 역할을 못 읽은 경우(구버전 앱)도 조용히 문구로 넘어갑니다.
     expect(MafiaResultArt.phonePoster(neutral), isNull);
-    expect(MafiaResultArt.tabletPoster(neutral, winnerRoleIds: {'???'}), isNull);
+    expect(
+      MafiaResultArt.tabletPoster(neutral, winnerRoleIds: {'???'}),
+      isNull,
+    );
   });
 
   test('포스터가 있는 승리는 네 가지 승리 조건을 모두 덮는다', () {

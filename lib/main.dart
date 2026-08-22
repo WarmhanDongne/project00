@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -27,15 +26,23 @@ void main() async {
   // 태블릿에서 가로입니다.
   //
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
-  final view =
-      PlatformDispatcher.instance.implicitView ??
-      PlatformDispatcher.instance.views.firstOrNull;
-  final physicalSize = view != null
-      ? (view.physicalSize / view.devicePixelRatio)
-      : const Size(390, 844);
-  final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
+  // 기기 판별은 DeviceLayout 한 곳에서 합니다(게임 종료 후 방향 복원과 같은
+  // 기준을 써야 로비 방향이 어긋나지 않습니다).
+  final isTablet = DeviceLayout.isTabletDevice();
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  //
+  // 여기서 예외가 나면 화면이 한 장도 그려지기 전이라 사용자에게는 앱이 그냥
+  // 죽은 것으로 보이고, Crashlytics도 아직 붙지 않아 원인이 남지 않습니다.
+  // 실패해도 최소한 무슨 일인지 알리는 화면은 띄웁니다.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (error, stack) {
+    debugPrint('Firebase 초기화 실패: $error\n$stack');
+    runApp(const _StartupFailureApp());
+    return;
+  }
 
   //=======================오류 수집 시작==============================
   // Firebase 초기화 바로 뒤에 붙입니다. 이 뒤에 나는 위젯·비동기 오류는
@@ -83,6 +90,53 @@ void main() async {
     // 그려진 뒤 사운드를 초기화합니다.
     unawaited(soundProvider.initialize());
   });
+}
+
+//=======================시작 실패 화면==============================
+/// Firebase 초기화가 실패했을 때만 띄우는 최소 화면입니다.
+///
+/// 이 시점에는 앱의 테마·번역·오류 수집이 모두 준비되지 않았으므로 아무
+/// 의존성 없이 그릴 수 있는 것만 씁니다.
+class _StartupFailureApp extends StatelessWidget {
+  const _StartupFailureApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF141414),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.cloud_off, color: Color(0xFF8A8A8A), size: 48),
+                SizedBox(height: 20),
+                Text(
+                  '앱을 시작할 수 없습니다',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFECECEC),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  '네트워크 상태를 확인한 뒤 앱을 다시 실행해 주세요.\n'
+                  '문제가 계속되면 앱을 최신 버전으로 업데이트해 주세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFA8A8A8), height: 1.6),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 앱 최초 화면 방향을 iOS scene이 활성화된 뒤 한 번만 적용합니다.

@@ -48,10 +48,26 @@ Future<void> preloadLiarsPokerAssets(
   if (!context.mounted) return;
 
   // 첫 카드 제출·공개 소리가 늦지 않도록 게임 전용 효과음을 먼저 준비합니다.
-  unawaited(
-    SoundEffects.of(context)?.preloadEffects(LiarsPokerSounds.preloadTargets) ??
-        Future<void>.value(),
-  );
+  // 이 게임 소리를 미리 풀어 둡니다. 하지 않으면 첫 재생이 화면보다 늦습니다.
+  // `scope`를 주면 다른 게임에 들어갈 때 이 소리들을 자동으로 놓아 줍니다 —
+  // 쌓이면 기기 디코더가 모자라 준비가 실패합니다(2026-08 iOS 사고).
+  final sound = SoundEffects.of(context);
+  if (sound != null) {
+    unawaited(
+      sound.preloadEffects(
+        LiarsPokerSounds.preloadTargets,
+        scope: 'liars_poker',
+      ),
+    );
+    // 안내 음성은 겹쳐 나지 않으므로 사본을 하나만 둡니다.
+    unawaited(
+      sound.preloadEffects(
+        LiarsPokerSounds.narrationTargets,
+        solo: true,
+        scope: 'liars_poker',
+      ),
+    );
+  }
 
   final images = Assets.games.liarsPoker.images;
   final localAssets = <GameImage>[

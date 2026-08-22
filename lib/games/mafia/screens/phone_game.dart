@@ -109,7 +109,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   @override
   void dispose() {
     sessionSubscription?.close();
-    unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }
@@ -225,10 +225,8 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   Future<void> _leaveRoom() async {
     final leave = await SharedPhoneExitModal.show(
       context,
-      // 마피아 전용 삽화가 없습니다. 아이콘 그림을 삽화 크기로 늘리면 흐릿하고
-      // 모달만 커져서, 코드로 그린 작은 표시를 씁니다.
       doorImage: const _ExitBadge(color: _mafiaExitColor),
-      imageHeight: 96,
+      imageHeight: 120,
       maxWidth: 320,
       surfaceColor: Colors.white,
       titleColor: Colors.black,
@@ -256,9 +254,35 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
 const Color _mafiaExitColor = Color(0xFF212730);
 
 //=======================퇴장 모달 표시==============================
-/// 퇴장 모달 위쪽의 작은 표시입니다.
+/// 퇴장 모달 위쪽 표시입니다.
+///
+/// 마피아다운 리볼버 그림을 씁니다. 그림 파일이 아직 없거나 불러오지 못하면
+/// 아이콘으로 대신 그려, 모달 자체가 비어 보이지 않게 합니다.
 class _ExitBadge extends StatelessWidget {
   const _ExitBadge({required this.color});
+
+  /// 그림을 불러오지 못했을 때 쓰는 아이콘 색입니다.
+  final Color color;
+
+  /// 퇴장 모달의 리볼버 그림입니다. 파일을 넣으면 자동으로 보입니다.
+  static const String revolverAsset =
+      'assets/games/mafia/images/other/exit_revolver.webp';
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Image.asset(
+        revolverAsset,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stack) => _FallbackBadge(color: color),
+      ),
+    );
+  }
+}
+
+class _FallbackBadge extends StatelessWidget {
+  const _FallbackBadge({required this.color});
 
   final Color color;
 

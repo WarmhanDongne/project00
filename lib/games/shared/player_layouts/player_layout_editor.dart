@@ -7,6 +7,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/player_layouts/player_slot_positions.dart';
 import 'package:project00/games/shared/widgets/game_setup_back_button.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 typedef PlayerLayoutPrepared =
     Future<bool> Function(PlayerLayoutModel playerLayout);
@@ -49,8 +50,8 @@ class PlayerLayoutEditor extends StatefulWidget {
     this.tableImage,
     this.chairImage,
   }) : assert(
-         initialLayout.playerCount >= 2 && initialLayout.playerCount <= 6,
-         '지원하는 플레이어 수는 2~6명입니다.',
+         initialLayout.playerCount >= 2 && initialLayout.playerCount <= 12,
+         '지원하는 플레이어 수는 2~12명입니다.',
        );
 
   final PlayerLayoutModel initialLayout;
@@ -80,8 +81,29 @@ class PlayerLayoutEditor extends StatefulWidget {
 
 class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     with TickerProviderStateMixin {
-  static const double _playerSlotSize = 160;
-  static const double _swapTriggerDistance = 130;
+  /// 디자인 기준 화면 폭입니다(Figma tablet-screen-8-seating-*: 1280x800).
+  static const double _designBoardWidth = 1280;
+
+  /// 안내 문구 알약의 높이입니다(디자인 696x48).
+  static const double _bannerHeight = 48;
+
+  /// 가운데 태블릿 자리 표시의 크기입니다(디자인 300x200).
+  static const Size _tabletMarkerSize = Size(300, 200);
+
+  /// 인원에 따라 카드가 세 단계로 작아집니다(디자인 4·6인 / 9인 / 12인).
+  _SeatCardMetrics _metricsFor(Size boardSize) {
+    final base = switch (_playerCount) {
+      <= 6 => _SeatCardMetrics.large,
+      <= 9 => _SeatCardMetrics.medium,
+      _ => _SeatCardMetrics.small,
+    };
+    // 1280보다 좁은 태블릿에서도 화면 대비 같은 비율로 보이게 줄입니다.
+    return base.scaled((boardSize.width / _designBoardWidth).clamp(0.72, 1.15));
+  }
+
+  /// 카드 중심이 이만큼 가까워지면 자리를 맞바꿉니다. 카드가 작아질수록
+  /// 자리 간격도 좁아지므로 카드 너비에 비례합니다.
+  double _swapTriggerDistance(Size cardSize) => cardSize.width * 0.6;
 
   /// 테이블 크기에 비례해 어느 화면에서도 같은 비율로 보이게 합니다.
   double _chairSizeFor(Size boardSize) =>
@@ -132,6 +154,20 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   }
 
   @override
+  void didUpdateWidget(covariant PlayerLayoutEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 같은 자리에서 참가자 수가 바뀌면 좌석표를 다시 만듭니다. 이전 좌석표를
+    // 그대로 쓰면 자리 번호가 범위를 벗어나 화면이 깨집니다.
+    if (oldWidget.initialLayout.playerCount !=
+        widget.initialLayout.playerCount) {
+      _playerSlotIndexes = List<int>.from(widget.initialLayout.seatIndexes);
+      _draggingPositions.clear();
+      _draggingPlayerIndex = null;
+      _hoveredSlotIndex = null;
+    }
+  }
+
+  @override
   void dispose() {
     _entranceController.dispose();
     _zoomController.dispose();
@@ -169,13 +205,14 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     required int playerIndex,
     required DragUpdateDetails details,
     required Size boardSize,
+    required Size cardSize,
   }) {
     final currentPosition =
         _draggingPositions[playerIndex] ??
         _slotPositions[_playerSlotIndexes[playerIndex]];
 
-    final maxX = math.max(0.0, 1 - (_playerSlotSize / boardSize.width));
-    final maxY = math.max(0.0, 1 - (_playerSlotSize / boardSize.height));
+    final maxX = math.max(0.0, 1 - (cardSize.width / boardSize.width));
+    final maxY = math.max(0.0, 1 - (cardSize.height / boardSize.height));
     final nextPosition = Offset(
       (currentPosition.dx + details.delta.dx / boardSize.width).clamp(0, maxX),
       (currentPosition.dy + details.delta.dy / boardSize.height).clamp(0, maxY),
@@ -189,6 +226,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       playerIndex: playerIndex,
       draggingPosition: nextPosition,
       boardSize: boardSize,
+      cardSize: cardSize,
     );
   }
 
@@ -196,12 +234,14 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     required int playerIndex,
     required Offset draggingPosition,
     required Size boardSize,
+    required Size cardSize,
   }) {
     final draggedCenter = Offset(
-      draggingPosition.dx * boardSize.width + _playerSlotSize / 2,
-      draggingPosition.dy * boardSize.height + _playerSlotSize / 2,
+      draggingPosition.dx * boardSize.width + cardSize.width / 2,
+      draggingPosition.dy * boardSize.height + cardSize.height / 2,
     );
     final currentSlotIndex = _playerSlotIndexes[playerIndex];
+    final trigger = _swapTriggerDistance(cardSize);
 
     int? nearbySlotIndex;
     double nearestDistance = double.infinity;
@@ -211,12 +251,12 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
       final slotPosition = _slotPositions[slotIndex];
       final slotCenter = Offset(
-        slotPosition.dx * boardSize.width + _playerSlotSize / 2,
-        slotPosition.dy * boardSize.height + _playerSlotSize / 2,
+        slotPosition.dx * boardSize.width + cardSize.width / 2,
+        slotPosition.dy * boardSize.height + cardSize.height / 2,
       );
       final distance = (draggedCenter - slotCenter).distance;
 
-      if (distance <= _swapTriggerDistance && distance < nearestDistance) {
+      if (distance <= trigger && distance < nearestDistance) {
         nearestDistance = distance;
         nearbySlotIndex = slotIndex;
       }
@@ -328,18 +368,18 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     }
   }
 
-  Offset _slotCenterPixel(int slotIndex, Size boardSize) {
+  Offset _slotCenterPixel(int slotIndex, Size boardSize, Size cardSize) {
     final normalized = _slotPositions[slotIndex];
     return Offset(
-      normalized.dx * boardSize.width + _playerSlotSize / 2,
-      normalized.dy * boardSize.height + _playerSlotSize / 2,
+      normalized.dx * boardSize.width + cardSize.width / 2,
+      normalized.dy * boardSize.height + cardSize.height / 2,
     );
   }
 
   /// 화면 중심에서 바깥쪽으로 밀어낸, 화면 밖의 한 지점입니다. 블록은 이 지점을
   /// 향해 퇴장하고, 의자는 이 지점에서부터 자리로 들어옵니다.
-  Offset _offscreenCenterPixel(int slotIndex, Size boardSize) {
-    final startCenter = _slotCenterPixel(slotIndex, boardSize);
+  Offset _offscreenCenterPixel(int slotIndex, Size boardSize, Size cardSize) {
+    final startCenter = _slotCenterPixel(slotIndex, boardSize, cardSize);
     final boardCenter = Offset(boardSize.width / 2, boardSize.height / 2);
     var direction = startCenter - boardCenter;
     if (direction.distance < 1) direction = const Offset(0, -1);
@@ -363,13 +403,14 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_cancel());
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.canvas,
         body: SafeArea(
           child: Column(
             children: [
@@ -381,25 +422,42 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        // 디자인: 696x48 알약 안에 19px 안내 문구. 뒤로가기
+                        // 버튼과 겹치지 않게 좌우를 비워 둡니다.
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 64),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 696),
+                            child: Container(
+                              height: _bannerHeight,
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.surfaceMuted,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: colors.text,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                         Align(
                           alignment: Alignment.centerLeft,
                           // 역할 배치 화면과 같은 버튼입니다.
                           child: GameSetupBackButton(
                             isBusy: _isCancelling,
                             onPressed: () => unawaited(_cancel()),
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 64),
-                          child: Text(
-                            '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                            ),
                           ),
                         ),
                       ],
@@ -414,10 +472,11 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                       constraints.maxWidth,
                       constraints.maxHeight,
                     );
-                    _slotPositions = normalizedPlayerSlotTopLeftPositions(
+                    final metrics = _metricsFor(boardSize);
+                    _slotPositions = seatingCardTopLeftPositions(
                       playerCount: _playerCount,
                       boardSize: boardSize,
-                      slotSize: _playerSlotSize,
+                      cardSize: metrics.size,
                     );
 
                     return AnimatedBuilder(
@@ -436,6 +495,12 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                           scale: zoomScale,
                           child: Stack(
                             children: [
+                              if (!_isCompleting)
+                                _buildTabletMarker(
+                                  boardSize: boardSize,
+                                  metrics: metrics,
+                                  colors: colors,
+                                ),
                               for (
                                 var playerIndex = 0;
                                 playerIndex < _playerCount;
@@ -444,6 +509,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                                 _buildPlayer(
                                   playerIndex: playerIndex,
                                   boardSize: boardSize,
+                                  metrics: metrics,
                                   t: t,
                                 ),
                               _buildTable(boardSize: boardSize, t: t),
@@ -455,20 +521,36 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                                 _buildChair(
                                   seatIndex: seatIndex,
                                   boardSize: boardSize,
+                                  cardSize: metrics.size,
                                   t: t,
                                 ),
                               if (!_isCompleting)
                                 Positioned(
-                                  right: 24,
-                                  bottom: 14,
-                                  child: FilledButton(
-                                    onPressed: _completeSetting,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xffd4d4d4),
-                                      foregroundColor: Colors.black,
-                                      shape: const RoundedRectangleBorder(),
+                                  // 디자인: 208x64, radius 12, 오른쪽·아래 28
+                                  right: 28,
+                                  bottom: 28,
+                                  child: SizedBox(
+                                    width: 208,
+                                    height: 64,
+                                    child: FilledButton(
+                                      onPressed: _completeSetting,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: colors.primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '설정 완료',
+                                        style: TextStyle(
+                                          fontSize: 21,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
-                                    child: const Text('설정 완료'),
                                   ),
                                 ),
                             ],
@@ -489,6 +571,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   Widget _buildPlayer({
     required int playerIndex,
     required Size boardSize,
+    required _SeatCardMetrics metrics,
     required double t,
   }) {
     final player = widget.initialLayout.players[playerIndex];
@@ -504,23 +587,28 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
               playerIndex: playerIndex,
               details: details,
               boardSize: boardSize,
+              cardSize: metrics.size,
             ),
       onPanEnd: _isCompleting ? null : (_) => _finishDragging(playerIndex),
       onPanCancel: _isCompleting ? null : () => _finishDragging(playerIndex),
-      child: _PlayerSlot(player: player),
+      child: _SeatCard(
+        player: player,
+        metrics: metrics,
+        isDragging: isDragging,
+      ),
     );
 
     if (_isCompleting) {
       final exitT = _exitInterval.transform(t);
       final center = Offset.lerp(
-        _slotCenterPixel(slotIndex, boardSize),
-        _offscreenCenterPixel(slotIndex, boardSize),
+        _slotCenterPixel(slotIndex, boardSize, metrics.size),
+        _offscreenCenterPixel(slotIndex, boardSize, metrics.size),
         exitT,
       )!;
       return Positioned(
         key: ValueKey(player.uid),
-        left: center.dx - _playerSlotSize / 2,
-        top: center.dy - _playerSlotSize / 2,
+        left: center.dx - metrics.size.width / 2,
+        top: center.dy - metrics.size.height / 2,
         child: child,
       );
     }
@@ -580,9 +668,68 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     );
   }
 
+  //=======================태블릿 자리 표시==============================
+  /// 디자인의 가운데 안내 상자입니다(300x200, 점선 테두리).
+  ///
+  /// 실제 태블릿이 놓이는 자리를 알려 주어, 참가자들이 자기 자리를 태블릿을
+  /// 기준으로 맞출 수 있게 합니다. 설정 완료 연출이 시작되면 테이블이 이
+  /// 자리를 대신하므로 표시를 지웁니다.
+  Widget _buildTabletMarker({
+    required Size boardSize,
+    required _SeatCardMetrics metrics,
+    required PlatformColors colors,
+  }) {
+    // 카드와 같은 배율로 줄여, 좁은 태블릿에서도 자리 사이 여백이 유지됩니다.
+    final scale = metrics.size.width / _SeatCardMetrics.large.size.width;
+    final size = Size(
+      _tabletMarkerSize.width * scale,
+      _tabletMarkerSize.height * scale,
+    );
+    return Positioned(
+      left: boardSize.width / 2 - size.width / 2,
+      top: boardSize.height / 2 - size.height / 2,
+      width: size.width,
+      height: size.height,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surfaceMuted,
+            borderRadius: BorderRadius.circular(20 * scale),
+          ),
+          child: _DashedRoundedRect(
+            color: colors.border,
+            radius: 20 * scale,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '태블릿',
+                  style: TextStyle(
+                    color: colors.textMuted,
+                    fontSize: 21 * scale,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 8 * scale),
+                Text(
+                  '테이블 중앙',
+                  style: TextStyle(
+                    color: colors.textMuted,
+                    fontSize: 16 * scale,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildChair({
     required int seatIndex,
     required Size boardSize,
+    required Size cardSize,
     required double t,
   }) {
     final chairT = chairEntranceProgress(
@@ -590,9 +737,9 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       seatIndex: seatIndex,
       seatCount: _playerCount,
     );
-    final seatCenter = _slotCenterPixel(seatIndex, boardSize);
+    final seatCenter = _slotCenterPixel(seatIndex, boardSize, cardSize);
     final center = Offset.lerp(
-      _offscreenCenterPixel(seatIndex, boardSize),
+      _offscreenCenterPixel(seatIndex, boardSize, cardSize),
       seatCenter,
       chairT,
     )!;
@@ -637,51 +784,190 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   }
 }
 
-class _PlayerSlot extends StatelessWidget {
-  const _PlayerSlot({required this.player});
+class _SeatCardMetrics {
+  const _SeatCardMetrics({
+    required this.size,
+    required this.avatar,
+    required this.radius,
+    required this.nicknameSize,
+    required this.padding,
+    required this.gap,
+  });
+
+  /// 4·6인 (Figma tablet-screen-8-seating-4 / -6)
+  static const large = _SeatCardMetrics(
+    size: Size(220, 92),
+    avatar: 56,
+    radius: 16,
+    nicknameSize: 32,
+    padding: 16,
+    gap: 12,
+  );
+
+  /// 7~9인 (Figma tablet-screen-8-seating-9)
+  static const medium = _SeatCardMetrics(
+    size: Size(176, 76),
+    avatar: 44,
+    radius: 14,
+    nicknameSize: 24,
+    padding: 16,
+    gap: 12,
+  );
+
+  /// 10~12인 (Figma tablet-screen-8-seating-12)
+  static const small = _SeatCardMetrics(
+    size: Size(128, 64),
+    avatar: 36,
+    radius: 12,
+    nicknameSize: 18,
+    padding: 14,
+    gap: 12,
+  );
+
+  final Size size;
+  final double avatar;
+  final double radius;
+  final double nicknameSize;
+  final double padding;
+  final double gap;
+
+  double get avatarRadius => avatar * 0.25;
+
+  _SeatCardMetrics scaled(double scale) => _SeatCardMetrics(
+    size: Size(size.width * scale, size.height * scale),
+    avatar: avatar * scale,
+    radius: radius * scale,
+    nicknameSize: nicknameSize * scale,
+    padding: padding * scale,
+    gap: gap * scale,
+  );
+}
+
+//=======================플레이어 카드==============================
+/// 자리 하나를 나타내는 카드입니다.
+///
+/// 디자인(Figma tablet-screen-8-seating-*): 흰 배경 + 옅은 테두리, 왼쪽에
+/// 캐릭터, 오른쪽에 닉네임. 드래그 중에는 1.06배로 커지고 테두리가 보라색으로,
+/// 배경이 연보라로 바뀌어 "지금 옮기는 카드"가 한눈에 보입니다.
+class _SeatCard extends StatelessWidget {
+  const _SeatCard({
+    required this.player,
+    required this.metrics,
+    required this.isDragging,
+  });
 
   final PlayerLayoutPlayer player;
+  final _SeatCardMetrics metrics;
+  final bool isDragging;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.platformColors;
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
-      child: Container(
-        width: _PlayerLayoutEditorState._playerSlotSize,
-        height: _PlayerLayoutEditorState._playerSlotSize,
-        padding: const EdgeInsets.all(12),
-        decoration: const BoxDecoration(color: Color(0xffd4d4d4)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: Image.asset(
-                roomCharacterAssetPath(player.characterId),
-                fit: BoxFit.contain,
-              ),
+      child: AnimatedScale(
+        scale: isDragging ? 1.06 : 1,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          width: metrics.size.width,
+          height: metrics.size.height,
+          padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+          decoration: BoxDecoration(
+            color: isDragging ? colors.primarySoft : colors.surface,
+            borderRadius: BorderRadius.circular(metrics.radius),
+            border: Border.all(
+              color: isDragging ? colors.primary : colors.border,
+              width: isDragging ? 3 : 1,
             ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    player.nickname,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: metrics.avatar,
+                height: metrics.avatar,
+                padding: EdgeInsets.all(metrics.avatar * 0.08),
+                decoration: BoxDecoration(
+                  color: colors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(metrics.avatarRadius),
+                ),
+                child: Image.asset(
+                  roomCharacterAssetPath(player.characterId),
+                  fit: BoxFit.contain,
+                ),
+              ),
+              SizedBox(width: metrics.gap),
+              Expanded(
+                child: Text(
+                  player.nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: metrics.nicknameSize,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+//=======================점선 테두리==============================
+/// 태블릿 자리 표시의 점선 사각형입니다(디자인: 2px, 8/6 점선).
+class _DashedRoundedRect extends StatelessWidget {
+  const _DashedRoundedRect({
+    required this.color,
+    required this.radius,
+    required this.child,
+  });
+
+  final Color color;
+  final double radius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedRoundedRectPainter(color: color, radius: radius),
+      child: child,
+    );
+  }
+}
+
+class _DashedRoundedRectPainter extends CustomPainter {
+  const _DashedRoundedRectPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+      );
+
+    const dash = 8.0;
+    const gap = 6.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = math.min(distance + dash, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance = end + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRoundedRectPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.radius != radius;
 }

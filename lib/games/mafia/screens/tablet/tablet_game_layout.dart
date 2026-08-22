@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/mafia/animations/ejection_text.dart';
+import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 //=======================태블릿 화면 공용 골격==============================
@@ -425,7 +427,11 @@ class _MafiaTabletMoonState extends State<MafiaTabletMoon>
 /// 밤에는 어두운 막에 흰 글씨입니다.
 ///
 /// 글자는 어몽어스 추방 발표처럼 **내려찍힙니다**([MafiaEjectionText]).
-class MafiaTabletNotice extends StatelessWidget {
+///
+/// 밤 안내가 뜨는 순간에는 나레이션('밤이 되었습니다')을 한 번 냅니다. 안내가
+/// 뜨는 곳이 두 군데(첫 밤·매 밤)라 화면마다 소리를 넣으면 한쪽을 빠뜨리기
+/// 쉬워서, **안내가 화면에 붙는 순간**에 여기서 냅니다.
+class MafiaTabletNotice extends StatefulWidget {
   const MafiaTabletNotice({
     super.key,
     required this.text,
@@ -442,7 +448,24 @@ class MafiaTabletNotice extends StatelessWidget {
   final bool isNight;
 
   @override
+  State<MafiaTabletNotice> createState() => _MafiaTabletNoticeState();
+}
+
+class _MafiaTabletNoticeState extends State<MafiaTabletNotice> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isNight) return;
+    // context를 쓰는 일이라 첫 프레임 뒤로 미룹니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SoundEffects.play(context, MafiaSounds.voiceNight);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final text = widget.text;
+    final isNight = widget.isNight;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = MafiaTabletDesign.resolve(constraints);

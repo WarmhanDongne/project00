@@ -80,14 +80,51 @@ void main() {
     expect(find.text('다라님은'), findsOneWidget);
   });
 
+  testWidgets('나눠 찍는 문구는 한 박자보다 빠르게 찍힌다', (tester) async {
+    // 같은 시점에 자간이 더 좁혀져 있으면 더 빨리 찍히는 중입니다.
+    const at = Duration(milliseconds: 150);
+
+    await pumpText(tester, const ['가나님은', '밤을 넘기지 못했습니다']);
+    await tester.pump(at);
+    final twoBeats = trackingOf(tester, '가나님은')!;
+
+    await pumpText(tester, const ['가나님은']);
+    await tester.pump(at);
+    final oneBeat = trackingOf(tester, '가나님은')!;
+
+    expect(twoBeats, lessThan(oneBeat));
+  });
+
   test('박자 시간은 부모가 주는 발표 시간 안에 들어간다', () {
     // 두 박자가 다 찍히기 전에 발표가 걷히면 마지막 말이 잘립니다.
     final total = MafiaEjectionText.totalCycle(
       2,
       MafiaEjectionText.defaultBeatHold,
     );
-    expect(total.inMilliseconds, 300 + 180 + 1500 + 240 + 300 + 180);
+    // 나눠 찍을 때는 1.25배 빠르게 지나갑니다.
+    expect(
+      total.inMilliseconds,
+      ((300 + 180 + 1500 + 240 + 300 + 180) / 1.25).round(),
+    );
     // 아침 사망자 발표는 8초를 줍니다.
     expect(total, lessThan(const Duration(seconds: 8)));
+  });
+
+  test('한 박자짜리 문구의 속도는 그대로다', () {
+    expect(
+      MafiaEjectionText.totalCycle(
+        1,
+        MafiaEjectionText.defaultBeatHold,
+      ).inMilliseconds,
+      300 + 180,
+    );
+    expect(
+      MafiaEjectionText.scaledFor(const Duration(milliseconds: 1000), 1),
+      const Duration(milliseconds: 1000),
+    );
+    expect(
+      MafiaEjectionText.scaledFor(const Duration(milliseconds: 1000), 2),
+      const Duration(milliseconds: 800),
+    );
   });
 }

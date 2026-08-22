@@ -17,6 +17,7 @@ class GameInfo {
     this.tabletDescription = '',
     this.rules = '',
     required this.imageUrl,
+    this.componentImageUrl = '',
     required this.enabled,
     required this.genres,
     required this.minPlayers,
@@ -50,6 +51,7 @@ class GameInfo {
       tabletDescription: firestoreString(json['tabletDescription']),
       rules: firestoreString(json['rules']),
       imageUrl: firestoreString(json['imageUrl']),
+      componentImageUrl: firestoreString(json['componentImageUrl']),
       enabled: json['enabled'] as bool? ?? true,
       genres: firestoreStringList(json['genres']),
       minPlayers: firestoreInt(json['minPlayers']),
@@ -71,6 +73,15 @@ class GameInfo {
   final String tabletDescription;
   final String rules;
   final String imageUrl;
+
+  /// 게임 **구성품 사진**입니다(모달의 미리보기 자리).
+  ///
+  /// Storage에 올린 그림의 내려받기 URL을 Firestore `componentImageUrl`에 적어
+  /// 두면 앱 업데이트 없이 그림을 바꿀 수 있습니다. 비어 있거나 내려받기가
+  /// 실패하면 게임이 코드로 그리는 미리보기(`buildTabletPreviewArtwork`)를
+  /// 그대로 씁니다 — 오프라인에서도 모달이 비지 않습니다.
+  final String componentImageUrl;
+
   final bool enabled;
   final List<String> genres;
   final int minPlayers;

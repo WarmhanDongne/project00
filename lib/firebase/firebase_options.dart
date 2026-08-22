@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC_klPq9yspgkyoLD1rs-w9OmIJExx4MBw',
-    appId: '1:93097008048:android:ba00391987c6630dd49475',
+    appId: '1:93097008048:android:0ccdec23053fc259d49475',
     messagingSenderId: '93097008048',
     projectId: 'project0000-ec01e',
     databaseURL:
@@ -69,14 +69,14 @@ class DefaultFirebaseOptions {
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyC-OYxr_0iywf5G9uWpPG32TWva416WcnY',
-    appId: '1:93097008048:ios:09b7ee6976bbf5cdd49475',
+    appId: '1:93097008048:ios:7cc378f1a02877ffd49475',
     messagingSenderId: '93097008048',
     projectId: 'project0000-ec01e',
     databaseURL:
         'https://project0000-ec01e-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'project0000-ec01e.firebasestorage.app',
     iosClientId:
-        '93097008048-l7ovteo187vpqe8ppime2ck350nvqigi.apps.googleusercontent.com',
-    iosBundleId: 'com.example.project00',
+        '93097008048-m72v2b01l0kpidn3nkah94mt7om8ub3g.apps.googleusercontent.com',
+    iosBundleId: 'com.warmhandongne.msg',
   );
 }

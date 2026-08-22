@@ -459,9 +459,12 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                             const SizedBox(height: 14),
                             AspectRatio(
                               aspectRatio: 4 / 3,
-                              child:
-                                  templateGame?.buildTabletPreviewArtwork() ??
-                                  const _UnavailablePreviewArtwork(),
+                              child: _ComponentArtwork(
+                                url: widget.game.componentImageUrl,
+                                fallback:
+                                    templateGame?.buildTabletPreviewArtwork() ??
+                                    const _UnavailablePreviewArtwork(),
+                              ),
                             ),
                           ],
                         ),
@@ -511,6 +514,42 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 게임 구성품 사진입니다(Firestore `componentImageUrl`).
+///
+/// 서버 그림을 우선 보여 주고, **주소가 비었거나 내려받기가 실패하면**
+/// 게임이 코드로 그리는 미리보기를 그대로 씁니다. 내려받는 동안에도 코드 그림을
+/// 띄워 두므로 모달이 빈 칸으로 뜨는 순간이 없습니다.
+///
+/// 그림은 구성품을 늘어놓은 사진이라 잘리면 안 됩니다. 그래서 칸을 채우지 않고
+/// [BoxFit.contain]으로 전체가 보이게 넣습니다.
+class _ComponentArtwork extends StatelessWidget {
+  const _ComponentArtwork({required this.url, required this.fallback});
+
+  final String url;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) return fallback;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      // 구성품 사진은 어두운 배경 위에 찍혀 있습니다. 4:3보다 넓은 사진이 오면
+      // 위아래에 띠가 생기는데, 검정 위에 두면 사진과 이어져 보입니다.
+      child: ColoredBox(
+        color: Colors.black,
+        child: Image.network(
+          url,
+          key: const Key('game-component-artwork'),
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, progress) =>
+              progress == null ? child : fallback,
+          errorBuilder: (_, _, _) => fallback,
         ),
       ),
     );

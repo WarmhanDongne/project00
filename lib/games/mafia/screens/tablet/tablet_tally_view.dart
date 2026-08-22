@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
 import 'package:project00/games/mafia/animations/ballot_animations.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
@@ -24,9 +25,13 @@ import 'package:project00/gen/assets.gen.dart';
 /// 없습니다. 득표 숫자를 어떻게 보여 줄지는 시안에 없어, **표를 받은 사람만
 /// 왼쪽부터 늘어놓습니다.**
 ///
-/// 득표수는 숫자로 적지 않습니다. **그 사람의 프로필 블럭이 받은 표만큼 위로
-/// 쌓입니다**(확정 2026-08). 표가 한 장 날아와 닿으면 블럭이 한 칸 올라가므로,
+/// 득표수는 숫자로 적지 않습니다. **그 사람의 프로필과 닉네임이 받은 표만큼
+/// 위로 쌓입니다**(확정 2026-08). 표가 한 장 날아와 닿으면 한 칸 올라가므로,
 /// 숫자를 읽지 않아도 누가 앞서는지 한눈에 보입니다.
+///
+/// 칸 하나가 **프로필 + 닉네임**입니다. 닉네임을 탑 아래에 한 번만 적으면 탑이
+/// 높아질수록 사진과 이름이 멀어져 누구 표인지 헷갈립니다. 칸 크기는 이 이름
+/// 줄까지 계산해서 정하므로 **칸끼리 겹치지 않습니다.**
 ///
 /// 비밀 투표라 **누가 찍었는지는 절대 보여 주지 않습니다.** 서버도 보내지 않습니다.
 class MafiaTabletTallyView extends StatefulWidget {
@@ -70,7 +75,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
   static const double _slotGap = 26;
   static const double _slotMaxSize = 258;
 
-  /// 프로필 아래 닉네임이 차지하는 높이입니다(프로필 크기에 비례).
+  /// 칸마다 프로필 아래 닉네임이 차지하는 높이입니다(프로필 크기에 비례).
   static const double _nicknameRatio = 36 / 136;
   static const double _slotLabelRatio = _nicknameRatio;
 
@@ -98,6 +103,11 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
 
   /// 표가 한 장 날아가는 시간과 장 사이 간격입니다.
   static const Duration _ballotFlight = Duration(milliseconds: 420);
+
+  /// 표 소리를 낼 진행도입니다. 화면은 착지(1.0)에서 세고, 소리만 기기
+  /// 출력 지연만큼 앞서 요청합니다.
+  static final double _ballotSoundThreshold =
+      1 - ProgressSoundCue.lead.inMilliseconds / _ballotFlight.inMilliseconds;
   static const Duration _ballotGap = Duration(milliseconds: 140);
 
   late final AnimationController _controller;
@@ -223,7 +233,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     if (!mounted) return;
     var landed = 0;
     for (var index = 0; index < _ballotOrder.length; index += 1) {
-      if (_ballotProgress(index) >= 1) landed += 1;
+      if (_ballotProgress(index) >= _ballotSoundThreshold) landed += 1;
     }
     while (_landedSoundCount < landed) {
       _landedSoundCount += 1;
@@ -296,8 +306,11 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
 
     final tallest = _layoutTallest.clamp(1.0, 12.0);
     final column = _slotsBottom - _slotsTop;
+    // 칸 하나가 '프로필 + 닉네임'이므로 이름 줄을 칸마다 더해 계산합니다.
+    // 이 값을 빼먹으면 위 칸이 아래 칸 이름을 덮습니다.
     final byHeight =
-        column / (tallest + _blockGapRatio * (tallest - 1) + _slotLabelRatio);
+        column /
+        (tallest * (1 + _slotLabelRatio) + _blockGapRatio * (tallest - 1));
 
     return math.min(byWidth, byHeight).clamp(0.0, _slotMaxSize);
   }
@@ -317,26 +330,21 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     return first + step * rankIndex + size / 2;
   }
 
-  /// 탑의 아래 끝입니다. 닉네임 한 줄을 아래에 남깁니다.
-  double get _towerBottom => _slotsBottom - _slotSize * _slotLabelRatio;
+  /// 칸 하나의 높이입니다(프로필 정사각형 + 닉네임 한 줄).
+  double get _blockUnitHeight => _slotSize * (1 + _slotLabelRatio);
 
-  /// [rankIndex]번째 사람의 [blockIndex]번째 블럭 자리입니다(0 = 맨 아래).
+  /// [rankIndex]번째 사람의 [blockIndex]번째 칸 자리입니다(0 = 맨 아래).
   Rect _blockRect(int rankIndex, int blockIndex) {
     final size = _slotSize;
-    final top = _towerBottom - size * (blockIndex + 1) - _blockGap * blockIndex;
-    return Rect.fromLTWH(_slotCenterX(rankIndex) - size / 2, top, size, size);
+    final unit = _blockUnitHeight;
+    final top = _slotsBottom - unit * (blockIndex + 1) - _blockGap * blockIndex;
+    return Rect.fromLTWH(_slotCenterX(rankIndex) - size / 2, top, size, unit);
   }
 
-  /// 닉네임 한 줄이 놓이는 자리입니다.
-  Rect _nicknameRect(int rankIndex) {
-    final size = _slotSize;
-    final height = size * _slotLabelRatio;
-    return Rect.fromLTWH(
-      _slotCenterX(rankIndex) - size / 2,
-      _towerBottom,
-      size,
-      height,
-    );
+  /// 표가 내려앉는 프로필 사진 자리입니다(닉네임 줄은 뺍니다).
+  Rect _blockProfileRect(int rankIndex, int blockIndex) {
+    final rect = _blockRect(rankIndex, blockIndex);
+    return Rect.fromLTWH(rect.left, rect.top, rect.width, _slotSize);
   }
 
   /// 날아오는 표 한 장의 크기입니다.
@@ -393,35 +401,23 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     );
   }
 
-  /// 프로필 블럭 탑과 그 아래 닉네임입니다.
+  /// 프로필 + 닉네임 칸으로 이루어진 탑입니다.
   List<Widget> _buildTower(int rankIndex) {
     final entry = _ranked[rankIndex];
     final player = widget.players[entry.uid];
     final landed = _landedCountOf(rankIndex);
-    final size = _slotSize;
 
     return [
-      // 아래 블럭부터 그립니다. 위 블럭이 그림자를 덮어 탑처럼 보입니다.
+      // 아래 칸부터 그립니다. 위 칸이 그림자를 덮어 탑처럼 보입니다.
       for (var block = 0; block < landed; block += 1)
         MafiaTabletBox(
           rect: _blockRect(rankIndex, block),
-          child: _buildBlock(player, size, _blockPopProgress(rankIndex, block)),
-        ),
-      MafiaTabletBox(
-        rect: _nicknameRect(rankIndex),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            player?.nickname ?? '플레이어',
-            maxLines: 1,
-            style: const TextStyle(
-              color: Color(0xFF444444),
-              fontSize: 26,
-              fontWeight: FontWeight.w500,
-            ),
+          child: _buildBlock(
+            player,
+            _slotSize,
+            _blockPopProgress(rankIndex, block),
           ),
         ),
-      ),
     ];
   }
 
@@ -444,6 +440,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
               final side = constraints.biggest.shortestSide;
               return DecoratedBox(
                 decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(side * 10 / 136),
                   border: Border.all(
                     color: Colors.white,
@@ -457,13 +454,38 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(side * 10 / 136),
-                  child: SizedBox.expand(
-                    child: MafiaProfileImage(
-                      url: player?.profileImageUrl ?? '',
+                child: Column(
+                  children: [
+                    // 프로필은 정사각형을 지킵니다.
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(side * 10 / 136),
+                        child: SizedBox.expand(
+                          child: MafiaProfileImage(
+                            url: player?.profileImageUrl ?? '',
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    // 칸마다 이름을 함께 적습니다(확정 2026-08).
+                    SizedBox(
+                      height: size * _slotLabelRatio,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            player?.nickname ?? '플레이어',
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Color(0xFF444444),
+                              fontSize: 26,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -488,7 +510,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
       flying.add(
         _FlyingBallot(
           from: MafiaBallotBoxRects.tallyCenter,
-          to: _blockRect(rank, blockIndex).center,
+          to: _blockProfileRect(rank, blockIndex).center,
           progress: progress,
           size: _paperSize,
         ),

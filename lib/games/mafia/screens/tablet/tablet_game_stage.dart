@@ -52,11 +52,18 @@ enum MafiaTabletStage {
   /// 그 흐름은 화면(tablet_game.dart)이 관리합니다.
   /// 시간은 각 연출이 스스로 정한 박자의 합입니다. 한쪽만 바꾸면 안내가
   /// 잘리거나 빈 화면이 남으므로 연출 쪽 상수를 그대로 가져옵니다.
-  Duration? get announcementHold => switch (this) {
+  ///
+  /// 확정(2026-08): 이 발표로 게임이 끝나면 마지막 안내(다음 단계 예고)를
+  /// 건너뛰므로 그만큼 짧습니다. 그래서 상태를 받아 계산합니다.
+  Duration? announcementHoldOf(MafiaController game) => switch (this) {
     // '아침이 되었습니다'(2.5초) → 사망자 발표(8초) → '토론을 시작합니다'(2.5초).
-    MafiaTabletStage.morning => MafiaTabletMorningSequence.totalHold,
+    MafiaTabletStage.morning => MafiaTabletMorningSequence.holdOf(
+      game.morningResult,
+    ),
     // 개표(4초) → 처형자 이름·신분 공개(9초) → '밤이 되었습니다'(2.5초).
-    MafiaTabletStage.voteResult => MafiaTabletVoteResultSequence.totalHold,
+    MafiaTabletStage.voteResult => MafiaTabletVoteResultSequence.holdOf(
+      game.voteResult,
+    ),
     _ => null,
   };
 

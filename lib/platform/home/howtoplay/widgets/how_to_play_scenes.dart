@@ -17,6 +17,12 @@ const _characterIds = <String>['frog', 'rabbit', 'bear', 'penguin', 'cat'];
 /// 안내에 보여 주는 예시 참여 코드입니다.
 const _sampleRoomCode = 'QRTEQ';
 
+/// 태블릿에서 휴대폰으로 날아가는 조각의 문구입니다.
+///
+/// 예시 참여 코드(QRTEQ)를 그대로 날리면 다섯 글자가 작은 조각 안에서 뭉개져
+/// 읽히지 않습니다. 조각은 "코드가 전달된다"는 뜻만 보이면 됩니다.
+const _codePacketLabel = 'QR';
+
 class HowToPlaySceneView extends StatelessWidget {
   const HowToPlaySceneView({super.key, required this.scene, required this.t});
 
@@ -415,7 +421,7 @@ class _CodePacket extends StatelessWidget {
         ],
       ),
       child: Text(
-        _sampleRoomCode,
+        _codePacketLabel,
         style: TextStyle(
           color: Colors.white,
           fontSize: unit * 0.028,
