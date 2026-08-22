@@ -46,6 +46,27 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
   /// 더미 뒤에 무엇을 숨길지 계산할 때 화면 쪽에서 참고합니다.
   static const double cardAspectRatio = 286 / 419.39;
 
+  //=======================연출 시간 (휴대폰도 함께 씁니다)==============================
+  // 확정(2026-08): 휴대폰의 신분 카드는 **이 연출이 끝난 뒤에** 화면 위에서
+  // 들어옵니다. 태블릿에서 카드가 아직 날아가는 중인데 휴대폰에 이미 카드가
+  // 있으면, 카드가 건네지는 느낌이 사라집니다. 그래서 두 기기가 같은 시간표를
+  // 봐야 하고, 그 값을 여기 한곳에 둡니다.
+
+  /// 더미가 화면 위에서 중앙으로 내려오는 시간입니다(공용 분배와 같은 리듬).
+  static const Duration deckEntryDuration = Duration(milliseconds: 620);
+
+  /// 카드 한 장이 좌석 방향으로 날아가는 시간입니다.
+  static const Duration cardFlightDuration = Duration(milliseconds: 560);
+
+  /// 다음 장을 던지기까지의 간격입니다.
+  static const Duration launchGap = Duration(milliseconds: 240);
+
+  /// [playerCount]명에게 다 나눠 주기까지 걸리는 전체 시간입니다.
+  static Duration totalDuration(int playerCount) =>
+      deckEntryDuration +
+      launchGap * math.max(0, playerCount - 1) +
+      cardFlightDuration;
+
   @override
   State<MafiaRoleDealTossAnimation> createState() =>
       _MafiaRoleDealTossAnimationState();
@@ -53,12 +74,11 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
 
 class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
     with TickerProviderStateMixin {
-  /// 더미가 화면 위에서 중앙으로 내려오는 시간입니다(공용 분배와 같은 리듬).
-  static const Duration _deckEntry = Duration(milliseconds: 620);
-
-  /// 카드 한 장의 비행 시간과 발사 간격입니다.
-  static const Duration _flight = Duration(milliseconds: 560);
-  static const Duration _launchGap = Duration(milliseconds: 240);
+  // 시간표는 위젯 쪽(공개 상수)에 있습니다. 휴대폰도 같은 값을 봅니다.
+  static const Duration _deckEntry =
+      MafiaRoleDealTossAnimation.deckEntryDuration;
+  static const Duration _flight = MafiaRoleDealTossAnimation.cardFlightDuration;
+  static const Duration _launchGap = MafiaRoleDealTossAnimation.launchGap;
 
   late final AnimationController _entryController;
   late final AnimationController _tossController;

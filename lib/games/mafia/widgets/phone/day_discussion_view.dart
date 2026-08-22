@@ -57,10 +57,15 @@ class MafiaDayDiscussionView extends StatelessWidget {
   final String endLabel;
 
   //=======================시안 기준 좌표==============================
-  // 제목·타이머는 다른 단계와 같은 자리·크기를 씁니다(2026-08 통일 지시.
+  // 제목·타이머는 다른 단계와 같은 크기를 씁니다(2026-08 통일 지시.
   // 시안은 제목 48px@142, 타이머 209였습니다).
-  static const double _titleTop = MafiaPhoneStatusText.promptTop;
-  static const double _timerTop = MafiaPhoneStatusText.timerTop;
+  //
+  // 확정(2026-08): 이 화면만 문구 묶음을 [_textDrop]만큼 **아래로** 내립니다.
+  // 토론 화면은 가운데 삽화가 커서, 다른 단계와 같은 높이(102·142)에 두면
+  // 문구가 위쪽에 붕 떠 보였습니다. 삽화(244) 바로 위까지 내려 붙입니다.
+  static const double _textDrop = 36;
+  static const double _titleTop = MafiaPhoneStatusText.promptTop + _textDrop;
+  static const double _timerTop = MafiaPhoneStatusText.timerTop + _textDrop;
   static const double _illustrationTop = 244;
   static const double _illustrationSize = 349;
 

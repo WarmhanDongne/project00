@@ -19,6 +19,35 @@
 | 낮 토론 | **자유 토론 + 전체 타이머** (길이 미정) |
 | 신분 규칙 | 인원수별 배분표는 **사용자가 별도 전달** |
 
+## 게임 시작 전 — 자리 배치 대신 역할 배치 (확정 2026-08-22)
+
+시안 `1149:334`. 다른 게임은 자리 배치 화면을 지나가지만, **마피아는 그 자리에
+역할 배치 화면**을 띄웁니다(`screens/tablet/tablet_role_setup_screen.dart`).
+자리는 참여 순서대로 자동 배정합니다.
+
+| 규칙 | 값 |
+|---|---|
+| 고르는 방법 | 역할을 누르면 색이 들어오고(선택), 다시 누르면 회색 |
+| 필수 신분 | **마피아·시민은 끌 수 없습니다**(늘 선택 상태, 눌러도 회색 안 됨) |
+| 자리 계산 | 고른 역할 = 한 자리씩. **남은 자리는 시민**이 채웁니다 |
+| 시작 조건 | 합이 인원과 같고, 마피아 진영 1명 이상 · 전원 마피아 아님 |
+| Tip 카드 | 인원별 추천 조합(`MafiaComposition.recommended`) 아이콘만 |
+| 아이콘 | `assets/games/mafia/images/roles/role_icon_<역할 id>.png` (80 × 80) |
+
+플랫폼 화면은 게임 id로 분기하지 않습니다. `TemplateGame.buildStartSetupScreen`이
+null이 아니면 그 화면을, null이면 공용 자리 배치를 띄웁니다.
+
+고른 구성은 `game_mafia_start_game`의 `composition`으로 갑니다. 서버
+`mafiaComposition`이 같은 규칙으로 한 번 더 검사하므로, 화면을 우회해도 깨진
+구성으로는 시작되지 않습니다.
+
+⚠️ **인원수 2 이상은 아직 고를 수 없습니다.** 시안에 +/− 조작이 없어 역할 하나는
+한 자리입니다(7인 이상 추천 조합의 `마피아 x2`는 토글로 만들 수 없습니다).
+시안이 오면 그 자리만 늘리면 됩니다.
+
+⚠️ 시안은 `영매`와 `자경단원`의 그림이 서로 바뀌어 있습니다. 그림 뜻에 맞춰
+넣었습니다(십자선을 든 그림 = 자경단원, 눈+불꽃 = 영매).
+
 ## 게임 흐름 (서버 phase 초안)
 
 ```
@@ -246,16 +275,21 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 - `abilityTiming` — none / night / day / gameStart / onDeath / passive
 - `winCondition` — 진영 승리 또는 개별 조건(광대·처형자·생존자·최후생존·세력장악)
 - `investigationAppearance` — 조사에 어떻게 보이는가(밀러=마피아, 보스·배신자=시민)
-- `maxUses` — 게임당 사용 횟수 제한(자경단원·생존자)
+- `maxUses` — 게임당 사용 횟수 제한(자경단원 1발)
+- `nightTargetScope` — 살아 있는 사람 / **사망자**(영매·도둑)
+- `defenseCharges` — 공격을 스스로 막는 횟수(군인 1)
+- `voteWeight` — 낮 투표에서 내 표의 무게(정치인 2)
+- `blocksTargetVote` — 대상의 다음 낮 투표권까지 막는가(마담)
+- `selfDestructsOnAllyKill` — 같은 편을 쏘면 자신도 죽는가(자경단원 오발)
+- `convertsTargetTo` — 전향에 성공한 대상이 되는 역할(교주 → 광신도)
 
 ### 구현 여부 게이트 (중요)
 
 `isImplemented`가 **서버 동작까지 완성됐는지**입니다. 정의만 있는 역할이
 배분되면 게임이 멈추므로, 배분은 `MafiaRoles.implemented`만 사용합니다.
 
-- 구현 완료: **시민 · 경찰 · 의사 · 마피아** (클래식 4종)
-- 그래서 지금 시작 가능한 인원은 **4~9인**
-  (10인 이상은 마피아 보스·경호원이 필요 → 미구현)
+- 구현 완료 22종(2026-08-22, 마피아42 표준 룰) — 아래 표 참고
+- 시작 가능 인원은 **4~12인 전부**
 - `MafiaComposition.playableCounts`가 이 값을 계산하고 테스트가 고정합니다
 
 ### 새 역할을 켜는 순서
@@ -721,12 +755,18 @@ roleReveal → night → morning → day → voting → voteResult → (night | 
 | 내 역할·조사 결과 | `private/{uid}` | 본인만 |
 | 동료의 밤 선택 | 각 동료의 `private` | public에 두면 전원에게 보임 |
 | 밤 행동 제출 **인원수만** | `public.nightSubmittedCount` | 누가 냈는지 보이면 특수직이 드러남 |
+| 밤 행동 **종류만**(소리 신호) | `public.nightActionCue` | 효과음을 낼 순간을 태블릿에 알림. uid는 넣지 않음 |
 | 투표 내역 | `server.votes` | 비밀 투표. 개표 결과만 공개 |
 | 사망자용 전원 신분표 | `private/{uid}.spectatorRoles` | 관전 화면(P8)용. public이면 생존자도 읽음 |
 | 처형자 신분 | `public.revealedRoles` | 확정 규칙대로 공개 |
 
 밤에 죽은 사람의 신분은 **공개하지 않습니다**(확정된 것은 처형자만). 게임이
 끝나면 전원 공개합니다.
+
+`nightActionCue`는 예외로 보이지만 규칙을 지킵니다 — **행동의 종류만** 담고
+누가 했는지는 담지 않습니다. 확정(2026-08): 총성 같은 직업 효과음은 그 직업이
+**선택을 완료한 순간** 방 가운데 태블릿에서 울립니다. 그 사람의 휴대폰에서
+울리면 옆 사람에게 신분이 그대로 드러나므로 반드시 태블릿에서 냅니다.
 
 ### 역할 추가가 서버 수정 없이 되는 이유
 
@@ -852,10 +892,20 @@ roleReveal → night → morning → day → voting → voteResult → (night | 
 곡을 **인자로 받습니다**.
 
 ```dart
-_bgm.start(MafiaSounds.background);      // 낮
-_bgm.stop();
-_bgm.start(MafiaSounds.nightBackground); // 밤 — 곡을 갈아 끼울 때
+// 확정(2026-08): 마피아는 **밤에만** 곡이 깔립니다. 어떤 곡을 깔지는
+// mafiaBackgroundMusicFor() 한곳에서 정하고, 화면은 그 값만 따릅니다.
+_bgm.start(MafiaSounds.nightBackground);   // 밤
+_bgm.fadeOut(duration: mafiaBgmFadeOut);   // 아침 — 서서히 사라짐(1.6초)
+_bgm.stop();                               // 화면을 떠날 때(dispose)
 ```
+
+낮에 곡을 깔지 않는 이유: 사람들이 서로 이야기하는 시간이라 곡이 목소리를
+덮고, 조용한 낮과 곡이 깔린 밤이 갈려야 밤이 밤답게 느껴집니다. 낮 곡을
+되살리려면 `mafiaBackgroundMusicFor`가 `MafiaSounds.background`를 돌려주게만
+하면 됩니다(화면 코드는 그대로).
+
+페이드는 **사용자 볼륨 설정을 건드리지 않습니다.** `SoundService`가 설정
+볼륨에 곱하는 배율만 내리고, 멈춘 뒤 배율을 1로 되돌립니다.
 
 ⚠️ **같은 5.4MB 배경음악 파일이 세 게임에 각각 복사돼 총 16MB입니다.**
 라이어스포커에는 파일이 없어 BGM이 끊기던 것을 같은 파일로 채웠습니다. 세 게임이
@@ -868,16 +918,17 @@ _bgm.start(MafiaSounds.nightBackground); // 밤 — 곡을 갈아 끼울 때
 
 | 상수 | 파일 | 재생 시점 |
 |---|---|---|
-| `gunshot` | `gun.mp3` | 사망·처형이 **드러나는 순간** (아침 발표·처형 발표 공용) |
-| `vote` | `vote.mp3` | 투표 제출 |
+| `gunshot` | `gun.mp3` | 마피아류가 **제거 대상 선택을 완료한 순간**(태블릿) |
+| `vote` | `vote.mp3` | 투표 제출 · 개표에서 표가 닿는 순간 |
 | `mafiaWin` | `win_mafia.mp3` | 마피아 승리 결과 화면 |
 | `nightBackground` | `background/background_night.mp3` | 밤 배경음 — **BGM 채널** |
-| `background/background.mp3` | 낮 배경음 — **BGM 채널** |
+| `background` | `background/background.mp3` | 낮 배경음 — **지금은 쓰지 않습니다** |
 
 `preloadTargets = [gunshot, vote, mafiaWin]`. 배경음악 두 곡은 길고 BGM
 채널로 재생하므로 제외합니다.
 
-**아직 없는 소리**: 시민 승리음, 역할 카드 뒤집는 소리, 아침 전환음.
+**아직 없는 소리**: 시민 승리음, 역할 카드 뒤집는 소리, 아침 전환음, 그리고
+제거 말고 다른 밤 행동의 완료음(보호·조사·역할 조사·역할 차단·전향·침묵·추적).
 `mafiaWin` 옆에 `citizenWin`을 추가하고 결과 화면에서 승리 진영으로 갈라 쓰면
 됩니다.
 
@@ -953,3 +1004,168 @@ public에 들어오는 유일한 정상 경로**입니다.
 | 4 | 서버 함수 | **완료** (배포는 사용자) |
 | 5 | 클라이언트 배선 (provider·controller·service) | 진행 예정 |
 | 6 | 게임 등록·사운드·preload | 대기 |
+
+## 중립 승리 포스터 (2026-08-22 수령 완료)
+
+광대·처형자·연쇄살인마·교단 승리 배경을 받아 연결했습니다. 문구(`광대 승리`
+등)는 그림에 얹었습니다 — 기존 `background_mafia_win`과 같은 방식입니다.
+
+| 승리 | 휴대폰 941×1672 | 태블릿 |
+|---|---|---|
+| 광대 | `background_jester_win_phone.png` | `background_jester_win.png` |
+| 처형자 | `background_executioner_win_phone.png` | `background_executioner_win.png` |
+| 연쇄살인마 | `background_serial_killer_win_phone.png` | `background_serial_killer_win.png` |
+| 교단(교주·광신도) | `background_cult_win_phone.png` | `background_cult_win.png` |
+
+### 진영만으로는 그림을 고를 수 없습니다
+
+중립은 개별 승리라 `winner: "neutral"` 하나로 네 가지 판이 들어옵니다. 그래서
+[MafiaResultArt]가 **이긴 사람의 역할**까지 받습니다.
+
+```dart
+MafiaResultArt.phonePoster(winner, winnerRoleIds: controller.winnerRoleIds)
+```
+
+역할 id를 직접 비교하지 않고 [MafiaWinCondition]으로 가릅니다. 교주와 광신도는
+같은 조건(`factionDominance`)이라 한 장을 함께 씁니다. 아직 그림이 없는
+승리(생존자)는 null이 나오고 화면이 문구로 대신 알립니다.
+`test/mafia_neutral_result_art_test.dart`가 이 짝을 잠급니다.
+
+### 문구 합성 방법
+
+받은 원본에는 문구가 없어서 기존 포스터 스타일대로 얹었습니다.
+
+- 글꼴 Pretendard Black, 역할 이름은 크림 `#DCC8A2`, `승리`는 적색 `#A8241E`
+- 어두운 외곽선 + 그림자, 아래쪽에 옅은 어둠(scrim)을 깔아 글자를 띄움
+- 세로판은 화면 높이의 73.5% 위치, 가로판은 77.5% 위치에 가운데 정렬
+- 이름이 길면(`연쇄살인마`) 폭에 맞춰 글자가 작아집니다
+
+⚠️ 태블릿 원본이 16:9(1672×941)이고 태블릿 시안은 1194×834라, `BoxFit.cover`가
+**양옆을 약 10%씩 자릅니다.** 그래서 문구를 가운데 62% 안에 두었습니다. 새
+가로판을 만들 때도 가장자리에 중요한 것을 두지 마세요.
+
+## 역할 19종 확정 (2026-08-22, 마피아42 표준 룰)
+
+사용자가 우선 구현할 역할을 지정했습니다. 룰 기준은 **마피아42 표준**입니다.
+
+### 시민팀
+
+| 역할 | id | 능력 | 구현 방식 |
+|---|---|---|---|
+| 시민 | `citizen` | 없음 | — |
+| 경찰 | `police` | 밤에 진영 조사 | `investigate` |
+| 의사 | `doctor` | 밤에 치료(보호) | `protect` |
+| 군인 | `soldier` | **밤 공격 1회 자동 방어** | `defenseCharges: 1` (밤 행동 없음) |
+| 정치인 | `politician` | **낮 투표 2표** | `voteWeight: 2` |
+| 영매 | `medium` | **사망자**의 직업 확인 | `investigateRole` + `nightTargetScope: dead` |
+| 기자 | `reporter` | 지목한 신분을 아침에 전체 공개 | `expose` |
+| 건달 | `gangster` | 밤 능력 차단 | `roleblock` |
+| 사립탐정 | `detective` | 대상이 누구를 찾아갔는지 조사 | `track` |
+| 자경단원 | `vigilante` | 밤에 1회 제거, **시민을 쏘면 함께 죽음** | `maxUses: 1` + `selfDestructsOnAllyKill` |
+
+### 마피아팀
+
+| 역할 | id | 능력 | 구현 방식 |
+|---|---|---|---|
+| 마피아 | `mafia` | 밤에 다수결로 한 명 제거 | `eliminate` / `mafiaAttack` |
+| 스파이 | `spy` | 마피아를 알고 **조사에 시민** | `knowsAllies` + `asCitizen` (밤 행동 없음) |
+| 짐승인간 | `beast` | **혼자** 공격. 동료를 모름 | `eliminate` / `independentAttack`, `knowsAllies: false` |
+| 마담 | `madam` | 능력 차단 + **다음 낮 투표권 차단** | `roleblock` + `blocksTargetVote` |
+| 도둑 | `thief` | **사망자**의 직업을 훔쳐 그 직업이 됨 | 새 행동 `steal` + `nightTargetScope: dead` |
+
+### 중립 (개별 승리)
+
+| 역할 | id | 승리 조건 | 판정 시점 |
+|---|---|---|---|
+| 광대 | `jester` | 자신이 **처형**되면 승리 | 개표(`resolveMafiaVoting`) |
+| 처형자 | `executioner` | 지정 목표가 **처형**되면 승리 | 개표 |
+| 연쇄살인마 | `serial_killer` | 혼자 최후까지 생존 | `checkMafiaWinner` |
+| 교주 | `cult_leader` | 살아남은 전원이 교단 | `checkMafiaWinner` |
+| 광신도 | `cultist` | 교주와 같음 | **전향으로만 생김** (배분 안 됨) |
+
+### 엔진에 새로 들어간 것
+
+- **대상 범위** — 밤 대상 검증이 "살아 있는 사람" 고정에서 역할별로 갈립니다
+- **개인 승리** — `checkMafiaWinner`가 진영 대신 `MafiaOutcome`(승자 명단 포함)을
+  돌려줍니다. 광대·처형자는 처형 순간 `server.pendingNeutralWinUids`에 예약해
+  두고, **처형 발표 연출이 끝난 뒤** 게임을 끝냅니다
+- **신분 교체** — `changeMafiaRole`이 배분표·private·동료 목록을 함께 고칩니다
+  (도둑의 절도, 교주의 전향). 진영이 바뀌므로 승패 판정도 새 직업을 따릅니다
+- **투표 가중치·투표권 차단** — `tallyVotes`에 무게를 주고, `beginMafiaVoting`이
+  유혹 표식을 소모하며 `voteEligibleCount`에서 뺍니다
+- **사용 횟수·자기 방어** — `server.abilityUses` / `server.defenseUsed`.
+  둘 다 server에만 둡니다(public에 두면 신분이 드러납니다)
+
+### 신분이 새지 않게 지킨 것 (중요)
+
+- **거절 메시지** — "같은 편을 고를 수 없습니다"는 `knowsAllies`인 역할에만
+  보냅니다. 짐승인간·연쇄살인마에게 같은 말을 하면 대상의 진영을 알려 줍니다.
+  그런 경우는 제출을 받아 두고 밤 해결에서 **조용히** 불발시킵니다
+- **전향 실패** — 마피아를 전향시키려 하면 아무 기록도 남기지 않습니다
+- **막힌 화면 금지** — 능력을 다 쓴 밤(자경단원)·사망자가 없는 밤(영매·도둑)·
+  투표권을 잃은 낮(마담 대상)은 모두 **다른 사람과 같은 대기 화면**입니다
+- **군인의 방어 소모**는 `server.defenseUsed`에만 남고, 아침 발표에는 의사의
+  보호와 구별되지 않는 `savedCount`로만 나갑니다
+
+### 아직 넣지 않은 규칙 (마피아42와 다른 점)
+
+- 처형자의 목표가 처형이 아닌 이유로 죽으면 마피아42는 **광대로 바뀌지만**,
+  지금은 그 처형자가 이길 수 없습니다
+- 자경단원의 오발 자멸은 마피아42의 '다음 밤'이 아니라 **같은 밤**입니다
+- 영매의 '사망자와 대화'는 채팅 기능이 없어 **직업 확인**으로 대신합니다
+- 경호원(`bodyguard`)의 고전 규칙(대상 대신 죽음)은 여전히 미구현입니다
+
+### 카드 그림 (2026-08-22 수령 완료)
+
+신규 8종(군인·정치인·영매·건달·스파이·짐승인간·마담·도둑) 카드를 받아
+연결했습니다. **구현된 22종 전부 카드가 있습니다** —
+`test/mafia_role_catalog_test.dart`의 '구현된 역할은 모두 카드 그림이 있다'가
+이 상태를 지킵니다.
+
+받은 원본은 1036×1518이었고, 기존 카드와 같은 **700×1026**으로 줄인 뒤
+`pngquant`(256색) + `oxipng`로 압축했습니다. 기존 카드가 256색 팔레트 PNG
+(약 290KB)라 규격을 맞춘 것입니다 — 원본을 그대로 넣으면 한 장에 2.3MB로
+8장이 18MB가 됩니다. 새 카드를 받을 때도 같은 절차를 쓰세요.
+
+```bash
+sips -z 1026 700 <원본>.png --out assets/games/mafia/images/cards/role_<id>.png
+pngquant --force --quality 70-98 256 --output <같은경로> <같은경로>
+oxipng -o 4 <같은경로>
+```
+
+그다음 `dart run build_runner build` → `mafia_roles.dart`에 `card:` 한 줄입니다.
+
+### 기본 구성에 들어간 역할 / 연습장 전용
+
+기본 구성표(4~12인)에는 위 19종 중 14종만 들어갑니다. 짐승인간·연쇄살인마는
+밤 사망자를 둘로 늘리고, 도둑·영매는 사망자가 나온 뒤에야 능력을 쓰며,
+처형자·교주는 판을 크게 바꿔 기본 구성의 균형을 흔들기 때문입니다. 이 역할들은
+`MafiaComposition.playableOutsideComposition`에 적어 두고 **연습장에서 직접
+골라** 시험합니다(연습장은 구성표에 없는 역할도 시민 한 자리를 바꿔 끼웁니다).
+
+### 검증
+
+| 파일 | 확인 |
+|---|---|
+| `functions/test/mafia-role-abilities.test.mjs` | 34개 — 새 역할 규칙 전부 |
+| `functions/test/mafia-role-parity.test.mjs` | Dart↔서버 표 대조(새 축 9개 포함) |
+| `test/mafia_role_catalog_test.dart` | 구현 목록·카드 누락 목록 고정 |
+| `test/mafia_new_role_views_test.dart` | 대기 화면 3가지 상태 + 신분 카드 개인 안내 |
+| `test/mafia_neutral_result_art_test.dart` | 중립 승리 포스터 짝 맞추기 |
+
+### 새로 만든 화면은 없습니다
+
+19종 전부 **기존 화면 6개**(신분 카드·밤 행동·아침 발표·낮 토론·투표·결과)로
+돌아갑니다. 화면이 역할 이름이 아니라 `nightAction`·`nightTargetScope` 같은
+데이터로 갈라지기 때문입니다. 새로 붙인 것은 화면이 아니라 **상태 세 가지**뿐
+입니다.
+
+| 상태 | 어디에 | 왜 |
+|---|---|---|
+| 능력 소진 대기 | 밤 화면 | 자경단원이 한 발을 다 쓴 밤 |
+| 투표 불가 안내 | 투표 화면 | 마담에게 유혹당한 사람 |
+| 개인 안내 한 줄 | 신분 카드 | **처형자의 목표**, 신분이 바뀌었다는 알림 |
+
+처형자의 목표는 반드시 필요합니다 — 목표를 모르면 그 역할은 성립하지 않습니다.
+서버가 `private.executionerTargetUid`로 본인에게만 보내고, 신분 카드 설명 아래에
+`목표 · 홍길동` 한 줄로 붙습니다.

@@ -5,54 +5,21 @@ import {excludeMafiaPlayer} from "../lib/mafia/exclude-player.js";
 import {
   advanceMafiaAfterDeaths,
   assignMafiaRoles,
+  bumpNightActionCue,
   checkMafiaWinner,
   createInitialMafiaGame,
+  mafiaCompositionToUse,
   mafiaInvestigationVerdict,
   resolveMafiaNight,
   resolveMafiaVoting,
 } from "../lib/mafia/game.js";
-import {MAFIA_COMPOSITION, MAFIA_NIGHT_PHASE_ORDER} from "../lib/mafia/roles.js";
-
-/** 역할만 정해 주면 나머지는 채워 주는 시험용 상태입니다. */
-function makeGame(roleMap, {phase = "night", round = 1} = {}) {
-  const players = {};
-  Object.keys(roleMap).forEach((uid, index) => {
-    players[uid] = {
-      uid,
-      nickname: uid,
-      profileImageUrl: "",
-      seatIndex: index,
-      status: "alive",
-    };
-  });
-  const privateState = {};
-  for (const uid of Object.keys(roleMap)) {
-    privateState[uid] = {roleId: roleMap[uid]};
-  }
-  return {
-    public: {
-      gameType: "mafia",
-      status: "playing",
-      phase,
-      round,
-      revision: 1,
-      turnDeadlineAt: null,
-      players,
-      roleRevealedUids: [],
-      nightSubmittedCount: 0,
-      nightActorCount: 0,
-      discussionSkipCount: 0,
-      voteSubmittedCount: 0,
-      voteEligibleCount: Object.keys(roleMap).length,
-      winner: null,
-      winnerUids: [],
-      startedAt: 0,
-      updatedAt: 0,
-    },
-    private: privateState,
-    server: {roles: {...roleMap}},
-  };
-}
+import {mafiaComposition} from "../lib/mafia/validation.js";
+import {
+  MAFIA_COMPOSITION,
+  MAFIA_NIGHT_PHASE_ORDER,
+  MAFIA_ROLES,
+} from "../lib/mafia/roles.js";
+import {makeGame} from "./mafia-test-state.mjs";
 
 const SIX = {
   m1: "mafia",
@@ -89,7 +56,7 @@ test("구성표에 있는 모든 인원에 역할을 배분할 수 있다", () =
   }
 });
 
-test("마피아는 서로를 알고 시작하고 시민은 모른다", () => {
+test("서로를 아는 역할끼리만 동료 목록을 받는다", () => {
   const players = {};
   for (let index = 0; index < 12; index += 1) {
     players[`u${index}`] = {
@@ -101,16 +68,27 @@ test("마피아는 서로를 알고 시작하고 시민은 모른다", () => {
     };
   }
   const game = createInitialMafiaGame(players, 1000);
-  // 12인 구성은 보스 1 + 마피아 2 = 3명이므로 서로 2명씩 압니다.
+  const roles = game.server.roles;
+
   for (const [uid, entry] of Object.entries(game.private)) {
-    const faction = game.server.roles[uid] === "mafia" ||
-      game.server.roles[uid] === "mafia_boss" ? "mafia" : "citizen";
-    if (faction === "mafia") {
-      assert.equal(entry.allyUids.length, 2, `${uid} 동료 수`);
-      assert.ok(!entry.allyUids.includes(uid), "자신은 동료에 없다");
-    } else {
+    const role = MAFIA_ROLES[roles[uid]];
+    // 기대값을 역할 표에서 다시 계산합니다. 구성표가 바뀌어도 이 테스트는
+    // 그대로 유효합니다.
+    const expected = Object.keys(roles).filter((other) => {
+      if (other === uid) return false;
+      const otherRole = MAFIA_ROLES[roles[other]];
+      return otherRole.knowsAllies && otherRole.faction === role.faction;
+    });
+    if (!role.knowsAllies || expected.length === 0) {
       assert.equal(entry.allyUids, undefined, `${uid}는 동료를 몰라야 한다`);
+      continue;
     }
+    assert.deepEqual(
+      [...entry.allyUids].sort(),
+      expected.sort(),
+      `${uid}(${roles[uid]}) 동료 목록`,
+    );
+    assert.ok(!entry.allyUids.includes(uid), "자신은 동료에 없다");
   }
 });
 
@@ -288,7 +266,8 @@ test("아무도 투표하지 않으면 무처형이다", () => {
 test("마피아가 모두 죽으면 시민 승리", () => {
   const game = makeGame(SIX);
   game.public.players.m1.status = "dead";
-  assert.equal(checkMafiaWinner(game), "citizen");
+  assert.equal(checkMafiaWinner(game).winner, "citizen");
+  assert.equal(checkMafiaWinner(game).reason, "citizenWin");
 });
 
 test("마피아 수가 나머지와 같아지면 마피아 승리", () => {
@@ -298,12 +277,20 @@ test("마피아 수가 나머지와 같아지면 마피아 승리", () => {
   game.public.players.d1.status = "dead";
   game.public.players.c1.status = "dead";
   game.public.players.c2.status = "dead";
-  assert.equal(checkMafiaWinner(game), "mafia");
+  assert.equal(checkMafiaWinner(game).winner, "mafia");
+  assert.equal(checkMafiaWinner(game).reason, "mafiaWin");
 });
 
 test("아직 진행 중이면 승자가 없다", () => {
   const game = makeGame(SIX);
   assert.equal(checkMafiaWinner(game), null);
+});
+
+test("승자 명단에 상대 진영이 섞이지 않는다", () => {
+  const game = makeGame(SIX);
+  game.public.players.m1.status = "dead";
+  const outcome = checkMafiaWinner(game);
+  assert.ok(!outcome.winnerUids.includes("m1"), "마피아가 승자에 없어야 한다");
 });
 
 test("끝나면 전원 신분이 공개되고 승리 진영이 채워진다", () => {
@@ -493,4 +480,120 @@ test("일반 시민 제출은 즉시 결과를 만들지 않는다", () => {
   game.server.nightActions = {d1: "c1"};
   recordImmediateInvestigation(game, "d1", "c1", 1000);
   assert.equal(game.private.d1.investigations, undefined);
+});
+
+// =========================================================================
+// 밤 행동 소리 신호
+//
+// 확정(2026-08): 직업 효과음은 밤이 시작될 때 자동으로 울리지 않고, 그 직업이
+// **선택을 완료한 순간** 태블릿에서 울립니다.
+// =========================================================================
+
+test("첫 제출에 행동 종류로 소리 신호가 올라간다", () => {
+  const game = makeGame(SIX);
+  bumpNightActionCue(game, "m1");
+
+  assert.deepEqual(game.public.nightActionCue, {id: 1, action: "eliminate"});
+  // 누가 냈는지는 절대 들어가지 않습니다.
+  assert.equal(JSON.stringify(game.public.nightActionCue).includes("m1"), false);
+});
+
+test("대상을 바꿔 다시 제출하면 신호가 올라가지 않는다", () => {
+  const game = makeGame(SIX);
+  bumpNightActionCue(game, "m1");
+  game.server.nightActions = {m1: "c1"};
+
+  bumpNightActionCue(game, "m1");
+  assert.equal(game.public.nightActionCue.id, 1);
+});
+
+test("다른 직업이 제출하면 그 직업의 소리로 신호가 올라간다", () => {
+  const game = makeGame(SIX);
+  bumpNightActionCue(game, "m1");
+  game.server.nightActions = {m1: "c1"};
+
+  bumpNightActionCue(game, "p1");
+  assert.deepEqual(game.public.nightActionCue, {id: 2, action: "investigate"});
+});
+
+test("밤에 할 일이 없는 신분은 신호를 올리지 않는다", () => {
+  const game = makeGame(SIX);
+  bumpNightActionCue(game, "c1");
+  assert.equal(game.public.nightActionCue, undefined);
+});
+
+// =========================================================================
+// 역할 배치 화면에서 고른 구성
+//
+// 확정(2026-08): 마피아는 시작 전에 자리 배치 대신 역할 배치를 합니다.
+// 서버가 막지 않으면 게임이 시작조차 못 하는 구성이 들어옵니다.
+// =========================================================================
+
+test("구성을 보내지 않으면 인원별 추천 표를 쓴다", () => {
+  assert.equal(mafiaComposition(undefined, 6), null);
+  assert.equal(mafiaComposition(null, 6), null);
+});
+
+test("인원과 합이 맞는 구성은 그대로 쓴다", () => {
+  const chosen = {mafia: 1, police: 1, doctor: 1, citizen: 3};
+  assert.deepEqual(mafiaComposition(chosen, 6), chosen);
+});
+
+test("합이 인원과 다르면 거부한다", () => {
+  assert.throws(() => mafiaComposition({mafia: 1, citizen: 2}, 6), /맞지 않습니다/);
+});
+
+test("이 빌드가 구현하지 않은 역할은 거부한다", () => {
+  assert.throws(
+    () => mafiaComposition({mafia: 1, vampire: 1, citizen: 4}, 6),
+    /쓸 수 없는 역할/,
+  );
+});
+
+test("마피아가 없거나 전원 마피아면 거부한다", () => {
+  assert.throws(() => mafiaComposition({police: 1, citizen: 5}, 6), /마피아가 최소/);
+  assert.throws(() => mafiaComposition({mafia: 6}, 6), /마피아만으로는/);
+});
+
+test("고른 구성대로 역할이 배분된다", () => {
+  const game = makeGame(SIX, {phase: "roleReveal"});
+  const roles = assignMafiaRoles(game.public.players, {
+    mafia: 2,
+    doctor: 1,
+    citizen: 3,
+  });
+  const counts = {};
+  for (const roleId of Object.values(roles)) {
+    counts[roleId] = (counts[roleId] ?? 0) + 1;
+  }
+  assert.deepEqual(counts, {mafia: 2, doctor: 1, citizen: 3});
+});
+
+test("쓴 구성을 남겨 다시하기가 이어 쓴다", () => {
+  const players = {};
+  ["u1", "u2", "u3", "u4", "u5", "u6"].forEach((uid, index) => {
+    players[uid] = {
+      uid,
+      nickname: uid,
+      profileImageUrl: "",
+      seatIndex: index,
+      status: "alive",
+    };
+  });
+  const chosen = {mafia: 1, jester: 1, citizen: 4};
+  const game = createInitialMafiaGame(players, 1000, chosen);
+
+  // 다시하기가 같은 구성으로 돌 수 있게 남깁니다.
+  assert.deepEqual(game.server.composition, chosen);
+});
+
+test("인원이 바뀌면 지난 구성 대신 추천 표로 돌아간다", () => {
+  // 6인 구성을 5인 판에 그대로 쓰면 자리가 남습니다.
+  assert.deepEqual(
+    mafiaCompositionToUse(5, {mafia: 1, jester: 1, citizen: 4}),
+    MAFIA_COMPOSITION[5],
+  );
+  // 합이 맞으면 그대로 씁니다.
+  const same = {mafia: 1, jester: 1, citizen: 4};
+  assert.deepEqual(mafiaCompositionToUse(6, same), same);
 });

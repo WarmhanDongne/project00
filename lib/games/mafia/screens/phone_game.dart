@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/assets/game_asset_store.dart';
-import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
@@ -21,7 +20,6 @@ import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
-import 'package:project00/gen/assets.gen.dart';
 
 /// 마피아 휴대폰 화면의 진입점입니다.
 ///
@@ -180,6 +178,12 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           result: game.isNaturalResult
               ? MafiaPhoneResultSequence(
                   winner: game.winnerFaction,
+                  // 중립은 이긴 **역할**로 포스터가 갈립니다(광대/처형자/
+                  // 연쇄살인마/교단).
+                  winnerRoleIds: game.winnerRoleIds,
+                  // 중립은 "중립 승리"로는 무슨 일이 있었는지 알 수 없어
+                  // 역할 이름으로 알려 줍니다(예: `광대 승리`).
+                  winnerLabel: game.winnerLabel,
                   players: game.orderedPlayers,
                   revealedRoles: {
                     for (final player in game.orderedPlayers)
@@ -221,14 +225,15 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   Future<void> _leaveRoom() async {
     final leave = await SharedPhoneExitModal.show(
       context,
-      // 마피아 전용 모달 그림이 없어 나가기 아이콘을 그대로 씁니다.
-      doorImage: Assets.games.mafia.images.icons.iconOut.game.image(
-        fit: BoxFit.contain,
-      ),
+      // 마피아 전용 삽화가 없습니다. 아이콘 그림을 삽화 크기로 늘리면 흐릿하고
+      // 모달만 커져서, 코드로 그린 작은 표시를 씁니다.
+      doorImage: const _ExitBadge(color: _mafiaExitColor),
+      imageHeight: 96,
+      maxWidth: 320,
       surfaceColor: Colors.white,
       titleColor: Colors.black,
       descriptionColor: Colors.black,
-      primaryColor: const Color(0xFF212730),
+      primaryColor: _mafiaExitColor,
     );
     if (leave != true || !mounted) return;
     if (_isLeavingRoom) return;
@@ -245,5 +250,30 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+  }
+}
+
+const Color _mafiaExitColor = Color(0xFF212730);
+
+//=======================퇴장 모달 표시==============================
+/// 퇴장 모달 위쪽의 작은 표시입니다.
+class _ExitBadge extends StatelessWidget {
+  const _ExitBadge({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.logout_rounded, size: 42, color: color),
+      ),
+    );
   }
 }

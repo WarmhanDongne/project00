@@ -45,6 +45,23 @@ void main() {
     });
   });
 
+  testWidgets('문구 묶음이 다른 단계보다 아래, 삽화 위에 놓인다', (tester) async {
+    // 확정(2026-08): 토론 화면은 가운데 삽화가 커서, 문구를 다른 단계와 같은
+    // 높이에 두면 위쪽에 붕 떠 보였습니다. 삽화 쪽으로 내려 붙입니다.
+    tester.view.physicalSize = MafiaPhoneDesign.size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpView(tester, remainingSeconds: 150);
+
+    final titleTop = tester.getTopLeft(find.text('자유 토론')).dy;
+    final timerBottom = tester.getBottomLeft(find.text('2m 30s')).dy;
+
+    // 다른 단계의 안내 문구 자리보다 아래에 있습니다.
+    expect(titleTop, greaterThan(MafiaPhoneStatusText.promptTop));
+    // 그러면서 삽화(시안 top 244)를 덮지는 않습니다.
+    expect(timerBottom, lessThanOrEqualTo(244));
+  });
+
   testWidgets('시간이 남아 있으면 타이머가 검은색이다', (tester) async {
     await pumpView(tester, remainingSeconds: 150);
 

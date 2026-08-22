@@ -70,10 +70,20 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
   static const Rect _portrait = Rect.fromLTWH(539, 356, 116, 116);
   static const double _sentenceTop = 627;
 
+  /// 신분 문구의 첫 박자가 머무는 시간입니다.
+  static const Duration _sentenceBeatHold = Duration(milliseconds: 1000);
+
   late final AnimationController _flip;
   Timer? _nameTimer;
   Timer? _cardTimer;
   bool _showsCard = false;
+
+  /// 신분 문구를 찍기 시작했는지입니다.
+  ///
+  /// 예전에는 뒤집기 진행도로 문구를 서서히 띄웠지만, 이제 문구가 스스로
+  /// 내려찍히므로([MafiaEjectionText]) **카드가 절반 돌아간 순간에 붙입니다.**
+  /// 반투명하게 깔아 두면 찍히는 한 방이 죽습니다.
+  bool _showsSentence = false;
 
   @override
   void initState() {
@@ -81,7 +91,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
     _flip = AnimationController(
       vsync: this,
       duration: MafiaTabletExecutionView.flipDuration,
-    );
+    )..addListener(_handleFlipProgress);
     if (widget.executed == null) return;
 
     _nameTimer = Timer(MafiaTabletExecutionView.nameHold, () {
@@ -93,11 +103,20 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
     });
   }
 
+  void _handleFlipProgress() {
+    if (_showsSentence || !mounted) return;
+    // 앞면이 드러나기 시작하는 지점입니다(카드 뒤집기의 절반).
+    if (_flip.value < 0.5) return;
+    setState(() => _showsSentence = true);
+  }
+
   @override
   void dispose() {
     _nameTimer?.cancel();
     _cardTimer?.cancel();
-    _flip.dispose();
+    _flip
+      ..removeListener(_handleFlipProgress)
+      ..dispose();
     super.dispose();
   }
 
@@ -109,13 +128,17 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
       fit: StackFit.expand,
       children: [
         const MafiaTabletSun(),
+        // 확정(2026-08): 안내 문구는 모두 내려찍고, 긴 문장은 두 박자로 나눕니다.
         if (executed == null)
-          MafiaTabletHeadline(
-            text: widget.isTie ? '표가 같아 아무도 처형되지 않았습니다' : '처형된 사람이 없습니다',
+          MafiaTabletAnnouncement(
+            beats: widget.isTie
+                ? MafiaCopy.tieBeats
+                : const [MafiaCopy.noExecution],
             top: _nameTop,
           )
         else if (!_showsCard)
-          MafiaTabletHeadline(text: executed.nickname, top: _nameTop)
+          // 처형자 이름 한 방입니다. 이 게임에서 가장 센 순간입니다.
+          MafiaTabletAnnouncement(beats: [executed.nickname], top: _nameTop)
         else
           ..._buildCardStage(executed),
       ],
@@ -137,25 +160,20 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
           );
         },
       ),
-      AnimatedBuilder(
-        animation: _flip,
-        builder: (context, child) {
-          // 뒤집기 후반부에 맞춰 문구가 떠오릅니다.
-          final eased = Curves.easeInOutCubic.transform(_flip.value);
-          final opacity = ((eased - 0.5) * 2).clamp(0.0, 1.0);
-          return Opacity(opacity: opacity, child: child);
-        },
-        child: MafiaTabletHeadline(
-          text: widget.executedRole == null
-              ? MafiaCopy.unknownRole(executed.nickname)
-              : MafiaCopy.wasRole(
+      // 카드가 절반 돌아가면 신분 문구가 두 박자로 찍힙니다.
+      if (_showsSentence)
+        MafiaTabletAnnouncement(
+          beats: widget.executedRole == null
+              ? MafiaCopy.unknownRoleBeats(executed.nickname)
+              : MafiaCopy.wasRoleBeats(
                   executed.nickname,
                   widget.executedRole!.displayName,
                 ),
           top: _sentenceTop,
           fontSize: 24,
+          // 남은 발표 시간(약 3.7초)에 두 박자가 다 들어가게 줄였습니다.
+          beatHold: _sentenceBeatHold,
         ),
-      ),
     ];
   }
 

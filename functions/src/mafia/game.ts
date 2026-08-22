@@ -20,6 +20,7 @@ import {
   MafiaGameState,
   MafiaPrivatePlayer,
   MafiaPublicPlayer,
+  MafiaPublicState,
   MafiaRoom,
 } from "./types.js";
 
@@ -113,11 +114,33 @@ function shuffle<T>(items: T[]): T[] {
  * 정의만 있는 역할이 배분되면 그 사람은 밤에 아무것도 할 수 없어 게임이
  * 멈춥니다.
  */
+/**
+ * 이 인원에 쓸 역할 구성입니다. 고른 것이 없으면 추천 표를 씁니다.
+ *
+ * @param {number} playerCount 인원
+ * @param {Record<string, number> | null} chosen 역할 배치 화면에서 고른 구성
+ * @return {Record<string, number> | null} 쓸 구성(불가능하면 null)
+ */
+export function mafiaCompositionToUse(
+  playerCount: number,
+  chosen: Record<string, number> | null,
+): Record<string, number> | null {
+  if (chosen) {
+    const total = Object.values(chosen).reduce((sum, n) => sum + n, 0);
+    // 인원이 바뀌었으면(누가 나가거나 들어옴) 그 구성은 더 못 씁니다.
+    if (total === playerCount) return chosen;
+  }
+  return mafiaCompositionFor(playerCount);
+}
+
 export function assignMafiaRoles(
   players: Record<string, MafiaPublicPlayer>,
+  chosen: Record<string, number> | null = null,
 ): Record<string, string> {
   const uids = orderedPlayers(players).map((player) => player.uid);
-  const composition = mafiaCompositionFor(uids.length);
+  // 태블릿이 역할 배치 화면에서 고른 구성이 있으면 그것을 씁니다(확정 2026-08).
+  // 없으면 인원별 추천 표를 그대로 씁니다.
+  const composition = mafiaCompositionToUse(uids.length, chosen);
   if (!composition) {
     throw new HttpsError(
       "failed-precondition",
@@ -159,19 +182,96 @@ function allyUidsFor(
   return allies.length > 0 ? allies : undefined;
 }
 
+/**
+ * 모든 사람의 동료 목록을 배분표에 맞춰 다시 계산합니다.
+ *
+ * 게임 중에 신분이 바뀌는 역할(교주의 전향, 도둑의 절도)이 있어서, 시작할 때
+ * 한 번 만든 목록으로는 부족합니다. 바뀐 사람뿐 아니라 **상대편 목록에서도**
+ * 사라지거나 나타나야 하므로 전원을 다시 계산합니다.
+ */
+function refreshMafiaAllies(game: MafiaGameState): void {
+  for (const uid of Object.keys(game.server.roles)) {
+    const entry = game.private[uid];
+    if (!entry) continue;
+    const allies = allyUidsFor(uid, game.server.roles);
+    if (allies) entry.allyUids = allies;
+    else delete entry.allyUids;
+  }
+}
+
+/**
+ * 게임 중에 신분을 바꿉니다(교주의 전향, 도둑의 절도).
+ *
+ * 배분표(`server.roles`)와 본인 private을 함께 고쳐야 합니다. 한쪽만 바꾸면
+ * 화면에 보이는 신분과 승패 판정이 어긋납니다.
+ */
+function changeMafiaRole(
+  game: MafiaGameState,
+  uid: string,
+  roleId: string,
+  round: number,
+): void {
+  if (!mafiaRole(roleId)) return;
+  if (game.server.roles[uid] === roleId) return;
+  game.server.roles[uid] = roleId;
+  game.private[uid] ??= {roleId};
+  game.private[uid].roleId = roleId;
+  game.private[uid].roleChangedRound = round;
+  refreshMafiaAllies(game);
+}
+
+/**
+ * 처형자에게 목표를 지정합니다(게임 시작 시 한 번).
+ *
+ * 목표는 **시민 진영의 살아 있는 사람** 중 무작위입니다. 마피아를 목표로 주면
+ * 처형자가 사실상 시민팀 조력자가 되어 역할이 의미를 잃습니다.
+ *
+ * ⚠️ 목표가 처형이 아닌 이유로 죽으면 이 처형자는 이길 수 없습니다(마피아42는
+ * 그 경우 광대로 바뀌지만, 그 규칙은 아직 넣지 않았습니다).
+ */
+function assignExecutionerTargets(
+  roles: Record<string, string>,
+  privateState: Record<string, MafiaPrivatePlayer>,
+): Record<string, string> | undefined {
+  const executioners = Object.keys(roles)
+    .filter((uid) => mafiaRole(roles[uid])?.winCondition === "lynchTarget");
+  if (executioners.length === 0) return undefined;
+
+  const targets: Record<string, string> = {};
+  for (const uid of executioners) {
+    const candidates = Object.keys(roles).filter((other) =>
+      other !== uid && mafiaRole(roles[other])?.faction === "citizen");
+    if (candidates.length === 0) continue;
+    const targetUid = candidates[randomInt(candidates.length)];
+    targets[uid] = targetUid;
+    privateState[uid].executionerTargetUid = targetUid;
+  }
+  return Object.keys(targets).length > 0 ? targets : undefined;
+}
+
 /** 새 게임의 초기 상태입니다. 역할 확인 단계로 시작합니다. */
 export function createInitialMafiaGame(
   players: Record<string, MafiaPublicPlayer>,
   now: number,
+  composition: Record<string, number> | null = null,
 ): MafiaGameState {
-  const roles = assignMafiaRoles(players);
+  const roles = assignMafiaRoles(players, composition);
+  // 다시하기가 같은 구성으로 돌 수 있게 실제로 쓴 구성을 남깁니다.
+  const usedComposition = mafiaCompositionToUse(
+    Object.keys(players).length,
+    composition,
+  );
   const privateState: Record<string, MafiaPrivatePlayer> = {};
   for (const uid of Object.keys(roles)) {
     const allies = allyUidsFor(uid, roles);
     privateState[uid] = allies ?
       {roleId: roles[uid], allyUids: allies} :
       {roleId: roles[uid]};
+    // 사용 횟수가 제한된 역할(자경단원)은 남은 횟수를 본인에게만 알려 줍니다.
+    const maxUses = mafiaRole(roles[uid])?.maxUses ?? null;
+    if (maxUses !== null) privateState[uid].abilityUsesLeft = maxUses;
   }
+  const executionerTargets = assignExecutionerTargets(roles, privateState);
 
   return {
     public: {
@@ -197,11 +297,44 @@ export function createInitialMafiaGame(
       updatedAt: now,
     },
     private: privateState,
-    server: {roles},
+    server: {
+      roles,
+      ...(executionerTargets ? {executionerTargets} : {}),
+      // 다시하기가 같은 구성으로 돌게 남겨 둡니다.
+      ...(usedComposition ? {composition: usedComposition} : {}),
+    },
   };
 }
 
 // ===== 단계 전환 =====
+
+/**
+ * 밤 행동 소리 신호를 올립니다([MafiaNightActionCue]).
+ *
+ * 확정(2026-08): 직업 효과음은 밤이 시작될 때 자동으로 울리지 않고, 그 직업이
+ * **선택을 완료한 순간** 태블릿에서 울립니다.
+ *
+ * **첫 제출에만** 올립니다. 마감 전에 대상을 바꿔 다시 제출하는 것은 새 행동이
+ * 아니라 같은 행동의 수정이라, 총성이 두 번 울리면 방이 헷갈립니다.
+ *
+ * 반드시 `server.nightActions[actorUid]`를 **넣기 전에** 부르세요.
+ *
+ * @param {MafiaGameState} game 게임 상태
+ * @param {string} actorUid 제출한 사람
+ * @return {void}
+ */
+export function bumpNightActionCue(
+  game: MafiaGameState,
+  actorUid: string,
+): void {
+  if (game.server.nightActions?.[actorUid] !== undefined) return;
+  const action = mafiaRole(game.server.roles[actorUid])?.nightAction;
+  if (!action || action === "none") return;
+  game.public.nightActionCue = {
+    id: (game.public.nightActionCue?.id ?? 0) + 1,
+    action,
+  };
+}
 
 /** 밤을 시작합니다. 지난 밤의 선택을 모두 지웁니다. */
 export function beginMafiaNight(game: MafiaGameState, now: number): void {
@@ -221,6 +354,9 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
     delete entry.nightTargetUid;
     delete entry.allySelections;
     delete entry.voteTargetUid;
+    // 지난 낮에 쓰고 남은 안내입니다. 새 밤에는 지웁니다.
+    delete entry.voteBanned;
+    delete entry.roleChangedRound;
   }
   touch(game, now);
 }
@@ -239,18 +375,43 @@ export function beginMafiaDay(game: MafiaGameState, now: number): void {
   touch(game, now);
 }
 
-/** 투표를 시작합니다. */
+/**
+ * 투표를 시작합니다.
+ *
+ * 마담에게 유혹당한 사람은 이번 투표에 참여하지 못합니다. 그 표는 참여 인원수
+ * (`voteEligibleCount`)에서도 빼야 전원 제출로 개표가 됩니다. 본인에게는
+ * private으로 알려 주고, 표식은 여기서 소모합니다(다음 낮까지 남지 않습니다).
+ */
 export function beginMafiaVoting(game: MafiaGameState, now: number): void {
+  const bans = game.server.voteBans ?? {};
+  const alive = alivePlayers(game.public.players);
+
   game.public.phase = "voting";
   game.public.turnDeadlineAt = now + MAFIA_VOTE_MS;
   game.public.voteSubmittedCount = 0;
   game.public.voteSubmittedUids = [];
-  game.public.voteEligibleCount = alivePlayers(game.public.players).length;
+  game.public.voteEligibleCount =
+    alive.filter((player) => bans[player.uid] !== true).length;
   delete game.server.votes;
   for (const entry of Object.values(game.private)) {
     delete entry.voteTargetUid;
+    delete entry.voteBanned;
   }
+  for (const uid of Object.keys(bans)) {
+    if (game.public.players[uid]?.status !== "alive") continue;
+    game.private[uid] ??= {roleId: game.server.roles[uid]};
+    game.private[uid].voteBanned = true;
+  }
+  delete game.server.voteBans;
   touch(game, now);
+}
+
+/** 이번 낮에 투표할 수 없는 사람인지입니다(마담에게 유혹당함). */
+export function isMafiaVoteBanned(
+  game: MafiaGameState,
+  uid: string,
+): boolean {
+  return game.private[uid]?.voteBanned === true;
 }
 
 function touch(game: MafiaGameState, now: number): void {
@@ -281,6 +442,16 @@ export function mafiaInvestigationVerdict(
   default:
     return role.faction === "mafia" ? "마피아" : "시민";
   }
+}
+
+/**
+ * 결과 문구에 쓰는 역할 이름입니다. 모르는 id면 "알 수 없음"입니다.
+ *
+ * 영매("경찰")·도둑(훔친 직업) 결과가 이 값을 씁니다. 이름은 Dart에도 있지만,
+ * 결과 문구는 서버가 만들어 보내는 것이 규칙이라 서버 표에도 둡니다.
+ */
+export function mafiaRoleDisplayName(roleId: string): string {
+  return mafiaRole(roleId)?.displayName ?? "알 수 없음";
 }
 
 /** 조사·추적 결과를 본인 private에만 남깁니다. */
@@ -314,12 +485,19 @@ export function recordImmediateInvestigation(
   if (role === null) return;
   const round = game.public.round;
   switch (role.nightAction) {
-  case "investigate":
-  case "investigateRole": {
+  case "investigate": {
     const verdict = mafiaInvestigationVerdict(
       game.server.roles[targetUid],
       false,
     );
+    recordInvestigation(game, actorUid, targetUid, verdict, round);
+    break;
+  }
+  case "investigateRole":
+  case "steal": {
+    // 영매·도둑은 **사망자**를 봅니다. 죽은 사람의 신분은 밤 사이에 바뀌지
+    // 않으므로 이 값은 잠정값이 아니라 그대로 최종값입니다.
+    const verdict = mafiaRoleDisplayName(game.server.roles[targetUid]);
     recordInvestigation(game, actorUid, targetUid, verdict, round);
     break;
   }
@@ -338,14 +516,23 @@ export function recordImmediateInvestigation(
   void now;
 }
 
-/** 표를 세어 최다 득표 대상을 고릅니다. */
-function tallyVotes(votes: Record<string, string>): {
+/**
+ * 표를 세어 최다 득표 대상을 고릅니다.
+ *
+ * [weightOf]를 주면 사람마다 표의 무게가 달라집니다(정치인 2표). 밤의 마피아
+ * 지목은 전원 1표라 무게를 주지 않습니다.
+ */
+function tallyVotes(
+  votes: Record<string, string>,
+  weightOf?: (voterUid: string) => number,
+): {
   tally: Record<string, number>;
   leaders: string[];
 } {
   const tally: Record<string, number> = {};
-  for (const targetUid of Object.values(votes)) {
-    tally[targetUid] = (tally[targetUid] ?? 0) + 1;
+  for (const [voterUid, targetUid] of Object.entries(votes)) {
+    const weight = weightOf ? weightOf(voterUid) : 1;
+    tally[targetUid] = (tally[targetUid] ?? 0) + weight;
   }
   let best = 0;
   for (const count of Object.values(tally)) best = Math.max(best, count);
@@ -360,6 +547,14 @@ function tallyVotes(votes: Record<string, string>): {
  *
  * 반드시 [MAFIA_NIGHT_PHASE_ORDER] 순서로 처리합니다. 순서가 어긋나면 규칙이
  * 깨집니다(차단이 보호보다 먼저, 조사 조작이 조사보다 먼저).
+ *
+ * 죽음이 정해지는 순서도 중요합니다.
+ *   1. 단계 순서대로 돌며 차단·보호·조사·표적을 모읍니다.
+ *   2. 마피아의 지목은 다수결로 **한 명**만 고릅니다.
+ *   3. 마지막에 보호와 자기 방어(군인)를 적용해 실제 사망자를 정합니다.
+ *
+ * 보호·방어 판정을 마지막으로 미루는 이유는, 마피아 다수결 결과가 나오기 전에
+ * 는 누가 공격받는지 확정되지 않기 때문입니다.
  */
 export function resolveMafiaNight(game: MafiaGameState, now: number): void {
   const actions = game.server.nightActions ?? {};
@@ -369,6 +564,8 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
   const blockedUids = new Set<string>();
   const protectedUids = new Set<string>();
   const framedUids = new Set<string>();
+  /** 공격받은 사람 → 공격한 사람들. 오발 판정에 공격자가 필요합니다. */
+  const attacks = new Map<string, string[]>();
   const deadUids = new Set<string>();
   let savedCount = 0;
 
@@ -386,33 +583,56 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
       MAFIA_NIGHT_PHASE_ORDER[left.phase] -
       MAFIA_NIGHT_PHASE_ORDER[right.phase]);
 
-  // 마피아 진영의 제거는 한 명만 죽이므로 표로 모아 마지막에 판정합니다.
+  // 마피아 진영의 다수결 지목입니다. 짐승인간은 여기 들어오지 않습니다
+  // (해결 단계가 independentAttack이라 혼자 공격합니다).
   const mafiaAttackVotes: Record<string, string> = {};
+  /** 이 밤에 실제로 능력이 발동한 사람입니다. 사용 횟수를 셀 때 씁니다. */
+  const usedAbility = new Set<string>();
 
   for (const entry of ordered) {
     const role = entry.role;
     // 차단된 사람의 능력은 무효입니다.
     if (blockedUids.has(entry.actorUid)) continue;
-    // 이미 죽은 대상에게는 아무 일도 일어나지 않습니다.
-    if (game.public.players[entry.targetUid]?.status !== "alive") continue;
+    // 대상이 아직 규칙에 맞는 상태인지 확인합니다. 살아 있는 사람을 고르는
+    // 역할은 대상이 죽었으면 무효, 사망자를 고르는 역할(영매·도둑)은 그 반대
+    // 입니다. 제출 시점에도 검사하지만, 그 사이에 상태가 바뀔 수 있습니다.
+    const targetStatus = game.public.players[entry.targetUid]?.status;
+    const wantsDead = role.nightTargetScope === "dead";
+    if (wantsDead ? targetStatus !== "dead" : targetStatus !== "alive") continue;
 
     switch (role.nightAction) {
     case "roleblock":
       blockedUids.add(entry.targetUid);
+      // 마담은 능력에 더해 **다음 낮의 투표권**까지 막습니다.
+      if (role.blocksTargetVote) {
+        game.server.voteBans ??= {};
+        game.server.voteBans[entry.targetUid] = true;
+      }
+      usedAbility.add(entry.actorUid);
       break;
     case "protect":
       protectedUids.add(entry.targetUid);
+      usedAbility.add(entry.actorUid);
       break;
     case "frame":
       framedUids.add(entry.targetUid);
+      usedAbility.add(entry.actorUid);
       break;
-    case "investigate":
-    case "investigateRole": {
+    case "investigate": {
       const verdict = mafiaInvestigationVerdict(
         roles[entry.targetUid],
         framedUids.has(entry.targetUid),
       );
       recordInvestigation(game, entry.actorUid, entry.targetUid, verdict, round);
+      usedAbility.add(entry.actorUid);
+      break;
+    }
+    case "investigateRole": {
+      // 직업까지 봅니다(영매는 사망자, 정보원은 산 사람). 진영 조사와 달리
+      // 프레이머의 조작이 통하지 않습니다 — 직업 자체를 보기 때문입니다.
+      const verdict = mafiaRoleDisplayName(roles[entry.targetUid]);
+      recordInvestigation(game, entry.actorUid, entry.targetUid, verdict, round);
+      usedAbility.add(entry.actorUid);
       break;
     }
     case "track": {
@@ -423,26 +643,59 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
         game.public.players[visitedUid]?.nickname ?? "알 수 없음" :
         "방문 없음";
       recordInvestigation(game, entry.actorUid, entry.targetUid, verdict, round);
+      usedAbility.add(entry.actorUid);
+      break;
+    }
+    case "convert": {
+      // 교주의 전향입니다. 마피아는 전향되지 않습니다(같은 어둠의 조직이라
+      // 넘어오지 않습니다). 실패해도 **아무 표시를 남기지 않습니다** — 실패가
+      // 보이면 대상의 진영이 드러납니다.
+      const becomes = role.convertsTargetTo;
+      const targetFaction = mafiaRole(roles[entry.targetUid])?.faction;
+      if (!becomes || targetFaction === "mafia") break;
+      if (roles[entry.targetUid] === becomes) break;
+      changeMafiaRole(game, entry.targetUid, becomes, round);
+      usedAbility.add(entry.actorUid);
       break;
     }
     case "expose":
       // 기자입니다. 경찰과 달리 **모두가** 보므로 public에 씁니다.
       game.public.revealedRoles ??= {};
       game.public.revealedRoles[entry.targetUid] = roles[entry.targetUid];
+      usedAbility.add(entry.actorUid);
       break;
+    case "steal": {
+      // 도둑입니다. 사망자의 직업을 그대로 가져옵니다(진영까지 바뀝니다).
+      const stolen = roles[entry.targetUid];
+      if (!stolen || !mafiaRole(stolen)) break;
+      changeMafiaRole(game, entry.actorUid, stolen, round);
+      recordInvestigation(
+        game,
+        entry.actorUid,
+        entry.targetUid,
+        mafiaRoleDisplayName(stolen),
+        round,
+      );
+      usedAbility.add(entry.actorUid);
+      break;
+    }
     case "eliminate":
-      if (role.faction === "mafia") {
+      if (entry.phase === "mafiaAttack") {
         // 마피아는 다수결로 한 명만 죽입니다.
         mafiaAttackVotes[entry.actorUid] = entry.targetUid;
-      } else if (!protectedUids.has(entry.targetUid)) {
-        // 자경단원·연쇄살인마 등 독립 공격은 각자 처리합니다.
-        deadUids.add(entry.targetUid);
       } else {
-        savedCount += 1;
+        // 자경단원·연쇄살인마·짐승인간은 각자 따로 공격합니다.
+        // 같은 편은 죽이지 않습니다. **막지 않고 조용히 넘깁니다** — 여기서
+        // 오류를 내면 대상이 같은 편이라는 사실이 공격자에게 드러납니다.
+        const sameTeam =
+          mafiaRole(roles[entry.targetUid])?.faction === role.faction;
+        if (sameTeam && role.faction === "mafia") break;
+        addAttack(attacks, entry.targetUid, entry.actorUid);
+        usedAbility.add(entry.actorUid);
       }
       break;
     default:
-      // 아직 처리하지 않는 행동입니다(전향·침묵·감시·추적·표식).
+      // 아직 처리하지 않는 행동입니다(침묵·감시·표식).
       break;
     }
   }
@@ -453,12 +706,44 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
     const targetUid = attack.leaders.length === 1 ?
       attack.leaders[0] :
       attack.leaders[randomInt(attack.leaders.length)];
-    if (protectedUids.has(targetUid)) {
-      savedCount += 1;
-    } else {
-      deadUids.add(targetUid);
+    addAttack(attacks, targetUid, "");
+    for (const actorUid of Object.keys(mafiaAttackVotes)) {
+      usedAbility.add(actorUid);
     }
   }
+
+  // 공격 판정 — 보호가 먼저, 그다음 자기 방어(군인)입니다.
+  //
+  // 자기 방어는 **공격 한 번마다** 하나씩 소모합니다. 같은 밤에 마피아와
+  // 짐승인간이 같은 사람을 노렸다면 군인은 한 번만 막고 두 번째에 죽습니다.
+  // 반면 의사의 보호는 그 사람을 그 밤 동안 살립니다(공격 수와 무관).
+  for (const [targetUid, attackerUids] of attacks) {
+    if (protectedUids.has(targetUid)) {
+      savedCount += 1;
+      continue;
+    }
+    let survived = true;
+    for (let index = 0; index < attackerUids.length; index += 1) {
+      if (consumeMafiaDefense(game, targetUid)) continue;
+      survived = false;
+      break;
+    }
+    if (survived) {
+      savedCount += 1;
+      continue;
+    }
+    deadUids.add(targetUid);
+    // 자경단원 오발 — 같은 편을 쏘면 자신도 함께 죽습니다.
+    for (const attackerUid of attackerUids) {
+      if (!attackerUid) continue;
+      const attacker = mafiaRole(roles[attackerUid]);
+      if (!attacker?.selfDestructsOnAllyKill) continue;
+      if (mafiaRole(roles[targetUid])?.faction !== attacker.faction) continue;
+      deadUids.add(attackerUid);
+    }
+  }
+
+  countAbilityUses(game, usedAbility);
 
   for (const uid of deadUids) {
     killMafiaPlayer(game, uid, "nightAttack", now);
@@ -476,32 +761,107 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
   touch(game, now);
 }
 
+/** 공격 목록에 한 건 더합니다. 공격자가 마피아 다수결이면 빈 문자열입니다. */
+function addAttack(
+  attacks: Map<string, string[]>,
+  targetUid: string,
+  attackerUid: string,
+): void {
+  const list = attacks.get(targetUid);
+  if (list) list.push(attackerUid);
+  else attacks.set(targetUid, [attackerUid]);
+}
+
+/**
+ * 자기 방어를 하나 소모합니다. 막아냈으면 true입니다(군인).
+ *
+ * 소모 기록은 server에만 둡니다. public에 두면 군인이 누군지 드러납니다.
+ */
+function consumeMafiaDefense(
+  game: MafiaGameState,
+  uid: string,
+): boolean {
+  const charges = mafiaRole(game.server.roles[uid])?.defenseCharges ?? 0;
+  if (charges <= 0) return false;
+  const used = game.server.defenseUsed?.[uid] === true ? 1 : 0;
+  if (used >= charges) return false;
+  game.server.defenseUsed ??= {};
+  game.server.defenseUsed[uid] = true;
+  return true;
+}
+
+/**
+ * 이번 밤에 실제로 발동한 능력의 사용 횟수를 셉니다.
+ *
+ * **차단당해 불발된 밤은 세지 않습니다.** 자경단원의 한 발이 차단으로 사라지면
+ * 규칙이 억울해집니다.
+ */
+function countAbilityUses(
+  game: MafiaGameState,
+  usedAbility: Set<string>,
+): void {
+  for (const uid of usedAbility) {
+    const maxUses = mafiaRole(game.server.roles[uid])?.maxUses ?? null;
+    if (maxUses === null) continue;
+    game.server.abilityUses ??= {};
+    const used = (game.server.abilityUses[uid] ?? 0) + 1;
+    game.server.abilityUses[uid] = used;
+    game.private[uid] ??= {roleId: game.server.roles[uid]};
+    game.private[uid].abilityUsesLeft = Math.max(0, maxUses - used);
+  }
+}
+
+/** 남은 능력 사용 횟수입니다. 제한이 없으면 null입니다. */
+export function mafiaAbilityUsesLeft(
+  game: MafiaGameState,
+  uid: string,
+): number | null {
+  const maxUses = mafiaRole(game.server.roles[uid])?.maxUses ?? null;
+  if (maxUses === null) return null;
+  return Math.max(0, maxUses - (game.server.abilityUses?.[uid] ?? 0));
+}
+
 // ===== 투표 해결 =====
 
 /**
  * 표를 세어 처형자를 정합니다. **동표면 무처형**입니다(확정 규칙).
  *
  * 밤의 마피아 지목과 다릅니다. 마피아 지목은 동표면 무작위입니다.
+ *
+ * 정치인의 표는 2표로 셉니다. 그래서 공개되는 득표수는 사람 수가 아니라
+ * **표의 무게**입니다 — 2표가 몰린 자리를 보면 정치인이 어디에 찍었는지 유추할
+ * 수 있지만, 규칙상 감수하는 노출입니다.
+ *
+ * 광대·처형자의 단독 승리는 여기서 **예약만** 합니다. 태블릿의 개표·처형 발표
+ * 연출이 끝난 뒤([advanceMafiaAfterDeaths])에 게임을 끝냅니다. 즉시 끝내면
+ * 처형 장면을 보여 주지 못하고 결과 화면으로 튕깁니다.
  */
 export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
   const votes = game.server.votes ?? {};
-  const {tally, leaders} = tallyVotes(votes);
-  const aliveCount = alivePlayers(game.public.players).length;
+  const {tally, leaders} = tallyVotes(
+    votes,
+    (voterUid) => mafiaRole(game.server.roles[voterUid])?.voteWeight ?? 1,
+  );
+  const eligibleCount = game.public.voteEligibleCount;
   const tie = leaders.length > 1;
   const executedUid = leaders.length === 1 ? leaders[0] : null;
 
   if (executedUid) {
+    const lynchWinners = lynchWinnerUids(game, executedUid);
     killMafiaPlayer(game, executedUid, "execution", now);
     // 처형자 신분은 공개합니다(확정 규칙).
     game.public.revealedRoles ??= {};
     game.public.revealedRoles[executedUid] = game.server.roles[executedUid];
+    if (lynchWinners.length > 0) {
+      game.server.pendingNeutralWinUids = lynchWinners;
+    }
   }
 
   game.public.voteResult = {
     tally,
     executedUid,
     tie,
-    abstainCount: Math.max(0, aliveCount - Object.keys(votes).length),
+    abstainCount: Math.max(0, eligibleCount - Object.keys(votes).length),
     resolvedAt: now,
   };
   game.public.phase = "voteResult";
@@ -509,6 +869,38 @@ export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
   game.public.turnDeadlineAt = null;
   delete game.server.votes;
   touch(game, now);
+}
+
+/**
+ * 이 처형으로 단독 승리한 사람입니다. 없으면 빈 배열입니다.
+ *
+ * 두 가지가 겹칠 수 있습니다 — 처형된 사람이 광대이면서, 그 사람을 목표로 받은
+ * 처형자가 살아 있는 경우입니다. 그때는 둘 다 이깁니다.
+ */
+function lynchWinnerUids(
+  game: MafiaGameState,
+  executedUid: string,
+): string[] {
+  const winners: string[] = [];
+
+  // 광대 — 자신이 처형되면 승리합니다.
+  if (mafiaRole(game.server.roles[executedUid])?.winCondition ===
+      "lynchedSelf") {
+    winners.push(executedUid);
+  }
+
+  // 처형자 — 목표가 처형되면 승리합니다. 본인이 살아 있어야 합니다.
+  for (const [uid, targetUid] of
+    Object.entries(game.server.executionerTargets ?? {})) {
+    if (targetUid !== executedUid) continue;
+    if (game.public.players[uid]?.status !== "alive") continue;
+    if (mafiaRole(game.server.roles[uid])?.winCondition !== "lynchTarget") {
+      // 도둑에게 직업을 빼앗기거나 전향된 뒤라면 더 이상 처형자가 아닙니다.
+      continue;
+    }
+    winners.push(uid);
+  }
+  return winners;
 }
 
 // ===== 사망 처리 =====
@@ -542,34 +934,110 @@ export function killMafiaPlayer(
 
 // ===== 승패 판정 =====
 
+/** 승패 판정 결과입니다. 진영과 **실제로 이긴 사람**을 함께 담습니다. */
+export interface MafiaOutcome {
+  winner: MafiaFactionId;
+  /** 이긴 사람입니다. 진영 승리면 그 진영 전원(사망자 포함)입니다. */
+  winnerUids: string[];
+  reason: NonNullable<MafiaPublicState["finishReason"]>;
+}
+
+/** 그 역할이 교단(교주·광신도)인지입니다. */
+function isCultRole(roleId: string): boolean {
+  return mafiaRole(roleId)?.winCondition === "factionDominance";
+}
+
+/** 그 역할이 혼자 최후까지 남아야 이기는 역할인지입니다(연쇄살인마). */
+function isLastStandingRole(roleId: string): boolean {
+  return mafiaRole(roleId)?.winCondition === "lastStanding";
+}
+
+/** 그 역할을 가진 모든 사람입니다(사망자 포함). 승자 명단에 씁니다. */
+function uidsWhere(
+  roles: Record<string, string>,
+  match: (roleId: string) => boolean,
+): string[] {
+  return Object.keys(roles).filter((uid) => match(roles[uid]));
+}
+
 /**
  * 승리 진영입니다. 아직 끝나지 않았으면 null입니다.
  *
- * - 살아 있는 마피아가 없으면 시민 승리
- * - 마피아가 나머지 인원과 같거나 많으면 마피아 승리
+ * 판정 순서가 규칙입니다. 개별 승리를 먼저 봅니다 — 살아남은 사람이 전부 교단
+ * 이면 그것은 시민팀 승리가 아니라 교단 승리입니다.
  *
- * 중립 역할의 개별 승리 조건은 아직 판정하지 않습니다.
+ *   1. 살아 있는 사람이 **모두 교단**이면 교단 승리
+ *   2. 살아 있는 사람이 **연쇄살인마뿐**이면 연쇄살인마 승리
+ *   3. 마피아·연쇄살인마·교단이 모두 없으면 시민 승리
+ *   4. 마피아가 나머지와 같거나 많으면 마피아 승리
+ *      (단, 살아 있는 연쇄살인마·교단이 없어야 합니다 — 아직 판을 뒤집을
+ *       사람이 남아 있으면 마피아의 승리가 확정되지 않습니다)
+ *
+ * 광대·처형자는 여기서 판정하지 않습니다. 그 둘은 **처형되는 순간**
+ * ([resolveMafiaVoting])에 정해집니다.
  */
-export function checkMafiaWinner(game: MafiaGameState): MafiaFactionId | null {
+export function checkMafiaWinner(game: MafiaGameState): MafiaOutcome | null {
+  const roles = game.server.roles;
   const alive = alivePlayers(game.public.players);
+
   let mafiaCount = 0;
-  let otherCount = 0;
+  let cultCount = 0;
+  let killerCount = 0;
   for (const player of alive) {
-    const faction = mafiaRole(game.server.roles[player.uid])?.faction;
-    if (faction === "mafia") mafiaCount += 1;
-    else otherCount += 1;
+    const roleId = roles[player.uid];
+    if (mafiaRole(roleId)?.faction === "mafia") mafiaCount += 1;
+    else if (isCultRole(roleId)) cultCount += 1;
+    else if (isLastStandingRole(roleId)) killerCount += 1;
   }
-  if (mafiaCount === 0) return "citizen";
-  if (mafiaCount >= otherCount) return "mafia";
+  const otherCount = alive.length - mafiaCount;
+
+  if (cultCount > 0 && cultCount === alive.length) {
+    return {
+      winner: "neutral",
+      winnerUids: uidsWhere(roles, isCultRole),
+      reason: "neutralWin",
+    };
+  }
+  if (killerCount > 0 && killerCount === alive.length) {
+    return {
+      winner: "neutral",
+      winnerUids: alive.map((player) => player.uid),
+      reason: "neutralWin",
+    };
+  }
+  // 아직 판을 뒤집을 사람이 남아 있으면 진영 승리는 확정되지 않습니다.
+  if (cultCount > 0 || killerCount > 0) return null;
+
+  if (mafiaCount === 0) {
+    return {
+      winner: "citizen",
+      winnerUids: uidsWhere(roles, (id) => mafiaRole(id)?.faction === "citizen"),
+      reason: "citizenWin",
+    };
+  }
+  if (mafiaCount >= otherCount) {
+    return {
+      winner: "mafia",
+      winnerUids: uidsWhere(roles, (id) => mafiaRole(id)?.faction === "mafia"),
+      reason: "mafiaWin",
+    };
+  }
   return null;
 }
 
-/** 게임을 끝냅니다. 끝나는 순간 전원의 신분을 공개합니다. */
+/**
+ * 게임을 끝냅니다. 끝나는 순간 전원의 신분을 공개합니다.
+ *
+ * [winnerUids]를 주면 그 목록을 그대로 씁니다. 주지 않으면 승리 진영 전원입니다.
+ * 중립의 개별 승리는 "그 진영 전원"이 성립하지 않아(죽은 광대까지 승자가 됩니다)
+ * 반드시 목록을 넘겨야 합니다.
+ */
 export function finishMafiaGame(
   game: MafiaGameState,
   winner: MafiaFactionId | null,
-  reason: NonNullable<MafiaGameState["public"]["finishReason"]>,
+  reason: NonNullable<MafiaPublicState["finishReason"]>,
   now: number,
+  winnerUids?: string[],
 ): void {
   game.public.status = "finished";
   game.public.phase = "finished";
@@ -585,9 +1053,14 @@ export function finishMafiaGame(
   }
   game.public.revealedRoles = revealed;
 
-  game.public.winnerUids = winner === null ? [] :
-    Object.keys(game.server.roles).filter((uid) =>
-      mafiaRole(game.server.roles[uid])?.faction === winner);
+  if (winnerUids) {
+    game.public.winnerUids = [...winnerUids];
+  } else {
+    game.public.winnerUids = winner === null ? [] :
+      Object.keys(game.server.roles).filter((uid) =>
+        mafiaRole(game.server.roles[uid])?.faction === winner);
+  }
+  delete game.server.pendingNeutralWinUids;
   touch(game, now);
 }
 
@@ -595,21 +1068,32 @@ export function finishMafiaGame(
  * 승패를 확인해 끝났으면 마무리하고, 아니면 다음 단계로 넘깁니다.
  *
  * 판정 시점은 두 곳입니다: 아침 발표 직후, 처형 발표 직후.
+ *
+ * 처형으로 정해진 단독 승리(광대·처형자)를 **가장 먼저** 봅니다. 광대가
+ * 처형되면 그 판은 광대의 것이고, 같은 처형으로 마피아가 전멸했더라도 시민팀
+ * 승리로 덮어써서는 안 됩니다.
  */
 export function advanceMafiaAfterDeaths(
   game: MafiaGameState,
   next: "day" | "night",
   now: number,
 ): MafiaFactionId | null {
-  const winner = checkMafiaWinner(game);
-  if (winner) {
+  const pending = game.server.pendingNeutralWinUids;
+  if (pending && pending.length > 0) {
+    finishMafiaGame(game, "neutral", "neutralWin", now, pending);
+    return "neutral";
+  }
+
+  const outcome = checkMafiaWinner(game);
+  if (outcome) {
     finishMafiaGame(
       game,
-      winner,
-      winner === "mafia" ? "mafiaWin" : "citizenWin",
+      outcome.winner,
+      outcome.reason,
       now,
+      outcome.winnerUids,
     );
-    return winner;
+    return outcome.winner;
   }
   if (next === "day") {
     beginMafiaDay(game, now);

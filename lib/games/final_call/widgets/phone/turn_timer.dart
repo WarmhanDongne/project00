@@ -1,39 +1,33 @@
-import 'dart:async';
-import 'package:project00/core/time/server_clock.dart';
-import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
-
 import 'package:flutter/material.dart';
+import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
+import 'package:project00/games/shared/widgets/game_turn_countdown.dart';
 
+/// 내 턴의 남은 시간입니다(시안: `00:초` 7세그먼트 표시).
+///
+/// 시간을 세는 일은 공용 [GameTurnCountdown]이 합니다. 세 게임이 각자 세면
+/// 같은 함정(보정 전 0에서 굳는 문제)을 각자 다시 만들게 됩니다. 이 위젯은
+/// **생김새와 초읽기 소리만** 담당합니다.
 class FinalCallTimer extends StatefulWidget {
   const FinalCallTimer({super.key, required this.deadline, this.onTimeout});
+
   final int deadline;
   final VoidCallback? onTimeout;
+
+  /// 화면에 보여 주는 최대 초입니다(턴 제한시간 30초).
+  static const int maxSeconds = 30;
 
   @override
   State<FinalCallTimer> createState() => _FinalCallTimerState();
 }
 
 class _FinalCallTimerState extends State<FinalCallTimer> {
-  Timer? _timer;
-  bool _didNotifyTimeout = false;
-
   /// 마지막 5초 초읽기 소리입니다. 이 위젯은 내 턴에만 그려지므로, 소리도
   /// 지금 행동해야 하는 사람의 기기에서만 납니다.
   final CountdownTickCue _tickCue = CountdownTickCue();
 
-  int get seconds =>
-      (ServerClock.remainingUntil(widget.deadline).inMilliseconds / 1000)
-          .ceil()
-          .clamp(0, 30);
-
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {});
-      _notifyTimeoutIfNeeded();
-    });
     _tickCue.schedule(widget.deadline);
   }
 
@@ -47,28 +41,12 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
   void didUpdateWidget(covariant FinalCallTimer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.deadline != widget.deadline) {
-      _didNotifyTimeout = false;
       _tickCue.schedule(widget.deadline);
     }
   }
 
-  void _notifyTimeoutIfNeeded() {
-    if (seconds > 0) {
-      // 뒤늦게 도착한 시계 보정으로 만료가 취소되면 타임아웃도 다시 무장합니다.
-      _didNotifyTimeout = false;
-      return;
-    }
-    // 서버 시각 보정 전의 0은 기기 시계 오차일 수 있으므로 자동 행동을
-    // 확정하지 않습니다. 보정이 도착하면 다음 tick에서 판정합니다.
-    // (라이어스 포커 PhoneTimer와 같은 규칙입니다.)
-    if (_didNotifyTimeout || !ServerClock.hasSynced) return;
-    _didNotifyTimeout = true;
-    widget.onTimeout?.call();
-  }
-
   @override
   void dispose() {
-    _timer?.cancel();
     // 제한시간 전에 행동을 마치면 이 위젯이 사라집니다. 초읽기도 그때 멈춰야
     // 다음 사람 차례까지 소리가 이어지지 않습니다.
     _tickCue.stop();
@@ -76,13 +54,25 @@ class _FinalCallTimerState extends State<FinalCallTimer> {
   }
 
   @override
-  Widget build(BuildContext context) => Text(
-    '00:${seconds.toString().padLeft(2, '0')}',
-    style: TextStyle(
-      fontFamily: 'DigitalTimer',
-      color: seconds <= 10 ? Colors.red : Colors.black87,
-      fontSize: 28,
-      fontWeight: FontWeight.w700,
-    ),
-  );
+  Widget build(BuildContext context) {
+    return GameTurnCountdown(
+      expiresAt: widget.deadline,
+      onTimeout: widget.onTimeout,
+      builder: (context, remaining) {
+        // 올림으로 세어 마지막 1초가 화면에 남습니다(기존 표기 그대로).
+        final seconds = ((remaining ?? Duration.zero).inMilliseconds / 1000)
+            .ceil()
+            .clamp(0, FinalCallTimer.maxSeconds);
+        return Text(
+          '00:${seconds.toString().padLeft(2, '0')}',
+          style: TextStyle(
+            fontFamily: 'DigitalTimer',
+            color: seconds <= 10 ? Colors.red : Colors.black87,
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+          ),
+        );
+      },
+    );
+  }
 }

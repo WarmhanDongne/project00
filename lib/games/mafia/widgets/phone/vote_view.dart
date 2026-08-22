@@ -13,6 +13,7 @@ import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
 /// | 투표 전 | 고른 대상 없음 | 9칸 모두 선명, `선택 완료` 비활성 |
 /// | 대상 선택 | [selectedUid] 있음 | 고른 칸만 선명 + 금색 테두리, 버튼 활성 |
 /// | 제출 완료 | [isSubmitted] | 그리드·타이머 없이 대기 문구만 |
+/// | 투표권 없음 | [voteBanned] | 그리드 없이 안내 문구만(마담에게 유혹당함) |
 ///
 /// 밤 지목(P2~P4)과 **좌표가 완전히 같습니다.** 다른 점은 배경이 밝아 글자가
 /// 검은색이고, 대상을 고르면 나머지가 흐려지는 것뿐입니다. 그래서 그리드는
@@ -28,6 +29,7 @@ class MafiaVoteView extends StatefulWidget {
     this.selectedUid,
     this.remainingSeconds,
     this.isSubmitted = false,
+    this.voteBanned = false,
     this.onSelect,
     this.onConfirm,
   });
@@ -45,6 +47,12 @@ class MafiaVoteView extends StatefulWidget {
 
   /// 표를 서버에 보냈는지입니다. true면 대기 화면이 됩니다.
   final bool isSubmitted;
+
+  /// 이번 낮에 투표할 수 없는지입니다(마담에게 유혹당함).
+  ///
+  /// 고를 수 없는 그리드를 보여 주면 막힌 화면이 되므로, 이유를 적은 안내
+  /// 문구만 그립니다. 이 사실은 본인만 알 수 있어(private) 신분이 새지 않습니다.
+  final bool voteBanned;
 
   final ValueChanged<String>? onSelect;
   final VoidCallback? onConfirm;
@@ -137,6 +145,8 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         final scale = MafiaPhoneDesign.scaleOf(size);
         // 연출 중에는 서버 상태와 무관하게 연출 화면을 보여 줍니다.
         final showsWaiting = !_isSubmitting && widget.isSubmitted;
+        final showsBanned =
+            !_isSubmitting && !showsWaiting && widget.voteBanned;
 
         // 제출 연출이 매 프레임 다시 그려지도록 컨트롤러를 구독합니다.
         return AnimatedBuilder(
@@ -145,7 +155,9 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
             fit: StackFit.expand,
             children: [
               const Positioned.fill(child: MafiaPhoneBackground.day()),
-              if (showsWaiting)
+              if (showsBanned)
+                _buildBanned(size, scale)
+              else if (showsWaiting)
                 _buildWaiting(size, scale)
               else if (_isSubmitting)
                 ..._buildSubmitAnimation(size, scale)
@@ -291,6 +303,33 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
 
   /// 표를 내고 다른 사람을 기다리는 화면입니다.
   ///
+  /// 투표권을 잃은 사람에게 이유를 알려 줍니다(마담에게 유혹당함).
+  ///
+  /// 대기 문구와 같은 자리를 씁니다. 다른 사람 화면과 겉모습이 같아야 이 사람이
+  /// 무엇을 당했는지 옆에서 보고 알 수 없습니다.
+  Widget _buildBanned(Size size, double scale) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: MafiaPhoneDesign.top(size, MafiaVoteView._waitingTop),
+      child: IgnorePointer(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '이번 낮에는\n투표할 수 없습니다',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 그리드·타이머·버튼을 모두 지웁니다. 표를 낸 뒤에는 바꿀 수 없다는 것을
   /// 화면으로 알려 주는 편이 분명합니다.
   Widget _buildWaiting(Size size, double scale) {

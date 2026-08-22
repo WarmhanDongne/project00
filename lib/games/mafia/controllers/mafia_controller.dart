@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/diagnostics/crash_reporting.dart';
@@ -41,10 +42,7 @@ class MafiaController extends Notifier<MafiaGameState> {
     final initialState = MafiaGameState.initial();
     _publicSubscription = service.query
         .watchPublicGame(roomCode)
-        .listen(
-          _handlePublic,
-          onError: (Object error) => _setError('게임 연결이 불안정합니다: $error'),
-        );
+        .listen(_handlePublic, onError: _handlePublicError);
     if (watchPrivate) {
       _privateSubscription = service.query
           .watchPrivatePlayer(roomCode: roomCode, uid: uid)
@@ -95,6 +93,10 @@ class MafiaController extends Notifier<MafiaGameState> {
   List<MafiaPlayer> get alivePlayers =>
       orderedPlayers.where((player) => player.isAlive).toList(growable: false);
 
+  /// 사망한 사람입니다. 영매·도둑의 밤 대상 명단이 이 목록을 씁니다.
+  List<MafiaPlayer> get deadPlayers =>
+      orderedPlayers.where((player) => !player.isAlive).toList(growable: false);
+
   MafiaPlayer? get me => players[uid];
   bool get isAlive => me?.isAlive ?? true;
 
@@ -116,6 +118,9 @@ class MafiaController extends Notifier<MafiaGameState> {
   // **누가** 했는지는 서버가 보내지 않습니다. 보이면 특수직이 드러납니다.
   int get nightSubmittedCount => state.nightSubmittedCount;
   int get nightActorCount => state.nightActorCount;
+
+  /// 방금 제출된 밤 행동의 소리 신호입니다(태블릿이 효과음을 냅니다).
+  MafiaNightActionCue? get nightActionCue => state.nightActionCue;
   int get voteSubmittedCount => state.voteSubmittedCount;
 
   /// 투표를 마친 사람들입니다. 태블릿 투표지 연출이 씁니다(어디에 냈는지는
@@ -134,22 +139,42 @@ class MafiaController extends Notifier<MafiaGameState> {
 
   /// 밤 화면에서 고를 수 있는 대상입니다.
   ///
-  /// 역할 이름으로 분기하지 않습니다. 행동 종류와 진영만 보고 걸러 서버 검증과
-  /// 같은 규칙을 씁니다.
+  /// 역할 이름으로 분기하지 않습니다. 대상 범위·행동 종류·동료 목록만 보고
+  /// 걸러 서버 검증([assertValidNightTarget])과 같은 규칙을 씁니다.
+  ///
+  /// 영매·도둑은 **사망자**를 고릅니다. 그래서 명단의 출처부터 갈립니다.
   List<MafiaPlayer> get nightTargets {
     final role = myRole;
     if (role == null || !role.actsAtNight) return const <MafiaPlayer>[];
+    if (role.targetsDead) return deadPlayers;
+
     final isProtect = role.nightAction == MafiaNightAction.protect;
     final isEliminate = role.nightAction == MafiaNightAction.eliminate;
     return alivePlayers
         .where((player) {
           // 보호는 자기 자신도 고를 수 있습니다.
           if (player.uid == uid) return isProtect;
-          // 같은 편은 제거 대상이 될 수 없습니다.
+          // 동료를 **아는** 역할만 같은 편을 목록에서 뺍니다. 모르는 역할
+          // (짐승인간·연쇄살인마)은 allyUids가 비어 있어 그대로 보입니다.
           if (isEliminate && state.allyUids.contains(player.uid)) return false;
           return true;
         })
         .toList(growable: false);
+  }
+
+  /// 남은 능력 사용 횟수입니다. 제한이 없으면 null입니다(자경단원 1회).
+  int? get abilityUsesLeft => state.abilityUsesLeft;
+
+  /// 능력을 다 써서 이번 밤에 아무것도 할 수 없는지입니다.
+  bool get abilityExhausted => (state.abilityUsesLeft ?? 1) <= 0;
+
+  /// 내 신분이 지난밤에 바뀌었는지입니다(도둑의 절도, 교주의 전향).
+  bool get roleChangedThisRound => state.roleChangedRound == round;
+
+  /// 처형자에게 지정된 목표입니다. 처형자가 아니면 null입니다.
+  MafiaPlayer? get executionerTarget {
+    final targetUid = state.executionerTargetUid;
+    return targetUid == null ? null : players[targetUid];
   }
 
   /// 동료가 고른 대상입니다. 마피아끼리 서로의 선택을 봅니다.
@@ -167,6 +192,9 @@ class MafiaController extends Notifier<MafiaGameState> {
   String? get voteTargetUid => state.voteTargetUid;
 
   bool get hasVoted => voteTargetUid != null;
+
+  /// 이번 낮에 투표할 수 없는지입니다(마담에게 유혹당함).
+  bool get isVoteBanned => state.voteBanned;
 
   /// 투표 대상입니다. 자기 자신은 뺍니다(시안 기준).
   List<MafiaPlayer> get voteTargets =>
@@ -204,13 +232,48 @@ class MafiaController extends Notifier<MafiaGameState> {
       entry.key: MafiaRoles.find(entry.value),
   };
 
-  /// 승리 진영입니다. 중립 개별 승리는 서버가 별도로 판정합니다.
+  /// 승리 진영입니다. 중립 개별 승리도 [MafiaFaction.neutral]로 옵니다.
   MafiaFaction? get winnerFaction => switch (state.winner) {
     'citizen' => MafiaFaction.citizen,
     'mafia' => MafiaFaction.mafia,
     'neutral' => MafiaFaction.neutral,
     _ => null,
   };
+
+  /// 이긴 사람들의 역할 id입니다. 결과 포스터를 고르는 데 씁니다.
+  ///
+  /// 게임이 끝나면 전원 신분이 공개되므로 승자의 신분도 읽을 수 있습니다.
+  Set<String> get winnerRoleIds => {
+    for (final winnerUid in state.winnerUids)
+      if (state.revealedRoles[winnerUid] != null)
+        state.revealedRoles[winnerUid]!,
+  };
+
+  /// 결과 화면 문구입니다. 예: `시민 승리` · `광대 승리`.
+  ///
+  /// 중립은 진영 대결이 아니라 **개별 승리**라 "중립 승리"로는 무슨 일이
+  /// 일어났는지 알 수 없습니다. 승자의 신분을 읽어 역할 이름으로 알려 줍니다.
+  ///
+  /// 포스터가 있는 승리는 그림에 문구가 들어 있어 이 값을 쓰지 않습니다.
+  /// 그림이 없는 승리(생존자 등)에서만 화면에 나옵니다.
+  String get winnerLabel {
+    final faction = winnerFaction;
+    if (faction == null) return '게임 종료';
+    if (faction != MafiaFaction.neutral) return '${faction.displayName} 승리';
+
+    final roles = winnerRoleIds
+        .map(MafiaRoles.find)
+        .whereType<MafiaRole>()
+        .toList(growable: false);
+    if (roles.isEmpty) return '중립 승리';
+    // 교주와 광신도는 한 세력이라 이름을 나열하지 않고 `교단`으로 묶습니다.
+    if (roles.every(
+      (role) => role.winCondition == MafiaWinCondition.factionDominance,
+    )) {
+      return '교단 승리';
+    }
+    return '${roles.map((role) => role.displayName).toSet().join('·')} 승리';
+  }
 
   //=======================조작 가능 여부==============================
   /// 지금 서버에 명령을 보낼 수 있는 상태인지입니다.
@@ -221,8 +284,12 @@ class MafiaController extends Notifier<MafiaGameState> {
       !commandInFlight;
 
   bool get canSubmitNightAction =>
-      canAct && isNight && actsAtNight && !hasSubmittedNight;
-  bool get canVote => canAct && isVoting && !hasVoted;
+      canAct &&
+      isNight &&
+      actsAtNight &&
+      !hasSubmittedNight &&
+      !abilityExhausted;
+  bool get canVote => canAct && isVoting && !hasVoted && !isVoteBanned;
   bool get canEndDiscussion => canAct && isDay && !hasVotedToSkipDiscussion;
 
   String get actionErrorMessage =>
@@ -244,6 +311,36 @@ class MafiaController extends Notifier<MafiaGameState> {
     _applyPublicValue(event.snapshot.value);
   }
 
+  /// 공개 상태 구독이 끊긴 경우입니다.
+  ///
+  /// **읽기가 거부되면(`permission_denied`) 방이 사라진 것으로 봅니다.** 방이
+  /// 지워지거나 이 기기가 방에서 빠지면 규칙이 읽기를 막습니다. 예전에는 이때
+  /// '연결이 불안정합니다'만 띄우고 **마지막 상태에 그대로 머물렀습니다** —
+  /// 태블릿이 밤 화면에 굳은 채 마감 처리를 끝없이 다시 시도하며 오류만
+  /// 쌓였습니다(2026-08 시뮬레이터에서 확인).
+  ///
+  /// 로그아웃·토큰 갱신 직후에도 잠깐 거부될 수 있어, 곧바로 끝내지 않고
+  /// [_confirmMissingPublicGame]으로 한 번 더 읽어 확인합니다.
+  void _handlePublicError(Object error) {
+    if (!_isPermissionDenied(error)) {
+      _setError('게임 연결이 불안정합니다: $error');
+      return;
+    }
+    _setError('게임을 읽을 수 없습니다. 방이 사라졌는지 확인합니다…');
+    _confirmMissingPublicGame();
+  }
+
+  /// 읽기 권한이 거부된 오류인지입니다.
+  ///
+  /// RTDB는 규칙에 막히면 `permission-denied`(Dart 코드) 또는
+  /// `permission_denied`(원본 메시지)로 알려 줍니다. 둘 다 봅니다.
+  static bool _isPermissionDenied(Object error) {
+    final code = error is FirebaseException ? error.code : '';
+    if (code.replaceAll('_', '-') == 'permission-denied') return true;
+    return error.toString().contains('permission_denied') ||
+        error.toString().contains('permission-denied');
+  }
+
   void _confirmMissingPublicGame() {
     if (_missingPublicTimer != null) return;
     _missingPublicTimer = Timer(const Duration(milliseconds: 1500), () async {
@@ -256,7 +353,13 @@ class MafiaController extends Notifier<MafiaGameState> {
           return;
         }
         _finishForRemovedGame();
-      } catch (_) {
+      } catch (error) {
+        if (!ref.mounted) return;
+        // 다시 읽어도 거부되면 방이 없는 것이 확실합니다.
+        if (_isPermissionDenied(error)) {
+          _finishForRemovedGame();
+          return;
+        }
         // 네트워크가 아직 복구 중이면 마지막 정상 상태를 유지합니다.
       }
     });
@@ -324,6 +427,7 @@ class MafiaController extends Notifier<MafiaGameState> {
       roleRevealedUids: mafiaStringList(map['roleRevealedUids']),
       nightSubmittedCount: (map['nightSubmittedCount'] as num?)?.toInt() ?? 0,
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
+      nightActionCue: MafiaNightActionCue.fromMap(map['nightActionCue']),
       voteSubmittedCount: (map['voteSubmittedCount'] as num?)?.toInt() ?? 0,
       voteSubmittedUids: mafiaStringList(map['voteSubmittedUids']),
       voteEligibleCount: (map['voteEligibleCount'] as num?)?.toInt() ?? 0,
@@ -392,6 +496,10 @@ class MafiaController extends Notifier<MafiaGameState> {
       voteTargetUid: map['voteTargetUid']?.toString(),
       discussionSkipVoted: map['discussionSkipVoted'] == true,
       spectatorRoles: spectatorRoles,
+      executionerTargetUid: map['executionerTargetUid']?.toString(),
+      abilityUsesLeft: (map['abilityUsesLeft'] as num?)?.toInt(),
+      voteBanned: map['voteBanned'] == true,
+      roleChangedRound: (map['roleChangedRound'] as num?)?.toInt(),
     );
   }
 

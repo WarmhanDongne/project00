@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
@@ -9,6 +10,7 @@ import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 ///
 /// 확정: **태블릿과 같은 발표 문구**를 보여 줍니다.
 /// `○○님은 밤을 넘기지 못했습니다.` / `어제 밤, 아무도 죽지 않았습니다.`
+/// 문구는 두 박자로 나뉘어 내려찍힙니다([MafiaPhoneAnnouncement]).
 ///
 /// ⚠️ 전용 시안이 없어 배치는 임시입니다(낮 배경 + 가운데 문구). 시안이 오면
 /// 좌표만 맞추면 됩니다.
@@ -34,46 +36,21 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
         : current.deadUids
               .map((uid) => players[uid]?.nickname ?? '플레이어')
               .toList(growable: false);
-    final message = deadNames.isEmpty
-        ? '어제 밤, 아무도 죽지 않았습니다.'
-        : '${deadNames.join(' · ')}님은 밤을 넘기지 못했습니다.';
+    // 확정(2026-08): 태블릿과 같은 말투로 내려찍고, 두 박자로 나눠 띄웁니다.
+    final beats = deadNames.isEmpty
+        ? MafiaCopy.noDeathBeats
+        : MafiaCopy.deathBeats(deadNames.join(' · '));
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = MafiaPhoneDesign.resolve(constraints);
-        final scale = MafiaPhoneDesign.scaleOf(size);
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            const Positioned.fill(child: MafiaPhoneBackground.day()),
-            Positioned(
-              left: MafiaPhoneDesign.left(size, 27),
-              right: MafiaPhoneDesign.left(size, 27),
-              top: MafiaPhoneDesign.top(
-                size,
-                MafiaPhoneStatusText.announcementTop,
-              ),
-              child: IgnorePointer(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    message,
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 24 * scale,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            MafiaStoredRoleCard(role: role),
-          ],
-        );
-      },
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned.fill(child: MafiaPhoneBackground.day()),
+        MafiaPhoneAnnouncement(
+          beats: beats,
+          top: MafiaPhoneStatusText.announcementTop,
+        ),
+        MafiaStoredRoleCard(role: role),
+      ],
     );
   }
 }

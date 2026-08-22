@@ -33,6 +33,12 @@ class FinalCallController extends Notifier<FinalCallGameState> {
   @override
   FinalCallGameState build() {
     final initialState = FinalCallGameState.initial();
+    // 태블릿(진행 기기)이 첫 카드 뽑기·CALL 함수의 콜드스타트를 미리 끝냅니다.
+    // 휴대폰은 명령을 보내는 시점이 제각각이라 준비하지 않습니다(LP와 같은 규칙).
+    if (!watchPrivateHand) {
+      unawaited(_warmUpGameplayCommands());
+    }
+
     _publicSubscription = service.query
         .watchPublicGame(roomCode)
         .listen(
@@ -53,6 +59,15 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       unawaited(_privateSubscription?.cancel());
     });
     return initialState;
+  }
+
+  /// 첫 조작 함수를 미리 깨웁니다. 실패는 무시합니다(실제 명령이 재시도합니다).
+  Future<void> _warmUpGameplayCommands() async {
+    try {
+      await service.command.warmUpGameplayCommands();
+    } catch (_) {
+      // 예열은 보조 기능이라 실패해도 게임 진행을 막지 않습니다.
+    }
   }
 
   //=======================화면 호환용 상태 접근자==============================

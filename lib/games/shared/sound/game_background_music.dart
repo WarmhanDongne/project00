@@ -68,6 +68,21 @@ class GameBackgroundMusic {
     _run(_sound?.stopBgm(), '배경음악을 멈추지 못했습니다');
   }
 
+  /// 배경음악을 **서서히 줄이며** 멈춥니다.
+  ///
+  /// 장면이 바뀌는 순간에 씁니다(마피아는 아침이 될 때 밤 곡을 이렇게
+  /// 내립니다). 곧바로 [start]를 부르면 페이드는 버려지고 새 곡이 제 볼륨으로
+  /// 시작합니다.
+  ///
+  /// ⚠️ 화면의 `dispose`에서는 [stop]을 쓰세요. 화면이 사라진 뒤에도 소리가
+  /// 몇 초 더 들리면 안 됩니다.
+  void fadeOut({Duration duration = const Duration(milliseconds: 1200)}) {
+    if (!_isPlaying) return;
+
+    _isPlaying = false;
+    _run(_sound?.fadeOutBgm(duration: duration), '배경음악을 서서히 줄이지 못했습니다');
+  }
+
   void _run(Future<void>? operation, String message) {
     if (operation == null) return;
     unawaited(

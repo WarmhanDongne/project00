@@ -102,6 +102,22 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
     _float = AnimationController(vsync: this, duration: _floatCycle)..repeat();
     _dots = AnimationController(vsync: this, duration: _dotsCycle)..repeat();
     // 오래 기다렸는데도 접속되지 않으면 나갈 길을 내줍니다.
+    _startHomeTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant GameReconnectScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 같은 자리에서 문구와 대기 시간만 바꿔 다시 쓰는 경우(예: 패치 화면의
+    // 단계 전환)가 있습니다. 이전 시계를 그대로 두면 새 시간이 무시됩니다.
+    if (oldWidget.homeButtonDelay != widget.homeButtonDelay) {
+      _showsHomeButton = false;
+      _startHomeTimer();
+    }
+  }
+
+  void _startHomeTimer() {
+    _homeTimer?.cancel();
     _homeTimer = Timer(widget.homeButtonDelay, () {
       if (mounted) setState(() => _showsHomeButton = true);
     });
@@ -170,11 +186,18 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
                         ),
                         SizedBox(height: unit * (isWide ? 0.05 : 0.06)),
                         // 기다림 표시가 있던 자리에 홈으로 버튼이 들어옵니다.
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 320),
-                          child: _showsHomeButton
-                              ? _buildHomeButton(unit: unit)
-                              : _buildDots(unit: unit),
+                        // 버튼 높이만큼 자리를 미리 비워 두어, 점이 버튼으로
+                        // 바뀔 때 위쪽 그림과 문구가 밀려 올라가지 않습니다.
+                        SizedBox(
+                          height: _homeSlotHeight(unit),
+                          child: Center(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 320),
+                              child: _showsHomeButton
+                                  ? _buildHomeButton(unit: unit)
+                                  : _buildDots(unit: unit),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -237,6 +260,12 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
     );
   }
 
+  /// 기다림 표시와 홈으로 버튼이 함께 쓰는 자리의 높이입니다.
+  ///
+  /// 둘 중 큰 쪽(버튼)에 맞춰 두어야 바뀌는 순간에도 화면이 움직이지
+  /// 않습니다. 태블릿에서는 글자 배율이 작아 버튼도 조금 낮습니다.
+  double _homeSlotHeight(double unit) => unit * (unit > 700 ? 0.092 : 0.105);
+
   /// 시간이 지나 나타나는 홈으로 버튼입니다.
   ///
   /// 기다림 표시(점)와 같은 자리·같은 보라색을 씁니다. 기다리라는 표시가
@@ -248,10 +277,9 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
       child: GestureDetector(
         onTap: widget.onHome,
         child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: unit * 0.075,
-            vertical: unit * 0.028,
-          ),
+          height: _homeSlotHeight(unit),
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(horizontal: unit * 0.075),
           decoration: BoxDecoration(
             color: GameReconnectScreen.accent,
             borderRadius: BorderRadius.circular(unit * 0.06),

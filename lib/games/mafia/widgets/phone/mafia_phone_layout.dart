@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/ejection_text.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
 import 'package:project00/gen/assets.gen.dart';
@@ -92,6 +93,75 @@ abstract final class MafiaPhoneStatusText {
   ///
   /// 한 줄이라 띠 가운데에 그대로 맞춥니다.
   static const double announcementTop = 400;
+}
+
+//=======================안내 문구==============================
+/// 휴대폰의 **안내 문구**입니다.
+///
+/// 확정(2026-08): 어몽어스 추방 발표처럼 내려찍고, 긴 문장은 두 박자로 나눠
+/// 띄웁니다([MafiaEjectionText]). 태블릿의 [MafiaTabletAnnouncement]와 같은
+/// 말투라 두 화면이 같은 순간에 같은 느낌으로 박힙니다.
+class MafiaPhoneAnnouncement extends StatelessWidget {
+  const MafiaPhoneAnnouncement({
+    super.key,
+    required this.beats,
+    required this.top,
+    this.fontSize = MafiaPhoneStatusText.promptFontSize,
+    this.color = Colors.black,
+    this.fontWeight = FontWeight.w700,
+    this.sideMargin = defaultSideMargin,
+    this.beatHold = MafiaEjectionText.defaultBeatHold,
+  });
+
+  /// 차례로 찍을 문구들입니다. 하나면 한 번만 찍습니다.
+  final List<String> beats;
+
+  /// 시안 기준 top입니다.
+  final double top;
+  final double fontSize;
+  final Color color;
+  final FontWeight fontWeight;
+
+  /// 좌우 여백입니다. 닉네임이 길어도 글자가 화면 끝에 닿지 않습니다.
+  final double sideMargin;
+
+  /// 마지막이 아닌 박자가 머무는 시간입니다.
+  final Duration beatHold;
+
+  /// 시안이 문구에 남겨 둔 좌우 여백입니다.
+  static const double defaultSideMargin = 27;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = MafiaPhoneDesign.resolve(constraints);
+        final scale = MafiaPhoneDesign.scaleOf(size);
+        final margin = MafiaPhoneDesign.left(size, sideMargin);
+
+        return Stack(
+          children: [
+            Positioned(
+              left: margin,
+              right: margin,
+              top: MafiaPhoneDesign.top(size, top),
+              child: IgnorePointer(
+                child: MafiaEjectionText(
+                  beats: beats,
+                  beatHold: beatHold,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: fontSize * scale,
+                    fontWeight: fontWeight,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 //=======================격자 규격==============================

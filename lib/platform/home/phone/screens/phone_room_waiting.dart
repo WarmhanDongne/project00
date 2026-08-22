@@ -237,15 +237,13 @@ class _PhoneRoomHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 112,
-            child: PlatformButton(
-              label: '그룹 나가기',
-              height: 44,
-              expand: false,
-              style: PlatformButtonStyle.secondary,
-              onPressed: onPressed,
-            ),
+          // 고정 폭을 두면 글자 배율이 큰 기기에서 문구가 잘립니다.
+          PlatformButton(
+            label: '그룹 나가기',
+            height: 44,
+            expand: false,
+            style: PlatformButtonStyle.secondary,
+            onPressed: onPressed,
           ),
           const Spacer(),
           const PhoneProfile(),
@@ -270,15 +268,9 @@ class _GroupWaitingContent extends StatelessWidget {
         const SizedBox(height: 20),
         PhoneRoomParticipantList(players: players),
         const SizedBox(height: 24),
-        const Row(
-          children: [
-            Text(
-              '그룹이 보유 중인 게임',
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
-            ),
-            SizedBox(width: 10),
-            _ReadOnlyBadge(),
-          ],
+        const Text(
+          '그룹이 보유 중인 게임',
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 12),
         _GroupGamesContent(provider: provider),
@@ -290,30 +282,6 @@ class _GroupWaitingContent extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _ReadOnlyBadge extends StatelessWidget {
-  const _ReadOnlyBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.surfaceMuted,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        '보기 전용',
-        style: TextStyle(
-          color: colors.textMuted,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }
@@ -630,12 +598,15 @@ class _StartingSoonBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            '곧 시작합니다',
-            style: TextStyle(
-              color: colors.primary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
+          Flexible(
+            child: Text(
+              '곧 시작합니다',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

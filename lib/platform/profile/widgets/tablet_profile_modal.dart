@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
+import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -23,6 +24,7 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
   Uint8List? _previewImage;
   bool _isSavingNickname = false;
   bool _isSavingImage = false;
+  bool _isDeletingAccount = false;
   bool _didChange = false;
 
   User? get _user => FirebaseAuth.instance.currentUser;
@@ -102,6 +104,50 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
     Navigator.of(context).pop(true);
+  }
+
+  //=======================회원탈퇴==============================
+  Future<void> _deleteAccount() async {
+    if (_isDeletingAccount) return;
+    if (await _confirmAccountDeletion() != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await _authService.deleteAccount();
+      // 계정이 사라지면 저장된 방 세션으로 자동 복귀할 수 없습니다.
+      await PlayerRoomSessionStore.instance.clear();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      setState(() => _isDeletingAccount = false);
+      _showMessage(error.message);
+    }
+  }
+
+  Future<bool?> _confirmAccountDeletion() {
+    final colors = context.platformColors;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('회원탈퇴'),
+        content: const Text(
+          '계정과 프로필, 보유 게임 정보가 모두 삭제되며 되돌릴 수 없습니다.\n'
+          '정말 탈퇴하시겠습니까?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: colors.danger),
+            child: const Text('탈퇴하기'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _close() => Navigator.of(context).pop(_didChange);
@@ -198,7 +244,13 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                 PlatformButton(
                   label: '로그아웃',
                   style: PlatformButtonStyle.dangerSoft,
-                  onPressed: _logout,
+                  onPressed: _isDeletingAccount ? null : _logout,
+                ),
+                const SizedBox(height: 10),
+                PlatformButton(
+                  label: _isDeletingAccount ? '탈퇴 처리 중' : '회원탈퇴',
+                  style: PlatformButtonStyle.neutral,
+                  onPressed: _isDeletingAccount ? null : _deleteAccount,
                 ),
               ],
             ),

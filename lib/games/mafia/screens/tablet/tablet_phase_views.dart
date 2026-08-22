@@ -172,9 +172,10 @@ class MafiaTabletMorningView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 확정(2026-08): 긴 문장은 두 박자로 나눠 내려찍습니다.
         if (deadNames.isEmpty)
-          const MafiaTabletHeadline(
-            text: '어제 밤, 아무도 죽지 않았습니다.',
+          const MafiaTabletAnnouncement(
+            beats: MafiaCopy.noDeathBeats,
             top: _noDeathTextTop,
             fontSize: 48,
             fontWeight: FontWeight.w400,
@@ -187,8 +188,8 @@ class MafiaTabletMorningView extends StatelessWidget {
               filterQuality: FilterQuality.high,
             ),
           ),
-          MafiaTabletHeadline(
-            text: '${deadNames.join(' · ')}님은 밤을 넘기지 못했습니다.',
+          MafiaTabletAnnouncement(
+            beats: MafiaCopy.deathBeats(deadNames.join(' · ')),
             top: _deathTextTop,
             fontSize: 48,
             fontWeight: FontWeight.w400,

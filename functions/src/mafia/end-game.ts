@@ -37,6 +37,7 @@ export const game_mafia_end_game = onCall<EndData>(
       finishMafiaGame(game, null, "manual", now);
       game.public.nightSubmittedCount = 0;
       game.public.nightActorCount = 0;
+      delete game.public.nightActionCue;
       game.public.voteSubmittedCount = 0;
       game.public.voteEligibleCount = 0;
       delete game.public.morningResult;

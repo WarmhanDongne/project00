@@ -38,7 +38,7 @@ class TemplateExampleGame extends TemplateGame {
       const Center(child: Text('게임 구성 요소 미리보기'));
 
   @override
-  Future<void> startGame(String roomCode) =>
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>
       TemplateService().command.startGame(roomCode: roomCode);
 
   @override

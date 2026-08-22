@@ -37,6 +37,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.none,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleCitizen.game,
+    icon: Assets.games.mafia.images.roles.roleIconCitizen.game,
     isImplemented: true,
   );
 
@@ -51,6 +52,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.investigate,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.rolePolice.game,
+    icon: Assets.games.mafia.images.roles.roleIconPolice.game,
     isImplemented: true,
   );
 
@@ -65,6 +67,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.protect,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleDoctor.game,
+    icon: Assets.games.mafia.images.roles.roleIconDoctor.game,
     isImplemented: true,
   );
 
@@ -85,6 +88,92 @@ abstract final class MafiaRoles {
     isImplemented: true,
   );
 
+  /// 밤 공격을 한 번 스스로 막아냅니다(마피아42 군인).
+  ///
+  /// 의사의 보호와 다릅니다. 보호는 남이 걸어 주지만 군인은 공격받는 순간
+  /// **자동으로** 방어를 소모합니다. 두 번째 공격에는 죽습니다.
+  static final soldier = MafiaRole(
+    id: 'soldier',
+    displayName: '군인',
+    faction: MafiaFaction.citizen,
+    tier: MafiaRoleTier.extended,
+    abilityTiming: MafiaAbilityTiming.passive,
+    accentColor: _citizenColor,
+    description:
+        '밤에 공격을 받아도\n'
+        '한 번은 스스로 막아냅니다.\n'
+        '두 번째 공격에는 쓰러집니다.',
+    defenseCharges: 1,
+    card: Assets.games.mafia.images.cards.roleSoldier.game,
+    icon: Assets.games.mafia.images.roles.roleIconSoldier.game,
+    isImplemented: true,
+  );
+
+  /// 낮 투표에서 2표를 가집니다(마피아42 정치인).
+  ///
+  /// ⚠️ 개표 결과(`voteResult.tally`)는 가중치가 반영된 수라서, 2표가 몰린
+  /// 자리를 보면 정치인이 어디에 찍었는지 유추할 수 있습니다. 규칙상 감수하는
+  /// 노출입니다.
+  static final politician = MafiaRole(
+    id: 'politician',
+    displayName: '정치인',
+    faction: MafiaFaction.citizen,
+    tier: MafiaRoleTier.extended,
+    abilityTiming: MafiaAbilityTiming.day,
+    accentColor: _citizenColor,
+    description:
+        '낮 투표에서 2표를 행사합니다.\n'
+        '밤에는 아무 일도 하지 않습니다.',
+    voteWeight: 2,
+    card: Assets.games.mafia.images.cards.rolePolitician.game,
+    icon: Assets.games.mafia.images.roles.roleIconPolitician.game,
+    isImplemented: true,
+  );
+
+  /// 밤에 **사망자** 한 명의 직업을 확인합니다(마피아42 영매).
+  ///
+  /// 경찰과 다릅니다. 경찰은 살아 있는 사람의 진영만 보고, 영매는 죽은 사람의
+  /// **직업 이름**을 봅니다. 그래서 대상 범위가 [MafiaNightTargetScope.dead]입니다.
+  static final medium = MafiaRole(
+    id: 'medium',
+    nightPromptVerb: '교신',
+    displayName: '영매',
+    faction: MafiaFaction.citizen,
+    tier: MafiaRoleTier.extended,
+    abilityTiming: MafiaAbilityTiming.night,
+    nightAction: MafiaNightAction.investigateRole,
+    nightPhase: MafiaNightPhase.investigate,
+    nightTargetScope: MafiaNightTargetScope.dead,
+    accentColor: _citizenColor,
+    description:
+        '밤마다 죽은 사람 한 명과 교신해\n'
+        '그 사람의 직업을 알아냅니다.',
+    card: Assets.games.mafia.images.cards.roleMedium.game,
+    icon: Assets.games.mafia.images.roles.roleIconMedium.game,
+    isImplemented: true,
+  );
+
+  /// 밤에 지목한 사람의 능력을 막습니다(마피아42 건달).
+  ///
+  /// 역할 차단자([roleblocker])와 같은 동작입니다. 시안 이름만 다릅니다.
+  static final gangster = MafiaRole(
+    id: 'gangster',
+    nightPromptVerb: '협박',
+    displayName: '건달',
+    faction: MafiaFaction.citizen,
+    tier: MafiaRoleTier.advanced,
+    abilityTiming: MafiaAbilityTiming.night,
+    nightAction: MafiaNightAction.roleblock,
+    nightPhase: MafiaNightPhase.roleblock,
+    accentColor: _citizenColor,
+    description:
+        '밤마다 한 명을 협박해\n'
+        '그 사람의 능력을 막습니다.',
+    card: Assets.games.mafia.images.cards.roleGangster.game,
+    icon: Assets.games.mafia.images.roles.roleIconGangster.game,
+    isImplemented: true,
+  );
+
   static final vigilante = MafiaRole(
     id: 'vigilante',
     nightPromptVerb: '제거',
@@ -96,8 +185,11 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.independentAttack,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleVigilante.game,
-    // 게임당 사용 횟수 제한은 규칙마다 다릅니다. 우선 1회로 두고 확정 시 조정.
+    // 마피아42 기준: 게임당 1회. 시민팀을 쏘면 오발로 자신도 함께 죽습니다.
     maxUses: 1,
+    selfDestructsOnAllyKill: true,
+    icon: Assets.games.mafia.images.roles.roleIconVigilante.game,
+    isImplemented: true,
   );
 
   static final hunter = MafiaRole(
@@ -157,9 +249,9 @@ abstract final class MafiaRoles {
   static final detective = MafiaRole(
     id: 'detective',
     nightPromptVerb: '추적',
-    // 확정 명세는 '추적자'였지만 시안 카드가 '탐정'이라 카드를 따릅니다.
-    // 능력(대상이 누구에게 능력을 썼는지 조사)은 같은 역할입니다.
-    displayName: '탐정',
+    // 시안 카드는 '탐정', 확정 명세는 '사립탐정'입니다. 능력(대상이 누구를
+    // 찾아갔는지 조사)은 같은 역할이라 이름만 명세를 따릅니다.
+    displayName: '사립탐정',
     faction: MafiaFaction.citizen,
     tier: MafiaRoleTier.advanced,
     abilityTiming: MafiaAbilityTiming.night,
@@ -167,6 +259,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.investigate,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleDetective.game,
+    icon: Assets.games.mafia.images.roles.roleIconDetective.game,
     isImplemented: true,
   );
 
@@ -221,6 +314,7 @@ abstract final class MafiaRoles {
     nightPhase: MafiaNightPhase.statusEffect,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleReporter.game,
+    icon: Assets.games.mafia.images.roles.roleIconReporter.game,
     isImplemented: true,
   );
 
@@ -244,6 +338,7 @@ abstract final class MafiaRoles {
         '끝까지 살아남아야 합니다.',
     card: Assets.games.mafia.images.cards.roleMafia.game,
     knowsAllies: true,
+    icon: Assets.games.mafia.images.roles.roleIconMafia.game,
     isImplemented: true,
   );
 
@@ -263,6 +358,99 @@ abstract final class MafiaRoles {
     knowsAllies: true,
     // 마피아와 같은 제거 + 조사에 시민으로 보이기. 둘 다 데이터로 처리되므로
     // 서버 엔진을 고치지 않고 동작합니다.
+    isImplemented: true,
+  );
+
+  /// 마피아를 알고 있지만 조사에는 시민으로 보입니다(마피아42 스파이).
+  ///
+  /// 밤에 하는 일이 없어 **밤 행동 인원수에도 잡히지 않습니다.** 그래서 조사만
+  /// 피하면 끝까지 시민처럼 보입니다.
+  static final spy = MafiaRole(
+    id: 'spy',
+    displayName: '스파이',
+    faction: MafiaFaction.mafia,
+    tier: MafiaRoleTier.extended,
+    abilityTiming: MafiaAbilityTiming.passive,
+    investigationAppearance: MafiaInvestigationAppearance.asCitizen,
+    accentColor: _mafiaColor,
+    description:
+        '마피아가 누구인지 알고 있습니다.\n'
+        '조사를 받아도 시민으로 보입니다.\n'
+        '밤에는 아무 일도 하지 않습니다.',
+    knowsAllies: true,
+    card: Assets.games.mafia.images.cards.roleSpy.game,
+    icon: Assets.games.mafia.images.roles.roleIconSpy.game,
+    isImplemented: true,
+  );
+
+  /// 마피아팀이지만 **혼자** 공격합니다(마피아42 짐승인간).
+  ///
+  /// 마피아와 다릅니다. 마피아는 다수결로 한 명만 죽이지만 짐승인간은 자기
+  /// 대상을 따로 죽입니다(해결 단계가 [MafiaNightPhase.independentAttack]).
+  /// 동료를 모르고 동료도 그를 모릅니다([knowsAllies]가 false).
+  static final beast = MafiaRole(
+    id: 'beast',
+    nightPromptVerb: '사냥',
+    displayName: '짐승인간',
+    faction: MafiaFaction.mafia,
+    tier: MafiaRoleTier.advanced,
+    abilityTiming: MafiaAbilityTiming.night,
+    nightAction: MafiaNightAction.eliminate,
+    nightPhase: MafiaNightPhase.independentAttack,
+    accentColor: _mafiaColor,
+    description:
+        '밤마다 혼자 한 명을 사냥합니다.\n'
+        '마피아와 같은 편이지만\n'
+        '서로가 누구인지 모릅니다.',
+    card: Assets.games.mafia.images.cards.roleBeast.game,
+    icon: Assets.games.mafia.images.roles.roleIconBeast.game,
+    isImplemented: true,
+  );
+
+  /// 밤에 지목한 사람의 능력과 **다음 낮 투표권**까지 막습니다(마피아42 마담).
+  static final madam = MafiaRole(
+    id: 'madam',
+    nightPromptVerb: '유혹',
+    displayName: '마담',
+    faction: MafiaFaction.mafia,
+    tier: MafiaRoleTier.advanced,
+    abilityTiming: MafiaAbilityTiming.night,
+    nightAction: MafiaNightAction.roleblock,
+    nightPhase: MafiaNightPhase.roleblock,
+    accentColor: _mafiaColor,
+    description:
+        '밤마다 한 명을 유혹해\n'
+        '능력과 다음 낮의 투표권을\n'
+        '함께 막습니다.',
+    blocksTargetVote: true,
+    knowsAllies: true,
+    card: Assets.games.mafia.images.cards.roleMadam.game,
+    icon: Assets.games.mafia.images.roles.roleIconMadam.game,
+    isImplemented: true,
+  );
+
+  /// 밤에 **사망자**의 직업을 훔쳐 자신이 그 직업이 됩니다(마피아42 도둑).
+  ///
+  /// 훔친 직업의 **진영까지** 따라갑니다. 시민 직업을 훔치면 그 순간부터 시민팀
+  /// 승리 조건으로 판정합니다.
+  static final thief = MafiaRole(
+    id: 'thief',
+    nightPromptVerb: '절도',
+    displayName: '도둑',
+    faction: MafiaFaction.mafia,
+    tier: MafiaRoleTier.advanced,
+    abilityTiming: MafiaAbilityTiming.night,
+    nightAction: MafiaNightAction.steal,
+    nightPhase: MafiaNightPhase.statusEffect,
+    nightTargetScope: MafiaNightTargetScope.dead,
+    accentColor: _mafiaColor,
+    description:
+        '밤에 죽은 사람 한 명의 직업을\n'
+        '훔쳐 그 직업이 됩니다.\n'
+        '진영도 함께 바뀝니다.',
+    knowsAllies: true,
+    card: Assets.games.mafia.images.cards.roleThief.game,
+    icon: Assets.games.mafia.images.roles.roleIconThief.game,
     isImplemented: true,
   );
 
@@ -406,6 +594,11 @@ abstract final class MafiaRoles {
     winCondition: MafiaWinCondition.lastStanding,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleSerialKiller.game,
+    description:
+        '밤마다 혼자 한 명을 제거합니다.\n'
+        '마지막까지 남으면 혼자 승리합니다.',
+    icon: Assets.games.mafia.images.roles.roleIconSerialKiller.game,
+    isImplemented: true,
   );
 
   static final arsonist = MafiaRole(
@@ -432,6 +625,11 @@ abstract final class MafiaRoles {
     winCondition: MafiaWinCondition.lynchedSelf,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleJester.game,
+    description:
+        '낮 투표로 처형되면\n'
+        '그 자리에서 혼자 승리합니다.',
+    icon: Assets.games.mafia.images.roles.roleIconJester.game,
+    isImplemented: true,
   );
 
   /// 지정된 목표가 낮 투표로 처형되면 승리합니다.
@@ -444,6 +642,11 @@ abstract final class MafiaRoles {
     winCondition: MafiaWinCondition.lynchTarget,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleExecutioner.game,
+    description:
+        '지목된 목표가 낮 투표로 처형되면\n'
+        '그 자리에서 혼자 승리합니다.',
+    icon: Assets.games.mafia.images.roles.roleIconExecutioner.game,
+    isImplemented: true,
   );
 
   static final survivor = MafiaRole(
@@ -473,8 +676,21 @@ abstract final class MafiaRoles {
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleCultLeader.game,
+    description:
+        '밤마다 한 명을 광신도로 만듭니다.\n'
+        '살아남은 사람이 모두 교단이면\n'
+        '교단이 승리합니다.',
+    // 전향에 성공하면 대상은 광신도가 됩니다.
+    convertsTargetTo: 'cultist',
+    knowsAllies: true,
+    icon: Assets.games.mafia.images.roles.roleIconCultLeader.game,
+    isImplemented: true,
   );
 
+  /// 교주가 전향시킨 사람입니다. **배분표로는 나오지 않습니다.**
+  ///
+  /// 게임 중 [cultLeader]의 전향으로만 생깁니다. 그래서 인원별 구성표에는 절대
+  /// 넣지 않지만, 전향 결과를 화면이 그릴 수 있어야 하므로 구현 역할입니다.
   static final cultist = MafiaRole(
     id: 'cultist',
     displayName: '광신도',
@@ -484,6 +700,12 @@ abstract final class MafiaRoles {
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleCultist.game,
+    description:
+        '교주의 부름을 받았습니다.\n'
+        '살아남은 사람이 모두 교단이면\n'
+        '교단이 승리합니다.',
+    knowsAllies: true,
+    isImplemented: true,
   );
 
   static final piedPiper = MafiaRole(
@@ -519,11 +741,12 @@ abstract final class MafiaRoles {
   /// 정의된 모든 역할입니다. 새 역할을 추가하면 여기에도 등록합니다.
   static final all = <MafiaRole>[
     // 시민 진영
-    citizen, police, doctor, bodyguard, vigilante, hunter, mayor, sheriff,
-    mason, watcher, detective, miller, witness, roleblocker, reporter,
+    citizen, police, doctor, bodyguard, soldier, politician, medium, gangster,
+    vigilante, hunter, mayor, sheriff, mason, watcher, detective, miller,
+    witness, roleblocker, reporter,
     // 마피아 진영
-    mafia, mafiaBoss, member, traitor, framer, silencer, information,
-    mafiaRoleblocker, disguiser, recruiter, yakuza,
+    mafia, mafiaBoss, spy, beast, madam, thief, member, traitor, framer,
+    silencer, information, mafiaRoleblocker, disguiser, recruiter, yakuza,
     // 중립 진영
     serialKiller, arsonist, jester, executioner, survivor, cultLeader,
     cultist, piedPiper, vampire,
@@ -532,6 +755,26 @@ abstract final class MafiaRoles {
   /// 서버 처리까지 완성돼 실제로 배분해도 되는 역할입니다.
   static List<MafiaRole> get implemented =>
       all.where((role) => role.isImplemented).toList(growable: false);
+
+  /// 전향([MafiaRole.convertsTargetTo])으로만 생기는 역할의 id입니다.
+  ///
+  /// 광신도가 여기 들어옵니다. 교주 없이 광신도로 시작하면 교단 승리 조건이
+  /// 성립하지 않으므로 배분 대상이 아닙니다.
+  static Set<String> get convertOnlyIds => {
+    for (final role in all)
+      if (role.convertsTargetTo != null) role.convertsTargetTo!,
+  };
+
+  /// 게임 **시작 시 배분해도 되는** 역할입니다.
+  ///
+  /// [implemented]에서 전향으로만 생기는 역할을 뺀 목록입니다. 구성표와 연습장
+  /// 역할 선택이 이 목록을 씁니다.
+  static List<MafiaRole> get distributable {
+    final convertOnly = convertOnlyIds;
+    return implemented
+        .where((role) => !convertOnly.contains(role.id))
+        .toList(growable: false);
+  }
 
   /// 서버가 보낸 역할 id를 정의로 바꿉니다.
   ///

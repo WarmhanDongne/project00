@@ -14,6 +14,8 @@ class SharedPhoneExitModal extends StatelessWidget {
     required this.descriptionColor,
     this.showSurface = true,
     this.showText = true,
+    this.imageHeight,
+    this.maxWidth = 380,
   });
 
   final Widget doorImage;
@@ -23,6 +25,13 @@ class SharedPhoneExitModal extends StatelessWidget {
   final Color descriptionColor;
   final bool showSurface;
   final bool showText;
+
+  /// 그림 자리의 높이입니다. 큰 삽화 대신 작은 표시를 쓰는 게임은 이 값을
+  /// 줄여 모달이 화면을 가득 채우지 않게 합니다. null이면 삽화 기준 높이.
+  final double? imageHeight;
+
+  /// 세로 화면에서 모달의 최대 너비입니다.
+  final double maxWidth;
 
   static Future<bool?> show(
     BuildContext context, {
@@ -34,6 +43,8 @@ class SharedPhoneExitModal extends StatelessWidget {
     Offset? origin,
     bool showSurface = true,
     bool showText = true,
+    double? imageHeight,
+    double maxWidth = 380,
   }) {
     final screenSize = MediaQuery.sizeOf(context);
     return showPhoneRippleDialog<bool>(
@@ -47,6 +58,8 @@ class SharedPhoneExitModal extends StatelessWidget {
         descriptionColor: descriptionColor,
         showSurface: showSurface,
         showText: showText,
+        imageHeight: imageHeight,
+        maxWidth: maxWidth,
       ),
     );
   }
@@ -69,10 +82,10 @@ class SharedPhoneExitModal extends StatelessWidget {
   //=======================세로 화면==============================
   Widget _buildPortrait(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final imageHeight = (screenHeight * 0.34).clamp(180.0, 280.0);
+    final height = imageHeight ?? (screenHeight * 0.34).clamp(180.0, 280.0);
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 380),
+      constraints: BoxConstraints(maxWidth: maxWidth),
       child: _wrapSurface(
         SingleChildScrollView(
           child: Padding(
@@ -80,7 +93,7 @@ class SharedPhoneExitModal extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: imageHeight, child: doorImage),
+                SizedBox(height: height, child: doorImage),
                 const SizedBox(height: 8),
                 if (showText) ...[
                   _buildTextContent(),
@@ -116,7 +129,10 @@ class SharedPhoneExitModal extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(flex: 5, child: SizedBox(height: 220, child: doorImage)),
+              Expanded(
+                flex: 5,
+                child: SizedBox(height: imageHeight ?? 220, child: doorImage),
+              ),
               const SizedBox(width: 28),
               Expanded(
                 flex: 6,

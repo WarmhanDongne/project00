@@ -67,6 +67,7 @@ dependencies:
   crypto: ^3.0.7
   wakelock_plus: ^1.7.0
   firebase_crashlytics: ^5.2.7
+  shorebird_code_push: ^2.0.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -78,6 +79,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   build_runner: ^2.15.1
+  shared_preferences_platform_interface: ^2.4.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -98,6 +100,7 @@ flutter:
     - assets/images/logo/
     - assets/images/others/
     - assets/images/reconnect/
+    - assets/images/patch/
     - assets/images/widgets/layout/
     - assets/images/widgets/roulette/
     - assets/games/liars_poker/images/background/
@@ -115,6 +118,7 @@ flutter:
     - assets/games/mafia/images/cards/
     - assets/games/mafia/images/icons/
     - assets/games/mafia/images/other/
+    - assets/games/mafia/images/roles/
     - assets/games/mafia/sounds/
     - assets/games/mafia/sounds/background/
     - assets/games/final_call/images/background/
