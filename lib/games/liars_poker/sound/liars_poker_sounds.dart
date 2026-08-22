@@ -13,6 +13,11 @@ abstract final class LiarsPokerSounds {
   /// 소리가 겹치므로 방 중앙의 태블릿만 냅니다.
   static const win = 'assets/games/liars_poker/sounds/win.mp3';
 
+  /// **'라이어!'** 나레이션입니다(1.4초, 2026-08-22 Take3-1).
+  ///
+  /// 누군가 라이어를 선언해 패가 공개되는 순간, 방 가운데 태블릿에서만 냅니다.
+  static const voiceLiar = 'assets/games/liars_poker/sounds/voice_liar.m4a';
+
   /// 게임 진행 중 반복 재생하는 배경음악입니다(파이널콜과 같은 곡, 확정).
   ///
   /// 효과음이 아니라 BGM 전용 플레이어로 재생합니다. 반복 재생이므로 게임
@@ -24,5 +29,5 @@ abstract final class LiarsPokerSounds {
   ///
   /// 승리음처럼 한 게임에 한 번만 나는 소리는 미리 준비하지 않으면 첫
   /// 재생이 화면보다 늦습니다.
-  static const preloadTargets = [submit, win];
+  static const preloadTargets = [submit, win, voiceLiar];
 }

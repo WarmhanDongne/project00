@@ -243,6 +243,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       _stage = LiarsPokerTabletStage.dealing;
     } else if (hasNewReveal) {
       _stage = LiarsPokerTabletStage.cardsRevealing;
+      // 패가 공개되는 건 누군가 라이어를 선언했다는 뜻입니다. 그 순간에
+      // 나레이션을 한 번 냅니다(태블릿만 — 여러 기기가 울리면 겹칩니다).
+      SoundEffects.play(context, LiarsPokerSounds.voiceLiar);
     } else if (hasNewSubmission) {
       _stage = LiarsPokerTabletStage.cardsPlaying;
       unawaited(game.warmUpLiarCommand());

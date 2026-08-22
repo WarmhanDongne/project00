@@ -1,4 +1,5 @@
 import 'package:project00/core/sound/app_sounds.dart';
+import 'package:project00/games/final_call/models/final_call_models.dart';
 
 /// Final Call 전용 사운드 경로입니다.
 ///
@@ -20,9 +21,41 @@ abstract final class FinalCallSounds {
   /// 소리가 겹치므로 방 중앙의 태블릿만 냅니다.
   static const win = 'assets/games/final_call/sounds/win.mp3';
 
+  //=======================나레이션(사람 목소리)==============================
+  // 받은 파일(2026-08-22 Take4)입니다. 방 가운데 태블릿에서만 냅니다.
+
+  /// **'콜!'** 나레이션입니다(0.8초). CALL 선언이 확정되는 순간 재생합니다.
+  static const voiceCall = 'assets/games/final_call/sounds/voice_call.m4a';
+
+  /// 블루팀 승리 발표에 재생합니다(1.5초).
+  static const voiceWinBlue =
+      'assets/games/final_call/sounds/voice_win_blue.m4a';
+
+  /// 레드팀 승리 발표에 재생합니다(1.4초).
+  static const voiceWinRed = 'assets/games/final_call/sounds/voice_win_red.m4a';
+
+  /// 무승부 발표에 재생합니다(1.0초).
+  static const voiceDraw = 'assets/games/final_call/sounds/voice_draw.m4a';
+
+  /// 결과에 맞는 나레이션입니다.
+  static String resultVoiceFor({
+    required bool isDraw,
+    required FinalCallTeam? winningTeam,
+  }) {
+    if (isDraw) return voiceDraw;
+    return winningTeam == FinalCallTeam.blue ? voiceWinBlue : voiceWinRed;
+  }
+
   /// 게임 진입 준비 단계에서 미리 풀어 둘 효과음입니다.
   ///
   /// 하트 파열음·승리음처럼 한 판에 한 번만 나는 소리는 미리 준비하지
   /// 않으면 첫 재생이 화면보다 늦습니다.
-  static const preloadTargets = [heartbreak, win];
+  static const preloadTargets = [
+    heartbreak,
+    win,
+    voiceCall,
+    voiceWinBlue,
+    voiceWinRed,
+    voiceDraw,
+  ];
 }

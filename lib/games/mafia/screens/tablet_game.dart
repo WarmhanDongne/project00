@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:project00/games/mafia/loading/mafia_loading.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,6 +19,7 @@ import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/mafia/sound/mafia_bgm_plan.dart';
+import 'package:project00/games/mafia/sound/mafia_sounds.dart';
 import 'package:project00/games/mafia/sound/mafia_night_cue_speaker.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
@@ -84,6 +86,21 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   Timer? _deadlineTimer;
   Timer? _stageTimer;
 
+  //=======================밤 늑대 하울링 (확정 2026-08)==============================
+  // 밤마다 한 번, 무작위 시각에 멀리서 늑대가 웁니다. 정해진 시각이면 몇 판만
+  // 해도 박자가 읽혀 분위기가 죽습니다.
+  /// 밤이 시작되고 이만큼 지난 뒤부터 울릴 수 있습니다.
+  static const Duration _howlEarliest = Duration(seconds: 10);
+
+  /// 밤이 끝나기 이만큼 전까지만 울립니다.
+  ///
+  /// 하울링은 약 6초입니다. 여유를 두지 않으면 소리가 아침 발표로 넘어가거나
+  /// 마지막 5초 초읽기와 겹칩니다.
+  static const Duration _howlLatestBeforeEnd = Duration(seconds: 12);
+
+  Timer? _howlTimer;
+  final math.Random _howlRandom = math.Random();
+
   /// 지금 깔아 둔 곡입니다. null이면 아무것도 깔지 않은 상태입니다.
   String? _bgmAsset;
 
@@ -143,6 +160,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   void dispose() {
     _deadlineTimer?.cancel();
     _stageTimer?.cancel();
+    _howlTimer?.cancel();
     _nightNoticeTimer?.cancel();
     _bgm.stop();
     _countdownTick.stop();
@@ -179,6 +197,9 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 단계에 처음 들어온 순간 한 번만 하는 일입니다.
   void _onStageEntered(MafiaController game, MafiaTabletStage stage) {
     _stageTimer?.cancel();
+    _howlTimer?.cancel();
+    if (stage == MafiaTabletStage.night) _scheduleWolfHowl(game);
+    if (stage == MafiaTabletStage.finished) _playWinVoice(game);
     final hold = stage.announcementHold;
     if (hold == null) return;
 
@@ -187,6 +208,38 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       if (!mounted) return;
       _advance(game, stage);
     });
+  }
+
+  /// 이번 밤의 늑대 하울링을 무작위 시각에 한 번 예약합니다.
+  ///
+  /// 밤은 조기 종료가 없어 마감까지 반드시 이어지므로, 마감 기준으로 잡으면
+  /// 밤 길이가 바뀌어도 알아서 따라갑니다. 남은 시간이 창(窓)보다 짧으면
+  /// (재접속으로 밤 끝자락에 붙은 경우) 이번 밤은 건너뜁니다.
+  void _scheduleWolfHowl(MafiaController game) {
+    final deadline = game.turnDeadlineAt;
+    if (deadline == null) return;
+
+    final latest = ServerClock.remainingUntil(deadline) - _howlLatestBeforeEnd;
+    if (latest <= _howlEarliest) return;
+
+    final spanMs = (latest - _howlEarliest).inMilliseconds;
+    final delay =
+        _howlEarliest + Duration(milliseconds: _howlRandom.nextInt(spanMs + 1));
+    _howlTimer = Timer(delay, () {
+      // 밤을 벗어났으면 울리지 않습니다.
+      if (!mounted || _stage != MafiaTabletStage.night) return;
+      SoundEffects.play(context, MafiaSounds.wolfHowl);
+    });
+  }
+
+  /// 승리 발표에 이긴 진영 나레이션을 한 번 냅니다.
+  ///
+  /// 방 가운데 태블릿에서만 냅니다 — 휴대폰까지 같이 울리면 말이 겹칩니다.
+  /// 중립 개별 승리는 아직 파일이 없어 조용히 지나갑니다.
+  void _playWinVoice(MafiaController game) {
+    final voice = MafiaSounds.winVoiceFor(game.winnerFaction);
+    if (voice == null) return;
+    SoundEffects.play(context, voice);
   }
 
   /// 누군가 밤 행동을 마친 순간 그 직업의 효과음을 냅니다.

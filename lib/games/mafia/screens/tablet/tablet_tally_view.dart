@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/sound/sound_effects.dart';
+import 'package:project00/games/shared/animations/progress_sound_cue.dart';
 import 'package:project00/games/mafia/animations/ballot_animations.dart';
 import 'package:project00/games/mafia/models/mafia_player.dart';
 import 'package:project00/games/mafia/models/mafia_state_models.dart';
@@ -98,6 +99,11 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
 
   /// 표가 한 장 날아가는 시간과 장 사이 간격입니다.
   static const Duration _ballotFlight = Duration(milliseconds: 420);
+
+  /// 표 소리를 낼 진행도입니다. 화면은 착지(1.0)에서 세고, 소리만 기기
+  /// 출력 지연만큼 앞서 요청합니다.
+  static final double _ballotSoundThreshold =
+      1 - ProgressSoundCue.lead.inMilliseconds / _ballotFlight.inMilliseconds;
   static const Duration _ballotGap = Duration(milliseconds: 140);
 
   late final AnimationController _controller;
@@ -223,7 +229,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
     if (!mounted) return;
     var landed = 0;
     for (var index = 0; index < _ballotOrder.length; index += 1) {
-      if (_ballotProgress(index) >= 1) landed += 1;
+      if (_ballotProgress(index) >= _ballotSoundThreshold) landed += 1;
     }
     while (_landedSoundCount < landed) {
       _landedSoundCount += 1;

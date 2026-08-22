@@ -7,7 +7,8 @@ import 'package:project00/core/assets/game_image.dart';
 const double finalCallCardHeightRatio = 1026 / 700;
 
 GameImage finalCallCardAsset(FinalCallCard card) {
-  final suffix = '${card.color}_${card.value}.png';
+  // 에셋 압축(2026-08-22)으로 확장자가 webp가 됐습니다.
+  final suffix = '${card.color}_${card.value}.webp';
   return Assets.games.finalCall.images.cards.values
       .firstWhere(
         (asset) => asset.path.endsWith(suffix),

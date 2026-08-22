@@ -65,6 +65,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   /// 우승 발표마다 승리음을 한 번만 재생하기 위한 플래그입니다.
   bool hasPlayedWinSound = false;
 
+  /// CALL 나레이션을 이미 낸 선언자입니다. 같은 CALL로 두 번 내지 않습니다.
+  String? _announcedCallerUid;
+
   /// 설정에서 게임 종료를 누른 뒤 홈으로 나가는 중인지 여부입니다.
   bool isEndingGame = false;
 
@@ -129,6 +132,17 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     }
     final enteredPhase = previousPhase != game.phase;
     previousPhase = game.phase;
+
+    // CALL이 선언되는 순간 나레이션을 한 번 냅니다(태블릿만 — 여러 기기가
+    // 울리면 말이 겹칩니다). 선언자는 라운드가 끝나면 지워지므로, 없다가
+    // 생긴 순간만 잡습니다.
+    final caller = game.callerUid;
+    if (caller != null && caller != _announcedCallerUid) {
+      _announcedCallerUid = caller;
+      SoundEffects.play(context, FinalCallSounds.voiceCall);
+    } else if (caller == null) {
+      _announcedCallerUid = null;
+    }
 
     // 카드 분배가 시작되면 배경음악을 켭니다. 라운드마다 분배가 반복되지만
     // start가 한 번만 실행되므로 곡이 처음으로 되감기지 않습니다.
@@ -197,6 +211,14 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     hasPlayedWinSound = true;
     backgroundMusic.stop();
     SoundEffects.play(context, FinalCallSounds.win);
+    // 승리음(음악) 위에 결과 나레이션을 얹습니다.
+    SoundEffects.play(
+      context,
+      FinalCallSounds.resultVoiceFor(
+        isDraw: game.finishReason == 'draw',
+        winningTeam: game.winningTeam,
+      ),
+    );
   }
 
   // ============================================================================

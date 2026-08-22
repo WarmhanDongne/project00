@@ -1,4 +1,5 @@
 import 'package:project00/core/sound/app_sounds.dart';
+import 'package:project00/games/mafia/models/mafia_role.dart';
 
 /// 마피아 전용 효과음 경로입니다.
 ///
@@ -41,6 +42,37 @@ abstract final class MafiaSounds {
     _ => null,
   };
 
+  //=======================나레이션(사람 목소리)==============================
+  // 받은 파일(2026-08-22 Take4)입니다. 효과음과 달리 **한 판에 한 번**만 나고,
+  // 방 가운데 태블릿에서만 냅니다. 여러 기기가 함께 울리면 말이 겹쳐 들립니다.
+
+  /// '밤이 되었습니다' 안내가 뜨는 순간 재생합니다(1.4초).
+  static const voiceNight = 'assets/games/mafia/sounds/voice_night.m4a';
+
+  /// 시민 팀 승리 발표에 재생합니다(1.6초).
+  static const voiceWinCitizen =
+      'assets/games/mafia/sounds/voice_win_citizen.m4a';
+
+  /// 마피아 팀 승리 발표에 재생합니다(1.7초).
+  static const voiceWinMafia = 'assets/games/mafia/sounds/voice_win_mafia.m4a';
+
+  /// 이긴 진영에 맞는 나레이션입니다. 중립 개별 승리는 아직 파일이 없어 null입니다.
+  static String? winVoiceFor(MafiaFaction? winner) => switch (winner) {
+    MafiaFaction.citizen => voiceWinCitizen,
+    MafiaFaction.mafia => voiceWinMafia,
+    _ => null,
+  };
+
+  /// 밤에 멀리서 들리는 늑대 하울링입니다.
+  ///
+  /// 확정(2026-08): 밤이 시작되고 10초가 지난 뒤부터 **밤 한 번에 한 번**,
+  /// 무작위 시각에 태블릿에서 울립니다. 정해진 시각에 울리면 몇 판만 해도
+  /// 박자가 읽혀 분위기가 죽습니다.
+  ///
+  /// 연출과 맞출 필요가 없는 배경 소리라 [preloadTargets]에 넣지 않습니다
+  /// (파일이 6초로 길어 미리 물려 두면 메모리만 씁니다).
+  static const wolfHowl = 'assets/games/mafia/sounds/wolf_howl.mp3';
+
   /// 투표를 제출했을 때 재생합니다.
   static const vote = 'assets/games/mafia/sounds/vote.mp3';
 
@@ -69,11 +101,18 @@ abstract final class MafiaSounds {
   ///
   /// 아침이 되면 `GameBackgroundMusic.fadeOut()`으로 서서히 사라집니다.
   static const nightBackground =
-      'assets/games/mafia/sounds/background/background_night.mp3';
+      'assets/games/mafia/sounds/background/background_night.m4a';
 
   /// 게임 진입 준비 단계에서 미리 풀어 둘 짧은 효과음입니다.
   ///
   /// 준비하지 않으면 첫 재생에서 에셋을 파일로 풀어내며 소리가 화면보다 늦게
   /// 납니다. 총성·승리음은 게임에 한 번만 나므로 매번 그 지연을 겪습니다.
-  static const preloadTargets = [gunshot, vote, mafiaWin];
+  static const preloadTargets = [
+    gunshot,
+    vote,
+    mafiaWin,
+    voiceNight,
+    voiceWinCitizen,
+    voiceWinMafia,
+  ];
 }
