@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
+import 'package:project00/core/diagnostics/dev_error_log.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_leave_intent.dart';
@@ -128,8 +130,15 @@ class RoomProvider extends ChangeNotifier {
       errorMessage = error.message ?? '서버 요청을 처리하지 못했습니다.';
       return null;
     } catch (error) {
-      // 기타 일반 예외 처리
-      errorMessage = error.toString();
+      // 예외 원문을 화면에 넣지 않습니다. 진단은 개발용 기록에 남깁니다.
+      DevErrorLog.instance.add(
+        error: error,
+        context: 'room/command',
+        time: DateTime.now(),
+      );
+      errorMessage =
+          userErrorMessage(error, context: UserErrorContext.roomCommand) ??
+          UserErrorCopy.requestFailed;
       return null;
     } finally {
       // 로딩 종료 및 UI 갱신
@@ -330,14 +339,15 @@ class RoomProvider extends ChangeNotifier {
     try {
       await _service.removePlayer(code, userUid);
       return true;
-    } on RoomCommandException catch (error) {
-      errorMessage = error.message;
-      return false;
-    } on FirebaseFunctionsException catch (error) {
-      errorMessage = error.message ?? '플레이어를 내보내지 못했습니다.';
-      return false;
     } catch (error) {
-      errorMessage = error.toString();
+      DevErrorLog.instance.add(
+        error: error,
+        context: 'room/remove_player',
+        time: DateTime.now(),
+      );
+      errorMessage =
+          userErrorMessage(error, context: UserErrorContext.roomCommand) ??
+          '플레이어를 내보내지 못했습니다.';
       return false;
     } finally {
       _removingPlayerUids.remove(userUid);
@@ -439,30 +449,26 @@ class RoomProvider extends ChangeNotifier {
           ),
         );
 
-    statusSubscription = _service
-        .watchRoomStatus(listenedRoomCode)
-        .listen(
-          (status) {
-            if (roomCode != listenedRoomCode) return;
-            // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
-            // status의 null은 초기 캐시 미수신일 수 있으므로 방 종료로 보지 않고,
-            // 실제 삭제는 roomCode 생존 마커를 서버에서 재확인해 판정합니다.
-            if (status == 'closed') {
-              _terminateRoom(
-                RoomTerminationReason.closed,
-                expectedRoomCode: listenedRoomCode,
-              );
-            }
-          },
-          onError: (Object error) {
-            // 내 참가자 노드가 사라지면 status 읽기 권한도 함께 사라져 이 구독이
-            // permission-denied로 종료됩니다. 퇴장·강퇴·방 삭제 정리는 players
-            // 구독이 담당하므로 여기서는 unhandled exception만 막습니다.
-            final message = error.toString().toLowerCase();
-            if (message.contains('permission')) return;
-            _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode);
-          },
-        );
+    statusSubscription = _service.watchRoomStatus(listenedRoomCode).listen(
+      (status) {
+        if (roomCode != listenedRoomCode) return;
+        // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
+        // status의 null은 초기 캐시 미수신일 수 있으므로 방 종료로 보지 않고,
+        // 실제 삭제는 roomCode 생존 마커를 서버에서 재확인해 판정합니다.
+        if (status == 'closed') {
+          _terminateRoom(
+            RoomTerminationReason.closed,
+            expectedRoomCode: listenedRoomCode,
+          );
+        }
+      },
+      // 내 참가자 노드가 사라지면 status 읽기 권한도 함께 사라져 이 구독이
+      // permission-denied로 종료됩니다. 퇴장·강퇴·방 삭제 정리는 players
+      // 구독이 담당하므로 여기서는 표시하지 않고 넘깁니다. 권한 오류를
+      // 걸러내는 판단은 userErrorMessage가 소유합니다.
+      onError: (Object error) =>
+          _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode),
+    );
 
     if (_joinedNickname != null) {
       _startPlayerHeartbeat(listenedRoomCode);
@@ -895,16 +901,17 @@ class RoomProvider extends ChangeNotifier {
     // 표시하지 않습니다.
     if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
     if (_isLeaving) return;
-    final message = error.toString().toLowerCase();
-    // Realtime Database 스트림은 네트워크 복구 시 자동으로 다시 연결됩니다.
-    // iOS 플러그인의 native unknown Stacktrace는 화면에 노출하지 않습니다.
-    if (message.contains('firebase_database/unknown') ||
-        message.contains('stacktrace:')) {
-      errorMessage = null;
-      notifyListeners();
-      return;
-    }
-    errorMessage = error.toString();
+    DevErrorLog.instance.add(
+      error: error,
+      context: 'room/subscription',
+      time: DateTime.now(),
+    );
+    // 정상 퇴장으로 권한이 사라진 경우와, 연결이 돌아오면 스스로 복구되는
+    // 네이티브 오류는 사용자에게 표시하지 않습니다.
+    errorMessage = userErrorMessage(
+      error,
+      context: UserErrorContext.roomSubscription,
+    );
     notifyListeners();
   }
 
@@ -1078,7 +1085,11 @@ class RoomProvider extends ChangeNotifier {
   Future<bool> leaveRoom() {
     final code = roomCode;
     if (code == null) return Future.value(false);
-    return _runLeave(code, () => _service.leaveRoom(code));
+    return _runLeave(
+      code,
+      () => _service.leaveRoom(code),
+      errorContext: UserErrorContext.leaveRoom,
+    );
   }
 
   /// 게임 중 퇴장: 서버가 다음 턴 또는 인원 부족 종료까지 결정합니다.
@@ -1092,6 +1103,7 @@ class RoomProvider extends ChangeNotifier {
         cloudFunctionName: game.leaveFunctionName,
         roomCode: code,
       ),
+      errorContext: UserErrorContext.leaveGame,
     );
   }
 
@@ -1106,7 +1118,11 @@ class RoomProvider extends ChangeNotifier {
   /// 1. 실제 실패 — [errorMessage]가 채워지고 [isLeaving]은 false입니다.
   /// 2. 이미 다른 퇴장이 진행 중 — [isLeaving]이 true로 남습니다.
   /// 호출자는 `!left && isLeaving`이면 아무 오류도 표시하지 않아야 합니다.
-  Future<bool> _runLeave(String code, Future<void> Function() request) async {
+  Future<bool> _runLeave(
+    String code,
+    Future<void> Function() request, {
+    required UserErrorContext errorContext,
+  }) async {
     if (_isLeaving) return false;
 
     _isLeaving = true;
@@ -1131,7 +1147,9 @@ class RoomProvider extends ChangeNotifier {
         // 사용자에게 실패 문구가 뜹니다.
         left = await _hasLeftDespiteFailure(code);
         if (!left) {
-          errorMessage = _leaveFailureMessage(error);
+          errorMessage =
+              userErrorMessage(error, context: errorContext) ??
+              UserErrorCopy.requestFailed;
           RoomLeaveIntent.fail(code);
           // 방을 계속 사용하므로 presence를 즉시 되살립니다.
           if (roomCode == code && _joinedNickname != null) {
@@ -1180,16 +1198,6 @@ class RoomProvider extends ChangeNotifier {
       }
       return false;
     }
-  }
-
-  /// 퇴장 실패 문구입니다. 예외 원문을 사용자 화면에 넣지 않습니다.
-  String _leaveFailureMessage(Object error) {
-    if (error is RoomCommandException) return error.message;
-    if (error is FirebaseFunctionsException) {
-      final message = error.message;
-      if (message != null && message.isNotEmpty) return message;
-    }
-    return '방에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.';
   }
 
   // 메모리 초기화 leaveRoom에서 사용

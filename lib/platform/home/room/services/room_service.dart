@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
 import 'package:project00/games/shared/services/callable_retry_policy.dart';
 import 'package:project00/core/network/realtime_connection_monitor.dart';
@@ -82,7 +83,10 @@ class RoomService {
       if (error is RoomCommandException) {
         rethrow;
       }
-      throw RoomCommandException('방을 생성하지 못했습니다: $error');
+      throw RoomCommandException(
+        userErrorMessage(error, context: UserErrorContext.roomCommand) ??
+            '방을 생성하지 못했습니다.',
+      );
     }
   }
 
@@ -587,8 +591,7 @@ class RoomService {
   }
 
   String _databaseErrorMessage(Object? error) {
-    final message = error?.toString().toLowerCase() ?? '';
-    if (message.contains('permission-denied')) {
+    if (error != null && isPermissionDenied(error)) {
       return '방에 접근할 권한이 없습니다.';
     }
     return '서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.';

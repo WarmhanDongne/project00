@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/games/final_call/models/final_call_models.dart';
@@ -43,14 +43,26 @@ class FinalCallController extends Notifier<FinalCallGameState> {
         .watchPublicGame(roomCode)
         .listen(
           _handlePublic,
-          onError: (Object error) => _setError('게임 연결이 불안정합니다: $error'),
+          onError: (Object error) => _setError(
+            userErrorMessage(
+                  error,
+                  context: UserErrorContext.gameSubscription,
+                ) ??
+                UserErrorCopy.unstableConnection,
+          ),
         );
     if (watchPrivateHand) {
       _privateSubscription = service.query
           .watchPrivatePlayer(roomCode: roomCode, uid: uid)
           .listen(
             _handlePrivate,
-            onError: (Object error) => _setError('손패 연결이 불안정합니다: $error'),
+            onError: (Object error) => _setError(
+              userErrorMessage(
+                    error,
+                    context: UserErrorContext.gameSubscription,
+                  ) ??
+                  UserErrorCopy.unstableConnection,
+            ),
           );
     }
     ref.onDispose(() {
@@ -471,9 +483,8 @@ class FinalCallController extends Notifier<FinalCallGameState> {
       return true;
     } catch (error) {
       _setError(
-        error is FirebaseFunctionsException
-            ? (error.message ?? '요청을 처리하지 못했습니다.')
-            : '서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.',
+        userErrorMessage(error, context: UserErrorContext.gameCommand) ??
+            UserErrorCopy.requestFailed,
       );
       return false;
     } finally {
