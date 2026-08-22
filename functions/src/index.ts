@@ -118,3 +118,10 @@ export {
   game_common_interruption_on_connection_changed,
   game_common_interruption_vote_to_continue,
 } from "./game-interruption/functions.js";
+
+// 인원 부족이 확정된 중단은 60초 마감을 기다리지 않고 끝낼 수 있습니다(C-11).
+// 위 블록과 따로 두는 이유는 export 목록을 함께 고칠 때의 병합 충돌을 줄이기
+// 위해서입니다. 구현도 functions.ts와 분리했습니다.
+export {
+  game_common_interruption_finish_now,
+} from "./game-interruption/finish-now.js";
