@@ -762,6 +762,13 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
     return false;
   }
 
+  /// 마감이 지난 턴을 태블릿이 대신 해결합니다(휴대폰 타이머 백스톱).
+  ///
+  /// 판정 정책은 휴대폰 타임아웃과 같고 서버가 수행합니다. 마감 전 호출은
+  /// 서버가 success:false로 거절하므로 _runCommand가 false를 돌려줍니다.
+  Future<bool> forceTurnTimeout() =>
+      _runCommand(() => service.command.forceTimeout(roomCode: roomCode));
+
   Future<bool> callLiar() {
     if (!canCallLiar) return Future.value(_reject('현재 라이어를 선언할 수 없습니다.'));
     return _runCommand(() => service.command.callLiar(roomCode: roomCode));

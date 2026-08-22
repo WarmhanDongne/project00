@@ -65,6 +65,9 @@ export {
 export {
   game_liars_poker_resolve_penalty,
 } from "./liars-poker/finish-penalty.js";
+export {
+  game_liars_poker_force_timeout,
+} from "./liars-poker/force-timeout.js";
 export {game_liars_poker_end_game} from "./liars-poker/end-game.js";
 export {game_liars_poker_leave_game} from "./liars-poker/leave-game.js";
 
