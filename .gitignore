@@ -43,4 +43,5 @@ design/
 work-items/
 
 # AI assistant local context
+# 아키텍처 문서 원본은 저장소 밖: ../project00-notes/docs/
 CLAUDE.md

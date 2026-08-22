@@ -14,8 +14,10 @@ argument-hint: [게임 이름 또는 설명]
 ## 시작 전 필독
 
 1. `AGENTS.md` — 변경 전 필수 원칙 10가지
-2. `docs/AI_GAME_DEVELOPMENT_GUIDE.md` — 상태 머신·Riverpod·Cloud Functions 상세
+2. `AI_GAME_DEVELOPMENT_GUIDE.md` — 상태 머신·Riverpod·Cloud Functions 상세
 3. `lib/games/_game_template/README.md` — 스캐폴드
+
+2번 문서는 저장소에 포함되지 않는다. 없으면 건너뛰고 `AGENTS.md`와 코드를 기준으로 한다.
 
 ## 구조 기준
 
