@@ -21,6 +21,9 @@ import 'package:flutter/material.dart';
 /// `'가나님은 밤을 넘기지 못했습니다'`는 `['가나님은', '밤을 넘기지 못했습니다']`가
 /// 됩니다. 한 번에 다 읽히지 않는 긴 줄보다 짧은 두 방이 훨씬 세게 박힙니다.
 ///
+/// 나눠 찍을 때는 전체 박자가 [multiBeatSpeed]배 **빠르게** 지나갑니다. 같은
+/// 속도로 두 번 찍으면 한 문장을 읽는 데 두 배가 걸려 늘어집니다.
+///
 /// **마지막 박자는 물러나지 않습니다.** 그 자리에 남아 있고, 화면을 걷어 가는
 /// 것은 부모(단계 전환·[MafiaAnnouncementReveal])의 몫입니다.
 class MafiaEjectionText extends StatefulWidget {
@@ -62,15 +65,32 @@ class MafiaEjectionText extends StatefulWidget {
   /// 처음 자간입니다(글자 크기 대비). 벌어진 글자가 좁혀지며 모입니다.
   static const double startTracking = 0.3;
 
+  /// 두 박자 이상으로 나눠 찍을 때의 배속입니다.
+  ///
+  /// 확정(2026-08): 긴 문장을 두 박자로 나누면 읽는 호흡이 두 번 필요해 전체가
+  /// 늘어집니다. 나눠 찍을 때만 조금 빠르게 지나가 한 문장을 읽는 것과 비슷한
+  /// 호흡을 유지합니다. 한 박자짜리 문구의 속도는 그대로입니다.
+  static const double multiBeatSpeed = 1.25;
+
+  /// 박자 수에 맞춘 실제 연출 시간입니다. 나눠 찍을 때만 빨라집니다.
+  static Duration scaledFor(Duration duration, int beatCount) {
+    if (beatCount <= 1) return duration;
+    return Duration(
+      microseconds: (duration.inMicroseconds / multiBeatSpeed).round(),
+    );
+  }
+
   /// 박자 하나가 다음 박자로 넘어가기까지 걸리는 시간입니다.
   ///
-  /// 부모가 주는 시간 안에 박자가 다 들어가는지 계산할 때 씁니다.
+  /// 부모가 주는 시간 안에 박자가 다 들어가는지 계산할 때 씁니다. 넘어가는
+  /// 구간은 나눠 찍을 때만 생기므로 항상 배속이 적용됩니다.
   static Duration beatCycle(Duration beatHold) =>
-      slamDuration + impactDuration + beatHold + exitDuration;
+      scaledFor(slamDuration + impactDuration + beatHold + exitDuration, 2);
 
   /// [beats]를 모두 찍는 데 걸리는 시간입니다(마지막 박자가 찍히는 순간까지).
   static Duration totalCycle(int beatCount, Duration beatHold) =>
-      beatCycle(beatHold) * (beatCount - 1) + slamDuration + impactDuration;
+      beatCycle(beatHold) * (beatCount - 1) +
+      scaledFor(slamDuration + impactDuration, beatCount);
 
   @override
   State<MafiaEjectionText> createState() => _MafiaEjectionTextState();
@@ -87,6 +107,9 @@ class _MafiaEjectionTextState extends State<MafiaEjectionText>
   /// 지금 찍고 있는 박자입니다.
   int _index = 0;
 
+  /// 나눠 찍는 문구인지입니다. 박자가 둘 이상이면 전체가 빨라집니다.
+  int get _beatCount => widget.beats.length;
+
   /// 내려찍기 전체에서 '찍히는' 구간이 차지하는 비율입니다.
   static double get _slamRatio =>
       MafiaEjectionText.slamDuration.inMilliseconds /
@@ -100,12 +123,17 @@ class _MafiaEjectionTextState extends State<MafiaEjectionText>
     super.initState();
     _slam = AnimationController(
       vsync: this,
-      duration:
-          MafiaEjectionText.slamDuration + MafiaEjectionText.impactDuration,
+      duration: MafiaEjectionText.scaledFor(
+        MafiaEjectionText.slamDuration + MafiaEjectionText.impactDuration,
+        _beatCount,
+      ),
     )..addStatusListener(_handleSlamStatus);
     _exit = AnimationController(
       vsync: this,
-      duration: MafiaEjectionText.exitDuration,
+      duration: MafiaEjectionText.scaledFor(
+        MafiaEjectionText.exitDuration,
+        _beatCount,
+      ),
     )..addStatusListener(_handleExitStatus);
     _playCurrentBeat();
   }
@@ -115,6 +143,17 @@ class _MafiaEjectionTextState extends State<MafiaEjectionText>
     super.didUpdateWidget(oldWidget);
     // 문구가 갈리면(닉네임이 바뀌는 등) 처음 박자부터 다시 찍습니다.
     if (listEquals(widget.beats, oldWidget.beats)) return;
+    // 박자 수가 바뀌면 배속도 달라집니다.
+    if (widget.beats.length != oldWidget.beats.length) {
+      _slam.duration = MafiaEjectionText.scaledFor(
+        MafiaEjectionText.slamDuration + MafiaEjectionText.impactDuration,
+        _beatCount,
+      );
+      _exit.duration = MafiaEjectionText.scaledFor(
+        MafiaEjectionText.exitDuration,
+        _beatCount,
+      );
+    }
     _index = 0;
     _playCurrentBeat();
   }
@@ -129,9 +168,12 @@ class _MafiaEjectionTextState extends State<MafiaEjectionText>
     if (status != AnimationStatus.completed || !mounted) return;
     // 마지막 박자는 물러나지 않습니다. 부모가 화면을 걷어 갑니다.
     if (_isLastBeat) return;
-    _holdTimer = Timer(widget.beatHold, () {
-      if (mounted) _exit.forward(from: 0);
-    });
+    _holdTimer = Timer(
+      MafiaEjectionText.scaledFor(widget.beatHold, _beatCount),
+      () {
+        if (mounted) _exit.forward(from: 0);
+      },
+    );
   }
 
   void _handleExitStatus(AnimationStatus status) {

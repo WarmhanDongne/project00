@@ -21,7 +21,8 @@ class ShorebirdPatchScreen extends StatelessWidget {
   });
 
   /// 가운데 그림입니다. 파일을 넣으면 자동으로 보입니다.
-  static const String illustrationAsset = 'assets/images/patch/game_update.png';
+  static const String illustrationAsset =
+      'assets/images/patch/game_update.webp';
 
   /// 가운데 큰 문구입니다.
   final String title;

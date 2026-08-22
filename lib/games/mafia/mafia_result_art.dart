@@ -40,18 +40,14 @@ abstract final class MafiaResultArt {
       MafiaFaction.mafia => background.backgroundMafiaWinPhone.game,
       MafiaFaction.citizen => background.backgroundCitizenWinPhone.game,
       MafiaFaction.neutral => switch (_neutralKind(winnerRoleIds)) {
-        MafiaWinCondition.lynchedSelf => background
-            .backgroundJesterWinPhone
-            .game,
-        MafiaWinCondition.lynchTarget => background
-            .backgroundExecutionerWinPhone
-            .game,
-        MafiaWinCondition.lastStanding => background
-            .backgroundSerialKillerWinPhone
-            .game,
-        MafiaWinCondition.factionDominance => background
-            .backgroundCultWinPhone
-            .game,
+        MafiaWinCondition.lynchedSelf =>
+          background.backgroundJesterWinPhone.game,
+        MafiaWinCondition.lynchTarget =>
+          background.backgroundExecutionerWinPhone.game,
+        MafiaWinCondition.lastStanding =>
+          background.backgroundSerialKillerWinPhone.game,
+        MafiaWinCondition.factionDominance =>
+          background.backgroundCultWinPhone.game,
         // 생존자처럼 아직 그림이 없는 승리입니다.
         _ => null,
       },

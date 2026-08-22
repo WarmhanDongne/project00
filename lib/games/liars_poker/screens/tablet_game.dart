@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/layout/app_orientation.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/core/sound/sound_effects.dart';
 import 'package:project00/games/liars_poker/liars_poker_flow_config.dart';
@@ -76,6 +77,22 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   String _previousServerPhase = 'playing';
   int _previousRound = 1;
   Timer? _penaltyTransitionTimer;
+
+  //=======================턴 타임아웃 백스톱==============================
+  // 타임아웃 처리는 원래 턴 플레이어 휴대폰의 타이머가 합니다. 그 기기가
+  // 화면 잠금·백그라운드로 멈추면 아무도 턴을 넘기지 못하므로, 태블릿이
+  // 마감 + 여유 시간 뒤에도 턴이 그대로면 서버에 강제 해결을 요청합니다.
+  Timer? _turnTimeoutBackstop;
+  int? _backstopDeadline;
+
+  /// 휴대폰 타이머가 먼저 처리할 시간을 주는 여유입니다.
+  static const Duration _backstopGrace = Duration(seconds: 2);
+
+  /// 강제 해결이 실패했을 때 다시 시도하기까지의 간격입니다.
+  static const Duration _backstopRetryDelay = Duration(seconds: 3);
+
+  /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
+  static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
 
   /// 카드 분배가 시작되면 켜고, 화면을 떠날 때 끄는 배경음악입니다.
   final GameBackgroundMusic _backgroundMusic = GameBackgroundMusic();
@@ -169,6 +186,8 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       _penaltyTransitionTimer = null;
     }
 
+    _scheduleTurnTimeoutBackstop(game);
+
     final isFirstSnapshot = !_hasReceivedFirstState;
     final wasDealing = _previousServerPhase == 'dealing';
     final isRoundChanged = game.round != _previousRound;
@@ -243,6 +262,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       _stage = LiarsPokerTabletStage.dealing;
     } else if (hasNewReveal) {
       _stage = LiarsPokerTabletStage.cardsRevealing;
+      // 패가 공개되는 건 누군가 라이어를 선언했다는 뜻입니다. 그 순간에
+      // 나레이션을 한 번 냅니다(태블릿만 — 여러 기기가 울리면 겹칩니다).
+      SoundEffects.play(context, LiarsPokerSounds.voiceLiar);
     } else if (hasNewSubmission) {
       _stage = LiarsPokerTabletStage.cardsPlaying;
       unawaited(game.warmUpLiarCommand());
@@ -689,17 +711,65 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     );
   }
 
+  /// 현재 턴 마감에 맞춰 강제 해결 타이머를 (재)예약합니다.
+  ///
+  /// 연결 확인(interruption) 중에는 서버가 모든 진행 명령을 거절하므로
+  /// 타이머를 내려 두고, 해소되어 상태가 갱신되면 다시 예약합니다.
+  void _scheduleTurnTimeoutBackstop(LiarsPokerController game) {
+    final isTurnPhase =
+        game.phase == 'playing' || game.phase == 'lastCardChallenge';
+    final deadline = isTurnPhase && game.interruption == null
+        ? game.turnDeadlineAt
+        : null;
+    if (deadline == null) {
+      _turnTimeoutBackstop?.cancel();
+      _turnTimeoutBackstop = null;
+      _backstopDeadline = null;
+      return;
+    }
+    if (deadline == _backstopDeadline) return;
+    _backstopDeadline = deadline;
+    _armTurnTimeoutBackstop(deadline);
+  }
+
+  void _armTurnTimeoutBackstop(int deadline) {
+    _turnTimeoutBackstop?.cancel();
+    // 보정 전 계산은 기기 시계 오차일 수 있어 마감 판단을 미룹니다.
+    if (!ServerClock.hasSynced) {
+      _turnTimeoutBackstop = Timer(_clockSyncRecheck, () {
+        if (!mounted || _backstopDeadline != deadline) return;
+        _armTurnTimeoutBackstop(deadline);
+      });
+      return;
+    }
+    final delay = ServerClock.remainingUntil(deadline) + _backstopGrace;
+    _turnTimeoutBackstop = Timer(delay, () async {
+      final game = _controller;
+      if (!mounted || game == null || game.turnDeadlineAt != deadline) return;
+      final success = await game.forceTurnTimeout();
+      // 아직 같은 턴이면(휴대폰도 서버도 못 넘긴 상태) 계속 다시 시도합니다.
+      if (success || !mounted || _controller?.turnDeadlineAt != deadline) {
+        return;
+      }
+      _turnTimeoutBackstop = Timer(_backstopRetryDelay, () {
+        if (!mounted || _controller?.turnDeadlineAt != deadline) return;
+        _armTurnTimeoutBackstop(deadline);
+      });
+    });
+  }
+
   @override
   void dispose() {
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     _backgroundMusic.stop();
     _penaltyTransitionTimer?.cancel();
+    _turnTimeoutBackstop?.cancel();
     _sessionSubscription?.close();
     _exitMatController.dispose();
     // ---------------------------------------------------------------------------
     // 게임 종료 후 플랫폼 화면 정책 복원
     // ---------------------------------------------------------------------------
-    unawaited(AppOrientation.lockPlatformLandscape());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }

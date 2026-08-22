@@ -429,6 +429,9 @@ class MafiaController extends Notifier<MafiaGameState> {
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
       nightActionCue: MafiaNightActionCue.fromMap(map['nightActionCue']),
       voteSubmittedCount: (map['voteSubmittedCount'] as num?)?.toInt() ?? 0,
+      // 토론 조기 종료에 동의한 사람 수입니다(서버 day.ts가 갱신).
+      // 이 줄이 없어 폰의 'n/m' 실시간 집계가 항상 0으로 보였습니다.
+      discussionSkipCount: (map['discussionSkipCount'] as num?)?.toInt() ?? 0,
       voteSubmittedUids: mafiaStringList(map['voteSubmittedUids']),
       voteEligibleCount: (map['voteEligibleCount'] as num?)?.toInt() ?? 0,
       morningResult: rawMorning is Map
@@ -587,7 +590,12 @@ class MafiaController extends Notifier<MafiaGameState> {
     if (commandInFlight) return false;
     state = state.copyWith(commandInFlight: true, errorMessage: null);
     try {
-      await command();
+      final result = await command();
+      // 서버는 "아직 할 일이 아니다"를 예외가 아니라 정상 응답으로 알립니다
+      // (예: 마감 전 타임아웃 호출 → {success: false, reason: "notExpired"}).
+      // 이를 성공으로 넘기면 호출자가 재시도하지 않아 진행이 멈춥니다.
+      // 명시적인 success:false만 실패로 봅니다(success 필드가 없는 명령도 있음).
+      if (result is Map && result['success'] == false) return false;
       return true;
     } catch (error, stack) {
       // 사용자에게는 짧은 안내만 보여 주고, 실제 원인은 따로 남깁니다.

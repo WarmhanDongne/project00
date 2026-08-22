@@ -752,6 +752,7 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
   game.public.morningResult = {
     deadUids: [...deadUids],
     savedCount,
+    endsGame: mafiaAnnouncementEndsGame(game),
     resolvedAt: now,
   };
   game.public.phase = "morning";
@@ -862,6 +863,7 @@ export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
     executedUid,
     tie,
     abstainCount: Math.max(0, eligibleCount - Object.keys(votes).length),
+    endsGame: mafiaAnnouncementEndsGame(game),
     resolvedAt: now,
   };
   game.public.phase = "voteResult";
@@ -1062,6 +1064,22 @@ export function finishMafiaGame(
   }
   delete game.server.pendingNeutralWinUids;
   touch(game, now);
+}
+
+/**
+ * 지금 발표가 끝나면 게임이 끝나는지입니다.
+ *
+ * 사망·처형을 이미 반영한 상태에서 판정하므로, 발표가 끝날 때
+ * [advanceMafiaAfterDeaths]가 내리는 결론과 같습니다. **판정을 앞당기는 것이
+ * 아니라**, 태블릿이 다음 단계 안내('밤이 되었습니다' 등)를 띄우지 않도록
+ * 미리 알려 주는 힌트입니다.
+ * @param {MafiaGameState} game 지금 게임 상태
+ * @return {boolean} 이 발표가 마지막이면 true
+ */
+export function mafiaAnnouncementEndsGame(game: MafiaGameState): boolean {
+  const pending = game.server.pendingNeutralWinUids;
+  if (pending && pending.length > 0) return true;
+  return checkMafiaWinner(game) !== null;
 }
 
 /**

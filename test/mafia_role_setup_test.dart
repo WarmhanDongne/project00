@@ -43,6 +43,21 @@ void main() {
         DefaultTextStyle.of(tester.element(finder)).style.color;
   }
 
+  /// 이 역할 아이콘에 걸린 색 필터입니다.
+  ///
+  /// 아이콘과 이름은 같은 Row의 형제라, 이름에서 가장 가까운 Row를 찾아
+  /// 그 안의 필터를 봅니다.
+  ColorFilter iconFilter(WidgetTester tester, String roleName) {
+    final row = find
+        .ancestor(of: find.text(roleName), matching: find.byType(Row))
+        .first;
+    final filter = find.descendant(
+      of: row,
+      matching: find.byType(ColorFiltered),
+    );
+    return tester.widget<ColorFiltered>(filter.first).colorFilter;
+  }
+
   testWidgets('세 팀 판과 시안의 역할이 모두 놓인다', (tester) async {
     await pumpSetup(tester);
 
@@ -106,13 +121,18 @@ void main() {
   testWidgets('고르지 않은 아이콘은 회색조로 그린다', (tester) async {
     await pumpSetup(tester);
 
-    // 고른 역할 4개 + 시민 = 5개는 색이 그대로이고, 나머지는 회색조입니다.
-    final gray = find.byType(ColorFiltered);
-    expect(gray, findsNWidgets(19 - 5));
+    // 아이콘마다 색 필터가 **늘 한 겹**입니다. 고른 것은 원색 행렬,
+    // 고르지 않은 것은 회색조 행렬을 씁니다. (겹 수가 상태에 따라 달라지면
+    // 그림이 한 프레임 튀고, 투명도를 따로 겹치면 Impeller가 경고합니다.)
+    expect(find.byType(ColorFiltered), findsNWidgets(19));
+    // 고른 역할은 원색(t=1), 고르지 않은 역할은 옅은 회색조(t=0) 행렬입니다.
+    expect(iconFilter(tester, '경찰'), ColorFilter.matrix(mafiaRoleIconTint(1)));
+    expect(iconFilter(tester, '광대'), ColorFilter.matrix(mafiaRoleIconTint(0)));
 
     await tester.tap(find.text('광대'));
     await tester.pumpAndSettle();
-    expect(find.byType(ColorFiltered), findsNWidgets(19 - 6));
+    expect(find.byType(ColorFiltered), findsNWidgets(19));
+    expect(iconFilter(tester, '광대'), ColorFilter.matrix(mafiaRoleIconTint(1)));
   });
 
   testWidgets('남은 자리는 시민이 채운 구성으로 시작한다', (tester) async {

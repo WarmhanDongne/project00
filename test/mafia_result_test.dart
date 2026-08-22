@@ -24,11 +24,11 @@ void main() {
       );
       expect(
         MafiaResultArt.tabletPoster(MafiaFaction.mafia)?.path,
-        contains('background_mafia_win.png'),
+        contains('background_mafia_win.webp'),
       );
       expect(
         MafiaResultArt.tabletPoster(MafiaFaction.citizen)?.path,
-        contains('background_citizen_win.png'),
+        contains('background_citizen_win.webp'),
       );
     });
 

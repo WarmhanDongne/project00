@@ -286,6 +286,31 @@ void main() {
     expect(find.text('게임 구성 요소를 준비 중입니다.'), findsOneWidget);
   });
 
+  testWidgets('구성품 사진 주소가 있으면 그 사진을, 없으면 코드 그림을 쓴다', (tester) async {
+    // 확정(2026-08): 구성품 그림은 Storage에 올리고 Firestore에 주소만 둡니다.
+    // 앱 업데이트 없이 바꿀 수 있지만, 주소가 비었거나 내려받기가 실패하면
+    // 모달이 비지 않게 코드 그림으로 되돌아갑니다.
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final provider = RoomProvider(
+      service: _SelectionRoomService(),
+      gameService: _CatalogGameService(),
+    );
+    addTearDown(provider.dispose);
+
+    // 주소가 없으면 예전처럼 코드 그림입니다.
+    await _pumpPreviewGame(tester, provider, _mafiaGame);
+    expect(find.byKey(const Key('mafia-preview-artwork')), findsOneWidget);
+    expect(find.byKey(const Key('game-component-artwork')), findsNothing);
+
+    // 주소가 있으면 사진 자리를 잡습니다(내려받는 동안에는 코드 그림).
+    await _pumpPreviewGame(tester, provider, _mafiaWithComponentImage);
+    expect(find.byKey(const Key('game-component-artwork')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('maxPlayers가 0이면 12명까지 허용하고 13명부터 시작을 차단한다', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);
@@ -773,6 +798,23 @@ const _mafiaGame = GameInfo(
   name: '마피아',
   description: '정체를 숨기고 토론하는 추리 게임입니다.',
   imageUrl: '',
+  enabled: true,
+  genres: ['추리'],
+  minPlayers: 4,
+  maxPlayers: 12,
+  playTime: 30,
+  order: 1,
+  ruleVideoUrl: '',
+  isOwned: true,
+);
+
+/// 구성품 사진 주소가 있는 게임입니다(Storage + Firestore 경로 시험용).
+const _mafiaWithComponentImage = GameInfo(
+  id: 'mafia',
+  name: '마피아',
+  description: '정체를 숨기고 토론하는 추리 게임입니다.',
+  imageUrl: '',
+  componentImageUrl: 'https://example.com/mafia_components.png',
   enabled: true,
   genres: ['추리'],
   minPlayers: 4,

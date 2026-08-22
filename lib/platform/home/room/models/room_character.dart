@@ -4,7 +4,7 @@ class RoomCharacter {
   final String id;
   final String label;
 
-  String get assetPath => 'assets/images/character/$id.png';
+  String get assetPath => 'assets/images/character/$id.webp';
 }
 
 const roomCharacters = <RoomCharacter>[

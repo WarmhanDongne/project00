@@ -5,18 +5,18 @@ import 'package:project00/games/mafia/models/mafia_roles.dart';
 
 /// 역할 카드 파일 이름과 역할 id를 하나로 유지합니다.
 ///
-/// 규칙은 `assets/games/mafia/images/cards/role_<id>.png` 하나입니다. 규칙이
+/// 규칙은 `assets/games/mafia/images/cards/role_<id>.webp` 하나입니다. 규칙이
 /// 지켜지면 카드를 받았을 때 `card:` 한 줄만 추가하면 되고, 어긋나면 어느 카드가
 /// 어느 역할인지 사람이 매번 다시 확인해야 합니다.
 void main() {
   final cardsDir = Directory('assets/games/mafia/images/cards');
 
-  test('카드 파일은 모두 role_<id>.png 규칙을 따른다', () {
+  test('카드 파일은 모두 role_<id>.webp 규칙을 따른다', () {
     final files = cardsDir
         .listSync()
         .whereType<File>()
         .map((file) => file.uri.pathSegments.last)
-        .where((name) => name.endsWith('.png'))
+        .where((name) => name.endsWith('.webp'))
         .toList();
 
     expect(files, isNotEmpty, reason: '카드 폴더가 비어 있습니다');
@@ -35,8 +35,11 @@ void main() {
         .listSync()
         .whereType<File>()
         .map((file) => file.uri.pathSegments.last)
-        .where((name) => name.startsWith('role_') && name.endsWith('.png'))
-        .map((name) => name.substring('role_'.length, name.length - 4))
+        .where((name) => name.startsWith('role_') && name.endsWith('.webp'))
+        .map(
+          (name) =>
+              name.substring('role_'.length, name.length - '.webp'.length),
+        )
         // 뒷면은 역할이 아닙니다.
         .where((id) => id != 'back')
         .toSet();
@@ -54,8 +57,11 @@ void main() {
         .listSync()
         .whereType<File>()
         .map((file) => file.uri.pathSegments.last)
-        .where((name) => name.startsWith('role_') && name.endsWith('.png'))
-        .map((name) => name.substring('role_'.length, name.length - 4))
+        .where((name) => name.startsWith('role_') && name.endsWith('.webp'))
+        .map(
+          (name) =>
+              name.substring('role_'.length, name.length - '.webp'.length),
+        )
         .where((id) => id != 'back')
         .toSet();
 

@@ -25,6 +25,11 @@ firebase-debug.*.log
 firepit-log.txt
 ui-debug.log
 
+# 릴리즈 서명 키 — 절대 커밋하지 않습니다
+android/key.properties
+*.jks
+*.keystore
+
 # Platform build output
 android/app/debug/
 android/app/profile/

@@ -38,9 +38,24 @@ class SoundService {
   /// 그래서 [preloadEffects]에서 소스까지 물려 준비를 끝내 두고, 재생할 때는
   /// 되감아 다시 트는 것만 합니다. 같은 소리가 겹칠 수 있도록 소리마다 여러
   /// 개를 두고 돌려씁니다.
+  /// 겹쳐 날 수 있는 짧은 소리의 사본 수입니다.
+  ///
+  /// ⚠️ **사본은 공짜가 아닙니다.** 준비된 플레이어 하나가 기기의 디코더를
+  /// 하나 잡습니다. iOS에서 준비된 플레이어가 30개를 넘자 그 뒤의 소리가
+  /// `AVPlayerItem.Status.failed`로 통째로 준비되지 않았습니다(2026-08,
+  /// 마피아 내레이션 3개가 마지막이라 그것만 실패). 그래서 겹칠 일이 없는
+  /// 소리는 [preloadEffects]에 `solo: true`로 넘겨 하나만 둡니다.
   static const int _playersPerEffect = 4;
   final Map<String, List<AudioPlayer>> _preparedEffects = {};
   final Map<String, int> _nextPreparedEffect = {};
+
+  /// 지금 물려 둔 게임 전용 소리가 어느 게임 것인지입니다(게임 id).
+  ///
+  /// 게임은 한 번에 하나만 돌아가므로, 다른 게임이 준비를 요청하면 앞 게임의
+  /// 소리를 놓아 줍니다. 이게 없으면 한 세션에서 게임을 옮겨 다닐 때마다
+  /// 플레이어가 쌓여 위의 한계에 부딪힙니다.
+  String? _effectScope;
+  final Set<String> _scopedEffects = {};
 
   bool _initialized = false;
   Future<void>? _initialization;
@@ -98,12 +113,37 @@ class SoundService {
   ///
   /// 한 파일이 실패해도 나머지는 계속 준비합니다. 사운드는 보조 기능이라
   /// 준비 실패로 게임 진입을 막지 않습니다.
-  Future<void> preloadEffects(Iterable<String> assetPaths) async {
+  /// [solo]는 **자기 자신과 겹쳐 날 일이 없는 소리**입니다(내레이션 등).
+  /// 사본을 하나만 두어 기기 디코더를 아낍니다 — [_playersPerEffect] 주석 참고.
+  ///
+  /// [scope]에 게임 id를 주면 그 게임 전용 준비로 표시합니다. 다른 게임이
+  /// 준비를 요청하는 순간 앞 게임 것은 놓아 줍니다.
+  Future<void> preloadEffects(
+    Iterable<String> assetPaths, {
+    bool solo = false,
+    String? scope,
+  }) async {
     await initialize();
 
+    if (scope != null && scope != _effectScope) {
+      // 표시를 **먼저** 바꿉니다. 한 화면이 효과음과 안내 음성을 나눠 두 번
+      // 부르므로, 기다리는 동안 두 번째 호출이 같은 게임을 남으로 보고 방금
+      // 준비한 것을 놓아 버리면 안 됩니다.
+      _effectScope = scope;
+      final stale = _scopedEffects.toList();
+      _scopedEffects.clear();
+      // 놓아 준 뒤에 준비합니다 — 자리를 먼저 비워야 준비가 실패하지 않습니다.
+      await releaseEffects(stale);
+    }
+
+    final copies = solo ? 1 : _playersPerEffect;
     for (final assetPath in assetPaths) {
+      if (scope != null) _scopedEffects.add(assetPath);
       if (_preparedEffects.containsKey(assetPath)) continue;
 
+      // 하나라도 준비되면 그걸 씁니다. 중간에 실패해도 남은 사본으로 소리는
+      // 제때 납니다 — 통째로 버리면 그 소리만 늦게 납니다.
+      final players = <AudioPlayer>[];
       try {
         // 번들 에셋이면 파일로 풀어 둡니다. 서버에서 내려받은 파일은 이미
         // 기기에 있으므로 이 단계가 필요 없습니다.
@@ -113,23 +153,61 @@ class SoundService {
         }
 
         // 그 파일을 물린 플레이어까지 미리 준비 상태로 만들어 둡니다.
-        final players = <AudioPlayer>[];
-        for (var index = 0; index < _playersPerEffect; index += 1) {
-          final player = AudioPlayer();
-          await player.setReleaseMode(ReleaseMode.stop);
-          await player.setVolume(_effectVolume);
-          // setSource는 네이티브 준비가 끝날 때까지 기다립니다. 이 비용을
-          // 재생 시점이 아니라 지금 치릅니다.
-          await player.setSource(
-            GameAssetStore.instance.soundSourceFor(assetPath),
-          );
-          players.add(player);
+        for (var index = 0; index < copies; index += 1) {
+          players.add(await _prepareEffectPlayer(assetPath));
         }
-        _preparedEffects[assetPath] = players;
-        _nextPreparedEffect[assetPath] = 0;
       } catch (error) {
-        debugPrint('효과음을 미리 준비하지 못했습니다($assetPath): $error');
+        debugPrint(
+          '효과음을 미리 준비하지 못했습니다($assetPath, '
+          '사본 ${players.length}/$copies): $error',
+        );
       }
+
+      if (players.isEmpty) continue;
+      _preparedEffects[assetPath] = players;
+      _nextPreparedEffect[assetPath] = 0;
+    }
+  }
+
+  /// 소리 하나를 물린 플레이어를 준비 상태로 돌려줍니다.
+  Future<AudioPlayer> _prepareEffectPlayer(String assetPath) async {
+    final player = AudioPlayer();
+    try {
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.setVolume(_effectVolume);
+      // setSource는 네이티브 준비가 끝날 때까지 기다립니다. 이 비용을
+      // 재생 시점이 아니라 지금 치릅니다.
+      await player.setSource(GameAssetStore.instance.soundSourceFor(assetPath));
+      return player;
+    } on Object {
+      // 실패한 플레이어를 그냥 두면 디코더를 계속 잡고 있어, 뒤따르는 소리가
+      // 연달아 실패합니다. 반드시 놓아 줍니다.
+      await _disposeQuietly(player);
+      rethrow;
+    }
+  }
+
+  /// 미리 준비해 둔 소리를 놓아 줍니다.
+  ///
+  /// 준비 상태를 유지하는 값이 기기 자원이라, 다 쓴 게임의 소리는 돌려줘야
+  /// 다음 게임 소리가 준비될 자리가 생깁니다.
+  Future<void> releaseEffects(Iterable<String> assetPaths) async {
+    for (final assetPath in assetPaths.toList()) {
+      _scopedEffects.remove(assetPath);
+      _nextPreparedEffect.remove(assetPath);
+      final players = _preparedEffects.remove(assetPath);
+      if (players == null) continue;
+      for (final player in players) {
+        await _disposeQuietly(player);
+      }
+    }
+  }
+
+  Future<void> _disposeQuietly(AudioPlayer player) async {
+    try {
+      await player.dispose();
+    } catch (error) {
+      debugPrint('효과음 플레이어를 정리하지 못했습니다: $error');
     }
   }
 

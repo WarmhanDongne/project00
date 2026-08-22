@@ -462,7 +462,12 @@ class FinalCallController extends Notifier<FinalCallGameState> {
     if (commandInFlight) return false;
     state = state.copyWith(commandInFlight: true, errorMessage: null);
     try {
-      await command();
+      final result = await command();
+      // 서버는 "아직 할 일이 아니다"를 예외가 아니라 정상 응답으로 알립니다
+      // (예: 마감 전 타임아웃 호출 → {success: false, reason: "notExpired"}).
+      // 이를 성공으로 넘기면 호출자가 재시도하지 않아 진행이 멈춥니다.
+      // 명시적인 success:false만 실패로 봅니다(success 필드가 없는 명령도 있음).
+      if (result is Map && result['success'] == false) return false;
       return true;
     } catch (error) {
       _setError(

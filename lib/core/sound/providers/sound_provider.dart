@@ -196,8 +196,19 @@ class SoundProvider extends ChangeNotifier {
   ///
   /// 게임 진입 준비 단계에서 호출하세요. 준비하지 않으면 그 게임의 첫 효과음이
   /// 화면보다 늦게 납니다. 공용 효과음은 [initialize]에서 이미 준비합니다.
-  Future<void> preloadEffects(Iterable<String> assetPaths) {
-    return _service.preloadEffects(assetPaths);
+  /// [solo]는 자기 자신과 겹쳐 날 일이 없는 소리(내레이션 등)입니다.
+  /// [scope]에 게임 id를 주면 다른 게임이 준비할 때 자동으로 놓아 줍니다.
+  Future<void> preloadEffects(
+    Iterable<String> assetPaths, {
+    bool solo = false,
+    String? scope,
+  }) {
+    return _service.preloadEffects(assetPaths, solo: solo, scope: scope);
+  }
+
+  /// 미리 준비해 둔 효과음을 놓아 줍니다.
+  Future<void> releaseEffects(Iterable<String> assetPaths) {
+    return _service.releaseEffects(assetPaths);
   }
 
   /// 효과음을 1회 재생합니다.
