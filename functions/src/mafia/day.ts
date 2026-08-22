@@ -4,7 +4,11 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {mafiaProcessed, recordMafiaCommand} from "./commands.js";
-import {alivePlayers, beginMafiaVoting} from "./game.js";
+import {
+  alivePlayers,
+  beginMafiaVoting,
+  endMafiaDayByVote,
+} from "./game.js";
 import {MafiaRoom} from "./types.js";
 import {
   assertMafiaAlive,
@@ -67,7 +71,8 @@ export const game_mafia_end_discussion = onCall<EndData>(
 
       // 과반수 = 절반 초과. 10명이면 6명부터 끝납니다.
       const majority = skipCount * 2 > aliveCount;
-      if (majority) beginMafiaVoting(game, now);
+      // 확정(2026-08): 곧바로 투표로 넘기지 않고 안내를 거칩니다.
+      if (majority) endMafiaDayByVote(game, now);
 
       response = {
         success: true,

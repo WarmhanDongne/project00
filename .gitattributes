@@ -1,0 +1,8 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Ignore generated plugin files for line ending conversions
+linux/flutter/generated_plugin_registrant.* -text
+windows/flutter/generated_plugin_registrant.* -text
+windows/flutter/generated_plugins.cmake -text
+macos/Flutter/GeneratedPluginRegistrant.swift -text

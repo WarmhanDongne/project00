@@ -329,6 +329,65 @@ void main() {
       expect(find.text('플레이어0'), findsOneWidget);
     });
 
+    //=======================게임이 끝난 뒤 (확정 2026-08)==============
+    // 끝나면 관전이 아니라 결과를 보는 화면입니다. 제목을 '신분 정보'로 바꾸고
+    // '비밀로 유지하세요' 안내는 지웁니다. 내 이름은 빨간색으로 찾기 쉽게.
+    testWidgets('게임이 끝나면 제목이 신분 정보이고 안내 문구가 사라진다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MafiaSpectatorRosterView(
+            myRole: MafiaRoles.find('citizen'),
+            isNight: false,
+            isFinished: true,
+            revealed: [
+              for (final player in buildPlayers(4))
+                MafiaRevealedPlayer(
+                  player: player,
+                  role: MafiaRoles.find('mafia'),
+                ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('신분 정보'), findsOneWidget);
+      expect(find.text('관전자 정보'), findsNothing);
+      expect(find.textContaining('비밀로 유지하세요'), findsNothing);
+    });
+
+    testWidgets('관전 중에는 제목과 안내 문구를 그대로 둔다', (tester) async {
+      await pump(tester, isNight: false);
+
+      expect(find.text('관전자 정보'), findsOneWidget);
+      expect(find.textContaining('비밀로 유지하세요'), findsOneWidget);
+    });
+
+    testWidgets('내 닉네임만 빨간색이다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MafiaSpectatorRosterView(
+            myRole: MafiaRoles.find('citizen'),
+            isNight: false,
+            myUid: 'u1',
+            revealed: [
+              for (final player in buildPlayers(3))
+                MafiaRevealedPlayer(
+                  player: player,
+                  role: MafiaRoles.find('mafia'),
+                ),
+            ],
+          ),
+        ),
+      );
+
+      Color? colorOf(String nickname) =>
+          tester.widget<Text>(find.text(nickname)).style?.color;
+
+      expect(colorOf('플레이어1'), MafiaSpectatorRosterView.myNicknameColor);
+      expect(colorOf('플레이어0'), Colors.black);
+      expect(colorOf('플레이어2'), Colors.black);
+    });
+
     testWidgets('12인이면 명단도 4열로 바뀐다', (tester) async {
       await pump(tester, isNight: false, playerCount: 12);
 

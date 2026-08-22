@@ -137,7 +137,10 @@ class MafiaExecutionResultView extends StatelessWidget {
                 child: IgnorePointer(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10 * scale),
-                    child: MafiaProfileImage(url: target.profileImageUrl),
+                    child: MafiaProfileImage(
+                      url: target.profileImageUrl,
+                      characterId: target.characterId,
+                    ),
                   ),
                 ),
               ),
@@ -387,7 +390,10 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
       child: Opacity(
         opacity: opacity,
         child: ClipOval(
-          child: MafiaProfileImage(url: widget.executed.profileImageUrl),
+          child: MafiaProfileImage(
+            url: widget.executed.profileImageUrl,
+            characterId: widget.executed.characterId,
+          ),
         ),
       ),
     );

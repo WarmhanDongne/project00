@@ -77,10 +77,17 @@ abstract final class MafiaSounds {
   static const vote = 'assets/games/mafia/sounds/vote.mp3';
 
   /// 마피아 승리 결과 화면에서 재생합니다.
-  ///
-  /// 시민 승리용 소리는 아직 없습니다. 파일이 들어오면 여기에 추가하고
-  /// 결과 화면에서 승리 진영으로 갈라 쓰면 됩니다.
   static const mafiaWin = 'assets/games/mafia/sounds/win_mafia.mp3';
+
+  /// 이 진영이 이겼을 때 낼 **효과음**입니다. 없으면 null입니다.
+  ///
+  /// 확정(2026-08): 지금은 마피아 승리만 파일이 있고, **다른 승리는 효과음 없이
+  /// 나레이션만** 냅니다(사용자 결정). 시민·중립 파일이 들어오면 여기 한 줄씩
+  /// 추가하면 결과 화면은 고칠 필요가 없습니다.
+  static String? winEffectFor(MafiaFaction? faction) => switch (faction) {
+    MafiaFaction.mafia => mafiaWin,
+    _ => null,
+  };
 
   /// 낮 동안 깔리던 배경음악입니다. **지금은 쓰지 않습니다.**
   ///
@@ -102,6 +109,13 @@ abstract final class MafiaSounds {
   /// 아침이 되면 `GameBackgroundMusic.fadeOut()`으로 서서히 사라집니다.
   static const nightBackground =
       'assets/games/mafia/sounds/background/background_night.m4a';
+
+  /// 모두가 신분을 확인한 뒤 '게임을 시작하겠습니다' 안내에 맞춰 냅니다.
+  ///
+  /// ⚠️ **전용 음성이 아직 없어 공용 도장 소리를 씁니다.** 안내가 내려찍히는
+  /// 순간의 한 방으로 쓰기에 맞습니다. `voice_game_start.m4a`가 들어오면 이
+  /// 상수만 그 경로로 바꾸면 됩니다(화면 코드는 고칠 필요 없습니다).
+  static const gameStart = AppSounds.stamp;
 
   /// 게임 진입 준비 단계에서 미리 풀어 둘 짧은 효과음입니다.
   ///

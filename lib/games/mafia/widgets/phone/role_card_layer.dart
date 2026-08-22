@@ -266,6 +266,16 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
     _bob.stop();
     setState(() => _stage = _CardStage.returning);
     _text.reverse();
+    // ⚠️ **아직 뒤집지 않은 카드**는 되돌릴 것이 없습니다. 그때
+    // `_flip.reverse()`는 이미 0이라 상태 알림을 내지 않아, 내려가는 이동이
+    // 시작되지 않고 카드가 화면 가운데에 그대로 멈췄습니다. 신분을 확인하지
+    // 않은 채 밤이 된 사람의 화면이 카드에 막혀 있던 원인입니다(2026-08).
+    if (_flip.value == 0) {
+      _originTop = _centerTop;
+      _targetTop = _storedTop;
+      _travel.forward(from: 0);
+      return;
+    }
     _flip.reverse();
   }
 
@@ -333,10 +343,18 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   /// 어두운 막을 깔지입니다.
   ///
-  /// 처음 확인(P1)은 시안이 밝은 배경에 검은 글씨라 막을 깔지 않습니다.
-  /// 그 뒤 다른 단계에서 열어 볼 때는 막을 깔아, 뒤 화면의 잘못 눌림을 막고
-  /// 밤 화면에서도 문구가 읽히게 합니다.
-  bool get _usesScrim => !widget.isFirstReveal;
+  /// **카드를 여는 순간부터** 깝니다. 뒤 화면의 잘못 눌림을 막고, 밤 화면에서도
+  /// 문구가 읽힙니다.
+  ///
+  /// 처음 확인(P1)에서 카드가 아직 뒷면으로 떠 있는 동안(누르라는 화살표가
+  /// 보이는 시안)에는 깔지 않습니다. 예전에는 `isFirstReveal`만 봤는데, 그 값이
+  /// **서버의 확인 응답이 온 뒤에** 꺼져서 카드를 열고 한참 지나 뒤늦게 툭
+  /// 어두워졌습니다(2026-08).
+  bool get _usesScrim =>
+      _stage == _CardStage.flipping ||
+      _stage == _CardStage.revealed ||
+      _stage == _CardStage.returning ||
+      _stage == _CardStage.stored;
 
   @override
   Widget build(BuildContext context) {
@@ -402,11 +420,14 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   /// 카드 뒤를 덮는 막입니다. 눌러도 카드가 닫힙니다.
   Widget _buildScrim() {
+    // 되돌아가는 중에는 막이 함께 걷힙니다.
+    final showsScrim =
+        _stage == _CardStage.flipping || _stage == _CardStage.revealed;
     return Positioned.fill(
       child: IgnorePointer(
-        ignoring: !_isOpen,
+        ignoring: !showsScrim,
         child: AnimatedOpacity(
-          opacity: _isOpen ? 1 : 0,
+          opacity: showsScrim ? 1 : 0,
           duration: const Duration(milliseconds: 260),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:project00/games/mafia/animations/announcement_reveal.dart';
 import 'package:project00/games/mafia/animations/mafia_phase_transition.dart';
+import 'package:project00/games/mafia/mafia_copy.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/controllers/mafia_controller.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_day_view.dart';
@@ -107,6 +109,7 @@ class MafiaTabletStageView extends StatelessWidget {
     required this.playerLayout,
     this.remainingSeconds,
     this.showsNightNotice = false,
+    this.showsGameStartNotice = false,
     this.onRulebookPressed,
     this.onSettingsPressed,
     this.onRestart,
@@ -122,6 +125,9 @@ class MafiaTabletStageView extends StatelessWidget {
 
   /// 역할 배분 화면 위에 '밤이 됐습니다' 안내를 덮을지입니다.
   final bool showsNightNotice;
+
+  /// '게임을 시작하겠습니다' 안내를 덮어 보여 줄지입니다(전원 확인 직후).
+  final bool showsGameStartNotice;
 
   final VoidCallback? onRulebookPressed;
   final VoidCallback? onSettingsPressed;
@@ -175,6 +181,9 @@ class MafiaTabletStageView extends StatelessWidget {
       stage == MafiaTabletStage.voting;
 
   Widget _buildStage() {
+    // 기자가 취재한 사람입니다. 아침 발표가 이 사람의 카드를 뒤집습니다.
+    final exposedUid = controller.morningResult?.exposedUid;
+
     return switch (stage) {
       // 역할 배분은 태블릿 배경 위에서 공용 분배 연출을 돌립니다(확정 방식).
       // 카드는 뒷면 그대로입니다 — 태블릿에서 신분이 보이면 안 됩니다.
@@ -182,14 +191,25 @@ class MafiaTabletStageView extends StatelessWidget {
         players: controller.orderedPlayers,
         confirmedCount: controller.roleConfirmedCount,
         showsNightNotice: showsNightNotice,
+        showsGameStartNotice: showsGameStartNotice,
       ),
       // 시안에 문구가 없어 진행 현황도 넣지 않습니다.
       MafiaTabletStage.night => MafiaTabletNightView(),
       MafiaTabletStage.morning => MafiaTabletMorningSequence(
         result: controller.morningResult,
         players: controller.players,
+        // 기자가 취재에 성공한 아침이면 그 사람의 신분이 공개됩니다.
+        exposedRole: exposedUid == null
+            ? null
+            : controller.revealedRoleOf(exposedUid),
       ),
       // 토론과 투표 시간은 같은 시안에서 가운데 그림만 다릅니다.
+      // 확정(2026-08): 과반수 투표로 토론이 끝나면 안내를 띄운 뒤 투표로
+      // 넘어갑니다(서버가 낮 마감을 안내 길이만큼으로 줄여 둡니다).
+      MafiaTabletStage.day when controller.isDayEndedByVote =>
+        const MafiaAnnouncementReveal(
+          child: MafiaTabletNotice.day(text: MafiaCopy.discussionSkippedNotice),
+        ),
       MafiaTabletStage.day => MafiaTabletDayView(
         showBallotBox: false,
         remainingSeconds: remainingSeconds,

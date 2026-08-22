@@ -13,6 +13,7 @@ class MafiaMorningResult {
     required this.deadUids,
     required this.savedCount,
     this.endsGame = false,
+    this.exposedUid,
   });
 
   /// 밤에 사망한 사람입니다. 비어 있으면 아무도 죽지 않았습니다.
@@ -31,15 +32,29 @@ class MafiaMorningResult {
   /// 계속되는 것처럼 보입니다.
   final bool endsGame;
 
+  /// 기자가 취재에 성공해 **신분이 공개되는** 사람입니다.
+  ///
+  /// 공개된 신분 자체는 `revealedRoles`에 있습니다. 이 값은 아침 발표가 누구의
+  /// 카드를 뒤집어 보여 줄지 알기 위한 것입니다. 없으면 취재가 없었거나
+  /// 실패한 밤입니다.
+  final String? exposedUid;
+
   factory MafiaMorningResult.fromMap(Map<Object?, Object?> map) {
+    final exposedUid = map['exposedUid']?.toString();
     return MafiaMorningResult(
       deadUids: _stringList(map['deadUids']),
       savedCount: (map['savedCount'] as num?)?.toInt() ?? 0,
       endsGame: map['endsGame'] == true,
+      exposedUid: (exposedUid == null || exposedUid.isEmpty)
+          ? null
+          : exposedUid,
     );
   }
 
   bool get hasDeaths => deadUids.isNotEmpty;
+
+  /// 기자의 취재가 성공한 밤인지입니다.
+  bool get hasExposure => exposedUid != null;
 }
 
 /// 밤 행동이 제출된 순간 태블릿이 낼 소리 신호입니다.

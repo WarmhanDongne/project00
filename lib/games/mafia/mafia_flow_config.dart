@@ -48,18 +48,32 @@ abstract final class MafiaTiming {
   /// 시작된 시각을 되짚어(마감 − 이 시간) 분배 연출이 끝나는 순간을 셉니다.
   static const Duration roleReveal = Duration(seconds: 60);
 
-  /// 밤에 행동을 고를 수 있는 시간입니다(확정 2026-08: 1분).
+  //=======================밤의 두 구간 (확정 2026-08)==============================
+  // 마담이 막은 사람의 능력은 무효라, **마담 판정이 끝나야** 뒤 역할들의 행동이
+  // 의미를 가집니다. 그래서 밤을 나눕니다.
+  //
+  //   차단(1분) → 행동(1분) → 마무리(10초) → 아침
+  //
+  // 앞 구간이 일찍 끝나면 남은 시간을 버리고 곧바로 다음 구간이 열립니다.
+  // 서버가 구간을 정하고(`nightStage`), 화면은 그 값을 따릅니다.
+
+  /// 능력을 막는 역할(마담)만 고르는 앞 구간입니다.
+  ///
+  /// 서버 원본은 `MAFIA_NIGHT_BLOCK_MS`입니다.
+  static const Duration nightBlock = Duration(seconds: 60);
+
+  /// 그 밖의 밤 역할이 고르는 구간입니다.
   ///
   /// 서버 원본은 `MAFIA_NIGHT_ACTION_MS`입니다.
   static const Duration nightAction = Duration(seconds: 60);
 
-  /// 행동 시간이 끝난 뒤 다같이 기다리는 시간입니다(확정: 30초).
+  /// 행동이 모두 끝난 뒤 아침이 오기까지 기다리는 시간입니다(확정: 10초).
   ///
   /// 서버 원본은 `MAFIA_NIGHT_WAIT_MS`입니다.
-  static const Duration nightWait = Duration(seconds: 30);
+  static const Duration nightWait = Duration(seconds: 10);
 
-  /// 밤 전체 시간입니다(행동 + 대기).
-  static Duration get night => nightAction + nightWait;
+  /// 밤 전체 시간입니다(차단 + 행동 + 마무리).
+  static Duration get night => nightBlock + nightAction + nightWait;
 
   /// 생존 인원에 맞는 토론 시간입니다. 표 밖의 인원은 양 끝 값을 씁니다.
   static Duration discussion(int aliveCount) {

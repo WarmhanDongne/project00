@@ -463,6 +463,7 @@ class _MafiaTabletTallyViewState extends State<MafiaTabletTallyView>
                         child: SizedBox.expand(
                           child: MafiaProfileImage(
                             url: player?.profileImageUrl ?? '',
+                            characterId: player?.characterId,
                           ),
                         ),
                       ),

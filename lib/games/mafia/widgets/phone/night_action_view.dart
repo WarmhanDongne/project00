@@ -16,7 +16,17 @@ class MafiaNightInvestigationResult {
     required this.target,
     required this.verdict,
     this.title = '조사 결과',
+    this.asFactionSentence = false,
   });
+
+  /// 결과를 **문장 한 줄**로 보여 줄지입니다(경찰의 진영 조사).
+  ///
+  /// 확정(2026-08): 경찰의 결과는 `시민`처럼 한 낱말로 두지 않습니다. `시민`은
+  /// 직업 이름이기도 해서 "정확한 직업을 알아냈다"로 읽힙니다. 그래서
+  /// `OO님은 마피아입니다` · `OO님은 마피아가 아닙니다`로 적습니다.
+  ///
+  /// 영매·도둑은 실제로 직업 이름을 알아내므로 이 값이 false입니다.
+  final bool asFactionSentence;
 
   /// 조사한 대상입니다.
   final MafiaPlayer target;
@@ -40,6 +50,16 @@ class MafiaNightInvestigationResult {
     return MafiaRoles.all.any(
       (role) => role.displayName == text && role.faction.isMafia,
     );
+  }
+
+  /// 화면에 적을 결과 문구입니다.
+  ///
+  /// 진영 조사는 문장으로, 직업을 알아내는 조사(영매·도둑)는 서버가 보낸 직업
+  /// 이름을 그대로 씁니다.
+  String get displayText {
+    if (!asFactionSentence) return verdict;
+    final name = target.nickname;
+    return showsMafia ? '$name님은 마피아입니다' : '$name님은 마피아가 아닙니다';
   }
 }
 
@@ -260,6 +280,9 @@ class MafiaNightActionView extends StatelessWidget {
           selectedUid: selectedUid,
           allySelectedUids: allySelectedUids,
           selectionColor: current.nightAction.accentColor,
+          // 영매·도둑은 **사망자**를 고릅니다. 이 값을 넘기지 않으면 명단이
+          // 보이는데도 아무도 눌리지 않습니다(2026-08).
+          selectsDead: current.targetsDead,
           onSelect: onSelect,
         ),
       ),
@@ -300,19 +323,25 @@ class MafiaNightActionView extends StatelessWidget {
           ),
         ),
       ),
-      // 결과 값 (예: 시민 / 마피아) — 시안 고유 자리(151)라 통일 대상이 아닙니다.
+      // 결과 값 — 시안 고유 자리(151)라 통일 대상이 아닙니다.
+      // 진영 조사는 문장(`OO님은 마피아입니다`)이라 길어질 수 있어, 시안의
+      // 한 줄을 유지하도록 필요한 만큼만 줄입니다.
       Positioned(
-        left: 0,
-        right: 0,
+        left: MafiaPhoneDesign.left(size, MafiaPhoneDesign.contentLeft),
         top: MafiaPhoneDesign.top(size, 151),
+        width: MafiaPhoneDesign.contentWidth * scale,
         child: IgnorePointer(
-          child: Text(
-            result.verdict,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 36 * scale,
-              fontWeight: FontWeight.w700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              result.displayText,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 36 * scale,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
@@ -331,7 +360,10 @@ class MafiaNightActionView extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10 * scale),
-              child: MafiaProfileImage(url: result.target.profileImageUrl),
+              child: MafiaProfileImage(
+                url: result.target.profileImageUrl,
+                characterId: result.target.characterId,
+              ),
             ),
           ),
         ),

@@ -195,6 +195,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
                       player.uid: game.revealedRoleOf(player.uid),
                   },
                   myRole: game.myRole,
+                  myUid: game.uid,
                 )
               : const SizedBox.shrink(),
           content: Stack(
@@ -235,7 +236,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     final leave = await SharedPhoneExitModal.show(
       context,
       doorImage: const _ExitBadge(color: _mafiaExitColor),
-      imageHeight: 120,
+      imageHeight: 150,
       maxWidth: 320,
       surfaceColor: Colors.white,
       titleColor: Colors.black,
@@ -263,8 +264,8 @@ const Color _mafiaExitColor = Color(0xFF212730);
 //=======================퇴장 모달 표시==============================
 /// 퇴장 모달 위쪽 표시입니다.
 ///
-/// 마피아다운 리볼버 그림을 씁니다. 그림 파일이 아직 없거나 불러오지 못하면
-/// 아이콘으로 대신 그려, 모달 자체가 비어 보이지 않게 합니다.
+/// 마피아다운 리볼버 그림을 씁니다. 그림을 불러오지 못하면 아이콘으로 대신
+/// 그려, 모달 자체가 비어 보이지 않게 합니다.
 class _ExitBadge extends StatelessWidget {
   const _ExitBadge({required this.color});
 

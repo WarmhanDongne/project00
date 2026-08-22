@@ -171,13 +171,23 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   /// 줬을 때만 문구가 생깁니다.
   ///
   /// - **처형자** — 목표를 모르면 역할이 성립하지 않습니다. 계속 보여 줍니다.
+  /// - **동료를 아는 역할** — 마피아·스파이·마담·도둑·교단은 서로를 압니다.
+  ///   확정(2026-08): 스파이는 밤에 하는 일이 없어 이 줄이 없으면 누가
+  ///   마피아인지 끝까지 알 수 없었습니다. 마피아끼리도 밤 화면에서는 동료가
+  ///   *고른 대상*만 보여 서로가 누구인지 확인할 자리가 없었습니다.
   /// - **도둑·전향된 사람** — 카드 그림은 이미 새 신분으로 바뀌지만, 바뀐 줄
   ///   모르고 지나칠 수 있어 그 라운드 동안 한 줄로 알려 줍니다.
   static String? _roleNotice(MafiaController game) {
+    final lines = <String>[];
     final target = game.executionerTarget;
-    if (target != null) return '목표 · ${target.nickname}';
-    if (game.roleChangedThisRound) return '지난밤 신분이 바뀌었습니다';
-    return null;
+    if (target != null) lines.add('목표 · ${target.nickname}');
+    final allies = game.allyPlayers;
+    if (allies.isNotEmpty) {
+      lines.add('동료 · ${allies.map((player) => player.nickname).join(', ')}');
+    }
+    if (game.roleChangedThisRound) lines.add('지난밤 신분이 바뀌었습니다');
+    // 자리는 한 줄입니다. 여러 개면 가운뎃점으로 이어 붙입니다(넘치면 줄어듭니다).
+    return lines.isEmpty ? null : lines.join('  ·  ');
   }
 
   /// 태블릿에서 카드를 다 나눠 줄 때까지 남은 시간입니다.
@@ -232,6 +242,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     if (game.isSpectating) {
       return MafiaSpectatorRosterView(
         myRole: game.myRole,
+        myUid: game.uid,
         isNight: game.isNight,
         revealed: [
           for (final player in game.orderedPlayers)
@@ -256,6 +267,8 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       'day' => MafiaDayDiscussionView(
         role: game.myRole,
         remainingSeconds: remaining?.inSeconds,
+        // 과반수 투표로 끝난 낮입니다. 안내만 남기고 곧 투표로 넘어갑니다.
+        endedByVote: game.isDayEndedByVote,
         canEndDiscussion: game.canEndDiscussion,
         skipVoteCount: game.discussionSkipCount,
         aliveCount: game.alivePlayers.length,
@@ -285,10 +298,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         target != null &&
         _acknowledgedInvestigationRound != game.round;
 
-    // 확정(2026-08): 밤의 앞 1분만 고를 수 있고, 남은 30초는 다같이
-    // 기다립니다. 남은 시간이 대기 구간에 들어서면 화면을 대기로 넘깁니다.
-    final actionWindowClosed =
-        remaining != null && remaining <= MafiaTiming.nightWait;
+    // 확정(2026-08): 밤은 **차단 구간 → 행동 구간 → 마무리**로 흐릅니다.
+    // 내 차례가 아닌 구간에서는 격자를 감추고 대기 화면을 보여 줍니다.
+    // 서버가 구간을 알려 주므로 남은 시간으로 되짚지 않습니다.
+    final actionWindowClosed = game.nightStageClosed;
 
     return MafiaNightActionView(
       role: game.myRole,
@@ -319,6 +332,9 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
               // 제목은 역할의 동사에서 만듭니다. 조사·추적·교신·절도가
               // 모두 같은 자리를 쓰므로 역할 이름으로 분기하지 않습니다.
               title: _investigationTitle(game.myRole),
+              // 진영만 알아내는 조사는 문장으로 적습니다(확정 2026-08).
+              asFactionSentence:
+                  game.myRole?.nightAction == MafiaNightAction.investigate,
             )
           : null,
       onConfirmResult: showsResult
