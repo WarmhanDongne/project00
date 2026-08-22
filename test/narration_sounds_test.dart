@@ -49,7 +49,7 @@ void main() {
     // 준비하지 않으면 첫 재생이 화면보다 늦습니다. 나레이션은 한 판에 한 번씩만
     // 나므로 매번 그 지연을 겪습니다.
     expect(
-      LiarsPokerSounds.preloadTargets,
+      LiarsPokerSounds.narrationTargets,
       contains(LiarsPokerSounds.voiceLiar),
     );
     for (final path in [
@@ -58,14 +58,32 @@ void main() {
       FinalCallSounds.voiceWinRed,
       FinalCallSounds.voiceDraw,
     ]) {
-      expect(FinalCallSounds.preloadTargets, contains(path));
+      expect(FinalCallSounds.narrationTargets, contains(path));
     }
     for (final path in [
       MafiaSounds.voiceNight,
       MafiaSounds.voiceWinCitizen,
       MafiaSounds.voiceWinMafia,
     ]) {
-      expect(MafiaSounds.preloadTargets, contains(path));
+      expect(MafiaSounds.narrationTargets, contains(path));
+    }
+  });
+
+  test('나레이션은 효과음 목록과 섞지 않는다', () {
+    // 안내 음성은 겹쳐 나지 않아 사본을 하나만 둡니다(`solo: true`). 효과음
+    // 목록에 섞이면 사본이 4개씩 잡혀, 기기 디코더가 모자라 **뒤쪽 소리가
+    // 통째로 준비되지 않습니다** — 2026-08 iOS에서 마피아 승리 음성이 그렇게
+    // 실패했습니다.
+    for (final entry in narrations.entries) {
+      expect(
+        [
+          ...LiarsPokerSounds.preloadTargets,
+          ...FinalCallSounds.preloadTargets,
+          ...MafiaSounds.preloadTargets,
+        ],
+        isNot(contains(entry.value)),
+        reason: '${entry.key}이 효과음 목록에 들어 있습니다',
+      );
     }
   });
 

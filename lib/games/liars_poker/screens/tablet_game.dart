@@ -769,7 +769,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     // ---------------------------------------------------------------------------
     // 게임 종료 후 플랫폼 화면 정책 복원
     // ---------------------------------------------------------------------------
-    unawaited(AppOrientation.lockPlatformLandscape());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }

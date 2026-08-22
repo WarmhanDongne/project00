@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -27,13 +26,9 @@ void main() async {
   // 태블릿에서 가로입니다.
   //
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
-  final view =
-      PlatformDispatcher.instance.implicitView ??
-      PlatformDispatcher.instance.views.firstOrNull;
-  final physicalSize = view != null
-      ? (view.physicalSize / view.devicePixelRatio)
-      : const Size(390, 844);
-  final isTablet = physicalSize.shortestSide >= DeviceLayout.tabletBreakpoint;
+  // 기기 판별은 DeviceLayout 한 곳에서 합니다(게임 종료 후 방향 복원과 같은
+  // 기준을 써야 로비 방향이 어긋나지 않습니다).
+  final isTablet = DeviceLayout.isTabletDevice();
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   //
   // 여기서 예외가 나면 화면이 한 장도 그려지기 전이라 사용자에게는 앱이 그냥

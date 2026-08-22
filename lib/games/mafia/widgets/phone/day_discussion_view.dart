@@ -69,6 +69,9 @@ class MafiaDayDiscussionView extends StatelessWidget {
   static const double _illustrationTop = 244;
   static const double _illustrationSize = 349;
 
+  /// 토론 종료에 동의한 뒤의 버튼 색입니다(마피아 화면의 검정).
+  static const Color _votedButtonColor = Color(0xFF212730);
+
   /// 이 시간 미만이면 타이머를 빨간색으로 바꿉니다.
   ///
   /// 시안('시간 없을때')이 29초를 빨간색으로 보여 주므로 30초로 잡았습니다.
@@ -157,7 +160,11 @@ class MafiaDayDiscussionView extends StatelessWidget {
             // 서버가 투표로 넘깁니다.
             MafiaPhoneActionButton(
               label: hasVotedToSkip ? '$skipVoteCount/$aliveCount' : endLabel,
-              labelColor: hasVotedToSkip ? const Color(0xFFFF0000) : null,
+              // 확정(2026-08): 누른 뒤에는 옅은 회색으로 빠지지 않고 **검은
+              // 버튼 + 흰 글자**로 남습니다. 집계가 계속 올라가는 자리라
+              // 흐려지면 잘 읽히지 않습니다.
+              backgroundColor: hasVotedToSkip ? _votedButtonColor : null,
+              labelColor: hasVotedToSkip ? Colors.white : null,
               onTap: onEndDiscussion,
               enabled:
                   canEndDiscussion &&

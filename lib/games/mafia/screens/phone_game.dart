@@ -109,7 +109,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   @override
   void dispose() {
     sessionSubscription?.close();
-    unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }

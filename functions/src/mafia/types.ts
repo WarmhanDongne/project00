@@ -138,6 +138,14 @@ export interface MafiaMorningResult {
    * 누가 살렸는지·누가 살아났는지는 넣지 않습니다. 의사와 대상이 드러납니다.
    */
   savedCount: number;
+  /**
+   * 이 발표가 끝나면 게임이 끝나는지입니다(발표 연출용 힌트).
+   *
+   * 판정은 발표가 끝날 때 서버가 다시 합니다. 이 값은 태블릿이 **다음 단계
+   * 안내를 띄우지 않도록** 미리 알려 주기 위한 것입니다. 이미 이겼는데
+   * '토론을 시작합니다'가 떠오르면 게임이 계속되는 것처럼 보입니다.
+   */
+  endsGame?: boolean;
   resolvedAt: number;
 }
 
@@ -151,6 +159,13 @@ export interface MafiaVoteResult {
   tie: boolean;
   /** 기권(미투표) 인원입니다. */
   abstainCount: number;
+  /**
+   * 이 처형으로 게임이 끝나는지입니다(발표 연출용 힌트).
+   *
+   * 판정은 발표가 끝날 때 서버가 다시 합니다. 이 값은 태블릿이 **'밤이
+   * 되었습니다' 안내를 띄우지 않도록** 미리 알려 주기 위한 것입니다.
+   */
+  endsGame?: boolean;
   resolvedAt: number;
 }
 

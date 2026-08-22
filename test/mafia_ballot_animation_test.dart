@@ -155,13 +155,37 @@ void main() {
       expect(centers[0], lessThan(centers[1]));
       expect(centers[1], lessThan(centers[2]));
 
-      // 맨 아래 블럭도 닉네임보다 위에 있습니다.
-      final nickname = tester.getCenter(find.text('플레이어0')).dy;
-      expect(centers[2], lessThan(nickname));
+      // 확정(2026-08): 칸마다 프로필과 닉네임이 함께 오릅니다.
+      expect(find.text('플레이어0'), findsNWidgets(3));
+
+      // 칸끼리 겹치지 않습니다(사진 아래 이름 줄까지 포함해 자리를 잡습니다).
+      final rects =
+          tester
+              .widgetList(blocks)
+              .map(
+                (widget) => tester.getRect(
+                  find
+                      .ancestor(
+                        of: find.byWidget(widget),
+                        matching: find.byType(Column),
+                      )
+                      .first,
+                ),
+              )
+              .toList()
+            ..sort((left, right) => left.top.compareTo(right.top));
+      for (var i = 0; i + 1 < rects.length; i += 1) {
+        expect(
+          rects[i].overlaps(rects[i + 1]),
+          isFalse,
+          reason: '$i번과 ${i + 1}번 칸이 겹칩니다.',
+        );
+      }
     });
 
-    testWidgets('프로필 아래에 닉네임을 적는다', (tester) async {
-      // 확정(2026-08): 사진만으로는 멀리서 누구인지 알기 어렵습니다.
+    testWidgets('칸마다 프로필 아래에 닉네임을 적는다', (tester) async {
+      // 확정(2026-08): 사진만으로는 멀리서 누구인지 알기 어렵습니다. 이름을
+      // 탑 아래에 한 번만 적으면 탑이 높아질수록 사진과 멀어져 헷갈립니다.
       tester.view.physicalSize = const Size(1194, 834);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -183,8 +207,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
 
-      // 표를 받은 두 사람만 칸에 오릅니다.
-      expect(find.text('플레이어0'), findsOneWidget);
+      // 받은 표 수만큼 이름이 함께 오릅니다(u0 두 표, u1 한 표).
+      expect(find.text('플레이어0'), findsNWidgets(2));
       expect(find.text('플레이어1'), findsOneWidget);
       // 표를 못 받은 사람은 칸에 오르지 않습니다.
       expect(find.text('플레이어2'), findsNothing);

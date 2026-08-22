@@ -54,6 +54,11 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
   /// 카드 더미가 비었는지입니다. 그 전에는 문구가 카드 뒤에 숨습니다.
   bool _deckCleared = false;
 
+  /// 전원이 카드를 확인했는지입니다.
+  bool get _allConfirmed =>
+      widget.players.isNotEmpty &&
+      widget.confirmedCount >= widget.players.length;
+
   @override
   Widget build(BuildContext context) {
     final players = widget.players;
@@ -77,8 +82,12 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
         // 나눠 주는 동안에는 카드에 가려 보이지 않고, 마지막 장이 떠나면
         // 그 자리에 남습니다. 인원이 많아 문구가 카드보다 넓어지는 경우까지
         // 확실히 가리려고, 더미가 빌 때까지 투명도로도 감춥니다.
+        // 확정(2026-08): 전원이 확인하면(4/4) 숫자를 **곧바로** 거둡니다. 더
+        // 기다릴 것이 없는데 남겨 두면 밤 안내까지 10초를 멍하니 보게 됩니다.
         AnimatedOpacity(
-          opacity: _deckCleared || players.isEmpty ? 1 : 0,
+          opacity: _allConfirmed
+              ? 0
+              : (_deckCleared || players.isEmpty ? 1 : 0),
           duration: MafiaTabletRoleDealView.confirmRevealDuration,
           child: MafiaTabletHeadline(
             // 확정(2026-08): '확인' 글자는 빼고 숫자만 둡니다.
@@ -233,6 +242,14 @@ class MafiaTabletMorningSequence extends StatelessWidget {
   /// 세 박자를 합한 아침 전체 시간입니다.
   static Duration get totalHold => openingHold + announcementHold + closingHold;
 
+  /// 이 결과로 실제로 보여 줄 시간입니다.
+  ///
+  /// 확정(2026-08): 사망자 발표로 게임이 끝나면 **'토론을 시작합니다'를 건너뛰고
+  /// 곧바로** 결과 화면으로 갑니다. 이미 끝난 판에서 다음 단계를 예고하면 게임이
+  /// 계속되는 것처럼 보입니다.
+  static Duration holdOf(MafiaMorningResult? result) =>
+      (result?.endsGame ?? false) ? openingHold + announcementHold : totalHold;
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -250,10 +267,14 @@ class MafiaTabletMorningSequence extends StatelessWidget {
           child: MafiaTabletMorningView(result: result, players: players),
         ),
         // 3박자: 토론 시작 안내입니다. 단계가 넘어갈 때까지 남습니다.
-        MafiaAnnouncementReveal(
-          delay: openingHold + announcementHold,
-          child: const MafiaTabletNotice.day(text: MafiaCopy.discussionNotice),
-        ),
+        // 이 발표로 게임이 끝나면 띄우지 않습니다.
+        if (!(result?.endsGame ?? false))
+          MafiaAnnouncementReveal(
+            delay: openingHold + announcementHold,
+            child: const MafiaTabletNotice.day(
+              text: MafiaCopy.discussionNotice,
+            ),
+          ),
       ],
     );
   }
@@ -290,6 +311,14 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
   /// 개표부터 밤 안내까지 합한 전체 시간입니다.
   static Duration get totalHold => tallyHold + executionHold + nightNoticeHold;
 
+  /// 이 결과로 실제로 보여 줄 시간입니다.
+  ///
+  /// 확정(2026-08): 이 처형으로 게임이 끝나면 **'밤이 되었습니다'를 건너뛰고
+  /// 곧바로** 결과 화면으로 갑니다. 밤을 예고했다가 게임이 끝나면 흐름이
+  /// 끊깁니다.
+  static Duration holdOf(MafiaVoteResult? result) =>
+      (result?.endsGame ?? false) ? tallyHold + executionHold : totalHold;
+
   @override
   Widget build(BuildContext context) {
     // 아침 발표와 같은 말투입니다 — 각 박자가 떠올랐다 물러납니다.
@@ -310,10 +339,12 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
           ),
         ),
         // 확정(2026-08): 밤으로 가기 전에 안내를 띄우고 그 뒤에 배경이 바뀝니다.
-        MafiaAnnouncementReveal(
-          delay: tallyHold + executionHold,
-          child: const MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
-        ),
+        // 이 처형으로 게임이 끝나면 띄우지 않습니다.
+        if (!(result?.endsGame ?? false))
+          MafiaAnnouncementReveal(
+            delay: tallyHold + executionHold,
+            child: const MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
+          ),
       ],
     );
   }

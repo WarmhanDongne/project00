@@ -107,12 +107,12 @@ abstract final class MafiaSounds {
   ///
   /// 준비하지 않으면 첫 재생에서 에셋을 파일로 풀어내며 소리가 화면보다 늦게
   /// 납니다. 총성·승리음은 게임에 한 번만 나므로 매번 그 지연을 겪습니다.
-  static const preloadTargets = [
-    gunshot,
-    vote,
-    mafiaWin,
-    voiceNight,
-    voiceWinCitizen,
-    voiceWinMafia,
-  ];
+  /// 여러 사람이 동시에 눌러 겹쳐 날 수 있는 짧은 소리입니다. 사본을 여러 개
+  /// 물려 둡니다.
+  static const preloadTargets = [gunshot, vote, mafiaWin];
+
+  /// 한 번에 하나만 나는 안내 음성입니다. **[preloadTargets]와 나눠 둡니다** —
+  /// 겹칠 일이 없어 사본 하나로 충분하고, 사본을 아껴야 기기 디코더가 모자라
+  /// 준비가 실패하는 일이 없습니다(2026-08 iOS 사고).
+  static const narrationTargets = [voiceNight, voiceWinCitizen, voiceWinMafia];
 }

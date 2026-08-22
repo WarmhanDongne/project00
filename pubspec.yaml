@@ -130,6 +130,7 @@ flutter:
     - assets/sounds/
     - assets/lottie/
     - assets/l10n/
+    - shorebird.yaml
 
   # To add assets to your application, add an assets section, like this:
   # assets:

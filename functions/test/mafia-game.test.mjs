@@ -261,6 +261,66 @@ test("아무도 투표하지 않으면 무처형이다", () => {
   assert.equal(game.public.voteResult.abstainCount, 6);
 });
 
+// ===== 발표에 담는 종료 힌트 =====
+// 확정(2026-08): 발표가 끝나면 게임이 끝나는 경우, 태블릿이 다음 단계 예고
+// ('밤이 되었습니다'·'토론을 시작합니다')를 건너뛰도록 결과에 미리 알립니다.
+// 판정 자체는 발표가 끝날 때 advanceMafiaAfterDeaths가 다시 합니다.
+
+test("마피아가 전멸하는 처형이면 개표 결과에 종료를 알린다", () => {
+  const game = makeGame(
+    {m1: "mafia", c1: "citizen", c2: "citizen"},
+    {phase: "voting"},
+  );
+  game.server.votes = {c1: "m1", c2: "m1"};
+  resolveMafiaVoting(game, 3000);
+
+  assert.equal(game.public.voteResult.executedUid, "m1");
+  assert.equal(game.public.voteResult.endsGame, true);
+  // 발표 중에는 아직 진행 중입니다. 끝내는 것은 발표가 끝난 뒤입니다.
+  assert.equal(game.public.phase, "voteResult");
+
+  assert.equal(advanceMafiaAfterDeaths(game, "night", 4000), "citizen");
+  assert.equal(game.public.phase, "finished");
+});
+
+test("게임이 이어지는 처형이면 종료를 알리지 않는다", () => {
+  const game = makeGame(SIX, {phase: "voting"});
+  game.server.votes = {p1: "c1", d1: "c1"};
+  resolveMafiaVoting(game, 3000);
+
+  assert.equal(game.public.voteResult.executedUid, "c1");
+  assert.equal(game.public.voteResult.endsGame, false);
+  assert.equal(advanceMafiaAfterDeaths(game, "night", 4000), null);
+  assert.equal(game.public.phase, "night");
+});
+
+test("밤 사망으로 끝나는 아침이면 아침 결과에 종료를 알린다", () => {
+  const game = makeGame(
+    {m1: "mafia", c1: "citizen", c2: "citizen"},
+    {phase: "night"},
+  );
+  // 마피아가 한 명을 죽이면 1 대 1이 되어 마피아 승리입니다.
+  game.server.nightActions = {m1: "c1"};
+  resolveMafiaNight(game, 2000);
+
+  assert.deepEqual(game.public.morningResult.deadUids, ["c1"]);
+  assert.equal(game.public.morningResult.endsGame, true);
+  assert.equal(game.public.phase, "morning");
+
+  assert.equal(advanceMafiaAfterDeaths(game, "day", 3000), "mafia");
+  assert.equal(game.public.phase, "finished");
+});
+
+test("게임이 이어지는 아침이면 종료를 알리지 않는다", () => {
+  const game = makeGame(SIX, {phase: "night"});
+  game.server.nightActions = {m1: "c1"};
+  resolveMafiaNight(game, 2000);
+
+  assert.equal(game.public.morningResult.endsGame, false);
+  assert.equal(advanceMafiaAfterDeaths(game, "day", 3000), null);
+  assert.equal(game.public.phase, "day");
+});
+
 // ===== 승패 판정 =====
 
 test("마피아가 모두 죽으면 시민 승리", () => {

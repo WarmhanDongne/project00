@@ -33,10 +33,23 @@ Future<void> preloadFinalCallAssets(
 
   // 하트 파열음처럼 한 라운드에 한 번만 나는 소리가 화면보다 늦지 않도록
   // 게임 전용 효과음을 먼저 준비합니다.
-  unawaited(
-    SoundEffects.of(context)?.preloadEffects(FinalCallSounds.preloadTargets) ??
-        Future<void>.value(),
-  );
+  // 이 게임 소리를 미리 풀어 둡니다. 하지 않으면 첫 재생이 화면보다 늦습니다.
+  // `scope`를 주면 다른 게임에 들어갈 때 이 소리들을 자동으로 놓아 줍니다 —
+  // 쌓이면 기기 디코더가 모자라 준비가 실패합니다(2026-08 iOS 사고).
+  final sound = SoundEffects.of(context);
+  if (sound != null) {
+    unawaited(
+      sound.preloadEffects(FinalCallSounds.preloadTargets, scope: 'final_call'),
+    );
+    // 안내 음성은 겹쳐 나지 않으므로 사본을 하나만 둡니다.
+    unawaited(
+      sound.preloadEffects(
+        FinalCallSounds.narrationTargets,
+        solo: true,
+        scope: 'final_call',
+      ),
+    );
+  }
 
   final images = Assets.games.finalCall.images;
   final localAssets = <GameImage>[

@@ -182,7 +182,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _bgm.stop();
     _countdownTick.stop();
     _subscription?.close();
-    unawaited(AppOrientation.lockPlatformPortrait());
+    unawaited(AppOrientation.restorePlatform());
     unawaited(AppSystemUi.showPlatformSystemBars());
     super.dispose();
   }
@@ -217,7 +217,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _howlTimer?.cancel();
     if (stage == MafiaTabletStage.night) _scheduleWolfHowl(game);
     if (stage == MafiaTabletStage.finished) _playWinVoice(game);
-    final hold = stage.announcementHold;
+    final hold = stage.announcementHoldOf(game);
     if (hold == null) return;
 
     // 발표 연출은 정해진 시간만 보여 준 뒤 서버에 완료를 알립니다.
