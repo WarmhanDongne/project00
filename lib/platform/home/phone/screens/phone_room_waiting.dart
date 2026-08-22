@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/core/network/critical_network_guard.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_leave_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
@@ -128,9 +130,17 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   void _showStatusError(Object error) {
     if (!mounted) return;
+    // 퇴장하면 내 참가자 노드가 사라져 game/public/status 읽기 권한도 함께
+    // 사라집니다. 정상 퇴장으로 끝난 구독의 오류는 사용자 오류가 아닙니다.
+    if (widget.provider.isLeaving || widget.provider.roomCode == null) return;
+    final message = userErrorMessage(
+      error,
+      context: UserErrorContext.roomSubscription,
+    );
+    if (message == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('게임 시작 상태를 확인하지 못했습니다: $error')));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openGame(String roomCode, TemplateGame game) async {
@@ -212,6 +222,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                 children: [
                   widget.headerForTesting ??
                       _PhoneRoomHeader(
+                        provider: widget.provider,
                         onPressed: () async {
                           final left = await widget.provider.leaveRoom();
                           if (!context.mounted || !left) return;
@@ -288,8 +299,9 @@ class _ControllerReconnectBanner extends StatelessWidget {
 }
 
 class _PhoneRoomHeader extends StatelessWidget {
-  const _PhoneRoomHeader({required this.onPressed});
+  const _PhoneRoomHeader({required this.provider, required this.onPressed});
 
+  final RoomProvider provider;
   final VoidCallback onPressed;
 
   @override
@@ -304,14 +316,7 @@ class _PhoneRoomHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 고정 폭을 두면 글자 배율이 큰 기기에서 문구가 잘립니다.
-          PlatformButton(
-            label: '그룹 나가기',
-            height: 44,
-            expand: false,
-            style: PlatformButtonStyle.secondary,
-            onPressed: onPressed,
-          ),
+          PhoneRoomLeaveButton(provider: provider, onPressed: onPressed),
           const Spacer(),
           const PhoneProfile(),
         ],

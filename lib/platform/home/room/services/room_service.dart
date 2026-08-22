@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/firebase/services/realtime_database_service.dart';
+import 'package:project00/games/shared/services/callable_retry_policy.dart';
 import 'package:project00/core/network/realtime_connection_monitor.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
@@ -11,6 +13,13 @@ import 'package:project00/platform/home/room/services/controller_room_session_st
 class RoomService {
   static const int _databaseOperationAttempts = 4;
   static const int _functionOperationAttempts = 4;
+
+  /// 퇴장 callable 재전송 정책입니다. 사용자가 화면 앞에서 결과를 기다리므로
+  /// 게임 명령보다 시도별 타임아웃과 전체 예산을 넉넉하게 둡니다.
+  static const CallableRetryPolicy _leaveRetryPolicy = CallableRetryPolicy(
+    attemptTimeout: Duration(seconds: 10),
+    totalBudget: Duration(seconds: 20),
+  );
 
   RoomService({
     FirebaseDatabase? database,
@@ -74,7 +83,10 @@ class RoomService {
       if (error is RoomCommandException) {
         rethrow;
       }
-      throw RoomCommandException('방을 생성하지 못했습니다: $error');
+      throw RoomCommandException(
+        userErrorMessage(error, context: UserErrorContext.roomCommand) ??
+            '방을 생성하지 못했습니다.',
+      );
     }
   }
 
@@ -437,32 +449,24 @@ class RoomService {
     );
   }
 
-  Future<void> leaveRoom(String roomCode) async {
+  /// 내 참가자 노드가 아직 방에 살아 있는지만 확인합니다.
+  ///
+  /// [hasExistingPlayer]는 방 상태와 게임 상태까지 함께 요구해 정상 참가자에게도
+  /// false를 줄 수 있으므로 퇴장 완료 판정에는 쓰지 않습니다.
+  Future<bool> hasActivePlayerNode(String roomCode) async {
     final user = _auth.currentUser;
-
-    // user null 여부 검증
-    if (user == null) {
-      throw const RoomCommandException('인증 정보가 없습니다.');
-    }
-    // playerRef에
-    final uid = user.uid;
+    if (user == null) return false;
     final code = roomCode.trim().toUpperCase();
-    final roomRef = realtime.ref('rooms/$code');
-    final playerRef = roomRef.child('players/$uid');
-
-    // joinRoom의 연결 끊김 감지 트리거 취소
-    // iOS 네이티브 플러그인의 onDisconnect 오류는 긴 unknown Stacktrace로
-    // 전달될 수 있습니다. 취소 실패는 실제 퇴장 삭제를 막지 않게 합니다.
-    try {
-      await playerRef.onDisconnect().cancel();
-    } catch (_) {
-      // 아래 remove가 성공하면 예약된 update 대상도 사라지므로 계속 진행합니다.
-    }
-
-    await _functions.httpsCallable('leaveRealtimeRoom').call({
-      'roomCode': code,
-    });
+    final snapshot = await _readWithRetry(
+      realtime.ref('rooms/$code/players/${user.uid}'),
+    );
+    if (!snapshot.exists) return false;
+    final value = snapshot.value;
+    return value is Map && value['status']?.toString() == 'active';
   }
+
+  Future<void> leaveRoom(String roomCode) =>
+      _callLeave(cloudFunctionName: 'leaveRealtimeRoom', roomCode: roomCode);
 
   /// 진행 중인 게임에서 퇴장합니다.
   ///
@@ -470,6 +474,20 @@ class RoomService {
   /// Function 트랜잭션이 함께 처리하며, 클라이언트는 기존 연결 종료 예약만 먼저
   /// 취소합니다.
   Future<void> leaveGame({
+    required String cloudFunctionName,
+    required String roomCode,
+  }) => _callLeave(cloudFunctionName: cloudFunctionName, roomCode: roomCode);
+
+  /// 대기실 퇴장과 게임 중 퇴장이 재시도 정책과 연결 예약 취소를 공유합니다.
+  ///
+  /// 예전에는 대기실 퇴장에만 재시도가 없어 일시적인 네트워크 오류로 곧바로
+  /// 실패했고, 게임 중 퇴장의 인라인 재시도는 시도별 타임아웃이 없어 최악의 경우
+  /// callable 기본 70초 × 4회를 기다렸습니다. 두 퇴장 callable 모두 이미 나간
+  /// 사용자에게 성공으로 답하는 멱등 함수라 같은 정책을 공유해도 안전합니다.
+  ///
+  /// 원본 예외는 감싸지 않고 그대로 올려보냅니다. 호출자가 오류 코드를 보고
+  /// 사용자 문구를 결정하므로, 여기서 문자열로 바꾸면 그 판단 근거가 사라집니다.
+  Future<void> _callLeave({
     required String cloudFunctionName,
     required String roomCode,
   }) async {
@@ -480,34 +498,19 @@ class RoomService {
 
     final code = roomCode.trim().toUpperCase();
     final playerRef = realtime.ref('rooms/$code/players/${user.uid}');
+    // iOS 네이티브 플러그인의 onDisconnect 오류는 긴 unknown Stacktrace로
+    // 전달될 수 있습니다. 서버 트랜잭션이 실제 플레이어 노드를 제거하므로
+    // 취소 실패만으로 퇴장을 막지 않습니다.
     try {
       await playerRef.onDisconnect().cancel();
     } catch (_) {
-      // 서버 트랜잭션이 실제 플레이어 노드를 제거하므로 취소 실패만으로 막지 않습니다.
+      // 퇴장이 성공하면 예약된 update 대상도 함께 사라집니다.
     }
 
-    FirebaseFunctionsException? lastError;
-    for (var attempt = 0; attempt < _functionOperationAttempts; attempt += 1) {
-      try {
-        await _functions.httpsCallable(cloudFunctionName).call({
-          'roomCode': code,
-        });
-        return;
-      } on FirebaseFunctionsException catch (error) {
-        lastError = error;
-        final shouldRetry =
-            attempt < _functionOperationAttempts - 1 &&
-            (error.code == 'aborted' ||
-                error.code == 'internal' ||
-                error.code == 'unavailable' ||
-                error.code == 'deadline-exceeded');
-        if (!shouldRetry) break;
-        await Future<void>.delayed(Duration(milliseconds: 220 * (attempt + 1)));
-      }
-    }
-
-    throw RoomCommandException(
-      lastError?.message ?? '게임에서 퇴장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    await _leaveRetryPolicy.run(
+      () =>
+          _functions.httpsCallable(cloudFunctionName).call({'roomCode': code}),
+      enabled: true,
     );
   }
 
@@ -588,8 +591,7 @@ class RoomService {
   }
 
   String _databaseErrorMessage(Object? error) {
-    final message = error?.toString().toLowerCase() ?? '';
-    if (message.contains('permission-denied')) {
+    if (error != null && isPermissionDenied(error)) {
       return '방에 접근할 권한이 없습니다.';
     }
     return '서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.';

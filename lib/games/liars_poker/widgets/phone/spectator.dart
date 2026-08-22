@@ -7,7 +7,8 @@ import 'package:project00/games/liars_poker/liars_poker_copy.dart';
 import 'package:project00/games/liars_poker/widgets/phone/exit_modal.dart';
 import 'package:project00/games/liars_poker/widgets/phone/settings_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/top_bar.dart';
-import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
+import 'package:project00/games/shared/game_flow/leave_failure_notice.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/widgets/phone_ripple_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_rule_dialog.dart';
@@ -20,11 +21,13 @@ class PhoneSpectator extends StatelessWidget {
     super.key,
     required this.players,
     required this.table,
+    required this.provider,
     required this.onExitRoom,
   });
 
   final List<PlayerLayoutPlayer> players;
   final String table;
+  final RoomProvider provider;
   final Future<bool> Function() onExitRoom;
 
   @override
@@ -301,9 +304,7 @@ class PhoneSpectator extends StatelessWidget {
     if (!context.mounted || shouldExit != true) return;
     final left = await onExitRoom();
     if (!context.mounted || left) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+    showLeaveFailureNotice(context, provider);
   }
 
   GameImage _tableAsset(String rank) {

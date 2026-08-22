@@ -14,6 +14,7 @@ import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/games/shared/animations/game_entry_unroll.dart';
 import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
@@ -28,11 +29,13 @@ class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
   const LiarsPokerPhoneGame({
     super.key,
     required this.roomCode,
+    required this.provider,
     required this.gameService,
     required this.onExitRoom,
   });
 
   final String roomCode;
+  final RoomProvider provider;
   final LiarsPokerService gameService;
   final Future<bool> Function() onExitRoom;
 
@@ -414,6 +417,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
         child: RepaintBoundary(
           child: LiarsPokerPhoneGameScreen(
             controller: controller,
+            provider: widget.provider,
             onExitRoom: _leaveRoom,
             // 탈락자가 진실/거짓 판정과 벌칙 결과를 보는 동안에도 나갈 수
             // 있도록 관전자용 공용 상단바를 유지합니다.
@@ -447,6 +451,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       key: const ValueKey('liars-poker-spectator'),
       players: survivorPlayers,
       table: controller.table,
+      provider: widget.provider,
       onExitRoom: _leaveRoom,
     );
   }

@@ -75,6 +75,12 @@ void main() {
       reason: '방이 사라졌는데 밤 화면에 머물면 태블릿이 굳습니다',
     );
     expect(controller.turnDeadlineAt, isNull, reason: '마감이 남아 있으면 다시 시도합니다');
+    // C-04: 권한 판정을 공용 헬퍼로 옮긴 뒤에도 영문 원문이 새지 않아야 합니다.
+    expect(
+      controller.errorMessage,
+      isNot(matches(RegExp(r'[A-Za-z]{3,}'))),
+      reason: '사용자 문구에 permission-denied 영문 원문이 남으면 안 됩니다',
+    );
   });
 
   test('네트워크 문제로 끊긴 것은 게임을 끝내지 않는다', () async {
