@@ -1024,6 +1024,52 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  /// 저장 세션으로 무엇을 복원할 수 있는지 **서버에 쓰지 않고** 확인합니다.
+  ///
+  /// [restorePlayerRoom]은 참가자 노드를 되살리고 heartbeat를 시작합니다.
+  /// 복귀 여부를 사용자에게 물으려면 그 전에 판정만 필요하므로 두 단계로
+  /// 나눕니다. 묻기도 전에 서버에 참가자를 만들면, 사용자가 거절해도 이미
+  /// 방에 들어가 있게 됩니다(P-01).
+  Future<RestorableSession> detectRestorableSession() async {
+    if (roomCode != null || _isLeaving) return RestorableSession.none;
+    final uid = _currentUid();
+    if (uid == null || uid.isEmpty) return RestorableSession.none;
+    final store = PlayerRoomSessionStore.instance;
+    final session = await store.load();
+    if (session == null) return RestorableSession.none;
+    if (session.uid != uid) {
+      await store.clear(onlyRoomCode: session.roomCode);
+      return RestorableSession.none;
+    }
+    // 사용자가 이미 나갔거나 나가는 중인 방은 되살리지 않습니다.
+    if (RoomLeaveIntent.blocksRestore(session.roomCode)) {
+      await store.clear(onlyRoomCode: session.roomCode);
+      return RestorableSession.none;
+    }
+    try {
+      final restorable = await _service.restorableSession(session.roomCode);
+      if (restorable == RestorableSession.none) {
+        await store.clear(onlyRoomCode: session.roomCode);
+      }
+      return restorable;
+    } on RoomCommandException {
+      // 네트워크 오류라면 저장값을 유지해 연결이 돌아온 뒤 다시 확인합니다.
+      return RestorableSession.none;
+    }
+  }
+
+  /// 사용자가 복귀를 거절했습니다. 저장 세션을 지워 다시 묻지 않습니다.
+  ///
+  /// 서버에는 아직 아무것도 쓰지 않았으므로 참가자 노드를 지울 필요가
+  /// 없습니다. 방에 남아 있는 노드는 서버 정리가 담당합니다(C-10).
+  Future<void> declineRestorableSession() async {
+    final session = await PlayerRoomSessionStore.instance.load();
+    if (session == null) return;
+    RoomLeaveIntent.complete(session.roomCode);
+    await PlayerRoomSessionStore.instance.clear(onlyRoomCode: session.roomCode);
+    notifyListeners();
+  }
+
   /// 앱이 완전히 종료된 뒤에도 같은 Firebase UID의 기존 참가자 상태를 복원합니다.
   /// 직접 나가기·강퇴된 사용자는 저장 세션이 지워지므로 자동 입장하지 않습니다.
   Future<bool> restorePlayerRoom() async {
@@ -1054,9 +1100,9 @@ class RoomProvider extends ChangeNotifier {
         !RoomLeaveIntent.blocksRestore(session.roomCode);
 
     try {
-      final exists = await _service.hasExistingPlayer(session.roomCode);
+      final restorable = await _service.restorableSession(session.roomCode);
       if (!stillRestoring()) return false;
-      if (!exists) {
+      if (restorable == RestorableSession.none) {
         await store.clear(onlyRoomCode: session.roomCode);
         return false;
       }

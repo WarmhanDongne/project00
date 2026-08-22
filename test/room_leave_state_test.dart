@@ -322,9 +322,9 @@ class _LeaveRoomService implements RoomService {
       activePlayerNodeResult;
 
   @override
-  Future<bool> hasExistingPlayer(String roomCode) async {
+  Future<RestorableSession> restorableSession(String roomCode) async {
     existingPlayerReads += 1;
-    return true;
+    return RestorableSession.waitingRoom;
   }
 
   @override
