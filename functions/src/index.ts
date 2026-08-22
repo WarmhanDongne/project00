@@ -125,3 +125,10 @@ export {
 export {
   game_common_interruption_finish_now,
 } from "./game-interruption/finish-now.js";
+
+// 화면이 살아 있어야만 중단이 만료되던 구멍을 서버가 막습니다(C-03/C-10).
+// 위의 game_common_interruption_expire는 즉시 반응 경로로 **그대로 둡니다.**
+export {
+  cleanupExpiredGameInterruptions,
+  cleanupGhostRoomPlayers,
+} from "./game-interruption/expire-scheduler.js";
