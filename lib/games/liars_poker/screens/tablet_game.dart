@@ -707,9 +707,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
                 presentation: GameInterruptionPresentation.tabletController,
                 isSubmitting: game.isMenuCommandInFlight,
-                onContinue: () async {
-                  await game.excludeInterruptedPlayerAndContinue();
-                },
+                // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
+                // onError 콜백으로 이미 SnackBar를 띄웁니다(_showGameError).
+                onContinue: game.excludeInterruptedPlayerAndContinue,
                 onFinishNow: game.finishInterruptedGameNowFromController,
                 onExpired: game.expireInterruptionFromController,
               ),

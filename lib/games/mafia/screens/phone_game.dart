@@ -219,6 +219,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           interruption: game.interruption,
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
           onVote: () async {
             await game.voteToContinueInterruption();
           },
