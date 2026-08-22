@@ -19,6 +19,13 @@ abstract final class GameFlowCopy {
   static const interruptionFinishNowAccept = '종료';
   static const interruptionFinishNowFailed = '게임을 종료하지 못했습니다.';
 
+  //=======================자리 배치 중 참가자 변경 (C-13)==============================
+  /// 자리 배치·역할 구성 중 참가자가 바뀌어 준비를 처음부터 다시 해야 합니다.
+  ///
+  /// 낡은 배치를 유지하면 서버가 좌석 저장을 거부하므로(UID 집합 일치 검사)
+  /// 진행자에게는 원인을 알 수 없는 실패로 보입니다.
+  static const seatingRosterChanged = '참가자가 변경되어 자리 배치를 다시 진행해주세요.';
+
   static String round(int value) => 'ROUND $value';
 
   /// 즉시 종료 확인 문구입니다.

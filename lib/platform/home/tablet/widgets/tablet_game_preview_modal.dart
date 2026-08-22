@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/game_registry.dart';
+import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/shared/player_layouts/seating_roster_guard.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
@@ -270,6 +273,11 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     required PlayerLayoutModel initialLayout,
     required String roomCode,
   }) {
+    // 게임 시작 명령이 서버에 닿은 뒤에는 참가자 변경으로 자리 배치를 되감지
+    // 않습니다. 그 시점에는 이미 `game/public/status = playing`이라 선택 해제가
+    // 서버에서 거부되고, 화면은 곧 게임 화면으로 교체됩니다.
+    var startedGame = false;
+
     Future<bool> cancel() async {
       final cleared = await widget.roomProvider.clearSelectedGame();
       if (!layoutContext.mounted) return false;
@@ -302,12 +310,37 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
 
       try {
         await templateGame.startGame(roomCode, options: options);
+        startedGame = true;
       } catch (error) {
         if (!layoutContext.mounted) return false;
         _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
         return false;
       }
       return layoutContext.mounted;
+    }
+
+    /// 자리 배치 중 참가자 구성이 바뀌면 준비를 취소하고 대기실로 돌아갑니다.
+    ///
+    /// 낡은 자리 배치를 그대로 두면 서버가 좌석 저장을 거부하고
+    /// (`saveRealtimePlayerSeatIndexes`의 UID 집합 일치 검사) 진행자에게는
+    /// 원인을 알 수 없는 문구만 보입니다.
+    Future<void> handleRosterChanged() async {
+      if (startedGame || !layoutContext.mounted) return;
+      // 화면을 닫기 전에 미리 잡아 둡니다. pop 뒤에는 이 context로 messenger를
+      // 찾을 수 없어 안내가 사라진 화면과 함께 묻힙니다.
+      final messenger = ScaffoldMessenger.of(layoutContext);
+      // 서버 상태를 먼저 waiting으로 되돌립니다. 실패해도 화면은 닫습니다.
+      // 낡은 배치를 들고 남아 있는 편이 더 나쁘고, 대기실에서 다시 고르면
+      // 같은 선택 해제가 재시도됩니다.
+      await widget.roomProvider.clearSelectedGame();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text(GameFlowCopy.seatingRosterChanged)),
+        );
+      if (!layoutContext.mounted) return;
+      // maybePop은 위에 쌓인 다이얼로그만 닫아 자리 배치 화면에 갇힙니다.
+      exitGameRoute(layoutContext);
     }
 
     void complete(PlayerLayoutModel completedLayout) {
@@ -332,22 +365,29 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       );
     }
 
-    return templateGame.buildStartSetupScreen(
-          layout: initialLayout,
-          onPrepare: prepare,
-          onComplete: complete,
-          onCancel: cancel,
-        ) ??
-        PlayerLayoutEditor(
-          initialLayout: initialLayout,
-          tableColor: templateGame.tableColor,
-          tableBackgroundImage: templateGame.tableBackgroundImage,
-          tableImage: templateGame.layoutTableImage,
-          chairImage: templateGame.layoutChairImage,
-          onCancel: cancel,
-          onPrepare: prepare,
-          onComplete: complete,
-        );
+    // 공용 자리 배치와 게임별 준비 화면을 **여기서 한 번** 감쌉니다. 두 화면을
+    // 각각 고치면 게임을 추가할 때마다 같은 코드를 또 씁니다.
+    return SeatingRosterGuard(
+      provider: widget.roomProvider,
+      onRosterChanged: () => unawaited(handleRosterChanged()),
+      child:
+          templateGame.buildStartSetupScreen(
+            layout: initialLayout,
+            onPrepare: prepare,
+            onComplete: complete,
+            onCancel: cancel,
+          ) ??
+          PlayerLayoutEditor(
+            initialLayout: initialLayout,
+            tableColor: templateGame.tableColor,
+            tableBackgroundImage: templateGame.tableBackgroundImage,
+            tableImage: templateGame.layoutTableImage,
+            chairImage: templateGame.layoutChairImage,
+            onCancel: cancel,
+            onPrepare: prepare,
+            onComplete: complete,
+          ),
+    );
   }
 
   @override
