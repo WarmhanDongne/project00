@@ -79,6 +79,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.15.1
   shared_preferences_platform_interface: ^2.4.2
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -174,3 +175,8 @@ flutter_gen:
   output: lib/gen/
   integrations:
     flutter_svg: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icons/app_icon.png"
