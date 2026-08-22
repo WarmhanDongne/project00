@@ -46,5 +46,7 @@ main_loby_and_game_modal/
 docs/
 design/
 work-items/
-# Claude Code 개인 설정 — 로컬 전용, 공유하지 않음
-.claude/
+
+# AI assistant local context
+# 아키텍처 문서 원본은 저장소 밖: ../project00-notes/docs/
+CLAUDE.md

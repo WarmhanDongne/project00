@@ -56,7 +56,8 @@ flutter run
 - 파일명은 `snake_case`, 클래스명은 `PascalCase`, 변수와 함수명은 `camelCase`를 사용합니다.
 - 기능 추가 후 `flutter analyze`와 `flutter test`를 통과시킵니다.
 
-전체 디렉터리와 각 파일의 역할은 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)를 참고하세요.
+저장소 안의 강제 규칙은 [`AGENTS.md`](AGENTS.md)에 있습니다.
+전체 디렉터리 설명서(`PROJECT_STRUCTURE.md`)는 저장소에 포함되지 않습니다.
 
 ## 현재 구현 상태
 
