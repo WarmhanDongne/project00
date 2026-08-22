@@ -197,6 +197,10 @@ class MafiaTabletStageView extends StatelessWidget {
       MafiaTabletStage.voteResult => _buildVoteResult(),
       MafiaTabletStage.finished => MafiaTabletResultView(
         winner: controller.winnerFaction,
+        // 중립은 이긴 **역할**로 포스터가 갈립니다(광대/처형자/연쇄살인마/교단).
+        winnerRoleIds: controller.winnerRoleIds,
+        // 그림이 없는 승리에서만 쓰는 대비 문구입니다.
+        winnerLabel: controller.winnerLabel,
         players: controller.players,
         revealedRoles: {
           for (final entry in controller.players.keys)

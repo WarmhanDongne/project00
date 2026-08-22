@@ -53,6 +53,8 @@ class MafiaNightActionView extends StatelessWidget {
     this.allySelectedUids = const {},
     this.remainingSeconds,
     this.isSubmitted = false,
+    this.actionWindowClosed = false,
+    this.abilityExhausted = false,
     this.onSelect,
     this.onConfirm,
     this.investigationResult,
@@ -76,6 +78,18 @@ class MafiaNightActionView extends StatelessWidget {
   /// 선택을 확정해 서버에 보냈는지입니다. true면 대기 화면(P5)이 됩니다.
   final bool isSubmitted;
 
+  /// 행동 시간(밤의 앞 1분)이 끝났는지입니다.
+  ///
+  /// 확정(2026-08): 이 뒤 30초는 아무도 고를 수 없고 다같이 기다립니다.
+  /// 아직 안 골랐더라도 화면은 대기로 넘어갑니다.
+  final bool actionWindowClosed;
+
+  /// 능력을 다 써서 이번 밤에 고를 수 없는지입니다(자경단원의 한 발).
+  ///
+  /// 선택 화면 대신 **대기 화면**을 그립니다. 고를 수 없는 그리드를 보여 주면
+  /// 막힌 화면이 되고, 무엇보다 옆에서 보는 사람에게 특수직임이 드러납니다.
+  final bool abilityExhausted;
+
   final ValueChanged<String>? onSelect;
   final VoidCallback? onConfirm;
 
@@ -97,12 +111,14 @@ class MafiaNightActionView extends StatelessWidget {
   bool get _hasSubmittedAction => isSubmitted && (role?.actsAtNight ?? false);
 
   /// 밤에 대상을 고르는 신분인지입니다(제출 여부와 무관).
-  bool get _isNightActor => (role?.actsAtNight ?? false) && players.isNotEmpty;
+  bool get _isNightActor =>
+      (role?.actsAtNight ?? false) && players.isNotEmpty && !abilityExhausted;
 
   /// 대상을 고르는 화면인지입니다.
   bool get _showsSelection {
     final current = role;
-    if (current == null || isSubmitted) return false;
+    if (current == null || isSubmitted || actionWindowClosed) return false;
+    if (abilityExhausted) return false;
     return current.actsAtNight && players.isNotEmpty;
   }
 
@@ -129,9 +145,9 @@ class MafiaNightActionView extends StatelessWidget {
             // 두 상태에 걸쳐 남겨 두어야 사라지는 모습이 보입니다.
             if (_isNightActor && result == null)
               IgnorePointer(
-                ignoring: isSubmitted,
+                ignoring: isSubmitted || actionWindowClosed,
                 child: AnimatedOpacity(
-                  opacity: isSubmitted ? 0 : 1,
+                  opacity: isSubmitted || actionWindowClosed ? 0 : 1,
                   duration: const Duration(milliseconds: 360),
                   curve: Curves.easeOut,
                   child: MafiaPhoneActionButton(

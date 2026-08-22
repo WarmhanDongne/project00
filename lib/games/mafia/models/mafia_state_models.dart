@@ -30,6 +30,37 @@ class MafiaMorningResult {
   bool get hasDeaths => deadUids.isNotEmpty;
 }
 
+/// 밤 행동이 제출된 순간 태블릿이 낼 소리 신호입니다.
+///
+/// 확정(2026-08): 총성 같은 직업 효과음은 밤이 시작될 때 자동으로 울리지 않고,
+/// 그 직업이 **선택을 완료한 순간** 방 가운데 태블릿에서 울립니다.
+///
+/// 서버는 **행동의 종류만** 보냅니다. 누가 했는지는 보내지 않습니다 — uid가
+/// 오면 그 사람의 신분이 그대로 드러납니다.
+@immutable
+class MafiaNightActionCue {
+  const MafiaNightActionCue({required this.id, required this.action});
+
+  /// 신호 번호입니다. 이 값이 바뀔 때만 소리를 냅니다.
+  ///
+  /// 마감 전에 대상을 바꿔 다시 제출해도 그 밤에 한 번만 올라갑니다.
+  final int id;
+
+  /// 행동의 종류입니다(`eliminate`·`investigate`·`protect`…).
+  ///
+  /// [MafiaNightAction]의 이름과 같은 문자열입니다. 이 빌드가 모르는 행동이면
+  /// 소리를 내지 않습니다.
+  final String action;
+
+  static MafiaNightActionCue? fromMap(Object? raw) {
+    if (raw is! Map<Object?, Object?>) return null;
+    final id = (raw['id'] as num?)?.toInt();
+    final action = raw['action'] as String?;
+    if (id == null || id <= 0 || action == null) return null;
+    return MafiaNightActionCue(id: id, action: action);
+  }
+}
+
 /// 개표 결과입니다.
 @immutable
 class MafiaVoteResult {

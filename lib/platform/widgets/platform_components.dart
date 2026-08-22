@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
-enum PlatformButtonStyle { primary, secondary, danger, dangerSoft }
+enum PlatformButtonStyle { primary, secondary, neutral, danger, dangerSoft }
 
 enum PlatformNoticeStyle { success, warning, danger }
 
@@ -62,11 +62,13 @@ class PlatformButton extends StatelessWidget {
     final background = switch (style) {
       PlatformButtonStyle.primary => colors.primary,
       PlatformButtonStyle.secondary => colors.surface,
+      PlatformButtonStyle.neutral => colors.surfaceMuted,
       PlatformButtonStyle.danger => colors.danger,
       PlatformButtonStyle.dangerSoft => colors.dangerSoft,
     };
     final foreground = switch (style) {
       PlatformButtonStyle.secondary => colors.text,
+      PlatformButtonStyle.neutral => colors.textMuted,
       PlatformButtonStyle.dangerSoft => colors.danger,
       _ => Colors.white,
     };
@@ -250,15 +252,33 @@ class PlatformAuthShell extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back, size: 18),
                 ),
               ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(20, showBack ? 72 : 96, 20, 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: child,
-                ),
-              ),
+            // 남는 세로 공간이 있으면 가운데에 두고, 내용이 화면보다 길거나
+            // 키보드가 올라오면 위에서부터 스크롤합니다.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // showBack이면 위아래를 같이 띄워 뒤로가기 버튼을 피하면서도
+                // 정확히 가운데에 놓입니다.
+                final vertical = showBack ? 72.0 : 24.0;
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: vertical,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxWidth),
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

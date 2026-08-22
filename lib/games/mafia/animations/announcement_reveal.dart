@@ -35,13 +35,17 @@ class MafiaAnnouncementReveal extends StatefulWidget {
   final Duration? visibleFor;
 
   /// 떠오르는 시간입니다.
-  static const Duration enterDuration = Duration(milliseconds: 420);
+  ///
+  /// 확정(2026-08): 안내 문구 자체가 어몽어스 추방 발표처럼 **내려찍히게**
+  /// 되면서([MafiaEjectionText]) 짧게 줄였습니다. 이 겉옷이 천천히 스미면
+  /// 글자가 찍히는 순간까지 반투명해 한 방이 죽습니다.
+  static const Duration enterDuration = Duration(milliseconds: 260);
 
   /// 물러나는 시간입니다.
   static const Duration exitDuration = Duration(milliseconds: 380);
 
   /// 떠오르고 물러날 때 움직이는 폭입니다.
-  static const double travel = 14;
+  static const double travel = 10;
 
   @override
   State<MafiaAnnouncementReveal> createState() =>

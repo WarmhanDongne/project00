@@ -39,7 +39,7 @@ class LiarsPokerGame extends TemplateGame {
   Widget buildTabletPreviewArtwork() => const LiarsPokerPreviewArtwork();
 
   @override
-  Future<void> startGame(String roomCode) =>
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>
       LiarsPokerService().command.startGame(roomCode: roomCode);
 
   @override

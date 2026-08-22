@@ -135,6 +135,28 @@ class FirebaseAuthService {
     }
   }
 
+  //=======================회원탈퇴==============================
+  /// 계정과 계정에 딸린 데이터를 삭제하고 로컬 세션을 정리합니다.
+  ///
+  /// 클라이언트의 User.delete()는 최근 로그인을 요구해 재인증 없이 실패할 수
+  /// 있으므로, 관리자 권한을 가진 Cloud Function이 Firestore 문서·프로필
+  /// 사진·대기방 정리까지 함께 처리합니다.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthServiceException('user-not-found', '로그인된 사용자가 없습니다.');
+    }
+
+    try {
+      await _functions.httpsCallable('deleteAccount').call();
+    } on FirebaseFunctionsException catch (error) {
+      throw AuthServiceException(error.code, error.message ?? '회원탈퇴에 실패했습니다.');
+    }
+
+    // 계정이 사라진 뒤에도 로컬 인증 상태는 남아 있어 직접 정리합니다.
+    await _auth.signOut();
+  }
+
   //=======================프로필 정보를 Firestore에 동기화==============================
   Future<void> createUserDocument() async {
     final user = _auth.currentUser;

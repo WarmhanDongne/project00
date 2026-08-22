@@ -29,6 +29,8 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
     required this.role,
     required this.phaseKey,
     this.isFirstReveal = false,
+    this.entranceDelay = Duration.zero,
+    this.notice,
     this.onRevealed,
   });
 
@@ -44,6 +46,25 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
   /// 재접속처럼 이미 확인을 마친 상태에서는 false를 주어, 아래에 놓인
   /// 카드를 눌러 다시 보는 평소 동작으로 시작합니다.
   final bool isFirstReveal;
+
+  /// 카드가 내려오기 시작할 때까지 기다리는 시간입니다([isFirstReveal] 전용).
+  ///
+  /// 확정(2026-08): 태블릿의 **분배 연출이 끝난 뒤에** 카드가 들어옵니다.
+  /// 태블릿에서 카드가 아직 날아가는 중인데 휴대폰에 이미 카드가 있으면 카드를
+  /// 건네받는 느낌이 사라집니다. 그동안 카드는 아무것도 그리지 않습니다.
+  ///
+  /// 화면(`phone_game_screen.dart`)이 서버 마감 시각으로 계산해 넘겨 줍니다.
+  /// 재접속처럼 이미 지난 경우에는 0이 와서 곧바로 들어옵니다.
+  final Duration entranceDelay;
+
+  /// 신분 설명 아래에 한 줄 더 붙이는 **그 사람만의 안내**입니다.
+  ///
+  /// 카탈로그의 [MafiaRole.description]은 역할마다 고정된 문구지만, 이 값은
+  /// 게임마다 달라집니다. 처형자의 목표(`목표 · 홍길동`)와 지난밤에 신분이
+  /// 바뀌었다는 알림(도둑·전향)이 여기로 옵니다.
+  ///
+  /// 한 줄로 들어갑니다. 넘치면 줄어듭니다.
+  final String? notice;
 
   /// 처음 확인이 끝난 시점에 한 번 호출됩니다. 서버에 확인을 알립니다.
   final VoidCallback? onRevealed;
@@ -70,6 +91,11 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
 
 /// 카드가 지금 무엇을 하고 있는지입니다.
 enum _CardStage {
+  /// 아직 오지 않았습니다. 태블릿에서 분배 연출이 도는 중입니다.
+  ///
+  /// 이 동안에는 아무것도 그리지 않습니다(아래에 놓인 카드조차 없습니다).
+  undelivered,
+
   /// 화면 위에서 내려오는 중입니다(처음 확인 전용).
   entering,
 
@@ -102,6 +128,12 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
   static const double _roleTextTop = 659;
   static const double _descriptionTop = 739;
 
+  /// 개인 안내([MafiaPhoneRoleCardLayer.notice]) 자리입니다.
+  ///
+  /// 설명(최대 3줄)이 끝나는 아래이자 화면 바닥(874) 위입니다. 한 줄만
+  /// 들어가므로 여기서 더 내려가지 않습니다.
+  static const double _noticeTop = 812;
+
   /// 누르라는 화살표 자리입니다(시안 P1 — 카드 위·아래에서 카드를 가리킵니다).
   static const double _hintAboveTop = 144;
   static const double _hintBelowTop = 651;
@@ -117,6 +149,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   Timer? _holdTimer;
   Timer? _textTimer;
+  Timer? _entranceTimer;
 
   _CardStage _stage = _CardStage.stored;
 
@@ -152,9 +185,17 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
       duration: const Duration(milliseconds: 2400),
     );
 
-    if (widget.isFirstReveal) {
+    if (!widget.isFirstReveal) return;
+    if (widget.entranceDelay <= Duration.zero) {
       _startEntrance();
+      return;
     }
+    // 태블릿에서 카드가 다 날아갈 때까지 기다립니다.
+    _stage = _CardStage.undelivered;
+    _entranceTimer = Timer(widget.entranceDelay, () {
+      if (!mounted) return;
+      setState(_startEntrance);
+    });
   }
 
   /// 화면 위에서 카드가 내려옵니다(처음 확인).
@@ -242,6 +283,8 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
       case _CardStage.revealed:
         // 다 봤으면 기다리지 않고 바로 내려갑니다.
         _close();
+      // 아직 오지 않은 카드는 화면에 없어 눌릴 일도 없습니다.
+      case _CardStage.undelivered:
       case _CardStage.entering:
       case _CardStage.flipping:
       case _CardStage.returning:
@@ -269,6 +312,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
   void dispose() {
     _holdTimer?.cancel();
     _textTimer?.cancel();
+    _entranceTimer?.cancel();
     _travel
       ..removeStatusListener(_handleTravelDone)
       ..dispose();
@@ -296,6 +340,9 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   @override
   Widget build(BuildContext context) {
+    // 태블릿에서 카드가 아직 날아오는 중입니다. 화면에는 아무것도 없습니다.
+    if (_stage == _CardStage.undelivered) return const SizedBox.shrink();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
@@ -448,6 +495,25 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
               fontSize: 20 * scale,
               fontWeight: FontWeight.w300,
               height: 1.35,
+            ),
+          ),
+        ),
+      // 그 사람만의 안내(처형자의 목표, 신분이 바뀌었다는 알림)입니다.
+      if ((widget.notice ?? '').trim().isNotEmpty)
+        _buildFadingText(
+          size: size,
+          designTop: _noticeTop,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              widget.notice!,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: role.accentColor,
+                fontSize: 20 * scale,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),

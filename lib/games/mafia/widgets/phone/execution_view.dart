@@ -112,23 +112,21 @@ class MafiaExecutionResultView extends StatelessWidget {
             const Positioned.fill(child: MafiaPhoneBackground.day()),
             // 남이 처형된 시안 문구는 '오늘 의 처형자'이지만 띄어쓰기가 어긋난
             // 것으로 보고 바로잡았습니다.
-            _buildCenteredText(
-              size,
+            // 확정(2026-08): 안내 문구는 내려찍습니다([MafiaPhoneAnnouncement]).
+            MafiaPhoneAnnouncement(
+              beats: [
+                layout == _ResultLayout.self
+                    ? MafiaCopy.executedSelfTitle
+                    : MafiaCopy.executedOtherTitle,
+              ],
               top: layout.titleTop,
-              text: layout == _ResultLayout.self
-                  ? MafiaCopy.executedSelfTitle
-                  : MafiaCopy.executedOtherTitle,
-              fontSize: MafiaPhoneStatusText.promptFontSize,
-              scale: scale,
             ),
             if (target == null)
               // 아침 발표(사망자 없음)와 같은 자리·크기로 알립니다.
-              _buildCenteredText(
-                size,
+              const MafiaPhoneAnnouncement(
+                beats: [MafiaCopy.noExecution],
                 top: _noExecutionTop,
-                text: MafiaCopy.noExecution,
                 fontSize: MafiaPhoneStatusText.waitingFontSize,
-                scale: scale,
               )
             else ...[
               Positioned(
@@ -154,12 +152,9 @@ class MafiaExecutionResultView extends StatelessWidget {
               // 당사자 시안에는 이 문구가 없습니다. 자기가 처형된 것을 제목에서
               // 이미 알렸으므로 같은 말을 두 번 하지 않습니다.
               if (layout == _ResultLayout.other)
-                _buildCenteredText(
-                  size,
+                MafiaPhoneAnnouncement(
+                  beats: MafiaCopy.executedBeats(target.nickname),
                   top: _sentenceTop,
-                  text: MafiaCopy.executed(target.nickname),
-                  fontSize: 24,
-                  scale: scale,
                 ),
             ],
             MafiaStoredRoleCard(role: role),
@@ -267,17 +262,30 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
   static const double _portraitSize = 116;
   static const double _sentenceTop = 666;
 
+  /// 신분 문구의 첫 박자가 머무는 시간입니다.
+  static const Duration _sentenceBeatHold = Duration(milliseconds: 1200);
+
   late final AnimationController _flipController;
   Timer? _startTimer;
+
+  /// 신분 문구를 찍기 시작했는지입니다. 카드가 절반 돌아가면 붙습니다.
+  ///
+  /// 반투명하게 미리 깔아 두면 내려찍히는 한 방이 죽습니다.
+  bool _showsSentence = false;
 
   @override
   void initState() {
     super.initState();
-    _flipController = AnimationController(
-      vsync: this,
-      duration: MafiaExecutionRevealView.flipDuration,
-      value: widget.initiallyRevealed ? 1 : 0,
-    )..addStatusListener(_handleFlipStatus);
+    _flipController =
+        AnimationController(
+            vsync: this,
+            duration: MafiaExecutionRevealView.flipDuration,
+            value: widget.initiallyRevealed ? 1 : 0,
+          )
+          ..addStatusListener(_handleFlipStatus)
+          ..addListener(_handleFlipProgress);
+    // 재접속 복원은 이미 지나간 장면이라 문구가 처음부터 자리에 있습니다.
+    _showsSentence = widget.initiallyRevealed;
 
     if (widget.initiallyRevealed) {
       // 재접속 복원은 연출을 건너뜁니다. 이미 지나간 장면입니다.
@@ -294,11 +302,19 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
     widget.onRevealed?.call();
   }
 
+  void _handleFlipProgress() {
+    if (_showsSentence || !mounted) return;
+    // 앞면이 드러나기 시작하는 지점입니다(카드 뒤집기의 절반).
+    if (_flipController.value < 0.5) return;
+    setState(() => _showsSentence = true);
+  }
+
   @override
   void dispose() {
     _startTimer?.cancel();
     _flipController
       ..removeStatusListener(_handleFlipStatus)
+      ..removeListener(_handleFlipProgress)
       ..dispose();
     super.dispose();
   }
@@ -323,7 +339,7 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
               height: cardHeight,
               child: _buildFlippingCard(scale),
             ),
-            _buildSentence(size, scale),
+            _buildSentence(),
             MafiaStoredRoleCard(role: widget.myRole),
           ],
         );
@@ -377,43 +393,21 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
     );
   }
 
-  /// "○○님은 ○○이었습니다." 문구입니다. 카드가 뒤집힌 뒤에 떠오릅니다.
-  Widget _buildSentence(Size size, double scale) {
+  /// "○○님은 ○○이었습니다." 문구입니다.
+  ///
+  /// 카드가 절반 돌아간 순간 두 박자로 내려찍힙니다(확정 2026-08).
+  Widget _buildSentence() {
+    if (!_showsSentence) return const SizedBox.shrink();
     final role = widget.executedRole;
-    final text = role == null
-        ? MafiaCopy.unknownRole(widget.executed.nickname)
-        : MafiaCopy.wasRole(widget.executed.nickname, role.displayName);
 
-    return Positioned(
-      left: 0,
-      right: 0,
-      top: MafiaPhoneDesign.top(size, _sentenceTop),
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: _flipController,
-          builder: (context, child) {
-            // 뒤집기 후반부에 맞춰 떠오릅니다(카드와 같은 곡선).
-            final eased = Curves.easeInOutCubic.transform(
-              _flipController.value,
-            );
-            final opacity = ((eased - 0.5) * 2).clamp(0.0, 1.0);
-            return Opacity(opacity: opacity, child: child);
-          },
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              text,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 24 * scale,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
+    return MafiaPhoneAnnouncement(
+      beats: role == null
+          ? MafiaCopy.unknownRoleBeats(widget.executed.nickname)
+          : MafiaCopy.wasRoleBeats(widget.executed.nickname, role.displayName),
+      top: _sentenceTop,
+      sideMargin: 0,
+      // 다음 단계로 넘어가기 전에 두 박자가 다 들어가게 줄였습니다.
+      beatHold: _sentenceBeatHold,
     );
   }
 }

@@ -9,9 +9,19 @@ import {FinalCallRoom} from "./types.js";
 import {assertFinalCallTurn, FINAL_CALL_REGION, finalCallCommandId,
   finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
 
-type Data = {roomCode?: unknown; commandId?: unknown};
+type Data = {
+  roomCode?: unknown;
+  commandId?: unknown;
+  /** 콜드스타트를 미리 없애기 위한 예열 호출입니다. */
+  warmup?: unknown;
+};
 
 export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION}, async (request) => {
+  // 예열 호출은 아무것도 하지 않고 즉시 돌아갑니다. 첫 조작이 느려지지 않게
+  // 게임 진입 때 미리 한 번 부릅니다(라이어스 포커와 같은 방식).
+  if (request.data?.warmup === true) {
+    return {success: true, type: "warmup"};
+  }
   const uid = finalCallUid(request);
   const roomCode = finalCallRoomCode(request.data?.roomCode);
   const commandId = finalCallCommandId(request.data?.commandId);

@@ -50,6 +50,21 @@ class SoundService {
   double _bgmVolume = 1;
   double _effectVolume = 1;
 
+  /// BGM 페이드 배율입니다(0 = 무음, 1 = 설정 볼륨 그대로).
+  ///
+  /// 서서히 줄일 때 [_bgmVolume]을 직접 내리면 **사용자의 볼륨 설정이
+  /// 덮어써집니다.** 그래서 곱하기용 배율을 따로 둡니다.
+  double _bgmFade = 1;
+
+  /// 진행 중인 페이드를 가리키는 번호입니다.
+  ///
+  /// 페이드 도중에 새 곡이 시작되거나 곧바로 멈추면, 뒤늦게 도는 페이드가 새
+  /// 곡의 볼륨을 건드리지 않도록 번호로 구분합니다.
+  int _bgmFadeToken = 0;
+
+  /// 지금 BGM 플레이어에 걸어야 하는 볼륨입니다.
+  double get _playingBgmVolume => _bgmVolume * _bgmFade;
+
   Future<void> initialize() {
     if (_initialized) {
       return Future.value();
@@ -151,15 +166,56 @@ class SoundService {
   Future<void> playBgm(String assetPath) async {
     await initialize();
 
+    // 새 곡은 언제나 설정 볼륨 그대로 시작합니다(진행 중인 페이드는 버립니다).
+    _bgmFadeToken += 1;
+    _bgmFade = 1;
     await _bgmPlayer.play(
       GameAssetStore.instance.soundSourceFor(assetPath),
-      volume: _bgmVolume,
+      volume: _playingBgmVolume,
     );
   }
 
   /// 현재 재생 중인 BGM을 정지합니다.
   Future<void> stopBgm() async {
+    _bgmFadeToken += 1;
+    _bgmFade = 1;
     await _bgmPlayer.stop();
+  }
+
+  /// BGM을 **서서히 줄이며** 멈춥니다.
+  ///
+  /// 장면이 바뀌는 순간(마피아의 아침처럼)에 씁니다. 갑자기 끊으면 소리만
+  /// 뚝 사라져 화면 전환과 어긋나 보입니다.
+  ///
+  /// 사용자의 볼륨 설정은 건드리지 않습니다 — 설정 볼륨에 곱하는 배율만
+  /// 내리고, 멈춘 뒤 배율을 1로 되돌립니다.
+  Future<void> fadeOutBgm({
+    Duration duration = const Duration(milliseconds: 1200),
+  }) async {
+    await initialize();
+    final token = ++_bgmFadeToken;
+    if (duration <= Duration.zero) {
+      await _bgmPlayer.stop();
+      _bgmFade = 1;
+      return;
+    }
+
+    const step = Duration(milliseconds: 50);
+    final steps = (duration.inMilliseconds / step.inMilliseconds).ceil().clamp(
+      1,
+      1000,
+    );
+    for (var remaining = steps - 1; remaining >= 0; remaining -= 1) {
+      await Future<void>.delayed(step);
+      // 그 사이 새 곡이 시작되거나 곧바로 멈췄으면 손대지 않습니다.
+      if (token != _bgmFadeToken) return;
+      _bgmFade = remaining / steps;
+      await _bgmPlayer.setVolume(_playingBgmVolume);
+    }
+    if (token != _bgmFadeToken) return;
+    await _bgmPlayer.stop();
+    _bgmFade = 1;
+    await _bgmPlayer.setVolume(_playingBgmVolume);
   }
 
   /// 현재 재생 중인 BGM을 일시정지합니다.
@@ -182,7 +238,8 @@ class SoundService {
     _bgmVolume = _normalizeVolume(volume);
 
     await initialize();
-    await _bgmPlayer.setVolume(_bgmVolume);
+    // 페이드 중이라면 그 배율을 지키며 새 설정 볼륨을 반영합니다.
+    await _bgmPlayer.setVolume(_playingBgmVolume);
   }
 
   // ============================================================

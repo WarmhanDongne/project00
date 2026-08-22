@@ -8,13 +8,13 @@ import {mafiaDiscussionMs} from "../lib/mafia/types.js";
 // Dart ↔ TypeScript 토론 시간 대조
 //
 // 토론 시간은 생존 인원마다 다릅니다(확정 2026-08). 서버가 원본이고 연습장
-// (lib/games/mafia/mafia_timing.dart)이 같은 표를 따라 흐름을 재현합니다.
+// (lib/games/mafia/mafia_flow_config.dart)이 같은 표를 따라 흐름을 재현합니다.
 // 한쪽만 고치면 연습장에서 본 흐름과 실제 게임이 조용히 달라지므로, Dart
 // 파일을 직접 읽어 비교합니다.
 // =========================================================================
 
 const source = readFileSync(
-  new URL("../../lib/games/mafia/mafia_timing.dart", import.meta.url),
+  new URL("../../lib/games/mafia/mafia_flow_config.dart", import.meta.url),
   "utf8",
 );
 const table = source.slice(

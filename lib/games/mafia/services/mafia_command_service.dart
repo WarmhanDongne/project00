@@ -18,8 +18,19 @@ class MafiaCommandService {
   final CallableRetryPolicy retryPolicy;
 
   //=======================게임 수명주기==============================
-  Future<Map<String, dynamic>> startGame({required String roomCode}) {
-    return _call('game_mafia_start_game', {'roomCode': roomCode});
+  /// 게임을 시작합니다.
+  ///
+  /// [composition]은 역할 배치 화면에서 고른 구성(`역할 id → 인원수`)입니다.
+  /// 넘기지 않으면 서버가 인원별 추천 표를 씁니다.
+  Future<Map<String, dynamic>> startGame({
+    required String roomCode,
+    Map<String, int>? composition,
+  }) {
+    return _call('game_mafia_start_game', {
+      'roomCode': roomCode,
+      if (composition != null && composition.isNotEmpty)
+        'composition': composition,
+    });
   }
 
   Future<Map<String, dynamic>> restartGame({required String roomCode}) {

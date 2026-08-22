@@ -5,11 +5,41 @@ import 'package:project00/core/sound/app_sounds.dart';
 /// 여러 게임이 함께 쓰는 소리(카드 분배·룰렛 등)는
 /// `core/sound/app_sounds.dart`에 있습니다. 여기에는 마피아만 쓰는 것만 둡니다.
 abstract final class MafiaSounds {
-  /// 사망·처형을 발표하는 순간 재생하는 총성입니다.
+  /// 총성입니다.
   ///
-  /// 아침 발표(사망자 공개)와 처형 발표에 함께 씁니다. 연출이 시작될 때가
-  /// 아니라 **결과가 드러나는 순간**에 재생하세요.
+  /// 확정(2026-08): **마피아가 제거 대상 선택을 완료한 순간** 태블릿에서
+  /// 울립니다. 밤이 시작될 때 자동으로 울리던 것을 바꿨습니다 — 아무도
+  /// 고르지 않았는데 총이 울리면 연출이 겉돕니다.
   static const gunshot = 'assets/games/mafia/sounds/gun.mp3';
+
+  //=======================직업별 밤 행동 소리==============================
+  /// 밤 행동이 제출된 순간 낼 소리입니다. 파일이 없는 행동은 null입니다.
+  ///
+  /// [action]은 서버가 보내는 행동 종류(`MafiaNightActionCue.action`)입니다.
+  /// 역할 이름이 아니라 **행동 종류**로 갈라 쓰므로, 같은 행동을 쓰는 역할이
+  /// 추가돼도 이 표는 고칠 필요가 없습니다.
+  ///
+  /// ⚠️ 아직 파일이 없어 소리가 나지 않는 행동들입니다. 파일이 들어오면 상수를
+  /// 하나 추가하고 이 표에 한 줄 넣으면 그 순간부터 울립니다.
+  ///
+  /// | 행동 | 역할 | 어울리는 소리 |
+  /// |---|---|---|
+  /// | `protect` | 의사·경호원 | 심장 박동 한 번, 또는 방패가 닫히는 소리 |
+  /// | `investigate` | 경찰 | 손전등을 켜는 딸깍 소리 |
+  /// | `investigateRole` | 정보원 | 서류를 넘기는 소리 |
+  /// | `roleblock` | 역할 차단자 | 문이 잠기는 소리 |
+  /// | `convert` | 교주·뱀파이어 | 낮게 속삭이는 소리 |
+  /// | `silence` | 침묵술사 | 숨을 삼키는 소리 |
+  /// | `track`·`watch` | 사립탐정·감시자 | 발소리 한 걸음 |
+  /// | `steal` | 도둑 | 자물쇠를 따는 소리 |
+  ///
+  /// ⚠️ `eliminate`는 마피아뿐 아니라 자경단원·짐승인간·연쇄살인마도 씁니다.
+  /// 그 밤에 총성이 두 번 울릴 수 있는데, 규칙상 실제로 공격자가 둘이라는
+  /// 뜻이므로 그대로 둡니다.
+  static String? nightActionSound(String action) => switch (action) {
+    'eliminate' => gunshot,
+    _ => null,
+  };
 
   /// 투표를 제출했을 때 재생합니다.
   static const vote = 'assets/games/mafia/sounds/vote.mp3';
@@ -20,7 +50,12 @@ abstract final class MafiaSounds {
   /// 결과 화면에서 승리 진영으로 갈라 쓰면 됩니다.
   static const mafiaWin = 'assets/games/mafia/sounds/win_mafia.mp3';
 
-  /// 낮 동안 깔리는 배경음악입니다.
+  /// 낮 동안 깔리던 배경음악입니다. **지금은 쓰지 않습니다.**
+  ///
+  /// 확정(2026-08): 낮에는 배경음악을 깔지 않습니다. 사람들이 서로 이야기하는
+  /// 시간이라 곡이 목소리를 덮고, 조용한 낮과 곡이 깔린 밤이 갈려야 밤이
+  /// 밤답게 느껴집니다. 되살리려면 `mafiaBackgroundMusicFor`가 이 값을
+  /// 돌려주게만 하면 됩니다(화면 코드는 고칠 필요 없습니다).
   ///
   /// 효과음이 아니라 **BGM 채널**로 재생합니다
   /// (`shared/sound/game_background_music.dart`). 반복 재생이므로 화면을 떠날 때
@@ -30,9 +65,9 @@ abstract final class MafiaSounds {
   /// 절약). 마피아 전용 낮 곡이 들어오면 파일을 넣고 이 상수만 바꾸세요.
   static const background = AppSounds.background;
 
-  /// 밤 동안 깔리는 배경음악입니다. 낮과 곡을 갈아 끼워 분위기를 바꿉니다.
+  /// 밤 동안 깔리는 배경음악입니다. 마피아에서 유일하게 깔리는 곡입니다.
   ///
-  /// 곡을 바꿀 때는 `GameBackgroundMusic.stop()` 뒤에 다시 `start()`를 부릅니다.
+  /// 아침이 되면 `GameBackgroundMusic.fadeOut()`으로 서서히 사라집니다.
   static const nightBackground =
       'assets/games/mafia/sounds/background/background_night.mp3';
 

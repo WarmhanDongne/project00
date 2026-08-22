@@ -27,6 +27,7 @@ class MafiaGameState {
     required this.roleRevealedUids,
     required this.nightSubmittedCount,
     required this.nightActorCount,
+    required this.nightActionCue,
     required this.discussionSkipCount,
     required this.voteSubmittedCount,
     required this.voteSubmittedUids,
@@ -45,6 +46,10 @@ class MafiaGameState {
     required this.voteTargetUid,
     required this.discussionSkipVoted,
     required this.spectatorRoles,
+    required this.executionerTargetUid,
+    required this.abilityUsesLeft,
+    required this.voteBanned,
+    required this.roleChangedRound,
   });
 
   factory MafiaGameState.initial() => const MafiaGameState(
@@ -61,6 +66,7 @@ class MafiaGameState {
     roleRevealedUids: <String>[],
     nightSubmittedCount: 0,
     nightActorCount: 0,
+    nightActionCue: null,
     discussionSkipCount: 0,
     voteSubmittedCount: 0,
     voteSubmittedUids: <String>[],
@@ -79,6 +85,10 @@ class MafiaGameState {
     voteTargetUid: null,
     discussionSkipVoted: false,
     spectatorRoles: <String, String>{},
+    executionerTargetUid: null,
+    abilityUsesLeft: null,
+    voteBanned: false,
+    roleChangedRound: null,
   );
 
   //=======================전원 공개==============================
@@ -104,6 +114,12 @@ class MafiaGameState {
   /// 밤 행동을 제출한 **인원수**입니다. 누가 냈는지는 서버가 보내지 않습니다.
   final int nightSubmittedCount;
   final int nightActorCount;
+
+  /// 방금 제출된 밤 행동의 소리 신호입니다.
+  ///
+  /// 태블릿이 이 신호가 바뀔 때 그 직업의 효과음을 냅니다
+  /// ([MafiaNightActionCue]). 아무도 제출하지 않았으면 null입니다.
+  final MafiaNightActionCue? nightActionCue;
 
   /// 토론 조기 종료에 동의한 인원수입니다. 버튼이 `n/m`으로 표시합니다.
   final int discussionSkipCount;
@@ -155,6 +171,25 @@ class MafiaGameState {
   /// 관전자에게만 주는 전원 신분표입니다. 사망 후에만 채워집니다.
   final Map<String, String> spectatorRoles;
 
+  /// 처형자에게 지정된 목표입니다. 처형자가 아니면 null입니다.
+  ///
+  /// 이 사람이 **낮 투표로** 처형되면 처형자가 단독 승리합니다.
+  final String? executionerTargetUid;
+
+  /// 남은 능력 사용 횟수입니다. 제한이 없는 역할이면 null입니다(자경단원 1).
+  ///
+  /// 0이면 밤에 아무것도 제출할 수 없습니다.
+  final int? abilityUsesLeft;
+
+  /// 이번 낮에 투표할 수 없는지입니다(마담에게 유혹당함).
+  final bool voteBanned;
+
+  /// 내 신분이 바뀐 라운드입니다(도둑의 절도, 교주의 전향).
+  ///
+  /// 바뀐 신분은 [myRoleId]에 이미 반영돼 있습니다. 이 값은 "당신은 이제
+  /// ○○입니다" 안내를 띄울지 판단하는 데만 씁니다.
+  final int? roleChangedRound;
+
   MafiaGameState copyWith({
     bool? loading,
     bool? commandInFlight,
@@ -169,6 +204,7 @@ class MafiaGameState {
     List<String>? roleRevealedUids,
     int? nightSubmittedCount,
     int? nightActorCount,
+    MafiaNightActionCue? nightActionCue,
     int? discussionSkipCount,
     int? voteSubmittedCount,
     List<String>? voteSubmittedUids,
@@ -187,6 +223,10 @@ class MafiaGameState {
     Object? voteTargetUid = _notProvided,
     bool? discussionSkipVoted,
     Map<String, String>? spectatorRoles,
+    Object? executionerTargetUid = _notProvided,
+    Object? abilityUsesLeft = _notProvided,
+    bool? voteBanned,
+    Object? roleChangedRound = _notProvided,
   }) {
     return MafiaGameState(
       loading: loading ?? this.loading,
@@ -210,6 +250,7 @@ class MafiaGameState {
       ),
       nightSubmittedCount: nightSubmittedCount ?? this.nightSubmittedCount,
       nightActorCount: nightActorCount ?? this.nightActorCount,
+      nightActionCue: nightActionCue ?? this.nightActionCue,
       discussionSkipCount: discussionSkipCount ?? this.discussionSkipCount,
       voteSubmittedCount: voteSubmittedCount ?? this.voteSubmittedCount,
       voteSubmittedUids: List.unmodifiable(
@@ -244,6 +285,16 @@ class MafiaGameState {
           : voteTargetUid as String?,
       discussionSkipVoted: discussionSkipVoted ?? this.discussionSkipVoted,
       spectatorRoles: Map.unmodifiable(spectatorRoles ?? this.spectatorRoles),
+      executionerTargetUid: identical(executionerTargetUid, _notProvided)
+          ? this.executionerTargetUid
+          : executionerTargetUid as String?,
+      abilityUsesLeft: identical(abilityUsesLeft, _notProvided)
+          ? this.abilityUsesLeft
+          : abilityUsesLeft as int?,
+      voteBanned: voteBanned ?? this.voteBanned,
+      roleChangedRound: identical(roleChangedRound, _notProvided)
+          ? this.roleChangedRound
+          : roleChangedRound as int?,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/games/mafia/animations/ejection_text.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 //=======================태블릿 화면 공용 골격==============================
@@ -422,6 +423,8 @@ class _MafiaTabletMoonState extends State<MafiaTabletMoon>
 ///
 /// 뒤 화면을 완전히 가리지 않고 살짝 덮습니다. 낮에는 밝은 막에 검은 글씨,
 /// 밤에는 어두운 막에 흰 글씨입니다.
+///
+/// 글자는 어몽어스 추방 발표처럼 **내려찍힙니다**([MafiaEjectionText]).
 class MafiaTabletNotice extends StatelessWidget {
   const MafiaTabletNotice({
     super.key,
@@ -448,9 +451,9 @@ class MafiaTabletNotice extends StatelessWidget {
         return ColoredBox(
           color: isNight ? const Color(0xCC10131A) : const Color(0xCCF2F2F2),
           child: Center(
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
+            child: MafiaEjectionText(
+              // 단계 안내는 짧아서 한 박자로 찍습니다.
+              beats: [text],
               style: TextStyle(
                 color: isNight ? Colors.white : Colors.black,
                 fontSize: 64 * scale,
@@ -567,6 +570,66 @@ class MafiaTabletHeadline extends StatelessWidget {
                       fontSize: fontSize * scale,
                       fontWeight: fontWeight,
                     ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 태블릿의 **안내 문구**입니다. [MafiaTabletHeadline]과 같은 자리에 놓이지만,
+/// 어몽어스 추방 발표처럼 내려찍히고 긴 문장은 두 박자로 나눠 띄웁니다
+/// ([MafiaEjectionText]).
+///
+/// 헤드라인과 나눠 둔 이유: 확인 현황('5 / 6')처럼 **계속 바뀌는 숫자**는
+/// 찍을 때마다 흔들리면 읽기 어렵습니다. 그런 곳은 헤드라인을 그대로 씁니다.
+class MafiaTabletAnnouncement extends StatelessWidget {
+  const MafiaTabletAnnouncement({
+    super.key,
+    required this.beats,
+    required this.top,
+    this.fontSize = 64,
+    this.color = Colors.black,
+    this.fontWeight = FontWeight.w700,
+    this.beatHold = MafiaEjectionText.defaultBeatHold,
+  });
+
+  /// 차례로 찍을 문구들입니다. 하나면 한 번만 찍습니다.
+  final List<String> beats;
+
+  /// 시안 기준 top입니다.
+  final double top;
+  final double fontSize;
+  final Color color;
+  final FontWeight fontWeight;
+
+  /// 마지막이 아닌 박자가 머무는 시간입니다.
+  final Duration beatHold;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = MafiaTabletDesign.resolve(constraints);
+        final scale = MafiaTabletDesign.scaleOf(size);
+        return Stack(
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              top: MafiaTabletDesign.top(size, top),
+              child: IgnorePointer(
+                child: MafiaEjectionText(
+                  beats: beats,
+                  beatHold: beatHold,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: fontSize * scale,
+                    fontWeight: fontWeight,
                   ),
                 ),
               ),

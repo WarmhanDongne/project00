@@ -134,7 +134,13 @@ enum MafiaNightAction {
   /// 조사([investigate])와 다릅니다. 조사는 본인만 결과를 보고, 이건 살아 있는
   /// 모두가 봅니다. 그래서 결과를 `private`이 아니라 `public.revealedRoles`에
   /// 씁니다.
-  expose;
+  expose,
+
+  /// **사망자**의 직업을 훔쳐 자신이 그 직업이 됩니다(도둑).
+  ///
+  /// 밤이 끝날 때 배분표(`server.roles`)가 바뀌는 유일한 행동입니다. 그래서
+  /// 진영까지 바뀌고, 승패 판정도 새 직업을 따릅니다.
+  steal;
 
   /// 밤 화면에서 이 행동을 강조하는 색입니다.
   ///
@@ -161,8 +167,21 @@ enum MafiaNightAction {
     MafiaNightAction.silence => const Color(0xFFB388FF),
     // 진영을 바꾸는 행동 (시안 미확정)
     MafiaNightAction.convert ||
+    MafiaNightAction.steal ||
     MafiaNightAction.mark => const Color(0xFFFFC400),
   };
+}
+
+/// 밤에 고를 수 있는 대상의 범위입니다.
+///
+/// 대부분의 역할은 살아 있는 사람만 고릅니다. 영매·도둑은 **사망자**를 고릅니다.
+/// 밤 화면과 서버 검증이 같은 값을 봐야 하므로 데이터로 둡니다.
+enum MafiaNightTargetScope {
+  /// 살아 있는 사람만 고릅니다.
+  alive,
+
+  /// 사망한 사람만 고릅니다(영매·도둑).
+  dead,
 }
 
 /// 밤 행동을 해결하는 단계입니다. 값이 작을수록 먼저 처리합니다.
@@ -247,12 +266,19 @@ class MafiaRole {
     this.nightPhase,
     this.winCondition = MafiaWinCondition.faction,
     this.investigationAppearance = MafiaInvestigationAppearance.actual,
+    this.nightTargetScope = MafiaNightTargetScope.alive,
     this.maxUses,
+    this.defenseCharges = 0,
+    this.voteWeight = 1,
+    this.blocksTargetVote = false,
+    this.selfDestructsOnAllyKill = false,
+    this.convertsTargetTo,
     this.nightPromptVerb = '',
     this.knowsAllies = false,
     this.description = '',
     this.card,
     this.squareCard,
+    this.icon,
     this.isImplemented = false,
   }) : assert(
          nightAction == MafiaNightAction.none || nightPhase != null,
@@ -285,8 +311,37 @@ class MafiaRole {
   final MafiaWinCondition winCondition;
   final MafiaInvestigationAppearance investigationAppearance;
 
+  /// 밤에 고를 수 있는 대상의 범위입니다. 기본은 살아 있는 사람입니다.
+  ///
+  /// 영매·도둑만 [MafiaNightTargetScope.dead]입니다. 밤 화면은 이 값으로 명단을
+  /// 고르고, 서버도 같은 값으로 검증합니다.
+  final MafiaNightTargetScope nightTargetScope;
+
   /// 게임당 능력 사용 횟수 제한입니다. null이면 제한이 없습니다(자경단원 등).
   final int? maxUses;
+
+  /// 밤 공격을 스스로 막아내는 횟수입니다. 0이면 막지 못합니다(군인 1).
+  ///
+  /// 의사의 보호와 다릅니다. 보호는 남이 걸어 주는 것이고, 이 값은 대상이 되는
+  /// 순간 **자동으로** 소모됩니다. 소모 기록은 서버에만 둡니다.
+  final int defenseCharges;
+
+  /// 낮 투표에서 이 사람의 표가 몇 표로 세어지는지입니다(정치인 2).
+  final int voteWeight;
+
+  /// 밤에 지목한 대상의 **다음 낮 투표권**까지 막는지입니다(마담).
+  ///
+  /// 능력 차단([MafiaNightAction.roleblock])에 더해 적용됩니다.
+  final bool blocksTargetVote;
+
+  /// 같은 편을 제거했을 때 자신도 함께 죽는지입니다(자경단원 오발).
+  final bool selfDestructsOnAllyKill;
+
+  /// 전향([MafiaNightAction.convert])에 성공한 대상이 되는 역할 id입니다.
+  ///
+  /// 교주는 `cultist`(광신도)로 만듭니다. null이면 전향 결과가 정의되지 않은
+  /// 역할이라 서버가 아무 일도 하지 않습니다.
+  final String? convertsTargetTo;
 
   /// 밤 화면 안내 문구에서 강조하는 동사입니다. 예: `제거`·`보호`·`조사`.
   ///
@@ -316,6 +371,16 @@ class MafiaRole {
   /// 대신 표시합니다.
   final GameImage? squareCard;
 
+  /// 역할을 한눈에 알려 주는 **작은 아이콘**입니다(시안 80 × 80).
+  ///
+  /// 역할 배치 화면(게임 시작 전 구성 고르기)과 추천 조합 안내에 씁니다.
+  /// 카드와 달리 진영 색이 그림에 들어 있어, **고르지 않은 역할은 회색으로**
+  /// 바꿔 그립니다.
+  ///
+  /// 아직 그림이 없는 역할은 null입니다. 화면은 그 자리를 비워 두지 않고
+  /// 이름만으로 그립니다.
+  final GameImage? icon;
+
   /// 이 빌드가 **동작까지** 구현한 역할인지입니다.
   ///
   /// 정의만 있고 서버 처리가 없는 역할을 실수로 배분하면 게임이 진행되지 않습니다.
@@ -328,4 +393,7 @@ class MafiaRole {
   /// 진영 승리가 아니라 개별 조건으로 판정하는 역할인지입니다.
   bool get hasIndividualWinCondition =>
       winCondition != MafiaWinCondition.faction;
+
+  /// 밤에 **사망자**를 골라야 하는 역할인지입니다(영매·도둑).
+  bool get targetsDead => nightTargetScope == MafiaNightTargetScope.dead;
 }

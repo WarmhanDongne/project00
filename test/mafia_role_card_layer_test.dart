@@ -17,6 +17,7 @@ void main() {
     WidgetTester tester, {
     bool isFirstReveal = false,
     String phaseKey = 'roleReveal',
+    Duration entranceDelay = Duration.zero,
     VoidCallback? onRevealed,
   }) async {
     tester.view.physicalSize = design;
@@ -28,6 +29,7 @@ void main() {
           role: MafiaRoles.find('mafia'),
           phaseKey: phaseKey,
           isFirstReveal: isFirstReveal,
+          entranceDelay: entranceDelay,
           onRevealed: onRevealed,
         ),
       ),
@@ -173,5 +175,39 @@ void main() {
     await runStep(tester, MafiaPhoneRoleCardLayer.flipDuration);
     await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
     expect(cardTop(tester), closeTo(storedTop, 1));
+  });
+
+  //=======================분배가 끝난 뒤에 들어옵니다==============================
+  // 확정(2026-08): 태블릿에서 카드가 아직 날아가는 중인데 휴대폰에 이미 카드가
+  // 있으면 카드를 건네받는 느낌이 사라집니다.
+  testWidgets('분배가 끝날 때까지는 카드가 화면에 없다', (tester) async {
+    await pumpLayer(
+      tester,
+      isFirstReveal: true,
+      entranceDelay: const Duration(milliseconds: 900),
+    );
+
+    // 기다리는 동안에는 아래에 놓인 카드조차 없습니다.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(MafiaFlipCard), findsNothing);
+
+    // 분배가 끝나면 화면 위에서 들어옵니다.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(MafiaFlipCard), findsOneWidget);
+    final top = tester.getTopLeft(find.byType(MafiaFlipCard)).dy;
+    expect(top, lessThan(centerTop), reason: '화면 위에서 내려와야 합니다');
+
+    await runStep(tester, MafiaPhoneRoleCardLayer.travelDuration);
+    expect(
+      tester.getTopLeft(find.byType(MafiaFlipCard)).dy,
+      moreOrLessEquals(centerTop, epsilon: 1),
+    );
+  });
+
+  testWidgets('기다릴 시간이 없으면 곧바로 들어온다', (tester) async {
+    // 재접속처럼 이미 분배가 끝난 경우입니다.
+    await pumpLayer(tester, isFirstReveal: true);
+    await tester.pump();
+    expect(find.byType(MafiaFlipCard), findsOneWidget);
   });
 }

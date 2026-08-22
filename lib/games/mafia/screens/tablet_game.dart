@@ -17,11 +17,13 @@ import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_game_stage.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
-import 'package:project00/games/mafia/sound/mafia_sounds.dart';
+import 'package:project00/games/mafia/sound/mafia_bgm_plan.dart';
+import 'package:project00/games/mafia/sound/mafia_night_cue_speaker.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/games/shared/sound/countdown_tick_cue.dart';
 import 'package:project00/games/shared/sound/game_background_music.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_turn_countdown.dart';
 import 'package:project00/games/shared/widgets/tablet_game_rulebook_dialog.dart';
 import 'package:project00/games/shared/widgets/tablet_game_settings_dialog.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -81,15 +83,24 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   String? _advancedPhaseKey;
   Timer? _deadlineTimer;
   Timer? _stageTimer;
-  bool _isNightMusic = false;
+
+  /// 지금 깔아 둔 곡입니다. null이면 아무것도 깔지 않은 상태입니다.
+  String? _bgmAsset;
+
+  //=======================직업 효과음 (확정 2026-08)==============================
+  // 총성 등 직업 소리는 밤이 시작될 때 자동으로 울리지 않고, 그 직업이
+  // **선택을 완료한 순간** 이 태블릿에서 울립니다. 서버가 행동 종류만 담은
+  // 신호를 올려 주고(`public.nightActionCue`), 여기서 소리로 옮깁니다.
+  //
+  // 휴대폰에서 내지 않는 이유: 그 사람의 기기에서 총성이 나면 옆 사람에게
+  // 마피아가 그대로 드러납니다. 방 가운데 태블릿은 누가 냈는지 알려 주지
+  // 않으면서 모두에게 같은 순간을 들려줍니다.
+  /// 신호를 소리로 옮기는 규칙입니다([MafiaNightCueSpeaker]).
+  final MafiaNightCueSpeaker _nightCueSpeaker = MafiaNightCueSpeaker();
 
   //=======================밤 시작 안내 (확정 흐름)==============================
   // 전원 확인 → 10초 대기 → '밤이 되었습니다' 안내 2.5초 → 서버에 밤 시작.
   // 확인 제한(서버 1분)이 끝나도 같은 안내를 거쳐 넘어갑니다.
-  /// 밤 총성까지의 지연입니다(배경 전환 0.9초 + 한 박자).
-  static const Duration _nightGunshotDelay = Duration(milliseconds: 1500);
-  Timer? _gunshotTimer;
-
   static const Duration _nightNoticeDelay = Duration(seconds: 10);
   static const Duration _nightNoticeHold = Duration(milliseconds: 2500);
   Timer? _nightNoticeTimer;
@@ -133,7 +144,6 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _deadlineTimer?.cancel();
     _stageTimer?.cancel();
     _nightNoticeTimer?.cancel();
-    _gunshotTimer?.cancel();
     _bgm.stop();
     _countdownTick.stop();
     _subscription?.close();
@@ -157,6 +167,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       _nightNoticeScheduled = false;
     }
     _maybeScheduleNightNotice(game);
+    _playNightActionCue(game);
     _syncBackgroundMusic(game);
     _scheduleDeadlineCheck(game);
     // 제한시간이 있는 단계(밤·토론·투표)에서만 초읽기를 겁니다. 역할 확인은
@@ -168,15 +179,6 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 단계에 처음 들어온 순간 한 번만 하는 일입니다.
   void _onStageEntered(MafiaController game, MafiaTabletStage stage) {
     _stageTimer?.cancel();
-    _gunshotTimer?.cancel();
-    if (stage == MafiaTabletStage.night) {
-      // 확정(2026-08): 밤이 되면 마피아의 총성이 태블릿에서 울립니다.
-      // 배경 라디얼 와이프(0.9초)가 끝나고 한 박자 쉰 뒤에 울립니다.
-      _gunshotTimer = Timer(_nightGunshotDelay, () {
-        if (!mounted || _stage != MafiaTabletStage.night) return;
-        SoundEffects.play(context, MafiaSounds.gunshot);
-      });
-    }
     final hold = stage.announcementHold;
     if (hold == null) return;
 
@@ -187,19 +189,35 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     });
   }
 
-  /// 낮·밤에 따라 곡을 갈아 끼웁니다.
+  /// 누군가 밤 행동을 마친 순간 그 직업의 효과음을 냅니다.
+  ///
+  /// 낼지 말지는 [MafiaNightCueSpeaker]가 정합니다(같은 신호 두 번 금지,
+  /// 붙는 순간의 신호 금지).
+  void _playNightActionCue(MafiaController game) {
+    final sound = _nightCueSpeaker.soundFor(game.nightActionCue);
+    if (sound == null) return;
+    SoundEffects.play(context, sound);
+  }
+
+  /// 단계에 맞는 곡을 깔거나 내립니다([mafiaBackgroundMusicFor]).
+  ///
+  /// 확정(2026-08): **밤에만** 곡이 깔립니다. 아침이 되면 서서히 작아지며
+  /// 사라집니다 — 뚝 끊으면 소리만 먼저 사라져 화면 전환과 어긋납니다.
   void _syncBackgroundMusic(MafiaController game) {
-    if (game.isFinished) {
-      _bgm.stop();
+    final target = mafiaBackgroundMusicFor(
+      isNight: game.isNight,
+      isFinished: game.isFinished,
+    );
+    if (target == _bgmAsset) return;
+    _bgmAsset = target;
+
+    if (target == null) {
+      _bgm.fadeOut(duration: mafiaBgmFadeOut);
       return;
     }
-    final wantsNight = game.isNight;
-    if (_bgm.isPlaying && wantsNight == _isNightMusic) return;
+    // 곡을 갈아 끼울 때는 지금 곡을 확실히 멈춰야 겹쳐 들리지 않습니다.
     _bgm.stop();
-    _isNightMusic = wantsNight;
-    _bgm.start(
-      wantsNight ? MafiaSounds.nightBackground : MafiaSounds.background,
-    );
+    _bgm.start(target);
   }
 
   /// 전원이 역할을 확인하면 10초 뒤 밤 안내를 예약합니다(확정 흐름).
@@ -298,16 +316,21 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
         children: [
           // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
           MafiaTabletBackground(isNight: game.isNight),
-          MafiaTabletStageView(
-            stage: _stage,
-            controller: game,
-            playerLayout: widget.playerLayout,
-            remainingSeconds: _remainingSeconds(game),
-            showsNightNotice: _showsNightNotice,
-            onRulebookPressed: _openRulebook,
-            onSettingsPressed: () => _openSettings(game),
-            onRestart: () => unawaited(game.restartGame()),
-            onHome: () => unawaited(_endGameAndLeave(game)),
+          // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
+          // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
+          GameTurnCountdown(
+            expiresAt: game.turnDeadlineAt,
+            builder: (context, remaining) => MafiaTabletStageView(
+              stage: _stage,
+              controller: game,
+              playerLayout: widget.playerLayout,
+              remainingSeconds: remaining?.inSeconds,
+              showsNightNotice: _showsNightNotice,
+              onRulebookPressed: _openRulebook,
+              onSettingsPressed: () => _openSettings(game),
+              onRestart: () => unawaited(game.restartGame()),
+              onHome: () => unawaited(_endGameAndLeave(game)),
+            ),
           ),
           GameInterruptionLayer(
             interruption: game.interruption,
@@ -321,14 +344,6 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
         ],
       ),
     );
-  }
-
-  /// 남은 시간(초)입니다. 마감이 없는 단계면 null입니다.
-  int? _remainingSeconds(MafiaController game) {
-    final deadline = game.turnDeadlineAt;
-    if (deadline == null) return null;
-    final remaining = ServerClock.remainingUntil(deadline);
-    return remaining.isNegative ? 0 : remaining.inSeconds;
   }
 
   //=======================룰북·설정==============================
@@ -352,14 +367,12 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       context: context,
       builder: (_) => TabletGameSettingsDialog(
         provider: widget.provider,
-        onRestartGame: () {
-          Navigator.of(context).pop();
-          unawaited(game.restartGame());
-        },
-        onEndGame: () {
-          Navigator.of(context).pop();
-          unawaited(_endGameAndLeave(game));
-        },
+        // ⚠️ 여기서 다이얼로그를 닫지 마세요. 공용 설정 다이얼로그가 버튼을
+        // 누른 순간 **이미 닫고 나서** 이 콜백을 부릅니다. 여기서 한 번 더
+        // 닫으면 그 pop이 게임 화면을 닫아, 설정에서 재시작·종료를 누르면
+        // 게임이 그대로 튕겨 나갔습니다(2026-08 수정).
+        onRestartGame: () => unawaited(game.restartGame()),
+        onEndGame: () => unawaited(_endGameAndLeave(game)),
       ),
     );
   }

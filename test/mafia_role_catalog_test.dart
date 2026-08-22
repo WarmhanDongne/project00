@@ -138,18 +138,48 @@ void main() {
     }
   });
 
-  // 경호원은 의사와 같은 protect, 마피아 보스는 마피아와 같은 eliminate +
-  // 조사에 시민으로 보이기입니다. 둘 다 데이터로만 처리되므로 서버 엔진을
-  // 고치지 않고 켰습니다. 그래서 10~12인 구성도 시작할 수 있습니다.
+  // 2026-08 확정 목록입니다(마피아42 표준 룰). 이 목록이 바뀌면 서버 표
+  // (functions/src/mafia/roles.ts)도 같이 바뀌어야 하고, 그 대조는
+  // functions/test/mafia-role-parity.test.mjs가 합니다.
   test('구현 완료 역할 목록', () {
     expect(MafiaRoles.implemented.map((role) => role.id).toSet(), {
       // 클래식 4종
       'citizen', 'police', 'doctor', 'mafia',
       // 데이터만으로 동작해 함께 켠 역할
       'bodyguard', 'mafia_boss',
-      // 능력을 확정받아 서버에 구현한 역할
+      // 시민팀 확정 역할
+      'soldier', 'politician', 'medium', 'gangster', 'vigilante',
       'reporter', 'detective',
+      // 마피아팀 확정 역할
+      'spy', 'beast', 'madam', 'thief',
+      // 중립 확정 역할 (광신도는 교주의 전향으로만 생깁니다)
+      'jester', 'executioner', 'serial_killer', 'cult_leader', 'cultist',
     });
+  });
+
+  // 구현된 역할은 카드가 **전부** 있어야 합니다(2026-08-22 8종 수령 완료).
+  // 카드가 없으면 화면이 뒷면으로 대신 보여 주므로 게임이 깨지지는 않지만,
+  // 그 역할을 받은 사람은 자기 신분을 그림으로 확인할 수 없습니다.
+  test('구현된 역할은 모두 카드 그림이 있다', () {
+    final missing = MafiaRoles.implemented
+        .where((role) => role.card == null)
+        .map((role) => role.id)
+        .toList();
+    expect(missing, isEmpty, reason: '카드가 없는 역할: $missing');
+  });
+
+  test('전향으로만 생기는 역할은 배분 목록에서 빠진다', () {
+    // 교주 없이 광신도로 시작하면 교단 승리 조건이 성립하지 않습니다.
+    expect(MafiaRoles.convertOnlyIds, {'cultist'});
+    expect(
+      MafiaRoles.distributable.map((role) => role.id),
+      isNot(contains('cultist')),
+    );
+    for (final composition in MafiaComposition.recommended.values) {
+      for (final id in composition.keys) {
+        expect(MafiaRoles.convertOnlyIds, isNot(contains(id)));
+      }
+    }
   });
 
   test('구성표의 모든 인원(4~12)을 시작할 수 있다', () {

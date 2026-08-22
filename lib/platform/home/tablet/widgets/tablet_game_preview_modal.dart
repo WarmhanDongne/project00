@@ -6,6 +6,8 @@ import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_factory.dart';
+import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:project00/games/template_game.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -21,11 +23,20 @@ class GamePreviewDialog extends StatefulWidget {
     required this.game,
     required this.roomProvider,
     this.selectionActive = false,
+    this.selection,
   });
 
   final GameInfo game;
   final RoomProvider roomProvider;
   final bool selectionActive;
+
+  /// 이 미리보기를 띄우면서 함께 보낸 게임 선택 요청입니다.
+  ///
+  /// 목록은 서버 응답을 기다리지 않고 미리보기를 먼저 띄웁니다. 시작하기와
+  /// 닫기는 이 요청이 끝난 뒤에만 진행해야 합니다. 서버는 선택된 게임이 없으면
+  /// 자리 배치를 거부하고, 선택 해제가 선택보다 먼저 도착하면 방에 선택이
+  /// 남아 버립니다.
+  final Future<bool>? selection;
 
   @override
   State<GamePreviewDialog> createState() => _GamePreviewDialogState();
@@ -33,12 +44,12 @@ class GamePreviewDialog extends StatefulWidget {
 
 class _GamePreviewDialogState extends State<GamePreviewDialog> {
   bool _isPlayingVideo = false;
-  bool _isClosing = false;
   bool _isStarting = false;
   bool _allowPop = false;
   bool _videoControllerClosed = false;
   int _dismissRequestId = 0;
   Future<void>? _dismissFuture;
+  Future<bool>? _selectionFuture;
   YoutubePlayerController? _youtubeController;
 
   @override
@@ -109,6 +120,12 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// 함께 보낸 게임 선택 요청이 끝나기를 기다립니다(여러 번 불러도 한 번만).
+  Future<bool> _awaitSelection() {
+    if (!widget.selectionActive) return Future.value(true);
+    return _selectionFuture ??= widget.selection ?? Future.value(true);
+  }
+
   Future<void> _dismiss() {
     final inFlight = _dismissFuture;
     if (inFlight != null) return inFlight;
@@ -121,27 +138,16 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
 
   Future<void> _performDismiss(int requestId) async {
     if (!mounted) return;
-    setState(() => _isClosing = true);
-
-    final cleared =
-        !widget.selectionActive ||
-        await widget.roomProvider.clearSelectedGame();
-    if (!mounted || requestId != _dismissRequestId) return;
-    if (!cleared) {
-      setState(() => _isClosing = false);
-      _dismissFuture = null;
-      _showMessage(
-        context,
-        widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
-      );
-      return;
-    }
-
+    // 서버 응답을 기다리지 않고 바로 닫습니다. 방의 선택을 해제하는 호출은
+    // 미리보기를 띄운 목록 화면이 이어받습니다(선택이 서버에 닿은 뒤에 보내야
+    // 하고, 실패를 알릴 화면도 남아 있어야 합니다).
     setState(() => _allowPop = true);
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted || requestId != _dismissRequestId) return;
     if (ModalRoute.of(context)?.isCurrent != true) return;
-    Navigator.of(context).pop();
+    // true는 '사용자가 닫았으니 선택을 해제해 달라'는 뜻입니다. 시작하기로
+    // 넘어가면 이 경로를 지나지 않아 선택이 유지됩니다.
+    Navigator.of(context).pop(true);
   }
 
   void _handleBack() {
@@ -209,6 +215,20 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     }
 
     setState(() => _isStarting = true);
+    // 서버는 선택된 게임이 없으면 자리 배치를 거부합니다. 사용자가 응답보다
+    // 빨리 눌렀다면 여기서만 잠깐 기다립니다.
+    if (!await _awaitSelection()) {
+      if (!mounted) return;
+      setState(() => _isStarting = false);
+      _showMessage(
+        context,
+        widget.roomProvider.errorMessage ?? '게임을 선택하지 못했습니다.',
+      );
+      // 방에 선택이 남지 않았으므로 미리보기를 닫아 다시 고르게 합니다.
+      unawaited(_dismiss());
+      return;
+    }
+    if (!mounted) return;
     final seatingStarted = await widget.roomProvider.beginPlayerSeating();
     if (!mounted) return;
     if (!seatingStarted) {
@@ -229,71 +249,105 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
     unawaited(AppSystemUi.enterGameFullscreen());
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (layoutContext) => PlayerLayoutEditor(
+        builder: (layoutContext) => _buildStartSetup(
+          layoutContext,
+          templateGame: templateGame,
+          initialLayout: initialLayout,
+          roomCode: roomCode,
+        ),
+      ),
+    );
+  }
+
+  /// 자리 배치 화면 자리에 무엇을 띄울지 정합니다.
+  ///
+  /// 게임이 자기만의 준비 화면을 주면([TemplateGame.buildStartSetupScreen])
+  /// 그것을 띄우고, 없으면 공용 자리 배치를 띄웁니다. 게임 id로 분기하지
+  /// 않으므로 게임을 추가할 때 이 파일은 손대지 않습니다.
+  Widget _buildStartSetup(
+    BuildContext layoutContext, {
+    required TemplateGame templateGame,
+    required PlayerLayoutModel initialLayout,
+    required String roomCode,
+  }) {
+    Future<bool> cancel() async {
+      final cleared = await widget.roomProvider.clearSelectedGame();
+      if (!layoutContext.mounted) return false;
+      if (!cleared) {
+        _showMessage(
+          layoutContext,
+          widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
+        );
+      }
+      return cleared;
+    }
+
+    Future<bool> prepare(
+      PlayerLayoutModel completedLayout, {
+      Map<String, Object?>? options,
+    }) async {
+      //자리 realtime database에 저장
+      final saved = await widget.roomProvider.savePlayerSeatIndexes({
+        for (final player in completedLayout.players)
+          player.uid: player.seatIndex,
+      });
+      if (!layoutContext.mounted) return false;
+      if (!saved) {
+        _showMessage(
+          layoutContext,
+          widget.roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+        );
+        return false;
+      }
+
+      try {
+        await templateGame.startGame(roomCode, options: options);
+      } catch (error) {
+        if (!layoutContext.mounted) return false;
+        _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
+        return false;
+      }
+      return layoutContext.mounted;
+    }
+
+    void complete(PlayerLayoutModel completedLayout) {
+      if (!layoutContext.mounted) return;
+      //=======================태블릿 게임 방향 불변 조건==============================
+      // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
+      unawaited(AppOrientation.lockTabletGameLandscape());
+      // 자리 배치 연출이 화면을 게임 배경색으로 가득 채운 채로 끝나므로,
+      // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
+      // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
+      // 바꿔서 하나의 연출처럼 이어지게 합니다.
+      Navigator.of(layoutContext).pushReplacement(
+        PageRouteBuilder<void>(
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
+            playerLayout: completedLayout,
+            provider: widget.roomProvider,
+            roomCode: roomCode,
+          ),
+        ),
+      );
+    }
+
+    return templateGame.buildStartSetupScreen(
+          layout: initialLayout,
+          onPrepare: prepare,
+          onComplete: complete,
+          onCancel: cancel,
+        ) ??
+        PlayerLayoutEditor(
           initialLayout: initialLayout,
           tableColor: templateGame.tableColor,
           tableBackgroundImage: templateGame.tableBackgroundImage,
           tableImage: templateGame.layoutTableImage,
           chairImage: templateGame.layoutChairImage,
-          onCancel: () async {
-            final cleared = await widget.roomProvider.clearSelectedGame();
-            if (!layoutContext.mounted) return false;
-            if (!cleared) {
-              _showMessage(
-                layoutContext,
-                widget.roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
-              );
-            }
-            return cleared;
-          },
-          onPrepare: (completedLayout) async {
-            //자리 realtime database에 저장
-            final saved = await widget.roomProvider.savePlayerSeatIndexes({
-              for (final player in completedLayout.players)
-                player.uid: player.seatIndex,
-            });
-            if (!layoutContext.mounted) return false;
-            if (!saved) {
-              _showMessage(
-                layoutContext,
-                widget.roomProvider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
-              );
-              return false;
-            }
-
-            try {
-              await templateGame.startGame(roomCode);
-            } catch (error) {
-              if (!layoutContext.mounted) return false;
-              _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
-              return false;
-            }
-            return layoutContext.mounted;
-          },
-          onComplete: (completedLayout) {
-            if (!layoutContext.mounted) return;
-            //=======================태블릿 게임 방향 불변 조건==============================
-            // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
-            unawaited(AppOrientation.lockTabletGameLandscape());
-            // 자리 배치 연출이 화면을 게임 배경색으로 가득 채운 채로 끝나므로,
-            // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
-            // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
-            // 바꿔서 하나의 연출처럼 이어지게 합니다.
-            Navigator.of(layoutContext).pushReplacement(
-              PageRouteBuilder<void>(
-                transitionDuration: Duration.zero,
-                reverseTransitionDuration: Duration.zero,
-                pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
-                  playerLayout: completedLayout,
-                  provider: widget.roomProvider,
-                  roomCode: roomCode,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
+          onCancel: cancel,
+          onPrepare: prepare,
+          onComplete: complete,
+        );
   }
 
   @override
@@ -363,18 +417,10 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                       ),
                       IconButton.filledTonal(
                         tooltip: '닫기',
-                        onPressed: _isClosing || _isStarting
+                        onPressed: _isStarting
                             ? null
                             : () => unawaited(_dismiss()),
-                        icon: _isClosing
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.close, size: 20),
+                        icon: const Icon(Icons.close, size: 20),
                       ),
                     ],
                   ),
@@ -451,9 +497,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                                   child: PlatformButton(
                                     label: '시작하기',
                                     loading: _isStarting,
-                                    onPressed: _isClosing || _isStarting
-                                        ? null
-                                        : _startGame,
+                                    onPressed: _isStarting ? null : _startGame,
                                   ),
                                 ),
                               ],

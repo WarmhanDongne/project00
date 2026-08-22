@@ -4,6 +4,7 @@ import {
   alivePlayers,
   checkMafiaWinner,
   finishMafiaGame,
+  isMafiaVoteBanned,
   killMafiaPlayer,
   resolveMafiaVoting,
 } from "./game.js";
@@ -42,13 +43,14 @@ export function excludeMafiaPlayer(
   }
 
   // 인원이 줄었으니 승패가 이미 결정됐을 수 있습니다.
-  const winner = checkMafiaWinner(game);
-  if (winner) {
+  const outcome = checkMafiaWinner(game);
+  if (outcome) {
     finishMafiaGame(
       game,
-      winner,
-      winner === "mafia" ? "mafiaWin" : "citizenWin",
+      outcome.winner,
+      outcome.reason,
       now,
+      outcome.winnerUids,
     );
     return;
   }
@@ -61,7 +63,9 @@ export function excludeMafiaPlayer(
       Object.keys(game.server.nightActions ?? {}).length;
     // 확정(2026-08): 남은 행동자가 없어져도 밤은 마감까지 유지합니다.
   } else if (game.public.phase === "voting") {
-    game.public.voteEligibleCount = alive.length;
+    // 유혹당해 투표권이 없는 사람은 참여 인원에서 빠집니다(마담).
+    game.public.voteEligibleCount =
+      alive.filter((player) => !isMafiaVoteBanned(game, player.uid)).length;
     game.public.voteSubmittedCount = Object.keys(game.server.votes ?? {}).length;
     game.public.voteSubmittedUids = Object.keys(game.server.votes ?? {});
     if (game.public.voteSubmittedCount >= game.public.voteEligibleCount) {

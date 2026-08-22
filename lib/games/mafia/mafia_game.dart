@@ -3,6 +3,7 @@ import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/network/critical_network_guard.dart';
 import 'package:project00/games/mafia/screens/phone_game.dart';
+import 'package:project00/games/mafia/screens/tablet/tablet_role_setup_screen.dart';
 import 'package:project00/games/mafia/screens/tablet_game.dart';
 import 'package:project00/games/mafia/services/mafia_service.dart';
 import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
@@ -49,8 +50,45 @@ class MafiaGame extends TemplateGame {
   Widget buildTabletPreviewArtwork() => const MafiaPreviewArtwork();
 
   @override
-  Future<void> startGame(String roomCode) =>
-      MafiaService().command.startGame(roomCode: roomCode);
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options}) {
+    // 역할 배치 화면이 고른 구성입니다. 없으면 서버가 추천 표를 씁니다.
+    final composition = options?['composition'];
+    return MafiaService().command.startGame(
+      roomCode: roomCode,
+      composition: composition is Map<String, int> ? composition : null,
+    );
+  }
+
+  //=======================자리 배치 대신 역할 배치==============================
+  /// 확정(2026-08): 마피아는 자리보다 **이번 판의 신분 구성**이 판을 좌우해서,
+  /// 시작 전에 자리 배치 대신 역할 배치를 합니다(시안 `1149:334`).
+  ///
+  /// 자리는 참여 순서대로 이미 배정돼 있는 [layout]을 그대로 씁니다.
+  @override
+  Widget? buildStartSetupScreen({
+    required PlayerLayoutModel layout,
+    required Future<bool> Function(
+      PlayerLayoutModel layout, {
+      Map<String, Object?>? options,
+    })
+    onPrepare,
+    required void Function(PlayerLayoutModel layout) onComplete,
+    required Future<bool> Function() onCancel,
+  }) {
+    return MafiaRoleSetupScreen(
+      playerCount: layout.playerCount,
+      onCancel: onCancel,
+      onConfirm: (composition) async {
+        final started = await onPrepare(
+          layout,
+          options: {'composition': composition},
+        );
+        if (!started) return false;
+        onComplete(layout);
+        return true;
+      },
+    );
+  }
 
   @override
   Stream<String?> watchStatus(String roomCode) => MafiaService().query

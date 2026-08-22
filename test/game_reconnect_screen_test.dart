@@ -98,6 +98,37 @@ void main() {
       expect(find.text('게임에 다시 접속하는 중'), findsOneWidget);
     });
 
+    testWidgets('버튼으로 바뀔 때 그림과 문구가 움직이지 않는다', (tester) async {
+      for (final size in [const Size(402, 874), const Size(1194, 834)]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: GameReconnectScreen(homeButtonDelay: Duration(seconds: 2)),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        final titleBefore = tester.getRect(find.text('게임에 다시 접속하는 중'));
+        final messageBefore = tester.getRect(find.text('잠시만 기다려 주세요'));
+
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('홈으로'), findsOneWidget);
+
+        // 점이 버튼으로 바뀌어도 위쪽 내용은 제자리에 있어야 합니다.
+        expect(
+          tester.getRect(find.text('게임에 다시 접속하는 중')).top,
+          moreOrLessEquals(titleBefore.top, epsilon: 0.5),
+        );
+        expect(
+          tester.getRect(find.text('잠시만 기다려 주세요')).top,
+          moreOrLessEquals(messageBefore.top, epsilon: 0.5),
+        );
+      }
+    });
+
     test('기본 대기 시간은 공용 연결 화면과 같은 20초다', () {
       expect(
         GameReconnectScreen.defaultHomeButtonDelay,

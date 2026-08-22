@@ -56,6 +56,22 @@ function dartBoolField(body, field, fallback) {
   return match ? match[1] === "true" : fallback;
 }
 
+function dartIntField(body, field, fallback) {
+  const match = body.match(new RegExp(`\\n\\s*${field}: (\\d+),`));
+  return match ? Number(match[1]) : fallback;
+}
+
+/**
+ * `field: '값',` 형태에서 값을 뽑습니다.
+ *
+ * 줄 시작에 붙여 찾습니다. 그러지 않으면 여러 줄로 이어진 `description:`
+ * 안의 따옴표에 걸립니다.
+ */
+function dartStringField(body, field, fallback) {
+  const match = body.match(new RegExp(`\\n\\s*${field}: '([^']*)',`));
+  return match ? match[1] : fallback;
+}
+
 test("서버 역할 표가 Dart 카탈로그와 같다", () => {
   for (const [roleId, role] of Object.entries(MAFIA_ROLES)) {
     const body = dartRoleBody(roleId);
@@ -89,6 +105,100 @@ test("서버 역할 표가 Dart 카탈로그와 같다", () => {
       role.isImplemented,
       dartBoolField(body, "isImplemented", false),
       `${roleId}: 구현 여부가 다릅니다`,
+    );
+
+    // ===== 2026-08 추가된 규칙 축 =====
+    assert.equal(
+      role.displayName,
+      dartStringField(body, "displayName", null),
+      `${roleId}: 이름이 다릅니다`,
+    );
+    assert.equal(
+      role.nightTargetScope,
+      dartEnumField(body, "nightTargetScope", "alive"),
+      `${roleId}: 밤 대상 범위가 다릅니다`,
+    );
+    assert.equal(
+      role.winCondition,
+      dartEnumField(body, "winCondition", "faction"),
+      `${roleId}: 승리 조건이 다릅니다`,
+    );
+    assert.equal(
+      role.maxUses,
+      dartIntField(body, "maxUses", null),
+      `${roleId}: 사용 횟수 제한이 다릅니다`,
+    );
+    assert.equal(
+      role.defenseCharges,
+      dartIntField(body, "defenseCharges", 0),
+      `${roleId}: 자기 방어 횟수가 다릅니다`,
+    );
+    assert.equal(
+      role.voteWeight,
+      dartIntField(body, "voteWeight", 1),
+      `${roleId}: 투표 가중치가 다릅니다`,
+    );
+    assert.equal(
+      role.blocksTargetVote,
+      dartBoolField(body, "blocksTargetVote", false),
+      `${roleId}: 투표권 차단 여부가 다릅니다`,
+    );
+    assert.equal(
+      role.selfDestructsOnAllyKill,
+      dartBoolField(body, "selfDestructsOnAllyKill", false),
+      `${roleId}: 오발 자멸 여부가 다릅니다`,
+    );
+    assert.equal(
+      role.convertsTargetTo,
+      dartStringField(body, "convertsTargetTo", null),
+      `${roleId}: 전향 결과 역할이 다릅니다`,
+    );
+  }
+});
+
+test("서버 표에는 구현이 끝난 역할만 있다", () => {
+  // 정의만 있는 역할을 서버 표에 넣으면 배분될 수 있습니다.
+  for (const [roleId, role] of Object.entries(MAFIA_ROLES)) {
+    assert.ok(role.isImplemented, `${roleId}: 미구현 역할이 서버 표에 있습니다`);
+  }
+});
+
+test("전향으로만 생기는 역할은 배분표에 없다", () => {
+  // 광신도는 교주의 전향 결과입니다. 처음부터 배분되면 교주 없는 광신도가
+  // 생겨 승리 조건이 성립하지 않습니다.
+  const convertOnly = new Set(
+    Object.values(MAFIA_ROLES)
+      .map((role) => role.convertsTargetTo)
+      .filter((id) => id !== null),
+  );
+  for (const [count, composition] of Object.entries(MAFIA_COMPOSITION)) {
+    for (const roleId of Object.keys(composition)) {
+      assert.ok(
+        !convertOnly.has(roleId),
+        `${count}인 구성에 전향 전용 역할 '${roleId}'가 있습니다`,
+      );
+    }
+  }
+});
+
+test("전향 결과로 지정한 역할은 서버 표에 있다", () => {
+  for (const [roleId, role] of Object.entries(MAFIA_ROLES)) {
+    if (role.convertsTargetTo === null) continue;
+    assert.ok(
+      MAFIA_ROLES[role.convertsTargetTo],
+      `${roleId}의 전향 결과 '${role.convertsTargetTo}'가 서버 표에 없습니다`,
+    );
+  }
+});
+
+test("사망자를 고르는 역할은 밤 행동이 있다", () => {
+  // 대상 범위만 dead인데 밤 행동이 없으면 아무 일도 일어나지 않습니다.
+  for (const [roleId, role] of Object.entries(MAFIA_ROLES)) {
+    if (role.nightTargetScope !== "dead") continue;
+    assert.notEqual(
+      role.nightAction,
+      "none",
+      `${roleId}: 사망자를 고르는데 밤 행동이 없습니다`,
     );
   }
 });

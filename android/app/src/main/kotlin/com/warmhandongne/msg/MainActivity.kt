@@ -1,4 +1,4 @@
-package com.example.project00
+package com.warmhandongne.msg
 
 import io.flutter.embedding.android.FlutterActivity
 

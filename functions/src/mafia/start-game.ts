@@ -9,6 +9,7 @@ import {MafiaRoom} from "./types.js";
 import {
   assertMafiaController,
   MAFIA_REGION,
+  mafiaComposition,
   mafiaRoomCode,
   mafiaUid,
 } from "./validation.js";
@@ -19,6 +20,8 @@ type StartData = {
   controllerSessionId?: unknown;
   /** 콜드스타트를 미리 없애기 위한 예열 호출입니다. */
   warmup?: unknown;
+  /** 역할 배치 화면에서 고른 구성입니다(`역할 id → 인원수`). */
+  composition?: unknown;
 };
 
 export const game_mafia_start_game = onCall<StartData>(
@@ -54,9 +57,17 @@ export const game_mafia_start_game = onCall<StartData>(
       );
     }
 
+    // 태블릿이 역할 배치 화면에서 고른 구성입니다. 없으면 추천 표를 씁니다.
+    // 다시하기는 화면을 다시 지나지 않으므로 **지난 판의 구성을 이어 씁니다**
+    // (확정 2026-08: 고른 구성은 그 판의 규칙입니다). 인원이 바뀌어 합이 맞지
+    // 않으면 `mafiaCompositionToUse`가 추천 표로 되돌립니다.
+    const composition =
+      mafiaComposition(request.data?.composition, count) ??
+      (restart ? room.game?.server?.composition ?? null : null);
+
     // 역할 배분은 여기서 한 번만 합니다. 트랜잭션 콜백은 여러 번 실행될 수 있어
     // 안에서 배분하면 매번 다른 결과가 나옵니다.
-    const game = createInitialMafiaGame(players, Date.now());
+    const game = createInitialMafiaGame(players, Date.now(), composition);
     const transaction = await roomRef.child("game").transaction((current) => {
       if (current?.public?.status === "playing" && !restart) return;
       return game;

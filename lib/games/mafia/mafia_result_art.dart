@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:project00/core/assets/game_image.dart';
 import 'package:project00/games/mafia/models/mafia_role.dart';
+import 'package:project00/games/mafia/models/mafia_roles.dart';
 import 'package:project00/gen/assets.gen.dart';
 
 //=======================결과 화면 그림==============================
@@ -9,28 +10,74 @@ import 'package:project00/gen/assets.gen.dart';
 /// 휴대폰과 태블릿이 **같은 대응을 써야** 두 화면의 결과가 어긋나지 않으므로
 /// 여기 한곳에 둡니다.
 ///
-/// 중립 역할은 개별 승리 조건을 가지고(광대·처형자·생존자 등) 전용 그림이
-/// 없습니다. 그때는 null을 돌려주고, 화면이 문구로 대신 알립니다.
+/// 중립은 진영 대결이 아니라 **개별 승리**입니다. 그래서 진영만으로는 그림을
+/// 고를 수 없고, 실제로 이긴 사람의 역할([winnerRoleIds])까지 봐야 합니다.
+/// 같은 '중립 승리'라도 광대가 이긴 판과 교단이 장악한 판은 다른 그림입니다.
 ///
+/// 아직 그림이 없는 승리(생존자 등)는 null을 돌려주고, 화면이 문구로 대신
+/// 알립니다.
 abstract final class MafiaResultArt {
+  /// 중립 승리 포스터를 고르는 기준입니다.
+  ///
+  /// 역할 id를 직접 비교하지 않고 **승리 조건**으로 가릅니다. 교주와 광신도는
+  /// 같은 조건(`factionDominance`)이라 한 장을 함께 씁니다.
+  static MafiaWinCondition? _neutralKind(Set<String> winnerRoleIds) {
+    for (final id in winnerRoleIds) {
+      final condition = MafiaRoles.find(id)?.winCondition;
+      if (condition == null || condition == MafiaWinCondition.faction) continue;
+      return condition;
+    }
+    return null;
+  }
+
   /// 휴대폰 결과 포스터입니다. 시안은 이 그림 한 장이 화면 전부입니다.
-  static GameImage? phonePoster(MafiaFaction? winner) {
+  static GameImage? phonePoster(
+    MafiaFaction? winner, {
+    Set<String> winnerRoleIds = const {},
+  }) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
       MafiaFaction.mafia => background.backgroundMafiaWinPhone.game,
       MafiaFaction.citizen => background.backgroundCitizenWinPhone.game,
-      // 중립 승리 포스터는 아직 없습니다.
-      MafiaFaction.neutral || null => null,
+      MafiaFaction.neutral => switch (_neutralKind(winnerRoleIds)) {
+        MafiaWinCondition.lynchedSelf => background
+            .backgroundJesterWinPhone
+            .game,
+        MafiaWinCondition.lynchTarget => background
+            .backgroundExecutionerWinPhone
+            .game,
+        MafiaWinCondition.lastStanding => background
+            .backgroundSerialKillerWinPhone
+            .game,
+        MafiaWinCondition.factionDominance => background
+            .backgroundCultWinPhone
+            .game,
+        // 생존자처럼 아직 그림이 없는 승리입니다.
+        _ => null,
+      },
+      null => null,
     };
   }
 
   /// 태블릿 결과 포스터입니다.
-  static GameImage? tabletPoster(MafiaFaction? winner) {
+  static GameImage? tabletPoster(
+    MafiaFaction? winner, {
+    Set<String> winnerRoleIds = const {},
+  }) {
     final background = Assets.games.mafia.images.background;
     return switch (winner) {
       MafiaFaction.mafia => background.backgroundMafiaWin.game,
       MafiaFaction.citizen => background.backgroundCitizenWin.game,
-      MafiaFaction.neutral || null => null,
+      MafiaFaction.neutral => switch (_neutralKind(winnerRoleIds)) {
+        MafiaWinCondition.lynchedSelf => background.backgroundJesterWin.game,
+        MafiaWinCondition.lynchTarget =>
+          background.backgroundExecutionerWin.game,
+        MafiaWinCondition.lastStanding =>
+          background.backgroundSerialKillerWin.game,
+        MafiaWinCondition.factionDominance => background.backgroundCultWin.game,
+        _ => null,
+      },
+      null => null,
     };
   }
 

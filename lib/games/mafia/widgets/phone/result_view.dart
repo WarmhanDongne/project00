@@ -14,7 +14,12 @@ import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
 /// 이기는 경우(광대·처형자·생존자 등)에는 전용 포스터가 없으므로 승리 문구를
 /// 대신 보여 줍니다. 결과 화면이 빈 화면으로 남는 것보다 낫기 때문입니다.
 class MafiaResultView extends StatelessWidget {
-  const MafiaResultView({super.key, required this.winner, this.winnerLabel});
+  const MafiaResultView({
+    super.key,
+    required this.winner,
+    this.winnerRoleIds = const {},
+    this.winnerLabel,
+  });
 
   /// 승리 진영입니다. 서버가 보낸 값을 그대로 씁니다.
   ///
@@ -25,11 +30,17 @@ class MafiaResultView extends StatelessWidget {
   ///
   /// 중립 승리는 진영 이름이 아니라 역할 이름을 보여 주는 편이 분명하므로
   /// (예: `광대 승리`) 호출부가 서버 문구를 그대로 넘길 수 있게 열어 둡니다.
+  /// 이긴 사람들의 역할 id입니다. 중립 포스터를 고르는 데 씁니다.
+  final Set<String> winnerRoleIds;
+
   final String? winnerLabel;
 
   @override
   Widget build(BuildContext context) {
-    final poster = MafiaResultArt.phonePoster(winner);
+    final poster = MafiaResultArt.phonePoster(
+      winner,
+      winnerRoleIds: winnerRoleIds,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {

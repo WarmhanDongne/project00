@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project00/platform/home/howtoplay/widgets/how_to_play_button.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -28,6 +29,8 @@ class PhoneHeader extends StatelessWidget {
           ),
           const Spacer(),
           // 그룹 참여 버튼은 화면 하단 고정 바(PhoneHome)로 옮겼습니다.
+          const HowToPlayButton(),
+          const SizedBox(width: 10),
           const PhoneProfile(),
         ],
       ),
