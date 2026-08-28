@@ -37,16 +37,17 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 
 ## 자주 사용하는 명령어
 
-```bash
-dart run :mosigame doctor
-dart run :mosigame test session
-dart run :mosigame test auth
-dart run :mosigame validate --full
+```powershell
+.\tool\invoke_mosigame.ps1 doctor
+.\tool\invoke_mosigame.ps1 test session
+.\tool\invoke_mosigame.ps1 test auth
+.\tool\invoke_mosigame.ps1 validate --full
 flutter run
 ```
 
 Targeted suite는 관련 작업 중 빠른 피드백용이며, 완료 전에는
-`dart run :mosigame validate --full`을 실행합니다.
+guard를 통해 `dart run :mosigame validate --full`을 실행합니다. raw CLI와 Windows
+invocation guard의 구분은 [`PROJECT_CLI.md`](PROJECT_CLI.md)를 참고합니다.
 
 ## 개발 규칙
 

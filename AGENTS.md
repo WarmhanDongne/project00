@@ -11,7 +11,7 @@ router다.
 | 모든 작업 | [`Engineering Contract`](ENGINEERING_CONTRACT.md) |
 | 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](ARCHITECTURE.md)와 관련 코드·테스트 |
 | 새 게임 | [`게임 템플릿 가이드`](lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
-| Project CLI | `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
+| Project CLI | [`Project CLI`](PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
 
 외부 개인 notes나 로컬 절대 경로는 공식 context가 아니다. 문서와 구현이 충돌하거나
 제품 의도가 확인되지 않으면 추측하지 말고 evidence와 함께 보고한다. 하위
@@ -21,18 +21,19 @@ router다.
 
 작업 중 빠른 피드백:
 
-```bash
-dart run :mosigame test session
-dart run :mosigame test auth
+```powershell
+.\tool\invoke_mosigame.ps1 test session
+.\tool\invoke_mosigame.ps1 test auth
 ```
 
 관련 suite만 실행하며 targeted suite가 FULL validation을 대체하지 않는다. 완료 전:
 
-```bash
-dart run :mosigame validate --full
+```powershell
+.\tool\invoke_mosigame.ps1 validate --full
 ```
 
 실행한 command, status, exit code와 실행 전후 working-tree 상태를 보고한다.
+Windows guarded invocation과 raw CLI의 사용 조건은 `PROJECT_CLI.md`를 따른다.
 
 ## Approval routing
 
