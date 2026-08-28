@@ -19,21 +19,24 @@ router다.
 
 ## Validation routing
 
-작업 중 빠른 피드백:
+실행 전 [`PROJECT_CLI.md`](PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.
+아래 플랫폼 공통 raw 형식은 실행할 command와 argument를 나타낸다. 작업 중 빠른
+피드백:
 
-```powershell
-.\tool\invoke_mosigame.ps1 test session
-.\tool\invoke_mosigame.ps1 test auth
+```text
+dart run :mosigame test session
+dart run :mosigame test auth
 ```
 
 관련 suite만 실행하며 targeted suite가 FULL validation을 대체하지 않는다. 완료 전:
 
-```powershell
-.\tool\invoke_mosigame.ps1 validate --full
+```text
+dart run :mosigame validate --full
 ```
 
 실행한 command, status, exit code와 실행 전후 working-tree 상태를 보고한다.
-Windows guarded invocation과 raw CLI의 사용 조건은 `PROJECT_CLI.md`를 따른다.
+Windows guarded invocation과 macOS/Linux raw CLI의 사용 조건은 `PROJECT_CLI.md`를
+따른다.
 
 ## Approval routing
 

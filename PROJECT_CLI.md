@@ -6,14 +6,34 @@ supervisor around that CLI. It does not reproduce validation or doctor logic.
 
 ## Commands
 
-The raw commands remain supported:
+The portable raw commands below express the canonical Project CLI behavior. Run
+them from the repository root with the Flutter SDK's Dart available on `PATH`:
 
-```powershell
+```text
 dart run :mosigame doctor
 dart run :mosigame test session
 dart run :mosigame test auth
 dart run :mosigame validate --full
 ```
+
+## Platform routing
+
+On macOS and Linux, use the portable raw commands directly from bash, zsh, or
+another compatible shell. The repository does not currently contain a POSIX
+invocation guard:
+
+```bash
+dart run :mosigame doctor
+dart run :mosigame test session
+dart run :mosigame test auth
+dart run :mosigame validate --full
+```
+
+Do not install or invoke PowerShell on macOS/Linux merely to use the Windows
+guard. If non-Windows automation requires an outer deadline and exact descendant
+cleanup, the caller or CI environment must currently provide those guarantees. A
+repository-owned POSIX guard would be a separate implementation with its own tests,
+not a portable use of the Windows script.
 
 On Windows, use the guarded form for validation, automation, restricted execution
 environments, and any invocation whose caller needs a bounded result:
@@ -101,8 +121,9 @@ any incomplete child stdout is discarded before the single guard result is emitt
 
 Raw CLI use is acceptable for short, interactive local work when the SDK cache is
 writable, the caller already supplies an outer deadline and exact descendant cleanup,
-or a non-Windows environment is being used. The canonical CLI behavior is still the
-raw command; the guard adds Windows invocation safety without changing it.
+or a non-Windows environment is being used. On macOS/Linux it is the current normal
+repository invocation. The canonical CLI behavior is still the raw command; the
+guard adds Windows invocation safety without changing it.
 
 ## Troubleshooting
 

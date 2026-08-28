@@ -38,21 +38,23 @@
 
 ## Validation workflow
 
-Project CLI를 실행하기 전에 현재 execution environment가 SDK launcher/cache에 필요한
-권한과 외부 deadline을 제공하는지 확인한다. Windows에서 이 조건을 호출자가 직접
-보장하지 못하면 [`PROJECT_CLI.md`](PROJECT_CLI.md)의 guarded invocation을 사용한다.
+아래 예시는 PowerShell, bash, zsh에서 같은 command와 argument를 나타내는 Project
+CLI의 플랫폼 공통 raw 형식이다. 실제 실행 전에는 현재 execution environment가 SDK
+launcher/cache에 필요한 권한과 외부 deadline을 제공하는지 확인하고,
+[`PROJECT_CLI.md`](PROJECT_CLI.md)의 플랫폼별 실행 경로를 따른다. Windows에서 이
+조건을 호출자가 직접 보장하지 못하면 guarded invocation을 사용한다.
 
 관련 작업 중 빠른 피드백에는 다음 targeted suite를 사용한다.
 
-```powershell
-.\tool\invoke_mosigame.ps1 test session
-.\tool\invoke_mosigame.ps1 test auth
+```text
+dart run :mosigame test session
+dart run :mosigame test auth
 ```
 
 작업 완료 판단 전에는 저장소 루트에서 FULL validation을 실행한다.
 
-```powershell
-.\tool\invoke_mosigame.ps1 validate --full
+```text
+dart run :mosigame validate --full
 ```
 
 Targeted suite는 빠른 피드백 수단이며 FULL validation을 대체하지 않는다. `FAIL`은
@@ -67,7 +69,7 @@ Targeted suite는 빠른 피드백 수단이며 FULL validation을 대체하지 
 
 - 요청 범위가 구현되었다.
 - 관련 테스트가 통과했다.
-- `dart run :mosigame validate --full`이 통과했다.
+- Project CLI의 `validate --full`이 해당 플랫폼의 올바른 실행 경로로 통과했다.
 - 기존 사용자 변경이 보존되었다.
 - 예상하지 못한 tracked/unignored mutation이 없다.
 - 변경 파일, 실행 명령, status와 exit code를 포함한 검증 evidence를 보고했다.
