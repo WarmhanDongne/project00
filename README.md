@@ -35,6 +35,10 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 
 환경별 값은 `.env.dev`에 작성합니다. `.env.dev`는 Git에 포함되지 않으므로 팀원마다 `.env.example`을 복사해 사용합니다. API 키처럼 실제 비밀값은 Flutter 앱 번들에 넣지 말고 서버에서 관리해야 합니다.
 
+수동 테스트 중 production Realtime Database 상태를 제한적으로 확인해야 한다면
+[`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
+규칙을 따릅니다. 이 파일럿은 Project CLI와 자동화된 테스트를 대체하지 않습니다.
+
 ## 자주 사용하는 명령어
 
 Windows에서 validation, 자동화 또는 제한된 실행 환경을 사용할 때:

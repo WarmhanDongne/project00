@@ -22,6 +22,25 @@ Mosigame 기능 구현 또는 버그 수정의 완료 작업에는
 Skill을 사용한다. 질문, 조사, 계획, 읽기 전용 검토, 문서 전용 작업 및 Git 전용
 작업에는 적용하지 않는다.
 
+## Firebase MCP read-only pilot
+
+Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 제한된
+수동 테스트 관찰 절차에만 사용한다.
+
+- 실행 전에 사람이 로컬 terminal에서 MCP 전용 계정이 활성 상태이고 그 계정에
+  `roles/firebasedatabase.viewer` 이외의 더 넓은 권한이 없는지 확인한다. 계정 식별자나
+  CLI 인증 출력은 채팅에 포함하지 않는다.
+- 노출 도구는 `firebase_get_project`와 `realtimedatabase_get_data` 두 개여야 한다.
+  다르거나 `realtimedatabase_set_data`가 보이면 아무 도구도 호출하지 않는다.
+- 먼저 `firebase_get_project`로 project ID `project0000-ec01e`, 이름 `mosigame`, 상태
+  `ACTIVE`를 확인한다.
+- production RTDB는 사용자가 database URL, 정확한 단일 경로, 필요성을 확인하고
+  해당 조회를 사전 승인한 경우에만 한 번 읽는다. root나 상위 collection을 조회하지
+  않는다.
+- 개인정보, credential, token과 불필요한 사용자 데이터를 요청하거나 출력하지 않는다.
+- 쓰기, Auth 접근, project 변경, rules 변경, deploy와 migration은 금지한다.
+- MCP 결과는 Project CLI의 targeted suite나 `validate --full`을 대체하지 않는다.
+
 ## Validation routing
 
 실행 전 [`PROJECT_CLI.md`](PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.
