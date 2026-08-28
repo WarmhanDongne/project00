@@ -143,4 +143,33 @@ void main() {
       CliStatus.blocked,
     );
   });
+
+  test('serializes test steps with a top-level suite', () {
+    final result = TestCommandResult(
+      command: 'test',
+      suite: 'session',
+      status: CliStatus.pass,
+      startedAt: DateTime.utc(2026, 8, 28, 3, 4, 5),
+      durationMs: 123,
+      steps: const <ValidationStepResult>[
+        ValidationStepResult(
+          id: 'manifest',
+          status: CliStatus.pass,
+          message: 'Manifest is valid.',
+          durationMs: 1,
+          processExitCode: null,
+          timedOut: false,
+        ),
+      ],
+      exitCode: CliExitCode.success,
+    );
+
+    final json = jsonDecode(result.toJsonString()) as Map<String, Object?>;
+    expect(json['schemaVersion'], 1);
+    expect(json['command'], 'test');
+    expect(json['suite'], 'session');
+    expect(json['status'], 'PASS');
+    expect(json.containsKey('steps'), isTrue);
+    expect(json.containsKey('checks'), isFalse);
+  });
 }

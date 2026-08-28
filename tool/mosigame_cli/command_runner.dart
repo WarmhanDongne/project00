@@ -5,6 +5,7 @@ import 'doctor.dart';
 import 'process_runner.dart';
 import 'repository_snapshot.dart';
 import 'result.dart';
+import 'test_suites.dart';
 import 'validate.dart';
 
 typedef LineWriter = void Function(String value);
@@ -29,6 +30,8 @@ Future<int> runMosigameCli(
   final stopwatch = Stopwatch()..start();
   final wantsJson = CliArguments.wantsJson(rawArguments);
   final targetsValidate = CliArguments.targetsValidate(rawArguments);
+  final targetsTest = CliArguments.targetsTest(rawArguments);
+  final requestedTestSuite = CliArguments.requestedTestSuite(rawArguments);
   final repositoryRoot = workingDirectory ?? Directory.current.path;
 
   try {
@@ -39,6 +42,40 @@ Future<int> runMosigameCli(
       fileSystem: fileSystem,
       runtime: runtime ?? RuntimeEnvironment.current(),
     );
+    if (arguments.command == 'test') {
+      final suite = testSuiteByName(arguments.testSuite!)!;
+      final outcome = await TestSuiteRunner(
+        repositoryRoot: repositoryRoot,
+        suite: suite,
+        processRunner: processRunner,
+        fileSystem: fileSystem,
+        snapshotter:
+            repositorySnapshotter ??
+            GitRepositorySnapshotter(
+              repositoryRoot: repositoryRoot,
+              processRunner: processRunner,
+            ),
+        runDoctorChecks: doctorCheckRunner ?? doctor.runChecks,
+        progressWriter: writeError,
+      ).run();
+      stopwatch.stop();
+      final result = TestCommandResult(
+        command: 'test',
+        suite: suite.name,
+        status: outcome.status,
+        startedAt: startedAt,
+        durationMs: stopwatch.elapsedMilliseconds,
+        steps: outcome.steps,
+        exitCode: outcome.exitCode,
+      );
+      _emitTestResult(
+        result,
+        json: arguments.json,
+        stdoutWriter: writeOut,
+        stderrWriter: writeError,
+      );
+      return result.exitCode;
+    }
     if (arguments.command == 'validate') {
       final outcome = await FullValidator(
         repositoryRoot: repositoryRoot,
@@ -90,6 +127,34 @@ Future<int> runMosigameCli(
     return result.exitCode;
   } on CliUsageException catch (error) {
     stopwatch.stop();
+    if (targetsTest) {
+      final result = TestCommandResult(
+        command: 'test',
+        suite: requestedTestSuite,
+        status: CliStatus.invalid,
+        startedAt: startedAt,
+        durationMs: stopwatch.elapsedMilliseconds,
+        steps: <ValidationStepResult>[
+          ValidationStepResult(
+            id: 'arguments',
+            status: CliStatus.invalid,
+            message: error.message,
+            durationMs: 0,
+            processExitCode: null,
+            timedOut: false,
+          ),
+        ],
+        exitCode: CliExitCode.invalid,
+      );
+      _emitTestResult(
+        result,
+        json: wantsJson,
+        stdoutWriter: writeOut,
+        stderrWriter: writeError,
+      );
+      if (!wantsJson) writeError(CliArguments.usage);
+      return CliExitCode.invalid;
+    }
     if (targetsValidate) {
       final result = ValidateCommandResult(
         command: 'validate',
@@ -141,6 +206,33 @@ Future<int> runMosigameCli(
     return CliExitCode.invalid;
   } catch (_) {
     stopwatch.stop();
+    if (targetsTest) {
+      final result = TestCommandResult(
+        command: 'test',
+        suite: requestedTestSuite,
+        status: CliStatus.fail,
+        startedAt: startedAt,
+        durationMs: stopwatch.elapsedMilliseconds,
+        steps: const <ValidationStepResult>[
+          ValidationStepResult(
+            id: 'internal-error',
+            status: CliStatus.fail,
+            message: 'Project CLI internal error.',
+            durationMs: 0,
+            processExitCode: null,
+            timedOut: false,
+          ),
+        ],
+        exitCode: CliExitCode.internalError,
+      );
+      _emitTestResult(
+        result,
+        json: wantsJson,
+        stdoutWriter: writeOut,
+        stderrWriter: writeError,
+      );
+      return CliExitCode.internalError;
+    }
     if (targetsValidate) {
       final result = ValidateCommandResult(
         command: 'validate',
@@ -189,6 +281,37 @@ Future<int> runMosigameCli(
     );
     return CliExitCode.internalError;
   }
+}
+
+void _emitTestResult(
+  TestCommandResult result, {
+  required bool json,
+  required LineWriter stdoutWriter,
+  required LineWriter stderrWriter,
+}) {
+  if (json) {
+    stdoutWriter(result.toJsonString());
+    return;
+  }
+
+  final target =
+      result.status == CliStatus.invalid ||
+          result.exitCode == CliExitCode.internalError
+      ? stderrWriter
+      : stdoutWriter;
+  final suite = result.suite == null ? '' : ' ${result.suite}';
+  target(
+    'Mosigame Project CLI — ${result.command}$suite: '
+    '${result.status.wireName}',
+  );
+  for (final step in result.steps) {
+    target('[${step.status.wireName}] ${step.id}: ${step.message}');
+  }
+  final summary = result.summary;
+  target(
+    'Summary: ${summary.passed} passed, ${summary.failed} failed, '
+    '${summary.blocked} blocked, ${summary.invalid} invalid.',
+  );
 }
 
 void _emitValidateResult(

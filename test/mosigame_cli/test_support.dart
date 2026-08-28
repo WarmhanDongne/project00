@@ -4,6 +4,7 @@ import '../../tool/mosigame_cli/doctor.dart';
 import '../../tool/mosigame_cli/process_runner.dart';
 import '../../tool/mosigame_cli/repository_snapshot.dart';
 import '../../tool/mosigame_cli/result.dart';
+import '../../tool/mosigame_cli/test_suites.dart';
 
 String joinTestPath(String first, [String? second, String? third]) {
   var result = first;
@@ -225,6 +226,27 @@ FakeFileSystemProbe healthyFileSystem() {
     ),
     '{"frameworkVersion":"3.44.8","channel":"stable"}',
   );
+  return fileSystem;
+}
+
+FakeFileSystemProbe healthyFileSystemWithTestSuites() {
+  final fileSystem = healthyFileSystem();
+  for (final suite in const <TestSuiteDefinition>[
+    sessionTestSuite,
+    authTestSuite,
+  ]) {
+    for (final path in <String>[
+      ...suite.flutterTests,
+      ...suite.functionsTests,
+    ]) {
+      fileSystem.addFile(
+        <String>[
+          testRepositoryRoot,
+          ...path.split('/'),
+        ].join(Platform.pathSeparator),
+      );
+    }
+  }
   return fileSystem;
 }
 

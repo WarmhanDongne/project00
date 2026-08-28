@@ -224,4 +224,99 @@ void main() {
     expect(json.containsKey('checks'), isFalse);
     expect(stderrLines, isEmpty);
   });
+
+  test('dispatches test session and emits human output', () async {
+    final stdoutLines = <String>[];
+    final stderrLines = <String>[];
+    final runner = FakeProcessRunner()
+      ..handler = (_) => const ProcessExecution(
+        exitCode: 0,
+        stdoutText: 'selected test output',
+        stderrText: '',
+        timedOut: false,
+      );
+
+    final code = await runMosigameCli(
+      const <String>['test', 'session'],
+      processRunner: runner,
+      fileSystem: healthyFileSystemWithTestSuites(),
+      runtime: runtime,
+      workingDirectory: testRepositoryRoot,
+      repositorySnapshotter: FakeRepositorySnapshotter(),
+      doctorCheckRunner: () async => healthyDoctorChecks,
+      stdoutWriter: stdoutLines.add,
+      stderrWriter: stderrLines.add,
+    );
+
+    expect(code, CliExitCode.success);
+    expect(stdoutLines.join('\n'), contains('test session: PASS'));
+    expect(stdoutLines.join('\n'), contains('working-tree-mutation'));
+    expect(stderrLines.join('\n'), contains('selected test output'));
+  });
+
+  test('test JSON is one document with suite and steps', () async {
+    final stdoutLines = <String>[];
+    final stderrLines = <String>[];
+    final runner = FakeProcessRunner()
+      ..handler = (_) => const ProcessExecution(
+        exitCode: 0,
+        stdoutText: 'raw subprocess output',
+        stderrText: '',
+        timedOut: false,
+      );
+
+    final code = await runMosigameCli(
+      const <String>['--json', 'test', 'auth'],
+      processRunner: runner,
+      fileSystem: healthyFileSystemWithTestSuites(),
+      runtime: runtime,
+      workingDirectory: testRepositoryRoot,
+      repositorySnapshotter: FakeRepositorySnapshotter(),
+      doctorCheckRunner: () async => healthyDoctorChecks,
+      stdoutWriter: stdoutLines.add,
+      stderrWriter: stderrLines.add,
+    );
+
+    expect(code, CliExitCode.success);
+    expect(stdoutLines, hasLength(1));
+    final json = jsonDecode(stdoutLines.single) as Map<String, Object?>;
+    expect(json['schemaVersion'], 1);
+    expect(json['command'], 'test');
+    expect(json['suite'], 'auth');
+    expect(json['status'], 'PASS');
+    expect(json.containsKey('steps'), isTrue);
+    expect(json.containsKey('checks'), isFalse);
+    expect(stdoutLines.single, isNot(contains('raw subprocess output')));
+    expect(stderrLines.join('\n'), contains('raw subprocess output'));
+  });
+
+  test('invalid test invocation uses test steps and exits 2', () async {
+    for (final arguments in <List<String>>[
+      const <String>['test'],
+      const <String>['test', 'unknown'],
+      const <String>['test', 'session', 'auth'],
+      const <String>['test', 'session', '--unknown', '--json'],
+    ]) {
+      final stdoutLines = <String>[];
+      final stderrLines = <String>[];
+      final wantsJson = arguments.contains('--json');
+
+      final code = await runMosigameCli(
+        arguments,
+        stdoutWriter: stdoutLines.add,
+        stderrWriter: stderrLines.add,
+      );
+
+      expect(code, CliExitCode.invalid);
+      final output = wantsJson ? stdoutLines.single : stderrLines.join('\n');
+      expect(output, contains('INVALID'));
+      expect(output, isNot(contains('#0')));
+      if (wantsJson) {
+        final json = jsonDecode(output) as Map<String, Object?>;
+        expect(json['command'], 'test');
+        expect(json.containsKey('steps'), isTrue);
+        expect(stderrLines, isEmpty);
+      }
+    }
+  });
 }

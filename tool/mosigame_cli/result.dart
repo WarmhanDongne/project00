@@ -169,6 +169,42 @@ final class ValidateCommandResult {
   String toJsonString() => jsonEncode(toJson());
 }
 
+final class TestCommandResult {
+  const TestCommandResult({
+    required this.command,
+    required this.suite,
+    required this.status,
+    required this.startedAt,
+    required this.durationMs,
+    required this.steps,
+    required this.exitCode,
+  });
+
+  final String command;
+  final String? suite;
+  final CliStatus status;
+  final DateTime startedAt;
+  final int durationMs;
+  final List<ValidationStepResult> steps;
+  final int exitCode;
+
+  CliSummary get summary => CliSummary.fromSteps(steps);
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'schemaVersion': CliCommandResult.schemaVersion,
+    'command': command,
+    'suite': suite,
+    'status': status.wireName,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'durationMs': durationMs,
+    'exitCode': exitCode,
+    'steps': steps.map((step) => step.toJson()).toList(),
+    'summary': summary.toJson(),
+  };
+
+  String toJsonString() => jsonEncode(toJson());
+}
+
 final class CliCommandResult {
   const CliCommandResult({
     required this.command,
