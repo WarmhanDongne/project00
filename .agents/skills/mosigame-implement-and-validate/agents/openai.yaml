@@ -1,0 +1,6 @@
+interface:
+  display_name: "Mosigame Implement and Validate"
+  short_description: "Implement Mosigame changes with canonical validation."
+
+policy:
+  allow_implicit_invocation: true

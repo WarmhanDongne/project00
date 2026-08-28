@@ -17,6 +17,11 @@ router다.
 제품 의도가 확인되지 않으면 추측하지 말고 evidence와 함께 보고한다. 하위
 `AGENTS.md`가 있다면 해당 디렉터리 작업에는 그 지침도 적용한다.
 
+Mosigame 기능 구현 또는 버그 수정의 완료 작업에는
+[`Mosigame Implement and Validate`](.agents/skills/mosigame-implement-and-validate/SKILL.md)
+Skill을 사용한다. 질문, 조사, 계획, 읽기 전용 검토, 문서 전용 작업 및 Git 전용
+작업에는 적용하지 않는다.
+
 ## Validation routing
 
 실행 전 [`PROJECT_CLI.md`](PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.

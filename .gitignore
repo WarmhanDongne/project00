@@ -40,7 +40,10 @@ devtools_options.yaml
 
 # Antigravity / AI IDE Local Settings
 .antigravity/
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/mosigame-implement-and-validate/
 
 main_loby_and_game_modal/
 docs/
