@@ -39,6 +39,9 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 [`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
 규칙을 따릅니다. 이 파일럿은 Project CLI와 자동화된 테스트를 대체하지 않습니다.
 
+Android 1~3기기 Firebase Emulator 자동화는 조사 후 보류했습니다. 구현·검증 결과와
+재개 조건은 [`Emulator pilot record`](EMULATOR_PILOT.md)에 남겨 두었습니다.
+
 ## 자주 사용하는 명령어
 
 Windows에서 validation, 자동화 또는 제한된 실행 환경을 사용할 때:
