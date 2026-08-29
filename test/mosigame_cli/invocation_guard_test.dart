@@ -1,3 +1,7 @@
+@Tags(['invocation-guard'])
+library;
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -14,6 +18,7 @@ void main() {
   late String fakeLauncherPath;
   late String controlSignalDriverPath;
   final spawnedProcesses = <Process>[];
+  final guardProcesses = <Process>{};
 
   setUp(() async {
     temporaryDirectory = await Directory.systemTemp.createTemp(
@@ -38,11 +43,30 @@ void main() {
   });
 
   tearDown(() async {
+    final cleanupFailures = <int>[];
+    for (final process in guardProcesses.toList()) {
+      if (!await _terminateExactProcessTree(process)) {
+        cleanupFailures.add(process.pid);
+      }
+    }
+    guardProcesses.clear();
     for (final process in spawnedProcesses) {
       process.kill();
+      try {
+        await process.exitCode.timeout(const Duration(seconds: 10));
+      } on TimeoutException {
+        cleanupFailures.add(process.pid);
+      }
     }
+    spawnedProcesses.clear();
     if (temporaryDirectory.existsSync()) {
       await temporaryDirectory.delete(recursive: true);
+    }
+    if (cleanupFailures.isNotEmpty) {
+      fail(
+        'Test-owned process cleanup could not be confirmed for PIDs '
+        '${cleanupFailures.join(', ')}.',
+      );
     }
   });
 
@@ -58,6 +82,7 @@ void main() {
             'MOSIGAME_FAKE_MODE': 'normal',
             'MOSIGAME_FAKE_EXIT_CODE': '$exitCode',
           },
+          guardProcesses,
         );
 
         expect(result.exitCode, exitCode);
@@ -92,11 +117,74 @@ void main() {
           'MOSIGAME_FAKE_EXIT_CODE': '0',
           'MOSIGAME_FAKE_ARGUMENTS_FILE': argumentsPath,
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 0);
       final recorded = jsonDecode(await File(argumentsPath).readAsString());
       expect(recorded, arguments);
+    },
+    timeout: const Timeout(Duration(minutes: 1)),
+  );
+
+  test(
+    'setup delay is excluded and a marker before the startup deadline passes',
+    () async {
+      final result = await _runGuard(
+        guardPath,
+        fakeLauncherPath,
+        const <String>['doctor'],
+        const <String, String>{
+          'MOSIGAME_FAKE_MODE': 'normal',
+          'MOSIGAME_FAKE_EXIT_CODE': '0',
+          'MOSIGAME_FAKE_MARKER_DELAY_MS': '100',
+          'MOSIGAME_GUARD_TEST_SETUP_DELAY_MS': '1500',
+          'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS': '4000',
+        },
+        guardProcesses,
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+      final stderr = result.stderr as String;
+      final setupMs = _diagnosticMilliseconds(
+        stderr,
+        RegExp(r'Guard setup completed after (\d+) ms\.'),
+      );
+      final startupMs = _diagnosticMilliseconds(
+        stderr,
+        RegExp(r'Project CLI startup: (\d+) ms\.'),
+      );
+      expect(setupMs, greaterThanOrEqualTo(1500));
+      expect(startupMs, lessThan(4000));
+      expect(startupMs, lessThan(setupMs));
+    },
+    timeout: const Timeout(Duration(minutes: 1)),
+  );
+
+  test(
+    'a marker after the startup deadline is BLOCKED before marker polling',
+    () async {
+      final result = await _runGuard(
+        guardPath,
+        fakeLauncherPath,
+        const <String>['doctor', '--json'],
+        const <String, String>{
+          'MOSIGAME_FAKE_MODE': 'normal',
+          'MOSIGAME_FAKE_EXIT_CODE': '0',
+          'MOSIGAME_FAKE_MARKER_DELAY_MS': '400',
+          'MOSIGAME_GUARD_TEST_SETUP_DELAY_MS': '300',
+          'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS': '150',
+        },
+        guardProcesses,
+      );
+
+      expect(result.exitCode, 3, reason: '${result.stdout}\n${result.stderr}');
+      final decoded =
+          jsonDecode(result.stdout as String) as Map<String, Object?>;
+      final guard = decoded['guard']! as Map<String, Object?>;
+      expect(guard['reason'], 'startup-timeout');
+      expect(guard['progressObserved'], isFalse);
+      expect(result.stderr as String, isNot(contains('startup observed')));
     },
     timeout: const Timeout(Duration(minutes: 1)),
   );
@@ -116,6 +204,7 @@ void main() {
           'MOSIGAME_FAKE_PID_FILE': pidPath,
           'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS': '15000',
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 3, reason: '${result.stdout}\n${result.stderr}');
@@ -126,7 +215,7 @@ void main() {
       final pid = int.parse(await File(pidPath).readAsString());
       expect(await _processExists(pid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -136,7 +225,7 @@ void main() {
         '-NoProfile',
         '-NonInteractive',
         '-Command',
-        'Start-Sleep -Seconds 30',
+        r'while ($true) { Start-Sleep -Seconds 60 }',
       ]);
       spawnedProcesses.add(unrelated);
       final pidPath = File(
@@ -153,6 +242,7 @@ void main() {
           'MOSIGAME_GUARD_TEST_OVERALL_TIMEOUT_MS': '15000',
           'MOSIGAME_GUARD_TEST_HEARTBEAT_MS': '500',
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 1);
@@ -163,7 +253,7 @@ void main() {
       expect(await _processExists(pid), isFalse);
       expect(await _processExists(unrelated.pid), isTrue);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -182,6 +272,7 @@ void main() {
           'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS': '15000',
           'MOSIGAME_GUARD_TEST_FORCE_CLEANUP_FAILURE': '1',
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 4);
@@ -189,7 +280,7 @@ void main() {
       final pid = int.parse(await File(pidPath).readAsString());
       expect(await _processExists(pid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -207,6 +298,7 @@ void main() {
           'MOSIGAME_GUARD_TEST_FORCE_JOB_ASSIGNMENT_FAILURE': '1',
           'MOSIGAME_GUARD_TEST_ROOT_PID_FILE': rootPidPath,
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 3, reason: '${result.stdout}\n${result.stderr}');
@@ -220,7 +312,7 @@ void main() {
       final rootPid = int.parse(await File(rootPidPath).readAsString());
       expect(await _processExists(rootPid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -240,6 +332,7 @@ void main() {
           'MOSIGAME_GUARD_TEST_FORCE_ASSIGNMENT_CLEANUP_FAILURE': '1',
           'MOSIGAME_GUARD_TEST_ROOT_PID_FILE': rootPidPath,
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 4);
@@ -257,7 +350,7 @@ void main() {
       final rootPid = int.parse(await File(rootPidPath).readAsString());
       expect(await _processExists(rootPid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -275,6 +368,7 @@ void main() {
           'MOSIGAME_FAKE_PID_FILE': pidPath,
           'MOSIGAME_GUARD_TEST_INTERRUPT_AFTER_MS': '15000',
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 130);
@@ -282,7 +376,7 @@ void main() {
       final pid = int.parse(await File(pidPath).readAsString());
       expect(await _processExists(pid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -296,6 +390,7 @@ void main() {
         guardPath,
         fakeLauncherPath,
         pidPath,
+        guardProcesses,
       );
 
       expect(
@@ -307,7 +402,7 @@ void main() {
       final pid = int.parse(await File(pidPath).readAsString());
       expect(await _processExists(pid), isFalse);
     },
-    timeout: const Timeout(Duration(seconds: 45)),
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 
   test(
@@ -323,6 +418,7 @@ void main() {
           'MOSIGAME_FAKE_MODE': 'json',
           'MOSIGAME_FAKE_JSON': childJson,
         },
+        guardProcesses,
       );
 
       expect(result.exitCode, 0);
@@ -348,6 +444,7 @@ void main() {
             'MOSIGAME_FAKE_MODE': 'startup-hang',
             'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS': '15000',
           },
+          guardProcesses,
         );
 
         expect(result.exitCode, 3);
@@ -372,8 +469,9 @@ Future<ProcessResult> _runGuard(
   String fakeLauncherPath,
   List<String> arguments,
   Map<String, String> environment,
+  Set<Process> guardProcesses,
 ) {
-  return Process.run(
+  return _runTrackedProcess(
     'pwsh.exe',
     <String>[
       '-NoProfile',
@@ -392,6 +490,8 @@ Future<ProcessResult> _runGuard(
       'MOSIGAME_GUARD_TEST_TERMINATION_GRACE_MS': '2000',
       ...environment,
     },
+    guardProcesses: guardProcesses,
+    safetyTimeout: const Duration(seconds: 60),
   );
 }
 
@@ -400,8 +500,9 @@ Future<ProcessResult> _runGuardWithRealCtrlC(
   String guardPath,
   String fakeLauncherPath,
   String descendantPidPath,
+  Set<Process> guardProcesses,
 ) {
-  return Process.run(
+  return _runTrackedProcess(
     'pwsh.exe',
     <String>[
       '-NoProfile',
@@ -422,7 +523,75 @@ Future<ProcessResult> _runGuardWithRealCtrlC(
       'MOSIGAME_FAKE_MODE': 'overall-hang',
       'MOSIGAME_FAKE_PID_FILE': descendantPidPath,
     },
+    guardProcesses: guardProcesses,
+    safetyTimeout: const Duration(seconds: 90),
   );
+}
+
+Future<ProcessResult> _runTrackedProcess(
+  String executable,
+  List<String> arguments, {
+  required Map<String, String> environment,
+  required Set<Process> guardProcesses,
+  required Duration safetyTimeout,
+}) async {
+  final process = await Process.start(
+    executable,
+    arguments,
+    environment: environment,
+  );
+  guardProcesses.add(process);
+  final stdoutFuture = process.stdout
+      .transform(const Utf8Decoder(allowMalformed: true))
+      .join();
+  final stderrFuture = process.stderr
+      .transform(const Utf8Decoder(allowMalformed: true))
+      .join();
+  var exitConfirmed = false;
+
+  try {
+    final exitCode = await process.exitCode.timeout(safetyTimeout);
+    exitConfirmed = true;
+    final output = await Future.wait(<Future<String>>[
+      stdoutFuture,
+      stderrFuture,
+    ]).timeout(const Duration(seconds: 10));
+    return ProcessResult(process.pid, exitCode, output[0], output[1]);
+  } on TimeoutException {
+    final cleanupConfirmed = await _terminateExactProcessTree(process);
+    exitConfirmed = cleanupConfirmed;
+    throw StateError(
+      'Guard test harness safety timeout after '
+      '${safetyTimeout.inSeconds}s; exact process-tree cleanup confirmed: '
+      '$cleanupConfirmed.',
+    );
+  } finally {
+    if (exitConfirmed) {
+      guardProcesses.remove(process);
+    }
+  }
+}
+
+Future<bool> _terminateExactProcessTree(Process process) async {
+  if (!await _processExists(process.pid)) return true;
+
+  try {
+    await Process.run('taskkill.exe', <String>[
+      '/PID',
+      '${process.pid}',
+      '/T',
+      '/F',
+    ]).timeout(const Duration(seconds: 10));
+  } on TimeoutException {
+    return false;
+  }
+
+  try {
+    await process.exitCode.timeout(const Duration(seconds: 10));
+  } on TimeoutException {
+    return false;
+  }
+  return !await _processExists(process.pid);
 }
 
 Future<bool> _processExists(int pid) async {
@@ -436,6 +605,12 @@ Future<bool> _processExists(int pid) async {
   return (result.stdout as String).contains('"$pid"');
 }
 
+int _diagnosticMilliseconds(String output, RegExp pattern) {
+  final match = pattern.firstMatch(output);
+  expect(match, isNotNull, reason: output);
+  return int.parse(match!.group(1)!);
+}
+
 const _fakeLauncher = r'''@echo off
 pwsh.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0fake_child.ps1"
 exit /b %ERRORLEVEL%
@@ -444,6 +619,13 @@ exit /b %ERRORLEVEL%
 const _fakeChild = r'''
 $mode = $env:MOSIGAME_FAKE_MODE
 if ($mode -ne 'startup-hang') {
+    $markerDelayMs = 0
+    if (-not [string]::IsNullOrWhiteSpace($env:MOSIGAME_FAKE_MARKER_DELAY_MS)) {
+        $markerDelayMs = [int]$env:MOSIGAME_FAKE_MARKER_DELAY_MS
+    }
+    if ($markerDelayMs -gt 0) {
+        Start-Sleep -Milliseconds $markerDelayMs
+    }
     $marker = [IO.File]::Create($env:MOSIGAME_GUARD_STARTUP_MARKER)
     $marker.Dispose()
 }

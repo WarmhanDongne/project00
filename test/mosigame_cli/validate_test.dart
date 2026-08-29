@@ -45,7 +45,9 @@ void main() {
     _expectInvocation(runner.invocations[2], 'flutter', <String>[
       'test',
       '--no-pub',
-    ], flutterTestTimeout);
+      '--exclude-tags',
+      'invocation-guard',
+    ], _remainingBudgetMatcher);
     _expectInvocation(runner.invocations[3], 'npm', <String>[
       '--prefix',
       'functions',
@@ -56,10 +58,65 @@ void main() {
       '--prefix',
       'functions',
       'test',
-    ], functionsTestTimeout);
+    ], _remainingBudgetMatcher);
   });
 
-  test('runs all steps after a validation failure', () async {
+  test('does not start a step after the FULL deadline is exhausted', () async {
+    final runner = _passingRunner();
+    final snapshotter = FakeRepositorySnapshotter();
+    final elapsed = _FakeElapsedProvider();
+
+    final outcome = await _validator(
+      runner: runner,
+      snapshotter: snapshotter,
+      fullTimeout:
+          fullValidationFinalSnapshotReserve +
+          fullValidationProcessCleanupReserve +
+          fullValidationSnapshotCleanupReserve,
+      elapsedProvider: elapsed.call,
+    ).run();
+
+    expect(outcome.exitCode, CliExitCode.failure);
+    expect(runner.invocations, isEmpty);
+    expect(snapshotter.captureCount, 2);
+    final deadlineStep = outcome.steps.singleWhere(
+      (step) => step.details['fullDeadlineExceeded'] == true,
+    );
+    expect(deadlineStep.id, 'dart-format');
+    expect(deadlineStep.timedOut, isTrue);
+    expect(outcome.steps.last.id, 'working-tree-mutation');
+    expect(outcome.steps.last.status, CliStatus.fail);
+    expect(outcome.steps.last.details['evidenceTrusted'], isFalse);
+    expect(outcome.steps.last.details['reason'], 'validation-step-timed-out');
+  });
+
+  test(
+    'reserves final snapshot and both cleanup windows deterministically',
+    () async {
+      final runner = _passingRunner();
+      runner.handler = (_) => const ProcessExecution(
+        exitCode: 1,
+        stdoutText: '',
+        stderrText: '',
+        timedOut: false,
+      );
+      final elapsed = _FakeElapsedProvider(const Duration(seconds: 30));
+
+      await _validator(
+        runner: runner,
+        fullTimeout: const Duration(minutes: 4),
+        elapsedProvider: elapsed.call,
+      ).run();
+
+      expect(runner.invocations, hasLength(1));
+      expect(
+        runner.invocations.single.timeout,
+        const Duration(minutes: 1, seconds: 10),
+      );
+    },
+  );
+
+  test('stops after the first validation failure and snapshots B', () async {
     final runner = _passingRunner();
     runner.handler = (invocation) {
       if (invocation.executable == 'flutter' &&
@@ -77,15 +134,21 @@ void main() {
     final outcome = await _validator(runner: runner).run();
 
     expect(outcome.exitCode, CliExitCode.failure);
-    expect(runner.invocations, hasLength(5));
+    expect(runner.invocations, hasLength(2));
     expect(
       outcome.steps.singleWhere((step) => step.id == 'flutter-analyze').status,
       CliStatus.fail,
     );
+    expect(outcome.steps.map((step) => step.id), <String>[
+      'preflight',
+      'dart-format',
+      'flutter-analyze',
+      'working-tree-mutation',
+    ]);
     expect(outcome.steps.last.status, CliStatus.pass);
   });
 
-  test('timeout is FAIL with null process code and continues safely', () async {
+  test('timeout is FAIL with null process code and stops safely', () async {
     final runner = _passingRunner();
     runner.handler = (invocation) {
       if (invocation.executable == 'flutter' &&
@@ -109,7 +172,12 @@ void main() {
     expect(step.status, CliStatus.fail);
     expect(step.timedOut, isTrue);
     expect(step.processExitCode, isNull);
-    expect(runner.invocations, hasLength(5));
+    expect(runner.invocations, hasLength(3));
+    final mutation = outcome.steps.last;
+    expect(mutation.id, 'working-tree-mutation');
+    expect(mutation.status, CliStatus.fail);
+    expect(mutation.details['evidenceTrusted'], isFalse);
+    expect(mutation.details['reason'], 'validation-step-timed-out');
   });
 
   test('blocked preflight skips both snapshot and pipeline', () async {
@@ -225,21 +293,13 @@ void main() {
   );
 
   test(
-    'preserves multiple child exit codes while returning top-level 1',
+    'preserves the first child exit code and skips later commands',
     () async {
       final runner = _passingRunner();
       runner.handler = (invocation) {
         if (invocation.executable == 'dart') {
           return const ProcessExecution(
             exitCode: 7,
-            stdoutText: '',
-            stderrText: '',
-            timedOut: false,
-          );
-        }
-        if (invocation.executable == 'npm') {
-          return const ProcessExecution(
-            exitCode: 2,
             stdoutText: '',
             stderrText: '',
             timedOut: false,
@@ -255,8 +315,9 @@ void main() {
         outcome.steps
             .where((step) => step.status == CliStatus.fail)
             .map((step) => step.processExitCode),
-        <int?>[7, 2, 2],
+        <int?>[7],
       );
+      expect(runner.invocations, hasLength(1));
     },
   );
 
@@ -282,6 +343,12 @@ void main() {
       expect(runner.invocations, hasLength(1));
       expect(snapshotter.captureCount, 2);
       expect(outcome.steps.last.id, 'working-tree-mutation');
+      expect(outcome.steps.last.status, CliStatus.fail);
+      expect(outcome.steps.last.details['evidenceTrusted'], isFalse);
+      expect(
+        outcome.steps.last.details['reason'],
+        'process-cleanup-unconfirmed',
+      );
     },
   );
 
@@ -331,22 +398,44 @@ FullValidator _validator({
   FakeProcessRunner? runner,
   FakeRepositorySnapshotter? snapshotter,
   List<CliCheckResult> checks = healthyDoctorChecks,
+  Duration fullTimeout = fullValidationTimeout,
+  ElapsedProvider? elapsedProvider,
 }) => FullValidator(
   repositoryRoot: testRepositoryRoot,
   processRunner: runner ?? _passingRunner(),
   snapshotter: snapshotter ?? FakeRepositorySnapshotter(),
   runDoctorChecks: () async => checks,
   progressWriter: (_) {},
+  fullTimeout: fullTimeout,
+  elapsedProvider: elapsedProvider,
 );
 
 void _expectInvocation(
   RecordedProcess invocation,
   String executable,
   List<String> arguments,
-  Duration timeout,
+  Object timeout,
 ) {
   expect(invocation.executable, executable);
   expect(invocation.arguments, arguments);
   expect(invocation.workingDirectory, testRepositoryRoot);
   expect(invocation.timeout, timeout);
+}
+
+final _remainingBudgetMatcher = allOf(
+  greaterThan(Duration(minutes: 10)),
+  lessThanOrEqualTo(
+    fullValidationTimeout -
+        fullValidationFinalSnapshotReserve -
+        fullValidationProcessCleanupReserve -
+        fullValidationSnapshotCleanupReserve,
+  ),
+);
+
+final class _FakeElapsedProvider {
+  _FakeElapsedProvider([this.elapsed = Duration.zero]);
+
+  Duration elapsed;
+
+  Duration call() => elapsed;
 }

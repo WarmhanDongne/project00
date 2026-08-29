@@ -70,17 +70,49 @@ environment or use the explicit `BLOCKED` result.
 
 ## Deadlines and progress
 
-- Startup deadline: 30 seconds from guard start until the Project CLI entry point
-  creates its exclusive startup marker in the system temporary directory. Batch or
-  PowerShell launcher noise does not count as CLI startup.
+- Startup deadline: 60 seconds from the moment the guarded bridge is resumed until
+  the Project CLI entry point creates its exclusive startup marker in the system
+  temporary directory. Guard setup and C# compilation are reported separately and
+  do not consume the CLI startup budget or reported CLI-startup duration. Batch or
+  PowerShell launcher noise after resume still counts. While startup remains
+  unobserved, the deadline is checked before accepting a marker so a marker first
+  observed at or after the deadline is rejected.
 - Overall deadline: 15 minutes from guard start until the entire guarded Job Object
   becomes empty.
 - Heartbeat: every 30 seconds while the child tree remains active.
 
 Child stdout is forwarded to stdout and child stderr to stderr. Guard diagnostics,
-CLI-startup timing, and heartbeat lines use stderr and are prefixed
+guard-setup timing, CLI-startup timing, and heartbeat lines use stderr and are prefixed
 `[mosigame guard]`. The guard does not rewrite normal CLI output or print environment
 variables, credentials, tokens, or other secrets.
+
+## FULL validation execution policy
+
+`validate --full` runs its validation steps in order and stops after the first
+non-PASS result. It still captures working-tree snapshot B so mutation evidence is
+not lost. Fix the evidenced failure, rerun only its relevant check while iterating,
+then run FULL once for the next final candidate.
+
+The CLI gives FULL validation a 13-minute total budget. Before starting each
+process step it separately reserves the final two-minute working-tree snapshot,
+ten seconds for worst-case validation-process cleanup, and ten seconds for
+worst-case snapshot Git-process cleanup. A step receives the shorter of its own
+safety cap and the remaining FULL budget after those reserves. A timed-out step or
+unconfirmed cleanup makes snapshot B mutation evidence untrusted even when the two
+snapshots compare unchanged. The Windows guard's 15-minute overall deadline remains
+the outer cleanup safety net.
+
+The Windows invocation-guard integration suite is deliberately excluded from normal
+FULL validation because it creates real process trees and exercises real deadlines.
+Run it separately on Windows when `tool/invoke_mosigame.ps1`, Project CLI process
+execution or cleanup, or guard deployment/environment configuration changes:
+
+```powershell
+flutter test --no-pub test\mosigame_cli\invocation_guard_test.dart
+```
+
+Use a Windows shell where the Flutter SDK cache is writable and keep an external
+deadline. Ordinary product changes do not run this suite.
 
 ## Results and exit codes
 
@@ -128,8 +160,9 @@ guard adds Windows invocation safety without changing it.
 ## Troubleshooting
 
 - `dart-launcher-not-found`: put the supported Flutter SDK `bin` directory on PATH.
-- `startup-timeout`: the Project CLI startup marker was not observed before its
-  deadline. Verify that the SDK cache is writable by the execution identity.
+- `startup-timeout`: the Project CLI startup marker was not observed within 60
+  seconds after the guarded bridge resumed. Verify that the SDK cache is writable
+  by the execution identity.
   Do not change SDK code or ACLs merely to bypass the environment policy.
 - `overall-timeout`: inspect child progress on stderr and determine which existing
   CLI step exceeded the outer 15-minute budget.

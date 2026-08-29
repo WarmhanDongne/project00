@@ -105,17 +105,36 @@ function Read-PositiveIntOverride {
     return $parsedValue
 }
 
+function Read-NonNegativeIntOverride {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][int]$DefaultValue
+    )
+
+    $rawValue = [Environment]::GetEnvironmentVariable($Name)
+    if ([string]::IsNullOrWhiteSpace($rawValue)) {
+        return $DefaultValue
+    }
+    $parsedValue = 0
+    if (-not [int]::TryParse($rawValue, [ref]$parsedValue) -or $parsedValue -lt 0) {
+        throw "The test-only override $Name must be a non-negative integer."
+    }
+    return $parsedValue
+}
+
 try {
     # Millisecond overrides are intentionally environment-only and exist so the
     # fake-child contract tests do not alter the production defaults.
     $guardStartupTimeoutMs = Read-PositiveIntOverride `
-        -Name 'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS' -DefaultValue 30000
+        -Name 'MOSIGAME_GUARD_TEST_STARTUP_TIMEOUT_MS' -DefaultValue 60000
     $guardOverallTimeoutMs = Read-PositiveIntOverride `
         -Name 'MOSIGAME_GUARD_TEST_OVERALL_TIMEOUT_MS' -DefaultValue 900000
     $guardHeartbeatMs = Read-PositiveIntOverride `
         -Name 'MOSIGAME_GUARD_TEST_HEARTBEAT_MS' -DefaultValue 30000
     $guardTerminationGraceMs = Read-PositiveIntOverride `
         -Name 'MOSIGAME_GUARD_TEST_TERMINATION_GRACE_MS' -DefaultValue 5000
+    $guardSetupDelayMs = Read-NonNegativeIntOverride `
+        -Name 'MOSIGAME_GUARD_TEST_SETUP_DELAY_MS' -DefaultValue 0
 } catch {
     Complete-GuardFailure -Status 'FAIL' -GuardStatus 'INTERNAL_ERROR' -ExitCode 4 `
         -Reason 'invalid-guard-configuration' -Message $_.Exception.Message
@@ -385,6 +404,7 @@ public static class MosigameWindowsInvocationGuard
         bool forceCleanupFailure,
         bool forceJobAssignmentFailure,
         bool forceAssignmentCleanupFailure,
+        int setupDelayMs,
         int simulatedInterruptMs)
     {
         MosigameGuardResult result = new MosigameGuardResult();
@@ -508,6 +528,16 @@ public static class MosigameWindowsInvocationGuard
                 Pump(stderrStream, Console.OpenStandardError(), false, false, output, stopwatch);
             });
 
+            if (setupDelayMs > 0)
+            {
+                Thread.Sleep(setupDelayMs);
+            }
+            long setupCompletedMs =
+                initialElapsedMs + stopwatch.ElapsedMilliseconds;
+            WriteDiagnostic(
+                "Guard setup completed after " + setupCompletedMs + " ms.");
+
+            Stopwatch startupStopwatch = Stopwatch.StartNew();
             if (ResumeThread(processInfo.hThread) == UInt32.MaxValue)
             {
                 TerminateJobObject(job, 4);
@@ -517,7 +547,7 @@ public static class MosigameWindowsInvocationGuard
             }
             CloseIfOpen(ref processInfo.hThread);
 
-            WriteDiagnostic("Monitoring started (startup 30s, overall 15m by default).");
+            WriteDiagnostic("Monitoring started (startup 60s, overall 15m by default).");
             long nextHeartbeat = ((initialElapsedMs / heartbeatMs) + 1) * heartbeatMs;
             bool rootExited = false;
             uint rootExitCode = 4;
@@ -528,6 +558,7 @@ public static class MosigameWindowsInvocationGuard
             while (true)
             {
                 long elapsed = initialElapsedMs + stopwatch.ElapsedMilliseconds;
+                long startupElapsed = startupStopwatch.ElapsedMilliseconds;
                 if (simulatedInterruptMs > 0 && elapsed >= simulatedInterruptMs)
                 {
                     Interlocked.Exchange(ref cancelRequested, 1);
@@ -560,12 +591,22 @@ public static class MosigameWindowsInvocationGuard
                     terminalExitCode = 4;
                     break;
                 }
-                if (Interlocked.CompareExchange(ref output.ProgressObserved, 0, 0) == 0 &&
+                bool progressNotObserved =
+                    Interlocked.CompareExchange(ref output.ProgressObserved, 0, 0) == 0;
+                if (progressNotObserved && startupElapsed >= startupTimeoutMs)
+                {
+                    terminalKind = "blocked";
+                    terminalReason = "startup-timeout";
+                    terminalExitCode = 3;
+                    break;
+                }
+                if (progressNotObserved &&
                     File.Exists(startupMarkerPath))
                 {
                     Interlocked.Exchange(ref output.ProgressObserved, 1);
-                    Interlocked.Exchange(ref output.FirstProgressMs, elapsed);
-                    WriteDiagnostic("Project CLI startup observed after " + elapsed + " ms.");
+                    Interlocked.Exchange(ref output.FirstProgressMs, startupElapsed);
+                    WriteDiagnostic(
+                        "Project CLI startup observed after " + startupElapsed + " ms.");
                 }
                 if (rootExited && activeProcesses == 0)
                 {
@@ -591,14 +632,6 @@ public static class MosigameWindowsInvocationGuard
                     break;
                 }
 
-                if (Interlocked.CompareExchange(ref output.ProgressObserved, 0, 0) == 0 &&
-                    elapsed >= startupTimeoutMs)
-                {
-                    terminalKind = "blocked";
-                    terminalReason = "startup-timeout";
-                    terminalExitCode = 3;
-                    break;
-                }
                 if (elapsed >= overallTimeoutMs)
                 {
                     terminalKind = "timeout";
@@ -886,6 +919,7 @@ try {
         $guardForceCleanupFailure,
         $guardForceJobAssignmentFailure,
         $guardForceAssignmentCleanupFailure,
+        $guardSetupDelayMs,
         $guardInterruptMs
     )
 } catch {

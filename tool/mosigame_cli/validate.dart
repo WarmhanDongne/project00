@@ -9,9 +9,14 @@ const flutterAnalyzeTimeout = Duration(minutes: 10);
 const flutterTestTimeout = Duration(minutes: 30);
 const functionsLintTimeout = Duration(minutes: 5);
 const functionsTestTimeout = Duration(minutes: 15);
+const fullValidationTimeout = Duration(minutes: 13);
+const fullValidationFinalSnapshotReserve = gitSnapshotTimeout;
+const fullValidationProcessCleanupReserve = Duration(seconds: 10);
+const fullValidationSnapshotCleanupReserve = Duration(seconds: 10);
 
 typedef DoctorCheckRunner = Future<List<CliCheckResult>> Function();
 typedef ProgressWriter = void Function(String value);
+typedef ElapsedProvider = Duration Function();
 
 final class FullValidationOutcome {
   const FullValidationOutcome({
@@ -32,6 +37,9 @@ final class FullValidator {
     required this.snapshotter,
     required this.runDoctorChecks,
     required this.progressWriter,
+    this.fullTimeout = fullValidationTimeout,
+    this.finalSnapshotReserve = fullValidationFinalSnapshotReserve,
+    this.elapsedProvider,
   });
 
   final String repositoryRoot;
@@ -39,8 +47,13 @@ final class FullValidator {
   final RepositorySnapshotter snapshotter;
   final DoctorCheckRunner runDoctorChecks;
   final ProgressWriter progressWriter;
+  final Duration fullTimeout;
+  final Duration finalSnapshotReserve;
+  final ElapsedProvider? elapsedProvider;
 
   Future<FullValidationOutcome> run() async {
+    final fullStopwatch = Stopwatch()..start();
+    final readElapsed = elapsedProvider ?? () => fullStopwatch.elapsed;
     final steps = <ValidationStepResult>[];
     final preflightStopwatch = Stopwatch()..start();
     List<CliCheckResult> checks;
@@ -145,15 +158,54 @@ final class FullValidator {
     }
 
     var internalError = false;
+    var mutationEvidenceTrusted = true;
+    String? mutationEvidenceReason;
     try {
       for (final specification in _pipeline) {
-        final result = await _runStep(specification);
+        final remaining =
+            fullTimeout -
+            readElapsed() -
+            finalSnapshotReserve -
+            fullValidationProcessCleanupReserve -
+            fullValidationSnapshotCleanupReserve;
+        if (remaining <= Duration.zero) {
+          steps.add(
+            ValidationStepResult(
+              id: specification.id,
+              status: CliStatus.fail,
+              message:
+                  'The FULL validation deadline was exhausted before this step '
+                  'could start.',
+              durationMs: 0,
+              processExitCode: null,
+              timedOut: true,
+              details: const <String, Object?>{'fullDeadlineExceeded': true},
+            ),
+          );
+          mutationEvidenceTrusted = false;
+          mutationEvidenceReason = 'validation-step-timed-out';
+          break;
+        }
+        final effectiveTimeout = remaining < specification.timeout
+            ? remaining
+            : specification.timeout;
+        final result = await _runStep(specification, effectiveTimeout);
         steps.add(result);
-        if (result.details['cleanupConfirmed'] == false ||
-            result.details['internalError'] == true) {
+        if (result.details['cleanupConfirmed'] == false) {
+          mutationEvidenceTrusted = false;
+          mutationEvidenceReason = 'process-cleanup-unconfirmed';
           internalError = true;
           break;
         }
+        if (result.timedOut) {
+          mutationEvidenceTrusted = false;
+          mutationEvidenceReason = 'validation-step-timed-out';
+        }
+        if (result.details['internalError'] == true) {
+          internalError = true;
+          break;
+        }
+        if (result.status != CliStatus.pass) break;
       }
     } catch (_) {
       internalError = true;
@@ -163,16 +215,26 @@ final class FullValidator {
         final afterSnapshot = await snapshotter.capture();
         mutationStopwatch.stop();
         final unchanged = beforeSnapshot.hasSameStateAs(afterSnapshot);
+        final passed = mutationEvidenceTrusted && unchanged;
         steps.add(
           ValidationStepResult(
             id: 'working-tree-mutation',
-            status: unchanged ? CliStatus.pass : CliStatus.fail,
-            message: unchanged
+            status: passed ? CliStatus.pass : CliStatus.fail,
+            message: !mutationEvidenceTrusted
+                ? 'Working-tree snapshot B is not trusted after a validation '
+                      'timeout or unconfirmed process cleanup.'
+                : unchanged
                 ? 'Tracked and untracked working-tree state is unchanged.'
                 : 'Repository state changed during validation.',
             durationMs: mutationStopwatch.elapsedMilliseconds,
             processExitCode: null,
             timedOut: false,
+            details: mutationEvidenceTrusted
+                ? const <String, Object?>{}
+                : <String, Object?>{
+                    'evidenceTrusted': false,
+                    'reason': mutationEvidenceReason,
+                  },
           ),
         );
       } catch (_) {
@@ -208,6 +270,7 @@ final class FullValidator {
 
   Future<ValidationStepResult> _runStep(
     _ValidationStepSpecification specification,
+    Duration effectiveTimeout,
   ) async {
     final stopwatch = Stopwatch()..start();
     progressWriter('Running ${specification.id}...');
@@ -216,7 +279,7 @@ final class FullValidator {
         specification.executable,
         specification.arguments,
         workingDirectory: repositoryRoot,
-        timeout: specification.timeout,
+        timeout: effectiveTimeout,
         terminationGrace: defaultTerminationGrace,
         maxCapturedCharacters: defaultProcessCaptureLimitCharacters,
         onStdout: progressWriter,
@@ -337,7 +400,12 @@ const _pipeline = <_ValidationStepSpecification>[
   _ValidationStepSpecification(
     id: 'flutter-test',
     executable: 'flutter',
-    arguments: <String>['test', '--no-pub'],
+    arguments: <String>[
+      'test',
+      '--no-pub',
+      '--exclude-tags',
+      'invocation-guard',
+    ],
     timeout: flutterTestTimeout,
   ),
   _ValidationStepSpecification(
