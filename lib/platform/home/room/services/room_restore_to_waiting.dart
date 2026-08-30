@@ -34,3 +34,22 @@ Future<void> restoreRoomToWaiting(RoomProvider provider) async {
   // 스케줄과 다음 게임 선택이 같은 일을 다시 합니다.
   await provider.clearSelectedGame();
 }
+
+/// 태블릿 앱이 결과 화면 직후 종료됐다가 홈으로 복구된 경우를 정리합니다.
+///
+/// 일반 게임 경로는 결과 화면이 닫힌 뒤 [restoreRoomToWaiting]을 부릅니다. 하지만
+/// 결과 직후 프로세스가 종료되면 `whenComplete`가 실행되지 않습니다. 재실행한
+/// 태블릿 홈이 현재 화면이고, 게임과 방 상태가 모두 `finished`로 동기화된 뒤에만
+/// 같은 정리를 호출합니다. 결과 화면이 아직 열려 있거나 진행 중인 판은 건드리지
+/// 않습니다.
+Future<bool> restoreFinishedRoomOnControllerHome({
+  required RoomProvider provider,
+  required String? gameStatus,
+  required bool isControllerHomeCurrent,
+  required bool isOpeningGame,
+}) async {
+  if (!isControllerHomeCurrent || isOpeningGame) return false;
+  if (gameStatus != 'finished' || !provider.isRoomFinished) return false;
+  await restoreRoomToWaiting(provider);
+  return true;
+}

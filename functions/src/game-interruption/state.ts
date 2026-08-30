@@ -7,12 +7,54 @@ import {
 } from "./types.js";
 
 export const GAME_INTERRUPTION_VOTE_MS = 60000;
+export const PLAYER_HEARTBEAT_STALE_MS = 20000;
 
 type RoomPlayer = Record<string, unknown>;
 
 export interface InterruptibleRoom {
   players?: Record<string, RoomPlayer>;
   game?: InterruptibleGameState;
+}
+
+export type StalePlayerResult =
+  "disconnected" | "already-disconnected" | "heartbeat-recovered" |
+  "not-stale" | "not-playing" | "player-missing";
+
+/**
+ * 태블릿의 stale 후보를 transaction의 최신 room 값으로 다시 검증합니다.
+ * presence 변경과 게임 중단을 같은 transaction에서 수행하므로 늦은
+ * onDisconnect·중복 callable은 revision을 다시 올리지 않습니다.
+ */
+export function disconnectStaleGamePlayer(
+  room: InterruptibleRoom,
+  playerUid: string,
+  observedLastSeen: number,
+  now: number,
+  options: {minimumPlayerCount?: number} = {},
+): StalePlayerResult {
+  const game = room.game;
+  if (!game || game.public.status !== "playing") return "not-playing";
+  const player = room.players?.[playerUid];
+  if (!player || player.role !== "player" || player.status !== "active") {
+    return "player-missing";
+  }
+  if (player.isConnected !== true) return "already-disconnected";
+  const latestLastSeen = finiteOrNull(player.lastSeen);
+  if (latestLastSeen === null || latestLastSeen > observedLastSeen) {
+    return "heartbeat-recovered";
+  }
+  if (now - latestLastSeen <= PLAYER_HEARTBEAT_STALE_MS) return "not-stale";
+
+  player.isConnected = false;
+  reconcileGamePlayerConnection(
+    room,
+    playerUid,
+    true,
+    false,
+    now,
+    options,
+  );
+  return "disconnected";
 }
 
 /**
@@ -34,6 +76,8 @@ export function reconcileGamePlayerConnection(
   if (!game || game.public.status !== "playing") return;
 
   if (isConnected) {
+    // 첫 복구 이벤트가 두 번째 단절 뒤 도착할 수 있습니다.
+    if (room.players?.[playerUid]?.isConnected !== true) return;
     const interruption = game.public.interruption;
     if (interruption?.playerUid === playerUid) {
       cancelGameInterruption(game, interruption.id, now);
@@ -136,7 +180,14 @@ function restoreTurnDeadline(
   const saved = game.server.interruption;
   if (saved?.id === interruptionId && game.public.status === "playing") {
     const remaining = finiteOrNull(saved.previousTurnRemainingMs);
-    game.public.turnDeadlineAt = remaining === null ? null : now + remaining;
+    const controllerPause = game.server.controllerPause;
+    if (controllerPause) {
+      // 남아 있는 중단에 시간을 넘기고 마지막 원인이 해소될 때만 재개합니다.
+      if (remaining !== null) controllerPause.previousTurnRemainingMs = remaining;
+      game.public.turnDeadlineAt = null;
+    } else {
+      game.public.turnDeadlineAt = remaining === null ? null : now + remaining;
+    }
   }
   delete game.server.interruption;
 }

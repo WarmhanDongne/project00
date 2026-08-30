@@ -1,14 +1,13 @@
 import 'package:flutter/foundation.dart';
 
 //=======================개발용 오류 기록==============================
-/// 개발 중에 앱 안에서 바로 볼 수 있는 오류 기록입니다.
+/// 개발 중 콘솔과 ADB logcat에서 확인하는 오류 기록입니다.
 ///
-/// 시뮬레이터로 게임을 돌려 볼 때, 콘솔을 뒤지지 않고 화면에서 무슨 오류가
-/// 났는지 바로 보기 위한 것입니다. **디버그 빌드에서만** 쌓입니다
+/// 개인정보가 섞일 수 있는 오류 원문은 출력하지 않고 오류 타입, 문맥, 프로젝트
+/// 첫 stack frame만 구조화해 남깁니다. **디버그 빌드에서만** 쌓입니다
 /// (릴리스에서는 [add]가 아무 일도 하지 않습니다).
 ///
-/// 오류를 서버로 보내는 일은 [CrashReporting]이 맡습니다. 이 기록은 화면
-/// 표시 전용입니다.
+/// 오류를 서버로 보내는 일은 [CrashReporting]이 맡습니다. 화면에는 표시하지 않습니다.
 class DevErrorLog extends ChangeNotifier {
   DevErrorLog._();
 
@@ -47,6 +46,12 @@ class DevErrorLog extends ChangeNotifier {
     );
     if (_entries.length > maxEntries) _entries.removeLast();
     _unseenCount += 1;
+    final entry = _entries.first;
+    debugPrint(
+      '[dev_error] context=${_safeToken(context ?? 'unknown')} '
+      'errorType=${_safeToken(error.runtimeType.toString())} '
+      'frame=${_safeFrame(entry.firstProjectFrame)}',
+    );
     notifyListeners();
   }
 
@@ -63,6 +68,15 @@ class DevErrorLog extends ChangeNotifier {
     _unseenCount = 0;
     notifyListeners();
   }
+}
+
+String _safeToken(String value) =>
+    value.replaceAll(RegExp(r'[^A-Za-z0-9_./:-]'), '_');
+
+String _safeFrame(String? value) {
+  if (value == null || value.isEmpty) return 'none';
+  final safe = _safeToken(value);
+  return safe.length <= 240 ? safe : safe.substring(0, 240);
 }
 
 /// 오류 한 건입니다.

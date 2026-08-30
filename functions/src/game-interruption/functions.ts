@@ -13,6 +13,7 @@ import {LiarsPokerGameState} from "../liars-poker/common/types.js";
 import {resolveExpiredInterruption} from "./expire-resolution.js";
 import {
   completeGameInterruption,
+  disconnectStaleGamePlayer,
   InterruptibleRoom,
   reconcileGamePlayerConnection,
 } from "./state.js";
@@ -34,7 +35,42 @@ type Data = {
   roomCode?: unknown;
   interruptionId?: unknown;
   controllerSessionId?: unknown;
+  playerUid?: unknown;
+  observedLastSeen?: unknown;
 };
+
+/** 태블릿이 발견한 20초 초과 heartbeat 후보를 최신 값으로 재검증합니다. */
+export const game_common_interruption_report_stale_player = onCall<Data>(
+  {region: REGION},
+  async (request) => {
+    const uid = requireUid(request.auth?.uid);
+    const roomCode = parseRoomCode(request.data?.roomCode);
+    const playerUid = parsePlayerUid(request.data?.playerUid);
+    const observedLastSeen = parseTimestamp(request.data?.observedLastSeen);
+    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+    let response: Record<string, unknown> | null = null;
+
+    const transaction = await roomRef.transaction((raw) => {
+      if (raw === null) return raw;
+      const room = raw as GameRoom;
+      assertControllerSession(room, uid, request.data?.controllerSessionId);
+      const outcome = disconnectStaleGamePlayer(
+        room,
+        playerUid,
+        observedLastSeen,
+        Date.now(),
+        {minimumPlayerCount: minimumPlayerCount(room.selectedGame)},
+      );
+      response = {success: true, outcome};
+      return room;
+    });
+
+    if (!transaction.committed || !response) {
+      throw new HttpsError("aborted", "참가자 연결 상태를 확인하지 못했습니다.");
+    }
+    return response;
+  },
+);
 
 const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
   final_call: 4,
@@ -264,4 +300,19 @@ function parseInterruptionId(value: unknown): string {
     throw new HttpsError("invalid-argument", "올바른 게임 중단 ID가 아닙니다.");
   }
   return id;
+}
+
+function parsePlayerUid(value: unknown): string {
+  const uid = typeof value === "string" ? value.trim() : "";
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    throw new HttpsError("invalid-argument", "올바른 참가자 정보가 아닙니다.");
+  }
+  return uid;
+}
+
+function parseTimestamp(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new HttpsError("invalid-argument", "올바른 heartbeat 시각이 아닙니다.");
+  }
+  return Math.trunc(value);
 }

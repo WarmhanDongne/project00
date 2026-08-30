@@ -30,6 +30,8 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
   String searchWord = '';
   StreamSubscription<String?>? _restoredGameStatusSubscription;
   String? _restoredStatusRoomCode;
+  String? _restoredGameStatus;
+  Future<bool>? _restoredFinishedCleanup;
   bool _isOpeningRestoredGame = false;
 
   @override
@@ -53,18 +55,55 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
     final code = roomProvider.roomCode;
     if (code == null) {
       _restoredStatusRoomCode = null;
+      _restoredGameStatus = null;
       unawaited(_restoredGameStatusSubscription?.cancel());
       _restoredGameStatusSubscription = null;
       return;
     }
-    if (_restoredStatusRoomCode == code) return;
+    if (_restoredStatusRoomCode == code) {
+      _restoreFinishedRoomIfReady(code);
+      return;
+    }
     _restoredStatusRoomCode = code;
+    _restoredGameStatus = null;
     unawaited(_restoredGameStatusSubscription?.cancel());
     _restoredGameStatusSubscription = roomProvider.watchGameStatus(code).listen(
       (status) {
+        if (roomProvider.roomCode != code || _restoredStatusRoomCode != code) {
+          return;
+        }
+        _restoredGameStatus = status;
         if (status == 'playing') _openRestoredGameIfReady(code);
+        if (status == 'finished') _restoreFinishedRoomIfReady(code);
       },
       onError: (_) {},
+    );
+  }
+
+  void _restoreFinishedRoomIfReady(String roomCode) {
+    if (_restoredFinishedCleanup != null ||
+        roomProvider.roomCode != roomCode ||
+        _restoredGameStatus != 'finished' ||
+        !roomProvider.isRoomFinished ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        _isOpeningRestoredGame) {
+      return;
+    }
+    final cleanup = restoreFinishedRoomOnControllerHome(
+      provider: roomProvider,
+      gameStatus: _restoredGameStatus,
+      isControllerHomeCurrent:
+          mounted && ModalRoute.of(context)?.isCurrent == true,
+      isOpeningGame: _isOpeningRestoredGame,
+    );
+    _restoredFinishedCleanup = cleanup;
+    unawaited(
+      cleanup.whenComplete(() {
+        if (identical(_restoredFinishedCleanup, cleanup)) {
+          _restoredFinishedCleanup = null;
+        }
+      }),
     );
   }
 

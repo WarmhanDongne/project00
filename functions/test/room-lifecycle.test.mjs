@@ -7,7 +7,9 @@ import {
 } from "../lib/room/controller-session.js";
 import {
   isGameAccessibleToGroup,
+  mergeCleanupCandidateRoomCodes,
   shouldDeleteRoom,
+  synchronizeRoomGameStatus,
 } from "../lib/room/realtime-room-lifecycle.js";
 import {decideRoomJoin} from "../lib/room/room-join-policy.js";
 import {
@@ -15,6 +17,41 @@ import {
   decideRoomSeating,
 } from "../lib/room/room-seating-policy.js";
 import {runPrimedTransaction} from "../lib/room/room-transaction.js";
+
+test("늦은 finished 이벤트는 정리된 대기실이나 삭제된 방을 되살리지 않는다", () => {
+  const waiting = {status: "waiting", players: {a: {status: "active"}}};
+  assert.equal(synchronizeRoomGameStatus(waiting, "finished", 1000), undefined);
+  assert.equal(waiting.status, "waiting");
+  assert.equal(synchronizeRoomGameStatus(null, "finished", 1000), undefined);
+  const closed = {status: "closed", game: {public: {status: "finished"}}};
+  assert.equal(synchronizeRoomGameStatus(closed, "finished", 1000), undefined);
+});
+
+test("게임 상태 미러는 최신 상태만 반영하며 이전 보존 기한을 다음 게임에 넘기지 않는다", () => {
+  const room = {status: "finished", retainUntil: 5000, cleanupAt: 5000,
+    game: {public: {status: "playing"}}};
+  assert.equal(synchronizeRoomGameStatus(room, "finished", 1000), undefined);
+  synchronizeRoomGameStatus(room, "playing", 1000);
+  assert.equal(room.status, "playing");
+  assert.equal(room.cleanupAt, undefined);
+  room.game.public.status = "finished";
+  synchronizeRoomGameStatus(room, "finished", 2000);
+  const retainUntil = room.retainUntil;
+  assert.equal(synchronizeRoomGameStatus(room, "finished", 3000), undefined);
+  assert.equal(room.retainUntil, retainUntil);
+});
+
+test("자동 복구는 대기실 퇴장 뒤 새 참가자를 만들지 않는다", () => {
+  for (const roomStatus of ["waiting", "seating", "playing"]) {
+    assert.equal(decideRoomJoin({
+      roomStatus, playerExists: false, reconnectOnly: true,
+    }), "inactive-player");
+    assert.equal(decideRoomJoin({
+      roomStatus, playerExists: true, playerStatus: "active", reconnectOnly: true,
+    }), "reconnect");
+  }
+  assert.equal(decideRoomJoin({roomStatus: "waiting", playerExists: false}), "new-player");
+});
 
 test("controller UID와 현재 session이 모두 맞아야 진행 명령을 허용한다", () => {
   const sessionId = createControllerSessionId();
@@ -76,6 +113,61 @@ test("finished 방은 보존 시간이 지난 뒤에만 삭제한다", () => {
     shouldDeleteRoom({status: "finished", retainUntil: now}, now),
     true,
   );
+});
+
+test("구형 finished 방은 lastSeen 기준 보존 시간이 지나면 삭제한다", () => {
+  const now = 2_000_000;
+  assert.equal(
+    shouldDeleteRoom({
+      status: "finished",
+      controllerPresence: {lastSeen: now - 14 * 60_000},
+    }, now),
+    false,
+  );
+  assert.equal(
+    shouldDeleteRoom({
+      status: "finished",
+      controllerPresence: {lastSeen: now - 15 * 60_000},
+    }, now),
+    true,
+  );
+  assert.equal(shouldDeleteRoom({status: "finished"}, now), false);
+});
+
+test("cleanupAt 후보는 lastSeen 쿼리의 500개 정체와 별도로 포함한다", () => {
+  const staleBlockers = Array.from(
+    {length: 500},
+    (_, index) => `legacy-${index}`,
+  );
+  const candidates = mergeCleanupCandidateRoomCodes(
+    ["expired-cleanup-room"],
+    staleBlockers,
+  );
+
+  assert.equal(candidates[0], "expired-cleanup-room");
+  assert.equal(candidates.length, 501);
+  assert.equal(
+    mergeCleanupCandidateRoomCodes(["same"], ["same", "next"]).length,
+    2,
+  );
+});
+
+test("중복 Scheduler 평가는 이미 삭제된 방을 다시 변경하지 않는다", () => {
+  const now = 2_000_000;
+  let storedRoom = {
+    status: "closed",
+    cleanupAt: now - 1,
+    controllerPresence: {lastSeen: now - 10 * 60_000},
+  };
+  let deleteCount = 0;
+  for (let run = 0; run < 2; run += 1) {
+    if (storedRoom && shouldDeleteRoom(storedRoom, now)) {
+      storedRoom = null;
+      deleteCount += 1;
+    }
+  }
+  assert.equal(deleteCount, 1);
+  assert.equal(storedRoom, null);
 });
 
 test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에게만 허용한다", () => {

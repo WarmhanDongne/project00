@@ -346,6 +346,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           gameStatus: currentRoom.game?.public?.status,
           playerExists: existingPlayer !== undefined,
           playerStatus: existingPlayer?.status,
+          reconnectOnly: preserveProfile,
         });
         const decisionError = joinDecisionError(decision);
         if (decisionError) {

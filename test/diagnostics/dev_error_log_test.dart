@@ -4,7 +4,7 @@ import 'package:project00/core/diagnostics/dev_error_log.dart';
 import 'package:project00/core/diagnostics/dev_error_overlay.dart';
 
 //=======================개발용 오류 표시==============================
-// 개발 중 시뮬레이터에서 오류를 화면으로 바로 확인하기 위한 장치입니다.
+// 오류는 로컬 로그에 남기되 사용자 화면에는 표시하지 않는 장치입니다.
 void main() {
   setUp(DevErrorLog.instance.clear);
   tearDown(DevErrorLog.instance.clear);
@@ -67,27 +67,19 @@ void main() {
       expect(find.byIcon(Icons.bug_report), findsNothing);
     });
 
-    testWidgets('오류가 쌓이면 표시가 뜨고 눌러서 내용을 본다', (tester) async {
+    testWidgets('오류가 쌓여도 배지와 목록이 화면에 나타나지 않는다', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: DevErrorOverlay(child: Text('게임 화면'))),
       );
       addError('밤 제출이 터졌습니다');
       await tester.pump();
 
-      expect(find.byIcon(Icons.bug_report), findsOneWidget);
-      expect(find.textContaining('오류 1'), findsOneWidget);
-
-      // 눌러 목록을 열면 오류 내용이 보이고, 펼치면 복사할 수 있습니다.
-      await tester.tap(find.byIcon(Icons.bug_report));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('밤 제출이 터졌습니다'), findsWidgets);
-
-      await tester.tap(find.textContaining('밤 제출이 터졌습니다').first);
-      await tester.pumpAndSettle();
-      expect(find.text('복사'), findsOneWidget);
+      expect(find.byIcon(Icons.bug_report), findsNothing);
+      expect(find.textContaining('오류 1'), findsNothing);
+      expect(find.textContaining('밤 제출이 터졌습니다'), findsNothing);
     });
 
-    testWidgets('빌드가 터진 자리에는 오류와 파일 위치가 보인다', (tester) async {
+    testWidgets('위젯 오류 원문과 파일 위치도 화면에 보이지 않는다', (tester) async {
       // 테스트 프레임워크가 본문이 끝나는 시점에 ErrorWidget.builder가
       // 되돌려졌는지 확인하므로, tearDown이 아니라 본문에서 되돌립니다.
       final previousBuilder = ErrorWidget.builder;
@@ -99,8 +91,8 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('여기서 터집니다'), findsOneWidget);
-      // 터진 오류도 목록에 함께 쌓입니다.
+      expect(find.textContaining('여기서 터집니다'), findsNothing);
+      expect(find.textContaining('package:project00'), findsNothing);
       expect(DevErrorLog.instance.entries, isNotEmpty);
       ErrorWidget.builder = previousBuilder;
       // 위젯 오류는 테스트 프레임워크에도 보고되므로 확인 처리합니다.

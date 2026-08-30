@@ -40,7 +40,7 @@ class MafiaPhoneTopBar extends StatelessWidget {
         onBookPressed: () => onRulesPressed(null),
         onBookPressedAt: onRulesPressed,
         bookSemanticLabel: '게임 규칙 열기',
-        outSemanticLabel: '게임 나가기',
+        outSemanticLabel: '게임과 그룹 나가기',
       ),
     );
   }

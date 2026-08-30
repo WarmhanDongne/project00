@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   beginGameInterruption,
   cancelGameInterruption,
+  disconnectStaleGamePlayer,
   reconcileGamePlayerConnection,
 } from "../lib/game-interruption/state.js";
 
@@ -14,6 +15,9 @@ function room() {
         nickname: "나간 사람",
         characterId: "frog",
         isConnected: false,
+        role: "player",
+        status: "active",
+        lastSeen: 1000,
       },
       a: {isConnected: true},
       b: {isConnected: true},
@@ -36,6 +40,42 @@ function room() {
     },
   };
 }
+
+test("20초를 초과한 heartbeat만 원자적으로 연결 해제하고 턴을 멈춘다", () => {
+  const value = room();
+  value.players.leaving.isConnected = true;
+  assert.equal(disconnectStaleGamePlayer(value, "leaving", 1000, 21001), "disconnected");
+  assert.equal(value.players.leaving.isConnected, false);
+  assert.equal(value.game.public.turnDeadlineAt, null);
+  assert.equal(value.game.public.revision, 4);
+});
+
+test("정확히 20초인 heartbeat는 stale이 아니다", () => {
+  const value = room();
+  value.players.leaving.isConnected = true;
+  assert.equal(disconnectStaleGamePlayer(value, "leaving", 1000, 21000), "not-stale");
+  assert.equal(value.players.leaving.isConnected, true);
+  assert.equal(value.game.public.revision, 3);
+});
+
+test("검증 중 새 heartbeat가 오면 아무 상태도 바꾸지 않는다", () => {
+  const value = room();
+  value.players.leaving.isConnected = true;
+  value.players.leaving.lastSeen = 15000;
+  assert.equal(disconnectStaleGamePlayer(value, "leaving", 1000, 30000), "heartbeat-recovered");
+  assert.equal(value.players.leaving.isConnected, true);
+  assert.equal(value.game.public.revision, 3);
+});
+
+test("중복 검증과 늦은 onDisconnect는 revision을 다시 올리지 않는다", () => {
+  const value = room();
+  value.players.leaving.isConnected = true;
+  disconnectStaleGamePlayer(value, "leaving", 1000, 21001);
+  const revision = value.game.public.revision;
+  assert.equal(disconnectStaleGamePlayer(value, "leaving", 1000, 22000), "already-disconnected");
+  reconcileGamePlayerConnection(value, "leaving", true, false, 22000);
+  assert.equal(value.game.public.revision, revision);
+});
 
 test("연결 중단은 턴 시간을 멈추고 남은 접속자의 과반 투표를 만든다", () => {
   const value = room();
@@ -117,6 +157,22 @@ test("재접속 확정은 중단 상태와 턴 남은 시간을 복원한다", (
   assert.equal(value.game.server.interruption, undefined);
   assert.equal(value.game.public.turnDeadlineAt, 54000);
   assert.ok(interruption);
+});
+
+test("첫 복구의 늦은 true 이벤트는 두 번째 단절의 중단을 취소하지 않는다", () => {
+  const value = room();
+  const first = beginGameInterruption(value, "leaving", "disconnected", 1000);
+  value.players.leaving.isConnected = true;
+  reconcileGamePlayerConnection(value, "leaving", false, true, 4000);
+  value.players.leaving.isConnected = false;
+  const second = beginGameInterruption(value, "leaving", "disconnected", 5000);
+  assert.notEqual(first.id, second.id);
+  reconcileGamePlayerConnection(value, "leaving", false, true, 6000);
+  assert.equal(value.game.public.interruption?.id, second.id);
+  assert.equal(value.game.public.turnDeadlineAt, null);
+  value.players.leaving.isConnected = true;
+  reconcileGamePlayerConnection(value, "leaving", false, true, 10000);
+  assert.equal(value.game.public.turnDeadlineAt, 59000);
 });
 
 // =========================================================================

@@ -156,15 +156,22 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (gameContext) => ControllerReconnectGuard(
+        builder: (gameContext) => CriticalNetworkGuard(
           provider: widget.provider,
+          exitLabel: '게임과 그룹 나가기',
           onExit: () => unawaited(
             _leaveGameFromReconnect(gameContext: gameContext, game: game),
           ),
-          child: game.buildPhoneScreen(
-            roomCode: roomCode,
+          child: ControllerReconnectGuard(
             provider: widget.provider,
-            onExitRoom: () => widget.provider.leaveGame(game.id),
+            onExit: () => unawaited(
+              _leaveGameFromReconnect(gameContext: gameContext, game: game),
+            ),
+            child: game.buildPhoneScreen(
+              roomCode: roomCode,
+              provider: widget.provider,
+              onExitRoom: () => widget.provider.leaveGame(game.id),
+            ),
           ),
         ),
       ),
@@ -264,8 +271,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                           ).popUntil((route) => route.isFirst);
                         },
                       ),
-                  if (widget.provider.controllerPresenceState ==
-                      ControllerPresenceState.reconnecting)
+                  if (widget.provider.isServerConnected &&
+                      widget.provider.controllerPresenceState ==
+                          ControllerPresenceState.reconnecting)
                     const _ControllerReconnectBanner(),
                   if (hasSelectedGame) ...[
                     Expanded(

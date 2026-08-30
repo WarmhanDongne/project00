@@ -14,6 +14,7 @@ import 'package:project00/platform/home/room/services/room_leave_intent.dart';
 import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/controller_room_session_store.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
+import 'package:project00/platform/home/room/services/player_presence.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
@@ -65,6 +66,13 @@ class RoomProvider extends ChangeNotifier {
   bool isRemovingPlayer(String uid) => _removingPlayerUids.contains(uid);
   bool get isInRoom => roomCode != null; // 사용자가 Room 안인지 판단하는 기준 변수.
 
+  /// 이 앱 인스턴스가 RTDB 서버에 연결된 상태인지입니다.
+  ///
+  /// controller heartbeat가 오래됐다는 판정은 로컬 연결이 살아 있을 때만
+  /// 사용자에게 보여야 합니다. 휴대폰 자체가 오프라인이면 캐시된 lastSeen도
+  /// 함께 늙으므로, 그 값을 태블릿 장애로 표시하면 원인을 거꾸로 안내합니다.
+  bool get isServerConnected => _isServerConnected;
+
   /// 퇴장 요청이 진행 중입니다. 나가기 버튼 비활성화와 중복 탭 판정에 씁니다.
   bool get isLeaving => _isLeaving;
 
@@ -89,6 +97,8 @@ class RoomProvider extends ChangeNotifier {
   /// 방 세션 세대입니다. 저장 세션 복원처럼 여러 await를 거치는 작업이 그동안
   /// 방이 바뀌었는지 판정하는 데 씁니다.
   int _sessionEpoch = 0;
+  int _connectionEpoch = 0;
+  int _roomExistenceRevision = 0;
   bool _wasServerDisconnected = false;
   bool _isServerConnected = false;
   bool _roomMissingCandidate = false;
@@ -104,6 +114,11 @@ class RoomProvider extends ChangeNotifier {
   /// 않는 상태"를 알 수 없습니다. 마지막으로 받은 lastSeen을 들고 시계를
   /// 직접 돌려야 합니다.
   Timer? _controllerPresenceTimer;
+  Timer? _playerPresenceTimer;
+  bool _ownsControllerSession = false;
+  final PlayerStaleReportTracker _staleReportTracker =
+      PlayerStaleReportTracker();
+  final Set<String> _staleReportInFlight = <String>{};
   ControllerPresence _controllerPresence = ControllerPresence.unknown;
   String? _joinedNickname;
   String? _joinedCharacterId;
@@ -187,6 +202,7 @@ class RoomProvider extends ChangeNotifier {
     if (code != null) {
       _pendingCreateRoomOperationId = null;
       roomCode = code;
+      _ownsControllerSession = true;
       listenRoom();
       _startControllerHeartbeat(code);
       notifyListeners();
@@ -265,8 +281,10 @@ class RoomProvider extends ChangeNotifier {
   Future<void> markControllerConnected() async {
     final code = roomCode;
     if (code == null) return;
+    final epoch = _sessionEpoch;
     try {
       await _service.markControllerConnected(code);
+      if (_isDisposed || roomCode != code || _sessionEpoch != epoch) return;
       _startControllerHeartbeat(code);
     } catch (_) {
       // 접속 표시 실패가 방 진행을 막지 않습니다.
@@ -279,6 +297,7 @@ class RoomProvider extends ChangeNotifier {
       final restoredCode = await _service.restoreControllerRoom();
       if (restoredCode == null || _isDisposed) return;
       roomCode = restoredCode;
+      _ownsControllerSession = true;
       listenRoom();
       _startControllerHeartbeat(restoredCode);
       notifyListeners();
@@ -298,6 +317,7 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> _heartbeatControllerSafely(String code) async {
+    if (!_isServerConnected || roomCode != code || _isDisposed) return;
     try {
       await _service.heartbeatController(code);
     } catch (error) {
@@ -356,14 +376,7 @@ class RoomProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resumeControllerPresence() async {
-    final code = roomCode;
-    if (code == null) return;
-    try {
-      await _service.markControllerConnected(code);
-      _startControllerHeartbeat(code);
-    } catch (_) {}
-  }
+  Future<void> resumeControllerPresence() => markControllerConnected();
 
   Future<void> pauseControllerPresence() async {
     _controllerHeartbeatTimer?.cancel();
@@ -460,6 +473,7 @@ class RoomProvider extends ChangeNotifier {
     roomExistenceSubscription?.cancel();
     _playerHeartbeatTimer?.cancel();
     _controllerPresenceTimer?.cancel();
+    _playerPresenceTimer?.cancel();
 
     controllerPresenceState = ControllerPresenceState.unknown;
     _controllerPresence = ControllerPresence.unknown;
@@ -469,6 +483,7 @@ class RoomProvider extends ChangeNotifier {
     roomTerminationReason = null;
     _roomMissingCandidate = false;
     _roomDeletionConfirmation = null;
+    _roomExistenceRevision += 1;
 
     connectionSubscription = _service.watchServerConnection().listen(
       _handleServerConnection,
@@ -498,6 +513,7 @@ class RoomProvider extends ChangeNotifier {
         .listen(
           (exists) {
             if (roomCode != listenedRoomCode) return;
+            _roomExistenceRevision += 1;
             if (exists) {
               _roomMissingCandidate = false;
               return;
@@ -516,6 +532,7 @@ class RoomProvider extends ChangeNotifier {
         if (roomCode != listenedRoomCode) return;
         if (roomStatus != status) {
           roomStatus = status;
+          _syncPlayerPresenceTimer();
           notifyListeners();
         }
         // finished는 현재 게임만 끝난 상태이며 방과 참가자는 유지합니다.
@@ -570,6 +587,8 @@ class RoomProvider extends ChangeNotifier {
       (roomPlayer) {
         if (roomCode != listenedRoomCode) return;
         players = roomPlayer;
+        _pruneStaleReports(roomPlayer);
+        _evaluateStalePlayers();
 
         final myUid = _currentUid();
         if (myUid != null && myUid.isNotEmpty) {
@@ -675,7 +694,7 @@ class RoomProvider extends ChangeNotifier {
   void _startPlayerHeartbeat(String code) {
     _playerHeartbeatTimer?.cancel();
     unawaited(_heartbeatPlayerSafely(code));
-    _playerHeartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _playerHeartbeatTimer = Timer.periodic(playerHeartbeatInterval, (_) {
       if (roomCode == code && !_isLeaving) {
         unawaited(_heartbeatPlayerSafely(code));
       }
@@ -683,6 +702,9 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> _heartbeatPlayerSafely(String code) async {
+    if (!_isServerConnected || _isLeaving || roomCode != code || _isDisposed) {
+      return;
+    }
     try {
       await _service.heartbeatPlayer(code);
     } catch (error) {
@@ -695,8 +717,80 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  /// 태블릿에서만 로컬 시계를 돌립니다. RTDB 추가 읽기나 정상 heartbeat당
+  /// Function 호출은 없으며, 이미 구독한 players 값에서 후보만 고릅니다.
+  void _syncPlayerPresenceTimer() {
+    _playerPresenceTimer?.cancel();
+    _playerPresenceTimer = null;
+    if (!_ownsControllerSession ||
+        !_isServerConnected ||
+        roomStatus != 'playing') {
+      return;
+    }
+    _evaluateStalePlayers();
+    _playerPresenceTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _evaluateStalePlayers(),
+    );
+  }
+
+  void _evaluateStalePlayers() {
+    final code = roomCode;
+    if (code == null ||
+        !_ownsControllerSession ||
+        !_isServerConnected ||
+        roomStatus != 'playing') {
+      return;
+    }
+    final now = ServerClock.nowMillis();
+    for (final player in players) {
+      final lastSeen = player.lastSeen;
+      if (lastSeen == null ||
+          !isStalePlayerHeartbeatCandidate(player, nowMillis: now) ||
+          _staleReportInFlight.contains(player.uid)) {
+        continue;
+      }
+      if (!_staleReportTracker.markIfNew(player.uid, lastSeen)) continue;
+      _staleReportInFlight.add(player.uid);
+      // 같은 heartbeat 관측값은 성공·실패와 관계없이 한 번만 보고합니다.
+      // 네트워크 실패 시 기존 onDisconnect가 안전망이며, 새 heartbeat가 오면
+      // 관측값이 바뀌어 다음 단절은 다시 보고할 수 있습니다.
+      unawaited(_reportStalePlayer(code, player.uid, lastSeen));
+    }
+  }
+
+  Future<void> _reportStalePlayer(
+    String code,
+    String playerUid,
+    int observedLastSeen,
+  ) async {
+    try {
+      await _service.reportStalePlayer(
+        roomCode: code,
+        playerUid: playerUid,
+        observedLastSeen: observedLastSeen,
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[room_connection] event=stale_player_report_failed '
+          'errorType=${error.runtimeType}',
+        );
+      }
+    } finally {
+      _staleReportInFlight.remove(playerUid);
+    }
+  }
+
+  void _pruneStaleReports(List<RoomPlayer> currentPlayers) {
+    _staleReportTracker.retainCurrent(currentPlayers);
+  }
+
   void _handleServerConnection(bool isConnected) {
+    if (_isServerConnected != isConnected) _connectionEpoch += 1;
     _isServerConnected = isConnected;
+    _syncPlayerPresenceTimer();
+    notifyListeners();
     if (!isConnected) {
       _wasServerDisconnected = true;
       return;
@@ -723,6 +817,7 @@ class RoomProvider extends ChangeNotifier {
       return;
     }
 
+    final connectionEpoch = _connectionEpoch;
     final confirmation = _performRoomDeletionConfirmation(expectedRoomCode);
     _roomDeletionConfirmation = confirmation;
     try {
@@ -730,16 +825,34 @@ class RoomProvider extends ChangeNotifier {
     } finally {
       if (identical(_roomDeletionConfirmation, confirmation)) {
         _roomDeletionConfirmation = null;
+        if (connectionEpoch != _connectionEpoch &&
+            _isServerConnected &&
+            _roomMissingCandidate &&
+            roomCode == expectedRoomCode) {
+          unawaited(_confirmRoomDeleted(expectedRoomCode));
+        }
       }
     }
   }
 
   Future<void> _performRoomDeletionConfirmation(String expectedRoomCode) async {
+    final sessionEpoch = _sessionEpoch;
+    final connectionEpoch = _connectionEpoch;
+    final existenceRevision = _roomExistenceRevision;
     try {
       final exists = await _service
           .roomExists(expectedRoomCode)
           .timeout(const Duration(seconds: 8));
-      if (roomCode != expectedRoomCode) return;
+      if (_isDisposed ||
+          roomCode != expectedRoomCode ||
+          _sessionEpoch != sessionEpoch ||
+          _connectionEpoch != connectionEpoch ||
+          _roomExistenceRevision != existenceRevision ||
+          !_isServerConnected ||
+          !_roomMissingCandidate ||
+          _isLeaving) {
+        return;
+      }
       if (exists) {
         _roomMissingCandidate = false;
         return;
@@ -764,12 +877,19 @@ class RoomProvider extends ChangeNotifier {
     String expectedRoomCode, {
     required String expectedUid,
   }) async {
+    if (!_isServerConnected) return;
     final checkId = ++_playerRemovalCheckId;
+    final connectionEpoch = _connectionEpoch;
     try {
-      final exists = await _service
-          .roomExists(expectedRoomCode)
-          .timeout(const Duration(seconds: 8));
+      final results = await Future.wait<bool>([
+        _service.roomExists(expectedRoomCode),
+        _service.hasActivePlayerNode(expectedRoomCode),
+      ]).timeout(const Duration(seconds: 8));
+      final roomStillExists = results[0];
+      final playerStillExists = results[1];
       if (checkId != _playerRemovalCheckId ||
+          _connectionEpoch != connectionEpoch ||
+          !_isServerConnected ||
           roomCode != expectedRoomCode ||
           _isLeaving) {
         return;
@@ -779,7 +899,9 @@ class RoomProvider extends ChangeNotifier {
       )) {
         return;
       }
-      if (!exists) {
+      // 서로 다른 경로의 조회 결과가 충돌하면 살아 있는 참가자 근거를 보존합니다.
+      if (playerStillExists) return;
+      if (!roomStillExists) {
         _terminateRoom(
           RoomTerminationReason.deleted,
           expectedRoomCode: expectedRoomCode,
@@ -787,6 +909,10 @@ class RoomProvider extends ChangeNotifier {
         return;
       }
 
+      // 재연결 직후 players 구독은 빈 로컬 캐시를 먼저 전달할 수 있습니다.
+      // 방만 존재한다고 바로 강퇴 처리하면 실제 서버에 내 노드가 살아 있어도
+      // 저장 세션을 지우고 로비로 내보냅니다. 반드시 서버의 내 참가자 노드를
+      // 별도로 확인합니다.
       _hasJoined = false;
       wasKicked = true;
       roomTerminationReason = null;
@@ -841,7 +967,7 @@ class RoomProvider extends ChangeNotifier {
       return;
     }
 
-    final recovery = _performConnectionRecovery();
+    final recovery = _recoverCurrentConnection();
     _connectionRecoveryFuture = recovery;
     try {
       await recovery;
@@ -852,8 +978,28 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _recoverCurrentConnection() async {
+    final code = roomCode;
+    final sessionEpoch = _sessionEpoch;
+    do {
+      final connectionEpoch = _connectionEpoch;
+      try {
+        await _performConnectionRecovery();
+      } catch (_) {
+        if (_connectionEpoch == connectionEpoch || !_isServerConnected) rethrow;
+      }
+      // 진행 중 재단절·재연결이 있었다면 새 연결의 presence 예약도 복원합니다.
+      if (_connectionEpoch == connectionEpoch || !_isServerConnected) return;
+    } while (!_isDisposed &&
+        roomCode == code &&
+        _sessionEpoch == sessionEpoch &&
+        !_isLeaving);
+  }
+
   Future<void> _performConnectionRecovery() async {
     final code = roomCode;
+    final sessionEpoch = _sessionEpoch;
+    final connectionEpoch = _connectionEpoch;
     if (code == null) {
       throw const RoomCommandException('복구할 방 정보가 없습니다.');
     }
@@ -868,6 +1014,13 @@ class RoomProvider extends ChangeNotifier {
       await _service
           .markControllerConnected(code)
           .timeout(const Duration(seconds: 8));
+      if (_isDisposed ||
+          roomCode != code ||
+          _isLeaving ||
+          _sessionEpoch != sessionEpoch ||
+          _connectionEpoch != connectionEpoch) {
+        return;
+      }
       _startControllerHeartbeat(code);
       errorMessage = null;
       notifyListeners();
@@ -898,7 +1051,13 @@ class RoomProvider extends ChangeNotifier {
           characterId: characterId,
         )
         .timeout(const Duration(seconds: 8));
-    if (roomCode != code || _isLeaving) return;
+    if (_isDisposed ||
+        roomCode != code ||
+        _isLeaving ||
+        _sessionEpoch != sessionEpoch ||
+        _connectionEpoch != connectionEpoch) {
+      return;
+    }
     _startPlayerHeartbeat(code);
     errorMessage = null;
     notifyListeners();
@@ -1238,6 +1397,7 @@ class RoomProvider extends ChangeNotifier {
     if (_isLeaving) return false;
 
     _isLeaving = true;
+    _sessionEpoch += 1;
     RoomLeaveIntent.begin(code);
     // RTDB update는 방금 지워진 경로를 되살립니다. 이미 진행 중인 heartbeat가
     // 퇴장 직후 유령 참가자 노드를 만들지 못하게 타이머를 먼저 끊습니다.
@@ -1330,8 +1490,13 @@ class RoomProvider extends ChangeNotifier {
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     _controllerPresenceTimer?.cancel();
+    _playerPresenceTimer?.cancel();
     _controllerPresenceTimer = null;
     _controllerPresence = ControllerPresence.unknown;
+    _playerPresenceTimer = null;
+    _ownsControllerSession = false;
+    _staleReportTracker.clear();
+    _staleReportInFlight.clear();
     roomSubscription = null;
     playerSubscription = null;
     connectionSubscription = null;
@@ -1380,6 +1545,7 @@ class RoomProvider extends ChangeNotifier {
     _controllerHeartbeatTimer?.cancel();
     _playerHeartbeatTimer?.cancel();
     _controllerPresenceTimer?.cancel();
+    _playerPresenceTimer?.cancel();
     super.dispose();
   }
 }

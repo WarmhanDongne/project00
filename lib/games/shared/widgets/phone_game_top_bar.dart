@@ -19,7 +19,7 @@ class SharedPhoneGameTopBar extends StatelessWidget {
     this.trailingLeading,
     this.itemBuilder,
     this.bookSemanticLabel = '게임 규칙 열기',
-    this.outSemanticLabel = '게임 나가기',
+    this.outSemanticLabel = '게임과 그룹 나가기',
   });
 
   final bool isLandscape;
@@ -94,7 +94,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
     this.onOutPressedAt,
     this.itemBuilder,
     this.bookSemanticLabel = '게임 규칙 열기',
-    this.outSemanticLabel = '게임 나가기',
+    this.outSemanticLabel = '게임과 그룹 나가기',
   });
 
   final bool isLandscape;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {applyControllerPauseToTurnTimer} from "../lib/game-interruption/controller-presence.js";
+import {applyControllerPauseToTurnTimer, reconcileControllerConnection} from "../lib/game-interruption/controller-presence.js";
 import {
   beginGameInterruption,
   cancelGameInterruption,
@@ -26,6 +26,32 @@ function game({turnDeadlineAt = 51_000, status = "playing"} = {}) {
   };
 }
 
+for (const firstPause of ["player", "controller"]) {
+  for (const firstResume of ["player", "controller"]) {
+    test(`중첩 중단 ${firstPause} 먼저 단절 / ${firstResume} 먼저 복구`, () => {
+      const room = {players: {a: {isConnected: false}, b: {}}, game: game()};
+      let interruption;
+      const pause = (kind, now) => {
+        if (kind === "controller") applyControllerPauseToTurnTimer(room.game, false, now);
+        else interruption = beginGameInterruption(room, "a", "disconnected", now);
+      };
+      const resume = (kind, now) => {
+        if (kind === "controller") applyControllerPauseToTurnTimer(room.game, true, now);
+        else cancelGameInterruption(room.game, interruption.id, now);
+      };
+      const other = (kind) => kind === "player" ? "controller" : "player";
+      pause(firstPause, 1000);
+      pause(other(firstPause), 2000);
+      resume(firstResume, 6000);
+      assert.equal(room.game.public.turnDeadlineAt, null, "다른 중단 중에는 정지 유지");
+      resume(other(firstResume), 11000);
+      assert.equal(room.game.public.turnDeadlineAt, 61000, "마지막 복구에서 50초 보존");
+      assert.equal(room.game.server.interruption, undefined);
+      assert.equal(room.game.server.controllerPause, undefined);
+    });
+  }
+}
+
 test("태블릿이 끊기면 남은 시간을 보관하고 마감을 비운다", () => {
   const state = game({turnDeadlineAt: 51_000});
 
@@ -34,6 +60,30 @@ test("태블릿이 끊기면 남은 시간을 보관하고 마감을 비운다",
   assert.equal(outcome, "paused");
   assert.equal(state.public.turnDeadlineAt, null);
   assert.equal(state.server.controllerPause.previousTurnRemainingMs, 50_000);
+});
+
+test("마감이 없는 태블릿 중단도 RTDB null 제거 후 보존된다", () => {
+  const room = {players: {a: {}, b: {}}, game: game()};
+  const interruption = beginGameInterruption(room, "a", "disconnected", 1000);
+  applyControllerPauseToTurnTimer(room.game, false, 2000);
+  // RTDB는 null인 자식을 저장하지 않습니다.
+  const persisted = JSON.parse(JSON.stringify(room, (_, value) => value === null ? undefined : value));
+  assert.ok(persisted.game.server.controllerPause.startedAt);
+  cancelGameInterruption(persisted.game, interruption.id, 3000);
+  assert.equal(persisted.game.public.turnDeadlineAt, null);
+  applyControllerPauseToTurnTimer(persisted.game, true, 9000);
+  assert.equal(persisted.game.public.turnDeadlineAt, 59000);
+});
+
+test("이전 태블릿 접속 이벤트는 현재 presence와 다르면 무시한다", () => {
+  const room = {game: game(), controllerPresence: {connected: false}};
+  reconcileControllerConnection(room, false, 1000);
+  assert.equal(reconcileControllerConnection(room, true, 2000), "ignored");
+  assert.equal(room.game.public.turnDeadlineAt, null);
+  room.controllerPresence.connected = true;
+  assert.equal(reconcileControllerConnection(room, false, 3000), "ignored");
+  assert.equal(reconcileControllerConnection(room, true, 4000), "resumed");
+  assert.equal(room.game.public.turnDeadlineAt, 54000);
 });
 
 test("태블릿이 돌아오면 남은 시간부터 다시 흐른다", () => {

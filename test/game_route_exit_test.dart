@@ -49,6 +49,26 @@ void main() {
     expect(find.text('게임 시작'), findsOneWidget);
   });
 
+  testWidgets('같은 프레임의 두 종료 신호가 대기실을 제거하지 않는다', (tester) async {
+    final gameContext = await pumpGameRoute(tester);
+    exitGameRoute(gameContext);
+    // pop 이후 퇴장 애니메이션 동안 context는 아직 mounted입니다.
+    expect(gameContext.mounted, isTrue);
+    exitGameRoute(gameContext);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('게임 시작'), findsOneWidget);
+  });
+
+  testWidgets('다른 종료 경로가 먼저 pop해도 늦은 종료가 홈을 닫지 않는다', (tester) async {
+    final gameContext = await pumpGameRoute(tester);
+    Navigator.of(gameContext).pop();
+    exitGameRoute(gameContext);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('게임 시작'), findsOneWidget);
+  });
+
   testWidgets('다이얼로그가 열려 있어도 다이얼로그와 게임 화면을 함께 닫는다', (tester) async {
     final gameContext = await pumpGameRoute(tester);
 

@@ -17,6 +17,36 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  for (final change in ['marker-recovered', 'reconnected']) {
+    test('late missing-room reply is ignored after $change', () async {
+      final gate = Completer<bool>();
+      final service = _LifecycleRoomService()..roomExistsGate = gate;
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..listenRoom();
+      addTearDown(() async {
+        provider.dispose();
+        await service.dispose();
+      });
+      service.serverConnection.add(true);
+      service.roomExistsChanges.add(false);
+      await _flushEvents();
+      expect(service.roomExistenceReads, 1);
+      if (change == 'marker-recovered') {
+        service.roomExistsChanges.add(true);
+      } else {
+        service.serverConnection.add(false);
+        service.serverConnection.add(true);
+      }
+      await _flushEvents();
+      gate.complete(false);
+      await _flushEvents();
+      expect(provider.roomCode, 'ABCDE');
+      expect(provider.roomTerminationReason, isNull);
+      if (change == 'reconnected') expect(service.roomExistenceReads, 2);
+    });
+  }
+
   test(
     'controller false only enters reconnecting and keeps the room',
     () async {
@@ -123,6 +153,7 @@ class _LifecycleRoomService implements RoomService {
   final roomExistsChanges = StreamController<bool>.broadcast();
   final roomStatus = StreamController<String?>.broadcast();
   bool confirmedRoomExists = true;
+  Completer<bool>? roomExistsGate;
   int roomExistenceReads = 0;
 
   @override
@@ -138,6 +169,9 @@ class _LifecycleRoomService implements RoomService {
   @override
   Future<bool> roomExists(String roomCode) async {
     roomExistenceReads += 1;
+    final gate = roomExistsGate;
+    roomExistsGate = null;
+    if (gate != null) return gate.future;
     return confirmedRoomExists;
   }
 
