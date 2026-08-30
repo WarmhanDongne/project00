@@ -1,6 +1,6 @@
 # Mosigame repository guide
 
-작업을 시작하기 전에 반드시 [`ENGINEERING_CONTRACT.md`](ENGINEERING_CONTRACT.md)를
+작업을 시작하기 전에 반드시 [`ENGINEERING_CONTRACT.md`](docs/engineering/ENGINEERING_CONTRACT.md)를
 읽고 따른다. 이 파일은 규칙 전체를 복제하지 않고 필요한 tracked context로 안내하는
 router다.
 
@@ -8,10 +8,11 @@ router다.
 
 | 작업 | 추가로 읽을 문서와 코드 |
 | --- | --- |
-| 모든 작업 | [`Engineering Contract`](ENGINEERING_CONTRACT.md) |
-| 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](ARCHITECTURE.md)와 관련 코드·테스트 |
+| 모든 작업 | [`Engineering Contract`](docs/engineering/ENGINEERING_CONTRACT.md) |
+| 개발환경 점검·설정 | [`Agent Setup`](docs/development/AGENT_SETUP.md), [`Development Setup`](docs/development/DEVELOPMENT_SETUP.md), [`Development Environment Plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md) |
+| 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](docs/engineering/ARCHITECTURE.md)와 관련 코드·테스트 |
 | 새 게임 | [`게임 템플릿 가이드`](lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
-| Project CLI | [`Project CLI`](PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
+| Project CLI | [`Project CLI`](docs/engineering/PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
 
 외부 개인 notes나 로컬 절대 경로는 공식 context가 아니다. 문서와 구현이 충돌하거나
 제품 의도가 확인되지 않으면 추측하지 말고 evidence와 함께 보고한다. 하위
@@ -24,7 +25,7 @@ Skill을 사용한다. 질문, 조사, 계획, 읽기 전용 검토, 문서 전�
 
 ## Firebase MCP read-only pilot
 
-Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 제한된
+Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_MCP.md)의 제한된
 수동 테스트 관찰 절차에만 사용한다.
 
 - 실행 전에 사람이 로컬 terminal에서 MCP 전용 계정이 활성 상태이고 그 계정에
@@ -43,7 +44,7 @@ Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 제한
 
 ## Validation routing
 
-실행 전 [`PROJECT_CLI.md`](PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.
+실행 전 [`PROJECT_CLI.md`](docs/engineering/PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.
 아래 플랫폼 공통 raw 형식은 실행할 command와 argument를 나타낸다. 작업 중 빠른
 피드백:
 
@@ -59,8 +60,8 @@ dart run :mosigame validate --full
 ```
 
 실행한 command, status, exit code와 실행 전후 working-tree 상태를 보고한다.
-Windows guarded invocation과 macOS/Linux raw CLI의 사용 조건은 `PROJECT_CLI.md`를
-따른다.
+Windows guarded invocation과 macOS/Linux raw CLI의 사용 조건은
+`docs/engineering/PROJECT_CLI.md`를 따른다.
 
 ## Approval routing
 

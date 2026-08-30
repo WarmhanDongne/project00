@@ -4,11 +4,12 @@
 
 ## 시작하기
 
-```bash
-flutter pub get
-cp .env.example .env.dev
-flutter run
-```
+전체 문서 목차는 [`docs/README.md`](docs/README.md)에 있습니다. 사람이 읽는 전체
+설치·검증 안내는
+[`Development setup`](docs/development/DEVELOPMENT_SETUP.md)을 따릅니다. Codex에 환경 준비를
+맡길 때는 [`Agent setup`](docs/development/AGENT_SETUP.md)을 실행 계약으로 사용합니다. 현재 상태와
+후속 계획은 [`Development environment plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md)에
+계속 갱신합니다.
 
 Firebase Functions를 개발할 때는 Node.js 22를 사용합니다.
 
@@ -33,14 +34,17 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 - iOS: `ios/Runner/GoogleService-Info.plist`
 - Flutter 설정: `lib/firebase/firebase_options.dart`
 
-환경별 값은 `.env.dev`에 작성합니다. `.env.dev`는 Git에 포함되지 않으므로 팀원마다 `.env.example`을 복사해 사용합니다. API 키처럼 실제 비밀값은 Flutter 앱 번들에 넣지 말고 서버에서 관리해야 합니다.
+`.env.example`은 local override 형식의 예시지만 현재 앱은 `.env.dev`를 필수로
+읽지 않습니다. local config와 secret의 현재 계약은
+`docs/development/DEVELOPMENT_SETUP.md`를 따르며, 실제 비밀값은 Flutter 앱 번들에
+넣지 않습니다.
 
 수동 테스트 중 production Realtime Database 상태를 제한적으로 확인해야 한다면
-[`Firebase MCP RTDB Read-only Pilot`](FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
+[`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
 규칙을 따릅니다. 이 파일럿은 Project CLI와 자동화된 테스트를 대체하지 않습니다.
 
 Android 1~3기기 Firebase Emulator 자동화는 조사 후 보류했습니다. 구현·검증 결과와
-재개 조건은 [`Emulator pilot record`](EMULATOR_PILOT.md)에 남겨 두었습니다.
+재개 조건은 [`Emulator pilot record`](docs/operations/EMULATOR_PILOT.md)에 남겨 두었습니다.
 
 ## 자주 사용하는 명령어
 
@@ -70,7 +74,7 @@ flutter run
 
 Targeted suite는 관련 작업 중 빠른 피드백용이며, 완료 전에는 Project CLI의 FULL
 validation을 실행합니다. Windows guard와 macOS/Linux raw CLI의 사용 조건은
-[`PROJECT_CLI.md`](PROJECT_CLI.md)를 참고합니다.
+[`PROJECT_CLI.md`](docs/engineering/PROJECT_CLI.md)를 참고합니다.
 
 ## 개발 규칙
 
@@ -84,8 +88,8 @@ validation을 실행합니다. Windows guard와 macOS/Linux raw CLI의 사용 �
   통과시킵니다.
 
 저장소 안내는 [`AGENTS.md`](AGENTS.md), 공통 규칙은
-[`Engineering Contract`](ENGINEERING_CONTRACT.md), 구조 설명은
-[`Architecture Reference`](ARCHITECTURE.md)에 있습니다.
+[`Engineering Contract`](docs/engineering/ENGINEERING_CONTRACT.md), 구조 설명은
+[`Architecture Reference`](docs/engineering/ARCHITECTURE.md)에 있습니다.
 
 ## 현재 구현 상태
 

@@ -171,6 +171,6 @@ guard adds Windows invocation safety without changing it.
 - Repository-root errors: keep the tracked script under `tool/`; do not copy it to
   an unrelated directory.
 
-The detailed CLI implementation is in [`bin/mosigame.dart`](bin/mosigame.dart) and
-[`tool/mosigame_cli/`](tool/mosigame_cli/). The common completion rules remain in
+The detailed CLI implementation is in [`bin/mosigame.dart`](../../bin/mosigame.dart) and
+[`tool/mosigame_cli/`](../../tool/mosigame_cli/). The common completion rules remain in
 [`ENGINEERING_CONTRACT.md`](ENGINEERING_CONTRACT.md).

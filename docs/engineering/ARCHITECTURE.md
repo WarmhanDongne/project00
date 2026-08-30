@@ -34,10 +34,10 @@ tool/mosigame_cli/         Mosigame Project CLI 구현
 
 ## Game extension contract
 
-- 새 게임은 [`TemplateGame`](lib/games/template_game.dart)을 구현하고
-  [`GameRegistry`](lib/games/game_registry.dart)에만 등록한다. 플랫폼 화면에 게임
+- 새 게임은 [`TemplateGame`](../../lib/games/template_game.dart)을 구현하고
+  [`GameRegistry`](../../lib/games/game_registry.dart)에만 등록한다. 플랫폼 화면에 게임
   ID별 분기를 추가하지 않는다.
-- 구현 전 [`게임 템플릿 가이드`](lib/games/_game_template/README.md)와 가장 가까운
+- 구현 전 [`게임 템플릿 가이드`](../../lib/games/_game_template/README.md)와 가장 가까운
   기존 게임을 확인한다.
 - 쓰기는 `<game>_command_service.dart`에서 callable Function으로 요청하고, 읽기는
   `<game>_query_service.dart`의 RTDB stream으로 받는다.

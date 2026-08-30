@@ -1,7 +1,7 @@
 # Firebase MCP RTDB Read-only Pilot
 
 이 문서는 사람이 Mosigame의 제한된 Firebase MCP 파일럿을 설정하고 사용하는
-방법을 설명한다. AI가 따라야 하는 강제 실행 규칙은 [`AGENTS.md`](AGENTS.md)에
+방법을 설명한다. AI가 따라야 하는 강제 실행 규칙은 [`AGENTS.md`](../../AGENTS.md)에
 분리되어 있다.
 
 ## Purpose and boundary
@@ -184,4 +184,4 @@ Emulator 또는 integration test로 자동화한다.
 - [Firebase MCP server](https://firebase.google.com/docs/ai-assistance/mcp-server)
 - [Firebase Realtime Database IAM roles](https://cloud.google.com/iam/docs/roles-permissions/firebasedatabase)
 - [Codex MCP configuration](https://developers.openai.com/codex/mcp)
-- [Mosigame Project CLI](PROJECT_CLI.md)
+- [Mosigame Project CLI](../engineering/PROJECT_CLI.md)
