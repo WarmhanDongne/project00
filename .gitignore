@@ -7,6 +7,15 @@
 build/
 coverage/
 
+# Local package and Python caches
+.pnpm-store/
+__pycache__/
+*.pyc
+*.pyo
+
+# Local analysis output
+/analyze_result.txt
+
 # IDE / OS
 .idea/
 .vscode/
