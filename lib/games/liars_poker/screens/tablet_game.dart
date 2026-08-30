@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:project00/core/diagnostics/dev_error_log.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -164,11 +165,18 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     );
   }
 
+  /// 컨트롤러가 이미 사용자 문구로 변환한 안내만 표시합니다.
+  /// [error]는 개발용 기록 전용이며 화면에 붙이지 않습니다.
   void _showGameError(String message, Object error) {
-    if (!mounted) return;
+    if (!mounted || message.isEmpty) return;
+    DevErrorLog.instance.add(
+      error: error,
+      context: 'liars_poker/tablet',
+      time: DateTime.now(),
+    );
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('$message\n$error')));
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   //=======================서버 상태 → 태블릿 연출 상태==============================
@@ -699,9 +707,10 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                 currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
                 presentation: GameInterruptionPresentation.tabletController,
                 isSubmitting: game.isMenuCommandInFlight,
-                onContinue: () async {
-                  await game.excludeInterruptedPlayerAndContinue();
-                },
+                // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
+                // onError 콜백으로 이미 SnackBar를 띄웁니다(_showGameError).
+                onContinue: game.excludeInterruptedPlayerAndContinue,
+                onFinishNow: game.finishInterruptedGameNowFromController,
                 onExpired: game.expireInterruptionFromController,
               ),
             ],

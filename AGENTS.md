@@ -1,58 +1,72 @@
-# Project00 AI 작업 지침
+# Mosigame repository guide
 
-이 저장소에서 게임, 플랫폼, Firebase 코드를 수정하는 AI는 작업 전에 반드시
-`AI_GAME_DEVELOPMENT_GUIDE.md`를 끝까지 읽는다.
-새 게임을 추가할 때는 [`lib/games/_game_template/README.md`](lib/games/_game_template/README.md)와
-가장 가까운 기존 게임 구현도 함께 확인한다.
+작업을 시작하기 전에 반드시 [`ENGINEERING_CONTRACT.md`](docs/engineering/ENGINEERING_CONTRACT.md)를
+읽고 따른다. 이 파일은 규칙 전체를 복제하지 않고 필요한 tracked context로 안내하는
+router다.
 
-> `AI_GAME_DEVELOPMENT_GUIDE.md`와 `PROJECT_STRUCTURE.md`는 저장소에 포함되지 않는다.
-> 가지고 있으면 먼저 읽고, 없으면 코드와 `functions/src/<game>/` 타입을 기준으로
-> 판단한 뒤 추정한 부분을 보고한다. 아래 원칙은 문서가 없어도 항상 적용된다.
+## What to read
 
-## 변경 전 필수 원칙
+| 작업 | 추가로 읽을 문서와 코드 |
+| --- | --- |
+| 모든 작업 | [`Engineering Contract`](docs/engineering/ENGINEERING_CONTRACT.md) |
+| 개발환경 점검·설정 | [`Agent Setup`](docs/development/AGENT_SETUP.md), [`Development Setup`](docs/development/DEVELOPMENT_SETUP.md), [`Development Environment Plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md) |
+| 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](docs/engineering/ARCHITECTURE.md)와 관련 코드·테스트 |
+| 새 게임 | [`게임 템플릿 가이드`](lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
+| Project CLI | [`Project CLI`](docs/engineering/PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
 
-1. 사용자가 만든 미커밋 변경을 보존한다. 관련 없는 파일을 되돌리거나 정리하지 않는다.
-2. 게임 규칙, 턴 검증, 승패, 비공개 정보 이동은 Cloud Functions가 결정한다.
-3. Flutter 클라이언트는 `rooms/{roomCode}/game`을 직접 수정하지 않는다.
-4. 공개 데이터는 `game/public`, 개인 데이터는 `game/private/{uid}`, 클라이언트에
-   노출하면 안 되는 데이터는 `game/server`에 둔다.
-5. Realtime Database 구독은 Riverpod 세션 컨트롤러 한곳에서 받고, 위젯마다 별도
-   구독을 만들지 않는다.
-6. 서버 상태와 애니메이션 상태를 섞지 않는다. 서버 미러 상태는 불변 Provider 상태,
-   재생 여부와 `AnimationController`는 화면 로컬 상태가 소유한다.
-7. 새 게임은 `TemplateGame`을 구현하고 `GameRegistry`에만 등록한다. 플랫폼 화면에
-   게임 ID별 `if/switch`를 추가하지 않는다. 단, 임시 개발 화면은 문서에 명시한다.
-8. 생성된 `lib/gen/assets.gen.dart`를 직접 편집하지 않는다. 에셋을 등록한 후
-   `dart run build_runner build --delete-conflicting-outputs`로 다시 생성한다.
-9. 게임 명령 재시도를 지원하려면 동일한 `commandId`를 유지하고 서버를 멱등하게 만든다.
-10. `status`, 서버 `phase`, 화면 `GameScreenPhase`, 태블릿 연출 상태를 같은 개념으로
-    취급하지 않는다.
-11. 이미 배포된 callable의 동작을 바꿀 때 함수 이름을 바꾸지 않는다. 이름을 바꾸면
-    구버전 앱이 함수를 찾지 못하므로, 새 동작이 필요하면 callable을 추가한다. RTDB
-    트리거·스케줄 함수를 옮길 때는 같은 이벤트가 두 번 처리되지 않도록 구 함수를
-    삭제한다.
-12. 자리 배치·역할 구성 화면은 참가자 목록 변경 처리(퇴장 시 배치 무효화)를 먼저
-    반영한 뒤 확정 UI를 손댄다. 순서를 바꾸면 같은 화면을 두 번 고치게 된다.
+외부 개인 notes나 로컬 절대 경로는 공식 context가 아니다. 문서와 구현이 충돌하거나
+제품 의도가 확인되지 않으면 추측하지 말고 evidence와 함께 보고한다. 하위
+`AGENTS.md`가 있다면 해당 디렉터리 작업에는 그 지침도 적용한다.
 
-## 새 게임 구현 기준
+Mosigame 기능 구현 또는 버그 수정의 완료 작업에는
+[`Mosigame Implement and Validate`](.agents/skills/mosigame-implement-and-validate/SKILL.md)
+Skill을 사용한다. 질문, 조사, 계획, 읽기 전용 검토, 문서 전용 작업 및 Git 전용
+작업에는 적용하지 않는다.
 
-- 휴대폰 공통 흐름: `GameScreenPhase` + `PhoneGameShell`
-- 태블릿 상태 분기: 타입이 있는 enum + exhaustive `switch`
-- 쓰기: `<game>_command_service.dart` → callable Cloud Function
-- 읽기: `<game>_query_service.dart` → RTDB `onValue`
-- 상태: `NotifierProvider.autoDispose.family` + 불변 state
-- 공유 애니메이션/상단바/사이드바/결과/퇴장 UI는 `lib/games/shared/`부터 확인
-- 백엔드 타입과 상태 전이는 `functions/src/<game>/`에 함께 구현
+## Firebase MCP read-only pilot
 
-## 완료 전 최소 검증
+Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_MCP.md)의 제한된
+수동 테스트 관찰 절차에만 사용한다.
 
-```bash
-dart format lib test
-flutter analyze
-flutter test
-cd functions && npm test
+- 실행 전에 사람이 로컬 terminal에서 MCP 전용 계정이 활성 상태이고 그 계정에
+  `roles/firebasedatabase.viewer` 이외의 더 넓은 권한이 없는지 확인한다. 계정 식별자나
+  CLI 인증 출력은 채팅에 포함하지 않는다.
+- 노출 도구는 `firebase_get_project`와 `realtimedatabase_get_data` 두 개여야 한다.
+  다르거나 `realtimedatabase_set_data`가 보이면 아무 도구도 호출하지 않는다.
+- 먼저 `firebase_get_project`로 project ID `project0000-ec01e`, 이름 `mosigame`, 상태
+  `ACTIVE`를 확인한다.
+- production RTDB는 사용자가 database URL, 정확한 단일 경로, 필요성을 확인하고
+  해당 조회를 사전 승인한 경우에만 한 번 읽는다. root나 상위 collection을 조회하지
+  않는다.
+- 개인정보, credential, token과 불필요한 사용자 데이터를 요청하거나 출력하지 않는다.
+- 쓰기, Auth 접근, project 변경, rules 변경, deploy와 migration은 금지한다.
+- MCP 결과는 Project CLI의 targeted suite나 `validate --full`을 대체하지 않는다.
+
+## Validation routing
+
+실행 전 [`PROJECT_CLI.md`](docs/engineering/PROJECT_CLI.md)에서 해당 플랫폼의 실행 경로를 선택한다.
+아래 플랫폼 공통 raw 형식은 실행할 command와 argument를 나타낸다. 작업 중 빠른
+피드백:
+
+```text
+dart run :mosigame test session
+dart run :mosigame test auth
 ```
 
-범위가 큰 게임 변경은 실제 기기에서 `방 생성 → 휴대폰 입장 → 좌석 저장 → 시작 →
-턴 진행 → 재접속 → 결과 → 재시작/종료/퇴장`까지 확인한다.
+관련 suite만 실행하며 targeted suite가 FULL validation을 대체하지 않는다. 완료 전:
+
+```text
+dart run :mosigame validate --full
+```
+
+실행한 command, status, exit code와 실행 전후 working-tree 상태를 보고한다.
+Windows guarded invocation과 macOS/Linux raw CLI의 사용 조건은
+`docs/engineering/PROJECT_CLI.md`를 따른다.
+
+## Approval routing
+
+새 dependency, public API/persistent data/state-machine contract 변경, production 접근,
+deploy/migration, 사용자 변경과의 충돌, 중요한 architecture·제품 결정 또는 범위 밖
+수정이 필요하면 중단하고 사용자 승인을 받는다. 전체 조건과 Definition of Done은
+Engineering Contract를 따른다.
 

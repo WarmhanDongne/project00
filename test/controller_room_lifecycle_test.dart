@@ -4,7 +4,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/core/time/server_clock.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +16,36 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
+
+  for (final change in ['marker-recovered', 'reconnected']) {
+    test('late missing-room reply is ignored after $change', () async {
+      final gate = Completer<bool>();
+      final service = _LifecycleRoomService()..roomExistsGate = gate;
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..listenRoom();
+      addTearDown(() async {
+        provider.dispose();
+        await service.dispose();
+      });
+      service.serverConnection.add(true);
+      service.roomExistsChanges.add(false);
+      await _flushEvents();
+      expect(service.roomExistenceReads, 1);
+      if (change == 'marker-recovered') {
+        service.roomExistsChanges.add(true);
+      } else {
+        service.serverConnection.add(false);
+        service.serverConnection.add(true);
+      }
+      await _flushEvents();
+      gate.complete(false);
+      await _flushEvents();
+      expect(provider.roomCode, 'ABCDE');
+      expect(provider.roomTerminationReason, isNull);
+      if (change == 'reconnected') expect(service.roomExistenceReads, 2);
+    });
+  }
 
   test(
     'controller false only enters reconnecting and keeps the room',
@@ -29,7 +61,10 @@ void main() {
 
       service.serverConnection.add(true);
       service.roomExistsChanges.add(true);
-      service.controllerConnected.add(false);
+      // 태블릿이 스스로 내려간다고 알린 경우입니다. 유예 없이 즉시 표시합니다.
+      service.controllerPresence.add(
+        ControllerPresence(connected: false, lastSeen: ServerClock.nowMillis()),
+      );
       service.roomStatus.add(null);
       await _flushEvents();
 
@@ -45,7 +80,9 @@ void main() {
       await _flushEvents();
       expect(provider.roomCode, 'ABCDE');
 
-      service.controllerConnected.add(true);
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: ServerClock.nowMillis()),
+      );
       await _flushEvents();
       expect(
         provider.controllerPresenceState,
@@ -112,18 +149,19 @@ RoomProvider _provider(_LifecycleRoomService service) =>
 
 class _LifecycleRoomService implements RoomService {
   final serverConnection = StreamController<bool>.broadcast();
-  final controllerConnected = StreamController<bool?>.broadcast();
+  final controllerPresence = StreamController<ControllerPresence>.broadcast();
   final roomExistsChanges = StreamController<bool>.broadcast();
   final roomStatus = StreamController<String?>.broadcast();
   bool confirmedRoomExists = true;
+  Completer<bool>? roomExistsGate;
   int roomExistenceReads = 0;
 
   @override
   Stream<bool> watchServerConnection() => serverConnection.stream;
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
-      controllerConnected.stream;
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
+      controllerPresence.stream;
 
   @override
   Stream<bool> watchRoomExists(String roomCode) => roomExistsChanges.stream;
@@ -131,6 +169,9 @@ class _LifecycleRoomService implements RoomService {
   @override
   Future<bool> roomExists(String roomCode) async {
     roomExistenceReads += 1;
+    final gate = roomExistsGate;
+    roomExistsGate = null;
+    if (gate != null) return gate.future;
     return confirmedRoomExists;
   }
 
@@ -147,7 +188,7 @@ class _LifecycleRoomService implements RoomService {
   Future<void> dispose() async {
     await Future.wait([
       serverConnection.close(),
-      controllerConnected.close(),
+      controllerPresence.close(),
       roomExistsChanges.close(),
       roomStatus.close(),
     ]);

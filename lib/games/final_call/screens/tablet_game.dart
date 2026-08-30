@@ -520,9 +520,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
             presentation: GameInterruptionPresentation.tabletController,
             isSubmitting: game.commandInFlight,
-            onContinue: () async {
-              await game.excludeInterruptedPlayerAndContinue();
-            },
+            failureMessage: game.errorMessage,
+            onContinue: game.excludeInterruptedPlayerAndContinue,
+            onFinishNow: game.finishInterruptedGameNow,
             onExpired: game.expireInterruption,
           ),
           if (game.commandInFlight)

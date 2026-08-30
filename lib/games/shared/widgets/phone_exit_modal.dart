@@ -170,7 +170,7 @@ class SharedPhoneExitModal extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '게임에서 나가시겠습니까?',
+          '게임과 그룹에서 나갈까요?',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: titleColor,
@@ -181,7 +181,7 @@ class SharedPhoneExitModal extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '게임을 나가면 다시 접속할 수 없습니다.',
+          '현재 게임을 종료하고 그룹에서도 나갑니다. 다시 참여하려면 방 코드를 입력해야 합니다.',
           textAlign: TextAlign.center,
           style: TextStyle(color: descriptionColor, fontSize: 14, height: 1.45),
         ),
@@ -201,7 +201,7 @@ class SharedPhoneExitModal extends StatelessWidget {
         shadowColor: const Color(0xB3000000),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      child: const Text('계속하기'),
+      child: const Text('계속 참여'),
     );
   }
 

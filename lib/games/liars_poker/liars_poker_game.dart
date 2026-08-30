@@ -59,6 +59,7 @@ class LiarsPokerGame extends TemplateGame {
         onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
         child: LiarsPokerPhoneGame(
           roomCode: roomCode,
+          provider: provider,
           gameService: LiarsPokerService(),
           onExitRoom: onExitRoom,
         ),

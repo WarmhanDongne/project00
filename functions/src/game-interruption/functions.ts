@@ -4,23 +4,16 @@ import {getDatabase} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {
-  excludeFinalCallPlayer,
-  finishFinalCallForInsufficientPlayers,
-} from "../final-call/exclude-player.js";
+import {excludeFinalCallPlayer} from "../final-call/exclude-player.js";
 import {FinalCallGameState} from "../final-call/types.js";
-import {
-  excludeLiarsPokerPlayer,
-  finishLiarsPokerForInsufficientPlayers,
-} from "../liars-poker/exclude-player.js";
-import {
-  excludeMafiaPlayer,
-  finishMafiaForInsufficientPlayers,
-} from "../mafia/exclude-player.js";
+import {excludeLiarsPokerPlayer} from "../liars-poker/exclude-player.js";
+import {excludeMafiaPlayer} from "../mafia/exclude-player.js";
 import {MafiaGameState} from "../mafia/types.js";
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
+import {resolveExpiredInterruption} from "./expire-resolution.js";
 import {
   completeGameInterruption,
+  disconnectStaleGamePlayer,
   InterruptibleRoom,
   reconcileGamePlayerConnection,
 } from "./state.js";
@@ -42,7 +35,42 @@ type Data = {
   roomCode?: unknown;
   interruptionId?: unknown;
   controllerSessionId?: unknown;
+  playerUid?: unknown;
+  observedLastSeen?: unknown;
 };
+
+/** 태블릿이 발견한 20초 초과 heartbeat 후보를 최신 값으로 재검증합니다. */
+export const game_common_interruption_report_stale_player = onCall<Data>(
+  {region: REGION},
+  async (request) => {
+    const uid = requireUid(request.auth?.uid);
+    const roomCode = parseRoomCode(request.data?.roomCode);
+    const playerUid = parsePlayerUid(request.data?.playerUid);
+    const observedLastSeen = parseTimestamp(request.data?.observedLastSeen);
+    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+    let response: Record<string, unknown> | null = null;
+
+    const transaction = await roomRef.transaction((raw) => {
+      if (raw === null) return raw;
+      const room = raw as GameRoom;
+      assertControllerSession(room, uid, request.data?.controllerSessionId);
+      const outcome = disconnectStaleGamePlayer(
+        room,
+        playerUid,
+        observedLastSeen,
+        Date.now(),
+        {minimumPlayerCount: minimumPlayerCount(room.selectedGame)},
+      );
+      response = {success: true, outcome};
+      return room;
+    });
+
+    if (!transaction.committed || !response) {
+      throw new HttpsError("aborted", "참가자 연결 상태를 확인하지 못했습니다.");
+    }
+    return response;
+  },
+);
 
 const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
   final_call: 4,
@@ -173,19 +201,28 @@ export const game_common_interruption_expire = onCall<Data>(
       if (uid === room.controllerUid || uid === room.hostUid) {
         assertControllerSession(room, uid, request.data?.controllerSessionId);
       }
-      const now = Date.now();
-      if (now < interruption.deadlineAt) {
+      // 만료 처리 자체는 순수 함수가 소유합니다. 서버 스케줄
+      // (cleanupExpiredGameInterruptions)이 같은 함수를 쓰므로, 화면이 끝낸
+      // 게임과 서버가 끝낸 게임의 최종 상태가 갈리지 않습니다.
+      const result = resolveExpiredInterruption(
+        room,
+        Date.now(),
+        excludePlayer,
+      );
+      if (result.outcome === "not-expired") {
         throw new HttpsError("failed-precondition", "아직 투표 시간이 남아 있습니다.");
       }
-      const canContinue = interruption.canContinue;
-      completeGameInterruption(game, interruption.id, now);
-      delete room.players?.[interruption.playerUid];
-      if (canContinue) {
-        excludePlayer(room, interruption.playerUid, now);
-      } else {
-        finishForInsufficientPlayers(room, now);
+      if (result.outcome === "unsupported-game") {
+        throw new HttpsError(
+          "failed-precondition",
+          "이 게임은 인원 부족 종료를 지원하지 않습니다.",
+        );
       }
-      response = {success: true, expired: true, continued: canContinue};
+      response = {
+        success: true,
+        expired: true,
+        continued: result.outcome === "continued",
+      };
       return room;
     });
 
@@ -240,22 +277,6 @@ function excludePlayer(room: GameRoom, uid: string, now: number): void {
   }
 }
 
-function finishForInsufficientPlayers(room: GameRoom, now: number): void {
-  if (room.selectedGame === "final_call") {
-    const game = room.game as unknown as FinalCallGameState;
-    finishFinalCallForInsufficientPlayers(game, now);
-    return;
-  }
-  if (room.selectedGame === "liars_poker") {
-    const game = room.game as unknown as LiarsPokerGameState;
-    finishLiarsPokerForInsufficientPlayers(game, now);
-    return;
-  }
-  if (room.selectedGame === "mafia") {
-    finishMafiaForInsufficientPlayers(room.game as unknown as MafiaGameState, now);
-  }
-}
-
 function minimumPlayerCount(selectedGame: string | undefined): number {
   return selectedGame ? MINIMUM_PLAYER_COUNTS[selectedGame] ?? 2 : 2;
 }
@@ -279,4 +300,19 @@ function parseInterruptionId(value: unknown): string {
     throw new HttpsError("invalid-argument", "올바른 게임 중단 ID가 아닙니다.");
   }
   return id;
+}
+
+function parsePlayerUid(value: unknown): string {
+  const uid = typeof value === "string" ? value.trim() : "";
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    throw new HttpsError("invalid-argument", "올바른 참가자 정보가 아닙니다.");
+  }
+  return uid;
+}
+
+function parseTimestamp(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new HttpsError("invalid-argument", "올바른 heartbeat 시각이 아닙니다.");
+  }
+  return Math.trunc(value);
 }

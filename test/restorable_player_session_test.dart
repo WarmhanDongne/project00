@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 void main() {
-  group('isRestorablePlayerSessionState', () {
+  group('restorablePlayerSession', () {
     test('allows an active player to return to a waiting room', () {
       expect(
-        isRestorablePlayerSessionState(
+        restorablePlayerSession(
           playerExists: true,
           playerStatus: 'active',
           roomStatus: 'waiting',
@@ -13,13 +13,13 @@ void main() {
           gameStatus: null,
           privateGameDataExists: false,
         ),
-        isTrue,
+        RestorableSession.waitingRoom,
       );
     });
 
     test('allows an active player to return while seating is in progress', () {
       expect(
-        isRestorablePlayerSessionState(
+        restorablePlayerSession(
           playerExists: true,
           playerStatus: 'active',
           roomStatus: 'seating',
@@ -27,14 +27,14 @@ void main() {
           gameStatus: null,
           privateGameDataExists: false,
         ),
-        isTrue,
+        RestorableSession.waitingRoom,
       );
     });
 
     test('ignores stale finished game data in waiting and seating rooms', () {
       for (final roomStatus in ['waiting', 'seating']) {
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: true,
             playerStatus: 'active',
             roomStatus: roomStatus,
@@ -42,7 +42,7 @@ void main() {
             gameStatus: 'finished',
             privateGameDataExists: false,
           ),
-          isTrue,
+          RestorableSession.waitingRoom,
         );
       }
     });
@@ -51,7 +51,7 @@ void main() {
       'allows return only when an active game has complete authority data',
       () {
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: true,
             playerStatus: 'active',
             roomStatus: 'playing',
@@ -59,10 +59,10 @@ void main() {
             gameStatus: 'playing',
             privateGameDataExists: true,
           ),
-          isTrue,
+          RestorableSession.activeGame,
         );
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: true,
             playerStatus: 'active',
             roomStatus: 'playing',
@@ -70,10 +70,10 @@ void main() {
             gameStatus: 'playing',
             privateGameDataExists: true,
           ),
-          isFalse,
+          RestorableSession.none,
         );
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: true,
             playerStatus: 'active',
             roomStatus: 'playing',
@@ -81,10 +81,10 @@ void main() {
             gameStatus: null,
             privateGameDataExists: true,
           ),
-          isFalse,
+          RestorableSession.none,
         );
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: true,
             playerStatus: 'active',
             roomStatus: 'playing',
@@ -92,7 +92,7 @@ void main() {
             gameStatus: 'playing',
             privateGameDataExists: false,
           ),
-          isFalse,
+          RestorableSession.none,
         );
       },
     );
@@ -133,7 +133,7 @@ void main() {
             ),
           ]) {
         expect(
-          isRestorablePlayerSessionState(
+          restorablePlayerSession(
             playerExists: state.playerExists,
             playerStatus: state.playerStatus,
             roomStatus: state.roomStatus,
@@ -141,7 +141,7 @@ void main() {
             gameStatus: state.gameStatus,
             privateGameDataExists: false,
           ),
-          isFalse,
+          RestorableSession.none,
         );
       }
     });

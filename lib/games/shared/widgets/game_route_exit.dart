@@ -12,13 +12,12 @@ import 'package:flutter/widgets.dart';
 /// [context]는 **게임 라우트에 속한** context여야 합니다(다이얼로그 내부의
 /// context를 넘기면 그 다이얼로그를 게임 화면으로 착각합니다).
 void exitGameRoute(BuildContext context) {
+  if (!context.mounted) return;
   final navigator = Navigator.of(context);
   final route = ModalRoute.of(context);
-  if (route == null) {
-    // 라우트를 특정할 수 없으면 최소한 기존 동작은 유지합니다.
-    navigator.maybePop();
-    return;
-  }
+  // pop 직후 애니메이션 중에도 context는 mounted입니다. 이미 비활성인
+  // route를 popUntil로 찾으면 대기실·홈까지 모두 닫혀 검정 화면이 됩니다.
+  if (route == null || !route.isActive) return;
   // 게임 라우트 위에 쌓인 것(다이얼로그 등)을 모두 걷어냅니다.
   navigator.popUntil((candidate) => candidate == route);
   // 그런 다음 게임 라우트 자체를 닫습니다.

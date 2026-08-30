@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/layout/app_system_ui.dart';
 import 'package:project00/core/network/critical_network_guard.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/games/template_game.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_leave_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
@@ -119,6 +121,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   /// 모두 준비되는 순간 한 번만 게임 화면을 엽니다.
   void _openGameIfReady(String roomCode) {
     if (_latestGameStatus != 'playing' || _isOpeningGame || !mounted) return;
+    // 방이 이미 끝났으면 낡은 playing 값입니다. 종료된 게임을 다시 열지 않습니다.
+    if (widget.provider.isRoomFinished) return;
     final selectedGameId = widget.provider.selectedGameId;
     if (selectedGameId == null) return;
     final game = GameRegistry.find(selectedGameId);
@@ -128,9 +132,17 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   void _showStatusError(Object error) {
     if (!mounted) return;
+    // 퇴장하면 내 참가자 노드가 사라져 game/public/status 읽기 권한도 함께
+    // 사라집니다. 정상 퇴장으로 끝난 구독의 오류는 사용자 오류가 아닙니다.
+    if (widget.provider.isLeaving || widget.provider.roomCode == null) return;
+    final message = userErrorMessage(
+      error,
+      context: UserErrorContext.roomSubscription,
+    );
+    if (message == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('게임 시작 상태를 확인하지 못했습니다: $error')));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openGame(String roomCode, TemplateGame game) async {
@@ -144,15 +156,22 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
     final leftRoom = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (gameContext) => ControllerReconnectGuard(
+        builder: (gameContext) => CriticalNetworkGuard(
           provider: widget.provider,
+          exitLabel: '게임과 그룹 나가기',
           onExit: () => unawaited(
             _leaveGameFromReconnect(gameContext: gameContext, game: game),
           ),
-          child: game.buildPhoneScreen(
-            roomCode: roomCode,
+          child: ControllerReconnectGuard(
             provider: widget.provider,
-            onExitRoom: () => widget.provider.leaveGame(game.id),
+            onExit: () => unawaited(
+              _leaveGameFromReconnect(gameContext: gameContext, game: game),
+            ),
+            child: game.buildPhoneScreen(
+              roomCode: roomCode,
+              provider: widget.provider,
+              onExitRoom: () => widget.provider.leaveGame(game.id),
+            ),
           ),
         ),
       ),
@@ -190,6 +209,28 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
 
   @override
   Widget build(BuildContext context) {
+    // 시스템 뒤로가기로 이 화면만 닫히면 사용자는 로비에 있는데 서버에는
+    // 참가자로 남습니다. 그 뒤 홈의 저장 세션 복원이 대기 화면을 다시 띄워
+    // 방을 나온 것도 들어간 것도 아닌 상태가 됩니다. 나가려면 `그룹 나가기`를
+    // 써야 하므로 뒤로가기는 삼킵니다(P-02).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || !mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('그룹에서 나가려면 화면 위쪽의 나가기를 눌러주세요.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+      },
+      child: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     return CriticalNetworkGuard(
       provider: widget.provider,
       onExit: () {
@@ -200,8 +241,15 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
         animation: widget.provider,
         builder: (context, _) {
           final selectedGameId = widget.provider.selectedGameId;
+          // 게임이 끝난 방은 selectedGame이 그대로 남습니다. 종료 경로 어디에서도
+          // 지우지 않기 때문입니다. 그 값만 보고 그리면 룰북과 `곧 시작합니다`가
+          // 영원히 남아 대기실로 돌아오지 못합니다(P-02).
+          //
+          // 태블릿이 정리하기 전에도 화면이 갇히지 않도록 방 상태를 우선합니다.
           final hasSelectedGame =
-              selectedGameId != null && selectedGameId.isNotEmpty;
+              selectedGameId != null &&
+              selectedGameId.isNotEmpty &&
+              !widget.provider.isRoomFinished;
           final players = widget.provider.players
               .where((player) => player.isActive)
               .toList(growable: false);
@@ -212,6 +260,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                 children: [
                   widget.headerForTesting ??
                       _PhoneRoomHeader(
+                        provider: widget.provider,
                         onPressed: () async {
                           final left = await widget.provider.leaveRoom();
                           if (!context.mounted || !left) return;
@@ -222,8 +271,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                           ).popUntil((route) => route.isFirst);
                         },
                       ),
-                  if (widget.provider.controllerPresenceState ==
-                      ControllerPresenceState.reconnecting)
+                  if (widget.provider.isServerConnected &&
+                      widget.provider.controllerPresenceState ==
+                          ControllerPresenceState.reconnecting)
                     const _ControllerReconnectBanner(),
                   if (hasSelectedGame) ...[
                     Expanded(
@@ -288,8 +338,9 @@ class _ControllerReconnectBanner extends StatelessWidget {
 }
 
 class _PhoneRoomHeader extends StatelessWidget {
-  const _PhoneRoomHeader({required this.onPressed});
+  const _PhoneRoomHeader({required this.provider, required this.onPressed});
 
+  final RoomProvider provider;
   final VoidCallback onPressed;
 
   @override
@@ -304,14 +355,7 @@ class _PhoneRoomHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 고정 폭을 두면 글자 배율이 큰 기기에서 문구가 잘립니다.
-          PlatformButton(
-            label: '그룹 나가기',
-            height: 44,
-            expand: false,
-            style: PlatformButtonStyle.secondary,
-            onPressed: onPressed,
-          ),
+          PhoneRoomLeaveButton(provider: provider, onPressed: onPressed),
           const Spacer(),
           const PhoneProfile(),
         ],
@@ -331,7 +375,11 @@ class _GroupWaitingContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
-        const _WaitingStatusBanner(message: '태블릿에서 게임을 선택하는 중입니다'),
+        _WaitingStatusBanner(
+          message: provider.isRoomFinished
+              ? '게임이 끝났습니다. 태블릿에서 다음 게임을 고르는 중입니다'
+              : '태블릿에서 게임을 선택하는 중입니다',
+        ),
         const SizedBox(height: 20),
         PhoneRoomParticipantList(players: players),
         const SizedBox(height: 24),

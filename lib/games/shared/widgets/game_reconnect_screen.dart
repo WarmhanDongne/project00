@@ -4,10 +4,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 //=======================게임 재접속 화면==============================
-/// 게임 도중 연결이 끊겨 다시 붙는 동안 보여 주는 화면입니다.
+/// 연결이 끊겼거나 돌아갈 세션이 있을 때 보여 주는 화면입니다.
 ///
-/// ⚠️ **아직 화면만 만든 상태입니다(2026-08).** 어디서 띄울지, 어떤 조건에서
-/// 닫을지는 연결하지 않았습니다. 디자인을 확정한 뒤 배선합니다.
+/// 쓰이는 곳이 두 군데입니다.
+/// - `ControllerReconnectGuard`: 태블릿이 사라진 동안 게임 입력을 막고 기다립니다.
+///   [actions] 없이 [onHome]만 쓰며, 일정 시간 뒤 나가기 버튼이 나타납니다.
+/// - `SessionReturnPrompt`: 앱을 다시 켰을 때 기존 방·게임으로 돌아갈지 묻습니다.
+///   [actions]를 넘겨 기다림 표시 대신 선택 버튼을 보여 줍니다(P-01).
 ///
 /// 휴대폰(세로)·태블릿(가로)을 한 위젯으로 그립니다. 배경의 연보라 원은 그림
 /// 파일이 아니라 **코드로 그립니다.** 그래야 기기 비율이 달라도 원이 잘리거나
@@ -22,6 +25,7 @@ class GameReconnectScreen extends StatefulWidget {
     this.homeButtonDelay = defaultHomeButtonDelay,
     this.homeLabel = '홈으로',
     this.onHome,
+    this.actions = const [],
   });
 
   /// 가운데 큰 문구입니다.
@@ -56,6 +60,13 @@ class GameReconnectScreen extends StatefulWidget {
   /// 그 버튼을 눌렀을 때입니다. null이면 눌러도 아무 일도 하지 않습니다
   /// (배선 전 디자인 확인용).
   final VoidCallback? onHome;
+
+  /// 기다림 표시 자리에 대신 놓을 버튼들입니다.
+  ///
+  /// 비어 있지 않으면 점 애니메이션과 [homeButtonDelay] 타이머를 쓰지 않고
+  /// 이 버튼들을 바로 보여 줍니다. 기다리는 화면이 아니라 **고르는 화면**이
+  /// 되기 때문입니다.
+  final List<Widget> actions;
 
   static const Duration defaultHomeButtonDelay = Duration(seconds: 20);
 
@@ -118,6 +129,8 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
 
   void _startHomeTimer() {
     _homeTimer?.cancel();
+    // 고르는 화면에서는 기다림 타이머가 필요 없습니다.
+    if (widget.actions.isNotEmpty) return;
     _homeTimer = Timer(widget.homeButtonDelay, () {
       if (mounted) setState(() => _showsHomeButton = true);
     });
@@ -188,17 +201,25 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
                         // 기다림 표시가 있던 자리에 홈으로 버튼이 들어옵니다.
                         // 버튼 높이만큼 자리를 미리 비워 두어, 점이 버튼으로
                         // 바뀔 때 위쪽 그림과 문구가 밀려 올라가지 않습니다.
-                        SizedBox(
-                          height: _homeSlotHeight(unit),
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 320),
-                              child: _showsHomeButton
-                                  ? _buildHomeButton(unit: unit)
-                                  : _buildDots(unit: unit),
+                        if (widget.actions.isEmpty)
+                          SizedBox(
+                            height: _homeSlotHeight(unit),
+                            child: Center(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 320),
+                                child: _showsHomeButton
+                                    ? _buildHomeButton(unit: unit)
+                                    : _buildDots(unit: unit),
+                              ),
                             ),
+                          )
+                        else
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: unit * 0.03,
+                            runSpacing: unit * 0.025,
+                            children: widget.actions,
                           ),
-                        ),
                       ],
                     ),
                   ),

@@ -20,23 +20,27 @@ import 'package:project00/games/final_call/widgets/phone/card_change_dialog.dart
 import 'package:project00/games/final_call/widgets/phone/top_bar.dart';
 import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
+import 'package:project00/games/shared/game_flow/leave_failure_notice.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/core/assets/game_image.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// Final Call 휴대폰 화면의 진입점입니다.
 class FinalCallPhoneGame extends ConsumerStatefulWidget {
   const FinalCallPhoneGame({
     super.key,
     required this.roomCode,
+    required this.provider,
     required this.gameService,
     required this.onExitRoom,
   });
 
   final String roomCode;
+  final RoomProvider provider;
   final FinalCallService gameService;
   final Future<bool> Function() onExitRoom;
 
@@ -63,6 +67,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   String? replacingCardId;
   String? _automaticCardChangeKey;
   bool _isLeavingRoom = false;
+  bool _isExitModalOpen = false;
   bool _wasMyTurn = false;
 
   /// 에셋 사전 준비는 첫 상태 수신 때 한 번만 합니다(캐릭터 목록이 필요).
@@ -228,6 +233,10 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   }
 
   Future<void> _leaveRoom() async {
+    // 확인 모달보다 앞에서 판정합니다. 뒤에서 판정하면 빠른 두 번 탭에 모달이
+    // 두 개 쌓인 뒤 두 번째 확인이 삼켜집니다.
+    if (_isLeavingRoom || _isExitModalOpen) return;
+    _isExitModalOpen = true;
     final leave = await SharedPhoneExitModal.show(
       context,
       doorImage: Assets.games.finalCall.images.modal.modalImageDoor.game.image(
@@ -240,8 +249,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       showSurface: false,
       showText: true,
     );
+    _isExitModalOpen = false;
     if (leave != true || !mounted) return;
-    if (_isLeavingRoom) return;
     _isLeavingRoom = true;
     final left = await widget.onExitRoom();
     if (!mounted) return;
@@ -253,9 +262,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       return;
     }
     _isLeavingRoom = false;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+    showLeaveFailureNotice(context, widget.provider);
   }
 
   bool _turnHasEnded(FinalCallController game) {
@@ -504,9 +511,11 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           interruption: game.interruption,
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
           onVote: () async {
             await game.voteToContinueInterruption();
           },
+          onFinishNow: game.finishInterruptedGameNow,
           onExpired: game.expireInterruption,
         ),
       ],

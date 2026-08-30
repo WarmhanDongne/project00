@@ -116,5 +116,26 @@ export {
   game_common_interruption_exclude_player,
   game_common_interruption_expire,
   game_common_interruption_on_connection_changed,
+  game_common_interruption_report_stale_player,
   game_common_interruption_vote_to_continue,
 } from "./game-interruption/functions.js";
+
+// 인원 부족이 확정된 중단은 60초 마감을 기다리지 않고 끝낼 수 있습니다(C-11).
+// 위 블록과 따로 두는 이유는 export 목록을 함께 고칠 때의 병합 충돌을 줄이기
+// 위해서입니다. 구현도 functions.ts와 분리했습니다.
+export {
+  game_common_interruption_finish_now,
+} from "./game-interruption/finish-now.js";
+
+// 화면이 살아 있어야만 중단이 만료되던 구멍을 서버가 막습니다(C-03/C-10).
+// 위의 game_common_interruption_expire는 즉시 반응 경로로 **그대로 둡니다.**
+export {
+  cleanupExpiredGameInterruptions,
+  cleanupGhostRoomPlayers,
+} from "./game-interruption/expire-scheduler.js";
+
+// 태블릿 단절 동안 서버 턴 마감을 멈춥니다(C-14). RTDB 트리거이므로 리전이
+// asia-southeast1입니다. 신규 추가이므로 삭제할 구 함수가 없습니다.
+export {
+  game_common_controller_presence_changed,
+} from "./game-interruption/controller-presence.js";

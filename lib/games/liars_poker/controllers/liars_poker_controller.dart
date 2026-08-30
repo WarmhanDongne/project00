@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:project00/core/time/server_clock.dart';
 
 import 'package:firebase_database/firebase_database.dart';
@@ -805,6 +806,21 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
     );
   }
 
+  /// 남은 인원이 부족한 중단을 마감 전에 즉시 종료합니다.
+  ///
+  /// [excludeInterruptedPlayerAndContinue]의 거울상입니다. 계속할 수 있는
+  /// 중단은 투표·제외 흐름의 몫이므로 여기서 끝내지 않습니다.
+  Future<bool> finishInterruptedGameNow() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _runCommand(
+      () => service.interruption.finishNow(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
   //=======================태블릿(진행 기기) 게임 명령==============================
   /// 현재 방과 좌석은 유지하고 게임 데이터만 새로 만듭니다.
   Future<bool> restartGame() => _runMenuCommand(
@@ -840,6 +856,23 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
         interruptionId: current.id,
       ),
       failureMessage: '플레이어를 제외하고 게임을 계속하지 못했습니다.',
+    );
+  }
+
+  /// 태블릿에서 인원 부족 중단을 즉시 종료합니다.
+  ///
+  /// 휴대폰용 [finishInterruptedGameNow]와 같은 명령이지만 잠금이 다릅니다.
+  /// 태블릿 화면이 `isMenuCommandInFlight`를 보고 버튼을 잠그므로 여기서도
+  /// 메뉴 잠금을 써야 합니다. 다른 잠금을 쓰면 표시 없이 조용히 드롭됩니다.
+  Future<bool> finishInterruptedGameNowFromController() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _runMenuCommand(
+      () => service.interruption.finishNow(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+      failureMessage: GameFlowCopy.interruptionFinishNowFailed,
     );
   }
 
@@ -892,7 +925,9 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
       if (result is Map && result['success'] == false) return false;
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage =
+          userErrorMessage(error, context: UserErrorContext.gameCommand) ??
+          UserErrorCopy.requestFailed;
       return false;
     } finally {
       isCommandInFlight = false;
@@ -952,23 +987,26 @@ class LiarsPokerController extends Notifier<LiarsPokerGameState> {
   }
 
   void _handleSubscriptionError(Object error) {
+    // 정상 퇴장으로 권한이 사라진 경우와 연결 복구로 스스로 해결되는 네이티브
+    // 오류는 사용자에게 표시하지 않습니다. 예전에는 예외 원문을 문구에 붙여
+    // 정상 퇴장 중에도 permission-denied 영문 원문이 화면에 떴습니다.
+    final message = userErrorMessage(
+      error,
+      context: UserErrorContext.gameSubscription,
+    );
+
     // 태블릿은 SnackBar 안내를 위해 화면 콜백으로 전달합니다.
     if (onError != null) {
       if (!_initialDataCompleter.isCompleted) {
         _initialDataCompleter.completeError(error);
       }
-      onError!.call('게임 상태를 불러오지 못했습니다.', error);
+      // 초기 데이터 대기는 표시 여부와 별개로 반드시 풀어 줍니다.
+      if (message != null) onError!.call(message, error);
       return;
     }
 
-    final message = error.toString().toLowerCase();
-    if (message.contains('firebase_database/unknown') ||
-        message.contains('stacktrace:')) {
-      // RTDB 스트림은 연결 복구 후 최신 값을 다시 전달하므로 게임 화면을
-      // 긴 네이티브 Stacktrace로 덮지 않고 기존 상태를 유지합니다.
-      return;
-    }
-    errorMessage = '게임 정보를 불러오지 못했습니다: $error';
+    if (message == null) return;
+    errorMessage = message;
     if (!_initialDataCompleter.isCompleted) {
       _initialDataCompleter.completeError(error);
     }

@@ -11,7 +11,7 @@
       ".write": false
     },
     "rooms": {
-      ".indexOn": ["controllerPresence/lastSeen", "status"],
+      ".indexOn": ["controllerPresence/lastSeen", "cleanupAt", "status"],
       "$roomCode": {
         ".write": false,
         "roomCode": {".read": "auth != null"},
@@ -45,11 +45,11 @@
               ".validate": "newData.isString() && newData.val().matches(/^(bear|bee|cat|crab|deer|elephant|frog|giraffe|hedgehog|kindbear|octopus|owl|penguin|rabbit|shark|snake|whale)$/)"
             },
             "isConnected": {
-              ".write": "auth != null && auth.uid == $playerUid",
+              ".write": "auth != null && auth.uid == $playerUid && root.child('rooms').child($roomCode).child('players').child($playerUid).child('nickname').exists() && (!root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').exists() || root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').val() == 'active') && root.child('rooms').child($roomCode).child('status').exists() && root.child('rooms').child($roomCode).child('status').val() != 'closed'",
               ".validate": "newData.isBoolean()"
             },
             "lastSeen": {
-              ".write": "auth != null && auth.uid == $playerUid",
+              ".write": "auth != null && auth.uid == $playerUid && root.child('rooms').child($roomCode).child('players').child($playerUid).child('nickname').exists() && (!root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').exists() || root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').val() == 'active') && root.child('rooms').child($roomCode).child('status').exists() && root.child('rooms').child($roomCode).child('status').val() != 'closed'",
               ".validate": "newData.isNumber() && newData.val() <= now + 10000"
             }
           }

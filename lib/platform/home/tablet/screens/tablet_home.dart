@@ -9,6 +9,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/howtoplay/widgets/how_to_play_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
@@ -29,6 +30,8 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
   String searchWord = '';
   StreamSubscription<String?>? _restoredGameStatusSubscription;
   String? _restoredStatusRoomCode;
+  String? _restoredGameStatus;
+  Future<bool>? _restoredFinishedCleanup;
   bool _isOpeningRestoredGame = false;
 
   @override
@@ -52,18 +55,55 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
     final code = roomProvider.roomCode;
     if (code == null) {
       _restoredStatusRoomCode = null;
+      _restoredGameStatus = null;
       unawaited(_restoredGameStatusSubscription?.cancel());
       _restoredGameStatusSubscription = null;
       return;
     }
-    if (_restoredStatusRoomCode == code) return;
+    if (_restoredStatusRoomCode == code) {
+      _restoreFinishedRoomIfReady(code);
+      return;
+    }
     _restoredStatusRoomCode = code;
+    _restoredGameStatus = null;
     unawaited(_restoredGameStatusSubscription?.cancel());
     _restoredGameStatusSubscription = roomProvider.watchGameStatus(code).listen(
       (status) {
+        if (roomProvider.roomCode != code || _restoredStatusRoomCode != code) {
+          return;
+        }
+        _restoredGameStatus = status;
         if (status == 'playing') _openRestoredGameIfReady(code);
+        if (status == 'finished') _restoreFinishedRoomIfReady(code);
       },
       onError: (_) {},
+    );
+  }
+
+  void _restoreFinishedRoomIfReady(String roomCode) {
+    if (_restoredFinishedCleanup != null ||
+        roomProvider.roomCode != roomCode ||
+        _restoredGameStatus != 'finished' ||
+        !roomProvider.isRoomFinished ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        _isOpeningRestoredGame) {
+      return;
+    }
+    final cleanup = restoreFinishedRoomOnControllerHome(
+      provider: roomProvider,
+      gameStatus: _restoredGameStatus,
+      isControllerHomeCurrent:
+          mounted && ModalRoute.of(context)?.isCurrent == true,
+      isOpeningGame: _isOpeningRestoredGame,
+    );
+    _restoredFinishedCleanup = cleanup;
+    unawaited(
+      cleanup.whenComplete(() {
+        if (identical(_restoredFinishedCleanup, cleanup)) {
+          _restoredFinishedCleanup = null;
+        }
+      }),
     );
   }
 
@@ -128,7 +168,11 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
             ),
           ),
         )
-        .whenComplete(() => _isOpeningRestoredGame = false);
+        .whenComplete(() {
+          _isOpeningRestoredGame = false;
+          // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
+          unawaited(restoreRoomToWaiting(roomProvider));
+        });
   }
 
   @override

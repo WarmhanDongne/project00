@@ -14,6 +14,7 @@ import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart
 import 'package:project00/games/shared/widgets/phone_result_dialog.dart';
 import 'package:project00/games/liars_poker/widgets/phone/spectator.dart';
 import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/games/shared/animations/game_entry_unroll.dart';
 import 'package:project00/games/shared/game_feedback.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
@@ -21,6 +22,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/shared/widgets/game_connecting_overlay.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/core/assets/game_image.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
@@ -28,11 +30,13 @@ class LiarsPokerPhoneGame extends ConsumerStatefulWidget {
   const LiarsPokerPhoneGame({
     super.key,
     required this.roomCode,
+    required this.provider,
     required this.gameService,
     required this.onExitRoom,
   });
 
   final String roomCode;
+  final RoomProvider provider;
   final LiarsPokerService gameService;
   final Future<bool> Function() onExitRoom;
 
@@ -155,7 +159,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     _hasScheduledGameExit = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Navigator.of(context).maybePop();
+      exitGameRoute(context);
     });
   }
 
@@ -352,9 +356,11 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
             interruption: controller.interruption,
             currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
             isSubmitting: controller.isCommandInFlight,
+            failureMessage: controller.errorMessage,
             onVote: () async {
               await controller.voteToContinueInterruption();
             },
+            onFinishNow: controller.finishInterruptedGameNow,
             onExpired: controller.expireInterruption,
           ),
           // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
@@ -414,6 +420,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
         child: RepaintBoundary(
           child: LiarsPokerPhoneGameScreen(
             controller: controller,
+            provider: widget.provider,
             onExitRoom: _leaveRoom,
             // 탈락자가 진실/거짓 판정과 벌칙 결과를 보는 동안에도 나갈 수
             // 있도록 관전자용 공용 상단바를 유지합니다.
@@ -447,6 +454,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       key: const ValueKey('liars-poker-spectator'),
       players: survivorPlayers,
       table: controller.table,
+      provider: widget.provider,
       onExitRoom: _leaveRoom,
     );
   }

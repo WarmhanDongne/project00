@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:project00/core/error/user_error_message.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project00/core/diagnostics/crash_reporting.dart';
@@ -48,7 +48,13 @@ class MafiaController extends Notifier<MafiaGameState> {
           .watchPrivatePlayer(roomCode: roomCode, uid: uid)
           .listen(
             _handlePrivate,
-            onError: (Object error) => _setError('역할 정보 연결이 불안정합니다: $error'),
+            onError: (Object error) => _setError(
+              userErrorMessage(
+                    error,
+                    context: UserErrorContext.gameSubscription,
+                  ) ??
+                  UserErrorCopy.unstableConnection,
+            ),
           );
     }
     ref.onDispose(() {
@@ -365,23 +371,15 @@ class MafiaController extends Notifier<MafiaGameState> {
   /// 로그아웃·토큰 갱신 직후에도 잠깐 거부될 수 있어, 곧바로 끝내지 않고
   /// [_confirmMissingPublicGame]으로 한 번 더 읽어 확인합니다.
   void _handlePublicError(Object error) {
-    if (!_isPermissionDenied(error)) {
-      _setError('게임 연결이 불안정합니다: $error');
+    if (!isPermissionDenied(error)) {
+      _setError(
+        userErrorMessage(error, context: UserErrorContext.gameSubscription) ??
+            UserErrorCopy.unstableConnection,
+      );
       return;
     }
     _setError('게임을 읽을 수 없습니다. 방이 사라졌는지 확인합니다…');
     _confirmMissingPublicGame();
-  }
-
-  /// 읽기 권한이 거부된 오류인지입니다.
-  ///
-  /// RTDB는 규칙에 막히면 `permission-denied`(Dart 코드) 또는
-  /// `permission_denied`(원본 메시지)로 알려 줍니다. 둘 다 봅니다.
-  static bool _isPermissionDenied(Object error) {
-    final code = error is FirebaseException ? error.code : '';
-    if (code.replaceAll('_', '-') == 'permission-denied') return true;
-    return error.toString().contains('permission_denied') ||
-        error.toString().contains('permission-denied');
   }
 
   void _confirmMissingPublicGame() {
@@ -399,7 +397,7 @@ class MafiaController extends Notifier<MafiaGameState> {
       } catch (error) {
         if (!ref.mounted) return;
         // 다시 읽어도 거부되면 방이 없는 것이 확실합니다.
-        if (_isPermissionDenied(error)) {
+        if (isPermissionDenied(error)) {
           _finishForRemovedGame();
           return;
         }
@@ -624,11 +622,30 @@ class MafiaController extends Notifier<MafiaGameState> {
     );
   }
 
+  /// 태블릿 진행자가 중단된 참가자를 제외하고 게임을 계속합니다.
+  ///
+  /// 호출부는 마피아 태블릿 화면의 `GameInterruptionLayer.onContinue`입니다.
+  /// 라이어스 포커·파이널 콜과 같은 자리, 같은 문구입니다.
   Future<bool> excludeInterruptedPlayerAndContinue() {
     final current = interruption;
     if (current == null || !current.canContinue) return Future.value(false);
     return _run(
       () => service.interruption.excludeAndContinue(
+        roomCode: roomCode,
+        interruptionId: current.id,
+      ),
+    );
+  }
+
+  /// 남은 인원이 부족한 중단을 마감 전에 즉시 종료합니다.
+  ///
+  /// [excludeInterruptedPlayerAndContinue]의 거울상입니다. 계속할 수 있는
+  /// 중단은 투표·제외 흐름의 몫이므로 여기서 끝내지 않습니다.
+  Future<bool> finishInterruptedGameNow() {
+    final current = interruption;
+    if (current == null || current.canContinue) return Future.value(false);
+    return _run(
+      () => service.interruption.finishNow(
         roomCode: roomCode,
         interruptionId: current.id,
       ),

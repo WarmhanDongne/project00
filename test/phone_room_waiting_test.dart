@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -7,6 +8,7 @@ import 'package:project00/platform/home/gamelist/service/game_list_service.dart'
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -92,6 +94,7 @@ void main() {
     ) async {
       final provider = _provider()
         ..roomCode = 'ABCDE'
+        ..listenRoom()
         ..controllerPresenceState = ControllerPresenceState.reconnecting;
 
       await _pumpWaiting(tester, provider);
@@ -156,6 +159,99 @@ void main() {
       expect(find.byType(PhoneRoomWaiting), findsNothing);
       expect(provider.wasRoomClosed, isFalse);
       expect(provider.roomTerminationReason, isNull);
+      provider.dispose();
+    });
+
+    //=======================게임 종료 후 대기실 복귀 (P-02)==============================
+    // 게임 종료 경로 어디에도 selectedGame을 지우는 코드가 없다. 방이
+    // status = finished + selectedGame 잔류 상태로 남아 룰북과 `곧 시작합니다`가
+    // 영원히 표시됐고, 신규 참가(decideRoomJoin)와 재접속
+    // (isRestorablePlayerSessionState)이 모두 막혔다.
+
+    testWidgets('게임이 끝나면 룰북 대신 대기실로 돌아온다', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..selectedGameId = 'liars_poker'
+        ..selectedGame = _game('liars_poker', '라이어스 포커', rules: '규칙')
+        ..selectedGameLoadStatus = RoomDataLoadStatus.loaded
+        ..roomStatus = 'finished';
+
+      await _pumpWaiting(tester, provider);
+
+      expect(find.text('그룹이 선택한 게임'), findsNothing);
+      expect(find.text('곧 시작합니다'), findsNothing);
+      expect(find.text('그룹이 보유 중인 게임'), findsOneWidget);
+      provider.dispose();
+    });
+
+    testWidgets('아직 진행 중이면 선택 게임 화면을 유지한다', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..selectedGameId = 'liars_poker'
+        ..selectedGame = _game('liars_poker', '라이어스 포커', rules: '규칙')
+        ..selectedGameLoadStatus = RoomDataLoadStatus.loaded
+        ..roomStatus = 'seating';
+
+      await _pumpWaiting(tester, provider);
+
+      expect(find.text('그룹이 선택한 게임'), findsOneWidget);
+      expect(find.text('곧 시작합니다'), findsOneWidget);
+      provider.dispose();
+    });
+
+    testWidgets('종료된 방에서는 다음 게임을 기다린다고 알린다', (tester) async {
+      final provider = _provider()
+        ..roomCode = 'ABCDE'
+        ..roomStatus = 'finished';
+
+      await _pumpWaiting(tester, provider);
+
+      expect(find.text('게임이 끝났습니다. 태블릿에서 다음 게임을 고르는 중입니다'), findsOneWidget);
+      provider.dispose();
+    });
+
+    testWidgets('시스템 뒤로가기로는 방을 벗어나지 않는다', (tester) async {
+      // 뒤로가기로 화면만 닫히면 사용자는 로비에 있는데 서버에는 참가자로
+      // 남는다. 그 뒤 홈의 저장 세션 복원이 대기 화면을 다시 띄운다.
+      final provider = _provider()..roomCode = 'ABCDE';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: PlatformTheme.light(),
+          home: Builder(
+            builder: (context) => Scaffold(
+              key: const Key('lobby-root'),
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PhoneRoomWaiting(
+                      provider: provider,
+                      headerForTesting: const SizedBox(height: 72),
+                    ),
+                  ),
+                ),
+                child: const Text('대기실 열기'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('대기실 열기'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byType(PhoneRoomWaiting), findsOneWidget);
+
+      final waitingContext = tester.element(find.byType(PhoneRoomWaiting));
+      await Navigator.of(waitingContext).maybePop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(
+        find.byType(PhoneRoomWaiting),
+        findsOneWidget,
+        reason: '방에 남아야 합니다',
+      );
+      expect(find.textContaining('나가기를 눌러주세요'), findsOneWidget);
       provider.dispose();
     });
 
@@ -393,7 +489,24 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchGameStatus(String roomCode) => const Stream.empty();
 
   @override
-  Stream<bool> watchServerConnection() => const Stream.empty();
+  Stream<bool> watchServerConnection() => Stream.value(true);
+
+  @override
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
+      const Stream.empty();
+
+  @override
+  Stream<bool> watchRoomExists(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) =>
+      const Stream.empty();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

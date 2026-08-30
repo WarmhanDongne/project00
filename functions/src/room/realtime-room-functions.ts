@@ -25,6 +25,7 @@ import {
   GAME_PREPARATION_STARTED_MESSAGE,
   RoomJoinDecision,
 } from "./room-join-policy.js";
+import {decideSeatSave} from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
 
 const REGION = "asia-northeast3";
@@ -345,6 +346,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           gameStatus: currentRoom.game?.public?.status,
           playerExists: existingPlayer !== undefined,
           playerStatus: existingPlayer?.status,
+          reconnectOnly: preserveProfile,
         });
         const decisionError = joinDecisionError(decision);
         if (decisionError) {
@@ -531,54 +533,62 @@ export const saveRealtimePlayerSeatIndexes =
           requesterUid,
           request.data?.controllerSessionId,
         );
-        if (room.status !== "seating") {
+        const players = room.players;
+        const playerIds = players ? Object.keys(players) : [];
+        // 판정은 순수 함수 한곳에 모읍니다. 특히 명단 불일치(roster-changed)와
+        // 좌석 번호 오류(invalid-seats)를 나눠서 돌려주는 것이 요점입니다.
+        // 두 경우를 한 문구로 묶으면, 자리 배치 중 누가 나가서 생긴 실패까지
+        // "중복 없이 지정하라"로 보여 진행자가 무엇을 고쳐야 하는지 알 수
+        // 없었습니다(C-13).
+        const decision = decideSeatSave({
+          roomStatus: room.status,
+          playerIds,
+          seatEntries,
+          minPlayers: 2,
+          maxPlayers: DEFAULT_MAX_PLAYERS,
+        });
+        switch (decision) {
+        case "not-seating":
           rejection = new HttpsError(
             "failed-precondition",
             "자리 배치 중에만 플레이어 자리를 저장할 수 있습니다.",
           );
           return;
-        }
-        const players = room.players;
-        if (!players) {
+        case "no-players":
           rejection = new HttpsError(
             "failed-precondition",
             "참가 플레이어가 없습니다.",
           );
           return;
-        }
-        const playerIds = Object.keys(players);
-        if (playerIds.length < 2) {
+        case "too-few-players":
           rejection = new HttpsError(
             "failed-precondition",
             "게임을 시작하려면 최소 2명이 필요합니다.",
           );
           return;
-        }
-        if (playerIds.length > DEFAULT_MAX_PLAYERS) {
+        case "too-many-players":
           rejection = new HttpsError(
             "failed-precondition",
             `플레이어는 최대 ${DEFAULT_MAX_PLAYERS}명입니다.`,
           );
           return;
-        }
-
-        const seatPlayerIds = new Set(seatEntries.map(([uid]) => uid));
-        const validPlayers = seatEntries.length === playerIds.length &&
-          playerIds.every((uid) => seatPlayerIds.has(uid));
-        const seats = seatEntries.map(([, seatIndex]) => seatIndex);
-        const validSeats = seats.every(Number.isInteger) &&
-          new Set(seats).size === seats.length &&
-          seats.every((seat) => typeof seat === "number" &&
-            seat >= 0 && seat < playerIds.length);
-        if (!validPlayers || !validSeats) {
+        case "roster-changed":
+          rejection = new HttpsError(
+            "failed-precondition",
+            "참가자가 변경되어 자리 배치를 다시 진행해주세요.",
+          );
+          return;
+        case "invalid-seats":
           rejection = new HttpsError(
             "invalid-argument",
             "모든 플레이어의 자리는 중복 없이 지정해야 합니다.",
           );
           return;
+        case "save":
+          break;
         }
         for (const [playerId, seatIndex] of seatEntries) {
-          players[playerId].seatIndex = seatIndex;
+          players![playerId].seatIndex = seatIndex;
         }
         room.players = players;
         return room;

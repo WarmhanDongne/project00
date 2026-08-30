@@ -17,9 +17,12 @@ import 'package:project00/games/mafia/widgets/phone/result_sequence.dart';
 import 'package:project00/games/mafia/widgets/phone/top_bar.dart';
 import 'package:project00/games/shared/game_flow/game_flow_copy.dart';
 import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
+import 'package:project00/games/shared/game_flow/leave_failure_notice.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
 
 /// 마피아 휴대폰 화면의 진입점입니다.
 ///
@@ -29,11 +32,13 @@ class MafiaPhoneGame extends ConsumerStatefulWidget {
   const MafiaPhoneGame({
     super.key,
     required this.roomCode,
+    required this.provider,
     required this.gameService,
     required this.onExitRoom,
   });
 
   final String roomCode;
+  final RoomProvider provider;
   final MafiaService gameService;
   final Future<bool> Function() onExitRoom;
 
@@ -47,6 +52,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   String? initializationError;
   bool hasScheduledManualExit = false;
   bool _isLeavingRoom = false;
+  bool _isExitModalOpen = false;
   String? previousStatus;
 
   @override
@@ -98,7 +104,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       if (_isLeavingRoom || hasScheduledManualExit) return;
       hasScheduledManualExit = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted) exitGameRoute(context);
       });
       return;
     }
@@ -214,9 +220,11 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           interruption: game.interruption,
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
           onVote: () async {
             await game.voteToContinueInterruption();
           },
+          onFinishNow: game.finishInterruptedGameNow,
           onExpired: game.expireInterruption,
         ),
       ],
@@ -224,6 +232,10 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   }
 
   Future<void> _leaveRoom() async {
+    // 확인 모달보다 앞에서 판정합니다. 뒤에서 판정하면 빠른 두 번 탭에 모달이
+    // 두 개 쌓인 뒤 두 번째 확인이 삼켜집니다.
+    if (_isLeavingRoom || _isExitModalOpen) return;
+    _isExitModalOpen = true;
     final leave = await SharedPhoneExitModal.show(
       context,
       doorImage: const _ExitBadge(color: _mafiaExitColor),
@@ -234,8 +246,8 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       descriptionColor: Colors.black,
       primaryColor: _mafiaExitColor,
     );
+    _isExitModalOpen = false;
     if (leave != true || !mounted) return;
-    if (_isLeavingRoom) return;
     _isLeavingRoom = true;
     final left = await widget.onExitRoom();
     if (!mounted) return;
@@ -246,9 +258,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       return;
     }
     _isLeavingRoom = false;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+    showLeaveFailureNotice(context, widget.provider);
   }
 }
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 
@@ -69,6 +70,34 @@ void main() {
   });
 
   group('TabletRoomPanel Figma state flow', () {
+    testWidgets('연결이 끊긴 참가자를 명단에서 명확히 표시한다', (tester) async {
+      final service = _FakeRoomService();
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..players = const [
+          RoomPlayer(
+            uid: 'offline-player',
+            nickname: '학부생',
+            characterId: 'shark',
+            isConnected: false,
+            seatIndex: 0,
+            role: 'player',
+            status: 'active',
+            penaltyAttemptCount: 0,
+          ),
+        ];
+
+      await _pumpPanel(tester, provider);
+
+      expect(find.text('학부생'), findsOneWidget);
+      expect(find.text('연결 끊김'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('disconnected-player-offline-player')),
+        findsOneWidget,
+      );
+      provider.dispose();
+    });
+
     testWidgets('내보내기는 해당 참가자만 로딩하고 초기화를 실행하지 않는다', (tester) async {
       final removeCompleter = Completer<void>();
       final service = _FakeRoomService(removeCompleter: removeCompleter);
@@ -269,7 +298,7 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();
 
   @override
-  Stream<bool?> watchControllerConnected(String roomCode) =>
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
       const Stream.empty();
 
   @override
