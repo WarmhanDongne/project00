@@ -69,6 +69,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   Timer? _cooldownTimer;
   Uri? _queuedEmailLink;
   String? _lastHandledEmailLink;
+  bool _canPop = false;
+  bool _isLeaving = false;
 
   int get _cooldownSeconds {
     final until = _cooldownUntil;
@@ -340,16 +342,16 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<void> _requestBack() async {
-    if (_action != null) return;
-    if (_step == RegisterStep.emailInput) {
-      Navigator.of(context).maybePop();
-      return;
-    }
+    if (_action != null || _isLeaving) return;
     final shouldLeave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('회원가입을 중단할까요?'),
-        content: const Text('다시 로그인하면 완료하지 못한 단계부터 이어집니다.'),
+        content: Text(
+          _step == RegisterStep.emailInput
+              ? '입력한 내용은 저장되지 않습니다.'
+              : '다시 로그인하면 완료하지 못한 단계부터 이어집니다.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -363,17 +365,23 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
     );
     if (shouldLeave != true || !mounted) return;
-    await _pendingEmailStore.clear();
-    await FirebaseAuth.instance.signOut();
+    _isLeaving = true;
+    if (_step != RegisterStep.emailInput) {
+      await _pendingEmailStore.clear();
+      await FirebaseAuth.instance.signOut();
+    }
     if (!mounted) return;
     widget.onCancel?.call();
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    if (!mounted) return;
+    setState(() => _canPop = true);
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _canPop,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_requestBack());
       },

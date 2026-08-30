@@ -9,7 +9,7 @@ abstract final class GameFlowCopy {
   static const gameOpenFailed = '게임을 열 수 없습니다.';
   static const leaveFailed = '게임에서 퇴장하지 못했습니다.';
   static const waitingForGameData = '게임 준비를 기다리는 중...';
-  static const leaveGame = '나가기';
+  static const leaveGame = '게임과 그룹 나가기';
 
   //=======================인원 부족 즉시 종료 (C-11)==============================
   /// 남은 인원이 부족할 때 60초 카운트다운을 기다리지 않고 끝내는 버튼입니다.

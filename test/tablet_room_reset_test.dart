@@ -70,6 +70,34 @@ void main() {
   });
 
   group('TabletRoomPanel Figma state flow', () {
+    testWidgets('연결이 끊긴 참가자를 명단에서 명확히 표시한다', (tester) async {
+      final service = _FakeRoomService();
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..players = const [
+          RoomPlayer(
+            uid: 'offline-player',
+            nickname: '학부생',
+            characterId: 'shark',
+            isConnected: false,
+            seatIndex: 0,
+            role: 'player',
+            status: 'active',
+            penaltyAttemptCount: 0,
+          ),
+        ];
+
+      await _pumpPanel(tester, provider);
+
+      expect(find.text('학부생'), findsOneWidget);
+      expect(find.text('연결 끊김'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('disconnected-player-offline-player')),
+        findsOneWidget,
+      );
+      provider.dispose();
+    });
+
     testWidgets('내보내기는 해당 참가자만 로딩하고 초기화를 실행하지 않는다', (tester) async {
       final removeCompleter = Completer<void>();
       final service = _FakeRoomService(removeCompleter: removeCompleter);

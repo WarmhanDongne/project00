@@ -10,7 +10,7 @@ import 'package:project00/core/diagnostics/dev_error_log.dart';
 ///
 /// | 빌드 | 하는 일 |
 /// |---|---|
-/// | 디버그(개발) | 콘솔에 그대로 찍고, **화면에서 볼 수 있게** [DevErrorLog]에 쌓습니다. Crashlytics로는 보내지 않습니다 |
+/// | 디버그(개발) | 개인정보 없는 구조화 로그를 콘솔·ADB에 남기고 [DevErrorLog]에 쌓습니다. 화면·Crashlytics에는 보내지 않습니다 |
 /// | 릴리스 | Crashlytics로 보냅니다 |
 ///
 /// 받는 경로는 세 가지입니다.
@@ -29,10 +29,7 @@ abstract final class CrashReporting {
     await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
 
     // 1. 위젯·프레임워크 오류
-    final previousOnError = FlutterError.onError;
     FlutterError.onError = (details) {
-      // 콘솔 출력은 그대로 남깁니다(기존 동작을 없애지 않습니다).
-      previousOnError?.call(details);
       DevErrorLog.instance.add(
         error: details.exceptionAsString(),
         stack: details.stack,
@@ -51,7 +48,7 @@ abstract final class CrashReporting {
         time: DateTime.now(),
       );
       if (kDebugMode) {
-        debugPrint('잡히지 않은 비동기 오류: $error\n$stack');
+        // DevErrorLog.add가 원문 없이 구조화된 한 줄을 출력합니다.
       } else {
         unawaited(crashlytics.recordError(error, stack, fatal: true));
       }
@@ -85,7 +82,7 @@ abstract final class CrashReporting {
       time: DateTime.now(),
     );
     if (kDebugMode) {
-      debugPrint('오류(${reason ?? '직접 기록'}): $error');
+      // DevErrorLog.add가 원문 없이 구조화된 한 줄을 출력합니다.
       return;
     }
     unawaited(

@@ -42,7 +42,12 @@ void main() {
     final art = tester.getSize(find.byKey(const Key('exit-art')));
     expect(art.height, 96);
     expect(art.width, lessThanOrEqualTo(320));
-    expect(find.text('게임에서 나가시겠습니까?'), findsOneWidget);
+    expect(find.text('게임과 그룹에서 나갈까요?'), findsOneWidget);
+    expect(
+      find.text('현재 게임을 종료하고 그룹에서도 나갑니다. 다시 참여하려면 방 코드를 입력해야 합니다.'),
+      findsOneWidget,
+    );
+    expect(find.text('계속 참여'), findsOneWidget);
     expect(find.text('나가기'), findsOneWidget);
   });
 }

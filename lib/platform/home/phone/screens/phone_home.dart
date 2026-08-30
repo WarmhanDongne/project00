@@ -7,6 +7,7 @@ import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
+import 'package:project00/platform/home/phone/widgets/phone_owned_games_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -164,19 +165,7 @@ class _PhoneHomeState extends State<PhoneHome> {
             const PhoneHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: Row(
-                children: [
-                  const Text(
-                    '보유 중인 게임',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '모바일에서는 방에 참여해 플레이합니다.',
-                    style: TextStyle(color: colors.textMuted, fontSize: 10),
-                  ),
-                ],
-              ),
+              child: const PhoneOwnedGamesHeader(),
             ),
             PhoneOwnGameList(games: _games),
             _buildJoinBar(),

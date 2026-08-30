@@ -75,6 +75,36 @@ void main() {
 
     expect(service.clearedGameFor, ['ABCDE']);
   });
+
+  test('태블릿 재실행 홈은 끝난 게임과 방이 동기화되면 정리한다', () async {
+    final (room, service) = provider(roomCode: 'ABCDE', roomStatus: 'finished');
+
+    final restored = await restoreFinishedRoomOnControllerHome(
+      provider: room,
+      gameStatus: 'finished',
+      isControllerHomeCurrent: true,
+      isOpeningGame: false,
+    );
+
+    expect(restored, isTrue);
+    expect(service.clearedGameFor, ['ABCDE']);
+  });
+
+  test('결과 화면이 열려 있거나 방 상태 동기화 전에는 정리하지 않는다', () async {
+    final (room, service) = provider(roomCode: 'ABCDE', roomStatus: 'playing');
+
+    for (final isOpeningGame in [false, true]) {
+      final restored = await restoreFinishedRoomOnControllerHome(
+        provider: room,
+        gameStatus: 'finished',
+        isControllerHomeCurrent: true,
+        isOpeningGame: isOpeningGame,
+      );
+      expect(restored, isFalse);
+    }
+
+    expect(service.clearedGameFor, isEmpty);
+  });
 }
 
 /// 선택 해제 호출만 기록합니다. 나머지가 불리면 바로 알 수 있게 던집니다.

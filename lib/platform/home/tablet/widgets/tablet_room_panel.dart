@@ -476,11 +476,30 @@ class _PlayerTileState extends State<_PlayerTile> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              player.nickname,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  player.nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                  ),
+                ),
+                if (!player.isConnected)
+                  Text(
+                    '연결 끊김',
+                    key: ValueKey('disconnected-player-${player.uid}'),
+                    style: TextStyle(
+                      color: colors.danger,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
             ),
           ),
           if (_isNew)

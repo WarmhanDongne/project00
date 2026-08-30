@@ -20,6 +20,7 @@ import 'package:project00/games/shared/game_flow/game_screen_phase.dart';
 import 'package:project00/games/shared/game_flow/leave_failure_notice.dart';
 import 'package:project00/games/shared/game_flow/phone_game_shell.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -103,7 +104,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       if (_isLeavingRoom || hasScheduledManualExit) return;
       hasScheduledManualExit = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted) exitGameRoute(context);
       });
       return;
     }

@@ -4,6 +4,7 @@ import {getDatabase} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
 
 import {InterruptibleGameState} from "./types.js";
+import {runPrimedTransaction} from "../room/room-transaction.js";
 
 // Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수
 // 있습니다. 자세한 배경은 functions.ts 상단 주석을 보세요.
@@ -23,14 +24,13 @@ export type ControllerPauseOutcome = "paused" | "resumed" | "ignored";
  *
  * **왜 별도 슬롯인가.** 참가자 단절과 태블릿 단절은 동시에 일어날 수 있습니다.
  * `game.server.interruption`을 공유하면 나중에 온 쪽이 앞의 남은 시간을 덮어써
- * 복구할 값이 사라집니다. 각자 자기가 보관한 것만 되살립니다.
+ * 복구할 값이 사라집니다. 먼저 복구하는 쪽은 남은 중단에 시간을 넘깁니다.
  *
  * 두 중단이 겹쳤을 때의 동작:
  * - 참가자 중단이 먼저면 `turnDeadlineAt`이 이미 null이라 이 함수는 null을
- *   보관하고, 복구할 때도 null을 씁니다. 진짜 남은 시간은 참가자 중단이 들고
- *   있다가 그쪽 복구에서 되살립니다.
+ *   보관합니다. 진짜 남은 시간은 참가자 중단이 들고 있습니다.
  * - 태블릿 중단이 먼저면 반대로 참가자 중단이 null을 보관합니다.
- * 어느 순서든 남은 시간은 정확히 한 곳에만 있습니다.
+ * 마지막 중단이 해소될 때만 보존한 시간으로 deadline을 되살립니다.
  *
  * @param game 게임 상태입니다. 트랜잭션 안에서 직접 수정합니다.
  * @param connected 태블릿의 새 접속 상태입니다.
@@ -50,6 +50,7 @@ export function applyControllerPauseToTurnTimer(
     if (saved) return "ignored";
     const deadline = finiteOrNull(game.public.turnDeadlineAt);
     game.server.controllerPause = {
+      startedAt: now,
       previousTurnRemainingMs: deadline === null ?
         null :
         Math.max(0, deadline - now),
@@ -62,7 +63,15 @@ export function applyControllerPauseToTurnTimer(
 
   if (!saved) return "ignored";
   const remaining = finiteOrNull(saved.previousTurnRemainingMs);
-  game.public.turnDeadlineAt = remaining === null ? null : now + remaining;
+  const interruption = game.server.interruption;
+  if (game.public.interruption) {
+    if (interruption && remaining !== null) {
+      interruption.previousTurnRemainingMs = remaining;
+    }
+    game.public.turnDeadlineAt = null;
+  } else {
+    game.public.turnDeadlineAt = remaining === null ? null : now + remaining;
+  }
   delete game.server.controllerPause;
   game.public.revision += 1;
   game.public.updatedAt = now;
@@ -82,6 +91,17 @@ function finiteOrNull(value: unknown): number | null {
 
 interface ControllerPauseRoom {
   game?: InterruptibleGameState;
+  controllerPresence?: {connected?: boolean};
+}
+
+/** 늦은 접속 이벤트가 현재 단절/복구 상태를 뒤집지 않도록 최신 값을 대조합니다. */
+export function reconcileControllerConnection(
+  room: ControllerPauseRoom,
+  connected: boolean,
+  now: number,
+): ControllerPauseOutcome {
+  if (room.controllerPresence?.connected !== connected) return "ignored";
+  return applyControllerPauseToTurnTimer(room.game, connected, now);
 }
 
 /** 태블릿 접속 표시 변화를 서버 턴 마감 정지·복원으로 옮깁니다. */
@@ -96,11 +116,11 @@ export const game_common_controller_presence_changed = onValueWritten(
     if (wasConnected === isConnected) return;
 
     const roomCode = event.params.roomCode;
-    await getDatabase().ref(`rooms/${roomCode}`).transaction((raw) => {
-      if (raw === null) return raw;
+    await runPrimedTransaction(getDatabase().ref(`rooms/${roomCode}`), (raw) => {
+      if (raw === null) return;
       const room = raw as ControllerPauseRoom;
-      const outcome = applyControllerPauseToTurnTimer(
-        room.game,
+      const outcome = reconcileControllerConnection(
+        room,
         isConnected,
         Date.now(),
       );

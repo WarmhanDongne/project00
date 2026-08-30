@@ -116,6 +116,7 @@ export {
   game_common_interruption_exclude_player,
   game_common_interruption_expire,
   game_common_interruption_on_connection_changed,
+  game_common_interruption_report_stale_player,
   game_common_interruption_vote_to_continue,
 } from "./game-interruption/functions.js";
 

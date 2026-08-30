@@ -38,6 +38,9 @@ export interface InterruptiblePublicGameState {
  * 덮어써 복구할 값이 사라집니다.
  */
 export interface ServerControllerPause {
+  // null만 든 객체는 RTDB에서 사라지므로 중단 자체를 보존합니다.
+  // 이전 저장 데이터와의 호환을 위해 읽는 쪽에서는 선택 필드입니다.
+  startedAt?: number;
   previousTurnRemainingMs: number | null;
 }
 

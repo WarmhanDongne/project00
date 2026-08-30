@@ -241,17 +241,6 @@ class PlatformAuthShell extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
-            if (showBack)
-              Positioned(
-                left: 8,
-                top: 8,
-                child: IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed:
-                      onBackPressed ?? () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back, size: 18),
-                ),
-              ),
             // 남는 세로 공간이 있으면 가운데에 두고, 내용이 화면보다 길거나
             // 키보드가 올라오면 위에서부터 스크롤합니다.
             LayoutBuilder(
@@ -280,6 +269,19 @@ class PlatformAuthShell extends StatelessWidget {
                 );
               },
             ),
+            // Stack에서 나중에 그려야 스크롤 영역의 투명한 RenderBox가 버튼의
+            // hit test를 가로채지 않습니다.
+            if (showBack)
+              Positioned(
+                left: 8,
+                top: 8,
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed:
+                      onBackPressed ?? () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                ),
+              ),
           ],
         ),
       ),

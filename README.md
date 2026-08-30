@@ -1,14 +1,15 @@
-# Project 00
+# Mosigame
 
 여러 미니게임을 하나의 앱에서 제공하기 위한 Flutter 프로젝트입니다. 공통 플랫폼 기능과 게임별 코드를 분리하여, 새 게임을 추가해도 기존 게임과 앱 기능에 미치는 영향을 줄이는 구조입니다.
 
 ## 시작하기
 
-```bash
-flutter pub get
-cp .env.example .env.dev
-flutter run
-```
+전체 문서 목차는 [`docs/README.md`](docs/README.md)에 있습니다. 사람이 읽는 전체
+설치·검증 안내는
+[`Development setup`](docs/development/DEVELOPMENT_SETUP.md)을 따릅니다. Codex에 환경 준비를
+맡길 때는 [`Agent setup`](docs/development/AGENT_SETUP.md)을 실행 계약으로 사용합니다. 현재 상태와
+후속 계획은 [`Development environment plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md)에
+계속 갱신합니다.
 
 Firebase Functions를 개발할 때는 Node.js 22를 사용합니다.
 
@@ -21,58 +22,84 @@ npm run build
 npm run serve
 ```
 
-Functions 배포는 프로젝트 루트에서 다음 명령으로 실행합니다.
+Functions 배포는 사용자 승인을 받은 뒤 프로젝트 루트에서 다음 명령으로 실행합니다.
 
 ```bash
 ./functions/node_modules/.bin/firebase deploy --only functions
 ```
 
-현재 기본 HTTP 함수는 `healthCheck`이며 기본 리전은 서울 리전인 `asia-northeast3`입니다.
-
 Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 
 - Android: `android/app/google-services.json`
 - iOS: `ios/Runner/GoogleService-Info.plist`
-- Flutter 설정: `lib/firebase_options.dart`
+- Flutter 설정: `lib/firebase/firebase_options.dart`
 
-환경별 값은 `.env.dev`에 작성합니다. `.env.dev`는 Git에 포함되지 않으므로 팀원마다 `.env.example`을 복사해 사용합니다. API 키처럼 실제 비밀값은 Flutter 앱 번들에 넣지 말고 서버에서 관리해야 합니다.
+`.env.example`은 local override 형식의 예시지만 현재 앱은 `.env.dev`를 필수로
+읽지 않습니다. local config와 secret의 현재 계약은
+`docs/development/DEVELOPMENT_SETUP.md`를 따르며, 실제 비밀값은 Flutter 앱 번들에
+넣지 않습니다.
+
+수동 테스트 중 production Realtime Database 상태를 제한적으로 확인해야 한다면
+[`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
+규칙을 따릅니다. 이 파일럿은 Project CLI와 자동화된 테스트를 대체하지 않습니다.
+
+Android 1~3기기 Firebase Emulator 자동화는 조사 후 보류했습니다. 구현·검증 결과와
+재개 조건은 [`Emulator pilot record`](docs/operations/EMULATOR_PILOT.md)에 남겨 두었습니다.
 
 ## 자주 사용하는 명령어
 
+Windows에서 validation, 자동화 또는 제한된 실행 환경을 사용할 때:
+
+```powershell
+.\tool\invoke_mosigame.ps1 doctor
+.\tool\invoke_mosigame.ps1 test session
+.\tool\invoke_mosigame.ps1 test auth
+.\tool\invoke_mosigame.ps1 validate --full
+```
+
+macOS/Linux에서:
+
 ```bash
-dart format lib test
-flutter analyze
-flutter test
+dart run :mosigame doctor
+dart run :mosigame test session
+dart run :mosigame test auth
+dart run :mosigame validate --full
+```
+
+앱 실행은 모든 플랫폼에서 다음 명령을 사용합니다.
+
+```bash
 flutter run
 ```
+
+Targeted suite는 관련 작업 중 빠른 피드백용이며, 완료 전에는 Project CLI의 FULL
+validation을 실행합니다. Windows guard와 macOS/Linux raw CLI의 사용 조건은
+[`PROJECT_CLI.md`](docs/engineering/PROJECT_CLI.md)를 참고합니다.
 
 ## 개발 규칙
 
 - 앱 전체에서 사용하는 값과 도구는 `lib/core`에 둡니다.
 - 로그인, 사용자, 스토어, Firebase 같은 앱 플랫폼 기능은 `lib/platform`에 둡니다.
-- 두 개 이상의 기능이나 게임이 재사용하는 UI와 게임 기반 기능은 `lib/shared`에 둡니다.
+- 두 개 이상의 게임이 재사용하는 UI와 게임 기반 기능은 `lib/games/shared`에 둡니다.
 - 특정 게임에서만 쓰는 코드는 `lib/games/<game_id>`에 둡니다.
 - 특정 화면에서만 쓰는 위젯은 그 기능의 `widgets`에 둡니다. 여러 영역에서 쓰이기 시작하면 `shared`로 이동합니다.
 - 파일명은 `snake_case`, 클래스명은 `PascalCase`, 변수와 함수명은 `camelCase`를 사용합니다.
-- 기능 추가 후 `flutter analyze`와 `flutter test`를 통과시킵니다.
+- 기능 추가 후 Mosigame Project CLI의 관련 targeted suite와 FULL validation을
+  통과시킵니다.
 
-저장소 안의 강제 규칙은 [`AGENTS.md`](AGENTS.md)에 있습니다.
-전체 디렉터리 설명서(`PROJECT_STRUCTURE.md`)는 저장소에 포함되지 않습니다.
+저장소 안내는 [`AGENTS.md`](AGENTS.md), 공통 규칙은
+[`Engineering Contract`](docs/engineering/ENGINEERING_CONTRACT.md), 구조 설명은
+[`Architecture Reference`](docs/engineering/ARCHITECTURE.md)에 있습니다.
 
 ## 현재 구현 상태
 
-현재는 UI를 직접 설계하기 위한 빈 앱 상태입니다. `screens`, `widgets`, `router`, `theme` 폴더는 위치만 유지하며 기본 구현을 제공하지 않습니다.
-
-- 완료: Firebase Core 초기화와 빈 `MaterialApp` 실행
-- 완료: Firebase Realtime Database 패키지와 공용 인스턴스
-- 골격: 인증, Firestore, Storage, Functions, Messaging 서비스 인터페이스
-- 골격: 사용자 저장소, 매치메이킹, 실시간 게임 룸, Liar's Poker 상태 관리
-- 미구현: 화면 UI, 공용 위젯, 테마, 라우팅
-- 추후 작업: 실제 인증 흐름, 데이터 직렬화, Firebase 보안 규칙, 에러/로딩 처리, 다국어 코드 생성 및 화면 연결
+현재 앱에는 인증·온보딩, 방 생성/참가와 session lifecycle, 휴대폰·태블릿 플랫폼
+화면이 구현되어 있습니다. 게임은 `GameRegistry`를 통해 라이어스포커, 파이널콜,
+마피아를 등록하며, 게임 command와 중요한 상태 전이는 Firebase Functions가
+server-authoritative하게 처리합니다. 정확한 현재 contract는 코드와 테스트를
+우선하고, 구조 변경 전에는 Architecture Reference를 확인합니다.
 
 ## 자주 발생하는 문제 해결 (Troubleshooting)
 
 ### 안드로이드 에뮬레이터에서 앱 실행 시 즉시 튕기는 현상 (Impeller 오류)
 Flutter 3.22+ 버전부터 안드로이드에 새로운 그래픽 렌더링 엔진인 **Impeller**가 기본 적용되었습니다. 하지만 윈도우 환경의 일부 안드로이드 에뮬레이터(가상 기기)에서는 그래픽 드라이버 호환성 문제로 인해 `Requested texture size (1, 1) exceeds maximum supported size of (0, 0)` 에러와 함께 앱이 즉시 강제 종료되는 문제가 있습니다.
-
-이 프로젝트는 에뮬레이터 개발 환경에서의 안정성을 위해 `android/app/src/main/AndroidManifest.xml`에 `<meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />` 옵션을 주입하여 기존의 안정적인 Skia 엔진을 강제로 사용하도록 조치해 두었습니다.

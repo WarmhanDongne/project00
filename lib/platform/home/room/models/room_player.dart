@@ -11,6 +11,7 @@ class RoomPlayer {
     required this.status,
     this.joinedAt,
     this.updatedAt,
+    this.lastSeen,
     required this.penaltyAttemptCount,
   });
 
@@ -27,6 +28,7 @@ class RoomPlayer {
       status: json['status'] as String? ?? 'active',
       joinedAt: _dateTimeFromTimestamp(json['joinedAt']),
       updatedAt: _dateTimeFromTimestamp(json['updatedAt']),
+      lastSeen: _timestampMillis(json['lastSeen']),
       penaltyAttemptCount: json['penaltyAttemptCount'] as int? ?? 0,
     );
   }
@@ -40,6 +42,7 @@ class RoomPlayer {
   final String status;
   final DateTime? joinedAt;
   final DateTime? updatedAt;
+  final int? lastSeen;
   final int penaltyAttemptCount;
 
   Map<String, dynamic> toJson() => {
@@ -52,6 +55,7 @@ class RoomPlayer {
     'status': status,
     if (joinedAt != null) 'joinedAt': joinedAt!.millisecondsSinceEpoch,
     if (updatedAt != null) 'updatedAt': updatedAt!.millisecondsSinceEpoch,
+    if (lastSeen != null) 'lastSeen': lastSeen,
     'penaltyAttemptCount': penaltyAttemptCount,
   };
 
@@ -65,6 +69,8 @@ class RoomPlayer {
     return remaining > Duration.zero ? remaining : Duration.zero;
   }
 }
+
+int? _timestampMillis(Object? value) => value is num ? value.toInt() : null;
 
 DateTime? _dateTimeFromTimestamp(Object? value) {
   if (value is! num) return null;

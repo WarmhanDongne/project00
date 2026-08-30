@@ -294,6 +294,23 @@ class RoomService {
         .call(controllerCommandData(roomCode, {'playerUid': userUid}));
   }
 
+  /// 태블릿이 발견한 stale 후보를 서버가 최신 heartbeat와 함께 재검증합니다.
+  /// 정상 heartbeat에서는 호출하지 않으며, 실제 후보 한 건에만 호출합니다.
+  Future<void> reportStalePlayer({
+    required String roomCode,
+    required String playerUid,
+    required int observedLastSeen,
+  }) async {
+    await _functions
+        .httpsCallable('game_common_interruption_report_stale_player')
+        .call(
+          controllerCommandData(roomCode, {
+            'playerUid': playerUid,
+            'observedLastSeen': observedLastSeen,
+          }),
+        );
+  }
+
   // ========================================================== phone ==================================================================
 
   /// 실제 플레이어 노드를 만들기 전에 방 코드와 현재 입장 가능 상태만 검증합니다.

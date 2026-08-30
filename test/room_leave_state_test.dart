@@ -231,6 +231,95 @@ void main() {
     await _flushEvents();
     expect(provider.errorMessage, isNull);
   });
+
+  test('재연결 직후 빈 참가자 캐시는 서버의 내 노드가 있으면 강퇴로 처리하지 않는다', () async {
+    final service = _LeaveRoomService();
+    final provider = _provider(service)..listenRoom();
+    addTearDown(() async {
+      provider.dispose();
+      await service.dispose();
+    });
+
+    service.serverConnection.add(true);
+    service.players.add(const [_player]);
+    await _flushEvents();
+    expect(provider.roomCode, 'ABCDE');
+
+    // 첫 복구와 두 번째 복구 모두 빈 캐시가 먼저 와도 세션을 보존해야 합니다.
+    for (var attempt = 0; attempt < 2; attempt += 1) {
+      service.players.add(const []);
+      await _flushEvents();
+      expect(provider.roomCode, 'ABCDE');
+      expect(provider.wasKicked, isFalse);
+      service.players.add(const [_player]);
+      await _flushEvents();
+    }
+    expect(service.activePlayerNodeReads, 2);
+  });
+
+  test('서버에서도 내 참가자 노드가 없을 때만 강퇴로 확정한다', () async {
+    final service = _LeaveRoomService()..activePlayerNodeResult = false;
+    final provider = _provider(service)..listenRoom();
+    addTearDown(() async {
+      provider.dispose();
+      await service.dispose();
+    });
+
+    service.serverConnection.add(true);
+    service.players.add(const [_player]);
+    await _flushEvents();
+    service.players.add(const []);
+    await _flushEvents();
+
+    expect(service.activePlayerNodeReads, 1);
+    expect(provider.wasKicked, isTrue);
+    expect(provider.roomCode, isNull);
+  });
+
+  test('첫 복구 진행 중 재단절하면 새 연결에서 복구를 한 번 더 수행한다', () async {
+    final service = _LeaveRoomService()..restoreGate = Completer<void>();
+    final provider = _provider(service)..listenRoom();
+    addTearDown(() async {
+      provider.dispose();
+      await service.dispose();
+    });
+    service.serverConnection.add(true);
+    service.players.add(const [_player]);
+    await _flushEvents();
+    service.serverConnection.add(false);
+    service.serverConnection.add(true);
+    await _flushEvents();
+    expect(service.restoreCalls, 1);
+    service.serverConnection.add(false);
+    service.serverConnection.add(true);
+    await _flushEvents();
+    service.restoreGate!.complete();
+    await _flushEvents();
+    expect(service.restoreCalls, 2);
+    expect(provider.roomCode, 'ABCDE');
+    expect(provider.wasRoomClosed, isFalse);
+  });
+
+  test('퇴장보다 늦은 복구 완료는 heartbeat와 로컬 세션을 되살리지 않는다', () async {
+    final service = _LeaveRoomService()..restoreGate = Completer<void>();
+    final provider = _provider(service)..listenRoom();
+    addTearDown(() async {
+      provider.dispose();
+      await service.dispose();
+    });
+    service.serverConnection.add(true);
+    service.players.add(const [_player]);
+    await _flushEvents();
+    final recovering = provider.retryConnectionRecovery();
+    await _flushEvents();
+    expect(await provider.leaveRoom(), isTrue);
+    final heartbeats = service.heartbeatCalls;
+    service.restoreGate!.complete();
+    await recovering;
+    expect(provider.roomCode, isNull);
+    expect(service.heartbeatCalls, heartbeats);
+    expect(await PlayerRoomSessionStore.instance.load(), isNull);
+  });
 }
 
 RoomProvider _provider(_LeaveRoomService service) => RoomProvider(
@@ -284,6 +373,8 @@ class _LeaveRoomService implements RoomService {
 
   /// 완료 시점을 시험이 통제하기 위한 게이트입니다.
   Completer<void>? gate;
+  Completer<void>? restoreGate;
+  int heartbeatCalls = 0;
 
   bool roomExistsResult = true;
   bool roomExistsThrows = false;
@@ -293,6 +384,7 @@ class _LeaveRoomService implements RoomService {
   int roomExistenceReads = 0;
   int restoreCalls = 0;
   int existingPlayerReads = 0;
+  int activePlayerNodeReads = 0;
 
   Future<void> _leave() async {
     leaveCalls += 1;
@@ -319,8 +411,10 @@ class _LeaveRoomService implements RoomService {
   }
 
   @override
-  Future<bool> hasActivePlayerNode(String roomCode) async =>
-      activePlayerNodeResult;
+  Future<bool> hasActivePlayerNode(String roomCode) async {
+    activePlayerNodeReads += 1;
+    return activePlayerNodeResult;
+  }
 
   @override
   Future<RestorableSession> restorableSession(String roomCode) async {
@@ -335,10 +429,13 @@ class _LeaveRoomService implements RoomService {
     required String characterId,
   }) async {
     restoreCalls += 1;
+    if (restoreCalls == 1 && restoreGate != null) await restoreGate!.future;
   }
 
   @override
-  Future<void> heartbeatPlayer(String roomCode) async {}
+  Future<void> heartbeatPlayer(String roomCode) async {
+    heartbeatCalls += 1;
+  }
 
   @override
   Stream<bool> watchServerConnection() => serverConnection.stream;

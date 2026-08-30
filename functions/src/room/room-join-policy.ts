@@ -14,6 +14,7 @@ type RoomJoinState = {
   gameStatus?: unknown;
   playerExists: boolean;
   playerStatus?: unknown;
+  reconnectOnly?: boolean;
 };
 
 /**
@@ -36,6 +37,9 @@ export function decideRoomJoin(state: RoomJoinState): RoomJoinDecision {
       "reconnect" :
       "inactive-player";
   }
+
+  // 자동 복구는 퇴장 이후 새 참가자로 등록할 권한이 없습니다.
+  if (state.reconnectOnly) return "inactive-player";
 
   if (roomStatus !== "waiting" || state.gameStatus === "playing") {
     return "game-preparing";

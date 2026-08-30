@@ -2,6 +2,7 @@
 
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
+import {logger} from "firebase-functions";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
@@ -86,6 +87,8 @@ interface RealtimeRoom extends ControllerSessionRoom {
   game?: {public?: {status?: string}};
   retainUntil?: number;
   cleanupAt?: number;
+  finishedAt?: number;
+  updatedAt?: number;
 }
 
 interface RealtimeRoomPlayer {
@@ -487,6 +490,30 @@ export const leaveRealtimeRoom = onCall<RoomData>(
   },
 );
 
+/** 늦은 게임 이벤트가 대기실·닫힌 방을 되살리지 않도록 최신 게임과 대조합니다. */
+export function synchronizeRoomGameStatus(
+  room: RealtimeRoom | null,
+  status: unknown,
+  now: number,
+): RealtimeRoom | undefined {
+  if (!room || room.status === "closed" ||
+      (status !== "playing" && status !== "finished") ||
+      room.game?.public?.status !== status) return;
+  if (status === "finished") {
+    if (room.status === "finished" && typeof room.retainUntil === "number") return;
+    room.finishedAt = now;
+    room.retainUntil = now + FINISHED_ROOM_RETENTION_MS;
+    room.cleanupAt = room.retainUntil;
+  } else {
+    delete room.finishedAt;
+    delete room.retainUntil;
+    delete room.cleanupAt;
+  }
+  room.status = status;
+  room.updatedAt = now;
+  return room;
+}
+
 /** 게임 public status를 방 수명주기 status와 분리된 필드로 미러링합니다. */
 export const syncRealtimeRoomGameStatus = onValueWritten(
   {
@@ -496,33 +523,35 @@ export const syncRealtimeRoomGameStatus = onValueWritten(
   async (event) => {
     const status = event.data.after.val();
     if (status !== "playing" && status !== "finished") return;
-    const now = Date.now();
-    const updates: Record<string, unknown> = {
-      status,
-      updatedAt: now,
-    };
-    if (status === "finished") {
-      updates.finishedAt = now;
-      updates.retainUntil = now + FINISHED_ROOM_RETENTION_MS;
-      updates.cleanupAt = now + FINISHED_ROOM_RETENTION_MS;
-    } else {
-      updates.finishedAt = null;
-      updates.retainUntil = null;
-    }
-    await event.data.after.ref.parent?.parent?.parent?.update(updates);
+    const roomRef = getDatabase().ref(`rooms/${event.params.roomCode}`);
+    await runPrimedTransaction(roomRef, (raw) =>
+      synchronizeRoomGameStatus(raw as RealtimeRoom | null, status, Date.now()),
+    );
   },
 );
 
 export function shouldDeleteRoom(room: RealtimeRoom, now: number): boolean {
   if (room.status === "closed") return (room.cleanupAt ?? 0) <= now;
-  if (room.status === "finished") return (room.retainUntil ?? Infinity) <= now;
   const lastSeen = room.controllerPresence?.lastSeen ?? 0;
+  if (room.status === "finished") {
+    if (typeof room.retainUntil === "number") return room.retainUntil <= now;
+    // retainUntil 도입 전에 종료된 방도 무기한 남기지 않습니다. 단, 실제
+    // heartbeat 시각이 없는 방은 나이를 증명할 수 없으므로 보수적으로 보존합니다.
+    return lastSeen > 0 && lastSeen + FINISHED_ROOM_RETENTION_MS <= now;
+  }
   // 진행 중인 판은 대기 방보다 오래 붙잡습니다. 태블릿이 3분 백그라운드에
   // 있었다는 이유로 게임이 통째로 사라지는 것이 '그룹 폭파'의 직접 원인이었습니다.
   const grace = room.status === "playing" ?
     PLAYING_ROOM_RETENTION_MS :
     CONTROLLER_RECONNECT_GRACE_MS;
   return lastSeen + grace <= now;
+}
+
+/** 서로 다른 정리 인덱스에서 찾은 후보를 순서를 유지하며 중복 제거합니다. */
+export function mergeCleanupCandidateRoomCodes(
+  ...candidateGroups: string[][]
+): string[] {
+  return [...new Set(candidateGroups.flat())];
 }
 
 /** heartbeat가 사라진 오래된 방을 서버가 최종적으로 정리합니다. */
@@ -536,40 +565,84 @@ export const cleanupStaleRealtimeRooms = onSchedule(
     const database = getDatabase();
     const now = Date.now();
     const staleBefore = now - CONTROLLER_RECONNECT_GRACE_MS;
-    const roomsSnapshot = await database
-      .ref("rooms")
-      .orderByChild("controllerPresence/lastSeen")
-      .endAt(staleBefore)
-      .limitToFirst(500)
-      .get();
-    if (!roomsSnapshot.exists()) return;
+    const roomsRef = database.ref("rooms");
+    const [expiredCleanupSnapshot, stalePresenceSnapshot] = await Promise.all([
+      roomsRef
+        .orderByChild("cleanupAt")
+        .startAt(0)
+        .endAt(now)
+        .limitToFirst(500)
+        .get(),
+      roomsRef
+        .orderByChild("controllerPresence/lastSeen")
+        .endAt(staleBefore)
+        .limitToFirst(500)
+        .get(),
+    ]);
 
-    const cleanupJobs: Promise<unknown>[] = [];
-    roomsSnapshot.forEach((child) => {
-      const roomCode = child.key;
-      if (!roomCode) return;
-      cleanupJobs.push(database.ref(`rooms/${roomCode}`).transaction((raw) => {
-        if (raw === null) return;
-        const room = raw as RealtimeRoom;
-        if (!shouldDeleteRoom(room, now)) return;
-        return null;
-      }).then(async (result) => {
-        if (!result.committed || result.snapshot.exists()) return;
-        const deletedRoom = child.val() as RealtimeRoom;
-        const controllerUid = deletedRoom.controllerUid;
-        if (!controllerUid) return;
-        const mappingRef = database.ref(`controllerRooms/${controllerUid}`);
-        const mapping = await mappingRef.get();
-        if (mapping.val() === roomCode) await mappingRef.remove();
-        if (deletedRoom.creationOperationId) {
-          await database
-            .ref(
-              `roomCreateRequests/${controllerUid}/${deletedRoom.creationOperationId}`,
-            )
-            .remove();
-        }
-      }));
+    const keys = (snapshot: DataSnapshot): string[] => {
+      const result: string[] = [];
+      snapshot.forEach((child) => {
+        if (child.key) result.push(child.key);
+      });
+      return result;
+    };
+    const candidateCodes = mergeCleanupCandidateRoomCodes(
+      keys(expiredCleanupSnapshot),
+      keys(stalePresenceSnapshot),
+    );
+
+    let deletedCount = 0;
+    let preservedCount = 0;
+    const jobs = candidateCodes.map(async (roomCode) => {
+      let deletedRoom: RealtimeRoom | null = null;
+      const roomRef = database.ref(`rooms/${roomCode}`);
+      // Admin SDK transaction은 서버 스냅샷이 캐시에 오기 전에 update를 null로
+      // 먼저 호출할 수 있습니다. 여기서 undefined를 반환하면 실제 방을 읽지 않고
+      // committed=false가 되어 모든 후보가 보존된 것처럼 보입니다.
+      const result = await runPrimedTransaction(
+        roomRef,
+        (raw) => {
+          if (raw === null) return;
+          const room = raw as RealtimeRoom;
+          if (!shouldDeleteRoom(room, now)) return;
+          deletedRoom = room;
+          return null;
+        },
+      );
+      if (!result.committed || result.snapshot.exists()) {
+        preservedCount += 1;
+        return;
+      }
+      deletedCount += 1;
+      const deleted = deletedRoom as RealtimeRoom | null;
+      const controllerUid = deleted?.controllerUid;
+      if (!controllerUid) return;
+      const mappingRef = database.ref(`controllerRooms/${controllerUid}`);
+      const mapping = await mappingRef.get();
+      if (mapping.val() === roomCode) await mappingRef.remove();
+      if (deleted?.creationOperationId) {
+        await database
+          .ref(
+            `roomCreateRequests/${controllerUid}/${deleted.creationOperationId}`,
+          )
+          .remove();
+      }
     });
-    await Promise.all(cleanupJobs);
+    const results = await Promise.allSettled(jobs);
+    const failedCount = results.filter(
+      (result) => result.status === "rejected",
+    ).length;
+    logger.info("Realtime room cleanup summary", {
+      expiredCleanupCandidateCount: keys(expiredCleanupSnapshot).length,
+      stalePresenceCandidateCount: keys(stalePresenceSnapshot).length,
+      uniqueCandidateCount: candidateCodes.length,
+      deletedCount,
+      preservedCount,
+      failedCount,
+    });
+    if (failedCount > 0) {
+      throw new Error("Realtime room cleanup had failed candidates");
+    }
   },
 );

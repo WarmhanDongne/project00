@@ -22,6 +22,7 @@ import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/games/shared/widgets/game_connecting_overlay.dart';
 import 'package:project00/games/shared/widgets/game_interruption_layer.dart';
+import 'package:project00/games/shared/widgets/game_route_exit.dart';
 import 'package:project00/core/assets/game_image.dart';
 
 /// 기기 방향과 관계없이 하나의 Firebase 구독 컨트롤러를 유지합니다.
@@ -158,7 +159,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     _hasScheduledGameExit = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Navigator.of(context).maybePop();
+      exitGameRoute(context);
     });
   }
 

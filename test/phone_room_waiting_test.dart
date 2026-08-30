@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -7,6 +8,7 @@ import 'package:project00/platform/home/gamelist/service/game_list_service.dart'
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -92,6 +94,7 @@ void main() {
     ) async {
       final provider = _provider()
         ..roomCode = 'ABCDE'
+        ..listenRoom()
         ..controllerPresenceState = ControllerPresenceState.reconnecting;
 
       await _pumpWaiting(tester, provider);
@@ -486,7 +489,24 @@ class _FakeRoomService implements RoomService {
   Stream<String?> watchGameStatus(String roomCode) => const Stream.empty();
 
   @override
-  Stream<bool> watchServerConnection() => const Stream.empty();
+  Stream<bool> watchServerConnection() => Stream.value(true);
+
+  @override
+  Stream<ControllerPresence> watchControllerPresence(String roomCode) =>
+      const Stream.empty();
+
+  @override
+  Stream<bool> watchRoomExists(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
+
+  @override
+  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) =>
+      const Stream.empty();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
