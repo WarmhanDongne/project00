@@ -155,9 +155,10 @@ deadline을 쓰던 경로와 늦은 연결 이벤트가 새 중단을 취소하�
 재현해 수정했다. 이후 수정 APK 테스트에서 사용자는 태블릿 중단 화면 뒤 30초 기다렸다가
 복구해 6초가 남았고 서버가 멈춘 시간부터 재개한 것으로 보인다고 보고하며 전체 통과를
 확정했다. 중단 직전 수치는 추정하지 않는다. 이 방식의 사용자 이해도는
-[GAME-PAUSE-UX-01](../planning/POST_LAUNCH_IMPROVEMENTS.md#game-pause-ux-01--단절-후-남은-시간-재개-안내)로
+[GAME-PAUSE-UX-01](../planning/TASKS.md#game-pause-ux-01--단절-후-남은-시간-재개-안내)로
 분리하며 시간 보존 실패로 기록하지 않는다.
-판정·원인 후보·수정 계획은 [출시 차단 현황](../planning/PRE_RELEASE_BLOCKERS.md)을 따른다.
+최종 판정은 [완료·검증 근거](../planning/COMPLETED_TASKS.md), 당시 원인 후보와 수정 계획은
+[조사 기록](../planning/logs/2026-08.md#batch-0831-initial)을 따른다.
 
 ## 종료, selectedGame, 대기실 복귀
 
@@ -193,7 +194,7 @@ finished 이벤트의 중복 처리로 보존 기한을 연장하지 않고 play
 사용자가 모두 통과로 확인했다. 태블릿 역할은 Medium Tablet 에뮬레이터였다.
 강제 종료 동안 winner 아래 `태블릿 오류 화면`이 나타나는 관찰은 사용자가 추후 개선으로
 지정했다. 정확한 화면 문구·route는 미확인이며
-[WINNER-CONNECTION-LAYER-01](../planning/POST_LAUNCH_IMPROVEMENTS.md#winner-connection-layer-01--winner-아래-태블릿-연결-안내-겹침)에서
+[WINNER-CONNECTION-LAYER-01](../planning/TASKS.md#winner-connection-layer-01--winner-아래-태블릿-연결-안내-겹침)에서
 추적한다. winner 잔류나 검정 화면 재발로 해석하지 않는다.
 
 ## 퇴장·강퇴·방 종료 계약
@@ -280,7 +281,7 @@ production RTDB를 다시 읽지 않아도 이 원인 분류와 안전한 UI 수
 - 네트워크 복구 체감 시간은 OS/Firebase 재연결 시간과 앱의 8초 복구 시도를 합친다.
   세션을 보존하며 복구에 성공한 경우의 순수 체감 시간만 P2 관찰 항목이며, 보류 근거·
   착수 조건·완료 기준은
-  [`NET-RECOVERY-01`](../planning/POST_LAUNCH_IMPROVEMENTS.md#net-recovery-01--네트워크-복구-체감-지연)에서
+  [`NET-RECOVERY-01`](../planning/TASKS.md#net-recovery-01--네트워크-복구-체감-지연)에서
   관리한다.
 - 과거 DevErrorLog 배지 사진의 두 오류 원문은 미확정이며 새 빌드에서는 화면에 표시하지 않는다.
 - 2026-08-31 사용자 확인으로 이번 실기기 테스트 중 DevErrorLog 배지·오류 원문·
@@ -292,15 +293,16 @@ production RTDB를 다시 읽지 않아도 이 원인 분류와 안전한 UI 수
 - A32·A35에서는 작은 화면 overflow가 재현되지 않았다. 2026-08-31 사용자는 실제
   S20+의 이전 UT 성공과 기존 깨짐의 글씨/화면 확대 설정 연관성을 설명했다. 빌드와
   설정값은 미제공이므로 최신 수정 빌드 확인과 구분한다. 확대 설정 대응은
-  [출시 후 개선](../planning/POST_LAUNCH_IMPROVEMENTS.md#accessibility-scale-01--글씨화면-확대-설정-대응)에 기록한다.
+  [출시 후 개선](../planning/TASKS.md#accessibility-scale-01--글씨화면-확대-설정-대응)에 기록한다.
 - iOS 네이티브 `onDisconnect` 오류와 실제 태블릿/휴대폰 중첩 종료의 수정 후 재검증은
   에이전트가 직접 실행하지 못했다. 사용자가 실행한 태블릿 역할은 Android 에뮬레이터이므로
   물리 태블릿·iOS의 검증 근거로 확대하지 않는다.
 - 에뮬레이터와 production Firebase를 사용하지 않은 자동 검사만으로 실제 연결 만료
   시간을 판정할 수 없다.
 
-출시 차단 항목의 근거, 완료 조건과 최종 판정은
-[`출시 전 필수 수정과 확인 현황`](../planning/PRE_RELEASE_BLOCKERS.md)을 따른다.
+기존 출시 차단 항목의 최종 변경과 판정은
+[`완료 작업과 검증 근거`](../planning/COMPLETED_TASKS.md)를 따른다. 새 미해결 항목과
+출시 판정 조건은 [작업 목록](../planning/TASKS.md)에서 관리한다.
 
 ## 승인이 필요한 개선 후보
 
