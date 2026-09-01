@@ -4,8 +4,8 @@ import 'package:project00/games/shared/widgets/game_reconnect_screen.dart';
 //=======================Shorebird 패치 화면==============================
 /// Shorebird 패치를 받아 적용하는 동안 보여 주는 화면입니다.
 ///
-/// ⚠️ **아직 화면만 만든 상태입니다(2026-08).** Shorebird 패키지를 붙이지
-/// 않았으므로 어디서 띄울지·언제 닫을지는 연결하지 않았습니다.
+/// `ShorebirdPatchGate`에서 새 패치를 받는 구간과 재시작 안내에
+/// 연결해 사용합니다.
 ///
 /// 재접속 화면([GameReconnectScreen])과 배경·움직임·문구 배치를 그대로 쓰고
 /// **가운데 그림과 문구만** 다릅니다. 같은 골격을 두 번 그리면 한쪽만 고쳐져
@@ -36,8 +36,7 @@ class ShorebirdPatchScreen extends StatelessWidget {
   /// 시간이 지난 뒤 나타나는 버튼 문구입니다.
   final String buttonLabel;
 
-  /// 그 버튼을 눌렀을 때입니다. null이면 눌러도 아무 일도 하지 않습니다
-  /// (배선 전 디자인 확인용).
+  /// 그 버튼을 눌렀을 때입니다. null이면 눌러도 아무 일도 하지 않습니다.
   final VoidCallback? onSkip;
 
   @override

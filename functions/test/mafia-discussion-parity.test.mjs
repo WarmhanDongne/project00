@@ -3,8 +3,10 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 
 import {
-  MAFIA_NIGHT_ACTION_MS,
-  MAFIA_NIGHT_BLOCK_MS,
+  MAFIA_NIGHT_ATTACK_MS,
+  MAFIA_NIGHT_MS,
+  MAFIA_NIGHT_PRIORITY_MS,
+  MAFIA_NIGHT_SUPPORT_MS,
   MAFIA_NIGHT_WAIT_MS,
   mafiaDiscussionMs,
 } from "../lib/mafia/types.js";
@@ -66,8 +68,8 @@ test("확정된 값 그대로다", () => {
 // =========================================================================
 // 밤 구간 시간 대조
 //
-// 밤은 차단(1분) → 행동(1분) → 마무리(10초)입니다(확정 2026-08). 연습장이 이
-// 흐름을 재현하므로 두 파일의 값이 같아야 합니다.
+// 밤은 1~4(60초) → 5~8(60초) → 9~14(50초) → 마무리(10초)이며,
+// 모든 구간을 다 쓰더라도 3분을 넘지 않습니다.
 // =========================================================================
 
 /** Dart의 `static const Duration <이름> = Duration(seconds: n);`을 읽습니다. */
@@ -80,10 +82,18 @@ function dartDurationSeconds(name) {
 }
 
 test("밤 구간 시간이 서버와 같다", () => {
-  assert.equal(dartDurationSeconds("nightBlock") * 1000, MAFIA_NIGHT_BLOCK_MS);
   assert.equal(
-    dartDurationSeconds("nightAction") * 1000,
-    MAFIA_NIGHT_ACTION_MS,
+    dartDurationSeconds("nightPriority") * 1000,
+    MAFIA_NIGHT_PRIORITY_MS,
+  );
+  assert.equal(
+    dartDurationSeconds("nightAttack") * 1000,
+    MAFIA_NIGHT_ATTACK_MS,
+  );
+  assert.equal(
+    dartDurationSeconds("nightSupport") * 1000,
+    MAFIA_NIGHT_SUPPORT_MS,
   );
   assert.equal(dartDurationSeconds("nightWait") * 1000, MAFIA_NIGHT_WAIT_MS);
+  assert.equal(MAFIA_NIGHT_MS, 180000);
 });

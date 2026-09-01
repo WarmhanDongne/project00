@@ -50,6 +50,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.investigate,
     nightPhase: MafiaNightPhase.investigate,
+    nightOrder: 11,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.rolePolice.game,
     icon: Assets.games.mafia.images.roles.roleIconPolice.game,
@@ -65,6 +66,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.protect,
     nightPhase: MafiaNightPhase.protect,
+    nightOrder: 9,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleDoctor.game,
     icon: Assets.games.mafia.images.roles.roleIconDoctor.game,
@@ -81,6 +83,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.protect,
     nightPhase: MafiaNightPhase.protect,
+    nightOrder: 9,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleBodyguard.game,
     // 의사와 같은 보호로 동작하므로 서버 엔진이 그대로 처리합니다.
@@ -143,6 +146,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.investigateRole,
     nightPhase: MafiaNightPhase.investigate,
+    nightOrder: 14,
     nightTargetScope: MafiaNightTargetScope.dead,
     accentColor: _citizenColor,
     description:
@@ -156,8 +160,8 @@ abstract final class MafiaRoles {
   /// 밤에 지목한 사람의 **다음 낮 투표권**을 막습니다(마피아42 건달).
   ///
   /// 확정(2026-08): 건달은 밤 능력을 막지 않습니다. 협박당한 사람은 밤에는
-  /// 평소대로 움직이고, **낮에 표를 낼 수 없습니다.** 그래서 마담과 달리
-  /// 해결 단계가 차단이 아니라 상태 부여이고, 밤의 앞 구간에도 끼지 않습니다.
+  /// 평소대로 움직이고, **낮에 표를 낼 수 없습니다.** 입력은 마담과 달리
+  /// 일반 행동 구간에서 받지만, 실제 판정은 마담 다음인 4번으로 합니다.
   static final gangster = MafiaRole(
     id: 'gangster',
     nightPromptVerb: '협박',
@@ -167,6 +171,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.statusEffect,
+    nightOrder: 4,
     accentColor: _citizenColor,
     description:
         '밤마다 한 명을 협박해\n'
@@ -187,6 +192,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.independentAttack,
+    nightOrder: 5,
     accentColor: _citizenColor,
     description:
         '밤에 한 명을 처형합니다.\n'
@@ -265,6 +271,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.track,
     nightPhase: MafiaNightPhase.investigate,
+    nightOrder: 12,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleDetective.game,
     icon: Assets.games.mafia.images.roles.roleIconDetective.game,
@@ -321,6 +328,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.expose,
     nightPhase: MafiaNightPhase.statusEffect,
+    nightOrder: 13,
     accentColor: _citizenColor,
     card: Assets.games.mafia.images.cards.roleReporter.game,
     icon: Assets.games.mafia.images.roles.roleIconReporter.game,
@@ -340,6 +348,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.mafiaAttack,
+    nightOrder: 6,
     accentColor: _mafiaColor,
     description:
         '밤마다 한 명을 지목해 제거하세요.\n'
@@ -361,6 +370,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.mafiaAttack,
+    nightOrder: 6,
     investigationAppearance: MafiaInvestigationAppearance.asCitizen,
     accentColor: _mafiaColor,
     card: Assets.games.mafia.images.cards.roleMafiaBoss.game,
@@ -380,6 +390,7 @@ abstract final class MafiaRoles {
     faction: MafiaFaction.mafia,
     tier: MafiaRoleTier.extended,
     abilityTiming: MafiaAbilityTiming.passive,
+    nightOrder: 10,
     investigationAppearance: MafiaInvestigationAppearance.asCitizen,
     accentColor: _mafiaColor,
     description:
@@ -406,6 +417,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.independentAttack,
+    nightOrder: 7,
     accentColor: _mafiaColor,
     description:
         '밤마다 혼자 한 명을 사냥합니다.\n'
@@ -426,6 +438,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.roleblock,
     nightPhase: MafiaNightPhase.roleblock,
+    nightOrder: 3,
     accentColor: _mafiaColor,
     description:
         '밤마다 한 명을 유혹해\n'
@@ -452,6 +465,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.steal,
     nightPhase: MafiaNightPhase.statusEffect,
+    nightOrder: 1,
     nightTargetScope: MafiaNightTargetScope.dead,
     accentColor: _mafiaColor,
     description:
@@ -602,6 +616,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.eliminate,
     nightPhase: MafiaNightPhase.independentAttack,
+    nightOrder: 8,
     winCondition: MafiaWinCondition.lastStanding,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleSerialKiller.game,
@@ -684,6 +699,7 @@ abstract final class MafiaRoles {
     abilityTiming: MafiaAbilityTiming.night,
     nightAction: MafiaNightAction.convert,
     nightPhase: MafiaNightPhase.convert,
+    nightOrder: 2,
     winCondition: MafiaWinCondition.factionDominance,
     accentColor: _neutralColor,
     card: Assets.games.mafia.images.cards.roleCultLeader.game,

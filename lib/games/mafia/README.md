@@ -255,7 +255,7 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 
 ## 역할 시스템 (전체 명세 반영 완료)
 
-전달받은 역할 명세(약 40역할 · 3진영 · 밤 11단계 · 인원별 구성)를 데이터로
+전달받은 역할 명세(약 40역할 · 3진영 · 밤 14단계 · 인원별 구성)를 데이터로
 등록했습니다. 파일 3개로 나뉩니다:
 
 | 파일 | 내용 |
@@ -270,7 +270,8 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 분기하면 새 역할이 자동 동작합니다:
 
 - `nightAction` — 밤에 무엇을 하는가(12종). 대상 선택 UI를 이 값으로 결정
-- `nightPhase` — 언제 해결하는가(명세 2~9단계). 서버 처리 순서
+- `nightPhase` — 마피아 다수결/독립 공격 같은 해결 방식
+- `nightOrder` — 역할별 실제 밤 판정 순서(1~14)
 - `faction` — citizen / mafia / **neutral**
 - `abilityTiming` — none / night / day / gameStart / onDeath / passive
 - `winCondition` — 진영 승리 또는 개별 조건(광대·처형자·생존자·최후생존·세력장악)
@@ -282,6 +283,19 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 - `blocksTargetVote` — 대상의 다음 낮 투표권까지 막는가(마담)
 - `selfDestructsOnAllyKill` — 같은 편을 쏘면 자신도 죽는가(자경단원 오발)
 - `convertsTargetTo` — 전향에 성공한 대상이 되는 역할(교주 → 광신도)
+
+밤 판정은 `nightOrder`를 다음처럼 고정합니다. 경호원은 의사(9), 마피아
+보스는 마피아(6)와 같은 순서를 공유합니다.
+
+| 순서 | 역할 | 순서 | 역할 |
+|---:|---|---:|---|
+| 1 | 도둑 | 8 | 연쇄살인마 |
+| 2 | 교주 | 9 | 의사 |
+| 3 | 마담 | 10 | 스파이 |
+| 4 | 건달 | 11 | 경찰 |
+| 5 | 자경단원 | 12 | 사립탐정 |
+| 6 | 마피아 | 13 | 기자 |
+| 7 | 짐승인간 | 14 | 영매 |
 
 ### 구현 여부 게이트 (중요)
 
@@ -770,7 +784,8 @@ roleReveal → night → morning → day → voting → voteResult → (night | 
 
 ### 역할 추가가 서버 수정 없이 되는 이유
 
-밤 해결 엔진이 역할 이름을 보지 않고 `nightAction`·`nightPhase`만 봅니다.
+밤 해결 엔진이 역할 이름을 보지 않고 `nightOrder`로 정렬한 뒤
+`nightAction`·`nightPhase`를 봅니다.
 그래서 **경호원과 마피아 보스를 코드 한 줄 없이 켰습니다.**
 
 - 경호원 = 의사와 같은 `protect`
@@ -783,7 +798,8 @@ roleReveal → night → morning → day → voting → voteResult → (night | 
 
 역할 규칙이 Dart(화면)와 TS(서버) 두 곳에 있습니다. 갈리면 규칙이 **조용히**
 깨지므로 `functions/test/mafia-role-parity.test.mjs`가 Dart 파일을 직접 파싱해
-진영·밤 행동·해결 단계·조사 모습·동료 인지·구현 여부·구성표를 전부 대조합니다.
+진영·밤 행동·처리 유형·판정 순서·조사 모습·동료 인지·구현 여부·구성표를
+전부 대조합니다.
 한쪽만 고치면 테스트가 먼저 실패합니다.
 
 ### `turnDeadlineAt` 이름을 쓰는 이유
@@ -951,8 +967,8 @@ _bgm.stop();                               // 화면을 떠날 때(dispose)
 
 | 역할 | 능력 | 구현 |
 |---|---|---|
-| 기자 | 밤에 지목한 사람의 신분을 **아침에 전체 공개** | 새 행동 `expose`, 해결 단계 `statusEffect`(9) |
-| 탐정 | 대상이 **누구에게 능력을 썼는지** 조사 | 기존 행동 `track`, 해결 단계 `investigate`(6) |
+| 기자 | 밤에 지목한 사람의 신분을 **아침에 전체 공개** | `expose` / `statusEffect`, `nightOrder: 13` |
+| 탐정 | 대상이 **누구에게 능력을 썼는지** 조사 | `track` / `investigate`, `nightOrder: 12` |
 
 **기자는 경찰과 다릅니다.** 경찰 결과는 본인만 보므로 `private`에, 기자 결과는
 모두가 보므로 `public.revealedRoles`에 씁니다. 그래서 **살아 있는 사람의 신분이

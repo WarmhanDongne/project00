@@ -8,12 +8,11 @@
 	<array>
 		<string>Default</string>
 	</array>
-	<!-- 이메일 링크 로그인용 Universal Links. 역시 유료 계정이 필요해 보류 중입니다. -->
-	<!--
+	<!-- 이메일 링크 로그인용 Universal Links. 정식 배포 프로파일에서 이 도메인의
+	     AASA 파일과 Team ID·bundle ID가 일치해야 합니다. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:project0000-ec01e.firebaseapp.com</string>
 	</array>
-	-->
 </dict>
 </plist>

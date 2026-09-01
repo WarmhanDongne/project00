@@ -6,6 +6,8 @@ import {
   createControllerSessionId,
 } from "../lib/room/controller-session.js";
 import {
+  collectGroupOwnedGameIds,
+  deletedRoomReservationPath,
   isGameAccessibleToGroup,
   mergeCleanupCandidateRoomCodes,
   shouldDeleteRoom,
@@ -180,6 +182,35 @@ test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에�
   assert.equal(
     isGameAccessibleToGroup("paid", "paid_game", [["another_game"]]),
     false,
+  );
+});
+
+test("그룹 보유 게임 ID는 문자열만 중복 없이 합친다", () => {
+  assert.deepEqual(
+    collectGroupOwnedGameIds([
+      ["mafia", "paid_game", "mafia"],
+      null,
+      ["final_call", 3, ""],
+    ]),
+    ["mafia", "paid_game", "final_call"],
+  );
+});
+
+test("삭제된 방의 생성 예약 경로는 안전한 식별자만 허용한다", () => {
+  assert.equal(
+    deletedRoomReservationPath({
+      controllerUid: "controller_1",
+      creationOperationId: "operation-123",
+    }),
+    "roomCreateRequests/controller_1/operation-123",
+  );
+  assert.equal(deletedRoomReservationPath({controllerUid: "controller_1"}), null);
+  assert.equal(
+    deletedRoomReservationPath({
+      controllerUid: "../controller",
+      creationOperationId: "operation-123",
+    }),
+    null,
   );
 });
 

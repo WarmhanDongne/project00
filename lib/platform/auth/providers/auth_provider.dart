@@ -1,11 +1,8 @@
-import 'dart:convert';
-import 'dart:math';
-
-import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
+import 'package:project00/platform/auth/services/apple_auth_utils.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -234,10 +231,10 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
 
       // Firebase가 Apple의 ID Token을 검증할 때 사용할 원본 nonce입니다.
-      final rawNonce = _generateNonce();
+      final rawNonce = generateAppleNonce();
 
       // Apple 로그인 요청에는 SHA-256 처리된 nonce를 전달합니다.
-      final hashedNonce = _sha256OfString(rawNonce);
+      final hashedNonce = sha256AppleNonce(rawNonce);
 
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: const [
@@ -347,30 +344,5 @@ class AuthProvider extends ChangeNotifier {
     await FirebaseAuth.instance.signOut();
 
     notifyListeners();
-  }
-
-  // ============================================================
-  // Apple Utils
-  // ============================================================
-
-  /// Apple 로그인에 사용할 랜덤 nonce를 생성합니다.
-  String _generateNonce([int length = 32]) {
-    const charset =
-        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        'abcdefghijklmnopqrstuvwxyz-._';
-
-    final random = Random.secure();
-
-    return List.generate(
-      length,
-      (_) => charset[random.nextInt(charset.length)],
-    ).join();
-  }
-
-  /// 문자열을 SHA-256으로 변환합니다.
-  String _sha256OfString(String input) {
-    final bytes = utf8.encode(input);
-
-    return sha256.convert(bytes).toString();
   }
 }

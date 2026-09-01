@@ -18,10 +18,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // 사용자 프로필과 보유 게임(`ownedGames`)입니다.
-    // 쓰기는 Cloud Functions(`syncGoogleUserProfile`)만 수행합니다.
+    // 사용자 프로필과 보유 게임(`ownedGames`)입니다. 민감 필드가 같은 문서에
+    // 있으므로 본인만 읽습니다. 그룹 보유 게임은 인증된 callable이 방 참가자를
+    // 검증한 뒤 필요한 ID만 반환합니다.
     match /users/{userId} {
-      allow read: if signedIn();
+      allow read: if isOwner(userId);
       allow write: if false;
     }
 

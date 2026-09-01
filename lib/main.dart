@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/app_orientation.dart';
 import 'package:project00/core/time/server_clock.dart';
@@ -50,6 +52,21 @@ void main() async {
   // Crashlytics로 올라갑니다.
   installDevErrorWidgetBuilder();
   await CrashReporting.initialize();
+  // App Check는 먼저 토큰을 관찰 모드로 발급합니다. Firebase 콘솔에서 정상
+  // 요청 비율을 확인한 뒤 Functions/RTDB/Storage enforcement를 단계적으로
+  // 켜야 구버전 앱과 설정 누락 기기를 한꺼번에 차단하지 않습니다.
+  try {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode
+          ? const AppleDebugProvider()
+          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+    );
+  } catch (error, stack) {
+    CrashReporting.recordError(error, stack, reason: 'Firebase App Check 초기화');
+  }
   Uri? initialEmailLink;
   try {
     initialEmailLink = await appLinks.getInitialLink();

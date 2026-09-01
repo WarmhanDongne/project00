@@ -273,6 +273,20 @@ test("도둑은 사망자의 직업을 훔쳐 진영까지 바꾼다", () => {
   assert.ok(!(game.private.m1.allyUids ?? []).includes("t1"));
 });
 
+test("도둑의 역할 교체는 교주의 전향보다 먼저 판정된다", () => {
+  const game = makeGame({t1: "thief", cl: "cult_leader", p1: "police",
+    m1: "mafia", c1: "citizen", c2: "citizen"});
+  killForTest(game, "p1");
+
+  // 제출 순서를 교주 → 도둑으로 넣어도 nightOrder가 우선입니다.
+  // 도둑이 먼저 경찰이 되면 교주가 그 다음 광신도로 전향시킵니다.
+  game.server.nightActions = {cl: "t1", t1: "p1"};
+  resolveMafiaNight(game, 1000);
+
+  assert.equal(game.server.roles.t1, "cultist");
+  assert.equal(game.private.t1.roleId, "cultist");
+});
+
 test("도둑이 훔친 직업은 승패 판정에 바로 반영된다", () => {
   const game = makeGame({t1: "thief", m1: "mafia", p1: "police",
     c1: "citizen"});

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>모시겜 계정 삭제</title>
+    <style>
+      :root { color-scheme: light dark; --accent: #5a4fcf; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+          "Malgun Gothic", system-ui, sans-serif;
+        line-height: 1.7;
+      }
+      main { max-width: 680px; margin: 0 auto; padding: 40px 20px 80px; }
+      h1 { font-size: 1.65rem; margin-bottom: 8px; }
+      h2 { font-size: 1.1rem; margin-top: 36px; }
+      .card { border: 1px solid #8885; border-radius: 14px; padding: 18px 20px; }
+      .button {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 11px 16px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      li { margin: 6px 0; }
+      footer { margin-top: 48px; opacity: 0.72; }
+      a { color: var(--accent); }
+      .button { color: white; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>모시겜 계정 및 데이터 삭제</h1>
+      <p>운영자: 따스한동네</p>
+
+      <h2>앱에서 바로 삭제하기</h2>
+      <div class="card">
+        <ol>
+          <li>모시겜에 로그인합니다.</li>
+          <li>프로필을 열고 <strong>회원탈퇴</strong>를 선택합니다.</li>
+          <li>삭제 안내를 확인한 뒤 <strong>탈퇴하기</strong>를 선택합니다.</li>
+          <li>Apple로 가입한 계정은 Apple 계정 확인을 한 번 더 완료합니다.</li>
+        </ol>
+        <p>완료되면 인증 계정, 프로필 문서, 온보딩 정보와 프로필 사진이 삭제됩니다.</p>
+      </div>
+
+      <h2>앱을 사용할 수 없는 경우</h2>
+      <p>
+        가입 이메일 주소와 &ldquo;모시겜 계정 삭제 요청&rdquo;이라는 내용을 아래
+        이메일로 보내주세요. 계정 소유 확인에 필요한 최소 정보만 추가로 요청할 수
+        있으며, 확인 후 계정과 관련 데이터를 삭제합니다.
+      </p>
+      <a class="button" href="mailto:warmhandongne@gmail.com?subject=%EB%AA%A8%EC%8B%9C%EA%B2%9C%20%EA%B3%84%EC%A0%95%20%EC%82%AD%EC%A0%9C%20%EC%9A%94%EC%B2%AD">계정 삭제 이메일 보내기</a>
+
+      <h2>삭제되는 정보와 보존되는 정보</h2>
+      <ul>
+        <li>삭제: Firebase 인증 계정, 이메일·닉네임·UID가 포함된 프로필, 보유 게임 정보, 온보딩 정보, 프로필 사진</li>
+        <li>임시 보존: 진행 중인 게임의 연속성을 위한 방 상태는 해당 방 종료와 자동 정리 때까지 남을 수 있습니다.</li>
+        <li>오류 기록: Crashlytics 기록은 운영 보존 기간인 최대 90일 후 삭제됩니다.</li>
+        <li>법령상 보존 의무가 있는 정보는 해당 기간 동안 분리 보관합니다.</li>
+      </ul>
+
+      <footer>
+        <a href="/privacy/">개인정보처리방침</a> · <a href="/">홈</a>
+      </footer>
+    </main>
+  </body>
+</html>

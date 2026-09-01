@@ -144,22 +144,30 @@ class MafiaController extends Notifier<MafiaGameState> {
   /// 밤에 대상을 골라야 하는 역할인지입니다.
   bool get actsAtNight => myRole?.actsAtNight ?? false;
 
-  //=======================밤의 두 구간==============================
+  //=======================밤의 순위 구간==============================
   /// 밤의 어느 구간인지입니다. 서버가 보내지 않으면(구버전) null입니다.
   String? get nightStage => state.nightStage;
 
   /// 지금 이 구간에 내가 고를 수 있는지입니다.
   ///
-  /// 확정(2026-08): 앞 구간(`block`)에는 **능력을 막는 역할만** 움직입니다.
-  /// 마지막 `wrapUp`은 아무도 고를 수 없습니다. 서버 `canActInNightStage`와
-  /// 같은 규칙입니다 — 여기서 막아 두지 않으면 눌러도 거절만 돌아옵니다.
+  /// 확정(2026-08): `priority`(1~4) → `attack`(5~8) →
+  /// `support`(9~14) 순으로 열립니다. `wrapUp`은 아무도 고를 수
+  /// 없습니다. 서버 `canActInNightStage`와 같은 규칙입니다.
   bool get canActInNightStage {
     final stage = nightStage;
     // 구간을 모르는 서버(구버전)에서는 예전처럼 그냥 고를 수 있습니다.
     if (stage == null) return true;
     if (stage == 'wrapUp') return false;
+    final role = myRole;
+    if (role == null || !role.actsAtNight) return false;
+    final order = role.nightOrder;
+    if (stage == 'priority') return order != null && order >= 1 && order <= 4;
+    if (stage == 'attack') return order != null && order >= 5 && order <= 8;
+    if (stage == 'support') return order != null && order >= 9 && order <= 14;
+    // 구버전 서버의 구간도 롤링 업데이트 동안 이해합니다.
     if (stage == 'block') return myRole?.blocksAbility ?? false;
-    return true;
+    if (stage == 'action') return true;
+    return false;
   }
 
   /// 이번 밤에 내 차례가 아직 오지 않았는지입니다(대기 화면으로 보냅니다).
