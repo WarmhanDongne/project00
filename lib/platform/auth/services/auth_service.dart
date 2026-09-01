@@ -1,8 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
+import 'package:project00/platform/auth/services/apple_auth_utils.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthServiceException implements Exception {
   const AuthServiceException(this.code, this.message);
@@ -148,13 +149,58 @@ class FirebaseAuthService {
     }
 
     try {
+      await _revokeAppleAuthorizationIfNeeded(user);
       await _functions.httpsCallable('deleteAccount').call();
+    } on SignInWithAppleAuthorizationException catch (error) {
+      throw AuthServiceException(
+        error.code.name,
+        error.code == AuthorizationErrorCode.canceled
+            ? 'Apple 계정 확인이 취소되어 회원탈퇴를 중단했습니다.'
+            : 'Apple 계정 확인에 실패했습니다. 잠시 후 다시 시도해주세요.',
+      );
+    } on FirebaseAuthException catch (error) {
+      throw _toServiceException(error);
     } on FirebaseFunctionsException catch (error) {
       throw AuthServiceException(error.code, error.message ?? '회원탈퇴에 실패했습니다.');
     }
 
     // 계정이 사라진 뒤에도 로컬 인증 상태는 남아 있어 직접 정리합니다.
     await _auth.signOut();
+  }
+
+  /// Apple 연결 계정은 Apple이 요구하는 재확인을 거쳐 authorization token을
+  /// 먼저 폐기합니다. 폐기 실패 시 서버 데이터도 지우지 않아 다시 시도할 수
+  /// 있도록 순서를 고정합니다.
+  Future<void> _revokeAppleAuthorizationIfNeeded(User user) async {
+    final usesApple = hasAppleProvider(
+      user.providerData.map((provider) => provider.providerId),
+    );
+    if (!usesApple) return;
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.iOS &&
+            defaultTargetPlatform != TargetPlatform.macOS)) {
+      throw const AuthServiceException(
+        'apple-platform-required',
+        'Apple로 가입한 계정은 iPhone 또는 iPad에서 회원탈퇴해주세요.',
+      );
+    }
+
+    final rawNonce = generateAppleNonce();
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: const [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+      nonce: sha256AppleNonce(rawNonce),
+    );
+    final authorizationCode = appleCredential.authorizationCode.trim();
+    if (authorizationCode.isEmpty) {
+      throw const AuthServiceException(
+        'missing-apple-authorization-code',
+        'Apple 계정 확인 정보를 가져오지 못했습니다. 다시 시도해주세요.',
+      );
+    }
+    await _auth.revokeTokenWithAuthorizationCode(authorizationCode);
   }
 
   //=======================프로필 정보를 Firestore에 동기화==============================

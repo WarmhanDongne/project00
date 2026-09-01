@@ -53,19 +53,19 @@ class Home extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.videogame_asset),
-              title: const Text('마피아 연습장'),
-              subtitle: const Text('Firebase 없이 흐름 전체를 돌려 봅니다'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const MafiaPracticeScreen(),
-                  ),
-                );
-              },
-            ),
+            // ListTile(
+            //   leading: const Icon(Icons.videogame_asset),
+            //   title: const Text('마피아 연습장'),
+            //   subtitle: const Text('Firebase 없이 흐름 전체를 돌려 봅니다'),
+            //   onTap: () {
+            //     Navigator.of(sheetContext).pop();
+            //     Navigator.of(context).push(
+            //       MaterialPageRoute<void>(
+            //         builder: (_) => const MafiaPracticeScreen(),
+            //       ),
+            //     );
+            //   },
+            // ),
             ListTile(
               leading: const Icon(Icons.groups),
               title: const Text('마피아 역할 배치 화면'),

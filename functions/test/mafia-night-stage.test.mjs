@@ -10,20 +10,22 @@ import {
   resolveMafiaVoting,
 } from "../lib/mafia/game.js";
 import {
-  MAFIA_NIGHT_ACTION_MS,
-  MAFIA_NIGHT_BLOCK_MS,
+  MAFIA_NIGHT_ATTACK_MS,
+  MAFIA_NIGHT_PRIORITY_MS,
+  MAFIA_NIGHT_SUPPORT_MS,
   MAFIA_NIGHT_WAIT_MS,
 } from "../lib/mafia/types.js";
 import {makeGame} from "./mafia-test-state.mjs";
 
 // =========================================================================
-// 밤의 두 구간 (확정 2026-08)
+// 밤의 순위 구간 (확정 2026-08)
 //
 // 마담이 막은 사람의 능력은 무효라, **마담 판정이 끝나야** 뒤 역할들의 행동이
-// 의미를 가집니다. 그래서 밤을 `block → action → wrapUp`으로 나눕니다.
+// 의미를 가집니다. 그래서 밤을 순위 범위로 나눕니다.
 //
-//   block   능력을 막는 역할만 고릅니다(1분)
-//   action  그 밖의 밤 역할이 고릅니다(1분)
+//   priority  1~4순위를 고릅니다(60초)
+//   attack    5~8순위를 고릅니다(60초)
+//   support   9~14순위를 고릅니다(50초)
 //   wrapUp  아무도 못 고릅니다. 아침까지 10초
 //
 // 앞 구간이 일찍 끝나면 남은 시간을 버리고 곧바로 다음 구간을 엽니다.
@@ -34,13 +36,13 @@ const WITH_MADAM = {
   c1: "citizen", c2: "citizen",
 };
 
-test("마담이 있으면 밤은 차단 구간으로 시작한다", () => {
+test("1~4순위 역할이 있으면 priority로 시작한다", () => {
   const game = makeGame(WITH_MADAM, {phase: "roleReveal"});
   beginMafiaNight(game, 1000);
 
   assert.equal(game.public.phase, "night");
-  assert.equal(game.public.nightStage, "block");
-  assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_BLOCK_MS);
+  assert.equal(game.public.nightStage, "priority");
+  assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_PRIORITY_MS);
   // 이번 구간에 기다리는 사람은 마담 한 명입니다.
   assert.equal(game.public.nightStageActorCount, 1);
   assert.equal(game.public.nightStageSubmittedCount, 0);
@@ -48,16 +50,26 @@ test("마담이 있으면 밤은 차단 구간으로 시작한다", () => {
   assert.equal(game.public.nightActorCount, 4);
 });
 
-test("차단 구간에는 마담만 고를 수 있다", () => {
+test("priority 구간에는 1~4순위만 고를 수 있다", () => {
   const game = makeGame(WITH_MADAM, {phase: "roleReveal"});
   beginMafiaNight(game, 1000);
 
   assert.equal(canActInNightStage(game, "mad"), true);
   assert.equal(canActInNightStage(game, "m1"), false);
   assert.equal(canActInNightStage(game, "p1"), false);
+
+  beginMafiaNightStage(game, "attack", 2000);
+  assert.equal(canActInNightStage(game, "mad"), false);
+  assert.equal(canActInNightStage(game, "m1"), true);
+  assert.equal(canActInNightStage(game, "p1"), false);
+
+  beginMafiaNightStage(game, "support", 3000);
+  assert.equal(canActInNightStage(game, "m1"), false);
+  assert.equal(canActInNightStage(game, "p1"), true);
+  assert.equal(canActInNightStage(game, "d1"), true);
 });
 
-test("마담이 일찍 고르면 남은 시간을 버리고 행동 구간이 열린다", () => {
+test("priority 전원이 고르면 남은 시간을 버리고 attack이 열린다", () => {
   const game = makeGame(WITH_MADAM, {phase: "roleReveal"});
   beginMafiaNight(game, 1000);
 
@@ -65,21 +77,20 @@ test("마담이 일찍 고르면 남은 시간을 버리고 행동 구간이 열
   const advanced = advanceMafiaNightStage(game, 5000);
 
   assert.equal(advanced, true);
-  assert.equal(game.public.nightStage, "action");
-  assert.equal(game.public.turnDeadlineAt, 5000 + MAFIA_NIGHT_ACTION_MS);
-  // 이제 마담을 뺀 세 명을 기다립니다.
-  assert.equal(game.public.nightStageActorCount, 3);
+  assert.equal(game.public.nightStage, "attack");
+  assert.equal(game.public.turnDeadlineAt, 5000 + MAFIA_NIGHT_ATTACK_MS);
+  assert.equal(game.public.nightStageActorCount, 1);
   assert.equal(canActInNightStage(game, "m1"), true);
 });
 
-test("마담이 없는 판은 곧바로 행동 구간으로 시작한다", () => {
+test("1~4순위가 없는 판은 attack으로 즉시 건너뜀다", () => {
   const game = makeGame({m1: "mafia", p1: "police", c1: "citizen",
     c2: "citizen"}, {phase: "roleReveal"});
   beginMafiaNight(game, 1000);
 
-  assert.equal(game.public.nightStage, "action");
-  assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_ACTION_MS);
-  assert.equal(game.public.nightStageActorCount, 2);
+  assert.equal(game.public.nightStage, "attack");
+  assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_ATTACK_MS);
+  assert.equal(game.public.nightStageActorCount, 1);
 });
 
 test("밤에 아무도 행동하지 않는 판은 곧바로 마무리 구간이 된다", () => {
@@ -93,6 +104,28 @@ test("밤에 아무도 행동하지 않는 판은 곧바로 마무리 구간이 
   assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_WAIT_MS);
 });
 
+test("1~8순위가 없으면 support로 즉시 건너뜀다", () => {
+  const game = makeGame({p1: "police", d1: "doctor", c1: "citizen"},
+    {phase: "roleReveal"});
+  beginMafiaNight(game, 1000);
+
+  assert.equal(game.public.nightStage, "support");
+  assert.equal(game.public.turnDeadlineAt, 1000 + MAFIA_NIGHT_SUPPORT_MS);
+  assert.equal(game.public.nightStageActorCount, 2);
+});
+
+test("5~8순위가 없으면 priority에서 support로 건너뜀다", () => {
+  const game = makeGame({mad: "madam", d1: "doctor", c1: "citizen"},
+    {phase: "roleReveal"});
+  beginMafiaNight(game, 1000);
+  game.server.nightActions = {mad: "d1"};
+  advanceMafiaNightStage(game, 5000);
+
+  assert.equal(game.public.nightStage, "support");
+  assert.equal(game.public.turnDeadlineAt, 5000 + MAFIA_NIGHT_SUPPORT_MS);
+  assert.equal(game.public.nightStageActorCount, 1);
+});
+
 test("행동할 사람이 전원 제출하면 10초 뒤 아침이 온다", () => {
   const game = makeGame(WITH_MADAM, {phase: "roleReveal"});
   beginMafiaNight(game, 1000);
@@ -100,8 +133,12 @@ test("행동할 사람이 전원 제출하면 10초 뒤 아침이 온다", () =>
   advanceMafiaNightStage(game, 2000);
 
   game.server.nightActions.m1 = "c1";
+  assert.equal(advanceMafiaNightStage(game, 3000), true);
+  assert.equal(game.public.nightStage, "support");
+  assert.equal(game.public.turnDeadlineAt, 3000 + MAFIA_NIGHT_SUPPORT_MS);
+
   game.server.nightActions.p1 = "m1";
-  assert.equal(advanceMafiaNightStage(game, 3000), false, "의사가 남았다");
+  assert.equal(advanceMafiaNightStage(game, 3500), false, "의사가 남았다");
 
   game.server.nightActions.d1 = "c2";
   assert.equal(advanceMafiaNightStage(game, 4000), true);
@@ -117,9 +154,12 @@ test("죽은 사람은 구간 인원에서 빠진다", () => {
   beginMafiaNight(game, 1000);
   game.server.nightActions = {mad: "c1"};
   advanceMafiaNightStage(game, 2000);
+  game.server.nightActions.m1 = "c1";
+  advanceMafiaNightStage(game, 3000);
 
-  // 의사가 죽었으므로 마피아·경찰 둘만 기다립니다.
-  assert.equal(game.public.nightStageActorCount, 2);
+  // 의사가 죽었으므로 support에서는 경찰만 기다립니다.
+  assert.equal(game.public.nightStage, "support");
+  assert.equal(game.public.nightStageActorCount, 1);
 });
 
 test("구간 값은 아침이 되면 지워진다", () => {

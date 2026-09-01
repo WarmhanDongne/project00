@@ -9,6 +9,7 @@ import 'package:project00/core/assets/game_image.dart';
 // 화면은 역할 이름(`id == 'mafia'`)으로 분기하지 마세요. 아래 축으로만
 // 분기하면 새 역할이 자동으로 동작합니다:
 //   - [MafiaRole.nightAction] : 밤에 무엇을 하는가 (대상 선택 UI 결정)
+//   - [MafiaRole.nightOrder]  : 밤 결과를 몇 번째로 판정하는가
 //   - [MafiaRole.faction]     : 어느 진영인가 (색·승패)
 //   - [MafiaRole.abilityTiming] : 언제 발동하는가
 
@@ -69,7 +70,7 @@ enum MafiaAbilityTiming {
   /// 능력이 없습니다(시민).
   none,
 
-  /// 밤에 대상을 고릅니다. 해결 순서는 [MafiaRole.nightPhase]가 정합니다.
+  /// 밤에 대상을 고릅니다. 해결 순서는 [MafiaRole.nightOrder]가 정합니다.
   night,
 
   /// 낮에 작동합니다(시장의 가중 투표 등).
@@ -184,39 +185,34 @@ enum MafiaNightTargetScope {
   dead,
 }
 
-/// 밤 행동을 해결하는 단계입니다. 값이 작을수록 먼저 처리합니다.
+/// 밤 행동의 처리 유형입니다.
 ///
-/// 역할 간 상호작용(차단이 보호보다 먼저, 조사 조작이 조사보다 먼저)이
-/// 규칙대로 동작하려면 서버가 이 순서로만 처리해야 합니다.
+/// 실제 역할별 판정 순서는 [MafiaRole.nightOrder]가 정합니다.
+/// 이 값은 마피아 다수결 공격과 독립 공격처럼 해결 방식을 구분합니다.
 enum MafiaNightPhase {
-  /// 2단계 — 행동 차단. 차단된 대상은 이후 단계에서 능력이 무효입니다.
-  roleblock(2),
+  /// 행동 차단. 차단된 대상의 이후 능력은 무효입니다.
+  roleblock,
 
-  /// 3단계 — 보호.
-  protect(3),
+  /// 보호.
+  protect,
 
-  /// 4단계 — 조사 결과 조작. 조사보다 반드시 먼저 처리합니다.
-  frame(4),
+  /// 조사 결과 조작.
+  frame,
 
-  /// 5단계 — 전향. 진영이 바뀝니다.
-  convert(5),
+  /// 전향. 진영이 바뀝니다.
+  convert,
 
-  /// 6단계 — 조사.
-  investigate(6),
+  /// 조사.
+  investigate,
 
-  /// 7단계 — 마피아 공격.
-  mafiaAttack(7),
+  /// 마피아 다수결 공격.
+  mafiaAttack,
 
-  /// 8단계 — 독립 공격(연쇄살인마·자경단원·방화범).
-  independentAttack(8),
+  /// 독립 공격(연쇄살인마·자경단원·방화범).
+  independentAttack,
 
-  /// 9단계 — 다음 낮에 적용되는 상태 효과(침묵).
-  statusEffect(9);
-
-  const MafiaNightPhase(this.order);
-
-  /// 명세의 단계 번호입니다.
-  final int order;
+  /// 다음 낮이나 아침에 적용되는 상태 효과.
+  statusEffect;
 }
 
 /// 경찰 조사에 어떻게 보이는지입니다.
@@ -264,6 +260,7 @@ class MafiaRole {
     required this.accentColor,
     this.nightAction = MafiaNightAction.none,
     this.nightPhase,
+    this.nightOrder,
     this.winCondition = MafiaWinCondition.faction,
     this.investigationAppearance = MafiaInvestigationAppearance.actual,
     this.nightTargetScope = MafiaNightTargetScope.alive,
@@ -284,6 +281,12 @@ class MafiaRole {
   }) : assert(
          nightAction == MafiaNightAction.none || nightPhase != null,
          '밤에 대상을 고르는 역할은 해결 단계(nightPhase)를 지정해야 합니다.',
+       ),
+       assert(
+         !isImplemented ||
+             nightAction == MafiaNightAction.none ||
+             nightOrder != null,
+         '구현된 밤 역할은 판정 순서(nightOrder)를 지정해야 합니다.',
        );
 
   /// 서버·클라이언트가 공유하는 식별자입니다. 카드 파일명(`role_<id>.png`)과
@@ -306,8 +309,14 @@ class MafiaRole {
 
   final MafiaNightAction nightAction;
 
-  /// 밤 행동의 해결 순서입니다. 밤 행동이 없으면 null입니다.
+  /// 밤 행동의 처리 유형입니다. 밤 행동이 없으면 null입니다.
   final MafiaNightPhase? nightPhase;
+
+  /// 역할별 밤 판정 순서입니다. 작을수록 먼저 처리합니다.
+  ///
+  /// 수동 행동이 없는 스파이도 정보 확인 위치(10)를 명세하기 위해 값을
+  /// 가집니다.
+  final int? nightOrder;
 
   final MafiaWinCondition winCondition;
   final MafiaInvestigationAppearance investigationAppearance;
@@ -337,7 +346,7 @@ class MafiaRole {
   ///
   /// 확정(2026-08): 건달은 능력이 아니라 **투표권만** 막습니다. 그래서
   /// "지목해서 막는다"를 두 값으로 나눴습니다 — 마담은 둘 다, 건달은 투표권만.
-  /// 이 값이 true인 역할만 밤의 **앞 구간**(차단)에 움직입니다.
+  /// 밤 구간은 이 값이 아니라 [nightOrder]로 정합니다.
   final bool blocksAbility;
 
   /// 같은 편을 제거했을 때 자신도 함께 죽는지입니다(자경단원 오발).

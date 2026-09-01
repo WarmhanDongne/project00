@@ -3,7 +3,7 @@
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
 import {logger} from "firebase-functions";
-import {onValueWritten} from "firebase-functions/v2/database";
+import {onValueDeleted, onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
@@ -139,6 +139,75 @@ function activeGroupUids(room: RealtimeRoom, controllerUid: string): string[] {
   }
   return [...uids];
 }
+
+/** 그룹 구성원의 보유 게임 목록을 중복 없이 합칩니다. */
+export function collectGroupOwnedGameIds(
+  ownedGamesByUser: unknown[],
+): string[] {
+  const gameIds = new Set<string>();
+  for (const ownedGames of ownedGamesByUser) {
+    if (!Array.isArray(ownedGames)) continue;
+    for (const gameId of ownedGames) {
+      if (typeof gameId === "string" && gameId.length > 0) gameIds.add(gameId);
+    }
+  }
+  return [...gameIds];
+}
+
+/**
+ * 삭제된 방에서 멱등 생성 예약을 찾을 때 사용할 안전한 RTDB 경로입니다.
+ * 잘못된 과거 데이터가 경로 구분자로 탈출하지 못하도록 두 식별자를 검증합니다.
+ */
+export function deletedRoomReservationPath(
+  room: unknown,
+): string | null {
+  if (!room || typeof room !== "object" || Array.isArray(room)) return null;
+  const value = room as Record<string, unknown>;
+  const controllerUid = typeof value.controllerUid === "string" ?
+    value.controllerUid : "";
+  const operationId = typeof value.creationOperationId === "string" ?
+    value.creationOperationId : "";
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(controllerUid) ||
+      !/^[A-Za-z0-9_-]{8,128}$/.test(operationId)) return null;
+  return `roomCreateRequests/${controllerUid}/${operationId}`;
+}
+
+/**
+ * 컨트롤러가 현재 방에서 선택할 수 있는 유료 게임 ID를 서버에서 계산합니다.
+ *
+ * 클라이언트가 다른 사용자의 `/users` 문서를 직접 읽지 않도록 방 매핑과
+ * 참가자 명단을 서버가 다시 확인합니다. 무료 게임은 클라이언트 카탈로그가
+ * 항상 포함하므로 응답에는 그룹이 실제 보유한 ID만 넣습니다.
+ */
+export const fetchRealtimeRoomGroupEntitlements = onCall(
+  {region: REGION},
+  async (request) => {
+    const controllerUid = requireUid(request.auth?.uid);
+    const database = getDatabase();
+    const roomCodeValue = await database
+      .ref(`controllerRooms/${controllerUid}`)
+      .get();
+    const roomCode = roomCodeValue.val();
+    if (typeof roomCode !== "string" || !ROOM_CODE.test(roomCode)) {
+      throw new HttpsError("failed-precondition", "현재 생성한 방이 없습니다.");
+    }
+
+    const room = await requireRoom(roomCode);
+    if (room.controllerUid !== controllerUid) {
+      throw new HttpsError("permission-denied", "현재 방의 컨트롤러가 아닙니다.");
+    }
+    const groupUids = activeGroupUids(room, controllerUid);
+    const users = await Promise.all(
+      groupUids.map((uid) =>
+        getFirestore().collection("users").doc(uid).get()),
+    );
+    return {
+      ownedGameIds: collectGroupOwnedGameIds(
+        users.map((user) => user.data()?.ownedGames),
+      ),
+    };
+  },
+);
 
 async function assertGameAccessible(
   room: RealtimeRoom,
@@ -527,6 +596,25 @@ export const syncRealtimeRoomGameStatus = onValueWritten(
     await runPrimedTransaction(roomRef, (raw) =>
       synchronizeRoomGameStatus(raw as RealtimeRoom | null, status, Date.now()),
     );
+  },
+);
+
+/**
+ * 방 삭제와 예약 삭제 사이의 부분 실패를 재시도 가능한 트리거로 막습니다.
+ *
+ * close/스케줄 정리 경로의 즉시 삭제는 빠른 정상 경로로 유지하고, 이 트리거는
+ * 방이 먼저 사라진 뒤 남은 `roomCreateRequests`를 멱등하게 지우는 backstop입니다.
+ */
+export const cleanupDeletedRoomCreationRequest = onValueDeleted(
+  {
+    ref: "/rooms/{roomCode}",
+    region: DATABASE_REGION,
+    retry: true,
+  },
+  async (event) => {
+    const reservationPath = deletedRoomReservationPath(event.data.val());
+    if (!reservationPath) return;
+    await getDatabase().ref(reservationPath).remove();
   },
 );
 

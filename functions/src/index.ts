@@ -21,8 +21,10 @@ export {
 
 export {
   beginRealtimeRoomSeating,
+  cleanupDeletedRoomCreationRequest,
   cleanupStaleRealtimeRooms,
   closeRoom,
+  fetchRealtimeRoomGroupEntitlements,
   leaveRealtimeRoom,
   removeRealtimeRoomPlayer,
   resumeRealtimeControllerRoom,

@@ -19,22 +19,14 @@ import {PublicGameInterruption, ServerGameInterruption} from "../game-interrupti
 /** 역할 확인 제한시간입니다. 이 안에 전원이 확인해야 합니다(확정: 약 1분). */
 export const MAFIA_ROLE_REVEAL_MS = 60000;
 
-/**
- * 밤의 **앞 구간**입니다 — 능력을 막는 역할만 움직입니다(확정 2026-08: 1분).
- *
- * 마담이 막으면 그 사람의 능력은 무효입니다. 그러니 **마담 판정이 끝나야**
- * 뒤 역할들이 실제로 행동할 수 있는지 정해집니다. 그래서 밤을 두 구간으로
- * 나눕니다. 막는 역할이 일찍 고르면 남은 시간을 버리고 곧바로 뒤 구간으로
- * 넘어갑니다([MafiaNightStageId]).
- */
-export const MAFIA_NIGHT_BLOCK_MS = 60000;
+/** 밤 1~4순위(도둑·교주·마담·건달) 동시 선택 시간입니다. */
+export const MAFIA_NIGHT_PRIORITY_MS = 60000;
 
-/**
- * 밤에 **행동을 고를 수 있는** 시간입니다(확정 2026-08: 1분).
- *
- * 이 시간이 지나면 더 제출할 수 없고, 모두 함께 기다립니다.
- */
-export const MAFIA_NIGHT_ACTION_MS = 60000;
+/** 밤 5~8순위(자경단원·마피아·짐승인간·연쇄살인마) 동시 선택 시간입니다. */
+export const MAFIA_NIGHT_ATTACK_MS = 60000;
+
+/** 밤 9~14순위(보호·정보·조사) 동시 선택 시간입니다. */
+export const MAFIA_NIGHT_SUPPORT_MS = 50000;
 
 /**
  * 행동이 모두 끝난 뒤 **아침이 오기까지** 기다리는 시간입니다(확정 2026-08: 10초).
@@ -44,23 +36,26 @@ export const MAFIA_NIGHT_ACTION_MS = 60000;
  */
 export const MAFIA_NIGHT_WAIT_MS = 10000;
 
-/** 밤 전체 제한시간입니다(차단 1분 + 행동 1분 + 마무리 10초). */
+/** 밤 전체 최대 제한시간입니다(60초 + 60초 + 50초 + 10초 = 3분). */
 export const MAFIA_NIGHT_MS =
-  MAFIA_NIGHT_BLOCK_MS + MAFIA_NIGHT_ACTION_MS + MAFIA_NIGHT_WAIT_MS;
+  MAFIA_NIGHT_PRIORITY_MS + MAFIA_NIGHT_ATTACK_MS +
+  MAFIA_NIGHT_SUPPORT_MS + MAFIA_NIGHT_WAIT_MS;
 
 /**
  * 밤의 어느 구간인지입니다.
  *
  * | 값 | 누가 고를 수 있나 |
  * |---|---|
- * | `block` | 능력을 막는 역할만(마담). 나머지는 대기 화면입니다 |
- * | `action` | 그 밖의 모든 밤 역할 |
+ * | `priority` | 1~4순위 역할 |
+ * | `attack` | 5~8순위 역할 |
+ * | `support` | 9~14순위 역할 |
  * | `wrapUp` | 아무도 고를 수 없습니다. 아침을 기다리는 10초입니다 |
  *
  * **구간 이름은 신분을 알려 주지 않습니다.** 어느 구간이든 화면 모습은 같고,
  * 고를 수 있는 사람에게만 격자가 보입니다.
  */
-export type MafiaNightStageId = "block" | "action" | "wrapUp";
+export type MafiaNightStageId =
+  | "priority" | "attack" | "support" | "wrapUp";
 
 /** 토론이 끝난 이유입니다. 투표로 끝났으면 태블릿이 그 안내를 띄웁니다. */
 export type MafiaDayEndReasonId = "timeout" | "vote";
@@ -109,10 +104,10 @@ export const MAFIA_VOTE_MS = 30000;
 export type MafiaFactionId = "citizen" | "mafia" | "neutral";
 
 /**
- * 밤 행동의 해결 단계입니다. 값이 작을수록 먼저 처리합니다.
+ * 밤 행동의 처리 유형입니다.
  *
- * Dart `MafiaNightPhase`의 order와 **같아야 합니다.** 순서가 어긋나면 규칙이
- * 깨집니다(차단이 보호보다 먼저, 조사 조작이 조사보다 먼저).
+ * 실제 역할별 판정 순서는 서버 역할 표의 `nightOrder`가 정합니다.
+ * 이 값은 마피아 다수결 공격과 독립 공격처럼 해결 방식을 구분합니다.
  */
 export type MafiaNightPhaseId =
   | "roleblock" | "protect" | "frame" | "convert"

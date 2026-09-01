@@ -298,7 +298,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         target != null &&
         _acknowledgedInvestigationRound != game.round;
 
-    // 확정(2026-08): 밤은 **차단 구간 → 행동 구간 → 마무리**로 흐릅니다.
+    // 확정(2026-08): 밤은 **1~4 → 5~8 → 9~14 → 마무리**로 흐릅니다.
     // 내 차례가 아닌 구간에서는 격자를 감추고 대기 화면을 보여 줍니다.
     // 서버가 구간을 알려 주므로 남은 시간으로 되짚지 않습니다.
     final actionWindowClosed = game.nightStageClosed;

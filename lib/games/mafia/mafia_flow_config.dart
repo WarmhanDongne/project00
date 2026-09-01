@@ -48,24 +48,23 @@ abstract final class MafiaTiming {
   /// 시작된 시각을 되짚어(마감 − 이 시간) 분배 연출이 끝나는 순간을 셉니다.
   static const Duration roleReveal = Duration(seconds: 60);
 
-  //=======================밤의 두 구간 (확정 2026-08)==============================
-  // 마담이 막은 사람의 능력은 무효라, **마담 판정이 끝나야** 뒤 역할들의 행동이
-  // 의미를 가집니다. 그래서 밤을 나눕니다.
+  //=======================밤의 순위 구간 (확정 2026-08)==============================
   //
-  //   차단(1분) → 행동(1분) → 마무리(10초) → 아침
+  //   1~4순위(60초) → 5~8순위(60초) → 9~14순위(50초)
+  //   → 마무리(10초) → 아침
   //
-  // 앞 구간이 일찍 끝나면 남은 시간을 버리고 곧바로 다음 구간이 열립니다.
+  // 해당 구간의 실제 행동 역할이 없거나 전원이 일찍 제출하면 남은
+  // 시간을 버리고 곧바로 다음 구간이 열립니다.
   // 서버가 구간을 정하고(`nightStage`), 화면은 그 값을 따릅니다.
 
-  /// 능력을 막는 역할(마담)만 고르는 앞 구간입니다.
-  ///
-  /// 서버 원본은 `MAFIA_NIGHT_BLOCK_MS`입니다.
-  static const Duration nightBlock = Duration(seconds: 60);
+  /// 도둑·교주·마담·건달(1~4순위) 구간입니다.
+  static const Duration nightPriority = Duration(seconds: 60);
 
-  /// 그 밖의 밤 역할이 고르는 구간입니다.
-  ///
-  /// 서버 원본은 `MAFIA_NIGHT_ACTION_MS`입니다.
-  static const Duration nightAction = Duration(seconds: 60);
+  /// 자경단원·마피아·짐승인간·연쇄살인마(5~8순위) 구간입니다.
+  static const Duration nightAttack = Duration(seconds: 60);
+
+  /// 보호·정보·조사 역할(9~14순위) 구간입니다.
+  static const Duration nightSupport = Duration(seconds: 50);
 
   /// 행동이 모두 끝난 뒤 아침이 오기까지 기다리는 시간입니다(확정: 10초).
   ///
@@ -80,8 +79,9 @@ abstract final class MafiaTiming {
   /// `FinalCallFlowTiming.closingRouteDelay`와 같은 1초로 맞춥니다.
   static const Duration closingRouteDelay = Duration(seconds: 1);
 
-  /// 밤 전체 시간입니다(차단 + 행동 + 마무리).
-  static Duration get night => nightBlock + nightAction + nightWait;
+  /// 밤 전체 최대 시간입니다(3분).
+  static Duration get night =>
+      nightPriority + nightAttack + nightSupport + nightWait;
 
   /// 생존 인원에 맞는 토론 시간입니다. 표 밖의 인원은 양 끝 값을 씁니다.
   static Duration discussion(int aliveCount) {

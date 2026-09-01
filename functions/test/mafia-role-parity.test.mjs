@@ -4,7 +4,6 @@ import test from "node:test";
 
 import {
   MAFIA_COMPOSITION,
-  MAFIA_NIGHT_PHASE_ORDER,
   MAFIA_ROLES,
 } from "../lib/mafia/roles.js";
 
@@ -24,10 +23,6 @@ import {
 const DART_ROOT = "../../lib/games/mafia/models";
 const roleSource = readFileSync(
   new URL(`${DART_ROOT}/mafia_roles.dart`, import.meta.url),
-  "utf8",
-);
-const roleModelSource = readFileSync(
-  new URL(`${DART_ROOT}/mafia_role.dart`, import.meta.url),
   "utf8",
 );
 const compositionSource = readFileSync(
@@ -90,6 +85,11 @@ test("서버 역할 표가 Dart 카탈로그와 같다", () => {
       role.nightPhase,
       dartEnumField(body, "nightPhase", null),
       `${roleId}: 밤 해결 단계가 다릅니다`,
+    );
+    assert.equal(
+      role.nightOrder,
+      dartIntField(body, "nightOrder", null),
+      `${roleId}: 밤 판정 순서가 다릅니다`,
     );
     assert.equal(
       role.investigationAppearance,
@@ -209,15 +209,32 @@ test("사망자를 고르는 역할은 밤 행동이 있다", () => {
   }
 });
 
-test("밤 해결 순서가 Dart와 같다", () => {
-  for (const [phase, order] of Object.entries(MAFIA_NIGHT_PHASE_ORDER)) {
-    const match = roleModelSource.match(new RegExp(`\\n  ${phase}\\((\\d+)\\)`));
-    assert.ok(match, `Dart에 ${phase} 단계가 없습니다.`);
-    assert.equal(
-      order,
-      Number(match[1]),
-      `${phase}: 해결 순서가 다릅니다`,
-    );
+test("역할별 밤 판정 순서가 명세와 같다", () => {
+  const expected = {
+    thief: 1,
+    cult_leader: 2,
+    madam: 3,
+    gangster: 4,
+    vigilante: 5,
+    mafia: 6,
+    mafia_boss: 6,
+    beast: 7,
+    serial_killer: 8,
+    doctor: 9,
+    bodyguard: 9,
+    spy: 10,
+    police: 11,
+    detective: 12,
+    reporter: 13,
+    medium: 14,
+  };
+
+  for (const [roleId, order] of Object.entries(expected)) {
+    assert.equal(MAFIA_ROLES[roleId].nightOrder, order, roleId);
+  }
+  for (const [roleId, role] of Object.entries(MAFIA_ROLES)) {
+    if (role.nightAction === "none") continue;
+    assert.notEqual(role.nightOrder, null, `${roleId}: 밤 순서가 없습니다`);
   }
 });
 

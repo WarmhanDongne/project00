@@ -10,6 +10,7 @@ import {
   bumpNightActionCue,
   canActInNightStage,
   mafiaAbilityUsesLeft,
+  nextMafiaNightStage,
   recordImmediateInvestigation,
   resolveMafiaNight,
 } from "./game.js";
@@ -51,8 +52,8 @@ function assertValidNightTarget(
     throw new HttpsError("failed-precondition", "밤에 할 수 있는 행동이 없습니다.");
   }
 
-  // 확정(2026-08): 밤은 차단 구간 → 행동 구간으로 흐릅니다. 앞 구간에는 능력을
-  // 막는 역할만 고를 수 있습니다.
+  // 확정(2026-08): 지금 열린 1~4, 5~8, 9~14 순위 구간의 역할만
+  // 고를 수 있습니다.
   if (!canActInNightStage(game, actorUid)) {
     throw new HttpsError("failed-precondition", "아직 고를 수 없습니다.");
   }
@@ -167,8 +168,8 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       game.public.updatedAt = now;
 
       // 확정(2026-08): 이 구간에서 기다릴 사람이 다 냈으면 남은 시간을 버리고
-      // 다음 구간을 엽니다(마담이 일찍 고르면 곧바로 행동 구간, 행동이 다
-      // 끝나면 10초 뒤 아침). 밤 자체를 여기서 끝내지는 않습니다 — 해결은
+      // 다음 순위 구간을 엽니다. 빈 구간은 즉시 건너뛰고, 모든 행동이
+      // 끝나면 10초 뒤 아침입니다. 밤 자체를 여기서 끝내지는 않습니다 — 해결은
       // 마감을 받은 timeout_night이 합니다.
       advanceMafiaNightStage(game, now);
 
@@ -228,7 +229,7 @@ export const game_mafia_timeout_night = onCall<TimeoutData>(
       if (stage !== "wrapUp") {
         beginMafiaNightStage(
           game,
-          stage === "block" ? "action" : "wrapUp",
+          nextMafiaNightStage(stage),
           now,
         );
         // 다음 구간에 기다릴 사람이 없으면 곧장 더 넘어갑니다.

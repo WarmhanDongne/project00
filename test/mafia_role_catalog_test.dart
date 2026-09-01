@@ -102,31 +102,36 @@ void main() {
 
   //=======================밤 해결 순서==============================
   // 순서가 어긋나면 프레이머·차단자 규칙이 깨집니다.
-  test('밤 해결 순서는 명세 단계 번호대로 정렬된다', () {
+  test('밤 해결 순서는 역할별 명세 번호대로 정렬된다', () {
     final orders = MafiaComposition.nightResolutionOrder
-        .map((phase) => phase.order)
+        .map((role) => role.nightOrder!)
         .toList();
     final sorted = [...orders]..sort();
     expect(orders, sorted);
-    expect(orders.toSet().length, orders.length);
   });
 
-  test('차단은 보호보다, 조사 조작은 조사보다 먼저 처리된다', () {
-    int indexOf(MafiaNightPhase phase) =>
-        MafiaComposition.nightResolutionOrder.indexOf(phase);
-
-    expect(
-      indexOf(MafiaNightPhase.roleblock),
-      lessThan(indexOf(MafiaNightPhase.protect)),
-    );
-    expect(
-      indexOf(MafiaNightPhase.frame),
-      lessThan(indexOf(MafiaNightPhase.investigate)),
-    );
-    expect(
-      indexOf(MafiaNightPhase.protect),
-      lessThan(indexOf(MafiaNightPhase.mafiaAttack)),
-    );
+  test('주요 역할의 밤 판정 순서가 1~14 명세와 같다', () {
+    const expected = {
+      'thief': 1,
+      'cult_leader': 2,
+      'madam': 3,
+      'gangster': 4,
+      'vigilante': 5,
+      'mafia': 6,
+      'mafia_boss': 6,
+      'beast': 7,
+      'serial_killer': 8,
+      'doctor': 9,
+      'bodyguard': 9,
+      'spy': 10,
+      'police': 11,
+      'detective': 12,
+      'reporter': 13,
+      'medium': 14,
+    };
+    for (final entry in expected.entries) {
+      expect(MafiaRoles.find(entry.key)?.nightOrder, entry.value);
+    }
   });
 
   //=======================구현 여부 게이트==============================
@@ -196,6 +201,7 @@ void main() {
     for (final role in MafiaRoles.implemented) {
       if (role.actsAtNight) {
         expect(role.nightPhase, isNotNull, reason: role.id);
+        expect(role.nightOrder, isNotNull, reason: role.id);
       }
     }
   });

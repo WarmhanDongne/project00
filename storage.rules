@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validProfileImage() {
+      return request.resource != null
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif)');
+    }
+
+    // 프로필 파일은 본인만 직접 읽고 변경합니다. 게임 참가자에게 필요한 사진은
+    // 서버가 방 상태에 넣은 Firebase download URL을 통해서만 표시됩니다.
+    match /users/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && fileName.matches('profile\\.(jpg|jpeg|png|webp|heic|heif)')
+        && validProfileImage();
+      allow delete: if isOwner(userId)
+        && fileName.matches('profile\\.(jpg|jpeg|png|webp|heic|heif)');
+    }
+  }
+}

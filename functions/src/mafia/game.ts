@@ -7,16 +7,15 @@ import {HttpsError} from "firebase-functions/v2/https";
 
 import {
   actsAtNight,
-  actsInBlockStage,
-  MAFIA_NIGHT_PHASE_ORDER,
   mafiaCompositionFor,
   mafiaRole,
 } from "./roles.js";
 import {
   mafiaDiscussionMs,
   MAFIA_DAY_SKIP_NOTICE_MS,
-  MAFIA_NIGHT_ACTION_MS,
-  MAFIA_NIGHT_BLOCK_MS,
+  MAFIA_NIGHT_ATTACK_MS,
+  MAFIA_NIGHT_PRIORITY_MS,
+  MAFIA_NIGHT_SUPPORT_MS,
   MAFIA_NIGHT_WAIT_MS,
   MAFIA_ROLE_REVEAL_MS,
   MAFIA_VOTE_MS,
@@ -32,8 +31,8 @@ import {
 // =========================================================================
 // 마피아 진행 엔진
 //
-// 역할 이름으로 분기하지 않습니다. 밤 해결은 `nightAction`과 `nightPhase`만
-// 보고 처리하므로, 역할을 추가할 때 이 파일을 고칠 필요가 없습니다.
+// 역할 이름으로 분기하지 않습니다. 밤 해결은 역할 표의 `nightOrder`로 정렬한 뒤
+// `nightAction`과 `nightPhase`로 처리하므로, 역할을 추가할 때는 표만 늘리면 됩니다.
 // =========================================================================
 
 /** 로비 참가자를 마피아 공개 플레이어로 변환합니다. */
@@ -345,51 +344,56 @@ export function bumpNightActionCue(
   };
 }
 
-// ===== 밤의 두 구간 =====
+// ===== 밤의 세 행동 구간 =====
 //
-// 확정(2026-08): 밤은 **차단 구간 → 행동 구간 → 마무리**로 흐릅니다.
-// 마담이 막은 사람의 능력은 무효라, 막는 역할의 판정이 끝나야 뒤 역할들의
-// 행동이 의미를 가집니다. 앞 구간이 일찍 끝나면 남은 시간을 버리고 곧바로
-// 다음 구간을 엽니다.
+// 확정(2026-08): 밤은 역할 해결 순서를 1~4, 5~8, 9~14로 묶어 엽니다.
+// 같은 구간의 역할은 동시에 고르되 실제 판정은 `nightOrder`로 정렬하고,
+// 생존한 실제 행동자가 없는 구간은 즉시 건너뜁니다.
+
+/** 이 순위가 속한 밤 행동 구간입니다. */
+function nightStageForOrder(nightOrder: number): MafiaNightStageId | null {
+  if (nightOrder >= 1 && nightOrder <= 4) return "priority";
+  if (nightOrder >= 5 && nightOrder <= 8) return "attack";
+  if (nightOrder >= 9 && nightOrder <= 14) return "support";
+  return null;
+}
 
 /**
  * 이번 밤에 행동해야 하는 사람들입니다.
  *
- * [inBlockStage]를 주면 그 구간에 움직이는 사람만 돌려줍니다.
+ * [stage]를 주면 그 순위 구간에 움직이는 사람만 돌려줍니다.
  */
 function nightActorUids(
   game: MafiaGameState,
-  inBlockStage?: boolean,
+  stage?: MafiaNightStageId,
 ): string[] {
   return alivePlayers(game.public.players)
     .filter((player) => {
       const roleId = game.server.roles[player.uid];
       if (!actsAtNight(roleId)) return false;
-      if (inBlockStage === undefined) return true;
-      return actsInBlockStage(roleId) === inBlockStage;
+      if (stage === undefined) return true;
+      const order = mafiaRole(roleId)?.nightOrder;
+      return order !== undefined && nightStageForOrder(order) === stage;
     })
     .map((player) => player.uid);
 }
 
 /** 이번 구간에 제출을 기다리는 사람들입니다. */
 function nightStageActorUids(game: MafiaGameState): string[] {
-  switch (game.public.nightStage) {
-  case "block":
-    return nightActorUids(game, true);
-  case "action":
-    return nightActorUids(game, false);
-  default:
-    return [];
-  }
+  const stage = game.public.nightStage;
+  if (!stage || stage === "wrapUp") return [];
+  return nightActorUids(game, stage);
 }
 
 /** 구간별 제한시간입니다. */
 function nightStageDurationMs(stage: MafiaNightStageId): number {
   switch (stage) {
-  case "block":
-    return MAFIA_NIGHT_BLOCK_MS;
-  case "action":
-    return MAFIA_NIGHT_ACTION_MS;
+  case "priority":
+    return MAFIA_NIGHT_PRIORITY_MS;
+  case "attack":
+    return MAFIA_NIGHT_ATTACK_MS;
+  case "support":
+    return MAFIA_NIGHT_SUPPORT_MS;
   default:
     return MAFIA_NIGHT_WAIT_MS;
   }
@@ -409,12 +413,21 @@ export function canActInNightStage(
   game: MafiaGameState,
   uid: string,
 ): boolean {
-  const stage = game.public.nightStage ?? "action";
+  const stage = game.public.nightStage;
+  if (!stage) return true;
   if (stage === "wrapUp") return false;
-  // 앞 구간에는 막는 역할만 움직입니다. 뒤 구간에는 아직 안 낸 사람 전부입니다
-  // (앞 구간에서 넘긴 마담도 여기서 낼 수 있습니다).
-  if (stage === "block") return actsInBlockStage(game.server.roles[uid]);
-  return true;
+  return nightStageActorUids(game).includes(uid);
+}
+
+/** 다음 밤 구간입니다. */
+export function nextMafiaNightStage(
+  stage: MafiaNightStageId,
+): MafiaNightStageId {
+  switch (stage) {
+  case "priority": return "attack";
+  case "attack": return "support";
+  default: return "wrapUp";
+  }
 }
 
 /** 밤의 한 구간을 시작합니다. */
@@ -442,7 +455,7 @@ export function advanceMafiaNightStage(
   game: MafiaGameState,
   now: number,
 ): boolean {
-  const stage = game.public.nightStage ?? "action";
+  const stage = game.public.nightStage ?? "priority";
   if (stage === "wrapUp") return false;
 
   const actions = game.server.nightActions ?? {};
@@ -450,8 +463,8 @@ export function advanceMafiaNightStage(
     .filter((uid) => actions[uid] === undefined);
   if (pending.length > 0) return false;
 
-  beginMafiaNightStage(game, stage === "block" ? "action" : "wrapUp", now);
-  // 앞 구간이 비어 있으면(마담이 없는 판) 뒤 구간도 비어 있을 수 있습니다.
+  beginMafiaNightStage(game, nextMafiaNightStage(stage), now);
+  // 역할이 없는 구간이 연속되면 마무리까지 한번에 건너뜁니다.
   advanceMafiaNightStage(game, now);
   return true;
 }
@@ -477,8 +490,8 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
     delete entry.voteBanned;
     delete entry.roleChangedRound;
   }
-  // 능력을 막는 역할부터 움직입니다. 없으면 곧바로 행동 구간이 열립니다.
-  beginMafiaNightStage(game, "block", now);
+  // 1~4순위부터 열고, 해당 역할이 없으면 곧바로 다음 구간으로 갑니다.
+  beginMafiaNightStage(game, "priority", now);
   advanceMafiaNightStage(game, now);
 }
 
@@ -719,8 +732,8 @@ function tallyVotes(
 /**
  * 밤 행동을 해결하고 아침 결과를 만듭니다.
  *
- * 반드시 [MAFIA_NIGHT_PHASE_ORDER] 순서로 처리합니다. 순서가 어긋나면 규칙이
- * 깨집니다(차단이 보호보다 먼저, 조사 조작이 조사보다 먼저).
+ * 반드시 역할 표의 `nightOrder` 순서로 처리합니다. 순서가 어긋나면
+ * 역할 교체·전향·차단·공격·보호·조사 결과가 달라집니다.
  *
  * 죽음이 정해지는 순서도 중요합니다.
  *   1. 단계 순서대로 돌며 차단·보호·조사·표적을 모읍니다.
@@ -752,12 +765,12 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
     .filter(([actorUid]) => game.public.players[actorUid]?.status === "alive")
     .flatMap(([actorUid, targetUid]) => {
       const role = mafiaRole(roles[actorUid]);
-      if (!role || role.nightPhase === null) return [];
+      if (!role || role.nightPhase === null || role.nightOrder === null) {
+        return [];
+      }
       return [{actorUid, targetUid, role, phase: role.nightPhase}];
     })
-    .sort((left, right) =>
-      MAFIA_NIGHT_PHASE_ORDER[left.phase] -
-      MAFIA_NIGHT_PHASE_ORDER[right.phase]);
+    .sort((left, right) => left.role.nightOrder! - right.role.nightOrder!);
 
   // 마피아 진영의 다수결 지목입니다. 짐승인간은 여기 들어오지 않습니다
   // (해결 단계가 independentAttack이라 혼자 공격합니다).

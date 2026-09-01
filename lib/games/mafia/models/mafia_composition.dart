@@ -150,14 +150,15 @@ abstract final class MafiaComposition {
       .where((count) => unimplementedRolesFor(count).isEmpty)
       .toList(growable: false);
 
-  /// 밤 행동을 처리하는 순서입니다. 서버는 이 순서로만 해결합니다.
+  /// 밤 행동을 처리하는 역할 순서입니다.
   ///
-  /// 순서가 어긋나면 규칙이 깨집니다. 예를 들어 조사 조작([MafiaNightPhase.frame])을
-  /// 조사([MafiaNightPhase.investigate])보다 나중에 처리하면 프레이머가 무효가 되고,
-  /// 차단([MafiaNightPhase.roleblock])을 보호보다 나중에 처리하면 차단된 의사가
-  /// 보호에 성공합니다.
-  static final List<MafiaNightPhase> nightResolutionOrder = List.unmodifiable(
-    MafiaNightPhase.values.toList()
-      ..sort((left, right) => left.order.compareTo(right.order)),
+  /// 서버는 각 역할의 [MafiaRole.nightOrder]를 같은 값으로 가지고 이 순서로
+  /// 해결합니다. 경호원·마피아 보스처럼 동일 능력의 파생 역할은 같은
+  /// 순서를 공유합니다.
+  static final List<MafiaRole> nightResolutionOrder = List.unmodifiable(
+    MafiaRoles.implemented.where((role) => role.nightOrder != null).toList()
+      ..sort(
+        (left, right) => left.nightOrder!.compareTo(right.nightOrder!),
+      ),
   );
 }

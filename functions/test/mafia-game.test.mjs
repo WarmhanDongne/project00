@@ -16,7 +16,6 @@ import {
 import {mafiaComposition} from "../lib/mafia/validation.js";
 import {
   MAFIA_COMPOSITION,
-  MAFIA_NIGHT_PHASE_ORDER,
   MAFIA_ROLES,
 } from "../lib/mafia/roles.js";
 import {makeGame} from "./mafia-test-state.mjs";
@@ -199,10 +198,16 @@ test("마피아 보스는 조사에서 시민으로 보인다", () => {
 });
 
 test("밤 해결 순서가 규칙을 지킨다", () => {
-  // 차단이 보호보다, 조사 조작이 조사보다 먼저여야 합니다.
-  assert.ok(MAFIA_NIGHT_PHASE_ORDER.roleblock < MAFIA_NIGHT_PHASE_ORDER.protect);
-  assert.ok(MAFIA_NIGHT_PHASE_ORDER.frame < MAFIA_NIGHT_PHASE_ORDER.investigate);
-  assert.ok(MAFIA_NIGHT_PHASE_ORDER.protect < MAFIA_NIGHT_PHASE_ORDER.mafiaAttack);
+  assert.ok(MAFIA_ROLES.thief.nightOrder < MAFIA_ROLES.cult_leader.nightOrder);
+  assert.ok(MAFIA_ROLES.madam.nightOrder < MAFIA_ROLES.gangster.nightOrder);
+  assert.ok(MAFIA_ROLES.vigilante.nightOrder < MAFIA_ROLES.mafia.nightOrder);
+  assert.ok(MAFIA_ROLES.mafia.nightOrder < MAFIA_ROLES.beast.nightOrder);
+  assert.ok(MAFIA_ROLES.beast.nightOrder < MAFIA_ROLES.serial_killer.nightOrder);
+  assert.ok(MAFIA_ROLES.serial_killer.nightOrder < MAFIA_ROLES.doctor.nightOrder);
+  assert.ok(MAFIA_ROLES.doctor.nightOrder < MAFIA_ROLES.police.nightOrder);
+  assert.ok(MAFIA_ROLES.police.nightOrder < MAFIA_ROLES.detective.nightOrder);
+  assert.ok(MAFIA_ROLES.detective.nightOrder < MAFIA_ROLES.reporter.nightOrder);
+  assert.ok(MAFIA_ROLES.reporter.nightOrder < MAFIA_ROLES.medium.nightOrder);
 });
 
 test("죽은 사람의 밤 행동은 무시한다", () => {

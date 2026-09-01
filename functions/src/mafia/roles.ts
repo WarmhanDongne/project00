@@ -30,8 +30,10 @@ export interface MafiaServerRole {
   displayName: string;
   faction: MafiaFactionId;
   nightAction: MafiaNightActionId;
-  /** 밤 행동이 없으면 null입니다. */
+  /** 밤 행동의 처리 유형입니다. 밤 행동이 없으면 null입니다. */
   nightPhase: MafiaNightPhaseId | null;
+  /** 역할별 밤 판정 순서입니다. 작을수록 먼저 처리합니다. */
+  nightOrder: number | null;
   /** 밤에 고를 수 있는 대상입니다. 영매·도둑만 "dead"입니다. */
   nightTargetScope: MafiaNightTargetScopeId;
   investigationAppearance: MafiaInvestigationAppearanceId;
@@ -67,6 +69,7 @@ export interface MafiaServerRole {
 const BASE = {
   nightAction: "none",
   nightPhase: null,
+  nightOrder: null,
   nightTargetScope: "alive",
   investigationAppearance: "actual",
   winCondition: "faction",
@@ -89,17 +92,17 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
   },
   police: {
     ...BASE, id: "police", displayName: "경찰", faction: "citizen",
-    nightAction: "investigate", nightPhase: "investigate",
+    nightAction: "investigate", nightPhase: "investigate", nightOrder: 11,
   },
   doctor: {
     ...BASE, id: "doctor", displayName: "의사", faction: "citizen",
-    nightAction: "protect", nightPhase: "protect",
+    nightAction: "protect", nightPhase: "protect", nightOrder: 9,
   },
   // 경호원은 지금 **의사와 같은 보호**로 동작합니다. 고전 규칙(대상 대신 죽음)이
   // 필요하면 데이터에 표시를 추가하고 해결 엔진에 한 갈래를 더해야 합니다.
   bodyguard: {
     ...BASE, id: "bodyguard", displayName: "경호원", faction: "citizen",
-    nightAction: "protect", nightPhase: "protect",
+    nightAction: "protect", nightPhase: "protect", nightOrder: 9,
   },
   // 군인은 공격 대상이 되는 순간 방어를 하나 소모하고 살아남습니다. 밤에
   // 고르는 것이 없으므로 밤 행동 인원수에도 잡히지 않습니다.
@@ -116,65 +119,65 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
   medium: {
     ...BASE, id: "medium", displayName: "영매", faction: "citizen",
     nightAction: "investigateRole", nightPhase: "investigate",
-    nightTargetScope: "dead",
+    nightOrder: 14, nightTargetScope: "dead",
   },
   // 확정(2026-08): 건달은 **낮 투표권**을 막습니다. 밤 능력은 막지 않습니다.
-  // 그래서 해결 단계도 차단(roleblock)이 아니라 상태 부여(statusEffect)입니다 —
-  // 뒤 역할의 행동 가능 여부를 바꾸지 않으므로 먼저 처리할 이유가 없습니다.
+  // 실제 순서는 nightOrder 4로 마담 다음, 공격보다 먼저입니다.
   gangster: {
     ...BASE, id: "gangster", displayName: "건달", faction: "citizen",
-    nightAction: "roleblock", nightPhase: "statusEffect",
+    nightAction: "roleblock", nightPhase: "statusEffect", nightOrder: 4,
     blocksTargetVote: true,
   },
   // 자경단원은 게임당 1회. 시민팀을 쏘면 오발로 자신도 함께 죽습니다.
   vigilante: {
     ...BASE, id: "vigilante", displayName: "자경단원", faction: "citizen",
-    nightAction: "eliminate", nightPhase: "independentAttack",
+    nightAction: "eliminate", nightPhase: "independentAttack", nightOrder: 5,
     maxUses: 1, selfDestructsOnAllyKill: true,
   },
   // 밤에 지목한 사람의 신분을 다음 아침에 **전체 공개**합니다.
   reporter: {
     ...BASE, id: "reporter", displayName: "기자", faction: "citizen",
-    nightAction: "expose", nightPhase: "statusEffect",
+    nightAction: "expose", nightPhase: "statusEffect", nightOrder: 13,
   },
   // 대상이 누구를 찾아갔는지 조사합니다.
   detective: {
     ...BASE, id: "detective", displayName: "사립탐정", faction: "citizen",
-    nightAction: "track", nightPhase: "investigate",
+    nightAction: "track", nightPhase: "investigate", nightOrder: 12,
   },
 
   // ===== 마피아 진영 =====
   mafia: {
     ...BASE, id: "mafia", displayName: "마피아", faction: "mafia",
-    nightAction: "eliminate", nightPhase: "mafiaAttack", knowsAllies: true,
+    nightAction: "eliminate", nightPhase: "mafiaAttack", nightOrder: 6,
+    knowsAllies: true,
   },
   // 마피아 보스는 마피아와 같지만 **조사에서 시민으로 보입니다.**
   mafia_boss: {
     ...BASE, id: "mafia_boss", displayName: "마피아 보스", faction: "mafia",
     nightAction: "eliminate", nightPhase: "mafiaAttack",
-    investigationAppearance: "asCitizen", knowsAllies: true,
+    nightOrder: 6, investigationAppearance: "asCitizen", knowsAllies: true,
   },
   // 스파이는 마피아를 알지만 밤에 하는 일이 없고 조사에 시민으로 보입니다.
   spy: {
     ...BASE, id: "spy", displayName: "스파이", faction: "mafia",
-    investigationAppearance: "asCitizen", knowsAllies: true,
+    nightOrder: 10, investigationAppearance: "asCitizen", knowsAllies: true,
   },
   // 짐승인간은 마피아팀이지만 **혼자** 공격합니다(다수결에 참여하지 않습니다).
   // 동료를 모르므로 knowsAllies가 false입니다.
   beast: {
     ...BASE, id: "beast", displayName: "짐승인간", faction: "mafia",
-    nightAction: "eliminate", nightPhase: "independentAttack",
+    nightAction: "eliminate", nightPhase: "independentAttack", nightOrder: 7,
   },
   // 마담은 능력 차단에 더해 대상의 **다음 낮 투표권**까지 막습니다.
   madam: {
     ...BASE, id: "madam", displayName: "마담", faction: "mafia",
-    nightAction: "roleblock", nightPhase: "roleblock",
+    nightAction: "roleblock", nightPhase: "roleblock", nightOrder: 3,
     blocksTargetVote: true, blocksAbility: true, knowsAllies: true,
   },
   // 도둑은 사망자의 직업을 훔쳐 그 직업이 됩니다(진영까지 바뀝니다).
   thief: {
     ...BASE, id: "thief", displayName: "도둑", faction: "mafia",
-    nightAction: "steal", nightPhase: "statusEffect",
+    nightAction: "steal", nightPhase: "statusEffect", nightOrder: 1,
     nightTargetScope: "dead", knowsAllies: true,
   },
 
@@ -190,12 +193,12 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
   serial_killer: {
     ...BASE, id: "serial_killer", displayName: "연쇄살인마",
     faction: "neutral",
-    nightAction: "eliminate", nightPhase: "independentAttack",
+    nightAction: "eliminate", nightPhase: "independentAttack", nightOrder: 8,
     winCondition: "lastStanding",
   },
   cult_leader: {
     ...BASE, id: "cult_leader", displayName: "교주", faction: "neutral",
-    nightAction: "convert", nightPhase: "convert",
+    nightAction: "convert", nightPhase: "convert", nightOrder: 2,
     winCondition: "factionDominance",
     convertsTargetTo: "cultist", knowsAllies: true,
   },
@@ -204,22 +207,6 @@ export const MAFIA_ROLES: Record<string, MafiaServerRole> = {
     ...BASE, id: "cultist", displayName: "광신도", faction: "neutral",
     winCondition: "factionDominance", knowsAllies: true,
   },
-};
-
-/**
- * 밤 행동 해결 순서입니다. 값이 작을수록 먼저 처리합니다.
- *
- * Dart `MafiaNightPhase`의 order와 같습니다. 순서를 바꾸면 규칙이 깨집니다.
- */
-export const MAFIA_NIGHT_PHASE_ORDER: Record<MafiaNightPhaseId, number> = {
-  roleblock: 2,
-  protect: 3,
-  frame: 4,
-  convert: 5,
-  investigate: 6,
-  mafiaAttack: 7,
-  independentAttack: 8,
-  statusEffect: 9,
 };
 
 /**

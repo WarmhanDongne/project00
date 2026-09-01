@@ -436,16 +436,28 @@ class MafiaTabletNotice extends StatefulWidget {
     super.key,
     required this.text,
     this.isNight = false,
+    this.voice,
   });
 
-  const MafiaTabletNotice.day({super.key, required this.text})
+  const MafiaTabletNotice.day({super.key, required this.text, this.voice})
     : isNight = false;
 
-  const MafiaTabletNotice.night({super.key, required this.text})
-    : isNight = true;
+  /// 밤 안내는 기본으로 '밤이 되었습니다' 음성을 냅니다.
+  const MafiaTabletNotice.night({
+    super.key,
+    required this.text,
+    this.voice = MafiaSounds.voiceNight,
+  }) : isNight = true;
 
   final String text;
   final bool isNight;
+
+  /// 안내가 뜨는 순간 한 번 낼 안내 음성입니다. null이면 소리가 없습니다.
+  ///
+  /// 방 가운데 태블릿에서만 냅니다 — 휴대폰까지 같이 울리면 말이 겹칩니다.
+  /// 안내마다 음성이 다르니 **문구와 함께 넘깁니다**(문구로 소리를 추측하지
+  /// 않습니다).
+  final String? voice;
 
   @override
   State<MafiaTabletNotice> createState() => _MafiaTabletNoticeState();
@@ -455,10 +467,11 @@ class _MafiaTabletNoticeState extends State<MafiaTabletNotice> {
   @override
   void initState() {
     super.initState();
-    if (!widget.isNight) return;
+    final voice = widget.voice;
+    if (voice == null) return;
     // context를 쓰는 일이라 첫 프레임 뒤로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) SoundEffects.play(context, MafiaSounds.voiceNight);
+      if (mounted) SoundEffects.play(context, voice);
     });
   }
 

@@ -1,6 +1,6 @@
 abstract final class AppConstants {
   static const appName = '모시겜';
-  static const supportEmail = 'support@example.com';
+  static const supportEmail = 'warmhandongne@gmail.com';
 
   /// 현재 빌드의 앱 버전입니다. Firestore 게임 문서의 `minAppVersion`과
   /// 비교해 이 빌드가 실행할 수 없는 게임을 걸러냅니다.
