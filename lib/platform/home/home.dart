@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/core/layout/device_layout.dart';
-import 'package:project00/games/mafia/dev/mafia_practice_screen.dart';
+// import 'package:project00/games/mafia/dev/mafia_practice_screen.dart';
 import 'package:project00/games/mafia/screens/tablet/tablet_role_setup_screen.dart';
 import 'package:project00/games/shared/widgets/game_reconnect_screen.dart';
 import 'package:project00/platform/home/phone/screens/phone_home.dart';

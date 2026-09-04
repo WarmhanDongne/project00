@@ -89,6 +89,70 @@ void main() {
     gameProvider.dispose();
   });
 
+  testWidgets('그룹 게임 갱신 중에 기존 카드를 유지하고 입력을 막는다', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final roomService = _SelectionRoomService();
+    final gameService = _CatalogGameService();
+    final roomProvider =
+        RoomProvider(service: roomService, gameService: gameService)
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    roomProvider
+      ..groupGames = const []
+      ..groupGamesLoadStatus = RoomDataLoadStatus.loading
+      ..notifyListeners();
+    await tester.pump();
+
+    expect(find.text('Final Call'), findsOneWidget);
+    expect(
+      find.byKey(const Key('game-list-refresh-indicator')),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    final inputGuard = tester.widget<IgnorePointer>(
+      find.byKey(const Key('game-list-input-guard')),
+    );
+    expect(inputGuard.ignoring, isTrue);
+
+    roomProvider
+      ..groupGames = const [_paidGame]
+      ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+      ..notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Final Call'), findsNothing);
+    expect(find.text('유료 게임'), findsOneWidget);
+    expect(
+      find.byKey(const Key('game-list-refresh-indicator')),
+      findsNothing,
+    );
+  });
+
   testWidgets('선택 해제에 실패하면 닫힌 뒤 오류를 알린다', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);

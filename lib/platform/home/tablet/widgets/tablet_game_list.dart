@@ -30,6 +30,7 @@ class _GameListState extends State<GameList> {
   bool _isPreviewOpen = false;
   int _selectionGeneration = 0;
   Future<void>? _pendingClear;
+  List<GameInfo> _lastVisibleGames = const [];
 
   @override
   void initState() {
@@ -147,7 +148,21 @@ class _GameListState extends State<GameList> {
             ? widget.roomProvider.groupGames
             : widget.gameProvider.games;
 
-        if (isLoading) {
+        // 방 생성·구성원 변경으로 그룹 게임을 다시 받는 동안에도
+        // 이전 카드를 유지합니다. 목록을 비우고 스피너로 통째 교체하면
+        // 화면이 깜빡이는 것처럼 보입니다. 초기 진입처럼 보여 줄 카드가
+        // 아예 없을 때만 기존 전체 로딩 표시를 씁니다.
+        if (!isLoading && errorMessage == null) {
+          _lastVisibleGames = sourceGames;
+        }
+        final keepsPreviousGames =
+            isLoading && sourceGames.isEmpty && _lastVisibleGames.isNotEmpty;
+        final visibleSourceGames = keepsPreviousGames
+            ? _lastVisibleGames
+            : sourceGames;
+        final isRefreshing = isLoading && visibleSourceGames.isNotEmpty;
+
+        if (isLoading && visibleSourceGames.isEmpty) {
           return Center(
             child: CircularProgressIndicator(color: colors.primary),
           );
@@ -169,18 +184,24 @@ class _GameListState extends State<GameList> {
             ),
           );
         }
-        final genres = _availableGenres(sourceGames);
+        final genres = _availableGenres(visibleSourceGames);
         // 고른 장르의 게임이 모두 빠지면(그룹 구성이 바뀌는 경우) 전체로
         // 되돌려, 빈 목록만 남는 상태에 갇히지 않게 합니다.
         final activeGenre = genres.contains(selectedGenre)
             ? selectedGenre
             : _genres.first;
-        final games = _filteredGames(sourceGames, activeGenre);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        final games = _filteredGames(visibleSourceGames, activeGenre);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            IgnorePointer(
+              key: const Key('game-list-input-guard'),
+              ignoring: isRefreshing,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
               Text(
                 hasRoom ? '그룹이 보유 중인 게임' : '보유 중인 게임',
                 style: const TextStyle(
@@ -264,19 +285,73 @@ class _GameListState extends State<GameList> {
                                 ),
                             itemBuilder: (context, index) {
                               final game = games[index];
-                              return GameCard(
-                                game: game,
-                                onTap: () => _openPreview(game),
+                              return _GameCardEntrance(
+                                key: ValueKey('game-card-${game.id}'),
+                                child: GameCard(
+                                  game: game,
+                                  onTap: () => _openPreview(game),
+                                ),
                               );
                             },
                           );
                         },
                       ),
               ),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 18,
+              right: 18,
+              child: IgnorePointer(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 140),
+                  child: isRefreshing
+                      ? Semantics(
+                          key: const Key('game-list-refresh-indicator'),
+                          label: '게임 목록 갱신 중',
+                          child: LinearProgressIndicator(
+                            minHeight: 2,
+                            color: colors.primary,
+                            backgroundColor: Colors.transparent,
+                          ),
+                        )
+                      : const SizedBox(
+                          key: Key('game-list-refresh-idle'),
+                          height: 2,
+                        ),
+                ),
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+/// 새로 생긴 게임 카드만 짧게 페이드·상승시킵니다.
+class _GameCardEntrance extends StatelessWidget {
+  const _GameCardEntrance({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, 8 * (1 - value)),
+          child: child,
+        ),
+      ),
     );
   }
 }
