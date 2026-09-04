@@ -13,6 +13,7 @@ router다.
 | 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](docs/engineering/ARCHITECTURE.md)와 관련 코드·테스트 |
 | 새 게임 | [`게임 템플릿 가이드`](lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
 | Project CLI | [`Project CLI`](docs/engineering/PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
+| 작업 계획·진행·완료·기록 정리 | [`작업 목록과 관리 방법`](docs/planning/TASKS.md), [`완료 작업`](docs/planning/COMPLETED_TASKS.md), 해당 월의 [`작업 기록`](docs/planning/logs/) |
 
 외부 개인 notes나 로컬 절대 경로는 공식 context가 아니다. 문서와 구현이 충돌하거나
 제품 의도가 확인되지 않으면 추측하지 말고 evidence와 함께 보고한다. 하위

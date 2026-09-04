@@ -1,7 +1,7 @@
 # 출시 차단 수정 — 필수 실기기 체크리스트
 
 자동으로 재현한 단절·복구 경합, 타이머 중첩 중단, 중복 route 종료와 퇴장 후 지연 쓰기는
-[출시 차단 현황](../planning/PRE_RELEASE_BLOCKERS.md)의 자동 검증 기록을 따른다.
+[기존 완료·검증 근거](../planning/COMPLETED_TASKS.md)의 자동 검증 기록을 따른다.
 아래는 실제 Firebase 연결 시간과 여러 기기의 화면 이동만 확인하는 마지막 세 시나리오다.
 
 **2026-08-31 실행 결과: 세 시나리오 모두 통과(사용자 명시 확인).**
@@ -23,7 +23,7 @@
   휴대폰 두 대로 실행 가능한 게임을 선택하고, 단절 중 `즉시 종료`는 누르지 않는다.
 - 로그인·회원가입 뒤로가기·오류 배지 미노출은 이미 통과했으므로 별도 반복하지 않는다.
   S20+의 이전 UT 성공은 유지하며 글씨/화면 확대 대응은
-  [출시 후 개선](../planning/POST_LAUNCH_IMPROVEMENTS.md#accessibility-scale-01--글씨화면-확대-설정-대응)이다.
+  [출시 후 개선](../planning/TASKS.md#accessibility-scale-01--글씨화면-확대-설정-대응)이다.
 
 빌드: [mosigame-sessionfix-20260831.apk](../../build/app/outputs/flutter-apk/mosigame-sessionfix-20260831.apk)
 
@@ -56,7 +56,7 @@ Galaxy A35. 각 OS 버전은 미제공이며 태블릿 실물 테스트는 아�
 남아 있었다고 보고했다. 서버가 멈춘 남은 시간부터 재개한 것 같으며 동작한다고 확인했다.
 반복해서 네트워크를 끊고 복구해도 문제없이 게임이 진행됐다. 이 시나리오 전체 통과이며
 문제가 있어서 메모한 것이 아니라고 명시했다. 사용자가 이 시간 재개 방식을 납득할지에
-대한 의견만 [출시 후 개선](../planning/POST_LAUNCH_IMPROVEMENTS.md#game-pause-ux-01--단절-후-남은-시간-재개-안내)으로 기록한다.
+대한 의견만 [출시 후 개선](../planning/TASKS.md#game-pause-ux-01--단절-후-남은-시간-재개-안내)으로 기록한다.
 
 ## 2. 태블릿 단절 복구와 퇴장 참가자 잔류
 
@@ -81,5 +81,5 @@ Galaxy A35. 각 OS 버전은 미제공이며 태블릿 실물 테스트는 아�
 
 **통과.** 태블릿을 강제 종료했을 때 winner 표시 화면 밑에 `태블릿 오류 화면`이 뜬다고
 보고했다. 사용자는 이를 오류가 아닌 추후 수정 사안으로 지정했다.
-[winner 아래 연결 안내 겹침](../planning/POST_LAUNCH_IMPROVEMENTS.md#winner-connection-layer-01--winner-아래-태블릿-연결-안내-겹침)으로
+[winner 아래 연결 안내 겹침](../planning/TASKS.md#winner-connection-layer-01--winner-아래-태블릿-연결-안내-겹침)으로
 기록하며 winner 종료·대기실 복귀의 통과 판정은 유지한다.

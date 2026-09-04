@@ -26,5 +26,10 @@
 
 ## Planning
 
-- [`Pre-release Blockers and Verification Status`](planning/PRE_RELEASE_BLOCKERS.md)
-- [`Post-launch Improvements`](planning/POST_LAUNCH_IMPROVEMENTS.md)
+- [`작업 목록`](planning/TASKS.md): 출시 전 필수·권장·출시 후 작업, 현재 상태와 완료 조건
+- [`완료 작업`](planning/COMPLETED_TASKS.md): 최종 변경, 완료일, 검증 근거와 한계
+- [`월별 작업 기록`](planning/logs/): 월별 파일 안에서 태스크별 과정과 날짜별 목차 관리
+  — [2026년 8월](planning/logs/2026-08.md)
+
+진행 과정은 기록에, 현재 구현 설명은 Engineering/Operations의 해당 기술 문서에 둔다.
+문서 작성·이동과 상태 관리 방법은 작업 목록의 관리 방법을 따른다.
