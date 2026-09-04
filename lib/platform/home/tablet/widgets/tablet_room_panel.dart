@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project00/platform/home/room/models/room_character.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -11,23 +12,98 @@ import 'package:project00/platform/widgets/platform_components.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 //=======================태블릿 방 패널==============================
-class TabletRoomPanel extends StatelessWidget {
+const _playerMotionDuration = Duration(milliseconds: 260);
+
+class TabletRoomPanel extends StatefulWidget {
   const TabletRoomPanel({super.key, required this.provider});
 
   final RoomProvider provider;
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: provider,
-      builder: (context, _) {
-        final code = provider.roomCode;
-        if (code == null) return _EmptyRoom(provider: provider);
-        if (provider.players.isEmpty) {
-          return _InvitationRoom(provider: provider, roomCode: code);
+  State<TabletRoomPanel> createState() => _TabletRoomPanelState();
+}
+
+class _TabletRoomPanelState extends State<TabletRoomPanel> {
+  Timer? _lastPlayerExitTimer;
+  late bool _hadPlayers;
+  late bool _showActiveRoom;
+
+  RoomProvider get provider => widget.provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _hadPlayers = provider.players.isNotEmpty;
+    _showActiveRoom = _hadPlayers;
+    provider.addListener(_handleRoomChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant TabletRoomPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.provider, provider)) return;
+    oldWidget.provider.removeListener(_handleRoomChange);
+    _lastPlayerExitTimer?.cancel();
+    _hadPlayers = provider.players.isNotEmpty;
+    _showActiveRoom = _hadPlayers;
+    provider.addListener(_handleRoomChange);
+  }
+
+  void _handleRoomChange() {
+    final hasRoom = provider.roomCode != null;
+    final hasPlayers = provider.players.isNotEmpty;
+    if (!hasRoom) {
+      _lastPlayerExitTimer?.cancel();
+      _hadPlayers = false;
+      _showActiveRoom = false;
+      if (mounted) setState(() {});
+      return;
+    }
+    if (hasPlayers) {
+      _lastPlayerExitTimer?.cancel();
+      _hadPlayers = true;
+      _showActiveRoom = true;
+      if (mounted) setState(() {});
+      return;
+    }
+    if (_hadPlayers) {
+      // 마지막 사람도 오른쪽으로 빠져나간 뒤 초대 화면으로
+      // 돌아가야 합니다. 즉시 교체하면 퇴장 애니메이션이 사라집니다.
+      _hadPlayers = false;
+      _showActiveRoom = true;
+      _lastPlayerExitTimer?.cancel();
+      _lastPlayerExitTimer = Timer(_playerMotionDuration, () {
+        if (!mounted ||
+            provider.roomCode == null ||
+            provider.players.isNotEmpty) {
+          return;
         }
-        return _ActiveRoom(provider: provider, roomCode: code);
-      },
+        setState(() => _showActiveRoom = false);
+      });
+      if (mounted) setState(() {});
+      return;
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _lastPlayerExitTimer?.cancel();
+    provider.removeListener(_handleRoomChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = provider.roomCode;
+    if (code == null) return _EmptyRoom(provider: provider);
+    if (!_showActiveRoom) {
+      return _InvitationRoom(provider: provider, roomCode: code);
+    }
+    return _ActiveRoom(
+      provider: provider,
+      roomCode: code,
+      players: List<RoomPlayer>.unmodifiable(provider.players),
     );
   }
 }
@@ -221,15 +297,19 @@ class _InvitationRoom extends StatelessWidget {
 }
 
 class _ActiveRoom extends StatelessWidget {
-  const _ActiveRoom({required this.provider, required this.roomCode});
+  const _ActiveRoom({
+    required this.provider,
+    required this.roomCode,
+    required this.players,
+  });
 
   final RoomProvider provider;
   final String roomCode;
+  final List<RoomPlayer> players;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    final players = provider.players;
     return Column(
       children: [
         Padding(
@@ -254,16 +334,9 @@ class _ActiveRoom extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: players.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 7),
-            itemBuilder: (context, index) => _PlayerTile(
-              player: players[index],
-              isRemoving: provider.isRemovingPlayer(players[index].uid),
-              onRemove: () =>
-                  unawaited(provider.removePlayer(players[index].uid)),
-            ),
+          child: _AnimatedPlayerList(
+            provider: provider,
+            players: players,
           ),
         ),
         Padding(
@@ -312,6 +385,172 @@ class _ActiveRoom extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedPlayerList extends StatefulWidget {
+  const _AnimatedPlayerList({required this.provider, required this.players});
+
+  final RoomProvider provider;
+  final List<RoomPlayer> players;
+
+  @override
+  State<_AnimatedPlayerList> createState() => _AnimatedPlayerListState();
+}
+
+class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  late List<RoomPlayer> _players;
+
+  @override
+  void initState() {
+    super.initState();
+    _players = List<RoomPlayer>.of(widget.players);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedPlayerList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncPlayers(widget.players);
+  }
+
+  void _syncPlayers(List<RoomPlayer> nextPlayers) {
+    final nextUids = nextPlayers.map((player) => player.uid).toSet();
+
+    // 퇴장은 인덱스가 바뀌지 않도록 뒤에서부터 뺀니다.
+    for (var index = _players.length - 1; index >= 0; index -= 1) {
+      final player = _players[index];
+      if (nextUids.contains(player.uid)) continue;
+      _players.removeAt(index);
+      _listKey.currentState?.removeItem(
+        index,
+        (context, animation) => _PlayerExitTransition(
+          playerUid: player.uid,
+          animation: animation,
+          child: _buildPlayerTile(player),
+        ),
+        duration: _playerMotionDuration,
+      );
+    }
+
+    final currentUids = _players.map((player) => player.uid).toSet();
+    for (var index = 0; index < nextPlayers.length; index += 1) {
+      final player = nextPlayers[index];
+      if (currentUids.contains(player.uid)) continue;
+      final insertionIndex = math.min(index, _players.length);
+      _players.insert(insertionIndex, player);
+      currentUids.add(player.uid);
+      _listKey.currentState?.insertItem(
+        insertionIndex,
+        duration: _playerMotionDuration,
+      );
+    }
+
+    // 연결 상태·NEW 시간·삭제 로딩 같은 기존 항목의 최신 값도
+    // 반영합니다. 인원수는 위 insert/remove와 이미 맞습니다.
+    _players = List<RoomPlayer>.of(nextPlayers);
+  }
+
+  Widget _buildPlayerTile(RoomPlayer player) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: _PlayerTile(
+        key: ValueKey('room-player-${player.uid}'),
+        player: player,
+        isRemoving: widget.provider.isRemovingPlayer(player.uid),
+        onRemove: () => unawaited(widget.provider.removePlayer(player.uid)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedList(
+      key: _listKey,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      initialItemCount: _players.length,
+      itemBuilder: (context, index, animation) {
+        final player = _players[index];
+        return SizeTransition(
+          sizeFactor: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
+          axisAlignment: -1,
+          child: _PlayerEntranceTransition(
+            key: ValueKey('room-player-entrance-${player.uid}'),
+            playerUid: player.uid,
+            child: _buildPlayerTile(player),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PlayerEntranceTransition extends StatelessWidget {
+  const _PlayerEntranceTransition({
+    super.key,
+    required this.playerUid,
+    required this.child,
+  });
+
+  final String playerUid;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: _playerMotionDuration,
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          key: ValueKey('room-player-motion-$playerUid'),
+          offset: Offset(28 * (1 - value), 0),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerExitTransition extends StatelessWidget {
+  const _PlayerExitTransition({
+    required this.playerUid,
+    required this.animation,
+    required this.child,
+  });
+
+  final String playerUid;
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return SizeTransition(
+      sizeFactor: curved,
+      axisAlignment: -1,
+      child: AnimatedBuilder(
+        animation: curved,
+        child: child,
+        builder: (context, child) => Opacity(
+          opacity: curved.value,
+          child: Transform.translate(
+            key: ValueKey('room-player-motion-$playerUid'),
+            offset: Offset(28 * (1 - curved.value), 0),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -402,6 +641,7 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
 
 class _PlayerTile extends StatefulWidget {
   const _PlayerTile({
+    super.key,
     required this.player,
     required this.isRemoving,
     required this.onRemove,
