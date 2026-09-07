@@ -1,0 +1,35 @@
+name: game_final_call
+description: 번들 Final Call 게임 패키지입니다.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.12.2
+dependencies:
+  flutter:
+    sdk: flutter
+  mosigame_core: any
+  game_contract: any
+  game_kit: any
+  firebase_auth: ^6.6.1
+  firebase_database: ^12.5.0
+  flutter_riverpod: ^3.4.2
+dev_dependencies:
+  build_runner: ^2.15.1
+  flutter_gen_runner: ^5.15.0
+flutter:
+  assets:
+    - assets/games/final_call/animations/
+    - assets/games/final_call/images/background/
+    - assets/games/final_call/images/button/
+    - assets/games/final_call/images/cards/
+    - assets/games/final_call/images/icons/
+    - assets/games/final_call/images/layout/
+    - assets/games/final_call/images/modal/
+    - assets/games/final_call/images/other/
+    - assets/games/final_call/sounds/
+flutter_gen:
+  output: lib/gen/
+  assets:
+    outputs:
+      package_parameter_enabled: true

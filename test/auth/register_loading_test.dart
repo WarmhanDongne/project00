@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/auth/screens/register_screen.dart';
-import 'package:project00/platform/auth/models/password_policy.dart';
-import 'package:project00/platform/auth/widgets/register_step_one.dart';
-import 'package:project00/platform/auth/widgets/register_step_two.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:mosigame_platform/platform/auth/screens/register_screen.dart';
+import 'package:mosigame_platform/platform/auth/models/password_policy.dart';
+import 'package:mosigame_platform/platform/auth/widgets/register_step_one.dart';
+import 'package:mosigame_platform/platform/auth/widgets/register_step_two.dart';
+import 'package:mosigame_platform/platform/theme/platform_theme.dart';
 
 void main() {
   testWidgets('최초 메일 발송 중에는 인증 버튼에 로더 하나만 표시한다', (tester) async {

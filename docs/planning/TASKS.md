@@ -2,7 +2,7 @@
 
 현재 해야 할 일과 진행 상태의 단일 원본이다. 출시 시점은 문서 경계가 아니라 항목의
 분류로 관리한다. 완료 결과는 [완료 문서](COMPLETED_TASKS.md), 과정은
-[월별 기록](logs/2026-08.md), 현재 구현은 [아키텍처](../engineering/ARCHITECTURE.md)와
+[월별 기록](logs/), 현재 구현은 [아키텍처](../engineering/ARCHITECTURE.md)와
 관련 기술 문서에서 확인한다.
 
 ## 관리 방법
@@ -161,6 +161,8 @@
 | [GENRE-TAGS-01](#genre-tags-01) | 태블릿 장르 태그 표시 범위 정리 | 요구사항 확인 | 보유 게임 기준인지 전체 장르인지 확정 |
 | [CODE-AUDIT-01](#code-audit-01) | 전체 코드 구조·최적화 후보 조사 | 조사 전 | 조사 범위와 순서 정의 |
 | [CODE-OPTIMIZE-01](#code-optimize-01) | 일반 최적화·리팩터링 | 조사 전 | 조사 결과로 개선 우선순위 결정 |
+| [PACKAGE-MIGRATION-01](#package-migration-01) | Flutter workspace 물리 패키지 분리 | 최종 검증 대기 | 승인 후 `validate --full`, 앱·Firebase Storage 실기기 확인 |
+| [GAME-COMM-DIAGNOSTICS-01](#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |
 | [DOCS-DETAIL-01](#docs-detail-01) | 기능별 상세 구현 문서화 | 조사 전 | 핵심 문서 외 설명이 필요한 기능 선정 |
 
 ### NOTIFICATION-UI-01
@@ -207,6 +209,49 @@
   큰 구조 변경은 별도 결정 후 출시 후로 미룰 수 있다.
 - 완료 조건: 선택한 개선의 효과와 회귀 검증을 남기고 제외·보류 이유를 기록한다.
   새 dependency·public API·영속 데이터·중요 상태 계약 변경은 기존 승인 절차를 따른다.
+
+### PACKAGE-MIGRATION-01
+
+**Flutter workspace 물리 패키지 분리**
+
+- 상태: 7개 패키지의 소스·번들 에셋 이동, 패키지별 FlutterGen, import와 pubspec
+  의존성 전환, CI 경계 0건 게이트까지 구현했다. 다운로드 게임은 Application Support
+  영구 캐시, Firebase Storage source, 로컬 매니페스트·SHA-256 검증, patch/asset 버전
+  게이트와 수동 `downloadGame` API까지 준비했다. 앱 시작·게임 진입은 자동 다운로드를
+  하지 않는다.
+- 자동 검증: workspace pub get, 정적 분석, 경계·재시도 검사, Flutter 테스트 659개,
+  Android debug 조립과 APK의 패키지 에셋 273개 포함을 확인했다.
+- 다음 행동: 저장소 규칙에 따라 사용자 승인 후 `dart run :mosigame validate --full`을
+  실행하고, 가능한 대상 기기에서 주요 번들 게임의 asset·sound 로딩을 확인한다.
+  다운로드 버튼 작업 때 Firebase Storage/Rules를 구성하고 번들 게임 복제 에셋으로
+  실제 다운로드를 먼저 검증한 뒤 신작 staging patch 리허설을 수행한다.
+- 근거와 환경상 우회 내용은 [2026-09 기록](logs/2026-09.md#package-migration-01)에
+  남긴다.
+
+### GAME-COMM-DIAGNOSTICS-01
+
+**게임 통신 실시간 진단**
+
+- 사용자 요청: 라이어스포커·파이널콜의 카드 제출, 룰렛, CALL 등이
+  어느 구간에서 지연·실패하는지 휴대폰과 아이패드 화면에서 시각적으로
+  확인한다.
+- 현재 구현: debug 빌드 오른쪽 아래 진단 버튼, 최근 200건 타임라인,
+  미확인 경고·실패 배지, RTDB 연결·상태 수신, callable 전송·재시도·
+  응답 시간·오류 코드, 룰렛 추첨·회전·반영 구간 기록을 추가했다.
+- 보호 경계: 방 코드, UID, callable payload, 카드 값, 개인 RTDB 스냅샷 내용은
+  기록하지 않고 release에서는 진단 버튼·기록을 비활성화한다.
+- 검증: 관련 진단·네트워크·재시도·룰렛 Flutter 테스트 28개와
+  ASCII 임시 복사본 Project CLI FULL validation(Flutter 664개, Functions 282개,
+  7/7)이 통과했다. 패키지 경계 0건과 명령 재시도 식별자 계약도
+  통과했다.
+- 배포: 운영 프로젝트의 `game_liars_poker_prepare_penalty`를 생성하고
+  `game_liars_poker_resolve_penalty`를 같은 서버 추첨 계약으로 갱신했다.
+- 후속 개선: 레버 연출 뒤 서버 추첨을 먼저 기다리며 원판이 멈추던
+  회귀를 수정했다. 서버 요청과 동시에 원판을 즉시 회전하고, 응답 후
+  남은 연출 시간 동안 서버가 정한 칸으로 감속한다. 서버 응답 전 실제
+  각도 변화를 검증하는 테스트를 추가했고 관련 21개가 통과했다.
+- 남은 확인: 실제 휴대폰·아이패드 debug 빌드에서 룰렛을 재실행하고,
+  버튼 위치·글자 가독성·기록 복사를 확인한다.
 
 ### DOCS-DETAIL-01
 
@@ -313,7 +358,7 @@
 - 단절 시작, `.info/connected` 복구, 세션 복원 완료 시각
 - 휴대폰/태블릿 역할, OS, 네트워크 전환 종류
 - 앱 재시작 필요 여부와 방·게임 상태 보존 여부
-- 개인정보를 제외한 `[dev_error]`, `room_connection` 구조화 로그
+- 개인정보를 제외한 `[dev_error]`, `[game_comm]`, `room_connection` 구조화 로그
 
 production RTDB 관찰이 필요하면
 [`Firebase MCP RTDB Read-only Pilot`](../operations/FIREBASE_MCP.md)의 사전 승인과
@@ -329,9 +374,9 @@ production RTDB 관찰이 필요하면
 
 #### 관련 코드와 문서
 
-- [`RoomProvider.retryConnectionRecovery`](../../lib/platform/home/room/providers/room_provider.dart)
-- [`RealtimeConnectionMonitor`](../../lib/core/network/realtime_connection_monitor.dart)
-- [`ControllerReconnectGuard`](../../lib/platform/home/phone/widgets/controller_reconnect_guard.dart)
+- [`RoomProvider.retryConnectionRecovery`](../../packages/mosigame_platform/lib/platform/home/room/providers/room_provider.dart)
+- [`RealtimeConnectionMonitor`](../../packages/mosigame_core/lib/core/network/realtime_connection_monitor.dart)
+- [`ControllerReconnectGuard`](../../packages/mosigame_platform/lib/platform/home/phone/widgets/controller_reconnect_guard.dart)
 - [`사용자 로그인·네트워크·세션 안내`](../operations/USER_AUTH_NETWORK_SESSION_GUIDE.md)
 - [`인증·네트워크·세션 기술 참고`](../operations/AUTH_NETWORK_SESSION_TECHNICAL_REFERENCE.md)
 

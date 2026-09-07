@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
-import 'package:project00/games/liars_poker/providers/liars_poker_session_provider.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_command_service.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_query_service.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
-import 'package:project00/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_liars_poker/games/liars_poker/controllers/liars_poker_controller.dart';
+import 'package:game_liars_poker/games/liars_poker/providers/liars_poker_session_provider.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_command_service.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_query_service.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_service.dart';
+import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
 
 //=======================인원 부족 즉시 종료 (C-11)==============================
 // 라이어스 포커는 즉시 종료 메서드가 **두 개**입니다. 휴대폰용은 명령 잠금을,

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/update/shorebird_patch_gate.dart';
+import 'package:mosigame_core/core/update/shorebird_patch_gate.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 //=======================Shorebird 패치 배선==============================

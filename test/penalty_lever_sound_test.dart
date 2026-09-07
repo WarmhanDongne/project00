@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/sound/app_sounds.dart';
-import 'package:project00/core/sound/providers/sound_provider.dart';
-import 'package:project00/games/penalty/roulette.dart';
+import 'package:mosigame_core/core/sound/app_sounds.dart';
+import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
+import 'package:game_kit/games/penalty/roulette.dart';
 import 'package:provider/provider.dart';
+// RouletteState의 회전값으로 서버 응답 전 즉시 회전을 확인합니다.
+// ignore: depend_on_referenced_packages
+import 'package:roulette/roulette.dart' as roulette;
+// ignore: implementation_imports, depend_on_referenced_packages
+import 'package:roulette/src/roulette.dart' as roulette_internal;
 // SoundProvider가 SharedPreferences를 직접 만들기 때문에, 테스트에서는 메모리
 // 구현으로 바꿔 끼웁니다. shared_preferences가 함께 가져오는 패키지입니다.
 // ignore: depend_on_referenced_packages
@@ -45,7 +52,11 @@ void main() {
 
     const roulette = MaterialApp(
       home: Scaffold(
-        body: PenaltyRoulette(attemptCount: 0, onResult: _ignoreResult),
+        body: PenaltyRoulette(
+          attemptCount: 0,
+          onPrepareResult: _prepareSafe,
+          onResult: _ignoreResult,
+        ),
       ),
     );
 
@@ -79,6 +90,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('서버 추첨 응답을 기다리는 동안에도 원판은 즉시 돈다', (tester) async {
+    final prepareResult = Completer<RouletteResult?>();
+    RouletteResult? result;
+
+    tester.view.physicalSize = const Size(1300, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PenaltyRoulette(
+            attemptCount: 0,
+            onPrepareResult: () => prepareResult.future,
+            onResult: (value) => result = value,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final rouletteState = tester.state<roulette_internal.RouletteState>(
+      find.byType(roulette.Roulette),
+    );
+
+    await tester.drag(leverArea(), const Offset(0, 320));
+    // 레버 잠금 연출(220ms)이 끝나면 서버 Future는 아직 대기 중입니다.
+    await tester.pump(const Duration(milliseconds: 240));
+    // roulette 패키지의 이벤트 스트림 처리와 ticker 등록 프레임입니다.
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final firstAngle = rouletteState.rotateAnimation.value.value;
+    await tester.pump(const Duration(milliseconds: 120));
+    final secondAngle = rouletteState.rotateAnimation.value.value;
+
+    expect(prepareResult.isCompleted, isFalse);
+    expect(secondAngle, isNot(firstAngle));
+
+    prepareResult.complete(RouletteResult.safe);
+    await tester.pumpAndSettle();
+
+    expect(result, RouletteResult.safe);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('임계점에 못 미치면 레버 효과음을 재생하지 않는다', (tester) async {
     final sound = _RecordingSoundProvider();
 
@@ -108,6 +166,7 @@ void main() {
         home: Scaffold(
           body: PenaltyRoulette(
             attemptCount: 0,
+            onPrepareResult: _prepareSafe,
             onResult: (value) => result = value,
           ),
         ),
@@ -124,3 +183,4 @@ void main() {
 }
 
 void _ignoreResult(RouletteResult result) {}
+Future<RouletteResult?> _prepareSafe() async => RouletteResult.safe;

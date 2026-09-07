@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/mafia_result_art.dart';
-import 'package:project00/games/mafia/models/mafia_role.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_result_view.dart';
-import 'package:project00/games/mafia/widgets/phone/result_sequence.dart';
-import 'package:project00/games/mafia/widgets/phone/result_view.dart';
+import 'package:game_mafia/games/mafia/mafia_result_art.dart';
+import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_result_view.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/result_sequence.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/result_view.dart';
 
 /// 결과 화면(P9)입니다.
 ///

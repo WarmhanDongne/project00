@@ -1,0 +1,41 @@
+name: game_mafia
+description: 번들 Mafia 게임 패키지입니다.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.12.2
+dependencies:
+  flutter:
+    sdk: flutter
+  mosigame_core: any
+  game_contract: any
+  game_kit: any
+  cloud_functions: ^6.4.0
+  firebase_auth: ^6.6.1
+  firebase_database: ^12.5.0
+  flutter_riverpod: ^3.4.2
+  flutter_svg: ^2.3.0
+  vector_graphics: ^1.2.3
+dev_dependencies:
+  build_runner: ^2.15.1
+  flutter_gen_runner: ^5.15.0
+flutter:
+  assets:
+    - assets/games/mafia/animations/
+    - assets/games/mafia/images/background/
+    - assets/games/mafia/images/background/bird/
+    - assets/games/mafia/images/banner/
+    - assets/games/mafia/images/cards/
+    - assets/games/mafia/images/icons/
+    - assets/games/mafia/images/other/
+    - assets/games/mafia/images/roles/
+    - assets/games/mafia/sounds/
+    - assets/games/mafia/sounds/background/
+flutter_gen:
+  output: lib/gen/
+  integrations:
+    flutter_svg: true
+  assets:
+    outputs:
+      package_parameter_enabled: true

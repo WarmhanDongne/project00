@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/mafia_copy.dart';
-import 'package:project00/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/games/mafia/mafia_copy.dart';
+import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
 
 /// 신분 공개 문구의 조사입니다.
 ///

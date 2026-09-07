@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/time/server_clock.dart';
-import 'package:project00/games/liars_poker/widgets/phone/turn_timer.dart';
+import 'package:mosigame_core/core/time/server_clock.dart';
+import 'package:game_liars_poker/games/liars_poker/widgets/phone/turn_timer.dart';
 
 /// 마운트 시점에 이미 마감이 지난 것으로 계산돼도 타이머가 죽지 않고,
 /// 서버 시각 보정 이후 정확히 한 번 타임아웃을 발화해야 합니다.

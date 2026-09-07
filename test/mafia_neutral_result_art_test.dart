@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/mafia_result_art.dart';
-import 'package:project00/games/mafia/models/mafia_role.dart';
-import 'package:project00/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/games/mafia/mafia_result_art.dart';
+import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
 
 //=======================중립 승리 포스터 고르기==============================
 // 중립은 진영 대결이 아니라 **개별 승리**라, 진영만으로는 그림을 고를 수

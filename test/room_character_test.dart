@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/room/models/room_character.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:mosigame_core/core/constants/room_character.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
 
 void main() {
   group('room character catalog', () {

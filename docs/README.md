@@ -8,6 +8,7 @@
 
 - [`Engineering Contract`](engineering/ENGINEERING_CONTRACT.md)
 - [`Architecture Reference`](engineering/ARCHITECTURE.md)
+- [`Package Migration`](engineering/PACKAGE_MIGRATION.md) — 게임별 패키지 분리와 게임 다운로드 계획
 - [`Project CLI`](engineering/PROJECT_CLI.md)
 
 ## Development

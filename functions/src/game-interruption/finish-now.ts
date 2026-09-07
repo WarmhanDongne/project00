@@ -10,7 +10,7 @@ import {
 
 // callable은 HTTPS라 Realtime Database 리전 제약을 받지 않습니다. 자세한 배경은
 // functions.ts 상단 주석을 보세요. 클라이언트도 이 리전으로 고정돼 있습니다
-// (lib/games/shared/services/game_interruption_command_service.dart).
+// (packages/game_kit/lib/games/shared/services/game_interruption_command_service.dart).
 const REGION = "asia-northeast3";
 const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
 const INTERRUPTION_ID = /^[A-Za-z0-9_-]{3,160}$/;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/widgets/game_route_exit.dart';
+import 'package:game_contract/games/shared/widgets/game_route_exit.dart';
 
 //=======================게임 화면 이탈==============================
 // 서버가 게임을 비정상 종료했을 때 게임 화면을 확실히 닫는지 확인합니다.

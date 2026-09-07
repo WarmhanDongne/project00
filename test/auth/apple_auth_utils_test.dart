@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/auth/services/apple_auth_utils.dart';
+import 'package:mosigame_platform/platform/auth/services/apple_auth_utils.dart';
 
 void main() {
   test('Apple provider 연결 여부를 provider ID로 판정한다', () {

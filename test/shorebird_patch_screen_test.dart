@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/update/shorebird_patch_screen.dart';
-import 'package:project00/games/shared/widgets/game_reconnect_screen.dart';
+import 'package:mosigame_core/core/update/shorebird_patch_screen.dart';
+import 'package:mosigame_core/games/shared/widgets/game_reconnect_screen.dart';
 
 //=======================Shorebird 패치 화면==============================
 // 재접속 화면과 같은 골격을 쓰고 가운데 그림과 문구만 다릅니다. 그림 파일이

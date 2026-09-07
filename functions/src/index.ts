@@ -65,6 +65,7 @@ export {
   game_liars_poker_pass_challenge,
 } from "./liars-poker/pass-challenge.js";
 export {
+  game_liars_poker_prepare_penalty,
   game_liars_poker_resolve_penalty,
 } from "./liars-poker/finish-penalty.js";
 export {

@@ -1,15 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/constants/app_constants.dart';
-import 'package:project00/core/utils/app_version.dart';
-import 'package:project00/platform/home/gamelist/models/game_info.dart';
-import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
+import 'package:mosigame_core/core/constants/app_constants.dart';
+import 'package:mosigame_core/core/utils/app_version.dart';
+import 'package:project00/games/game_registry.dart';
+import 'package:mosigame_platform/platform/home/gamelist/models/game_info.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_compatibility.dart';
 
 GameInfo _game(String id, {String minAppVersion = ''}) =>
     GameInfo.fromJson({'id': id, 'name': id, 'minAppVersion': minAppVersion});
 
 void main() {
+  const catalog = GameRegistry();
   //=======================버전 상수 드리프트 방지==============================
   // 스토어 배포 버전 판단이 이 상수 하나에 걸려 있습니다. pubspec 버전을 올리고
   // 상수를 잊으면, 새 게임에 minAppVersion을 적어도 구버전으로 오인해 게임이
@@ -47,22 +49,35 @@ void main() {
   // 스토어에 배포된 앱은 이후 Firestore에 추가된 게임 문서를 그대로 받습니다.
   // 코드가 없는 게임은 시작 대신 업데이트 안내로 이어져야 합니다.
   test('레지스트리에 있는 게임은 실행할 수 있다', () {
-    expect(isGamePlayableOnThisBuild(_game('liars_poker')), isTrue);
-    expect(isGamePlayableOnThisBuild(_game('final_call')), isTrue);
+    expect(
+      isGamePlayableOnThisBuild(_game('liars_poker'), catalog: catalog),
+      isTrue,
+    );
+    expect(
+      isGamePlayableOnThisBuild(_game('final_call'), catalog: catalog),
+      isTrue,
+    );
   });
 
   test('이 빌드에 코드가 없는 게임은 실행할 수 없다', () {
-    expect(isGamePlayableOnThisBuild(_game('future_game_2027')), isFalse);
+    expect(
+      isGamePlayableOnThisBuild(_game('future_game_2027'), catalog: catalog),
+      isFalse,
+    );
   });
 
   test('요구 버전이 현재 빌드보다 높으면 실행할 수 없다', () {
     expect(
-      isGamePlayableOnThisBuild(_game('liars_poker', minAppVersion: '99.0.0')),
+      isGamePlayableOnThisBuild(
+        _game('liars_poker', minAppVersion: '99.0.0'),
+        catalog: catalog,
+      ),
       isFalse,
     );
     expect(
       isGamePlayableOnThisBuild(
         _game('liars_poker', minAppVersion: AppConstants.appVersion),
+        catalog: catalog,
       ),
       isTrue,
     );

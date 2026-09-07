@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/home/room/services/player_presence.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
+import 'package:mosigame_platform/platform/home/room/services/player_presence.dart';
 
 void main() {
   RoomPlayer player({bool connected = true, int? lastSeen = 1000}) =>

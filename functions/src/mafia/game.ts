@@ -373,7 +373,7 @@ function nightActorUids(
       if (!actsAtNight(roleId)) return false;
       if (stage === undefined) return true;
       const order = mafiaRole(roleId)?.nightOrder;
-      return order !== undefined && nightStageForOrder(order) === stage;
+      return order != null && nightStageForOrder(order) === stage;
     })
     .map((player) => player.uid);
 }

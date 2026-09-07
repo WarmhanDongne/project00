@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/player_layouts/seating_roster_guard.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:game_contract/games/shared/player_layouts/seating_roster_guard.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
 
 //=======================자리 배치 중 참가자 변경 (C-13)==============================
 // 자리 배치 초안은 태블릿 메모리에만 있고, 화면에 넘긴 PlayerLayoutModel은 라우트를

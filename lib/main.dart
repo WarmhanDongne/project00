@@ -4,17 +4,19 @@ import 'package:app_links/app_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:project00/core/layout/app_orientation.dart';
-import 'package:project00/core/time/server_clock.dart';
-import 'package:project00/core/layout/device_layout.dart';
+import 'package:mosigame_core/core/layout/app_orientation.dart';
+import 'package:mosigame_core/core/time/server_clock.dart';
+import 'package:mosigame_core/core/layout/device_layout.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
-import 'package:project00/core/app/app.dart';
-import 'package:project00/core/diagnostics/crash_reporting.dart';
-import 'package:project00/core/diagnostics/dev_error_overlay.dart';
-import 'package:project00/core/sound/providers/sound_provider.dart';
-import 'package:project00/firebase/firebase_options.dart';
+import 'package:project00/app.dart';
+import 'package:project00/game_assets/game_asset_bootstrap.dart';
+import 'package:project00/games/game_registry.dart';
+import 'package:mosigame_core/core/diagnostics/crash_reporting.dart';
+import 'package:mosigame_core/core/diagnostics/dev_error_overlay.dart';
+import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
+import 'package:mosigame_core/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -52,6 +54,15 @@ void main() async {
   // Crashlytics로 올라갑니다.
   installDevErrorWidgetBuilder();
   await CrashReporting.initialize();
+  // 다운로드 게임은 앱 지원 디렉터리의 영구 캐시를 사용합니다. 여기서는
+  // 저장소만 연결하며 네트워크 요청은 하지 않습니다. 실제 다운로드는 향후
+  // 소유 게임 다운로드 버튼이 명시적으로 시작합니다.
+  try {
+    await initializeGameAssets(catalog: const GameRegistry());
+  } catch (error, stack) {
+    // 번들 게임은 캐시 없이도 동작하므로 시작을 막지 않습니다.
+    CrashReporting.recordError(error, stack, reason: '게임 에셋 저장소 초기화');
+  }
   // App Check는 먼저 토큰을 관찰 모드로 발급합니다. Firebase 콘솔에서 정상
   // 요청 비율을 확인한 뒤 Functions/RTDB/Storage enforcement를 단계적으로
   // 켜야 구버전 앱과 설정 누락 기기를 한꺼번에 차단하지 않습니다.

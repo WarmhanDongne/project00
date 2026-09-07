@@ -21,6 +21,10 @@ import {
   requireUid,
 } from "./common/validator.js";
 import {CARDS_PER_PLAYER} from "./restart-round.js";
+import {
+  assertStartGameSnapshot,
+  startGameFingerprint,
+} from "../common/start-game-transaction.js";
 
 type StartGameData = {
   roomCode?: unknown;
@@ -56,6 +60,7 @@ export const game_liars_poker_start_game =
       assertRoomExists(rawRoom);
 
       const room = rawRoom as RealtimeRoom;
+      const startFingerprint = startGameFingerprint(room);
 
       // 방을 만든 아이패드인지 확인합니다.
       assertController(room, uid, request.data?.controllerSessionId);
@@ -121,6 +126,7 @@ export const game_liars_poker_start_game =
 
       const initialGame: LiarsPokerGameState = {
         public: {
+          gameType: "liars_poker",
           status: "playing",
           // 태블릿의 실제 배분 애니메이션이 끝날 때까지 플레이를 막습니다.
           phase: "dealing",
@@ -147,34 +153,18 @@ export const game_liars_poker_start_game =
         },
       };
 
-      /*
-       * 방 전체가 아닌 game 노드에만 트랜잭션을 적용합니다.
-       *
-       * 트랜잭션 첫 실행에서 currentGame이 null이어도 정상입니다.
-       * 서버에 기존 게임이 있다면 최신 값으로 다시 실행됩니다.
-       */
-      const gameRef = roomRef.child("game");
-
-      const transaction =
-        await gameRef.transaction(
-          (currentGame) => {
-            const existingGame =
-              currentGame as
-                Partial<LiarsPokerGameState> |
-                null;
-
-            if (
-              existingGame?.public?.status ===
-              "playing" &&
-              !restart
-            ) {
-              // undefined를 반환하면 트랜잭션이 중단됩니다.
-              return;
-            }
-
-            return initialGame;
-          },
-        );
+      // 검증과 기록을 방 루트의 한 트랜잭션에서 다시 수행합니다. game 하위
+      // 노드만 잠그면 사전 조회 뒤 좌석이 바뀌어도 오래된 게임이 시작됩니다.
+      const transaction = await roomRef.transaction((currentRawRoom) => {
+        if (currentRawRoom === null) return currentRawRoom;
+        assertRoomExists(currentRawRoom);
+        const currentRoom = currentRawRoom as RealtimeRoom;
+        assertController(currentRoom, uid, request.data?.controllerSessionId);
+        assertStartGameSnapshot(startFingerprint, currentRoom);
+        if (currentRoom.game?.public?.status === "playing" && !restart) return;
+        currentRoom.game = initialGame;
+        return currentRoom;
+      });
 
       if (!transaction.committed) {
         throw new HttpsError(

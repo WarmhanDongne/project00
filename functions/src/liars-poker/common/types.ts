@@ -42,6 +42,8 @@ export interface PublicPenaltyResult {
 }
 
 export interface PublicGameState {
+  /** 다른 게임 상태를 같은 room.game 경로에서 잘못 읽는 것을 막는 판별자입니다. */
+  gameType?: "liars_poker";
   status: "playing" | "finished";
   finishReason?: "winner" | "manual" | "insufficientPlayers" | "interruptionVoteExpired";
   phase: "dealing" | "playing" | "lastCardChallenge" | "penalty" |
@@ -82,6 +84,13 @@ export interface ServerGameState {
   roundStarterUid: string;
   /** 1대1 LIAR 실패로 룰렛 전에 penaltyCount를 이미 올렸는지 표시합니다. */
   penaltyCountIncrementedBeforeRoulette?: boolean;
+  /** 서버가 추첨하고 태블릿 연출 완료를 기다리는 벌칙 결과입니다. */
+  pendingPenaltyResolution?: {
+    resolutionId: string;
+    targetUid: string;
+    result: "safe" | "eliminated";
+    createdAt: number;
+  };
   /** 태블릿 배분 연출이 끝나기 전까지 클라이언트에 공개하지 않는 손패입니다. */
   pendingHands?: Record<string, PrivatePlayerState>;
   interruption?: ServerGameInterruption;

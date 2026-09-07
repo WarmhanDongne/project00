@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/auth/models/onboarding_state.dart';
-import 'package:project00/platform/auth/services/onboarding_service.dart';
-import 'package:project00/platform/auth/widgets/auth_gate.dart';
+import 'package:mosigame_platform/platform/auth/models/onboarding_state.dart';
+import 'package:mosigame_platform/platform/auth/services/onboarding_service.dart';
+import 'package:mosigame_platform/platform/auth/widgets/auth_gate.dart';
 
 //=======================회전 크래시 회귀 방지==============================
 // 실기기에서 잡은 버그입니다. 로그인 뒤 화면을 회전하면

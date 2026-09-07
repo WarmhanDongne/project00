@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/howtoplay/models/how_to_play_step.dart';
-import 'package:project00/platform/home/howtoplay/screens/how_to_play_screen.dart';
-import 'package:project00/platform/home/howtoplay/widgets/how_to_play_button.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:mosigame_platform/platform/home/howtoplay/models/how_to_play_step.dart';
+import 'package:mosigame_platform/platform/home/howtoplay/screens/how_to_play_screen.dart';
+import 'package:mosigame_platform/platform/home/howtoplay/widgets/how_to_play_button.dart';
+import 'package:mosigame_platform/platform/theme/platform_theme.dart';
 
 //=======================플레이 방식 안내 연출==============================
 // 안내는 휴대폰 세로와 태블릿 가로 모두에서 열립니다. 반복 애니메이션이므로

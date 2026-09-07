@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project00/games/shared/widgets/game_reconnect_screen.dart';
+import 'package:mosigame_core/games/shared/widgets/game_reconnect_screen.dart';
 
 //=======================재접속 화면 미리보기 (개발 전용)==============================
 /// [GameReconnectScreen] 한 장만 띄우는 작은 앱입니다.

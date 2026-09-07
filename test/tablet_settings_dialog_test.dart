@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/sound/providers/sound_provider.dart';
-import 'package:project00/games/shared/widgets/tablet_game_settings_dialog.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
+import 'package:game_kit/games/shared/widgets/tablet_game_settings_dialog.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';

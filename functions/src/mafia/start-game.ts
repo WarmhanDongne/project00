@@ -13,6 +13,10 @@ import {
   mafiaRoomCode,
   mafiaUid,
 } from "./validation.js";
+import {
+  assertStartGameSnapshot,
+  startGameFingerprint,
+} from "../common/start-game-transaction.js";
 
 type StartData = {
   roomCode?: unknown;
@@ -37,6 +41,7 @@ export const game_mafia_start_game = onCall<StartData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const room = (await roomRef.get()).val() as MafiaRoom | null;
     if (!room) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
+    const startFingerprint = startGameFingerprint(room);
     assertMafiaController(room, uid, request.data?.controllerSessionId);
     if (room.selectedGame !== "mafia") {
       throw new HttpsError("failed-precondition", "마피아가 선택되지 않았습니다.");
@@ -68,9 +73,14 @@ export const game_mafia_start_game = onCall<StartData>(
     // 역할 배분은 여기서 한 번만 합니다. 트랜잭션 콜백은 여러 번 실행될 수 있어
     // 안에서 배분하면 매번 다른 결과가 나옵니다.
     const game = createInitialMafiaGame(players, Date.now(), composition);
-    const transaction = await roomRef.child("game").transaction((current) => {
-      if (current?.public?.status === "playing" && !restart) return;
-      return game;
+    const transaction = await roomRef.transaction((current) => {
+      if (current === null) return current;
+      const currentRoom = current as MafiaRoom;
+      assertMafiaController(currentRoom, uid, request.data?.controllerSessionId);
+      assertStartGameSnapshot(startFingerprint, currentRoom);
+      if (currentRoom.game?.public?.status === "playing" && !restart) return;
+      currentRoom.game = game;
+      return currentRoom;
     });
     if (!transaction.committed) {
       throw new HttpsError("already-exists", "이미 게임이 진행 중입니다.");

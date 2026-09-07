@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_game_layout.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_game_layout.dart';
 
 //=======================낮↔밤 라디얼 와이프==============================
 // 배경이 바뀔 때 옛 배경 위로 새 배경이 쓸려 들어오고(두 겹), 끝나면 옛

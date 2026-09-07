@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
-import 'package:project00/games/shared/player_layouts/player_layout_model.dart';
+import 'package:game_contract/games/shared/player_layouts/player_layout_editor.dart';
+import 'package:game_contract/games/shared/player_layouts/player_layout_model.dart';
 
 void main() {
   testWidgets('자리 배치는 선택 해제가 성공한 경우에만 뒤로 이동한다', (tester) async {

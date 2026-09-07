@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/liars_poker/controllers/liars_poker_controller.dart';
-import 'package:project00/games/liars_poker/providers/liars_poker_session_provider.dart';
-import 'package:project00/games/liars_poker/screens/phone/phone_game_screen.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_command_service.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_query_service.dart';
-import 'package:project00/games/liars_poker/services/liars_poker_service.dart';
-import 'package:project00/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_liars_poker/games/liars_poker/controllers/liars_poker_controller.dart';
+import 'package:game_liars_poker/games/liars_poker/providers/liars_poker_session_provider.dart';
+import 'package:game_liars_poker/games/liars_poker/screens/phone/phone_game_screen.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_command_service.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_query_service.dart';
+import 'package:game_liars_poker/games/liars_poker/services/liars_poker_service.dart';
+import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
 
 //=======================휴대폰 회전 재현==============================
 // 실기기에서 보고된 버그: 2인 게임 진행 중 휴대폰을 가로로 돌리면 터졌습니다.
