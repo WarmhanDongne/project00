@@ -11,7 +11,8 @@ router다.
 | 모든 작업 | [`Engineering Contract`](docs/engineering/ENGINEERING_CONTRACT.md) |
 | 개발환경 점검·설정 | [`Agent Setup`](docs/development/AGENT_SETUP.md), [`Development Setup`](docs/development/DEVELOPMENT_SETUP.md), [`Development Environment Plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md) |
 | 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](docs/engineering/ARCHITECTURE.md)와 관련 코드·테스트 |
-| 새 게임 | [`게임 템플릿 가이드`](lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
+| 패키지 분리·게임 다운로드·Shorebird 패치 | [`Package Migration`](docs/engineering/PACKAGE_MIGRATION.md), `tool/check_package_boundaries.py` |
+| 새 게임 | [`게임 템플릿 가이드`](packages/game_kit/lib/games/_game_template/README.md), 가장 가까운 기존 게임, `functions/src/<game>/` |
 | Project CLI | [`Project CLI`](docs/engineering/PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
 | 작업 계획·진행·완료·기록 정리 | [`작업 목록과 관리 방법`](docs/planning/TASKS.md), [`완료 작업`](docs/planning/COMPLETED_TASKS.md), 해당 월의 [`작업 기록`](docs/planning/logs/) |
 
@@ -70,4 +71,3 @@ Windows guarded invocation과 macOS/Linux raw CLI의 사용 조건은
 deploy/migration, 사용자 변경과의 충돌, 중요한 architecture·제품 결정 또는 범위 밖
 수정이 필요하면 중단하고 사용자 승인을 받는다. 전체 조건과 Definition of Done은
 Engineering Contract를 따른다.
-

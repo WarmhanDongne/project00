@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/animations/ejection_text.dart';
+import 'package:game_mafia/games/mafia/animations/ejection_text.dart';
 
 import 'support/ejection_beats.dart';
 

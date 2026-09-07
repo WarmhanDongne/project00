@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/gamelist/models/game_info.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/controller_presence.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:mosigame_platform/platform/home/gamelist/models/game_info.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/phone/screens/phone_room_waiting.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
+import 'package:mosigame_platform/platform/theme/platform_theme.dart';
 
 void main() {
   group('GameInfo rules', () {

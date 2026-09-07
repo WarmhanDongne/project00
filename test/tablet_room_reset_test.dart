@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/controller_presence.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
-import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
+import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_room_panel.dart';
 
 void main() {
   group('RoomProvider room command guard', () {
@@ -95,6 +95,59 @@ void main() {
         find.byKey(const ValueKey('disconnected-player-offline-player')),
         findsOneWidget,
       );
+      provider.dispose();
+    });
+
+    testWidgets('참가자는 오른쪽에서 들어오고 퇴장할 때 오른쪽으로 사라진다', (tester) async {
+      final provider = _provider(_FakeRoomService())..roomCode = 'ABCDE';
+      await _pumpPanel(tester, provider);
+
+      provider.players = const [
+        RoomPlayer(
+          uid: 'animated-player',
+          nickname: '애니메이션 플레이어',
+          characterId: 'frog',
+          isConnected: true,
+          seatIndex: 0,
+          role: 'player',
+          status: 'active',
+          penaltyAttemptCount: 0,
+        ),
+      ];
+      provider.notifyListeners();
+      await tester.pump();
+
+      final motionFinder = find.byKey(
+        const ValueKey('room-player-motion-animated-player'),
+      );
+      expect(find.text('애니메이션 플레이어'), findsOneWidget);
+      expect(
+        tester.widget<Transform>(motionFinder).transform.getTranslation().x,
+        greaterThan(0),
+      );
+
+      await tester.pump(_playerAnimationTestDuration);
+      expect(
+        tester.widget<Transform>(motionFinder).transform.getTranslation().x,
+        0,
+      );
+
+      provider.players = const [];
+      provider.notifyListeners();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 130));
+
+      expect(find.text('애니메이션 플레이어'), findsOneWidget);
+      expect(
+        tester.widget<Transform>(motionFinder).transform.getTranslation().x,
+        greaterThan(0),
+      );
+      expect(find.text('초대하기'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 130));
+      await tester.pump();
+      expect(find.text('애니메이션 플레이어'), findsNothing);
+      expect(find.text('초대하기'), findsOneWidget);
       provider.dispose();
     });
 
@@ -232,6 +285,8 @@ void main() {
     });
   });
 }
+
+const _playerAnimationTestDuration = Duration(milliseconds: 260);
 
 RoomProvider _provider(_FakeRoomService service) =>
     RoomProvider(service: service, gameService: _FakeGameService());

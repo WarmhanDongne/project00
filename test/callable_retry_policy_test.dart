@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/services/callable_retry_policy.dart';
+import 'package:mosigame_core/games/shared/services/callable_retry_policy.dart';
 
 void main() {
   const policy = CallableRetryPolicy(baseDelay: Duration.zero);

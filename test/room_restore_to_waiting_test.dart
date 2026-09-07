@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_restore_to_waiting.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
 
 //=======================게임 종료 후 방 복귀 (P-02)==============================
 // 게임 종료 경로 어디에도 selectedGame을 지우는 코드가 없었다. 방이

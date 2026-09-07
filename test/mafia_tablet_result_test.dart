@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/models/mafia_role.dart';
-import 'package:project00/games/mafia/models/mafia_roles.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_result_view.dart';
-import 'package:project00/games/mafia/widgets/mafia_flip_card.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_result_view.dart';
+import 'package:game_mafia/games/mafia/widgets/mafia_flip_card.dart';
 
 //=======================태블릿 결과 화면(시안 988:368)==============================
 // 확정 순서: 승리 배경 → 2초 또는 탭 → 흰 판 → 카드가 한 장씩 놓임 →

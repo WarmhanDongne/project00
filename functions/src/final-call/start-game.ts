@@ -11,6 +11,10 @@ import {
   finalCallRoomCode,
   finalCallUid,
 } from "./validation.js";
+import {
+  assertStartGameSnapshot,
+  startGameFingerprint,
+} from "../common/start-game-transaction.js";
 
 type StartData = {
   roomCode?: unknown;
@@ -27,6 +31,7 @@ export const game_final_call_start_game = onCall<StartData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const room = (await roomRef.get()).val() as FinalCallRoom | null;
     if (!room) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
+    const startFingerprint = startGameFingerprint(room);
     assertFinalCallController(room, uid, request.data?.controllerSessionId);
     if (room.selectedGame !== "final_call") {
       throw new HttpsError("failed-precondition", "Final Call이 선택되지 않았습니다.");
@@ -39,9 +44,18 @@ export const game_final_call_start_game = onCall<StartData>(
     }
     const players = await createFinalCallPlayers(room.players);
     const game = createInitialFinalCallGame(players, Date.now());
-    const transaction = await roomRef.child("game").transaction((current) => {
-      if (current?.public?.status === "playing" && !restart) return;
-      return game;
+    const transaction = await roomRef.transaction((current) => {
+      if (current === null) return current;
+      const currentRoom = current as FinalCallRoom;
+      assertFinalCallController(
+        currentRoom,
+        uid,
+        request.data?.controllerSessionId,
+      );
+      assertStartGameSnapshot(startFingerprint, currentRoom);
+      if (currentRoom.game?.public?.status === "playing" && !restart) return;
+      currentRoom.game = game;
+      return currentRoom;
     });
     if (!transaction.committed) {
       throw new HttpsError("already-exists", "이미 게임이 진행 중입니다.");

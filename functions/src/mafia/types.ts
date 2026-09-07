@@ -85,7 +85,7 @@ export const MAFIA_DAY_SKIP_NOTICE_MS = 2500;
  * 사람이 줄면 할 말도 줄어듭니다. 인원과 무관하게 같은 시간을 주면 적은
  * 인원에서는 침묵이 길어집니다.
  *
- * ⚠️ 이 표가 원본입니다. 연습장(lib/games/mafia/mafia_flow_config.dart)이 같은
+ * ⚠️ 이 표가 원본입니다. 연습장(packages/game_mafia/lib/games/mafia/mafia_flow_config.dart)이 같은
  * 값을 따라야 하고, functions/test/mafia-discussion-parity.test.mjs가 그것을
  * 확인합니다.
  *

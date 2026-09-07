@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/animations/role_deal_toss_animation.dart';
-import 'package:project00/games/mafia/models/mafia_role.dart';
-import 'package:project00/games/mafia/models/mafia_state_models.dart';
-import 'package:project00/games/mafia/sound/mafia_night_cue_speaker.dart';
-import 'package:project00/games/mafia/sound/mafia_sounds.dart';
+import 'package:game_mafia/games/mafia/animations/role_deal_toss_animation.dart';
+import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/games/mafia/sound/mafia_night_cue_speaker.dart';
+import 'package:game_mafia/games/mafia/sound/mafia_sounds.dart';
 
 //=======================직업 효과음·분배 시간표==============================
 // 확정(2026-08):

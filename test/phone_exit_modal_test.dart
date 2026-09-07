@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/widgets/phone_exit_modal.dart';
+import 'package:game_kit/games/shared/widgets/phone_exit_modal.dart';
 
 //=======================공용 퇴장 모달==============================
 // 게임마다 삽화 크기가 달라, 큰 그림이 없는 게임은 모달을 작게 띄웁니다.

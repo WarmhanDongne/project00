@@ -24,7 +24,10 @@ test("client and server default room limits remain 12", () => {
     "utf8",
   );
   const clientSource = readFileSync(
-    new URL("../../lib/platform/home/room/services/room_common.dart", import.meta.url),
+    new URL(
+      "../../packages/mosigame_platform/lib/platform/home/room/services/room_common.dart",
+      import.meta.url,
+    ),
     "utf8",
   );
   assert.match(serverSource, /const DEFAULT_MAX_PLAYERS = 12;/);

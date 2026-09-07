@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/liars_poker/widgets/phone/hand_card_stack.dart';
-import 'package:project00/core/assets/game_image.dart';
-import 'package:project00/gen/assets.gen.dart';
+import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/gen/assets.gen.dart';
+import 'package:game_liars_poker/games/liars_poker/widgets/phone/hand_card_stack.dart';
 
 void main() {
   //=======================새 라운드 손패 교체==============================

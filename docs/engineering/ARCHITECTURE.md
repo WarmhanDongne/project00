@@ -17,11 +17,12 @@ reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGI
 ## Repository map
 
 ```text
-lib/core/                  앱 공통 기반, 진단, 레이아웃, 사운드, 시간
-lib/firebase/              Firebase 설정과 공통 Firebase 서비스
-lib/platform/              인증, 프로필, 방/홈, 테마와 플랫폼 UI
-lib/games/                 게임 계약, registry, 게임별 구현과 게임 공용 UI
-lib/games/shared/          여러 게임이 공유하는 화면·연출·모델
+lib/                       앱 부트스트랩·조립·게임 registry
+packages/mosigame_core/    공통 기반, Firebase 설정, 진단, 사운드, 시간
+packages/game_contract/    TemplateGame·GameRoomContext·공용 모델
+packages/game_kit/         여러 게임이 공유하는 화면·연출·서비스 기반
+packages/mosigame_platform/ 인증, 프로필, 방/홈, 테마와 플랫폼 UI
+packages/game_<game>/      게임별 Flutter 구현과 자체 번들 assets
 functions/src/auth/        인증·온보딩 서버 작업
 functions/src/room/        방 lifecycle과 접속 상태 서버 작업
 functions/src/<game>/      게임별 타입, 검증과 상태 전이
@@ -34,10 +35,10 @@ tool/mosigame_cli/         Mosigame Project CLI 구현
 
 ## Game extension contract
 
-- 새 게임은 [`TemplateGame`](../../lib/games/template_game.dart)을 구현하고
+- 새 게임은 [`TemplateGame`](../../packages/game_contract/lib/games/template_game.dart)을 구현하고
   [`GameRegistry`](../../lib/games/game_registry.dart)에만 등록한다. 플랫폼 화면에 게임
   ID별 분기를 추가하지 않는다.
-- 구현 전 [`게임 템플릿 가이드`](../../lib/games/_game_template/README.md)와 가장 가까운
+- 구현 전 [`게임 템플릿 가이드`](../../packages/game_kit/lib/games/_game_template/README.md)와 가장 가까운
   기존 게임을 확인한다.
 - 쓰기는 `<game>_command_service.dart`에서 callable Function으로 요청하고, 읽기는
   `<game>_query_service.dart`의 RTDB stream으로 받는다.
@@ -48,7 +49,8 @@ tool/mosigame_cli/         Mosigame Project CLI 구현
 - `status`, 서버 `phase`, `GameScreenPhase`, 태블릿 연출 상태는 서로 다른 개념이다.
 - 휴대폰 공통 흐름은 `GameScreenPhase`와 `PhoneGameShell`을 먼저 확인한다. 태블릿
   상태 분기는 타입이 있는 enum과 exhaustive `switch`를 우선한다.
-- 공유 상단바, 사이드바, 결과, 퇴장 UI와 애니메이션은 `lib/games/shared/`를 먼저
+- 공유 상단바, 사이드바, 결과, 퇴장 UI와 애니메이션은
+  `packages/game_kit/lib/games/shared/`를 먼저
   확인한다.
 
 ## Data and compatibility boundaries
@@ -70,16 +72,16 @@ game/server          클라이언트에 노출하지 않는 서버 상태
   처리하지 않게 한다.
 - 자리/역할 구성은 참가자 퇴장에 따른 배치 무효화 contract를 먼저 반영한 뒤 UI를
   변경한다.
-- 생성된 `lib/gen/assets.gen.dart`를 직접 편집하지 않는다. 에셋 원본을 등록하고
-  저장소의 생성 절차를 사용한다.
+- 생성된 `lib/gen/` 또는 `packages/*/lib/gen/`을 직접 편집하지 않는다. 에셋 원본을
+  소유 패키지의 pubspec에 등록하고 저장소의 생성 절차를 사용한다.
 
 ## Task-specific entry points
 
-- 새 게임: `lib/games/_game_template/README.md`, 가장 가까운 게임의 README·구현,
+- 새 게임: `packages/game_kit/lib/games/_game_template/README.md`, 가장 가까운 게임의 README·구현,
   `functions/src/<game>/`
-- session/room: `lib/platform/home/`, `functions/src/room/`, 관련 테스트와
+- session/room: `packages/mosigame_platform/lib/platform/home/`, `functions/src/room/`, 관련 테스트와
   `dart run :mosigame test session`
-- auth/onboarding: `lib/platform/auth/`, `functions/src/auth/`, 관련 테스트와
+- auth/onboarding: `packages/mosigame_platform/lib/platform/auth/`, `functions/src/auth/`, 관련 테스트와
   `dart run :mosigame test auth`
 - Project CLI: `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/`
 

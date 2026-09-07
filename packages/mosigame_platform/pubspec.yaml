@@ -1,0 +1,40 @@
+name: mosigame_platform
+description: 인증·방·홈·프로필을 제공하는 Mosigame 플랫폼입니다.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.12.2
+dependencies:
+  flutter:
+    sdk: flutter
+  mosigame_core: any
+  game_contract: any
+  cloud_firestore: ^6.9.0
+  cloud_functions: ^6.4.0
+  crypto: ^3.0.7
+  firebase_auth: ^6.6.1
+  firebase_database: ^12.5.0
+  firebase_storage: ^13.5.0
+  flutter_svg: ^2.3.0
+  google_sign_in: ^7.2.0
+  image_picker: ^1.2.3
+  mobile_scanner: ^7.4.0
+  qr_flutter: ^4.1.0
+  shared_preferences: ^2.5.5
+  sign_in_with_apple: ^8.1.0
+  vector_graphics: ^1.2.3
+  youtube_player_iframe: ^6.0.2
+dev_dependencies:
+  build_runner: ^2.15.1
+  flutter_gen_runner: ^5.15.0
+flutter:
+  assets:
+    - assets/images/logo/
+flutter_gen:
+  output: lib/gen/
+  integrations:
+    flutter_svg: true
+  assets:
+    outputs:
+      package_parameter_enabled: true

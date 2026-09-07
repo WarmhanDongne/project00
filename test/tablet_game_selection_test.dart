@@ -2,17 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/player_layouts/player_layout_editor.dart';
-import 'package:project00/platform/home/gamelist/models/game_info.dart';
-import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
-import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
-import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:project00/games/game_registry.dart';
+import 'package:game_contract/games/shared/player_layouts/player_layout_editor.dart';
+import 'package:mosigame_platform/platform/home/gamelist/models/game_info.dart';
+import 'package:mosigame_platform/platform/home/gamelist/provider/game_list_provider.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
+import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_game_list.dart';
+import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
+import 'package:mosigame_platform/platform/theme/platform_theme.dart';
+import 'package:mosigame_platform/platform/widgets/platform_components.dart';
 
 void main() {
   test('태블릿 설명을 역직렬화하고 값이 없으면 휴대폰 설명으로 대체한다', () {
@@ -46,7 +47,11 @@ void main() {
     final roomService = _SelectionRoomService();
     final gameService = _CatalogGameService();
     final roomProvider =
-        RoomProvider(service: roomService, gameService: gameService)
+        RoomProvider(
+            service: roomService,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game];
@@ -89,6 +94,69 @@ void main() {
     gameProvider.dispose();
   });
 
+  testWidgets('그룹 게임 갱신 중에 기존 카드를 유지하고 입력을 막는다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final roomService = _SelectionRoomService();
+    final gameService = _CatalogGameService();
+    final roomProvider =
+        RoomProvider(
+            service: roomService,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
+          ..roomCode = 'ABCDE'
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+          ..groupGames = const [_game];
+    final gameProvider = GameProvider(service: gameService);
+    addTearDown(roomProvider.dispose);
+    addTearDown(gameProvider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Scaffold(
+          body: GameList(
+            gameProvider: gameProvider,
+            roomProvider: roomProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    roomProvider
+      ..groupGames = const []
+      ..groupGamesLoadStatus = RoomDataLoadStatus.loading
+      ..notifyListeners();
+    await tester.pump();
+
+    expect(find.text('Final Call'), findsOneWidget);
+    expect(
+      find.byKey(const Key('game-list-refresh-indicator')),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    final inputGuard = tester.widget<IgnorePointer>(
+      find.byKey(const Key('game-list-input-guard')),
+    );
+    expect(inputGuard.ignoring, isTrue);
+
+    roomProvider
+      ..groupGames = const [_paidGame]
+      ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
+      ..notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Final Call'), findsNothing);
+    expect(find.text('유료 게임'), findsOneWidget);
+    expect(find.byKey(const Key('game-list-refresh-indicator')), findsNothing);
+  });
+
   testWidgets('선택 해제에 실패하면 닫힌 뒤 오류를 알린다', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);
@@ -98,7 +166,11 @@ void main() {
     final roomService = _SelectionRoomService(failOnClear: true);
     final gameService = _CatalogGameService();
     final roomProvider =
-        RoomProvider(service: roomService, gameService: gameService)
+        RoomProvider(
+            service: roomService,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game];
@@ -137,7 +209,11 @@ void main() {
 
     final gameService = _CatalogGameService();
     final roomProvider =
-        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+        RoomProvider(
+            service: _SelectionRoomService(),
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_longGame];
@@ -191,6 +267,7 @@ void main() {
     final matchingProvider = RoomProvider(
       service: _SelectionRoomService(),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     )..players = List.generate(4, _player);
     addTearDown(matchingProvider.dispose);
     await _pumpPreview(tester, matchingProvider);
@@ -200,6 +277,7 @@ void main() {
     final warningProvider = RoomProvider(
       service: _SelectionRoomService(),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     )..players = List.generate(3, _player);
     addTearDown(warningProvider.dispose);
     await _pumpPreview(tester, warningProvider);
@@ -222,6 +300,7 @@ void main() {
     final provider = RoomProvider(
       service: _SelectionRoomService(),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     )..players = List.generate(1, _player);
     addTearDown(provider.dispose);
 
@@ -243,7 +322,11 @@ void main() {
 
     final service = _SelectionRoomService(failOnBeginSeating: true);
     final provider =
-        RoomProvider(service: service, gameService: _CatalogGameService())
+        RoomProvider(
+            service: service,
+            gameService: _CatalogGameService(),
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..players = List.generate(2, _player);
     addTearDown(provider.dispose);
@@ -265,6 +348,7 @@ void main() {
     final provider = RoomProvider(
       service: _SelectionRoomService(),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     );
     addTearDown(provider.dispose);
 
@@ -297,6 +381,7 @@ void main() {
     final provider = RoomProvider(
       service: _SelectionRoomService(),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     );
     addTearDown(provider.dispose);
 
@@ -321,6 +406,7 @@ void main() {
         RoomProvider(
             service: _SelectionRoomService(),
             gameService: _CatalogGameService(),
+            gameCatalog: const GameRegistry(),
           )
           ..roomCode = 'ABCDE'
           ..players = List.generate(12, _player);
@@ -349,7 +435,11 @@ void main() {
     final gameService = _CatalogGameService();
     final service = _SelectionRoomService();
     final roomProvider =
-        RoomProvider(service: service, gameService: gameService)
+        RoomProvider(
+            service: service,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game];
@@ -394,7 +484,11 @@ void main() {
     final gameService = _CatalogGameService();
     final service = _SelectionRoomService(clearCompleter: clearCompleter);
     final roomProvider =
-        RoomProvider(service: service, gameService: gameService)
+        RoomProvider(
+            service: service,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game];
@@ -440,7 +534,11 @@ void main() {
     final gameService = _CatalogGameService();
     final service = _SelectionRoomService(selectCompleter: selectCompleter);
     final roomProvider =
-        RoomProvider(service: service, gameService: gameService)
+        RoomProvider(
+            service: service,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game, _liarsPokerGame];
@@ -490,7 +588,11 @@ void main() {
       failOnBeginSeating: true,
     );
     final roomProvider =
-        RoomProvider(service: service, gameService: gameService)
+        RoomProvider(
+            service: service,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..players = List.generate(2, _player)
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
@@ -539,7 +641,11 @@ void main() {
     final gameService = _CatalogGameService();
     final service = _SelectionRoomService(failOnSelect: true);
     final roomProvider =
-        RoomProvider(service: service, gameService: gameService)
+        RoomProvider(
+            service: service,
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..players = List.generate(2, _player)
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
@@ -581,7 +687,11 @@ void main() {
 
     final gameService = _CatalogGameService();
     final roomProvider =
-        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+        RoomProvider(
+            service: _SelectionRoomService(),
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           // 전략(Final Call) + 추리(마피아)만 보유한 상태입니다.
@@ -627,7 +737,11 @@ void main() {
 
     final gameService = _CatalogGameService();
     final roomProvider =
-        RoomProvider(service: _SelectionRoomService(), gameService: gameService)
+        RoomProvider(
+            service: _SelectionRoomService(),
+            gameService: gameService,
+            gameCatalog: const GameRegistry(),
+          )
           ..roomCode = 'ABCDE'
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded
           ..groupGames = const [_game, _mafiaGame];
@@ -671,6 +785,7 @@ void main() {
     final provider = RoomProvider(
       service: service,
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     );
     addTearDown(provider.dispose);
 
@@ -691,6 +806,7 @@ void main() {
     final provider = RoomProvider(
       service: _SelectionRoomService(clearCompleter: clearCompleter),
       gameService: _CatalogGameService(),
+      gameCatalog: const GameRegistry(),
     )..roomCode = 'ABCDE';
     addTearDown(provider.dispose);
 

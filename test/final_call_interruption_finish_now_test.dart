@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/final_call/controllers/final_call_controller.dart';
-import 'package:project00/games/final_call/providers/final_call_session_provider.dart';
-import 'package:project00/games/final_call/services/final_call_command_service.dart';
-import 'package:project00/games/final_call/services/final_call_query_service.dart';
-import 'package:project00/games/final_call/services/final_call_service.dart';
-import 'package:project00/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_final_call/games/final_call/controllers/final_call_controller.dart';
+import 'package:game_final_call/games/final_call/providers/final_call_session_provider.dart';
+import 'package:game_final_call/games/final_call/services/final_call_command_service.dart';
+import 'package:game_final_call/games/final_call/services/final_call_query_service.dart';
+import 'package:game_final_call/games/final_call/services/final_call_service.dart';
+import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
 
 //=======================인원 부족 즉시 종료 (C-11)==============================
 // 파이널 콜은 최소 인원이 4명이라 한 명만 빠져도 `canContinue == false`가 됩니다.

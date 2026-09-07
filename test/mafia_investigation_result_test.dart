@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/models/mafia_role.dart';
-import 'package:project00/games/mafia/models/mafia_roles.dart';
-import 'package:project00/games/mafia/widgets/phone/night_action_view.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/night_action_view.dart';
 
 //=======================경찰 조사 결과==============================
 // 확정(2026-08): 결과가 마피아면 대상 사진의 테두리를 마피아 진영 색(빨강)으로

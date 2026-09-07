@@ -5,15 +5,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
-import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
-import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/room/services/controller_presence.dart';
-import 'package:project00/platform/home/room/services/player_room_session_store.dart';
-import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/home/room/services/room_leave_intent.dart';
-import 'package:project00/platform/home/room/services/room_service.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
+import 'package:mosigame_platform/platform/home/phone/screens/phone_room_waiting.dart';
+import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
+import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
+import 'package:mosigame_platform/platform/home/room/services/player_room_session_store.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_leave_intent.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
+import 'package:mosigame_platform/platform/theme/platform_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// C-04의 재현 시험입니다. 정상 퇴장 중에는 영문 원문이 화면에 나오지 않고,

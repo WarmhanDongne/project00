@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/shared/widgets/game_reconnect_screen.dart';
-import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart';
-import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:mosigame_core/games/shared/widgets/game_reconnect_screen.dart';
+import 'package:mosigame_platform/platform/home/phone/widgets/session_return_prompt.dart';
+import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
 
 //=======================비정상 종료 후 복귀 선택 (P-01)==============================
 // 지금까지는 복원에 성공하면 **묻지 않고** 대기 화면과 게임 화면을 곧바로

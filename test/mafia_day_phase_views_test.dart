@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/models/mafia_roles.dart';
-import 'package:project00/games/mafia/widgets/phone/execution_view.dart';
-import 'package:project00/games/mafia/widgets/phone/mafia_phone_layout.dart';
-import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
-import 'package:project00/games/mafia/widgets/phone/spectator_roster_view.dart';
-import 'package:project00/games/mafia/widgets/phone/vote_view.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/execution_view.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/player_select_grid.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/spectator_roster_view.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/vote_view.dart';
 
 import 'support/ejection_beats.dart';
 

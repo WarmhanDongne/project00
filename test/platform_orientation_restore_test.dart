@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/layout/app_orientation.dart';
-import 'package:project00/core/layout/device_layout.dart';
+import 'package:mosigame_core/core/layout/app_orientation.dart';
+import 'package:mosigame_core/core/layout/device_layout.dart';
 
 //=======================게임 종료 후 방향 복원==============================
 // 게임을 나와 로비로 돌아올 때의 방향은 **기기**로 정합니다. 화면마다 세로·가로를

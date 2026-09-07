@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/core/diagnostics/dev_error_log.dart';
-import 'package:project00/core/diagnostics/dev_error_overlay.dart';
+import 'package:mosigame_core/core/diagnostics/dev_error_log.dart';
+import 'package:mosigame_core/core/diagnostics/dev_error_overlay.dart';
+import 'package:mosigame_core/core/diagnostics/game_communication_log.dart';
 
 //=======================개발용 오류 표시==============================
-// 오류는 로컬 로그에 남기되 사용자 화면에는 표시하지 않는 장치입니다.
+// 일반 오류 원문은 숨기고 게임 통신 타임라인만 개발 화면에 표시합니다.
 void main() {
-  setUp(DevErrorLog.instance.clear);
-  tearDown(DevErrorLog.instance.clear);
+  setUp(() {
+    DevErrorLog.instance.clear();
+    GameCommunicationLog.instance.clear();
+  });
+  tearDown(() {
+    DevErrorLog.instance.clear();
+    GameCommunicationLog.instance.clear();
+  });
 
   void addError(String message, {String? context}) {
     DevErrorLog.instance.add(
       error: message,
       stack: StackTrace.fromString(
         '#0      something (package:flutter/src/widgets/framework.dart:1)\n'
-        '#1      MafiaThing.build (package:project00/games/mafia/x.dart:42)',
+        '#1      MafiaThing.build (package:game_mafia/games/mafia/x.dart:42)',
       ),
       context: context ?? '시험',
       time: DateTime(2026, 8, 21, 9, 30, 15),
@@ -38,7 +45,7 @@ void main() {
     test('우리 코드의 첫 스택 줄을 뽑아 준다', () {
       addError('빨간 화면');
 
-      // 프레임워크 줄이 먼저 나와도 project00 줄을 찾아야 고칠 곳이 보입니다.
+      // 프레임워크 줄이 먼저 나와도 workspace package 줄을 찾아야 고칠 곳이 보입니다.
       expect(
         DevErrorLog.instance.entries.first.firstProjectFrame,
         contains('games/mafia/x.dart:42'),
@@ -58,24 +65,55 @@ void main() {
   });
 
   group('화면 표시', () {
-    testWidgets('오류가 없으면 아무것도 보이지 않는다', (tester) async {
+    testWidgets('휴대폰과 아이패드 모두 오른쪽 아래에 진단 버튼을 표시한다', (tester) async {
+      for (final size in [const Size(390, 844), const Size(1194, 834)]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          const MaterialApp(home: DevErrorOverlay(child: Text('게임 화면'))),
+        );
+
+        final button = find.byKey(DevErrorOverlay.diagnosticsButtonKey);
+        expect(button, findsOneWidget);
+        final rect = tester.getRect(button);
+        expect(size.width - rect.right, lessThanOrEqualTo(20));
+        expect(size.height - rect.bottom, lessThanOrEqualTo(40));
+      }
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    testWidgets('버튼을 누르면 통신 상태와 타임라인을 연다', (tester) async {
+      GameCommunicationLog.instance.add(
+        level: GameCommunicationLevel.failure,
+        title: '카드 제출 요청 실패',
+        detail: '서버 응답 시간초과',
+        operation: 'game_liars_poker_submit_cards',
+        traceId: 'cards_test',
+      );
       await tester.pumpWidget(
         const MaterialApp(home: DevErrorOverlay(child: Text('게임 화면'))),
       );
 
       expect(find.text('게임 화면'), findsOneWidget);
-      expect(find.byIcon(Icons.bug_report), findsNothing);
+      await tester.tap(find.byKey(DevErrorOverlay.diagnosticsButtonKey));
+      await tester.pump();
+
+      expect(find.byKey(DevErrorOverlay.diagnosticsSheetKey), findsOneWidget);
+      expect(find.text('게임 통신 진단'), findsOneWidget);
+      expect(find.text('카드 제출 요청 실패'), findsOneWidget);
+      expect(find.textContaining('서버 응답 시간초과'), findsOneWidget);
     });
 
-    testWidgets('오류가 쌓여도 배지와 목록이 화면에 나타나지 않는다', (tester) async {
+    testWidgets('일반 오류가 쌓여도 원문은 진단 화면에 나타나지 않는다', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: DevErrorOverlay(child: Text('게임 화면'))),
       );
       addError('밤 제출이 터졌습니다');
       await tester.pump();
+      await tester.tap(find.byKey(DevErrorOverlay.diagnosticsButtonKey));
+      await tester.pump();
 
-      expect(find.byIcon(Icons.bug_report), findsNothing);
-      expect(find.textContaining('오류 1'), findsNothing);
       expect(find.textContaining('밤 제출이 터졌습니다'), findsNothing);
     });
 
@@ -93,6 +131,8 @@ void main() {
 
       expect(find.textContaining('여기서 터집니다'), findsNothing);
       expect(find.textContaining('package:project00'), findsNothing);
+      expect(find.textContaining('package:mosigame_'), findsNothing);
+      expect(find.textContaining('package:game_'), findsNothing);
       expect(DevErrorLog.instance.entries, isNotEmpty);
       ErrorWidget.builder = previousBuilder;
       // 위젯 오류는 테스트 프레임워크에도 보고되므로 확인 처리합니다.

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/animations/announcement_reveal.dart';
-import 'package:project00/games/mafia/mafia_copy.dart';
-import 'package:project00/games/mafia/mafia_flow_config.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/models/mafia_state_models.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_phase_views.dart';
+import 'package:game_mafia/games/mafia/animations/announcement_reveal.dart';
+import 'package:game_mafia/games/mafia/mafia_copy.dart';
+import 'package:game_mafia/games/mafia/mafia_flow_config.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_phase_views.dart';
 
 import 'support/ejection_beats.dart';
 

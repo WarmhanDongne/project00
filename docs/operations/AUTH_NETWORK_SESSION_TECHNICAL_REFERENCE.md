@@ -60,11 +60,11 @@ Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전
 
 중요 파일:
 
-- `lib/platform/auth/widgets/auth_gate.dart`: 인증·온보딩 route 결정
-- `lib/platform/auth/services/auth_service.dart`: 이메일 링크, Google, Apple 인증
-- `lib/platform/auth/services/onboarding_service.dart`: 온보딩 callable과 문서 구독
-- `lib/platform/auth/services/pending_email_store.dart`: 이메일 링크 로컬 상태
-- `lib/platform/auth/models/onboarding_state.dart`: 단계 모델
+- `packages/mosigame_platform/lib/platform/auth/widgets/auth_gate.dart`: 인증·온보딩 route 결정
+- `packages/mosigame_platform/lib/platform/auth/services/auth_service.dart`: 이메일 링크, Google, Apple 인증
+- `packages/mosigame_platform/lib/platform/auth/services/onboarding_service.dart`: 온보딩 callable과 문서 구독
+- `packages/mosigame_platform/lib/platform/auth/services/pending_email_store.dart`: 이메일 링크 로컬 상태
+- `packages/mosigame_platform/lib/platform/auth/models/onboarding_state.dart`: 단계 모델
 - `functions/src/auth/onboarding.ts`: 온보딩 시작·완료 전이
 - `functions/src/auth/sync-google-profile.ts`, `sync-apple-profile.ts`: 소셜 프로필 동기화
 - `functions/src/auth/require-complete-onboarding.ts`: 서버 명령의 완료 조건
@@ -87,10 +87,10 @@ Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전
 
 중요 파일:
 
-- `lib/platform/home/room/services/room_service.dart`: Firebase I/O와 callable 경계
-- `lib/platform/home/room/providers/room_provider.dart`: 구독, lifecycle, 복구, 오류 상태
+- `packages/mosigame_platform/lib/platform/home/room/services/room_service.dart`: Firebase I/O와 callable 경계
+- `packages/mosigame_platform/lib/platform/home/room/providers/room_provider.dart`: 구독, lifecycle, 복구, 오류 상태
 - `controller_room_session_store.dart`, `player_room_session_store.dart`: 로컬 복원 정보
-- `lib/platform/home/phone/widgets/session_return_prompt.dart`: 복원 동의 순서
+- `packages/mosigame_platform/lib/platform/home/phone/widgets/session_return_prompt.dart`: 복원 동의 순서
 - `functions/src/room/realtime-room-functions.ts`: 방 생성·참가
 - `functions/src/room/controller-session.ts`: controller session 검증
 - `functions/src/room/realtime-room-lifecycle.ts`: 선택·종료·퇴장·보존 정리
@@ -211,14 +211,23 @@ participant status, 재접속·강퇴·중단 계약을 먼저 설계하고 승�
 
 ## DevErrorLog와 사용자 오류
 
-`dev_error_overlay.dart`는 호환성을 위한 무표시 경계이며 debug를 포함해 배지·목록·오류
-원문·stack trace를 렌더링하지 않는다. `DevErrorLog`는 개인정보 없는 `context`,
-`errorType`, 첫 프로젝트 frame을 `[dev_error]` 한 줄로 콘솔과 ADB logcat에 남긴다.
-release의 예상하지 못한 오류는 기존 Crashlytics가 맡고, 정상 퇴장 중 늦은 구독 오류와
-성공한 재연결의 heartbeat 실패는 사용자 오류나 Crashlytics 오류로 승격하지 않는다.
+`dev_error_overlay.dart`는 debug 빌드에서 휴대폰·태블릿 화면 오른쪽 아래에 통신
+진단 버튼을 렌더링한다. `GameCommunicationLog`는 최근 200건의 callable
+전송·재시도·응답, RTDB 연결·스냅샷, 앱 lifecycle, 라이어스포커 룰렛
+추첨·회전·결과 반영 구간을 메모리 타임라인과 `[game_comm]` 콘솔 로그에
+남긴다. payload는 보관하지 않고 명령명, 추적 ID, 시도 횟수, 소요 시간,
+Firebase 오류 코드, 공개 상태의 `revision`·`phase`·`status`만 남긴다. 방 코드,
+UID, 카드 값과 개인 스냅샷 내용은 남기지 않는다. release에서는 버튼·타임라인·
+`[game_comm]`이 비활성화된다.
+
+`DevErrorLog`의 일반 오류 원문·stack trace는 화면에 렌더링하지 않고, 개인정보
+없는 `context`, `errorType`, 첫 프로젝트 frame을 `[dev_error]` 한 줄로 콘솔과
+ADB logcat에 남긴다. release의 예상하지 못한 오류는 기존 Crashlytics가 맡고, 정상 퇴장
+중 늦은 구독 오류와 성공한 재연결의 heartbeat 실패는 Crashlytics 오류로 승격하지
+않는다.
 
 ```powershell
-adb logcat -v time | Select-String -Pattern '\[dev_error\]|room_connection'
+adb logcat -v time | Select-String -Pattern '\[dev_error\]|\[game_comm\]|room_connection'
 ```
 
 ## 자동 테스트가 보장하는 범위

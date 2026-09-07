@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/animations/ballot_animations.dart';
-import 'package:project00/games/mafia/models/mafia_player.dart';
-import 'package:project00/games/mafia/models/mafia_state_models.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_day_view.dart';
-import 'package:project00/games/mafia/screens/tablet/tablet_tally_view.dart';
-import 'package:project00/games/mafia/widgets/phone/player_select_grid.dart';
+import 'package:game_mafia/games/mafia/animations/ballot_animations.dart';
+import 'package:game_mafia/games/mafia/models/mafia_player.dart';
+import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_day_view.dart';
+import 'package:game_mafia/games/mafia/screens/tablet/tablet_tally_view.dart';
+import 'package:game_mafia/games/mafia/widgets/phone/player_select_grid.dart';
 
 //=======================투표지·개표 연출==============================
 // 확정(2026-08): 투표하면 그 좌석에서 투표지가 투표함으로 날아가 사라지고,

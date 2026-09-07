@@ -8,6 +8,7 @@ import {
   findNextAlivePlayer,
 } from "../lib/liars-poker/common/next-turn.js";
 import {finishGame} from "../lib/liars-poker/finish-game.js";
+import {drawPenaltyResult} from "../lib/liars-poker/finish-penalty.js";
 import {restartRound} from "../lib/liars-poker/restart-round.js";
 
 function players(count) {
@@ -115,4 +116,13 @@ test("명령 결과의 undefined 값은 RTDB 저장 전에 제거된다", () => 
     success: true,
     nested: {round: 2},
   });
+});
+
+test("벌칙 결과는 서버 추첨 확률의 경계값으로 결정된다", () => {
+  assert.equal(drawPenaltyResult(0, () => 3), "eliminated");
+  assert.equal(drawPenaltyResult(0, () => 4), "safe");
+  assert.equal(drawPenaltyResult(1, () => 4), "eliminated");
+  assert.equal(drawPenaltyResult(1, () => 5), "safe");
+  assert.equal(drawPenaltyResult(2, () => 10), "eliminated");
+  assert.equal(drawPenaltyResult(2, () => 11), "safe");
 });

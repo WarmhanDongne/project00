@@ -21,6 +21,15 @@ version: 1.0.0+2
 environment:
   sdk: ^3.12.2
 
+workspace:
+  - packages/mosigame_core
+  - packages/game_contract
+  - packages/game_kit
+  - packages/mosigame_platform
+  - packages/game_liars_poker
+  - packages/game_final_call
+  - packages/game_mafia
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -32,6 +41,13 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  mosigame_core: any
+  game_contract: any
+  game_kit: any
+  mosigame_platform: any
+  game_liars_poker: any
+  game_final_call: any
+  game_mafia: any
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -47,6 +63,7 @@ dependencies:
   google_sign_in: ^7.2.0
 
   image_picker: ^1.2.3
+  path_provider: ^2.1.6
   firebase_storage: ^13.5.0
   qr_flutter: ^4.1.0
   video_player: ^2.10.0
@@ -95,41 +112,9 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/character/
     - assets/images/button/
-    - assets/images/logo/
     - assets/images/others/
-    - assets/images/reconnect/
-    - assets/images/patch/
     - assets/images/widgets/layout/
-    - assets/images/widgets/roulette/
-    - assets/games/liars_poker/images/background/
-    - assets/games/liars_poker/images/button/
-    - assets/games/liars_poker/images/cards/
-    - assets/games/liars_poker/images/icons/
-    - assets/games/liars_poker/images/layout/
-    - assets/games/liars_poker/images/table/
-    - assets/games/liars_poker/images/modal/
-    - assets/games/liars_poker/images/other/
-    - assets/games/liars_poker/sounds/
-    - assets/games/mafia/images/background/
-    - assets/games/mafia/images/background/bird/
-    - assets/games/mafia/images/banner/
-    - assets/games/mafia/images/cards/
-    - assets/games/mafia/images/icons/
-    - assets/games/mafia/images/other/
-    - assets/games/mafia/images/roles/
-    - assets/games/mafia/sounds/
-    - assets/games/mafia/sounds/background/
-    - assets/games/final_call/images/background/
-    - assets/games/final_call/images/button/
-    - assets/games/final_call/images/cards/
-    - assets/games/final_call/images/icons/
-    - assets/games/final_call/images/layout/
-    - assets/games/final_call/images/modal/
-    - assets/games/final_call/images/other/
-    - assets/games/final_call/sounds/
-    - assets/sounds/
     - assets/lottie/
     - assets/l10n/
     - shorebird.yaml

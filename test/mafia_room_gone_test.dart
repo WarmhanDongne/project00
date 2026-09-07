@@ -4,11 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project00/games/mafia/providers/mafia_session_provider.dart';
-import 'package:project00/games/mafia/services/mafia_command_service.dart';
-import 'package:project00/games/mafia/services/mafia_query_service.dart';
-import 'package:project00/games/mafia/services/mafia_service.dart';
-import 'package:project00/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_mafia/games/mafia/providers/mafia_session_provider.dart';
+import 'package:game_mafia/games/mafia/services/mafia_command_service.dart';
+import 'package:game_mafia/games/mafia/services/mafia_query_service.dart';
+import 'package:game_mafia/games/mafia/services/mafia_service.dart';
+import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
 
 //=======================방이 사라졌을 때==============================
 // 2026-08 시뮬레이터에서 확인한 문제입니다. 방이 지워지자 공개 상태 구독이
