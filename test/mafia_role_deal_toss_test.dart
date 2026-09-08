@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/animations/role_deal_toss_animation.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_phase_views.dart';
+import 'package:game_mafia/animations/role_deal_toss_animation.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/screens/tablet/tablet_phase_views.dart';
 
 //=======================T1 나눠 주기 연출==============================
 // 중앙 더미 → 좌석 방향으로 1장씩 → 화면 밖. 흩어진 좌석(12인 방에 4명)

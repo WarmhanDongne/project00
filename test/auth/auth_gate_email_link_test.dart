@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/auth/screens/register_screen.dart';
-import 'package:mosigame_platform/platform/auth/services/onboarding_service.dart';
-import 'package:mosigame_platform/platform/auth/widgets/auth_gate.dart';
+import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/widgets/auth_gate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

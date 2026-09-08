@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/auth/models/onboarding_state.dart';
+import 'package:project00/platform/auth/models/onboarding_state.dart';
 
 //=======================앱·서버 온보딩 값 대조==============================
 // 온보딩 문서의 `status`·`provider`는 **서버가 쓰고 앱이 읽습니다.** 앱 쪽

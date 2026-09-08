@@ -5,8 +5,8 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/error/user_error_message.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
+import 'package:game_kit/core/error/user_error_message.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 
 void main() {
   group('권한 거부', () {

@@ -20,6 +20,9 @@ class $AssetsImagesGen {
   /// Directory path: assets/images/button
   $AssetsImagesButtonGen get button => const $AssetsImagesButtonGen();
 
+  /// Directory path: assets/images/logo
+  $AssetsImagesLogoGen get logo => const $AssetsImagesLogoGen();
+
   /// Directory path: assets/images/others
   $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
 
@@ -37,16 +40,6 @@ class $AssetsL10nGen {
   List<String> get values => [appKo];
 }
 
-class $AssetsLottieGen {
-  const $AssetsLottieGen();
-
-  /// File path: assets/lottie/.gitkeep
-  String get aGitkeep => 'assets/lottie/.gitkeep';
-
-  /// List of all assets
-  List<String> get values => [aGitkeep];
-}
-
 class $AssetsImagesButtonGen {
   const $AssetsImagesButtonGen();
 
@@ -60,6 +53,20 @@ class $AssetsImagesButtonGen {
 
   /// List of all assets
   List<dynamic> get values => [googleLoginButton, googleGLogo];
+}
+
+class $AssetsImagesLogoGen {
+  const $AssetsImagesLogoGen();
+
+  /// File path: assets/images/logo/.gitkeep
+  String get aGitkeep => 'assets/images/logo/.gitkeep';
+
+  /// File path: assets/images/logo/google_g.svg
+  SvgGenImage get googleG =>
+      const SvgGenImage('assets/images/logo/google_g.svg');
+
+  /// List of all assets
+  List<dynamic> get values => [aGitkeep, googleG];
 }
 
 class $AssetsImagesOthersGen {
@@ -95,7 +102,6 @@ class $AssetsImagesWidgetsLayoutGen {
 abstract final class Assets {
   static const $AssetsImagesGen images = $AssetsImagesGen();
   static const $AssetsL10nGen l10n = $AssetsL10nGen();
-  static const $AssetsLottieGen lottie = $AssetsLottieGen();
   static const String shorebird = 'shorebird.yaml';
 
   /// List of all assets

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_phase_views.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/mafia_phone_layout.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/night_action_view.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/screens/tablet/tablet_phase_views.dart';
+import 'package:game_mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:game_mafia/widgets/phone/night_action_view.dart';
 
 //=======================단계가 끝날 때 사라지는 것들==============================
 // 확정(2026-08)

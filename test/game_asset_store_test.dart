@@ -4,11 +4,11 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/assets/game_asset_cache.dart';
-import 'package:mosigame_core/core/assets/game_asset_manifest.dart';
-import 'package:mosigame_core/core/assets/game_asset_store.dart';
-import 'package:mosigame_core/core/assets/game_asset_source.dart';
-import 'package:mosigame_core/core/assets/game_image.dart';
+import 'package:game_kit/core/assets/game_asset_cache.dart';
+import 'package:game_kit/core/assets/game_asset_manifest.dart';
+import 'package:game_kit/core/assets/game_asset_store.dart';
+import 'package:game_kit/core/assets/game_asset_source.dart';
+import 'package:game_kit/core/assets/game_image.dart';
 
 void main() {
   late Directory cacheRoot;

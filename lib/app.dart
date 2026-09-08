@@ -13,13 +13,13 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mosigame_core/core/diagnostics/dev_error_overlay.dart';
-import 'package:mosigame_core/core/layout/device_layout.dart';
-import 'package:mosigame_core/core/network/app_network_guard.dart';
-import 'package:mosigame_core/core/update/shorebird_patch_gate.dart';
+import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
+import 'package:game_kit/core/layout/device_layout.dart';
+import 'package:game_kit/core/network/app_network_guard.dart';
+import 'package:game_kit/core/update/shorebird_patch_gate.dart';
 import 'package:project00/games/game_registry.dart';
-import 'package:mosigame_platform/platform/auth/widgets/auth_gate.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
+import 'package:project00/platform/auth/widgets/auth_gate.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 class App extends StatelessWidget {
   const App({

@@ -9,6 +9,7 @@
 - [`Engineering Contract`](engineering/ENGINEERING_CONTRACT.md)
 - [`Architecture Reference`](engineering/ARCHITECTURE.md)
 - [`Package Migration`](engineering/PACKAGE_MIGRATION.md) — 게임별 패키지 분리와 게임 다운로드 계획
+- [`Cloud Functions`](engineering/CLOUD_FUNCTIONS.md) — 배포된 함수 69개 전수 정리
 - [`Project CLI`](engineering/PROJECT_CLI.md)
 
 ## Development

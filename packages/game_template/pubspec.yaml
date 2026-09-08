@@ -1,0 +1,30 @@
+name: game_template
+description: "새 게임을 시작할 때 복사하는 스켈레톤 패키지입니다."
+publish_to: "none"
+version: 0.0.1
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  game_kit: any
+  firebase_database: ^12.5.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  build_runner: ^2.15.1
+  flutter_gen_runner: ^5.15.0
+
+flutter:
+  assets:
+    - assets/
+
+flutter_gen:
+  output: lib/gen/
+  assets:
+    outputs:
+      package_parameter_enabled: true

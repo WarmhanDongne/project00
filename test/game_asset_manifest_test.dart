@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/assets/game_asset_manifest.dart';
+import 'package:game_kit/core/assets/game_asset_manifest.dart';
 
 void main() {
   const digest =

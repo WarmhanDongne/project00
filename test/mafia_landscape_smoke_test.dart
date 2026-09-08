@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_day_view.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_execution_view.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_game_layout.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_night_bird.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_phase_views.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_result_view.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_tally_view.dart';
-import 'package:game_mafia/games/mafia/models/mafia_role.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/screens/tablet/tablet_day_view.dart';
+import 'package:game_mafia/screens/tablet/tablet_execution_view.dart';
+import 'package:game_mafia/screens/tablet/tablet_game_layout.dart';
+import 'package:game_mafia/screens/tablet/tablet_night_bird.dart';
+import 'package:game_mafia/screens/tablet/tablet_phase_views.dart';
+import 'package:game_mafia/screens/tablet/tablet_result_view.dart';
+import 'package:game_mafia/screens/tablet/tablet_tally_view.dart';
+import 'package:game_mafia/models/mafia_role.dart';
 
 //=======================가로 화면 폭발 점검==============================
 // 태블릿은 항상 가로입니다. 모든 태블릿 화면을 여러 가로 크기로 실제로 펌프해서

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_leave_intent.dart';
+import 'package:project00/platform/home/room/services/room_leave_intent.dart';
 
 void main() {
   setUp(RoomLeaveIntent.resetForTesting);

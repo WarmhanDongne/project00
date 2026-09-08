@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_contract/games/template_game.dart';
-import 'package:game_liars_poker/games/liars_poker/liars_poker_game.dart';
-import 'package:mosigame_core/core/assets/game_asset_manifest.dart';
-import 'package:mosigame_core/core/assets/game_asset_source.dart';
-import 'package:mosigame_core/core/assets/game_asset_store.dart';
+import 'package:game_kit/template_game.dart';
+import 'package:game_liars_poker/liars_poker_game.dart';
+import 'package:game_kit/core/assets/game_asset_manifest.dart';
+import 'package:game_kit/core/assets/game_asset_source.dart';
+import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:project00/game_assets/game_asset_bootstrap.dart';
 
 void main() {

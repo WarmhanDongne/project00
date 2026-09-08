@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/network/app_network_guard.dart';
-import 'package:mosigame_core/core/network/network_unavailable_modal.dart';
-import 'package:mosigame_core/core/network/realtime_connection_monitor.dart';
+import 'package:game_kit/core/network/app_network_guard.dart';
+import 'package:game_kit/core/network/network_unavailable_modal.dart';
+import 'package:game_kit/core/network/realtime_connection_monitor.dart';
 
 void main() {
   group('AppNetworkGuard', () {

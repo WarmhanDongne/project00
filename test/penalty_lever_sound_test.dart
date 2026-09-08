@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/sound/app_sounds.dart';
-import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
-import 'package:game_kit/games/penalty/roulette.dart';
+import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/core/sound/providers/sound_provider.dart';
+import 'package:game_kit/penalty/roulette.dart';
 import 'package:provider/provider.dart';
 // RouletteState의 회전값으로 서버 응답 전 즉시 회전을 확인합니다.
 // ignore: depend_on_referenced_packages

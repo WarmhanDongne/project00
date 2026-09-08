@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/mafia_phone_layout.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/player_select_grid.dart';
+import 'package:game_mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:game_mafia/widgets/phone/player_select_grid.dart';
 
 //=======================휴대폰 내용 가운데 맞춤==============================
 // 확정(2026-08): 화면별 내용(격자·대기 문구)은 상단 안내와 하단 버튼 사이

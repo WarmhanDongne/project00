@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/time/server_clock.dart';
-import 'package:game_kit/games/shared/widgets/game_turn_countdown.dart';
+import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/widgets/game_turn_countdown.dart';
 
 //=======================남은 시간 세기==============================
 // 마피아 토론·투표 타이머가 굳어 있던 원인은, 서버 상태가 바뀌지 않는 동안

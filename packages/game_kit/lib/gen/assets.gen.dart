@@ -14,12 +14,174 @@ import 'package:flutter/widgets.dart';
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
+  /// Directory path: assets/images/character
+  $AssetsImagesCharacterGen get character => const $AssetsImagesCharacterGen();
+
+  /// Directory path: assets/images/others
+  $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
+
+  /// Directory path: assets/images/patch
+  $AssetsImagesPatchGen get patch => const $AssetsImagesPatchGen();
+
   /// Directory path: assets/images/phone_result
   $AssetsImagesPhoneResultGen get phoneResult =>
       const $AssetsImagesPhoneResultGen();
 
+  /// Directory path: assets/images/reconnect
+  $AssetsImagesReconnectGen get reconnect => const $AssetsImagesReconnectGen();
+
   /// Directory path: assets/images/widgets
   $AssetsImagesWidgetsGen get widgets => const $AssetsImagesWidgetsGen();
+}
+
+class $AssetsSoundsGen {
+  const $AssetsSoundsGen();
+
+  /// File path: assets/sounds/background.m4a
+  String get background => 'packages/game_kit/assets/sounds/background.m4a';
+
+  /// File path: assets/sounds/dealing.mp3
+  String get dealing => 'packages/game_kit/assets/sounds/dealing.mp3';
+
+  /// File path: assets/sounds/lever.mp3
+  String get lever => 'packages/game_kit/assets/sounds/lever.mp3';
+
+  /// File path: assets/sounds/roulette.mp3
+  String get roulette => 'packages/game_kit/assets/sounds/roulette.mp3';
+
+  /// File path: assets/sounds/stamp.mp3
+  String get stamp => 'packages/game_kit/assets/sounds/stamp.mp3';
+
+  /// File path: assets/sounds/timer.mp3
+  String get timer => 'packages/game_kit/assets/sounds/timer.mp3';
+
+  /// List of all assets
+  List<String> get values => [
+    background,
+    dealing,
+    lever,
+    roulette,
+    stamp,
+    timer,
+  ];
+}
+
+class $AssetsImagesCharacterGen {
+  const $AssetsImagesCharacterGen();
+
+  /// File path: assets/images/character/bear.webp
+  AssetGenImage get bear =>
+      const AssetGenImage('assets/images/character/bear.webp');
+
+  /// File path: assets/images/character/bee.webp
+  AssetGenImage get bee =>
+      const AssetGenImage('assets/images/character/bee.webp');
+
+  /// File path: assets/images/character/cat.webp
+  AssetGenImage get cat =>
+      const AssetGenImage('assets/images/character/cat.webp');
+
+  /// File path: assets/images/character/crab.webp
+  AssetGenImage get crab =>
+      const AssetGenImage('assets/images/character/crab.webp');
+
+  /// File path: assets/images/character/deer.webp
+  AssetGenImage get deer =>
+      const AssetGenImage('assets/images/character/deer.webp');
+
+  /// File path: assets/images/character/elephant.webp
+  AssetGenImage get elephant =>
+      const AssetGenImage('assets/images/character/elephant.webp');
+
+  /// File path: assets/images/character/frog.webp
+  AssetGenImage get frog =>
+      const AssetGenImage('assets/images/character/frog.webp');
+
+  /// File path: assets/images/character/giraffe.webp
+  AssetGenImage get giraffe =>
+      const AssetGenImage('assets/images/character/giraffe.webp');
+
+  /// File path: assets/images/character/hedgehog.webp
+  AssetGenImage get hedgehog =>
+      const AssetGenImage('assets/images/character/hedgehog.webp');
+
+  /// File path: assets/images/character/kindbear.webp
+  AssetGenImage get kindbear =>
+      const AssetGenImage('assets/images/character/kindbear.webp');
+
+  /// File path: assets/images/character/octopus.webp
+  AssetGenImage get octopus =>
+      const AssetGenImage('assets/images/character/octopus.webp');
+
+  /// File path: assets/images/character/owl.webp
+  AssetGenImage get owl =>
+      const AssetGenImage('assets/images/character/owl.webp');
+
+  /// File path: assets/images/character/penguin.webp
+  AssetGenImage get penguin =>
+      const AssetGenImage('assets/images/character/penguin.webp');
+
+  /// File path: assets/images/character/rabbit.webp
+  AssetGenImage get rabbit =>
+      const AssetGenImage('assets/images/character/rabbit.webp');
+
+  /// File path: assets/images/character/shark.webp
+  AssetGenImage get shark =>
+      const AssetGenImage('assets/images/character/shark.webp');
+
+  /// File path: assets/images/character/snake.webp
+  AssetGenImage get snake =>
+      const AssetGenImage('assets/images/character/snake.webp');
+
+  /// File path: assets/images/character/whale.webp
+  AssetGenImage get whale =>
+      const AssetGenImage('assets/images/character/whale.webp');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    bear,
+    bee,
+    cat,
+    crab,
+    deer,
+    elephant,
+    frog,
+    giraffe,
+    hedgehog,
+    kindbear,
+    octopus,
+    owl,
+    penguin,
+    rabbit,
+    shark,
+    snake,
+    whale,
+  ];
+}
+
+class $AssetsImagesOthersGen {
+  const $AssetsImagesOthersGen();
+
+  /// File path: assets/images/others/network_unavailable.webp
+  AssetGenImage get networkUnavailable =>
+      const AssetGenImage('assets/images/others/network_unavailable.webp');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [networkUnavailable];
+}
+
+class $AssetsImagesPatchGen {
+  const $AssetsImagesPatchGen();
+
+  /// File path: assets/images/patch/.gitkeep
+  String get aGitkeep => 'packages/game_kit/assets/images/patch/.gitkeep';
+
+  /// File path: assets/images/patch/game_update.webp
+  AssetGenImage get gameUpdate =>
+      const AssetGenImage('assets/images/patch/game_update.webp');
+
+  /// List of all assets
+  List<dynamic> get values => [aGitkeep, gameUpdate];
 }
 
 class $AssetsImagesPhoneResultGen {
@@ -31,6 +193,21 @@ class $AssetsImagesPhoneResultGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [borderCrown];
+}
+
+class $AssetsImagesReconnectGen {
+  const $AssetsImagesReconnectGen();
+
+  /// File path: assets/images/reconnect/game_controller.webp
+  AssetGenImage get gameController =>
+      const AssetGenImage('assets/images/reconnect/game_controller.webp');
+
+  /// File path: assets/images/reconnect/star.webp
+  AssetGenImage get star =>
+      const AssetGenImage('assets/images/reconnect/star.webp');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [gameController, star];
 }
 
 class $AssetsImagesWidgetsGen {
@@ -83,6 +260,7 @@ abstract final class Assets {
   static const String package = 'game_kit';
 
   static const $AssetsImagesGen images = $AssetsImagesGen();
+  static const $AssetsSoundsGen sounds = $AssetsSoundsGen();
 }
 
 class AssetGenImage {

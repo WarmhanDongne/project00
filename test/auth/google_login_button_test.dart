@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/widgets/platform_components.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 void main() {
   testWidgets('Google 로그인 버튼에 로고 에셋을 표시한다', (tester) async {

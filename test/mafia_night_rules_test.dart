@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/mafia_copy.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/models/mafia_role.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/day_discussion_view.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/morning_announcement_view.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/night_action_view.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/vote_view.dart';
+import 'package:game_mafia/mafia_copy.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/models/mafia_role.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/widgets/phone/day_discussion_view.dart';
+import 'package:game_mafia/widgets/phone/morning_announcement_view.dart';
+import 'package:game_mafia/widgets/phone/night_action_view.dart';
+import 'package:game_mafia/widgets/phone/vote_view.dart';
 
 import 'support/ejection_beats.dart';
 

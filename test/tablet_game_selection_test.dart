@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/game_registry.dart';
-import 'package:game_contract/games/shared/player_layouts/player_layout_editor.dart';
-import 'package:mosigame_platform/platform/home/gamelist/models/game_info.dart';
-import 'package:mosigame_platform/platform/home/gamelist/provider/game_list_provider.dart';
-import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
-import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
-import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_game_list.dart';
-import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
-import 'package:mosigame_platform/platform/widgets/platform_components.dart';
+import 'package:game_kit/player_layouts/player_layout_editor.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
+import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_game_list.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_game_preview_modal.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 void main() {
   test('태블릿 설명을 역직렬화하고 값이 없으면 휴대폰 설명으로 대체한다', () {

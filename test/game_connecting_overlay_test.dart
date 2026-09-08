@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_contract/games/shared/game_flow/game_flow_copy.dart';
-import 'package:game_kit/games/shared/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/widgets/game_connecting_overlay.dart';
 
 void main() {
   Widget buildOverlay({

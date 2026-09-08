@@ -5,13 +5,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/games/game_registry.dart';
-import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
-import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
-import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
-import 'package:mosigame_platform/platform/home/room/services/player_room_session_store.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_leave_intent.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
+import 'package:project00/platform/home/room/services/player_room_session_store.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_leave_intent.dart';
+import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

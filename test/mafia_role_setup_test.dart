@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_role_setup_screen.dart';
+import 'package:game_mafia/screens/tablet/tablet_role_setup_screen.dart';
 
 //=======================역할 배치 (게임 시작 전)==============================
 // 확정(2026-08): 마피아는 시작 전에 자리 배치 대신 **역할 배치**를 합니다.

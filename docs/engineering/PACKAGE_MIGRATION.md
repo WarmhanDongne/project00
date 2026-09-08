@@ -1,4 +1,4 @@
-# 게임별 패키지 분리와 게임 다운로드 계획
+# 고정 플랫폼 앱과 게임별 패키지·다운로드 계획
 
 라이어스포커·파이널콜·마피아는 앱에 번들하고, **그 다음 게임부터는 앱 안에서
 받아서 플레이**하는 구조의 기준 문서다. 2026-09-07에 7개 workspace package와
@@ -8,6 +8,42 @@
 다운로드 게임 기반은 영구 캐시와 Firebase Storage 경계까지 구현했다. 다운로드 버튼,
 실제 Storage 업로드·Rules, 신작 게임과 Shorebird 배포 리허설은 제품 작업 시 진행한다.
 코드와 다르면 코드를 먼저 조사하고 차이를 보고한다.
+
+`다운로드`는 사용자 관점에서 게임 에셋을 선택적으로 받는다는 뜻이다. Flutter
+Dart package를 Firebase에서 받아 동적 로드한다는 뜻이 아니다. 플랫폼·인증·방·홈은
+하나의 Mosigame 앱에 고정 내장되고, 게임 코드만 각 `game_<game>` package로 경계를
+갖는다.
+
+## 진행 상태 — 완료
+
+이 문서의 계획은 실행됐다. 현재 배치는 아래와 같다.
+
+```text
+project00/                    앱 = 플랫폼 + 셸  (69 dart)
+├─ lib/main.dart · app.dart
+├─ lib/games/game_registry.dart
+├─ lib/game_assets/           런타임 게임 에셋 다운로드
+├─ lib/platform/              인증 · 방 · 홈 · 프로필 · 테마
+└─ packages/                  게임 관련만
+   ├─ game_kit/               (92) 공용 기반 — core·firebase·계약·셸·연출
+   ├─ game_template/          ( 9) 새 게임 복사용 스켈레톤
+   ├─ game_liars_poker/       (40)
+   ├─ game_final_call/        (35)
+   └─ game_mafia/             (52)
+```
+
+의존 규칙은 `python3 tool/check_package_boundaries.py` 가 강제한다(현재 위반 0건).
+
+```text
+game_<게임>  ──▶  game_kit          게임은 game_kit 만 본다
+앱 lib/      ──▶  game_kit + 게임들  앱은 전부 본다
+game_kit     ──▶  (없음)            아무것도 의존하지 않는다
+```
+
+**게임 package 는 앱(`project00`)과 플랫폼을 의존하지 않는다.** 그래서 게임만
+따로 떼어 Shorebird 패치로 추가할 수 있다.
+
+## 이력: 원래 계획
 
 ## 1. 결정적 제약 — Shorebird가 무엇을 못 하는가
 
@@ -40,6 +76,9 @@
 
 ## 2. 목표 구조
 
+사용자에게 보이는 제품은 플랫폼 앱 하나이며, `packages/mosigame_platform`은 다운로드
+대상이 아닌 고정 내장 모듈이다.
+
 ```text
 project00/                      워크스페이스 루트 = 앱 셸
 ├─ pubspec.yaml                 workspace: [packages/*]
@@ -54,7 +93,7 @@ project00/                      워크스페이스 루트 = 앱 셸
    ├─ mosigame_core/            레이아웃·사운드·시간·오류·진단·네트워크·에셋스토어·Firebase 설정
    ├─ game_contract/            TemplateGame, GameRoomContext, 좌석 배치, 공용 게임 모델
    ├─ game_kit/                 서비스 베이스, GameFlowConfig, PhoneGameShell, 공용 위젯·연출
-   ├─ mosigame_platform/        auth·room·home·profile·theme
+   ├─ mosigame_platform/        고정 내장: auth·room·home·profile·theme
    ├─ game_liars_poker/         번들 (자체 assets/)
    ├─ game_final_call/          번들 (자체 assets/)
    ├─ game_mafia/               번들 (자체 assets/)

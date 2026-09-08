@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/widgets/mafia_flip_card.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/role_card_layer.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/widgets/mafia_flip_card.dart';
+import 'package:game_mafia/widgets/phone/role_card_layer.dart';
 
 //=======================내 신분 카드 (확정 2026-08)==============================
 // 처음: 화면 위 → 가운데 뒷면(미세하게 떠 있음) → 누르면 열림 → 0.3초 뒤 문구

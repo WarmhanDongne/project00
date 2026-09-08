@@ -1,7 +1,7 @@
 import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:mosigame_core/core/assets/game_image.dart';
+import 'package:game_kit/core/assets/game_image.dart';
 
-export 'package:mosigame_core/core/assets/game_image.dart';
+export 'package:game_kit/core/assets/game_image.dart';
 
 extension LiarsPokerImageX on AssetGenImage {
   GameImage get game => GameImage.bundled(path, package: Assets.package);

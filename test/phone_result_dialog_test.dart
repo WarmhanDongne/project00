@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_kit/games/shared/widgets/phone_result_dialog.dart';
+import 'package:game_kit/widgets/phone_result_dialog.dart';
 
 void main() {
   const dialog = PhoneResultDialog(nickname: '민수', characterId: 'frog');

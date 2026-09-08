@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/auth/screens/register_screen.dart';
-import 'package:mosigame_platform/platform/auth/services/onboarding_service.dart';
-import 'package:mosigame_platform/platform/auth/services/pending_email_store.dart';
+import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/services/pending_email_store.dart';
 
 void main() {
   testWidgets('email input app back asks before leaving registration', (

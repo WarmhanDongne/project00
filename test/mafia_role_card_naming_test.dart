@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
 
 /// 역할 카드 파일 이름과 역할 id를 하나로 유지합니다.
 ///

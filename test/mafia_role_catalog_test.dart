@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_composition.dart';
-import 'package:game_mafia/games/mafia/models/mafia_role.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
+import 'package:game_mafia/models/mafia_composition.dart';
+import 'package:game_mafia/models/mafia_role.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
 
 void main() {
   //=======================카탈로그 정합성==============================

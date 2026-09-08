@@ -6,6 +6,9 @@ reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGI
 
 ## Runtime responsibilities
 
+- 사용자에게 배포되는 실행 단위는 루트의 **Mosigame Flutter 앱 하나**다.
+  `mosigame_platform`은 별도 앱이나 다운로드 모듈이 아니라, 이 앱에 고정 내장되는
+  코드 경계용 Flutter package다.
 - Flutter(`lib/`)는 화면, 입력, 로컬 연출과 서버 상태의 읽기 모델을 담당한다.
 - Firebase Authentication과 Firestore는 계정·프로필 같은 플랫폼 데이터를 담당한다.
 - Realtime Database는 방, 접속 상태와 게임 상태를 전달한다.
@@ -30,6 +33,35 @@ test/                      Flutter/Project CLI 테스트
 functions/test/            Functions 테스트
 tool/mosigame_cli/         Mosigame Project CLI 구현
 ```
+
+## App and game delivery boundary
+
+`package`는 코드 분리 단위이고 `app`은 사용자에게 배포되는 실행 단위다. 따라서
+플랫폼을 package로 나누어도 Mosigame은 여전히 하나의 앱이다.
+
+```text
+Mosigame 정식 앱 바이너리
+├─ 루트 app shell (`lib/main.dart`, `lib/app.dart`)
+├─ 고정 내장 모듈
+│  ├─ mosigame_core
+│  ├─ game_contract
+│  ├─ game_kit
+│  └─ mosigame_platform
+├─ 기본 번들 게임
+│  ├─ game_liars_poker
+│  ├─ game_final_call
+│  └─ game_mafia
+└─ 이후 게임
+   ├─ Dart 코드: Shorebird 패치나 다음 정식 릴리스
+   └─ 이미지·사운드: 소유 확인 후 Firebase Storage 다운로드
+```
+
+- `mosigame_platform`과 공통 모듈은 앱이 실행되기 전에 이미 바이너리에 포함된다.
+- 게임 코드는 `game_<game>` package로 독립 관리하지만 Firebase Storage에서 Dart
+  package를 받아 동적 실행하지 않는다.
+- 소유 게임의 선택적 다운로드 대상은 게임 에셋이다. 코드는 Shorebird 패치 또는
+  정식 앱 업데이트로 전달한다.
+- 신작 패치 게임은 네이티브 플러그인과 번들 assets를 추가하지 않는다.
 
 실제 파일과 등록 상태를 확인하지 않은 폴더나 기능을 존재한다고 가정하지 않는다.
 
