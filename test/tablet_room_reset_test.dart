@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/gamelist/service/game_list_service.dart';
-import 'package:mosigame_platform/platform/home/room/models/room_player.dart';
-import 'package:mosigame_platform/platform/home/room/providers/room_provider.dart';
-import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_service.dart';
-import 'package:mosigame_platform/platform/home/tablet/widgets/tablet_room_panel.dart';
+import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
+import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
+import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 
 void main() {
   group('RoomProvider room command guard', () {

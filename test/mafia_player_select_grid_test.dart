@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_composition.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/mafia_phone_layout.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/player_select_grid.dart';
+import 'package:game_mafia/models/mafia_composition.dart';
+import 'package:game_mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:game_mafia/widgets/phone/player_select_grid.dart';
 
 /// 선택 그리드가 하단 버튼을 덮지 않는지 지키는 가드입니다.
 ///

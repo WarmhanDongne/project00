@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/auth/models/onboarding_state.dart';
-import 'package:mosigame_platform/platform/auth/services/onboarding_service.dart';
-import 'package:mosigame_platform/platform/auth/widgets/auth_gate.dart';
+import 'package:project00/platform/auth/models/onboarding_state.dart';
+import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/widgets/auth_gate.dart';
 
 //=======================끝나지 않는 로딩 막기==============================
 // 2026-08-22 실기기에서 앱이 스피너에서 멈춰 아무것도 못 하는 일이 있었습니다.

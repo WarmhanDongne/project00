@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/games/shared/widgets/game_reconnect_screen.dart';
+import 'package:game_kit/widgets/game_reconnect_screen.dart';
 
 //=======================게임 재접속 화면==============================
 // 아직 배선하지 않은 화면입니다(디자인 확인 단계). 그림 파일이 저장소에

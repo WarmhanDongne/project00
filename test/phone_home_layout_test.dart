@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/phone/widgets/phone_owned_games_header.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
+import 'package:project00/platform/home/phone/widgets/phone_owned_games_header.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 void main() {
   testWidgets('Galaxy S20+ 폭에서 보유 게임 제목이 넘치지 않는다', (tester) async {

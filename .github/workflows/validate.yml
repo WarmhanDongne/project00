@@ -31,6 +31,7 @@ jobs:
           npm --prefix functions ci
       - name: Enforce architecture and retry boundaries
         run: |
+          python3 tool/check_package_boundaries_test.py
           python3 tool/check_package_boundaries.py --max 0
           python3 tool/check_command_retry_contract.py
       - name: Run the repository full validation contract

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/animations/mafia_phase_transition.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/day_discussion_view.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/mafia_phone_layout.dart';
+import 'package:game_mafia/animations/mafia_phase_transition.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/widgets/phone/day_discussion_view.dart';
+import 'package:game_mafia/widgets/phone/mafia_phone_layout.dart';
 
 //=======================단계 전환==============================
 // 확정(2026-08): 단계가 바뀌면 있던 요소가 빠지고 새 요소가 들어옵니다.

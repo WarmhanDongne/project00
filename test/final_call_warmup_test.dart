@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_final_call/games/final_call/providers/final_call_session_provider.dart';
-import 'package:game_final_call/games/final_call/services/final_call_command_service.dart';
-import 'package:game_final_call/games/final_call/services/final_call_query_service.dart';
-import 'package:game_final_call/games/final_call/services/final_call_service.dart';
-import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_final_call/providers/final_call_session_provider.dart';
+import 'package:game_final_call/services/final_call_command_service.dart';
+import 'package:game_final_call/services/final_call_query_service.dart';
+import 'package:game_final_call/services/final_call_service.dart';
+import 'package:game_kit/services/game_interruption_command_service.dart';
 
 //=======================콜드스타트 예열==============================
 // 라이어스 포커·마피아와 같은 규칙입니다. 게임에 들어갈 때 **진행 기기(태블릿)**

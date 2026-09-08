@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_kit/games/shared/animations/card_deal.dart';
+import 'package:game_kit/animations/card_deal.dart';
 
 void main() {
   //=======================사운드는 연출을 막지 않는다==============================

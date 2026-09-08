@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_common.dart';
 
 void main() {
   group('restorablePlayerSession', () {

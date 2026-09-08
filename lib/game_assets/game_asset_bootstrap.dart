@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:game_contract/games/template_game.dart';
-import 'package:mosigame_core/core/assets/game_asset_cache.dart';
-import 'package:mosigame_core/core/assets/game_asset_source.dart';
-import 'package:mosigame_core/core/assets/game_asset_store.dart';
+import 'package:game_kit/template_game.dart';
+import 'package:game_kit/core/assets/game_asset_cache.dart';
+import 'package:game_kit/core/assets/game_asset_source.dart';
+import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:project00/game_assets/firebase_game_asset_source.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';

@@ -8,9 +8,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mosigame_core: any
-  game_contract: any
   cloud_functions: ^6.4.0
+  audioplayers: ^6.8.1
+  cloud_firestore: ^6.9.0
+  crypto: ^3.0.7
+  firebase_auth: ^6.6.1
+  firebase_core: ^4.14.0
+  firebase_crashlytics: ^5.3.0
+  shared_preferences: ^2.5.5
+  shorebird_code_push: ^2.0.7
+  wakelock_plus: ^1.7.0
   firebase_database: ^12.5.0
   flutter_markdown: ^0.7.7
   provider: ^6.1.5+1
@@ -22,6 +29,11 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/phone_result/
+    - assets/sounds/
+    - assets/images/reconnect/
+    - assets/images/patch/
+    - assets/images/others/
+    - assets/images/character/
     - assets/images/widgets/roulette/
 flutter_gen:
   output: lib/gen/

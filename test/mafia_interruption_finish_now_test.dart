@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/controllers/mafia_controller.dart';
-import 'package:game_mafia/games/mafia/providers/mafia_session_provider.dart';
-import 'package:game_mafia/games/mafia/services/mafia_command_service.dart';
-import 'package:game_mafia/games/mafia/services/mafia_query_service.dart';
-import 'package:game_mafia/games/mafia/services/mafia_service.dart';
-import 'package:game_kit/games/shared/services/game_interruption_command_service.dart';
+import 'package:game_mafia/controllers/mafia_controller.dart';
+import 'package:game_mafia/providers/mafia_session_provider.dart';
+import 'package:game_mafia/services/mafia_command_service.dart';
+import 'package:game_mafia/services/mafia_query_service.dart';
+import 'package:game_mafia/services/mafia_service.dart';
+import 'package:game_kit/services/game_interruption_command_service.dart';
 
 //=======================인원 부족 즉시 종료 가드 (C-11)==============================
 // 즉시 종료는 `제외하고 계속하기`의 거울상입니다. 계속할 수 있는 중단에서

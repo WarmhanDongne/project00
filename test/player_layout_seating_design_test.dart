@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_contract/games/shared/player_layouts/player_layout_editor.dart';
-import 'package:game_contract/games/shared/player_layouts/player_layout_model.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
+import 'package:game_kit/player_layouts/player_layout_editor.dart';
+import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
 
 //=======================자리 배치 화면 디자인==============================
 // Figma tablet-screen-8-seating-4 / -6 / -9 / -12 를 구현한 화면입니다.

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/models/mafia_role.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/night_action_view.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/role_card_layer.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/vote_view.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/models/mafia_role.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/widgets/phone/night_action_view.dart';
+import 'package:game_mafia/widgets/phone/role_card_layer.dart';
+import 'package:game_mafia/widgets/phone/vote_view.dart';
 
 //=======================2026-08 추가 역할의 화면 상태==============================
 // 새 역할은 "고를 수 없는 밤"과 "투표할 수 없는 낮"을 만듭니다. 그 상태에서

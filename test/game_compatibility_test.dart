@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/constants/app_constants.dart';
-import 'package:mosigame_core/core/utils/app_version.dart';
+import 'package:game_kit/core/constants/app_constants.dart';
+import 'package:game_kit/core/utils/app_version.dart';
 import 'package:project00/games/game_registry.dart';
-import 'package:mosigame_platform/platform/home/gamelist/models/game_info.dart';
-import 'package:mosigame_platform/platform/home/gamelist/service/game_compatibility.dart';
+import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 
 GameInfo _game(String id, {String minAppVersion = ''}) =>
     GameInfo.fromJson({'id': id, 'name': id, 'minAppVersion': minAppVersion});

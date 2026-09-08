@@ -1,5 +1,5 @@
 name: project00
-description: "A new Flutter project."
+description: "Mosigame 앱 셸과 고정 플랫폼·게임 패키지를 조립하는 Flutter 앱입니다."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -22,10 +22,8 @@ environment:
   sdk: ^3.12.2
 
 workspace:
-  - packages/mosigame_core
-  - packages/game_contract
   - packages/game_kit
-  - packages/mosigame_platform
+  - packages/game_template
   - packages/game_liars_poker
   - packages/game_final_call
   - packages/game_mafia
@@ -41,23 +39,16 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  mosigame_core: any
-  game_contract: any
   game_kit: any
-  mosigame_platform: any
   game_liars_poker: any
   game_final_call: any
   game_mafia: any
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   firebase_core: ^4.14.0
   firebase_database: ^12.5.0
   intl: ^0.20.2
   firebase_auth: ^6.6.1
   firebase_app_check: ^0.4.7
-  mask_text_input_formatter: ^2.9.0
   cloud_firestore: ^6.9.0
   cloud_functions: ^6.4.0
   google_sign_in: ^7.2.0
@@ -76,9 +67,8 @@ dependencies:
   shared_preferences: ^2.5.5
   app_links: ^7.2.1
   roulette: ^0.3.2
-  dev: ^1.0.0
-  flutter_gen_runner: ^5.15.0
   flutter_svg: ^2.3.0
+  vector_graphics: ^1.2.3
   youtube_player_iframe: ^6.0.2
   sign_in_with_apple: ^8.1.0
   crypto: ^3.0.7
@@ -86,6 +76,7 @@ dependencies:
   firebase_crashlytics: ^5.3.0
   shorebird_code_push: ^2.0.7
 dev_dependencies:
+  flutter_gen_runner: ^5.15.0
   flutter_test:
     sdk: flutter
 
@@ -111,11 +102,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
     - assets/images/button/
+    - assets/images/logo/
     - assets/images/others/
     - assets/images/widgets/layout/
-    - assets/lottie/
     - assets/l10n/
     - shorebird.yaml
 

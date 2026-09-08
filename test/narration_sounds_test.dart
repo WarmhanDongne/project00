@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
-import 'package:game_final_call/games/final_call/models/final_call_models.dart';
-import 'package:game_final_call/games/final_call/sound/final_call_sounds.dart';
-import 'package:game_liars_poker/games/liars_poker/sound/liars_poker_sounds.dart';
-import 'package:game_mafia/games/mafia/models/mafia_role.dart';
-import 'package:game_mafia/games/mafia/screens/tablet/tablet_game_layout.dart';
-import 'package:game_mafia/games/mafia/sound/mafia_sounds.dart';
+import 'package:game_kit/core/sound/providers/sound_provider.dart';
+import 'package:game_final_call/models/final_call_models.dart';
+import 'package:game_final_call/sound/final_call_sounds.dart';
+import 'package:game_liars_poker/sound/liars_poker_sounds.dart';
+import 'package:game_mafia/models/mafia_role.dart';
+import 'package:game_mafia/screens/tablet/tablet_game_layout.dart';
+import 'package:game_mafia/sound/mafia_sounds.dart';
 import 'package:provider/provider.dart';
 // SoundProvider가 SharedPreferences를 직접 만들기 때문에, 테스트에서는 메모리
 // 구현으로 바꿔 끼웁니다. shared_preferences가 함께 가져오는 패키지입니다.

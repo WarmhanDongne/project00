@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/room/services/controller_presence.dart';
+import 'package:project00/platform/home/room/services/controller_presence.dart';
 
 //=======================heartbeat 기반 태블릿 장애 판정 (C-12)==============================
 // 지금까지는 `controllerPresence/connected` bool 하나만 봤습니다. 태블릿이 강제

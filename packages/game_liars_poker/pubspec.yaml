@@ -8,8 +8,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mosigame_core: any
-  game_contract: any
   game_kit: any
   firebase_auth: ^6.6.1
   firebase_database: ^12.5.0

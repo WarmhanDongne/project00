@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/diagnostics/game_communication_log.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 
 void main() {
   final log = GameCommunicationLog.instance;

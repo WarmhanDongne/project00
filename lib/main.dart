@@ -4,19 +4,19 @@ import 'package:app_links/app_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:mosigame_core/core/layout/app_orientation.dart';
-import 'package:mosigame_core/core/time/server_clock.dart';
-import 'package:mosigame_core/core/layout/device_layout.dart';
+import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/core/layout/device_layout.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/app.dart';
 import 'package:project00/game_assets/game_asset_bootstrap.dart';
 import 'package:project00/games/game_registry.dart';
-import 'package:mosigame_core/core/diagnostics/crash_reporting.dart';
-import 'package:mosigame_core/core/diagnostics/dev_error_overlay.dart';
-import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
-import 'package:mosigame_core/firebase/firebase_options.dart';
+import 'package:game_kit/core/diagnostics/crash_reporting.dart';
+import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
+import 'package:game_kit/core/sound/providers/sound_provider.dart';
+import 'package:game_kit/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
 
 void main() async {

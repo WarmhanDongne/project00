@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/auth/screens/register_screen.dart';
-import 'package:mosigame_platform/platform/auth/widgets/register_step_one.dart';
-import 'package:mosigame_platform/platform/auth/widgets/register_step_two.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
-import 'package:mosigame_platform/platform/widgets/platform_components.dart';
+import 'package:project00/platform/auth/screens/register_screen.dart';
+import 'package:project00/platform/auth/widgets/register_step_one.dart';
+import 'package:project00/platform/auth/widgets/register_step_two.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 //=======================태블릿 회원가입·로그인 동등성 (T-03)==============================
 // 인증 화면에는 기기 분기가 없습니다. home.dart의 DeviceLayout.isTablet만

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/sound/app_sounds.dart';
-import 'package:mosigame_core/core/sound/providers/sound_provider.dart';
-import 'package:mosigame_core/core/time/server_clock.dart';
-import 'package:game_kit/games/shared/sound/countdown_tick_cue.dart';
+import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/core/sound/providers/sound_provider.dart';
+import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/sound/countdown_tick_cue.dart';
 import 'package:provider/provider.dart';
 // SoundProvider가 SharedPreferences를 직접 만들기 때문에, 테스트에서는 메모리
 // 구현으로 바꿔 끼웁니다. shared_preferences가 함께 가져오는 패키지입니다.

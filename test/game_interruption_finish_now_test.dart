@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/time/server_clock.dart';
-import 'package:game_kit/games/shared/game_flow/game_interruption.dart';
-import 'package:game_kit/games/shared/widgets/game_interruption_layer.dart';
+import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/game_flow/game_interruption.dart';
+import 'package:game_kit/widgets/game_interruption_layer.dart';
 
 //=======================인원 부족 즉시 종료 (C-11)==============================
 // 계속할 수 없는 중단에서 60초를 기다리지 않고 끝낼 수 있는지, 그리고 계속할 수

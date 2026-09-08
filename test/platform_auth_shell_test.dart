@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/theme/platform_theme.dart';
-import 'package:mosigame_platform/platform/widgets/platform_components.dart';
+import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/platform_components.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(theme: PlatformTheme.light(), home: child);

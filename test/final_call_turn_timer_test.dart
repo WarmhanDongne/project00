@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/time/server_clock.dart';
-import 'package:game_final_call/games/final_call/widgets/phone/turn_timer.dart';
+import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_final_call/widgets/phone/turn_timer.dart';
 
 /// 파이널 콜 턴 타이머입니다. 시간을 세는 일은 공용 `GameTurnCountdown`에
 /// 맡기고, 이 위젯은 생김새만 담당합니다. 라이어스 포커와 **같은 규칙**을

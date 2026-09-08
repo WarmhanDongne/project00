@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/models/mafia_state_models.dart';
-import 'package:game_mafia/games/mafia/providers/mafia_game_state.dart';
+import 'package:game_mafia/models/mafia_state_models.dart';
+import 'package:game_mafia/providers/mafia_game_state.dart';
 
 void main() {
   test('unrelated copyWith preserves nullable night progress', () {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/sound/service/sound_service.dart';
+import 'package:game_kit/core/sound/service/sound_service.dart';
 
 void main() {
   Duration offset(Duration? total, Duration window) =>

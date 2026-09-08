@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_mafia/games/mafia/animations/ballot_animations.dart';
-import 'package:game_mafia/games/mafia/models/mafia_player.dart';
-import 'package:game_mafia/games/mafia/models/mafia_roles.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/player_select_grid.dart';
-import 'package:game_mafia/games/mafia/widgets/phone/vote_view.dart';
+import 'package:game_mafia/animations/ballot_animations.dart';
+import 'package:game_mafia/models/mafia_player.dart';
+import 'package:game_mafia/models/mafia_roles.dart';
+import 'package:game_mafia/widgets/phone/player_select_grid.dart';
+import 'package:game_mafia/widgets/phone/vote_view.dart';
 
 //=======================휴대폰 투표 제출 연출==============================
 // 확정(2026-08): 표를 내면 가운데 요소가 뭉쳐 사라지고, 태블릿에서 쓰는 그

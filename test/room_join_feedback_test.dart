@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_platform/platform/home/phone/models/room_join_feedback.dart';
+import 'package:project00/platform/home/phone/models/room_join_feedback.dart';
 
 void main() {
   group('roomJoinFeedbackFor', () {

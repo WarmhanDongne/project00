@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:mosigame_core/core/assets/game_asset_manifest.dart';
-import 'package:mosigame_core/core/assets/game_asset_source.dart';
+import 'package:game_kit/core/assets/game_asset_manifest.dart';
+import 'package:game_kit/core/assets/game_asset_source.dart';
 
 /// Firebase Storage의 `game-assets/`를 다운로드 게임 저장소로 연결합니다.
 ///

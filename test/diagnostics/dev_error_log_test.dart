@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mosigame_core/core/diagnostics/dev_error_log.dart';
-import 'package:mosigame_core/core/diagnostics/dev_error_overlay.dart';
-import 'package:mosigame_core/core/diagnostics/game_communication_log.dart';
+import 'package:game_kit/core/diagnostics/dev_error_log.dart';
+import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 
 //=======================개발용 오류 표시==============================
 // 일반 오류 원문은 숨기고 게임 통신 타임라인만 개발 화면에 표시합니다.
@@ -21,7 +21,7 @@ void main() {
       error: message,
       stack: StackTrace.fromString(
         '#0      something (package:flutter/src/widgets/framework.dart:1)\n'
-        '#1      MafiaThing.build (package:game_mafia/games/mafia/x.dart:42)',
+        '#1      MafiaThing.build (package:game_mafia/x.dart:42)',
       ),
       context: context ?? '시험',
       time: DateTime(2026, 8, 21, 9, 30, 15),
