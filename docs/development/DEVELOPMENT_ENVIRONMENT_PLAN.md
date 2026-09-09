@@ -3,7 +3,7 @@
 이 문서는 바이브 코딩 개발환경의 현재 상태와 다음 결정을 계속 갱신하는 tracked
 계획서다. 과거 계획보다 현재 코드, 테스트, 설정과 canonical 문서를 우선한다.
 
-Last updated: 2026-08-29
+Last updated: 2026-09-09
 
 ## 현재 상태
 
@@ -15,10 +15,14 @@ Last updated: 2026-08-29
 | One implementation Skill | ACCEPTED AND COMMITTED | .agents/skills/mosigame-implement-and-validate |
 | Firebase MCP read-only pilot | ACCEPTED — LIMITED USE | docs/operations/FIREBASE_MCP.md |
 | Limited validation loop | SIMPLIFICATION IN WORKING TREE | implementation Skill |
-| Basic CI | DEFERRED | 현재 팀 규모와 local validation으로 우선 운영 |
+| Basic CI | IMPLEMENTED IN DEVELOP / RUN RESULT NOT CHECKED | `.github/workflows/validate.yml`: PR·main/develop push 시 경계·재시도 검사와 FULL 실행 |
 | Emulator/integration pilot | DEFERRED — IMPLEMENTATION REVERTED | docs/operations/EMULATOR_PILOT.md |
 | Phase 14 Minimal Team Adoption Pack | IMPLEMENTATION IN WORKING TREE / UNVERIFIED | 이 문서와 onboarding 산출물 |
 | Advanced team standardization | DEFERRED | 교육 시스템·조직 정책 근거 없음 |
+
+2026-09-09 `d1c40aa` 동기화에서 Basic CI의 구현 상태를 확인했다. GitHub Actions의
+실제 실행 결과는 이번에 조회하지 않았다. 아래 Phase 14 범위와 환경 검증 기록은
+당시 계획이며, CI 추가만으로 onboarding 검증 완료로 바꾸지 않는다.
 
 ## Phase 14 최소 범위
 

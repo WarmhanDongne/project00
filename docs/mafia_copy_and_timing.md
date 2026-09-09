@@ -22,13 +22,13 @@
 |---|---|---|---|---|---|---|---|
 | 시간 | 90초 | 120초 | 150초 | 180초 | 210초 | 240초 | 300초 |
 
-Dart 사본: `packages/game_mafia/lib/games/mafia/mafia_flow_config.dart`. 태블릿·휴대폰 진행 화면이
+Dart 사본: `packages/game_mafia/lib/mafia_flow_config.dart`. 태블릿·휴대폰 진행 화면이
 남은 시간을 미리 그리는 데 씁니다.
 두 값이 갈리면 `functions/test/mafia-discussion-parity.test.mjs`가 실패합니다.
 
 ## 2. 발표·연출 시간 (태블릿이 진행)
 
-`packages/game_mafia/lib/games/mafia/screens/tablet/`
+`packages/game_mafia/lib/screens/tablet/`
 
 | 구간 | 시간 | 상수 |
 |---|---|---|
@@ -54,7 +54,7 @@ Dart 사본: `packages/game_mafia/lib/games/mafia/mafia_flow_config.dart`. 태�
 
 ## 3. 휴대폰 연출 시간
 
-`packages/game_mafia/lib/games/mafia/widgets/phone/`
+`packages/game_mafia/lib/widgets/phone/`
 
 | 구간 | 시간 | 상수 |
 |---|---|---|
@@ -72,7 +72,7 @@ Dart 사본: `packages/game_mafia/lib/games/mafia/mafia_flow_config.dart`. 태�
 
 ## 3-1. 안내 문구 내려찍기 (태블릿·휴대폰 공통)
 
-`packages/game_mafia/lib/games/mafia/animations/ejection_text.dart` — 확정(2026-08): 어몽어스 추방
+`packages/game_mafia/lib/animations/ejection_text.dart` — 확정(2026-08): 어몽어스 추방
 발표처럼 글자가 크고 넓게 벌어진 채 들어와 제자리로 내려찍힙니다.
 
 | 구간 | 시간 | 상수 |
@@ -146,7 +146,7 @@ Dart 사본: `packages/game_mafia/lib/games/mafia/mafia_flow_config.dart`. 태�
 ## 5. 문구 목록
 
 ### 단계 안내 (태블릿, 화면 가운데 64px)
-`packages/game_mafia/lib/games/mafia/mafia_copy.dart`
+`packages/game_mafia/lib/mafia_copy.dart`
 
 | 문구 | 언제 |
 |---|---|

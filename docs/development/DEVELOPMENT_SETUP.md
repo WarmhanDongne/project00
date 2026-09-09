@@ -118,7 +118,7 @@ setup entry에서도 선택적으로 실행할 수 있다.
 
 - android/app/google-services.json
 - ios/Runner/GoogleService-Info.plist
-- packages/mosigame_core/lib/firebase/firebase_options.dart
+- packages/game_kit/lib/firebase/firebase_options.dart
 - .firebaserc와 firebase.json
 
 .env.example은 local override 형식의 예시이고 .env.dev는 Git ignore 대상이다. 현재

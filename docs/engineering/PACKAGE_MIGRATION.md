@@ -1,8 +1,10 @@
 # 고정 플랫폼 앱과 게임별 패키지·다운로드 계획
 
 라이어스포커·파이널콜·마피아는 앱에 번들하고, **그 다음 게임부터는 앱 안에서
-받아서 플레이**하는 구조의 기준 문서다. 2026-09-07에 7개 workspace package와
-소유 에셋의 물리 분리를 완료했다. 현재 경계 상태는
+받아서 플레이**하는 구조의 기준 문서다. 2026-09-09에 확인한 `origin/develop`
+`d1c40aa`는 플랫폼을 앱에 두고 공용 기반을 `game_kit`으로 합친 5개 workspace
+package 구조다. 9월 7일의 7개 패키지 분리는 중간 단계였으며
+[당시 기록](../planning/logs/2026-09.md#package-migration-01)에 보존한다. 현재 경계 상태는
 `python3 tool/check_package_boundaries.py`의 위반 수로 판정한다.
 
 다운로드 게임 기반은 영구 캐시와 Firebase Storage 경계까지 구현했다. 다운로드 버튼,
@@ -14,22 +16,23 @@ Dart package를 Firebase에서 받아 동적 로드한다는 뜻이 아니다. �
 하나의 Mosigame 앱에 고정 내장되고, 게임 코드만 각 `game_<game>` package로 경계를
 갖는다.
 
-## 진행 상태 — 완료
+## 현재 코드 구조
 
-이 문서의 계획은 실행됐다. 현재 배치는 아래와 같다.
+패키지 배치와 다운로드 기반은 구현됐고, 실제 다운로드 UI·운영 전송·기기 검증은
+남아 있다. 현재 배치는 아래와 같다.
 
 ```text
-project00/                    앱 = 플랫폼 + 셸  (69 dart)
+project00/                    앱 = 플랫폼 + 셸
 ├─ lib/main.dart · app.dart
 ├─ lib/games/game_registry.dart
 ├─ lib/game_assets/           런타임 게임 에셋 다운로드
 ├─ lib/platform/              인증 · 방 · 홈 · 프로필 · 테마
 └─ packages/                  게임 관련만
-   ├─ game_kit/               (92) 공용 기반 — core·firebase·계약·셸·연출
-   ├─ game_template/          ( 9) 새 게임 복사용 스켈레톤
-   ├─ game_liars_poker/       (40)
-   ├─ game_final_call/        (35)
-   └─ game_mafia/             (52)
+   ├─ game_kit/               공용 기반 — core·firebase·계약·셸·연출
+   ├─ game_template/          새 게임 복사용 스켈레톤
+   ├─ game_liars_poker/       번들 게임
+   ├─ game_final_call/        번들 게임
+   └─ game_mafia/             번들 게임
 ```
 
 의존 규칙은 `python3 tool/check_package_boundaries.py` 가 강제한다(현재 위반 0건).
@@ -37,13 +40,11 @@ project00/                    앱 = 플랫폼 + 셸  (69 dart)
 ```text
 game_<게임>  ──▶  game_kit          게임은 game_kit 만 본다
 앱 lib/      ──▶  game_kit + 게임들  앱은 전부 본다
-game_kit     ──▶  (없음)            아무것도 의존하지 않는다
+game_kit     ──▶  (내부 패키지 없음) Flutter·Firebase 등 외부 의존성은 있다
 ```
 
 **게임 package 는 앱(`project00`)과 플랫폼을 의존하지 않는다.** 그래서 게임만
 따로 떼어 Shorebird 패치로 추가할 수 있다.
-
-## 이력: 원래 계획
 
 ## 1. 결정적 제약 — Shorebird가 무엇을 못 하는가
 
@@ -74,57 +75,33 @@ game_kit     ──▶  (없음)            아무것도 의존하지 않는다
 스토어 정책상 코드 업데이트 자체는 양쪽 다 허용하지만, 앱의 **본래 목적을 바꾸는**
 기능 추가는 금지다. 미니게임 플랫폼에 미니게임을 더하는 것은 목적에 부합한다.
 
-## 2. 목표 구조
+## 2. 새 게임의 진입점과 의존 방향
 
-사용자에게 보이는 제품은 플랫폼 앱 하나이며, `packages/mosigame_platform`은 다운로드
-대상이 아닌 고정 내장 모듈이다.
+[`game_template`](../../packages/game_template/lib/example_game.dart)을 복사해
+`packages/game_<신작>/`을 만들고 package 이름·import·게임 식별자를 맞춘다.
+루트 workspace와 앱 의존성에 등록하고
+[`GameRegistry`](../../lib/games/game_registry.dart)에 게임을 추가한다.
+플랫폼은 주입된 `GameCatalog`를 사용하므로 게임별 분기를 넣지 않는다.
 
-```text
-project00/                      워크스페이스 루트 = 앱 셸
-├─ pubspec.yaml                 workspace: [packages/*]
-├─ lib/
-│  ├─ main.dart                 부트스트랩
-│  ├─ app.dart                  MaterialApp 배선
-│  ├─ game_assets/              영구 캐시·Firebase Storage 앱 조립
-│  ├─ games/game_registry.dart  번들 게임 등록 — 패치로 여기에 한 줄 추가
-│  └─ gen/                      앱 셸 에셋만 생성
-├─ assets/                      플랫폼 공통 에셋만
-└─ packages/
-   ├─ mosigame_core/            레이아웃·사운드·시간·오류·진단·네트워크·에셋스토어·Firebase 설정
-   ├─ game_contract/            TemplateGame, GameRoomContext, 좌석 배치, 공용 게임 모델
-   ├─ game_kit/                 서비스 베이스, GameFlowConfig, PhoneGameShell, 공용 위젯·연출
-   ├─ mosigame_platform/        고정 내장: auth·room·home·profile·theme
-   ├─ game_liars_poker/         번들 (자체 assets/)
-   ├─ game_final_call/          번들 (자체 assets/)
-   ├─ game_mafia/               번들 (자체 assets/)
-   └─ game_<신작>/              패치로 추가 — **에셋 0개**
-```
+공용 계약은 [`TemplateGame`](../../packages/game_kit/lib/template_game.dart)과
+[`GameRoomContext`](../../packages/game_kit/lib/models/game_room_context.dart)에 있다.
+게임은 `game_kit`을 사용하며 `project00`과 다른 게임 패키지를 의존하지 않는다.
+의존 방향은 pubspec 선언과 경계 검사로 확인한다.
 
-의존 방향. pubspec이 강제하므로 어기면 컴파일이 실패한다.
+스켈레톤 자체는 앱 의존성이 없고 실행 게임으로 등록되지 않는다. 복사본을 다운로드
+게임으로 등록할 때는 템플릿의 `flutter.assets`와 FlutterGen 설정을 제거하고 §4·§6의
+무에셋 규칙을 적용한다. 서버 command는 `functions/src/<game>/`에서 구현한다.
 
-```text
-mosigame_core
-   ▲        ▲
-   │        └── game_contract ──┬── game_kit ── game_<게임>
-   │                            │
-   └── mosigame_platform ───────┘
-                    ▲
-                    └── 앱 셸(모두 의존 + 게임 등록)
-```
-
-`game_contract`를 `game_kit`에서 떼어낸 이유는 하나다. 플랫폼이 좌석 배치와
-`TemplateGame` 타입을 알아야 하는데, 게임 셸·연출까지 끌어오면 안 되기 때문이다.
-분리 전의 `mosigame_platform → game_kit` 위반 7건도 이 계약 분리로 제거했다.
-
-## 3. 현재 상태 — 물리 분리 완료, 경계 위반 0건 (2026-09-07)
+## 3. 구조 검사와 에셋 소유권
 
 ```text
 python3 tool/check_package_boundaries.py
 ```
 
-루트 앱에는 부트스트랩·조립·레지스트리만 남았고, 299개 Dart 파일은 7개 패키지에
-소속된다. 게임 3종, core, kit, platform 에셋도 소유 패키지로 이동했고 각 패키지가
-자기 `assets.gen.dart`를 생성한다. 패키지 에셋은 `GameImage`가 package 이름을
+루트 앱은 부트스트랩·조립·레지스트리와 플랫폼을 소유한다. 공용 코드·에셋은
+`game_kit`, 게임 3종의 코드·에셋은 각 게임 패키지가 소유한다. 플랫폼 에셋과 생성물은
+루트 `assets/`와 `lib/gen/`에 있다. 각 에셋 소유 패키지는 자기 `assets.gen.dart`를
+생성한다. 패키지 에셋은 `GameImage`가 package 이름을
 보존하며, 사운드는 `packages/<package>/assets/...` 번들 키를 그대로 재생한다.
 
 경계 검사는 이제 가상 배치가 아니라 루트와 모든 `packages/*/lib`를 직접 스캔한다.
@@ -133,7 +110,7 @@ python3 tool/check_package_boundaries.py
 
 ## 4. 에셋 — 번들 게임과 다운로드 게임
 
-`packages/mosigame_core/lib/core/assets/game_asset_store.dart`가 번들·다운로드 에셋의 단일 해석
+`packages/game_kit/lib/core/assets/game_asset_store.dart`가 번들·다운로드 에셋의 단일 해석
 지점이다. 앱 시작 때 `initializeGameAssets`가 Application Support 아래의 영구 캐시와
 현재 Shorebird patch 번호를 연결하지만 네트워크 요청은 하지 않는다. 향후 소유 게임
 버튼이 `downloadGame(gameId)`을 명시적으로 호출할 때만 Firebase Storage에서 받고,
@@ -173,7 +150,8 @@ game-assets/<gameId>/manifest.json
 game-assets/<gameId>/<assetVersion>/<logicalPath>
 ```
 
-core는 Firebase SDK에 의존하지 않고 `GameAssetSource` 계약만 안다. 앱 셸의
+캐시 로직은 `GameAssetSource` 계약으로 파일 전송을 분리한다. `game_kit` 패키지에는
+별도 Firebase 서비스도 포함돼 있다. 앱 셸의
 `FirebaseGameAssetSource`가 로그인 사용자의 Firebase 자격 증명으로 Storage 파일을
 직접 로컬 `.part`에 받는다. Functions가 파일을 중계하지 않는다.
 
@@ -224,10 +202,9 @@ core는 Firebase SDK에 의존하지 않고 `GameAssetSource` 계약만 안다. 
 | 0e | **완료** 플랫폼이 쓰는 shared 조각을 계약/소유 계층으로 재배치 | 코드 계층 위반 0 |
 | 0f | **완료** 게임별 에셋 소유권과 패키지별 생성 전환 | −61 |
 | 0g | **완료** core의 생성 에셋 역방향 참조 제거 | −3 |
-| 1 | **완료** 패키지 7개 + `resolution: workspace` | `flutter pub get` 통과 |
-| 2 | **완료** `mosigame_core` 물리 이동 | analyze·경계 검사 통과 |
-| 3 | **완료** `game_contract` → `game_kit` 물리 이동 | analyze·경계 검사 통과 |
-| 4 | **완료** `mosigame_platform` 물리 이동 | analyze·경계 검사 통과 |
+| 1 | **구조 구현** 패키지 5개 + `resolution: workspace` | 현재 후보의 pub get·FULL 결과는 월별 기록에서 확인 |
+| 2–3 | **구조 구현** core·Firebase·계약·공용 UI를 `game_kit`에 통합 | 내부 패키지 의존 방향과 경계 검사 |
+| 4 | **구조 구현** 플랫폼을 앱 `lib/platform/`에 유지 | 게임 패키지의 앱 참조 금지 |
 | 5 | **완료** 게임 3개와 패키지별 에셋 물리 이동 | analyze·경계 검사 통과, 앱 실행 확인 남음 |
 | 6 | **구조 구현** 영구 캐시·Firebase Storage source·SHA-256·재시작 검증·수동 다운로드 API | 자동 테스트 통과, 실제 Storage/기기 전송은 다운로드 UI 작업 때 확인 |
 | 7 | **추가 준비 완료 / 실제 리허설 보류** `requiredAssetVersion > 0` 게임의 자동 등록과 무에셋 패키지 규칙 | 실제 신작 선정 후 스토어 기준 빌드→staging patch→기기 확인 필요 |
@@ -246,7 +223,7 @@ Storage 전송과 기기 저장 권한은 다운로드 버튼을 붙일 때 번�
 2. **새 네이티브 플러그인 금지.** 순수 Dart 패키지만 추가할 수 있다.
    필요한 플러그인은 미리 번들에 넣어 릴리스해 둔다.
 3. **`assets.gen.dart` 사용 금지.** `GameImage.remote`만 쓴다.
-4. **`game_kit`·`game_contract`의 공개 API를 바꾸지 않는다.** 바꾸면 번들 게임
+4. **`game_kit`의 공개 API를 바꾸지 않는다.** 바꾸면 번들 게임
    3종도 함께 패치돼야 하고 패치 크기와 위험이 커진다.
 5. **연출은 `game_kit`의 프리미티브를 재사용한다.** iOS에서 패치 코드는
    인터프리터로 돈다.

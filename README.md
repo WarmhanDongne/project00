@@ -32,7 +32,7 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 
 - Android: `android/app/google-services.json`
 - iOS: `ios/Runner/GoogleService-Info.plist`
-- Flutter 설정: `packages/mosigame_core/lib/firebase/firebase_options.dart`
+- Flutter 설정: `packages/game_kit/lib/firebase/firebase_options.dart`
 
 `.env.example`은 local override 형식의 예시지만 현재 앱은 `.env.dev`를 필수로
 읽지 않습니다. local config와 secret의 현재 계약은
@@ -78,10 +78,10 @@ validation을 실행합니다. Windows guard와 macOS/Linux raw CLI의 사용 �
 
 ## 개발 규칙
 
-- 앱 전체에서 사용하는 값과 도구는 `packages/mosigame_core`에 둡니다.
-- 최소 게임 계약은 `packages/game_contract`, 재사용 게임 UI·기반 기능은
-  `packages/game_kit`에 둡니다.
-- 로그인, 사용자, 스토어 같은 플랫폼 기능은 `packages/mosigame_platform`에 둡니다.
+- 공통 값·도구, 게임 계약과 재사용 게임 UI·기반 기능은 `packages/game_kit`에 둡니다.
+- 로그인, 사용자, 방·홈 같은 플랫폼 기능은 앱의 `lib/platform`에 둡니다.
+- 새 게임은 `packages/game_template`을 복사해 시작합니다. 게임 패키지는 앱이나
+  다른 게임을 참조하지 않고 공용 `game_kit`을 사용합니다.
 - 특정 게임에서만 쓰는 코드와 에셋은 `packages/game_<game_id>`에 둡니다.
 - 특정 화면에서만 쓰는 위젯은 그 기능의 `widgets`에 둡니다. 여러 영역에서 쓰이기 시작하면 `shared`로 이동합니다.
 - 파일명은 `snake_case`, 클래스명은 `PascalCase`, 변수와 함수명은 `camelCase`를 사용합니다.

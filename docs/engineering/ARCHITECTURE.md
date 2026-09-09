@@ -4,12 +4,13 @@
 reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGINEERING_CONTRACT.md)에
 있다. 이 설명과 코드가 다르면 코드를 먼저 조사하고 차이를 보고한다.
 
+구조 확인 기준: 2026-09-09, `origin/develop`의 `d1c40aa`.
+
 ## Runtime responsibilities
 
 - 사용자에게 배포되는 실행 단위는 루트의 **Mosigame Flutter 앱 하나**다.
-  `mosigame_platform`은 별도 앱이나 다운로드 모듈이 아니라, 이 앱에 고정 내장되는
-  코드 경계용 Flutter package다.
-- Flutter(`lib/`)는 화면, 입력, 로컬 연출과 서버 상태의 읽기 모델을 담당한다.
+  플랫폼은 루트 `lib/platform/`에 있고 별도 workspace package가 아니다.
+- Flutter(`lib/`, `packages/*/lib/`)는 화면, 입력, 로컬 연출과 서버 상태의 읽기 모델을 담당한다.
 - Firebase Authentication과 Firestore는 계정·프로필 같은 플랫폼 데이터를 담당한다.
 - Realtime Database는 방, 접속 상태와 게임 상태를 전달한다.
 - Cloud Functions(`functions/src/`)는 게임 command, 중요한 상태 전이와 서버 검증을
@@ -20,11 +21,10 @@ reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGI
 ## Repository map
 
 ```text
-lib/                       앱 부트스트랩·조립·게임 registry
-packages/mosigame_core/    공통 기반, Firebase 설정, 진단, 사운드, 시간
-packages/game_contract/    TemplateGame·GameRoomContext·공용 모델
-packages/game_kit/         여러 게임이 공유하는 화면·연출·서비스 기반
-packages/mosigame_platform/ 인증, 프로필, 방/홈, 테마와 플랫폼 UI
+lib/                       앱 부트스트랩·조립·게임 registry·에셋 다운로드 배선
+lib/platform/              인증, 프로필, 방/홈, 테마와 플랫폼 UI
+packages/game_kit/         core·Firebase·게임 계약·공용 화면·연출·서비스 기반
+packages/game_template/    새 게임을 복사해 시작하는 스켈레톤
 packages/game_<game>/      게임별 Flutter 구현과 자체 번들 assets
 functions/src/auth/        인증·온보딩 서버 작업
 functions/src/room/        방 lifecycle과 접속 상태 서버 작업
@@ -37,16 +37,14 @@ tool/mosigame_cli/         Mosigame Project CLI 구현
 ## App and game delivery boundary
 
 `package`는 코드 분리 단위이고 `app`은 사용자에게 배포되는 실행 단위다. 따라서
-플랫폼을 package로 나누어도 Mosigame은 여전히 하나의 앱이다.
+플랫폼과 게임 패키지는 하나의 Mosigame 앱으로 조립된다.
 
 ```text
 Mosigame 정식 앱 바이너리
 ├─ 루트 app shell (`lib/main.dart`, `lib/app.dart`)
-├─ 고정 내장 모듈
-│  ├─ mosigame_core
-│  ├─ game_contract
-│  ├─ game_kit
-│  └─ mosigame_platform
+├─ 고정 내장 기반
+│  ├─ lib/platform (앱 본체)
+│  └─ game_kit
 ├─ 기본 번들 게임
 │  ├─ game_liars_poker
 │  ├─ game_final_call
@@ -56,7 +54,11 @@ Mosigame 정식 앱 바이너리
    └─ 이미지·사운드: 소유 확인 후 Firebase Storage 다운로드
 ```
 
-- `mosigame_platform`과 공통 모듈은 앱이 실행되기 전에 이미 바이너리에 포함된다.
+- 플랫폼과 `game_kit`은 앱이 실행되기 전에 이미 바이너리에 포함된다.
+- workspace는 `game_kit`, `game_template`, 번들 게임 3종의 5개 패키지다.
+  `game_template`은 앱 의존성에 없으며 복사용으로만 관리한다.
+- 게임 패키지는 내부 패키지 중 `game_kit`에만 의존하고 앱이나 다른 게임을
+  참조하지 않는다. `game_kit`도 앱·게임 패키지를 참조하지 않는다.
 - 게임 코드는 `game_<game>` package로 독립 관리하지만 Firebase Storage에서 Dart
   package를 받아 동적 실행하지 않는다.
 - 소유 게임의 선택적 다운로드 대상은 게임 에셋이다. 코드는 Shorebird 패치 또는
@@ -67,10 +69,11 @@ Mosigame 정식 앱 바이너리
 
 ## Game extension contract
 
-- 새 게임은 [`TemplateGame`](../../packages/game_contract/lib/games/template_game.dart)을 구현하고
+- 새 게임은 [`TemplateGame`](../../packages/game_kit/lib/template_game.dart)을 구현하고
   [`GameRegistry`](../../lib/games/game_registry.dart)에만 등록한다. 플랫폼 화면에 게임
   ID별 분기를 추가하지 않는다.
-- 구현 전 [`게임 템플릿 가이드`](../../packages/game_kit/lib/games/_game_template/README.md)와 가장 가까운
+- 구현 전 [`게임 스켈레톤`](../../packages/game_template/lib/example_game.dart),
+  [`패키지·다운로드 기준`](PACKAGE_MIGRATION.md)과 가장 가까운
   기존 게임을 확인한다.
 - 쓰기는 `<game>_command_service.dart`에서 callable Function으로 요청하고, 읽기는
   `<game>_query_service.dart`의 RTDB stream으로 받는다.
@@ -82,7 +85,7 @@ Mosigame 정식 앱 바이너리
 - 휴대폰 공통 흐름은 `GameScreenPhase`와 `PhoneGameShell`을 먼저 확인한다. 태블릿
   상태 분기는 타입이 있는 enum과 exhaustive `switch`를 우선한다.
 - 공유 상단바, 사이드바, 결과, 퇴장 UI와 애니메이션은
-  `packages/game_kit/lib/games/shared/`를 먼저
+  `packages/game_kit/lib/widgets/`, `game_flow/`, `player_layouts/`를 먼저
   확인한다.
 
 ## Data and compatibility boundaries
@@ -109,11 +112,11 @@ game/server          클라이언트에 노출하지 않는 서버 상태
 
 ## Task-specific entry points
 
-- 새 게임: `packages/game_kit/lib/games/_game_template/README.md`, 가장 가까운 게임의 README·구현,
+- 새 게임: `packages/game_template/`, `PACKAGE_MIGRATION.md`, 가장 가까운 게임의 구현,
   `functions/src/<game>/`
-- session/room: `packages/mosigame_platform/lib/platform/home/`, `functions/src/room/`, 관련 테스트와
+- session/room: `lib/platform/home/`, `functions/src/room/`, 관련 테스트와
   `dart run :mosigame test session`
-- auth/onboarding: `packages/mosigame_platform/lib/platform/auth/`, `functions/src/auth/`, 관련 테스트와
+- auth/onboarding: `lib/platform/auth/`, `functions/src/auth/`, 관련 테스트와
   `dart run :mosigame test auth`
 - Project CLI: `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/`
 

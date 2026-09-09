@@ -60,11 +60,11 @@ Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전
 
 중요 파일:
 
-- `packages/mosigame_platform/lib/platform/auth/widgets/auth_gate.dart`: 인증·온보딩 route 결정
-- `packages/mosigame_platform/lib/platform/auth/services/auth_service.dart`: 이메일 링크, Google, Apple 인증
-- `packages/mosigame_platform/lib/platform/auth/services/onboarding_service.dart`: 온보딩 callable과 문서 구독
-- `packages/mosigame_platform/lib/platform/auth/services/pending_email_store.dart`: 이메일 링크 로컬 상태
-- `packages/mosigame_platform/lib/platform/auth/models/onboarding_state.dart`: 단계 모델
+- `lib/platform/auth/widgets/auth_gate.dart`: 인증·온보딩 route 결정
+- `lib/platform/auth/services/auth_service.dart`: 이메일 링크, Google, Apple 인증
+- `lib/platform/auth/services/onboarding_service.dart`: 온보딩 callable과 문서 구독
+- `lib/platform/auth/services/pending_email_store.dart`: 이메일 링크 로컬 상태
+- `lib/platform/auth/models/onboarding_state.dart`: 단계 모델
 - `functions/src/auth/onboarding.ts`: 온보딩 시작·완료 전이
 - `functions/src/auth/sync-google-profile.ts`, `sync-apple-profile.ts`: 소셜 프로필 동기화
 - `functions/src/auth/require-complete-onboarding.ts`: 서버 명령의 완료 조건
@@ -87,10 +87,10 @@ Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전
 
 중요 파일:
 
-- `packages/mosigame_platform/lib/platform/home/room/services/room_service.dart`: Firebase I/O와 callable 경계
-- `packages/mosigame_platform/lib/platform/home/room/providers/room_provider.dart`: 구독, lifecycle, 복구, 오류 상태
+- `lib/platform/home/room/services/room_service.dart`: Firebase I/O와 callable 경계
+- `lib/platform/home/room/providers/room_provider.dart`: 구독, lifecycle, 복구, 오류 상태
 - `controller_room_session_store.dart`, `player_room_session_store.dart`: 로컬 복원 정보
-- `packages/mosigame_platform/lib/platform/home/phone/widgets/session_return_prompt.dart`: 복원 동의 순서
+- `lib/platform/home/phone/widgets/session_return_prompt.dart`: 복원 동의 순서
 - `functions/src/room/realtime-room-functions.ts`: 방 생성·참가
 - `functions/src/room/controller-session.ts`: controller session 검증
 - `functions/src/room/realtime-room-lifecycle.ts`: 선택·종료·퇴장·보존 정리
