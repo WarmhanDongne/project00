@@ -4,7 +4,7 @@ import 'package:project00/platform/home/room/models/room_player.dart';
 const playerHeartbeatInterval = Duration(seconds: 10);
 const playerHeartbeatStaleGrace = Duration(seconds: 20);
 
-/// 서버 시각 기준으로 마지막 heartbeat가 20초를 **초과**했는지 판정합니다.
+/// 서버 시각 기준으로 마지막 heartbeat가 20초를 초과했는지 판정합니다.
 ///
 /// 이 함수는 후보만 고릅니다. 실제 접속 해제와 게임 중단은 controller 세션을
 /// 검증하는 서버 transaction이 최신 값을 다시 확인한 뒤 수행합니다.
