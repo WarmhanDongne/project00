@@ -46,7 +46,7 @@ class PlatformButton extends StatelessWidget {
     super.key,
     required this.label, // 버튼 문구
     required this.onPressed, // 클릭 동작
-    this.style = PlatformButtonStyle.primary, // 버튼 종류
+    this.style = PlatformButtonStyle.primary, // 버튼 종류, 스타일은 enum 정의
     this.height = 48,
     this.expand = true,
     this.loading = false, // 로딩 표시 사용 여부

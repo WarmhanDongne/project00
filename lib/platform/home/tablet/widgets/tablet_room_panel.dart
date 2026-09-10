@@ -181,6 +181,8 @@ class _EmptyRoom extends StatelessWidget {
             ),
           ),
           const Spacer(),
+
+          // 방 생성 버튼
           PlatformButton(
             label: provider.isLoading ? '생성 중...' : '초대하기',
             onPressed: provider.isLoading ? null : provider.createRoom,
