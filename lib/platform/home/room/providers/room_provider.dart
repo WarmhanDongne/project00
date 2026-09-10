@@ -183,6 +183,8 @@ class RoomProvider extends GameRoomContext {
   Future<void> createRoom() async {
     // Figma 상태 계약에서 방 생성은 `구성원 없음`에서만 가능합니다.
     // 기존 방의 `초기화`는 closeRoom이 담당하며 새 코드를 만들지 않습니다.
+
+    // 룸 코드가 없거나 로딩 중이면 리턴
     if (roomCode != null || isLoading) return;
 
     final operationId = _pendingCreateRoomOperationId ??=
