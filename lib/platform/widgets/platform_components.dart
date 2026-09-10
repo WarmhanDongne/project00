@@ -5,6 +5,7 @@ enum PlatformButtonStyle { primary, secondary, neutral, danger, dangerSoft }
 
 enum PlatformNoticeStyle { success, warning, danger }
 
+// 9/11 참조 PlatformButton
 //=======================공용 패널==============================
 class PlatformPanel extends StatelessWidget {
   const PlatformPanel({
@@ -36,16 +37,21 @@ class PlatformPanel extends StatelessWidget {
 }
 
 //=======================공용 버튼==============================
+/*
+1. 기본 디자인 제공
+2. 버튼 클릭 시 로딩 제공
+3. 
+ */
 class PlatformButton extends StatelessWidget {
   const PlatformButton({
     super.key,
-    required this.label,
-    required this.onPressed,
-    this.style = PlatformButtonStyle.primary,
+    required this.label, // 버튼 문구
+    required this.onPressed, // 클릭 동작
+    this.style = PlatformButtonStyle.primary, // 버튼 종류
     this.height = 48,
     this.expand = true,
-    this.loading = false,
-    this.leading,
+    this.loading = false, // 로딩 표시 사용 여부
+    this.leading, // 버튼 왼쪽에 아이콘 표시
   });
 
   final String label;
