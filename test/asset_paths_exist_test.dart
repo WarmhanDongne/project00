@@ -39,6 +39,21 @@ void main() {
     expect(missing, isEmpty, reason: '없는 에셋 파일을 가리킵니다:\n${missing.join('\n')}');
   });
 
+  test('번들 에셋 경로에 OS별로 다르게 처리되는 분해 문자가 없다', () {
+    final nonPortable = references
+        .where((reference) => _containsDecomposedUnicode(reference.path))
+        .map((reference) => '${reference.path}  ← ${reference.source.path}')
+        .toList();
+
+    expect(
+      nonPortable,
+      isEmpty,
+      reason:
+          'macOS와 Linux에서 다른 파일로 처리될 수 있는 '
+          '분해된 Unicode 경로입니다:\n${nonPortable.join('\n')}',
+    );
+  });
+
   test('workspace 코드의 번들 에셋은 소유 package pubspec에 등록돼 있다', () {
     final unregistered = <String>{};
     for (final reference in references) {
@@ -148,6 +163,12 @@ String _localAssetPath(String path) {
   if (!path.startsWith('packages/')) return path;
   return path.split('/').skip(2).join('/');
 }
+
+bool _containsDecomposedUnicode(String path) => path.runes.any(
+  (rune) =>
+      (rune >= 0x0300 && rune <= 0x036F) || // Combining Diacritical Marks
+      (rune >= 0x1100 && rune <= 0x11FF), // Hangul Jamo used by NFD
+);
 
 Set<String> _declaredAssets(File pubspec) =>
     RegExp(r'^\s+- (assets/\S+)$', multiLine: true)
