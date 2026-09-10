@@ -12,7 +12,7 @@ import {
 // =========================================================================
 // 역할 카탈로그 (서버용)
 //
-// Dart `packages/game_mafia/lib/games/mafia/models/mafia_roles.dart`의 **거울**입니다. 서버는 Dart를
+// Dart `packages/game_mafia/lib/models/mafia_roles.dart`의 **거울**입니다. 서버는 Dart를
 // 읽을 수 없어 같은 표를 두 곳에 둡니다. 두 표가 갈리면 규칙이 조용히 깨지므로
 // `functions/test/mafia-role-parity.test.mjs`가 Dart 파일을 파싱해 대조합니다.
 //
