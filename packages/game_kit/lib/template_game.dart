@@ -1,15 +1,21 @@
+// ============================================================
+// import
+// ============================================================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/models/game_room_context.dart';
+// ============================================================
+// import
+// ============================================================
 
-/// 플랫폼이 게임 구현을 찾고 실행할 때 의존하는 카탈로그 계약입니다.
+//=====[ 게임 목록 관리 규칙 ]=====
 abstract interface class GameCatalog {
   Iterable<TemplateGame> get games;
   TemplateGame? find(String id);
 }
 
-/// 테스트·초기화 전 상태에서 안전하게 아무 게임도 반환하지 않는 카탈로그입니다.
+//=====[ 비어 있는 기본 카탈로그 ]=====
 final class EmptyGameCatalog implements GameCatalog {
   const EmptyGameCatalog();
 
@@ -20,57 +26,43 @@ final class EmptyGameCatalog implements GameCatalog {
   TemplateGame? find(String id) => null;
 }
 
-/// 시작과 상태 구독을 담당하는 게임별 서버 경계입니다.
+//=====[ 서버와 통신할 때 필요한 최소 규칙 ]=====
 abstract interface class GameGateway {
   Future<void> startGame(String roomCode, {Map<String, Object?>? options});
   Stream<String?> watchStatus(String roomCode);
 }
 
-/// 게임을 플랫폼(방 생성/대기, 게임 미리보기, 시작·퇴장)에 연결하는 공용 계약입니다.
-///
-/// 앱 셸이 주입하는 [GameCatalog]에 인스턴스를 추가하면 플랫폼 쪽 코드(휴대폰 대기 화면,
-/// 태블릿 게임 미리보기, 방 나가기)는 별도 수정 없이 이 게임을 인식합니다.
-///
-/// ## 컨트롤러 상태 설계 기준
-///
-/// 서버 상태를 미러링하는 Riverpod 컨트롤러는 게임당 하나로 통일하고(phone/tablet
-/// 화면이 같은 소스를 구독), 화면 전용 연출·애니메이션 상태는 원칙적으로 위젯
-/// 로컬(StatefulWidget)에 둡니다. 이 기본값이 부족해지는 경우는 하나뿐입니다 —
-/// 화면(주로 태블릿)이 여러 형제 위젯 파일로 쪼개져 그 연출 상태를 공유해야 할
-/// 때뿐이며, 그럴 때만 서버 상태 컨트롤러와는 별도로 얇은 오케스트레이션 Provider를
-/// 추가하세요. 서버 데이터와 화면 연출 플래그를 같은 상태 클래스에 섞지 마세요.
+//=====[ 실제 게임 하나가 구현해야 하는 전체 규칙 ]=====
 abstract class TemplateGame implements GameGateway {
   const TemplateGame();
 
-  /// Firestore `games` 컬렉션 문서 id 및 Realtime Database 방 경로에 쓰이는 식별자.
+  //[기본 정보] 게임의 식별자와 이름 
+  // 서버:id / 사용자 보여주기용:title
   String get id;
-
-  String get title;
+  String get title; 
 
   /// 런타임 다운로드 게임이 요구하는 정확한 에셋 버전입니다. 번들 게임은 0입니다.
   int get requiredAssetVersion => 0;
 
-  /// 정확한 참가 인원이 필요한 게임의 고정 인원입니다.
-  ///
-  /// null이면 플랫폼의 게임 메타데이터에 있는 최소/최대 인원을 사용합니다.
+  //[플레이어 인원] 
+  // 고정 인원이면 => (고정숫자)
+  // Firestore 있는 최소/최대 인원으로 진행할 경우 NULL
   int? get fixedPlayerCount => null;
 
-  /// 게임 도중 퇴장할 때 [RoomService.leaveGame]이 호출할 Cloud Function 이름입니다.
+  //[함수호출] 플레이어 중도 게임 퇴장
+  //
   String get leaveFunctionName;
 
-  /// 이 게임의 휴대폰 화면 방향 정책입니다.
-  ///
-  /// 태블릿은 이 값과 무관하게 항상 가로 고정입니다. 새 게임은 휴대폰 화면에서
-  /// 실제로 지원하는 방향을 여기 명시하고, 태블릿용 방향 옵션을 추가하지 마세요.
+  //[설정][화면 방향]
+  // 가로/세로/둘다  어떤 방향을 지원하는지 정의
   PhoneGameOrientation get phoneOrientation;
 
-  /// 게임 배경 이미지의 대표 색상입니다. 배경 이미지가 아직 안 그려졌을 때
-  /// 테이블·의자의 바탕색으로 씁니다.
+  //[에셋][입장테이블]
+  // 기본적인 테이블 색상값
   Color get tableColor;
 
-  /// 자리 배치 완료 연출의 테이블에 입힐 게임 배경 이미지입니다. 이 이미지가
-  /// 실제 게임 화면의 배경과 같아야 확대했을 때 이질감 없이 이어집니다.
-  /// 준비된 이미지가 없는 게임은 null을 반환해 [tableColor]만 씁니다.
+  //[에셋][배경있는 테이블]
+  // 배경이미지 입힌 테이블
   ImageProvider? get tableBackgroundImage;
 
   /// 태블릿의 게임 선택 팝업에 표시할 실제 게임 구성 요소 미리보기입니다.
