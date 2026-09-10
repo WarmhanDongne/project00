@@ -5,7 +5,6 @@ enum PlatformButtonStyle { primary, secondary, neutral, danger, dangerSoft }
 
 enum PlatformNoticeStyle { success, warning, danger }
 
-// 9/11 참조 PlatformButton
 //=======================공용 패널==============================
 class PlatformPanel extends StatelessWidget {
   const PlatformPanel({
