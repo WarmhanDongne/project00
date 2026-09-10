@@ -1,0 +1,70 @@
+함수	종류	영역	리전	경로·주기	파일	하는 일
+createRealtimeRoom	onCall	방	asia-northeast3		room/realtime-room-functions.ts	태블릿이 방을 만들고 방 코드·컨트롤러 세션 발급. Admin SDK라 RTDB 보안 규칙을 우회
+validateRealtimeRoom	onCall	방	asia-northeast3		room/realtime-room-functions.ts	입력한 방 코드가 유효한지 확인 (참가 전 사전 검사)
+joinRealtimeRoom	onCall	방	asia-northeast3		room/realtime-room-functions.ts	휴대폰 참가·재접속. 기존 uid는 좌석과 게임 데이터를 유지하고 연결 상태만 복구
+beginRealtimeRoomSeating	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	좌석 배치 단계 시작 (방 상태 → seating)
+saveRealtimePlayerSeatIndexes	onCall	방	asia-northeast3		room/realtime-room-functions.ts	태블릿이 정한 좌석 번호 저장
+selectRealtimeRoomGame	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	이 방에서 플레이할 게임 선택
+fetchRealtimeRoomGroupEntitlements	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	방 참가자들이 합쳐서 보유한 유료 게임 ID를 서버가 계산. 클라이언트가 남의 /users 문서를 읽지 않게 하는 경계
+resumeRealtimeControllerRoom	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	태블릿이 앱을 다시 켰을 때 자기 방으로 복귀
+removeRealtimeRoomPlayer	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	태블릿이 특정 참가자를 내보냄
+leaveRealtimeRoom	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	참가자가 스스로 방을 나감
+closeRoom	onCall	방	asia-northeast3		room/realtime-room-lifecycle.ts	방을 닫음 (전원 퇴장)
+syncRealtimeRoomGameStatus	RTDB 트리거	방	asia-southeast1	/rooms/{room}/game/public/status	room/realtime-room-lifecycle.ts	게임 상태를 방 상태에 반영 (대기실 복귀 판정)
+cleanupDeletedRoomCreationRequest	RTDB 트리거	방	asia-southeast1	/rooms/{room} (삭제 시)	room/realtime-room-lifecycle.ts	방이 먼저 사라졌을 때 남은 생성 요청 기록을 재시도 가능하게 정리
+cleanupStaleRealtimeRooms	주기	방	asia-northeast3	5분	room/realtime-room-lifecycle.ts	버려진 방 정리 (cleanupAt 인덱스 사용)
+beginOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	가입 절차 시작 (상태 문서 생성)
+advanceOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	다음 단계로 진행
+completeOnboardingProfile	onCall	인증	asia-northeast3		auth/onboarding.ts	닉네임·프로필 확정하고 온보딩 완료
+recoverLegacyOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	온보딩 문서가 없는 구버전 계정을 현재 스키마로 복구
+checkEmailDuplicate	onCall	인증	asia-northeast3		auth/check-email.ts	가입 전 이메일 중복 확인
+syncGoogleUserProfile	onCall	인증	asia-northeast3		auth/sync-google-profile.ts	구글 로그인 사용자의 닉네임·사진을 Firestore에 병합
+syncAppleUserProfile	onCall	인증	asia-northeast3		auth/sync-apple-profile.ts	애플용. 애플은 이름을 최초 승인 때 한 번만 주고 사진은 아예 안 줘서, 비어 있는 값이 기존 값을 덮지 않도록 병합
+deleteAccount	onCall	인증	asia-northeast3		auth/delete-account.ts	계정 삭제
+cleanupIncompleteAccounts	주기	인증	asia-northeast3	매일 03:30	auth/cleanup-incomplete-accounts.ts	온보딩 미완료 계정 — 지금은 보고만 하고 실제 삭제는 꺼져 있음
+registerProfile	HTTP	인증	asia-northeast3		auth/register-profile.ts	프로필 등록 HTTP 엔드포인트. Dart 호출부 0곳 — 삭제 후보
+game_mafia_start_game	onCall	마피아	asia-northeast3		mafia/start-game.ts	역할 배분하고 게임 시작. 역할 구성은 태블릿이 고른 값
+game_mafia_confirm_role	onCall	마피아	asia-northeast3		mafia/role-reveal.ts	내 역할 카드를 확인했다고 알림. 전원 확인하면 곧바로 밤으로
+game_mafia_complete_role_reveal	onCall	마피아	asia-northeast3		mafia/role-reveal.ts	태블릿 배분 연출 종료. 미확인자가 있어도 넘어감 — 한 명 때문에 판이 멈추지 않게
+game_mafia_submit_night_action	onCall	마피아	asia-northeast3		mafia/night.ts	밤 행동 대상 제출. 마감 전엔 여러 번 바꿀 수 있음
+game_mafia_timeout_night	onCall	마피아	asia-northeast3		mafia/night.ts	밤 마감. 안 고른 사람은 아무 일도 안 한 것으로 처리
+game_mafia_complete_morning	onCall	마피아	asia-northeast3		mafia/morning.ts	아침 발표 연출 종료. 여기서 첫 번째 승패 판정
+game_mafia_end_discussion	onCall	마피아	asia-northeast3		mafia/day.ts	토론 조기 종료에 한 표. 생존자 과반수가 누르면 투표로
+game_mafia_timeout_day	onCall	마피아	asia-northeast3		mafia/day.ts	토론 시간 종료 → 투표
+game_mafia_submit_vote	onCall	마피아	asia-northeast3		mafia/vote.ts	비밀 투표. 누가 누굴 찍었는지는 server 에만, public 엔 제출 인원수만
+game_mafia_timeout_vote	onCall	마피아	asia-northeast3		mafia/vote.ts	투표 마감. 미제출은 기권
+game_mafia_complete_vote_result	onCall	마피아	asia-northeast3		mafia/vote.ts	개표·처형 연출 종료. 여기서 두 번째 승패 판정
+game_mafia_end_game	onCall	마피아	asia-northeast3		mafia/end-game.ts	게임 종료
+game_mafia_leave_game	onCall	마피아	asia-northeast3		mafia/end-game.ts	방에서는 즉시 나가되, 사망자는 바로 / 생존자는 남은 사람 투표 뒤 제외
+game_final_call_start_game	onCall	파이널콜	asia-northeast3		final-call/start-game.ts	게임 시작 · 다시하기 (restart 플래그)
+game_final_call_complete_dealing	onCall	파이널콜	asia-northeast3		final-call/complete-dealing.ts	태블릿 카드 분배 연출 종료
+game_final_call_draw_card	onCall	파이널콜	asia-northeast3		final-call/draw-card.ts	카드 뽑기
+game_final_call_complete_turn	onCall	파이널콜	asia-northeast3		final-call/complete-turn.ts	턴 종료
+game_final_call_timeout_turn	onCall	파이널콜	asia-northeast3		final-call/timeout-turn.ts	턴 마감. 단계별로 다르게 해결 (callerSubmit / finalSubmit / playing / finalTurns)
+game_final_call_declare	onCall	파이널콜	asia-northeast3		final-call/call.ts	CALL 선언
+game_final_call_submit_hand	onCall	파이널콜	asia-northeast3		final-call/submit-final-hand.ts	최종 핸드 제출
+game_final_call_complete_result_reveal	onCall	파이널콜	asia-northeast3		final-call/complete-result-reveal.ts	태블릿 최종 공개 연출 종료 → 휴대폰 결과 화면
+game_final_call_start_next_round	onCall	파이널콜	asia-northeast3		final-call/next-round.ts	다음 라운드
+game_final_call_end_game	onCall	파이널콜	asia-northeast3		final-call/end-game.ts	게임 종료. finished 상태를 먼저 전달해 전 기기가 인식
+game_final_call_clear_game	onCall	파이널콜	asia-northeast3		final-call/clear-game.ts	방·참가자는 유지하고 rooms/{code}/game 만 삭제
+game_final_call_leave_game	onCall	파이널콜	asia-northeast3		final-call/leave-game.ts	게임 도중 퇴장
+game_liars_poker_start_game	onCall	라이어스포커	asia-northeast3		liars-poker/start-game.ts	태블릿이 새 판 시작 · 다시하기
+game_liars_poker_complete_dealing	onCall	라이어스포커	asia-northeast3		liars-poker/complete-dealing.ts	카드 분배 연출 종료
+game_liars_poker_ready_turn	onCall	라이어스포커	asia-northeast3		liars-poker/ready-turn.ts	카드를 펼쳐 첫 턴 타이머 시작
+game_liars_poker_submit_cards	onCall	라이어스포커	asia-northeast3		liars-poker/submit-card.ts	카드 제출
+game_liars_poker_call_liar	onCall	라이어스포커	asia-northeast3		liars-poker/call-liar.ts	LIAR 선언
+game_liars_poker_pass_challenge	onCall	라이어스포커	asia-northeast3		liars-poker/pass-challenge.ts	마지막 카드 도전 포기 (FOLD)
+game_liars_poker_prepare_penalty	onCall	라이어스포커	asia-northeast3		liars-poker/finish-penalty.ts	벌칙 룰렛 준비
+game_liars_poker_resolve_penalty	onCall	라이어스포커	asia-northeast3		liars-poker/finish-penalty.ts	룰렛 결과 전달
+game_liars_poker_force_timeout	onCall	라이어스포커	asia-northeast3		liars-poker/force-timeout.ts	백스톱. 턴 플레이어 휴대폰이 잠기면 아무도 턴을 못 넘기므로 태블릿이 강제 해결. 마감 전 호출은 notExpired 로 거절
+game_liars_poker_end_game	onCall	라이어스포커	asia-northeast3		liars-poker/end-game.ts	게임 종료
+game_liars_poker_leave_game	onCall	라이어스포커	asia-northeast3		liars-poker/leave-game.ts	게임 도중 퇴장
+game_common_interruption_report_stale_player	onCall	게임 공용	asia-northeast3		game-interruption/functions.ts	heartbeat 가 끊긴 참가자를 신고
+game_common_interruption_vote_to_continue	onCall	게임 공용	asia-northeast3		game-interruption/functions.ts	기다리고 계속하는 쪽에 투표
+game_common_interruption_exclude_player	onCall	게임 공용	asia-northeast3		game-interruption/functions.ts	태블릿 진행자가 끊긴 사람을 제외하고 즉시 계속
+game_common_interruption_expire	onCall	게임 공용	asia-northeast3		game-interruption/functions.ts	마감(60초)이 지난 중단을 정리 — 즉시 반응 경로
+game_common_interruption_finish_now	onCall	게임 공용	asia-northeast3		game-interruption/finish-now.ts	인원 부족이 확정되면 60초를 기다리지 않고 즉시 정상 종료
+game_common_interruption_on_connection_changed	RTDB 트리거	게임 공용	asia-southeast1	/rooms/{room}/players/{uid}/isConnected	game-interruption/functions.ts	참가자 접속이 끊기면 공용 게임 중단 상태로 승격
+game_common_controller_presence_changed	RTDB 트리거	게임 공용	asia-southeast1	/rooms/{room}/controllerPresence/connected	game-interruption/controller-presence.ts	태블릿이 끊긴 동안 서버 턴 마감을 멈춤
+cleanupExpiredGameInterruptions	주기	게임 공용	asia-northeast3	1분	game-interruption/expire-scheduler.ts	중단 만료를 부르는 곳이 화면 타이머뿐이던 구멍의 백스톱. 모두가 앱을 닫아도 서버가 정리
+cleanupGhostRoomPlayers	주기	게임 공용	asia-northeast3	5분	game-interruption/expire-scheduler.ts	게임이 끝났거나 대기실로 돌아온 방의 오래 끊긴 참가자 제거. 유예는 재접속 유예(60초)보다 충분히 길게
