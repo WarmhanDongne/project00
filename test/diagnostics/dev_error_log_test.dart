@@ -48,7 +48,7 @@ void main() {
       // 프레임워크 줄이 먼저 나와도 workspace package 줄을 찾아야 고칠 곳이 보입니다.
       expect(
         DevErrorLog.instance.entries.first.firstProjectFrame,
-        contains('games/mafia/x.dart:42'),
+        contains('game_mafia/x.dart:42'),
       );
     });
 
