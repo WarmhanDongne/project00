@@ -472,30 +472,25 @@ class $AssetsGamesMafiaImagesCardsGen {
   AssetGenImage get roleYakuza =>
       const AssetGenImage('assets/games/mafia/images/cards/role_yakuza.webp');
 
-  /// File path: assets/games/mafia/images/cards/white A 오후 6.59.47.png
-  AssetGenImage get whiteA65947 => const AssetGenImage(
-    'assets/games/mafia/images/cards/white A 오후 6.59.47.png',
-  );
+  /// File path: assets/games/mafia/images/cards/white_a.png
+  AssetGenImage get whiteA =>
+      const AssetGenImage('assets/games/mafia/images/cards/white_a.png');
 
-  /// File path: assets/games/mafia/images/cards/white Joker 오후 6.59.47.png
-  AssetGenImage get whiteJoker65947 => const AssetGenImage(
-    'assets/games/mafia/images/cards/white Joker 오후 6.59.47.png',
-  );
+  /// File path: assets/games/mafia/images/cards/white_back.png
+  AssetGenImage get whiteBack =>
+      const AssetGenImage('assets/games/mafia/images/cards/white_back.png');
 
-  /// File path: assets/games/mafia/images/cards/white K 오후 6.59.47.png
-  AssetGenImage get whiteK65947 => const AssetGenImage(
-    'assets/games/mafia/images/cards/white K 오후 6.59.47.png',
-  );
+  /// File path: assets/games/mafia/images/cards/white_joker.png
+  AssetGenImage get whiteJoker =>
+      const AssetGenImage('assets/games/mafia/images/cards/white_joker.png');
 
-  /// File path: assets/games/mafia/images/cards/white Q 오후 6.59.47.png
-  AssetGenImage get whiteQ65947 => const AssetGenImage(
-    'assets/games/mafia/images/cards/white Q 오후 6.59.47.png',
-  );
+  /// File path: assets/games/mafia/images/cards/white_k.png
+  AssetGenImage get whiteK =>
+      const AssetGenImage('assets/games/mafia/images/cards/white_k.png');
 
-  /// File path: assets/games/mafia/images/cards/white back 오후 6.59.47.png
-  AssetGenImage get whiteBack65947 => const AssetGenImage(
-    'assets/games/mafia/images/cards/white back 오후 6.59.47.png',
-  );
+  /// File path: assets/games/mafia/images/cards/white_q.png
+  AssetGenImage get whiteQ =>
+      const AssetGenImage('assets/games/mafia/images/cards/white_q.png');
 
   /// List of all assets
   List<AssetGenImage> get values => [
@@ -543,11 +538,11 @@ class $AssetsGamesMafiaImagesCardsGen {
     roleWatcher,
     roleWitness,
     roleYakuza,
-    whiteA65947,
-    whiteJoker65947,
-    whiteK65947,
-    whiteQ65947,
-    whiteBack65947,
+    whiteA,
+    whiteBack,
+    whiteJoker,
+    whiteK,
+    whiteQ,
   ];
 }
 

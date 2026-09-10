@@ -178,9 +178,6 @@ String? resolveExecutable(String executable) {
     return File(executable).existsSync() ? executable : null;
   }
 
-  final pathValue = Platform.environment['PATH'];
-  if (pathValue == null || pathValue.trim().isEmpty) return null;
-
   final names = Platform.isWindows
       ? <String>[
           '$executable.exe',
@@ -190,6 +187,20 @@ String? resolveExecutable(String executable) {
           executable,
         ]
       : <String>[executable];
+
+  final flutterRoot = Platform.environment['FLUTTER_ROOT']?.trim();
+  if (flutterRoot != null &&
+      flutterRoot.isNotEmpty &&
+      (executable == 'dart' || executable == 'flutter')) {
+    final flutterBin = _joinPath(flutterRoot.replaceAll('"', ''), 'bin');
+    for (final name in names) {
+      final candidate = _joinPath(flutterBin, name);
+      if (File(candidate).existsSync()) return candidate;
+    }
+  }
+
+  final pathValue = Platform.environment['PATH'];
+  if (pathValue == null || pathValue.trim().isEmpty) return null;
 
   for (final rawDirectory in pathValue.split(Platform.isWindows ? ';' : ':')) {
     final directory = rawDirectory.trim().replaceAll('"', '');

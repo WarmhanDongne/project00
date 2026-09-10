@@ -25,7 +25,7 @@ test("client and server default room limits remain 12", () => {
   );
   const clientSource = readFileSync(
     new URL(
-      "../../packages/mosigame_platform/lib/platform/home/room/services/room_common.dart",
+      "../../lib/platform/home/room/services/room_common.dart",
       import.meta.url,
     ),
     "utf8",

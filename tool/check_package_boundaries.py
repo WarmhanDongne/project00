@@ -29,6 +29,15 @@ TEMPLATE_PACKAGES = {
     "game_template",
 }
 
+# ``game_`` 접두사를 쓰지만 실제 게임 구현이 아닌 지원 package 이름입니다.
+# game_contract는 현재 game_kit에 통합됐지만, 과거/향후 workspace 입력에서도
+# 다운로드 게임으로 오분류하면 안 되는 예약 이름으로 유지합니다.
+NON_GAME_IMPLEMENTATION_PACKAGES = (
+    FIXED_APP_PACKAGES
+    | TEMPLATE_PACKAGES
+    | {"game_contract"}
+)
+
 # 첫 정식 바이너리에 코드와 에셋을 함께 넣는 기본 게임입니다.
 BUNDLED_GAME_PACKAGES = {
     "game_liars_poker",
@@ -77,10 +86,9 @@ def allowed_for(package: str) -> set[str]:
 
 
 def is_game_implementation_package(package: str) -> bool:
-    """game_kit·game_template 을 제외한 실제 게임 package인지 판별합니다."""
+    """예약된 game_* 지원 package를 제외한 실제 게임 package인지 판별합니다."""
     return (package.startswith("game_")
-            and package not in FIXED_APP_PACKAGES
-            and package != "game_template")
+            and package not in NON_GAME_IMPLEMENTATION_PACKAGES)
 
 
 def declares_flutter_assets(pubspec: pathlib.Path) -> bool:
