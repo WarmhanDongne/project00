@@ -107,28 +107,6 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
   }
 }
 
-class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.title, this.trailing});
-
-  final String title;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-        ),
-        ?trailing,
-      ],
-    );
-  }
-}
-
 class _EmptyRoom extends StatelessWidget {
   const _EmptyRoom({required this.provider});
 
@@ -190,53 +168,6 @@ class _EmptyRoom extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final RRect rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final dashedPath = _createDashedPath(path);
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  Path _createDashedPath(Path source) {
-    const dashLength = 8.0;
-    const dashSpace = 6.0;
-    final pathMetrics = source.computeMetrics();
-    final dest = Path();
-    for (final metric in pathMetrics) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        dest.addPath(
-          metric.extractPath(distance, distance + dashLength),
-          Offset.zero,
-        );
-        distance += dashLength + dashSpace;
-      }
-    }
-    return dest;
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
@@ -384,6 +315,75 @@ class _ActiveRoom extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _PanelHeader extends StatelessWidget {
+  const _PanelHeader({required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final dashedPath = _createDashedPath(path);
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  Path _createDashedPath(Path source) {
+    const dashLength = 8.0;
+    const dashSpace = 6.0;
+    final pathMetrics = source.computeMetrics();
+    final dest = Path();
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dest.addPath(
+          metric.extractPath(distance, distance + dashLength),
+          Offset.zero,
+        );
+        distance += dashLength + dashSpace;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
