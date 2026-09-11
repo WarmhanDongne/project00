@@ -239,6 +239,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
       body: SafeArea(
         child: Column(
           children: [
+            // 상단 바
             _HomeHeader(
               onSearchChanged: (value) {
                 setState(() => searchWord = value);
@@ -256,6 +257,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
+                        // 게임 목록
                         child: GameList(
                           roomProvider: roomProvider,
                           gameProvider: gameProvider,
@@ -267,6 +269,7 @@ class _TabletHomeState extends State<TabletHome> with WidgetsBindingObserver {
                         thickness: 1,
                         color: colors.border,
                       ),
+                      // 방 초대 패널
                       SizedBox(
                         width: panelWidth,
                         child: TabletRoomPanel(provider: roomProvider),
