@@ -63,7 +63,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     provider.addListener(_handleRoomChange);
   }
 
-  //[ Render ] state(방 또는 참가자 상태)변화 시 보일 state 값 변경 후 재 build() 요청
+  //[Render] state(방 또는 참가자 상태)변화 시 보일 state 값 변경 후 재 build() 요청
   void _handleRoomChange() {
     // state 값
     final hasRoom = provider.roomCode != null;

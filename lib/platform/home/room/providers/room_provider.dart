@@ -180,6 +180,7 @@ class RoomProvider extends GameRoomContext {
     return players;
   }
 
+  // [방 생성]
   Future<void> createRoom() async {
     // Figma 상태 계약에서 방 생성은 `구성원 없음`에서만 가능합니다.
     // 기존 방의 `초기화`는 closeRoom이 담당하며 새 코드를 만들지 않습니다.
@@ -203,15 +204,18 @@ class RoomProvider extends GameRoomContext {
     }
   }
 
+  // [방 종료] 서버에서 방 종료 후, 방 상태를 초기화하는 비동기 메서드
   Future<void> closeRoom() async {
     final currentCode = roomCode;
     if (currentCode == null || isLoading) return;
 
+    // 방 종료 요청
     final success = await _runCommand<bool>(() async {
       await _service.closeControllerRoom(currentCode);
       return true;
     });
 
+    //앱 내부 상태 초기화
     if (success == true) {
       clearRoom(expectedRoomCode: currentCode);
     }

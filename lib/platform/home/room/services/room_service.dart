@@ -49,14 +49,17 @@ class RoomService {
     return user;
   }
 
+  // [방 생성]
   Future<String> createRoom({String? operationId}) async {
     final user = _auth.currentUser;
 
+    // 가드 조건문
     if (user == null) {
       throw const RoomCommandException('방을 만들려면 로그인이 필요합니다.');
     }
 
     try {
+      // cloud function 호출
       final response = await _functions
           .httpsCallable('createRealtimeRoom')
           .call(operationId == null ? null : {'operationId': operationId});
@@ -72,6 +75,7 @@ class RoomService {
           controllerSessionId.isEmpty) {
         throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
+      // 태블릿 기기에 roomCode와 controllerSessionId을 저장.
       await ControllerRoomSessionStore.instance.save(
         roomCode: roomCode,
         sessionId: controllerSessionId,
