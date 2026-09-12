@@ -215,6 +215,7 @@ class RoomService {
         .map((event) => ControllerPresence.fromValue(event.snapshot.value));
   }
 
+  //[observe] 특정 방의 현재 상태를 파베에서 실시간으로 감시
   Stream<String?> watchRoomStatus(String roomCode) => realtime
       .ref('rooms/$roomCode/status')
       .onValue
@@ -242,7 +243,7 @@ class RoomService {
         .map((event) => _playersFromSnapshot(event.snapshot));
   }
 
-  /// Firebase 서버와 이 앱 인스턴스의 실제 연결 상태입니다.
+  //[method] Firebase 서버와 이 앱 인스턴스의 실제 연결 상태 파악하는 메서드.
   Stream<bool> watchServerConnection() =>
       RealtimeConnectionMonitor.instance.watch(realtime);
 

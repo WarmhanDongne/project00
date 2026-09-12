@@ -20,6 +20,7 @@ import 'package:project00/platform/home/gamelist/service/game_list_service.dart'
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/room/providers/room_command_executor.dart';
 
+// listenRoom 등의 메서드에서 사용되는 enum 정의
 enum RoomDataLoadStatus { idle, loading, loaded, failure }
 
 enum ControllerPresenceState { unknown, connected, reconnecting }
@@ -461,10 +462,13 @@ class RoomProvider extends GameRoomContext {
     return result ?? false;
   }
 
+  // ======================[ listen ]============================
+  // 서버에서 발생하는 변화를 RoomProvider 상태와 화면에 반영한다.
   void listenRoom() {
     final listenedRoomCode = roomCode;
     if (listenedRoomCode == null) return;
 
+    // 기존 구독과 타이머 정리
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();
@@ -475,6 +479,7 @@ class RoomProvider extends GameRoomContext {
     _controllerPresenceTimer?.cancel();
     _playerPresenceTimer?.cancel();
 
+    // 이전 방에서 계산한 상태 초기화
     controllerPresenceState = ControllerPresenceState.unknown;
     _controllerPresence = ControllerPresence.unknown;
     _controllerPresenceTimer?.cancel();
@@ -490,6 +495,7 @@ class RoomProvider extends GameRoomContext {
       onError: (_) => _handleServerConnection(false),
     );
 
+    // 방을 관리하는 태블릿의 접속 상태 감시
     // connected와 lastSeen을 함께 받습니다. connected만 보면 태블릿이 강제
     // 종료·크래시·전원 차단으로 markControllerDisconnected를 보낼 기회조차
     // 없었던 경우를 영원히 알 수 없습니다(값이 true로 굳습니다).
@@ -508,6 +514,7 @@ class RoomProvider extends GameRoomContext {
           ),
         );
 
+    // 방이 실제로 존재하는지 감시
     roomExistenceSubscription = _service
         .watchRoomExists(listenedRoomCode)
         .listen(
@@ -527,6 +534,7 @@ class RoomProvider extends GameRoomContext {
           ),
         );
 
+    // 방 상태 감시
     statusSubscription = _service.watchRoomStatus(listenedRoomCode).listen(
       (status) {
         if (roomCode != listenedRoomCode) return;
@@ -717,8 +725,8 @@ class RoomProvider extends GameRoomContext {
     }
   }
 
-  /// 태블릿에서만 로컬 시계를 돌립니다. RTDB 추가 읽기나 정상 heartbeat당
-  /// Function 호출은 없으며, 이미 구독한 players 값에서 후보만 고릅니다.
+  //============================[ timer manage ]================================
+  // 게임 진행 중 참가자들의 연결 상태를 주기적으로 검사하는 타이머를 시작하거나 중단시킴.
   void _syncPlayerPresenceTimer() {
     _playerPresenceTimer?.cancel();
     _playerPresenceTimer = null;
@@ -786,11 +794,15 @@ class RoomProvider extends GameRoomContext {
     _staleReportTracker.retainCurrent(currentPlayers);
   }
 
+  //================================[method]====================================
+  // 서버 연결 상태를 프로바이드에 반영, 연결이 복구되면 방 연결 복구 작업을 시작
   void _handleServerConnection(bool isConnected) {
+    // 현재 연결 상태 저장과 화면 알림
     if (_isServerConnected != isConnected) _connectionEpoch += 1;
     _isServerConnected = isConnected;
     _syncPlayerPresenceTimer();
     notifyListeners();
+    // 연결이 끊겼다면 기록하고 종료
     if (!isConnected) {
       _wasServerDisconnected = true;
       return;
@@ -805,6 +817,8 @@ class RoomProvider extends GameRoomContext {
     unawaited(retryConnectionRecovery().catchError((Object _) {}));
   }
 
+  //=============================[double check]=================================
+  // 파베에서 방이 삭제됐는지 다시 확인한다.
   Future<void> _confirmRoomDeleted(String expectedRoomCode) async {
     if (!_roomMissingCandidate ||
         !_isServerConnected ||
