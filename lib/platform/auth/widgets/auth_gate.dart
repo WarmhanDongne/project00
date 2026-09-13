@@ -13,6 +13,7 @@ import 'package:game_kit/template_game.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
 class AuthGate extends StatefulWidget {
+  //==============================[ 외부에서 받을 설정 정의 ]======================
   const AuthGate({
     super.key,
     this.userChanges,
@@ -39,14 +40,11 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  //=================================[ 정보 보관 및 관리 ]========================
   late final OnboardingService _onboardingService;
 
-  /// 로그인 상태 스트림입니다. **반드시 한 번만 만들어 보관합니다.**
-  ///
-  /// 빌드마다 `userChanges()`를 새로 만들면 회전 같은 평범한 리빌드에도
-  /// StreamBuilder가 구독을 갈아 끼우며 `waiting`으로 돌아가, 화면 전체가
-  /// 스피너로 접혔다 펴집니다. 그 과정에서 아래 온보딩 구독이 다시 마운트되어
-  /// `Bad state: Stream has already been listened to.`로 터졌습니다(회전 크래시).
+  // 리빌드마다 인증 스트림 구독이 교체되지 않도록
+  // initState에서 한 번 초기화해 보관
   late final Stream<User?> _userChanges;
 
   StreamSubscription<Uri>? _emailLinkSubscription;
@@ -54,11 +52,9 @@ class _AuthGateState extends State<AuthGate> {
   String? _emailLinkError;
   String? _reauthenticationEmail;
 
-  //=======================온보딩 구독==============================
-  // 온보딩 스트림(`async*`)은 **한 번만 들을 수 있습니다.** StreamBuilder에
-  // 캐시된 스트림을 넘기면 위젯이 다시 마운트되는 순간 두 번째 listen이 되어
-  // 터집니다. 그래서 StreamBuilder 대신 여기서 직접 한 번 구독하고, 최근 값을
-  // 상태로 들고 있다가 그립니다. 다시 마운트돼도 구독은 그대로입니다.
+  //=======================[ 온보딩 구독 ]=======================================
+  // 단일 구독 스트림을 중복 구독하지 않도록 State에서 구독을 관리합니다.
+  // 수신한 최신 온보딩 상태를 보관해 화면 분기에 사용합니다.
   String? _watchedOnboardingUid;
   StreamSubscription<UserOnboarding?>? _onboardingSubscription;
   UserOnboarding? _onboarding;
@@ -78,6 +74,7 @@ class _AuthGateState extends State<AuthGate> {
     _subscribeToEmailLinks();
   }
 
+  //[스트림 구독 관리] emailLinks 스트림 변경 시 새 스트림 구독
   @override
   void didUpdateWidget(covariant AuthGate oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -177,9 +174,8 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  /// 이 uid의 온보딩 상태를 구독합니다. 이미 같은 uid를 듣고 있으면
-  /// 아무것도 하지 않습니다. 빌드 중에 불러도 안전합니다 — listen 자체는
-  /// 콜백을 즉시 부르지 않고, 값은 다음 이벤트 루프에서 setState로 반영됩니다.
+  //===============================[ user sign state subscribe ]================
+  // 해당 사용자의 가입 상태를 구독, 이미 구독 중이면 유지.
   void _ensureOnboardingWatch(String uid) {
     if (_watchedOnboardingUid == uid && _onboardingSubscription != null) {
       return;
@@ -208,11 +204,8 @@ class _AuthGateState extends State<AuthGate> {
         );
   }
 
-  /// 저장된 로그인 정보를 복원하지 못하고 멈춘 경우입니다.
-  ///
-  /// 기기 키체인에 남은 세션을 읽을 수 없을 때(앱 번들 id·서명 팀이 바뀐 뒤에
-  /// 일어납니다) 스트림이 아무 값도 주지 않고 멈춥니다. 그대로 두면 영원히
-  /// 스피너라, 세션을 비워 로그인 화면으로 되돌립니다.
+  // =============================[ call back or log out ]======================
+  // 로그인 복원이 지연되면 지정된 콜백을 실행하거나 로그아웃한다.
   void _handleAuthRestoreTimeout() {
     debugPrint('[auth_gate] 로그인 상태 복원이 지연됩니다. 저장된 세션을 비웁니다.');
     final onTimeout = widget.onAuthRestoreTimeout;
@@ -223,6 +216,8 @@ class _AuthGateState extends State<AuthGate> {
     unawaited(FirebaseAuth.instance.signOut());
   }
 
+  //=============================[ re-subscribe ]===============================
+  // 기존 가입 상태 구독 정리 후 재구독.
   void _retryOnboardingWatch() {
     final uid = _watchedOnboardingUid;
     // 구독 자체를 새로 만들어야 다시 시도가 됩니다. uid를 지워 두면
@@ -234,6 +229,8 @@ class _AuthGateState extends State<AuthGate> {
     if (uid != null) _ensureOnboardingWatch(uid);
   }
 
+  //===========================[ subscribe cancel ]=============================
+  // 가입 상태 구독을 취소하고 관련 정보를 초기화한다.
   void _clearOnboardingWatch() {
     unawaited(_onboardingSubscription?.cancel());
     _onboardingSubscription = null;
@@ -243,6 +240,8 @@ class _AuthGateState extends State<AuthGate> {
     _onboardingFailed = false;
   }
 
+  //============================[ email link subscribe ]========================
+  // 앱 실행 중 이메일 인증 링크 구독.
   void _subscribeToEmailLinks() {
     _emailLinkSubscription = widget.emailLinks?.listen(
       _handleIncomingEmailLink,
@@ -252,6 +251,8 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
+  //============================[ back to gate ]================================
+  // 유효한 이메일 인증 링크를 저장하고 인증 게이트로 돌아옵니다.
   void _handleIncomingEmailLink(Uri link) {
     if (!mounted) return;
     final value = link.toString();
@@ -274,6 +275,8 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
+  //============================[ result ]======================================
+  // 이메일 링크 처리가 끝나면 링크를 비우고 처리 결과를 반영한다.
   void _handleEmailLink(String? error) {
     if (!mounted) return;
     setState(() {
@@ -284,6 +287,8 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
+//==========================[ recovery screen ]=================================
+// 가입 상태 정보가 없는 기존 계정의 복구 화면
 class _LegacyRecoveryView extends StatefulWidget {
   const _LegacyRecoveryView({required this.service});
 
@@ -293,6 +298,8 @@ class _LegacyRecoveryView extends StatefulWidget {
   State<_LegacyRecoveryView> createState() => _LegacyRecoveryViewState();
 }
 
+//==========================[ manage recovery request ]=========================
+// 기존 계정의 복구 요청과 실패, 시간 초과, 재시도를 관리한다.
 class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
   Object? _error;
 
@@ -342,6 +349,9 @@ class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
   }
 }
 
+//=========================[ show error message ]===============================
+// 오류 메세지와 다시 시도, 로그아웃 버튼을 보여준다.
+// 로그인 실패 시 빈 화면에 로그아웃 버튼 하나만 딱 보일 때 코드
 class _GateErrorView extends StatelessWidget {
   const _GateErrorView({required this.message, required this.onRetry});
 
@@ -370,11 +380,8 @@ class _GateErrorView extends StatelessWidget {
   }
 }
 
-/// 앱을 준비하는 동안 보여 주는 화면입니다.
-///
-/// [onTimeout]을 주면 [timeout] 뒤에 한 번 알려 줍니다. **스피너가 영원히 도는
-/// 상태를 남기지 않기 위한 장치입니다** — 무엇을 기다리다 멈췄는지는 [step]으로
-/// 화면에 적어, 기기에서 바로 원인을 알 수 있게 합니다.
+//========================[ loading view ]======================================
+// 앱 진입에 필요한 처리를 기다리는 동안 보여주는 로딩 화면
 class _AppInitializingView extends StatefulWidget {
   const _AppInitializingView({required this.step, this.onTimeout});
 
@@ -390,6 +397,8 @@ class _AppInitializingView extends StatefulWidget {
   State<_AppInitializingView> createState() => _AppInitializingViewState();
 }
 
+//========================[ call back ]=========================================
+// 대기 시간을 관리하고 지연 안내와 시간 초과 콜백을 처리합니다.
 class _AppInitializingViewState extends State<_AppInitializingView> {
   Timer? _timer;
   Timer? _slowTimer;

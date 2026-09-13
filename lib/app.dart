@@ -62,6 +62,7 @@ class App extends StatelessWidget {
         // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
         // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
         home: ShorebirdPatchGate(
+          // [진입 화면 판단] 유저의 인증, 가입 상태에 따라 진입 화면 결정
           child: AuthGate(
             gameCatalog: const GameRegistry(),
             userChanges: userChanges,
