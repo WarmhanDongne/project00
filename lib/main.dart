@@ -93,7 +93,7 @@ void main() async {
     clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
   );
 
-  //[소리 관리 객체 생성 및 공유]
+  //===============[ 앱 실행 그리고 소리 관리 객체 생성 및 공유 ]======================
   final soundProvider = SoundProvider();
   runApp(
     ProviderScope(

@@ -1,17 +1,10 @@
-/// MaterialApp 배선입니다. 테마·인증 게이트·네트워크 가드·패치 게이트를 묶습니다.
-///
-/// `core/`가 아니라 앱 루트에 있는 이유: 이 파일은 platform(인증·테마)을 알아야
-/// 하는데, `core`는 platform을 몰라야 합니다. 배선은 앱 셸의 일입니다
-/// (`docs/engineering/PACKAGE_MIGRATION.md`).
-
 library;
-
-//=======================앱 셸==============================
 
 import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+//============================[ 기기 화면에 맞춰 픽셀 환산 ]=======================
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
@@ -35,22 +28,27 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    //============================[ 필요 변수 선언 ]==============================
     final view =
         PlatformDispatcher.instance.implicitView ??
         PlatformDispatcher.instance.views.firstOrNull;
     final size = view != null
         ? (view.physicalSize / view.devicePixelRatio)
         : const Size(390, 844);
-
+    // 추후 수정 요망(9/13): 메인에서 계산한 것 중복.
+    // 창 크기 변화에 유동적일지, 고정적일지 고민 후 처리할 것.
+    // 예: 폴더블 폰.
     final isTablet = size.shortestSide >= DeviceLayout.tabletBreakpoint;
     final currentDesignSize = isTablet
         ? const Size(834, 1194)
         : const Size(390, 844);
 
+    //===============================[ 앱 리턴 ]=================================
     return ScreenUtilInit(
       designSize: currentDesignSize,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        // 추후 수정 요망(9/13): 타이틀 수정 필요
         title: 'Project 00',
         theme: PlatformTheme.light(),
         darkTheme: PlatformTheme.dark(),
