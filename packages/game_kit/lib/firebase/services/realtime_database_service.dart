@@ -1,7 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 
-/// 프로젝트에서 사용하는 Firebase Realtime Database 진입점입니다.
+//==============================================================================
+//Create firebase database instance
+//==============================================================================
+// 파배 db에 접근할 객체를 준비하고 공유하는 파일
 abstract final class RealtimeDatabaseService {
   static final FirebaseDatabase instance = _createInstance();
 
