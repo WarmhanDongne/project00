@@ -13,7 +13,10 @@ export interface ControllerSessionRoom {
   controllerSessionId?: string;
 }
 
-/** 새 controller 인스턴스를 구분하는 추측 불가능한 세션 ID를 만듭니다. */
+/** ==========================[ create management id ]=====================
+ * 새 controller 인스턴스를 구분하는 추측 불가능한 세션 ID를 만듭니다.
+ * 관리자 세션 ID 생성
+ */
 export function createControllerSessionId(): string {
   return randomUUID();
 }
