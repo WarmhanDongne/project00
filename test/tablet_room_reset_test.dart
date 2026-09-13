@@ -32,6 +32,7 @@ void main() {
       provider.dispose();
     });
 
+    // [room create test]
     test('방이 있는 동안에는 새 초대 코드를 만들지 않는다', () async {
       final service = _FakeRoomService();
       final provider = _provider(service)..roomCode = 'ABCDE';
@@ -59,6 +60,7 @@ void main() {
       provider.dispose();
     });
 
+    //[delete wrong room]
     test('이전 방의 늦은 정리 요청은 현재 방을 지우지 않는다', () {
       final provider = _provider(_FakeRoomService())..roomCode = 'NEW12';
 
