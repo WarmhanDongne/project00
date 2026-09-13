@@ -20,12 +20,12 @@ import 'package:game_kit/firebase/firebase_options.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
-  // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화 보장
+  // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  // 첫 프레임보다 먼저 만들어 콜드 스타트 이메일 링크를 놓치지 않습니다.
+  // 링크 처리 인스턴스 생성. 콜드 스타트 보다 먼저 생성. 이메일 인증 링크 기능도 수행
   final appLinks = AppLinks();
 
-  //=======================플랫폼 기본 방향==============================
+  //=======================[ 플랫폼 기본 방향 ]==============================
   // 게임이 직접 방향을 변경하기 전까지 플랫폼 화면은 휴대폰에서 세로,
   // 태블릿에서 가로입니다.
   //
@@ -34,10 +34,7 @@ void main() async {
   // 기준을 써야 로비 방향이 어긋나지 않습니다).
   final isTablet = DeviceLayout.isTabletDevice();
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
-  //
-  // 여기서 예외가 나면 화면이 한 장도 그려지기 전이라 사용자에게는 앱이 그냥
-  // 죽은 것으로 보이고, Crashlytics도 아직 붙지 않아 원인이 남지 않습니다.
-  // 실패해도 최소한 무슨 일인지 알리는 화면은 띄웁니다.
+  // 빌드 실패 시 오류 전송
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -48,7 +45,7 @@ void main() async {
     return;
   }
 
-  //=======================오류 수집 시작==============================
+  //=======================[ 오류 수집 시작 ]==============================
   // Firebase 초기화 바로 뒤에 붙입니다. 이 뒤에 나는 위젯·비동기 오류는
   // 개발 중에는 화면(오른쪽 아래 빨간 표시)에서 보고, 릴리스에서는
   // Crashlytics로 올라갑니다.
@@ -85,17 +82,18 @@ void main() async {
     CrashReporting.recordError(error, stack, reason: '초기 이메일 링크 읽기');
   }
 
-  //=======================서버 시각 보정 시작==============================
+  //=======================[ 서버 시각 보정 시작 ]==============================
   // 턴 마감은 서버 시각 기준이므로, 기기 시계 오차·수동 변경·백그라운드 복귀에
   // 영향받지 않도록 서버와의 차이를 계속 추적합니다.
   ServerClock.start();
 
+  //========================[ 구글 SDK 초기화 ]==================================
   // 3. Google Sign-In SDK 초기화 및 Client ID 주입 (최신 API 필수 전제 조건)
-  // firebase_options.dart에 구조화된 iOS Client ID를 메모리에 로드합니다.
   await GoogleSignIn.instance.initialize(
     clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
   );
 
+  //[소리 관리 객체 생성 및 공유]
   final soundProvider = SoundProvider();
   runApp(
     ProviderScope(
@@ -109,10 +107,10 @@ void main() async {
     ),
   );
 
-  //=======================iOS scene 연결 이후 초기 방향==============================
+  //=======================[ iOS scene 연결 이후 초기 방향 ]==============================
   _InitialOrientationApplier(isTablet: isTablet).start();
 
-  //=======================첫 프레임 이후 네이티브 초기화==============================
+  //=======================[ 첫 프레임 이후 네이티브 초기화 ]==============================
   WidgetsBinding.instance.addPostFrameCallback((_) {
     // 네이티브 오디오 플러그인이 첫 화면 렌더링을 막지 않도록 첫 프레임이
     // 그려진 뒤 사운드를 초기화합니다.
@@ -120,9 +118,9 @@ void main() async {
   });
 }
 
-//=======================시작 실패 화면==============================
+//=======================[ 시작 실패 화면 ]==============================
 /// Firebase 초기화가 실패했을 때만 띄우는 최소 화면입니다.
-///
+/// 추후 분리 요소(9/13)
 /// 이 시점에는 앱의 테마·번역·오류 수집이 모두 준비되지 않았으므로 아무
 /// 의존성 없이 그릴 수 있는 것만 씁니다.
 class _StartupFailureApp extends StatelessWidget {
