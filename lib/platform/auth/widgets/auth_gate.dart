@@ -12,6 +12,20 @@ import 'package:project00/platform/home/home.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
+//==============================================================================
+// Screen determine
+//==============================================================================
+/*
+- 인증 상태 관찰: 파베 userChanges()를 구독해 로그인, 로그아웃을 화면에 반영한다.
+- 온보딩 상태 관찰: 현재 UID의 온보딩 상태를 구독하고, 로그아웃하거나 UID가 바뀌면 기존 구독
+을 정리한다.
+- 이메일 링크 수신과 전달: 앱 최초 실행 및 실행 중 받은 링크를 처리 화면에 넘긴다. 가입 화면
+이 별도 경로로 열려 있으면 루트로 돌아와 링크 처리 상태를 보여준다.
+- 기존 계정 복구 연결: 온보딩 문서가 없으면 OnboardingService.recoverLegacy()를 호출한다.
+- 대기, 오류 처리: 로그인 복원, 온보딩 조회, 계정 복구가 지연될 대 타임아웃과 복구 경로를
+제공한다. 로그인 복원 타임아웃의 기본 동작은 로그아웃이다. 
+*/
+
 class AuthGate extends StatefulWidget {
   //==============================[ 외부에서 받을 설정 정의 ]======================
   const AuthGate({
@@ -52,7 +66,7 @@ class _AuthGateState extends State<AuthGate> {
   String? _emailLinkError;
   String? _reauthenticationEmail;
 
-  //=======================[ 온보딩 구독 ]=======================================
+  //=======================[ onboarding subscribe ]=======================================
   // 단일 구독 스트림을 중복 구독하지 않도록 State에서 구독을 관리합니다.
   // 수신한 최신 온보딩 상태를 보관해 화면 분기에 사용합니다.
   String? _watchedOnboardingUid;
@@ -95,18 +109,19 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _userChanges,
       builder: (context, authSnapshot) {
+        // 로딩 화면
         if (authSnapshot.connectionState == ConnectionState.waiting) {
-          // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
-          // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
           return _AppInitializingView(
             step: '로그인 상태 확인',
             onTimeout: _handleAuthRestoreTimeout,
           );
         }
         final user = authSnapshot.data;
+        //[로그인 화면 진입: 로그인된 사용자가 없는 경우]
         if (user == null) {
           _clearOnboardingWatch();
           final link = _emailLink;
+          // 이메일 인증 화면 리턴
           if (link != null) {
             return RegisterScreen(
               initialEmailLink: link,
@@ -114,7 +129,9 @@ class _AuthGateState extends State<AuthGate> {
               onboardingService: _onboardingService,
             );
           }
+          // 이메일 인증 실패 시 오류 내용 표시
           if (_emailLinkError != null) {
+            //
             return RegisterScreen(
               initialStep: RegisterStep.emailLinkFailed,
               initialError: _emailLinkError,
@@ -122,6 +139,7 @@ class _AuthGateState extends State<AuthGate> {
               onboardingService: _onboardingService,
             );
           }
+          // 이메일 재인증 링크 대기 화면
           if (_reauthenticationEmail != null) {
             return RegisterScreen(
               initialStep: RegisterStep.awaitingEmailLink,
@@ -130,8 +148,10 @@ class _AuthGateState extends State<AuthGate> {
               onboardingService: _onboardingService,
             );
           }
+          // 처리할 인증 흐름 없을 시 로그인 화면 리턴
           return const LoginScreen();
         }
+        // 이메일 링크 처리 대기
         if (_emailLink != null) {
           return const _AppInitializingView(step: '이메일 링크 처리');
         }
@@ -382,6 +402,7 @@ class _GateErrorView extends StatelessWidget {
 
 //========================[ loading view ]======================================
 // 앱 진입에 필요한 처리를 기다리는 동안 보여주는 로딩 화면
+// 추후 수정 요소: 파일 분리. 로딩 뷰에 대한 코드가 한 파일에 작성되어야 하나?
 class _AppInitializingView extends StatefulWidget {
   const _AppInitializingView({required this.step, this.onTimeout});
 
