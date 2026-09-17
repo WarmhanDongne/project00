@@ -16,6 +16,8 @@ import 'package:project00/platform/widgets/platform_components.dart';
 // Screen determine
 //==============================================================================
 /*
+- 문제점: 파일 내 프라이빗 메서드로 인해 코드가 길다. 
+- 리팩토링 요소: 다른 파이어베이스 구독 메서드와 통합해 외부로 뺄 것, 빌드 코드 부분 줄일 것
 - 인증 상태 관찰: 파베 userChanges()를 구독해 로그인, 로그아웃을 화면에 반영한다.
 - 온보딩 상태 관찰: 현재 UID의 온보딩 상태를 구독하고, 로그아웃하거나 UID가 바뀌면 기존 구독
 을 정리한다.
@@ -156,6 +158,7 @@ class _AuthGateState extends State<AuthGate> {
           return const _AppInitializingView(step: '이메일 링크 처리');
         }
 
+        // 현재 사용자의 온보딩 상태 구독
         _ensureOnboardingWatch(user.uid);
         if (_onboardingFailed) {
           return _GateErrorView(
@@ -163,10 +166,8 @@ class _AuthGateState extends State<AuthGate> {
             onRetry: _retryOnboardingWatch,
           );
         }
+        // 오류 화면과 재시도 버튼 표시
         if (!_onboardingLoaded) {
-          // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
-          // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
-          // 대신 다시 시도할 화면을 보여 줍니다.
           return _AppInitializingView(
             step: '회원가입 상태 확인',
             onTimeout: () {
@@ -175,9 +176,11 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
         final onboarding = _onboarding;
+        // 계정 상태 복구 시도
         if (onboarding == null) {
           return _LegacyRecoveryView(service: _onboardingService);
         }
+        // 온보딩 상태에 맞는 최종 화면 반환
         return switch (onboarding.status) {
           OnboardingStatus.settingPassword => RegisterScreen(
             initialStep: RegisterStep.settingPassword,
