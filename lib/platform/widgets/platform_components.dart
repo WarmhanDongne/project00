@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
+//================================================================
+//public components
+//=================================================================
+// 수정 사항: 각 파트 마다 나뉜 컴포넌트를 독립된 컴포넌트로 나누는 것 고려할 것.
 enum PlatformButtonStyle { primary, secondary, neutral, danger, dangerSoft }
 
 enum PlatformNoticeStyle { success, warning, danger }
