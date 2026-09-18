@@ -177,7 +177,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  //=======================[ 회원가입 중단 여부 확인 ]=============
+  //=======================[ 회원가입 중단 여부 확인 ]=============================
+  // 호출 지점: build
   Future<void> _requestBack() async {
     if (_action != null || _isLeaving) return;
     final shouldLeave = await showDialog<bool>(
@@ -215,7 +216,91 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (navigator.canPop()) navigator.pop();
   }
 
-  //=============[ 중복 링크 필터/처리할 링크 보관/인증 처리 예약 ]=========
+  //=================[ 인증 이메일 발송, 재전송 및 인증 대기 상태 설정 ]==============
+  // 호출 지점: build()
+  Future<void> _sendEmail({bool resend = false}) async {
+    if (_action != null) return;
+    final email = _normalizedEmail()!;
+    if (!_isValidEmail(email)) {
+      setState(() => _errorMessage = '이메일 형식이 올바르지 않습니다.');
+      return;
+    }
+    setState(() {
+      _action = resend ? RegisterAction.resendEmail : RegisterAction.sendEmail;
+      _errorMessage = null;
+    });
+    try {
+      await _onboardingService.sendEmailLink(email);
+      final cooldownUntil = DateTime.fromMillisecondsSinceEpoch(
+        ServerClock.nowMillis() + _resendCooldown.inMilliseconds,
+      );
+      await _pendingEmailStore.save(email: email, cooldownUntil: cooldownUntil);
+      if (!mounted) return;
+      setState(() {
+        _emailController.text = email;
+        _cooldownUntil = cooldownUntil;
+        _step = RegisterStep.awaitingEmailLink;
+      });
+      _startCooldownTicker();
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = EmailLinkErrorMessage.from(error);
+        if (resend) _step = RegisterStep.emailLinkFailed;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _action = null);
+        unawaited(_processQueuedIncomingLink());
+      }
+    }
+  }
+
+  //======================[ 비밀번호 검증/저장 후 다음 단계 진행 ]===================
+  // 호출 지점: build
+  Future<void> _setPassword() async {
+    if (_action != null) return;
+    final password = _passwordController.text;
+    if (!PasswordPolicy.isValid(password)) {
+      setState(() => _errorMessage = PasswordPolicy.requirementsMessage);
+      return;
+    }
+    if (password != _confirmPasswordController.text) {
+      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    setState(() {
+      _action = RegisterAction.setPassword;
+      _errorMessage = null;
+    });
+    try {
+      await _onboardingService.setPasswordAndAdvance(password);
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on AuthServiceException catch (error) {
+      if (error.code == 'requires-recent-login') {
+        await _restartEmailVerification();
+      } else if (mounted) {
+        setState(() => _errorMessage = error.message);
+      }
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  //==========================[ 도메인 선택 또는 직접 입력 지원 ]===================
+  // 호출 지점: build
+  void _changeDomain(String? value) {
+    if (value == null) return;
+    setState(() {
+      _isCustomDomain = value == 'custom';
+      if (!_isCustomDomain) _emailDomain = value;
+    });
+    if (_isCustomDomain) _customDomainFocusNode.requestFocus();
+  }
+
+  //=============[ 중복 링크 필터/처리할 링크 보관/인증 처리 예약 ]===================
   // 호출 지점: initState
   void _queueIncomingLink(Uri link) {
     final value = link.toString();
@@ -235,7 +320,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     });
   }
 
-  //==================[ 이메일 인증 링크 처리 시도 ]====================
+  //==================[ 이메일 인증 링크 처리 시도 ]===============================
   // 호출 지점: _queueIncomingLink, _sendEmail
   Future<void> _processQueuedIncomingLink() async {
     if (!mounted ||
@@ -249,8 +334,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     await _completeIncomingLink(link);
   }
 
-  //==============[ 이메일 인증 단계에 따라 가입 단계 갱신 ]============
-  //호출 지점: _processQueuedIncomingLink
+  //==============[ 이메일 인증 단계에 따라 가입 단계 갱신 ]=========================
+  // 호출 지점: _processQueuedIncomingLink
   Future<void> _completeIncomingLink(Uri link) async {
     if (_action != null && _action != RegisterAction.completeLink) {
       _queuedEmailLink = link;
@@ -294,6 +379,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  //==============[ 이메일 인증 요청 및 타이머 상태 복원 ]===========================
+  // 호출 지점: initState
   Future<void> _restorePendingEmail() async {
     final pending = await _pendingEmailStore.read();
     if (!mounted || pending == null) return;
@@ -304,6 +391,20 @@ class _RegisterScreenState extends State<RegisterScreen>
     _startCooldownTicker();
   }
 
+  //==================[ 이메일 인증 타이머 갱신 ]==================================
+  // 호출 지점: _restorePendingEmail, _sendEmail, _restartEmailVerification
+  // didChangeAppLifecycleState
+  void _startCooldownTicker() {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() {});
+      if (_cooldownSeconds <= 0) timer.cancel();
+    });
+  }
+
+  //====================[ 사용자의 입력을 실제 이메일 주소로 변환 ]==================
+  // 호출 지점: _sendEmail
   String? _normalizedEmail() {
     final input = _emailController.text.trim().toLowerCase();
     if (input.contains('@')) return input;
@@ -313,78 +414,13 @@ class _RegisterScreenState extends State<RegisterScreen>
     return '$input@$domain';
   }
 
+  //=============================[ 이메일 형식 검사 ]=============================
+  // 호출 지점: _sendEmail
   bool _isValidEmail(String email) =>
       RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
 
-  Future<void> _sendEmail({bool resend = false}) async {
-    if (_action != null) return;
-    final email = _normalizedEmail()!;
-    if (!_isValidEmail(email)) {
-      setState(() => _errorMessage = '이메일 형식이 올바르지 않습니다.');
-      return;
-    }
-    setState(() {
-      _action = resend ? RegisterAction.resendEmail : RegisterAction.sendEmail;
-      _errorMessage = null;
-    });
-    try {
-      await _onboardingService.sendEmailLink(email);
-      final cooldownUntil = DateTime.fromMillisecondsSinceEpoch(
-        ServerClock.nowMillis() + _resendCooldown.inMilliseconds,
-      );
-      await _pendingEmailStore.save(email: email, cooldownUntil: cooldownUntil);
-      if (!mounted) return;
-      setState(() {
-        _emailController.text = email;
-        _cooldownUntil = cooldownUntil;
-        _step = RegisterStep.awaitingEmailLink;
-      });
-      _startCooldownTicker();
-    } on AuthServiceException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = EmailLinkErrorMessage.from(error);
-        if (resend) _step = RegisterStep.emailLinkFailed;
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _action = null);
-        unawaited(_processQueuedIncomingLink());
-      }
-    }
-  }
-
-  Future<void> _setPassword() async {
-    if (_action != null) return;
-    final password = _passwordController.text;
-    if (!PasswordPolicy.isValid(password)) {
-      setState(() => _errorMessage = PasswordPolicy.requirementsMessage);
-      return;
-    }
-    if (password != _confirmPasswordController.text) {
-      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    setState(() {
-      _action = RegisterAction.setPassword;
-      _errorMessage = null;
-    });
-    try {
-      await _onboardingService.setPasswordAndAdvance(password);
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } on AuthServiceException catch (error) {
-      if (error.code == 'requires-recent-login') {
-        await _restartEmailVerification();
-      } else if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
-    } finally {
-      if (mounted) setState(() => _action = null);
-    }
-  }
-
+  //===============================[ 이메일 인증 재시작 ]==========================
+  // 호출 지점: _setPassword
   Future<void> _restartEmailVerification() async {
     final email = _emailController.text.trim();
     try {
@@ -410,23 +446,5 @@ class _RegisterScreenState extends State<RegisterScreen>
         });
       }
     }
-  }
-
-  void _startCooldownTicker() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return timer.cancel();
-      setState(() {});
-      if (_cooldownSeconds <= 0) timer.cancel();
-    });
-  }
-
-  void _changeDomain(String? value) {
-    if (value == null) return;
-    setState(() {
-      _isCustomDomain = value == 'custom';
-      if (!_isCustomDomain) _emailDomain = value;
-    });
-    if (_isCustomDomain) _customDomainFocusNode.requestFocus();
   }
 }
