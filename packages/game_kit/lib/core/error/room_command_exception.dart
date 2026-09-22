@@ -1,4 +1,4 @@
-/// 방 서비스가 사용자에게 전달할 수 있는 짧은 도메인 오류입니다.
+// [error message] 외부에서 주입 받은 에러 메세지를 전달한다.
 class RoomCommandException implements Exception {
   const RoomCommandException(this.message);
 

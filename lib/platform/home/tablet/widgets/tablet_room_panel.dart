@@ -2,15 +2,30 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+// 방 코드를 클립보드에 복사
 import 'package:flutter/services.dart';
+// 참가자 캐릭터 id를 이미지 경로로 변환
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
+// 방 코드로 QR 이미지 생성
 import 'package:qr_flutter/qr_flutter.dart';
 
-//=======================태블릿 방 패널==============================
+// ============================================================
+// TABLET ROOM PANEL
+// ============================================================
+//
+// [Responsibility] RoomProvider의 방·참가자 상태를 태블릿용 방 패널로 표시하고,
+// 방 생성·초기화·참가자 제거 입력을 Provider에 전달합니다.
+// [State] 방이 없으면 생성 화면, 참가자가 없으면 초대 코드 화면, 참가자가 있으면
+// 활성 참가자 목록을 표시합니다.
+// [Presentation] 참가자 입·퇴장 애니메이션과 QR 확대·방 코드 복사 등 패널 내부의
+// 화면 표현을 담당합니다.
+// [Boundary] 방과 참가자 상태를 실제로 변경하는 로직은 RoomProvider와 하위
+// RoomService·Cloud Functions가 담당합니다.
+
 const _playerMotionDuration = Duration(milliseconds: 260);
 
 class TabletRoomPanel extends StatefulWidget {
@@ -34,7 +49,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     super.initState();
     _hadPlayers = provider.players.isNotEmpty;
     _showActiveRoom = _hadPlayers;
-    provider.addListener(_handleRoomChange);
+    provider.addListener(_handleRoomChange); // RoomProvider의 상태 감지
   }
 
   @override
@@ -48,9 +63,12 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     provider.addListener(_handleRoomChange);
   }
 
+  //[Render] state(방 또는 참가자 상태)변화 시 보일 state 값 변경 후 재 build() 요청
   void _handleRoomChange() {
+    // state 값
     final hasRoom = provider.roomCode != null;
     final hasPlayers = provider.players.isNotEmpty;
+    // 방이 없을 때 _EmptyRoom 요청
     if (!hasRoom) {
       _lastPlayerExitTimer?.cancel();
       _hadPlayers = false;
@@ -58,6 +76,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
       if (mounted) setState(() {});
       return;
     }
+    // 참가자가 있는 경우(방 있음) _ActiveRoom build() 요청
     if (hasPlayers) {
       _lastPlayerExitTimer?.cancel();
       _hadPlayers = true;
@@ -65,9 +84,14 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
       if (mounted) setState(() {});
       return;
     }
+    // 참가자가 방에 없는 경우
     if (_hadPlayers) {
-      // 마지막 사람도 오른쪽으로 빠져나간 뒤 초대 화면으로
-      // 돌아가야 합니다. 즉시 교체하면 퇴장 애니메이션이 사라집니다.
+      /*
+      마지막 참가자 퇴장
+      → 260ms 동안 _ActiveRoom 유지
+      → 퇴장 애니메이션 완료
+      → _InvitationRoom으로 변경
+       */
       _hadPlayers = false;
       _showActiveRoom = true;
       _lastPlayerExitTimer?.cancel();
@@ -94,6 +118,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
 
   @override
   Widget build(BuildContext context) {
+    // 현재 상태에 따라 보여줄 화면 결정. 방 없음, 참가자 없음, 참가자 있음
     final code = provider.roomCode;
     if (code == null) return _EmptyRoom(provider: provider);
     if (!_showActiveRoom) {
@@ -107,28 +132,10 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
   }
 }
 
-class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.title, this.trailing});
+//====================[ 메인 메서드 ]==================
 
-  final String title;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-        ),
-        ?trailing,
-      ],
-    );
-  }
-}
-
+//====================[ 기능: 방 생성 ]=====================
+//[state] 방 생성 이전
 class _EmptyRoom extends StatelessWidget {
   const _EmptyRoom({required this.provider});
 
@@ -181,6 +188,8 @@ class _EmptyRoom extends StatelessWidget {
             ),
           ),
           const Spacer(),
+
+          // 방 생성 버튼
           PlatformButton(
             label: provider.isLoading ? '생성 중...' : '초대하기',
             onPressed: provider.isLoading ? null : provider.createRoom,
@@ -188,53 +197,6 @@ class _EmptyRoom extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final RRect rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final dashedPath = _createDashedPath(path);
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  Path _createDashedPath(Path source) {
-    const dashLength = 8.0;
-    const dashSpace = 6.0;
-    final pathMetrics = source.computeMetrics();
-    final dest = Path();
-    for (final metric in pathMetrics) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        dest.addPath(
-          metric.extractPath(distance, distance + dashLength),
-          Offset.zero,
-        );
-        distance += dashLength + dashSpace;
-      }
-    }
-    return dest;
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
@@ -382,6 +344,76 @@ class _ActiveRoom extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+// ===================[ 서브 메서드 ]===================
+class _PanelHeader extends StatelessWidget {
+  const _PanelHeader({required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final dashedPath = _createDashedPath(path);
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  Path _createDashedPath(Path source) {
+    const dashLength = 8.0;
+    const dashSpace = 6.0;
+    final pathMetrics = source.computeMetrics();
+    final dest = Path();
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dest.addPath(
+          metric.extractPath(distance, distance + dashLength),
+          Offset.zero,
+        );
+        distance += dashLength + dashSpace;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 

@@ -132,58 +132,92 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
-  void _queueIncomingLink(Uri link) {
-    final value = link.toString();
-    if (value == _lastHandledEmailLink ||
-        value == _queuedEmailLink?.toString()) {
-      return;
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      // 시스템(휴대폰 뒤로가기 버튼) 뒤로가기 처리
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_requestBack());
+      },
+      // 회원가입 공통 화면 레이아웃 제공
+      child: PlatformAuthShell(
+        maxWidth: 390,
+        showBack: true,
+        onBackPressed: () => unawaited(_requestBack()),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '회원가입',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 18),
+            // 실제 화면 분기 처리
+            RegisterStepOne(
+              emailController: _emailController,
+              customDomainController: _customDomainController,
+              customDomainFocusNode: _customDomainFocusNode,
+              passwordController: _passwordController,
+              confirmPasswordController: _confirmPasswordController,
+              emailDomain: _emailDomain,
+              isCustomDomain: _isCustomDomain,
+              step: _step,
+              action: _action,
+              cooldownSeconds: _cooldownSeconds,
+              errorMessage: _errorMessage,
+              onDomainChanged: _changeDomain,
+              onSendEmail: _sendEmail,
+              onResendEmail: () => _sendEmail(resend: true),
+              onSetPassword: _setPassword,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  //=======================[ 회원가입 중단 여부 확인 ]=============================
+  // 호출 지점: build
+  Future<void> _requestBack() async {
+    if (_action != null || _isLeaving) return;
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('회원가입을 중단할까요?'),
+        content: Text(
+          _step == RegisterStep.emailInput
+              ? '입력한 내용은 저장되지 않습니다.'
+              : '다시 로그인하면 완료하지 못한 단계부터 이어집니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('계속하기'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('중단하기'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLeave != true || !mounted) return;
+    _isLeaving = true;
+    if (_step != RegisterStep.emailInput) {
+      await _pendingEmailStore.clear();
+      await FirebaseAuth.instance.signOut();
     }
-    _queuedEmailLink = link;
-    // addPostFrameCallback을 기다리는 첫 프레임부터 로딩 UI를 보여줍니다.
-    if (_action == null) {
-      _step = RegisterStep.awaitingEmailLink;
-      _action = RegisterAction.completeLink;
-      _errorMessage = null;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_processQueuedIncomingLink());
-    });
+    if (!mounted) return;
+    widget.onCancel?.call();
+    if (!mounted) return;
+    setState(() => _canPop = true);
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
   }
 
-  Future<void> _processQueuedIncomingLink() async {
-    if (!mounted ||
-        (_action != null && _action != RegisterAction.completeLink)) {
-      return;
-    }
-    final link = _queuedEmailLink;
-    if (link == null) return;
-    _queuedEmailLink = null;
-    _lastHandledEmailLink = link.toString();
-    await _completeIncomingLink(link);
-  }
-
-  Future<void> _restorePendingEmail() async {
-    final pending = await _pendingEmailStore.read();
-    if (!mounted || pending == null) return;
-    setState(() {
-      _emailController.text = pending.email;
-      _cooldownUntil = pending.cooldownUntil;
-    });
-    _startCooldownTicker();
-  }
-
-  String? _normalizedEmail() {
-    final input = _emailController.text.trim().toLowerCase();
-    if (input.contains('@')) return input;
-    final domain = _isCustomDomain
-        ? _customDomainController.text.trim().toLowerCase()
-        : _emailDomain;
-    return '$input@$domain';
-  }
-
-  bool _isValidEmail(String email) =>
-      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-
+  //=================[ 인증 이메일 발송, 재전송 및 인증 대기 상태 설정 ]==============
+  // 호출 지점: build()
   Future<void> _sendEmail({bool resend = false}) async {
     if (_action != null) return;
     final email = _normalizedEmail()!;
@@ -222,6 +256,86 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  //======================[ 비밀번호 검증/저장 후 다음 단계 진행 ]===================
+  // 호출 지점: build
+  Future<void> _setPassword() async {
+    if (_action != null) return;
+    final password = _passwordController.text;
+    if (!PasswordPolicy.isValid(password)) {
+      setState(() => _errorMessage = PasswordPolicy.requirementsMessage);
+      return;
+    }
+    if (password != _confirmPasswordController.text) {
+      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    setState(() {
+      _action = RegisterAction.setPassword;
+      _errorMessage = null;
+    });
+    try {
+      await _onboardingService.setPasswordAndAdvance(password);
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on AuthServiceException catch (error) {
+      if (error.code == 'requires-recent-login') {
+        await _restartEmailVerification();
+      } else if (mounted) {
+        setState(() => _errorMessage = error.message);
+      }
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  //==========================[ 도메인 선택 또는 직접 입력 지원 ]===================
+  // 호출 지점: build
+  void _changeDomain(String? value) {
+    if (value == null) return;
+    setState(() {
+      _isCustomDomain = value == 'custom';
+      if (!_isCustomDomain) _emailDomain = value;
+    });
+    if (_isCustomDomain) _customDomainFocusNode.requestFocus();
+  }
+
+  //=============[ 중복 링크 필터/처리할 링크 보관/인증 처리 예약 ]===================
+  // 호출 지점: initState
+  void _queueIncomingLink(Uri link) {
+    final value = link.toString();
+    if (value == _lastHandledEmailLink ||
+        value == _queuedEmailLink?.toString()) {
+      return;
+    }
+    _queuedEmailLink = link;
+    // addPostFrameCallback을 기다리는 첫 프레임부터 로딩 UI를 보여줍니다.
+    if (_action == null) {
+      _step = RegisterStep.awaitingEmailLink;
+      _action = RegisterAction.completeLink;
+      _errorMessage = null;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_processQueuedIncomingLink());
+    });
+  }
+
+  //==================[ 이메일 인증 링크 처리 시도 ]===============================
+  // 호출 지점: _queueIncomingLink, _sendEmail
+  Future<void> _processQueuedIncomingLink() async {
+    if (!mounted ||
+        (_action != null && _action != RegisterAction.completeLink)) {
+      return;
+    }
+    final link = _queuedEmailLink;
+    if (link == null) return;
+    _queuedEmailLink = null;
+    _lastHandledEmailLink = link.toString();
+    await _completeIncomingLink(link);
+  }
+
+  //==============[ 이메일 인증 단계에 따라 가입 단계 갱신 ]=========================
+  // 호출 지점: _processQueuedIncomingLink
   Future<void> _completeIncomingLink(Uri link) async {
     if (_action != null && _action != RegisterAction.completeLink) {
       _queuedEmailLink = link;
@@ -265,37 +379,48 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
-  Future<void> _setPassword() async {
-    if (_action != null) return;
-    final password = _passwordController.text;
-    if (!PasswordPolicy.isValid(password)) {
-      setState(() => _errorMessage = PasswordPolicy.requirementsMessage);
-      return;
-    }
-    if (password != _confirmPasswordController.text) {
-      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
+  //==============[ 이메일 인증 요청 및 타이머 상태 복원 ]===========================
+  // 호출 지점: initState
+  Future<void> _restorePendingEmail() async {
+    final pending = await _pendingEmailStore.read();
+    if (!mounted || pending == null) return;
     setState(() {
-      _action = RegisterAction.setPassword;
-      _errorMessage = null;
+      _emailController.text = pending.email;
+      _cooldownUntil = pending.cooldownUntil;
     });
-    try {
-      await _onboardingService.setPasswordAndAdvance(password);
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } on AuthServiceException catch (error) {
-      if (error.code == 'requires-recent-login') {
-        await _restartEmailVerification();
-      } else if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
-    } finally {
-      if (mounted) setState(() => _action = null);
-    }
+    _startCooldownTicker();
   }
 
+  //==================[ 이메일 인증 타이머 갱신 ]==================================
+  // 호출 지점: _restorePendingEmail, _sendEmail, _restartEmailVerification
+  // didChangeAppLifecycleState
+  void _startCooldownTicker() {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() {});
+      if (_cooldownSeconds <= 0) timer.cancel();
+    });
+  }
+
+  //====================[ 사용자의 입력을 실제 이메일 주소로 변환 ]==================
+  // 호출 지점: _sendEmail
+  String? _normalizedEmail() {
+    final input = _emailController.text.trim().toLowerCase();
+    if (input.contains('@')) return input;
+    final domain = _isCustomDomain
+        ? _customDomainController.text.trim().toLowerCase()
+        : _emailDomain;
+    return '$input@$domain';
+  }
+
+  //=============================[ 이메일 형식 검사 ]=============================
+  // 호출 지점: _sendEmail
+  bool _isValidEmail(String email) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
+
+  //===============================[ 이메일 인증 재시작 ]==========================
+  // 호출 지점: _setPassword
   Future<void> _restartEmailVerification() async {
     final email = _emailController.text.trim();
     try {
@@ -321,102 +446,5 @@ class _RegisterScreenState extends State<RegisterScreen>
         });
       }
     }
-  }
-
-  void _startCooldownTicker() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return timer.cancel();
-      setState(() {});
-      if (_cooldownSeconds <= 0) timer.cancel();
-    });
-  }
-
-  void _changeDomain(String? value) {
-    if (value == null) return;
-    setState(() {
-      _isCustomDomain = value == 'custom';
-      if (!_isCustomDomain) _emailDomain = value;
-    });
-    if (_isCustomDomain) _customDomainFocusNode.requestFocus();
-  }
-
-  Future<void> _requestBack() async {
-    if (_action != null || _isLeaving) return;
-    final shouldLeave = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('회원가입을 중단할까요?'),
-        content: Text(
-          _step == RegisterStep.emailInput
-              ? '입력한 내용은 저장되지 않습니다.'
-              : '다시 로그인하면 완료하지 못한 단계부터 이어집니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('계속하기'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('중단하기'),
-          ),
-        ],
-      ),
-    );
-    if (shouldLeave != true || !mounted) return;
-    _isLeaving = true;
-    if (_step != RegisterStep.emailInput) {
-      await _pendingEmailStore.clear();
-      await FirebaseAuth.instance.signOut();
-    }
-    if (!mounted) return;
-    widget.onCancel?.call();
-    if (!mounted) return;
-    setState(() => _canPop = true);
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) navigator.pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _canPop,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) unawaited(_requestBack());
-      },
-      child: PlatformAuthShell(
-        maxWidth: 390,
-        showBack: true,
-        onBackPressed: () => unawaited(_requestBack()),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '회원가입',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 18),
-            RegisterStepOne(
-              emailController: _emailController,
-              customDomainController: _customDomainController,
-              customDomainFocusNode: _customDomainFocusNode,
-              passwordController: _passwordController,
-              confirmPasswordController: _confirmPasswordController,
-              emailDomain: _emailDomain,
-              isCustomDomain: _isCustomDomain,
-              step: _step,
-              action: _action,
-              cooldownSeconds: _cooldownSeconds,
-              errorMessage: _errorMessage,
-              onDomainChanged: _changeDomain,
-              onSendEmail: _sendEmail,
-              onResendEmail: () => _sendEmail(resend: true),
-              onSetPassword: _setPassword,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

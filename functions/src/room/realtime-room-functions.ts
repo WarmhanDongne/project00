@@ -95,8 +95,9 @@ function joinDecisionError(decision: RoomJoinDecision): HttpsError | null {
 }
 
 /**
- * 중복 가능성이 낮은 5자리 방 코드를 생성합니다.
- */
+*==============================[Room code]===========================
+*방 코드 생성
+**/
 function generateRoomCode(): string {
   return Array.from(
     {length: ROOM_CODE_LENGTH},
@@ -107,7 +108,9 @@ function generateRoomCode(): string {
   ).join("");
 }
 
-/** 구버전 요청은 null로 두고 새 클라이언트의 방 생성 작업 ID를 검증합니다. */
+/** ============================[ Room code check ]===================
+ * 방 생성 요청 id가 문자열이고 허용된 형식인지 검사 후 정리된 문자열 반환.
+*/
 function parseCreateOperationId(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   const operationId = typeof value === "string" ? value.trim() : "";

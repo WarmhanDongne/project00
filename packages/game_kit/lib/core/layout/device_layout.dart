@@ -1,5 +1,9 @@
 import 'package:flutter/widgets.dart';
 
+//==============================================================================
+// screen
+//==============================================================================
+// 현재 기기가 태블릿인지 폰인지 판별
 abstract final class DeviceLayout {
   static const double tabletBreakpoint = 600;
 
