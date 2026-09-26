@@ -480,7 +480,7 @@ class RoomProvider extends GameRoomContext {
     return result ?? false;
   }
 
-  // ======================[ listen ]============================
+  // ======================[ 방 데이터 변화 구독 ]============================
   // 서버에서 발생하는 변화를 RoomProvider 상태와 화면에 반영한다.
   void listenRoom() {
     final listenedRoomCode = roomCode;
