@@ -12,6 +12,7 @@ class RoomCommandExecutor {
 
   Future<RoomCommandOutcome<T>> run<T>(Future<T> Function() command) async {
     try {
+      // run으로 전달 받은 함수를 실행(예: _service.createRoom(...))
       return RoomCommandOutcome.success(await command());
     } on RoomCommandException catch (error) {
       return RoomCommandOutcome.failure(error.message);
@@ -31,6 +32,7 @@ class RoomCommandExecutor {
   }
 }
 
+//===========================[ run으로 전달 받은 함수 실행 결과 담는 객체 ]==========
 class RoomCommandOutcome<T> {
   const RoomCommandOutcome._({this.value, this.errorMessage});
 

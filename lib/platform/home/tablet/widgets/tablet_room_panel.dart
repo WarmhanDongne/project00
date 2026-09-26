@@ -155,7 +155,8 @@ class _EmptyRoom extends StatelessWidget {
           CustomPaint(
             painter: _DashedBorderPainter(color: colors.border, radius: radius),
             child: Container(
-              width: 150,
+              width: 150, // 이런 형태로 사이즈가 비율 처리 되지 않은 요소 검색 후
+              // 비율 처리 필요
               height: 150,
               decoration: BoxDecoration(
                 color: colors.surfaceMuted,
