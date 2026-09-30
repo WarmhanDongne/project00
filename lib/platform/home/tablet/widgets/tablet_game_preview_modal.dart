@@ -529,9 +529,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
                               aspectRatio: 4 / 3,
                               child: _ComponentArtwork(
                                 url: widget.game.componentImageUrl,
-                                fallback:
-                                    templateGame?.buildTabletPreviewArtwork() ??
-                                    const _UnavailablePreviewArtwork(),
+                                fallback: const _UnavailablePreviewArtwork(),
                               ),
                             ),
                           ],
@@ -591,7 +589,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
 /// 게임 구성품 사진입니다(Firestore `componentImageUrl`).
 ///
 /// 서버 그림을 우선 보여 주고, **주소가 비었거나 내려받기가 실패하면**
-/// 게임이 코드로 그리는 미리보기를 그대로 씁니다. 내려받는 동안에도 코드 그림을
+/// 플랫폼의 공통 준비 중 패널을 표시합니다. 내려받는 동안에도 같은 패널을
 /// 띄워 두므로 모달이 빈 칸으로 뜨는 순간이 없습니다.
 ///
 /// 그림은 구성품을 늘어놓은 사진이라 잘리면 안 됩니다. 그래서 칸을 채우지 않고

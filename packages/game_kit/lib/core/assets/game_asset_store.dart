@@ -1,10 +1,18 @@
-import 'dart:io';
+// [game_asset_store.dart] 는 여러 게임이 함께 사용하는 게임 에셋 저장·검증·경로 해석을 담당하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [AssetStore] : 게임 에셋 저장·검증·경로 해석을 담당함
+//
+// 즉, 번들 파일과 내려받은 파일을 안전하게 같은 방식으로 사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/assets/game_asset_cache.dart';
 import 'package:game_kit/core/assets/game_asset_manifest.dart';
 import 'package:game_kit/core/assets/game_asset_source.dart';
+// ============================================================
 
 //=======================게임 에셋 단일 해석 지점==============================
 /// 게임 이미지·사운드가 실제로 어디서 오는지를 한곳에서 결정합니다.

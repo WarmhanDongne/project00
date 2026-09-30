@@ -1,3 +1,10 @@
+// [player_layout_model.dart] 는 여러 게임이 함께 사용하는 태블릿의 플레이어 자리 배치와 편집 규칙을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [PlayerLayout] : 태블릿의 플레이어 자리 배치와 편집 규칙을 관리함
+//
+// 즉, 인원과 기기 크기에 맞춰 자리를 안정적으로 배치하기 위해 필요한 파일이다.
+
 class PlayerLayoutModel {
   const PlayerLayoutModel({required this.players});
 
@@ -37,11 +44,10 @@ class PlayerLayoutModel {
     }
 
     return PlayerLayoutModel(
-      players: List.unmodifiable(
-        List.generate(
+      players: List<PlayerLayoutPlayer>.unmodifiable(
+        Iterable.generate(
           players.length,
           (index) => players[index].copyWith(seatIndex: seatIndexes[index]),
-          growable: false,
         ),
       ),
     );

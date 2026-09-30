@@ -1,0 +1,274 @@
+// 세션 수명·구독 해제·재접속·타이머를 관리하는 내부 구현입니다.
+// 화면 연출 설정은 ../phone_board.dart에서 수정합니다.
+// board와 같은 Dart library의 part로 유지해 private 상태를 외부에 노출하지 않습니다.
+part of '../phone_board.dart';
+
+class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
+  MafiaController? controller;
+  MafiaSessionArgs? sessionArgs;
+  ProviderSubscription<MafiaGameState>? sessionSubscription;
+  String? initializationError;
+  bool hasScheduledManualExit = false;
+  bool _isLeavingRoom = false;
+  bool _isExitModalOpen = false;
+  String? previousStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    // 게임에 들어가면 시스템 UI를 감추고 시안대로 세로로 고정합니다.
+    // 플랫폼 화면으로 돌아갈 때 dispose에서 복원합니다.
+    unawaited(AppSystemUi.enterGameFullscreen());
+    unawaited(AppOrientation.applyPhoneGame(PhoneGameOrientation.portraitOnly));
+    // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행합니다.
+    unawaited(GameAssetStore.instance.prepareGame('mafia').catchError((_) {}));
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      initializationError = GameFlowCopy.authenticationRequired;
+      return;
+    }
+    final args = MafiaSessionArgs(
+      roomCode: widget.roomCode,
+      uid: uid,
+      service: widget.gameService,
+      // 휴대폰만 내 역할·조사 결과를 구독합니다.
+      watchPrivate: true,
+    );
+    sessionArgs = args;
+    final provider = mafiaSessionProvider(args);
+    sessionSubscription = ref.listenManual(provider, (_, _) => _handleState());
+    controller = ref.read(provider.notifier);
+    // 첫 조작이 콜드스타트로 늦지 않게 서버를 미리 깨웁니다.
+    unawaited(controller!.warmUp());
+    // 첫 화면(P1) 이미지와 효과음을 미리 준비합니다. context가 필요한
+    // 작업이라 첫 프레임 뒤로 미룹니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(preloadMafiaAssets(context, isPhone: true));
+    });
+  }
+
+  void _handleState() {
+    final game = controller;
+    if (game == null || !mounted) return;
+    if (previousStatus == 'finished' && !game.isFinished) {
+      hasScheduledManualExit = false;
+    }
+    previousStatus = game.status;
+
+    // 나가야 할 종료 사유를 나열하지 않고 '정상 결과가 아니면 나간다'로 뒤집어
+    // 판단합니다. 사유 목록 방식은 서버에 사유가 하나만 늘어도 휴대폰이 결과
+    // 화면에 갇힙니다.
+    if (game.isFinished && !game.isNaturalResult) {
+      if (_isLeavingRoom || hasScheduledManualExit) return;
+      hasScheduledManualExit = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) exitGameRoute(context);
+      });
+      return;
+    }
+    hasScheduledManualExit = false;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    sessionSubscription?.close();
+    unawaited(AppOrientation.restorePlatform());
+    unawaited(AppSystemUi.showPlatformSystemBars());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = initializationError;
+    if (error != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(error, style: const TextStyle(color: Colors.white)),
+        ),
+      );
+    }
+    final args = sessionArgs;
+    // 다시 그리기는 ref.watch가 맡습니다(세 게임 공통). listenManual은 소리·
+    // 단계 전환 같은 부수효과만 처리합니다.
+    if (args != null) ref.watch(mafiaSessionProvider(args));
+    final game = controller;
+    if (game == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final stage = resolveMafiaPhoneStage(game);
+    final closingMessage = switch (game.finishReason) {
+      'interruptionVoteExpired' => GameFlowCopy.interruptionVoteExpired,
+      'insufficientPlayers' => GameFlowCopy.insufficientPlayers,
+      _ => GameFlowCopy.gameFinished,
+    };
+    final flowConfig = buildMafiaPhoneFlowConfig(
+      closingMessage: closingMessage,
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PhoneGameShell<MafiaPhoneStage>(
+          flowConfig: flowConfig,
+          stage: stage,
+          stageRole: stage.shellRole,
+          roundNumber: game.round,
+          closingMessage: closingMessage,
+          introTextColor: Colors.black,
+          // 연결·종료 단계에서 보이는 바탕입니다. 진행 화면은 각 시안 위젯이
+          // 자기 배경을 그립니다.
+          background: MafiaPhoneBackground(isNight: game.isNight),
+          onIntroCompleted: () {},
+          onRoundIntroCompleted: () {},
+          onConnectingExit: () => unawaited(_leaveRoom()),
+          topBar: MafiaPhoneTopBar(
+            onExitRoom: () => unawaited(_leaveRoom()),
+            onRulesPressed: (origin) => showMafiaRules(context, origin),
+          ),
+          // 확정(2026-08): 승리 그림 2초 → 전원 신분 명단.
+          result: game.isNaturalResult
+              ? MafiaPhoneScreens.result(
+                  winner: game.winnerFaction,
+                  // 중립은 이긴 **역할**로 포스터가 갈립니다(광대/처형자/
+                  // 연쇄살인마/교단).
+                  winnerRoleIds: game.winnerRoleIds,
+                  // 중립은 "중립 승리"로는 무슨 일이 있었는지 알 수 없어
+                  // 역할 이름으로 알려 줍니다(예: `광대 승리`).
+                  winnerLabel: game.winnerLabel,
+                  players: game.orderedPlayers,
+                  revealedRoles: {
+                    for (final player in game.orderedPlayers)
+                      player.uid: game.revealedRoleOf(player.uid),
+                  },
+                  myRole: game.myRole,
+                  myUid: game.uid,
+                )
+              : const SizedBox.shrink(),
+          content: Stack(
+            fit: StackFit.expand,
+            children: [
+              RepaintBoundary(
+                child: MafiaPhoneScreens.playing(
+                  controller: game,
+                  stage: stage,
+                  regions: flowConfig.stepFor(stage).phoneRegions!,
+                ),
+              ),
+              if (game.commandInFlight)
+                const Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        GameInterruptionLayer(
+          interruption: game.interruption,
+          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
+          onVote: () async {
+            await game.voteToContinueInterruption();
+          },
+          onFinishNow: game.finishInterruptedGameNow,
+          onExpired: game.expireInterruption,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _leaveRoom() async {
+    // 확인 모달보다 앞에서 판정합니다. 뒤에서 판정하면 빠른 두 번 탭에 모달이
+    // 두 개 쌓인 뒤 두 번째 확인이 삼켜집니다.
+    if (_isLeavingRoom || _isExitModalOpen) return;
+    _isExitModalOpen = true;
+    final leave = await SharedPhoneExitModal.show(
+      context,
+      doorImage: const _ExitBadge(color: _mafiaExitColor),
+      imageHeight: 150,
+      maxWidth: 320,
+      surfaceColor: Colors.white,
+      titleColor: Colors.black,
+      descriptionColor: Colors.black,
+      primaryColor: _mafiaExitColor,
+    );
+    _isExitModalOpen = false;
+    if (leave != true || !mounted) return;
+    _isLeavingRoom = true;
+    final left = await widget.onExitRoom();
+    if (!mounted) return;
+    if (left) {
+      // 서버 퇴장 성공 뒤에 게임 라우트를 먼저 닫습니다. 방향 복원을 먼저
+      // 기다리면 회전 응답이 지연될 때 화면에 갇힐 수 있습니다.
+      Navigator.of(context).pop(true);
+      return;
+    }
+    _isLeavingRoom = false;
+    showLeaveFailureNotice(context, widget.provider);
+  }
+}
+
+const Color _mafiaExitColor = MafiaColors.ink;
+
+// ---------------------------------------------------------------------------
+// 퇴장 모달 표시
+// ---------------------------------------------------------------------------
+/// 퇴장 모달 위쪽 표시입니다.
+///
+/// 마피아다운 리볼버 그림을 씁니다. 그림을 불러오지 못하면 아이콘으로 대신
+/// 그려, 모달 자체가 비어 보이지 않게 합니다.
+class _ExitBadge extends StatelessWidget {
+  const _ExitBadge({required this.color});
+
+  /// 그림을 불러오지 못했을 때 쓰는 아이콘 색입니다.
+  final Color color;
+
+  /// 퇴장 모달의 리볼버 그림입니다. 파일을 넣으면 자동으로 보입니다.
+  static const String revolverAsset =
+      'packages/game_mafia/assets/games/mafia/images/other/exit_revolver.webp';
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Image.asset(
+        revolverAsset,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stack) => _FallbackBadge(color: color),
+      ),
+    );
+  }
+}
+
+class _FallbackBadge extends StatelessWidget {
+  const _FallbackBadge({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.logout_rounded, size: 42, color: color),
+      ),
+    );
+  }
+}

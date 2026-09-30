@@ -1,8 +1,18 @@
+// [tablet_game_rulebook_dialog.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:game_kit/widgets/tablet_game_modal_frame.dart';
 import 'package:video_player/video_player.dart';
 import 'package:game_kit/game_assets.dart';
+// ============================================================
 
 /// 규칙 문구와 게임별 카드 자산만 주입하는 공용 태블릿 룰북입니다.
 class TabletGameRulebookDialog extends StatelessWidget {
@@ -114,41 +124,61 @@ class _RuleVideo extends StatefulWidget {
 
 class _RuleVideoState extends State<_RuleVideo> {
   VideoPlayerController? _controller;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadVideo();
+    unawaited(_loadVideo());
   }
 
   @override
   void didUpdateWidget(covariant _RuleVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoUrl != widget.videoUrl) _loadVideo();
+    if (oldWidget.videoUrl != widget.videoUrl) {
+      unawaited(_loadVideo());
+    }
   }
 
   Future<void> _loadVideo() async {
-    await _controller?.dispose();
-    _controller = null;
+    final generation = ++_loadGeneration;
     final url = widget.videoUrl?.trim() ?? '';
+    final previousController = _controller;
+    _controller = null;
+    try {
+      await previousController?.dispose();
+    } catch (_) {
+      // 이전 URL의 정리 실패가 새 영상 로드를 막지 않게 합니다.
+    }
+    if (!mounted || generation != _loadGeneration) return;
+
     if (url.isEmpty) {
-      if (mounted) setState(() {});
+      setState(() {});
       return;
     }
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-    _controller = controller;
+
+    VideoPlayerController? controller;
     try {
+      controller = VideoPlayerController.networkUrl(Uri.parse(url));
       await controller.initialize();
+      if (!mounted || generation != _loadGeneration) {
+        await controller.dispose();
+        return;
+      }
+      _controller = controller;
+      setState(() {});
     } catch (_) {
-      await controller.dispose();
-      if (identical(_controller, controller)) _controller = null;
+      await controller?.dispose();
+      if (mounted && generation == _loadGeneration) {
+        setState(() {});
+      }
     }
-    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _loadGeneration += 1;
+    unawaited(_controller?.dispose());
     super.dispose();
   }
 

@@ -1,3 +1,27 @@
+# Mafia 수정 위치
+
+- 게임 등록·기기 연결: `game_mafia.dart`
+- 휴대폰 흐름·문구·시간·화면 생성 함수: `phone/phone_board.dart`
+- 태블릿 흐름·문구·시간·실제 화면 선택: `tablet/tablet_board.dart`
+- 기기별 상세 화면/위젯/연출: `phone/` 또는 `tablet/`의 `screens`, `widgets`, `animations`
+- DTO·서버 읽기 상태: `shared/models/`
+- 단일 세션 구독·명령 상태: `shared/providers/`
+- 서버 명령/조회: `shared/services/`
+- 문구·디자인·소리: `game_copy.dart`, `game_theme.dart`, `game_sounds.dart` (해당 파일이 있는 게임)
+- 세션 수명·타이머·재접속 내부 처리: 기기별 `src/board_state.dart`
+- 자동 생성 에셋: `gen/` — 직접 편집하지 않고 패키지의 생성 절차 사용
+
+board의 `screenWidget` 타입은 코드 탐색용 설명입니다. 실제 위젯 교체는
+board의 화면 생성 함수 또는 단계 switch를 수정합니다. 서버 status와 승패를
+board에서 새로 계산하지 마세요. 문구/연출을 생략해도 서버 완료 명령이 필요한
+단계는 완료 콜백을 보존해야 합니다.
+
+기기 폴더 안에서 기기명을 반복하는 파일은 `phone_board.dart`,
+`tablet_board.dart` 두 진입점만 허용합니다. 새 기기별 Provider/Service가
+필요하기 전에는 공통 세션을 사용하며 빈 코드·중복 구독을 만들지 않습니다.
+
+---
+
 # 마피아 게임 설계 결정 기록
 
 > 화면 디자인은 **사용자가 직접 제작해 전달**합니다. 이 문서는 어떤 화면이
@@ -22,7 +46,7 @@
 ## 게임 시작 전 — 자리 배치 대신 역할 배치 (확정 2026-08-22)
 
 시안 `1149:334`. 다른 게임은 자리 배치 화면을 지나가지만, **마피아는 그 자리에
-역할 배치 화면**을 띄웁니다(`screens/tablet/tablet_role_setup_screen.dart`).
+역할 배치 화면**을 띄웁니다(`screens/tablet/role_setup_screen.dart`).
 자리는 참여 순서대로 자동 배정합니다.
 
 | 규칙 | 값 |
@@ -251,7 +275,7 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 - 신분 카드 에셋은 사용자가 나중에 `assets/`에 추가합니다. 에셋이 없어도
   화면이 깨지지 않게 구현했습니다(카드 뒷면 폴백).
 - ⚠️ **역할은 계속 추가됩니다.** 그래서 역할을 하드코딩하지 않고
-  `models/mafia_role.dart` 카탈로그로 정의했습니다. 아래 확장 규칙을 지키세요.
+  `models/role.dart` 카탈로그로 정의했습니다. 아래 확장 규칙을 지키세요.
 
 ## 역할 시스템 (전체 명세 반영 완료)
 
@@ -260,9 +284,9 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 
 | 파일 | 내용 |
 |---|---|
-| `models/mafia_role.dart` | 모델 + 축(enum) 정의 |
-| `models/mafia_roles.dart` | 역할 34종 전체 카탈로그 |
-| `models/mafia_composition.dart` | 인원별 구성표(4~12) · 게임 모드 · 밤 해결 순서 |
+| `models/role.dart` | 모델 + 축(enum) 정의 |
+| `models/role_catalog.dart` | 역할 34종 전체 카탈로그 |
+| `models/game_composition.dart` | 인원별 구성표(4~12) · 게임 모드 · 밤 해결 순서 |
 
 ### 분기 규칙 — 역할 이름으로 분기하지 마세요
 
@@ -323,7 +347,7 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 
 - 역할 시스템 3파일 (위 참고) + 카탈로그 테스트 17개
 - `widgets/phone/role_reveal_view.dart` — **P1 완성**. 골든 렌더로 시안 대조 검증
-- `models/mafia_player.dart` — 밤 지목·낮 투표가 공유하는 플레이어 모델
+- `models/player.dart` — 밤 지목·낮 투표가 공유하는 플레이어 모델
 - `widgets/phone/player_select_grid.dart` — 3열 선택 그리드
   (**P2~P4 밤 지목 + P7 낮 투표가 공용**)
 - `widgets/phone/night_action_view.dart` — **P2~P5를 하나로 처리하는 밤 화면**
@@ -406,7 +430,7 @@ revealedMessage / flipDuration / initiallyViewed / onRevealed.
 
 ## 미해결 (다음 세션 우선순위)
 
-1. 인원별 역할 배분표 → **완료**. `mafia_composition.dart` 참고
+1. 인원별 역할 배분표 → **완료**. `game_composition.dart` 참고
 2. 의사·경찰 카드 에셋 + P3·P4 디자인의 역할명 색상·설명 문구
 3. `role_citizen.png` 교체 여부 (Figma와 md5 다름, 크기는 동일)
 4. 타이머 길이(밤/토론/투표), 첫날 밤/낮 시작
@@ -448,7 +472,7 @@ Figma 프레임은 `phone-p<번호>`와 `tablet-p<번호>`로 **같은 단계 �
 링크를 받을 때 `p6`라고만 적혀 있으면 휴대폰·태블릿이 섞여 있을 수 있으니,
 프레임 이름(`data-name`)으로 어느 기기인지 확인하고 나서 구현합니다.
 
-## 공용 골격 (`mafia_phone_layout.dart`)
+## 공용 골격 (`game_layout.dart`)
 
 휴대폰 시안 P1~P9가 전부 같은 골격 위에 내용만 바뀝니다.
 
@@ -574,7 +598,7 @@ P2~P5도 이 공용 위젯을 쓰도록 정리했습니다.
   카드가 튀어 보이지 않게 **208로 통일**했습니다.
 - 연출 시간은 취향 문제이므로 `revealDelay` · `flipDuration` 상수로 뽑아 두었습니다.
 
-### 문구 조사 처리 (`mafia_copy.dart`)
+### 문구 조사 처리 (`game_copy.dart`)
 
 신분 공개 문구는 받침에 따라 조사가 갈립니다. 시민**이었**습니다 /
 마피아**였**습니다. 역할이 34개이고 더 늘어나므로 규칙으로 처리했습니다.
@@ -609,12 +633,12 @@ P2~P5도 이 공용 위젯을 쓰도록 정리했습니다.
 2. `MafiaRole.card` — 세로 카드를 시안대로 위쪽 기준 가로 폭 맞춤(이름 잘림)
 3. 둘 다 없으면 P1과 같이 **뒷면 + 역할 이름**
 
-이미지를 받으면 `mafia_roles.dart`에 `squareCard:` 한 줄만 추가하면 됩니다.
+이미지를 받으면 `role_catalog.dart`에 `squareCard:` 한 줄만 추가하면 됩니다.
 화면은 고치지 않습니다. 새 신분도 같은 방식으로 자동 지원됩니다.
 
 ## P9 결과 (휴대폰 완료 — 2026-08-20)
 
-`widgets/phone/result_view.dart` + `mafia_result_art.dart`.
+`widgets/phone/result_view.dart` + `result_art.dart`.
 
 시안 6장의 구성:
 
@@ -631,7 +655,7 @@ P2~P5도 이 공용 위젯을 쓰도록 정리했습니다.
 - 명단은 플레이어별이 아니라 **진영별**입니다. 왼쪽 배너가 승리 진영, 오른쪽이
   패배 진영이고 각 진영 구성원을 자기 배너 옆에 6줄씩 적습니다.
 
-### 진영 → 그림 대응은 `mafia_result_art.dart` 한곳에서
+### 진영 → 그림 대응은 `result_art.dart` 한곳에서
 
 휴대폰·태블릿이 같은 대응을 써야 두 화면의 결과가 어긋나지 않습니다.
 `test/mafia_result_test.dart`가 대응을 확인합니다(마피아가 이겼는데 시민
@@ -643,7 +667,7 @@ P2~P5도 이 공용 위젯을 쓰도록 정리했습니다.
 ### 배경 파일명의 `sitizen`
 
 오타처럼 보이지만 **에셋 파일명 그대로**입니다. 배너는 `citizen`으로 되어 있어
-둘이 다릅니다. 고치려면 파일명·`assets.gen.dart`·`mafia_result_art.dart`를
+둘이 다릅니다. 고치려면 파일명·`assets.gen.dart`·`result_art.dart`를
 함께 바꿔야 합니다.
 
 ## 배너에 투명 채널이 없습니다 (미해결)
@@ -886,7 +910,7 @@ roleReveal → night → morning → day → voting → voteResult → (night | 
 
 시안 없이 확정된 방식입니다.
 
-- 태블릿 배경 위에 **공용 카드 분배 애니메이션**(`shared/animations/card_deal.dart`)
+- 태블릿 배경 위에 **공용 카드 분배 애니메이션**(`tablet/animations/card_deal_animation.dart`)
 - 카드는 **뒷면 그대로** 진행합니다. 태블릿에서 신분이 보이면 안 됩니다
 - 분배가 끝나면 `game_mafia_complete_role_reveal` 호출
 
@@ -930,7 +954,7 @@ _bgm.stop();                               // 화면을 떠날 때(dispose)
 
 ### 받은 파일과 쓰이는 곳
 
-`packages/game_mafia/lib/games/mafia/sound/mafia_sounds.dart`
+`packages/game_mafia/lib/games/mafia/sound/game_sounds.dart`
 
 | 상수 | 파일 | 재생 시점 |
 |---|---|---|
@@ -1149,7 +1173,7 @@ pngquant --force --quality 70-98 256 --output <같은경로> <같은경로>
 oxipng -o 4 <같은경로>
 ```
 
-그다음 `dart run build_runner build` → `mafia_roles.dart`에 `card:` 한 줄입니다.
+그다음 `dart run build_runner build` → `role_catalog.dart`에 `card:` 한 줄입니다.
 
 ### 기본 구성에 들어간 역할 / 구성표 밖 역할
 

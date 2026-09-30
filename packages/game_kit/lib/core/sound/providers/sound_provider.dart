@@ -1,9 +1,17 @@
-import 'dart:async';
+// [sound_provider.dart] 는 여러 게임이 함께 사용하는 앱 공통 효과음과 재생 상태를 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [State] : 앱 공통 효과음과 재생 상태를 관리함
+//
+// 즉, 각 게임이 같은 소리 설정과 재생 규칙을 공유하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/sound/app_sounds.dart';
 import 'package:game_kit/core/sound/service/sound_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ============================================================
 
 /// 앱의 사운드 설정 상태를 관리하는 Provider.
 ///
@@ -41,7 +49,7 @@ class SoundProvider extends ChangeNotifier {
   double _bgmVolume = 30;
 
   bool _initialized = false;
-  bool _initializing = false;
+  Future<void>? _initialization;
 
   // ============================================================
   // Getters
@@ -71,12 +79,14 @@ class SoundProvider extends ChangeNotifier {
 
   /// 저장된 사운드 설정을 불러오고 SoundService를 초기화합니다.
   ///
-  /// 이미 초기화되었거나 초기화 중이라면 다시 실행하지 않습니다.
-  Future<void> initialize() async {
-    if (_initialized || _initializing) return;
+  /// 이미 초기화되었으면 바로 끝내고, 진행 중이면 같은 작업을
+  /// 기다립니다. 플레이어 초기화가 실패하면 다음 호출이 재시도합니다.
+  Future<void> initialize() {
+    if (_initialized) return Future.value();
+    return _initialization ??= _initialize();
+  }
 
-    _initializing = true;
-
+  Future<void> _initialize() async {
     try {
       await _loadSavedVolumes();
     } catch (error, stackTrace) {
@@ -89,14 +99,13 @@ class SoundProvider extends ChangeNotifier {
       await _applyVolumes();
       // 첫 재생이 늦지 않도록 공용 효과음을 미리 풀어 둡니다.
       await _service.preloadEffects(AppSounds.preloadTargets);
+      _initialized = true;
     } catch (error, stackTrace) {
       // 사운드 초기화 실패가 앱 화면 렌더링까지 막지 않도록 처리합니다.
       debugPrint('사운드 플레이어를 초기화하지 못했습니다: $error');
       debugPrintStack(stackTrace: stackTrace);
     } finally {
-      _initializing = false;
-      _initialized = true;
-
+      _initialization = null;
       notifyListeners();
     }
   }

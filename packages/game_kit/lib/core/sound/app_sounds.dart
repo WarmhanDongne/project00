@@ -1,3 +1,10 @@
+// [app_sounds.dart] 는 여러 게임이 함께 사용하는 앱 공통 효과음과 재생 상태를 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Sound] : 앱 공통 효과음과 재생 상태를 관리함
+//
+// 즉, 각 게임이 같은 소리 설정과 재생 규칙을 공유하기 위해 필요한 파일이다.
+
 /// 여러 게임이 함께 쓰는 공용 효과음 경로입니다.
 ///
 /// 게임 전용 사운드는 `lib/games/<game>/sound/`에 따로 둡니다. 여기에는
@@ -9,8 +16,7 @@ abstract final class AppSounds {
   /// 재생은 각 게임의 `sound/<game>_sounds.dart`가 이 값을 참조해
   /// `GameBackgroundMusic.start`에 넘깁니다. 어떤 게임에 전용 곡이 생기면
   /// **그 게임의 상수만** 새 파일로 바꾸면 됩니다.
-  static const background =
-      'packages/game_kit/assets/sounds/background.m4a';
+  static const background = 'packages/game_kit/assets/sounds/background.m4a';
 
   /// 카드가 한 장씩 날아갈 때마다 재생하는 짧은 효과음입니다.
   static const dealing = 'packages/game_kit/assets/sounds/dealing.mp3';

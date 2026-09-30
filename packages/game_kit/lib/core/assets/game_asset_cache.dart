@@ -1,8 +1,16 @@
-import 'dart:io';
+// [game_asset_cache.dart] 는 여러 게임이 함께 사용하는 게임 에셋 저장·검증·경로 해석을 담당하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [AssetCache] : 게임 에셋 저장·검증·경로 해석을 담당함
+//
+// 즉, 번들 파일과 내려받은 파일을 안전하게 같은 방식으로 사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:game_kit/core/assets/game_asset_manifest.dart';
 import 'package:game_kit/core/assets/game_asset_source.dart';
+// ============================================================
 
 /// 검증된 게임 파일만 버전 디렉터리에 설치하는 런타임 캐시입니다.
 class GameAssetCache {
@@ -153,7 +161,9 @@ class GameAssetCache {
     if (!await file.exists() || await file.length() != expected.bytes) {
       return false;
     }
-    final digest = sha256.convert(await file.readAsBytes()).toString();
+    // 큰 에셋을 한 번에 메모리로 올리지 않고 파일 스트림을 바로
+    // SHA-256에 전달합니다. 검증 결과는 기존과 같고 최대 메모리만 줄어듭니다.
+    final digest = (await sha256.bind(file.openRead()).first).toString();
     return digest == expected.sha256;
   }
 

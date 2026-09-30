@@ -1,8 +1,16 @@
-import 'dart:async';
+// [sound_effects.dart] 는 여러 게임이 함께 사용하는 앱 공통 효과음과 재생 상태를 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Sound] : 앱 공통 효과음과 재생 상태를 관리함
+//
+// 즉, 각 게임이 같은 소리 설정과 재생 규칙을 공유하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/sound/providers/sound_provider.dart';
 import 'package:provider/provider.dart';
+// ============================================================
 
 /// 위젯에서 효과음을 안전하게 재생합니다.
 ///

@@ -1,2 +1,146 @@
-/// Bundled Mafia package boundary.
-library;
+// game_mafia.dart: 게임 등록 정보와 두 기기의 board를 연결합니다.
+//
+// - [Package] : 마피아
+// - [GameEntry] : 게임 패키지를 플랫폼에 연결하는 진입 계약을 구현함
+//
+// 즉, 플랫폼이 게임 목록·화면·서비스를 동일한 방식으로 실행하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
+import 'package:flutter/widgets.dart';
+import 'package:game_mafia/game_assets.dart';
+import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/widgets/critical_network_guard.dart';
+import 'package:game_mafia/phone/phone_board.dart';
+import 'package:game_mafia/tablet/screens/role_setup_screen.dart';
+import 'package:game_mafia/tablet/tablet_board.dart';
+import 'package:game_mafia/shared/services/game_service.dart';
+import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/template_game.dart';
+import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_kit/models/game_room_context.dart';
+import 'package:game_mafia/game_theme.dart';
+// ============================================================
+
+/// 마피아를 플랫폼(방 생성·대기·미리보기·퇴장)에 연결합니다.
+///
+/// `game_registry.dart`에 인스턴스를 넣으면 플랫폼 화면은 수정 없이 이 게임을
+/// 인식합니다.
+class MafiaGame extends TemplateGame {
+  const MafiaGame();
+
+  @override
+  String get id => 'mafia';
+
+  @override
+  String get title => '마피아';
+
+  // 고정 인원이 아닙니다. 4~12인이며 실제 시작 가능 여부는 서버가 구성표로
+  // 확인합니다(`mafiaCompositionFor`).
+  @override
+  int? get fixedPlayerCount => null;
+
+  @override
+  String get leaveFunctionName => 'game_mafia_leave_game';
+
+  /// 시안이 402 × 874 세로 화면입니다.
+  @override
+  PhoneGameOrientation get phoneOrientation =>
+      PhoneGameOrientation.portraitOnly;
+
+  /// 낮 배경의 종이 바탕색입니다.
+  @override
+  Color get tableColor => MafiaColors.daySurface;
+
+  @override
+  ImageProvider get tableBackgroundImage =>
+      Assets.games.mafia.images.background.backgroundMorning.game.provider();
+
+  @override
+  Future<void> startGame(String roomCode, {Map<String, Object?>? options}) {
+    // 역할 배치 화면이 고른 구성입니다. 없으면 서버가 추천 표를 씁니다.
+    final composition = options?['composition'];
+    return MafiaService().command.startGame(
+      roomCode: roomCode,
+      composition: composition is Map<String, int> ? composition : null,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 자리 배치 대신 역할 배치
+  // ---------------------------------------------------------------------------
+  /// 확정(2026-08): 마피아는 자리보다 **이번 판의 신분 구성**이 판을 좌우해서,
+  /// 시작 전에 자리 배치 대신 역할 배치를 합니다(시안 `1149:334`).
+  ///
+  /// 자리는 참여 순서대로 이미 배정돼 있는 [layout]을 그대로 씁니다.
+  @override
+  Widget? buildStartSetupScreen({
+    required PlayerLayoutModel layout,
+    required Future<bool> Function(
+      PlayerLayoutModel layout, {
+      Map<String, Object?>? options,
+    })
+    onPrepare,
+    required void Function(PlayerLayoutModel layout) onComplete,
+    required Future<bool> Function() onCancel,
+  }) {
+    return MafiaRoleSetupScreen(
+      playerCount: layout.playerCount,
+      onCancel: onCancel,
+      onConfirm: (composition) async {
+        final started = await onPrepare(
+          layout,
+          options: {'composition': composition},
+        );
+        if (!started) return false;
+        onComplete(layout);
+        return true;
+      },
+    );
+  }
+
+  @override
+  Stream<String?> watchStatus(String roomCode) => MafiaService().query
+      .watchStatus(roomCode)
+      .map((event) => event.snapshot.value as String?);
+
+  @override
+  Widget buildPhoneScreen({
+    required String roomCode,
+    required GameRoomContext provider,
+    required Future<bool> Function() onExitRoom,
+  }) {
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        onExit: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        child: MafiaPhoneGame(
+          roomCode: roomCode,
+          provider: provider,
+          gameService: MafiaService(),
+          onExitRoom: onExitRoom,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget buildTabletScreen({
+    required PlayerLayoutModel playerLayout,
+    required GameRoomContext provider,
+    required String roomCode,
+  }) {
+    return Builder(
+      builder: (context) => CriticalNetworkGuard(
+        provider: provider,
+        exitLabel: '대기실로',
+        onExit: () => Navigator.of(context).maybePop(),
+        child: MafiaTabletGame(
+          roomCode: roomCode,
+          gameService: MafiaService(),
+          playerLayout: playerLayout,
+          provider: provider,
+        ),
+      ),
+    );
+  }
+}

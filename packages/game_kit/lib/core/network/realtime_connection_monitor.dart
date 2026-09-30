@@ -1,9 +1,17 @@
+// [realtime_connection_monitor.dart] 는 여러 게임이 함께 사용하는 네트워크 연결 상태와 재연결 흐름을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Network] : 네트워크 연결 상태와 재연결 흐름을 관리함
+//
+// 즉, 통신이 끊겨도 연결 문제를 안내하고 안전하게 복구하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'dart:async';
 import 'dart:collection';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
+// ============================================================
 
 /// 앱 전체에서 RTDB `.info/connected`를 한 번만 구독하는 연결 상태 소스입니다.
 ///

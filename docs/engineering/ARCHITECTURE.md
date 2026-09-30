@@ -72,7 +72,7 @@ Mosigame 정식 앱 바이너리
 - 새 게임은 [`TemplateGame`](../../packages/game_kit/lib/template_game.dart)을 구현하고
   [`GameRegistry`](../../lib/games/game_registry.dart)에만 등록한다. 플랫폼 화면에 게임
   ID별 분기를 추가하지 않는다.
-- 구현 전 [`게임 스켈레톤`](../../packages/game_template/lib/example_game.dart),
+- 구현 전 [`게임 스켈레톤`](../../packages/game_template/lib/game_template.dart),
   [`패키지·다운로드 기준`](PACKAGE_MIGRATION.md)과 가장 가까운
   기존 게임을 확인한다.
 - 쓰기는 `<game>_command_service.dart`에서 callable Function으로 요청하고, 읽기는
@@ -87,6 +87,15 @@ Mosigame 정식 앱 바이너리
 - 공유 상단바, 사이드바, 결과, 퇴장 UI와 애니메이션은
   `packages/game_kit/lib/widgets/`, `game_flow/`, `player_layouts/`를 먼저
   확인한다.
+
+## 게임 패키지 안에서 수정할 위치
+
+2026-09-17 기기별 board 구조: `game_<id>.dart`는 등록과 화면 연결을 담당하고,
+`phone/phone_board.dart`, `tablet/tablet_board.dart`에 기기별 흐름과 연출 설정을 둡니다.
+상세 화면·위젯·애니메이션은 각 기기 폴더, DTO·세션·서버 통신은 `shared/`입니다.
+각 board의 private State는 `src/board_state.dart` part로 분리해 구독·타이머·재접속의
+수명을 유지합니다. 새 게임은 `game_template`의 같은 구조를 따릅니다.
+이름과 역할의 상세 규칙은 [game_kit 채택 규칙](GAME_KIT_ADOPTION.md#2-1-기기별-조율판)을 봅니다.
 
 ## Data and compatibility boundaries
 

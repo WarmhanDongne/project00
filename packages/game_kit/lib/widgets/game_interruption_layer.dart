@@ -1,10 +1,18 @@
-import 'dart:async';
+// [game_interruption_layer.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/game_flow/game_interruption.dart';
+// ============================================================
 
 enum GameInterruptionPresentation { player, tabletController }
 

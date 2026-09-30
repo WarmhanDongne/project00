@@ -81,8 +81,7 @@ class GameInfo implements GameRoomMetadata {
   ///
   /// Storage에 올린 그림의 내려받기 URL을 Firestore `componentImageUrl`에 적어
   /// 두면 앱 업데이트 없이 그림을 바꿀 수 있습니다. 비어 있거나 내려받기가
-  /// 실패하면 게임이 코드로 그리는 미리보기(`buildTabletPreviewArtwork`)를
-  /// 그대로 씁니다 — 오프라인에서도 모달이 비지 않습니다.
+  /// 실패하면 플랫폼의 공통 준비 중 패널을 표시합니다.
   final String componentImageUrl;
 
   final bool enabled;

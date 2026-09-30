@@ -1,3 +1,10 @@
+// [app_constants.dart] 는 여러 게임이 함께 사용하는 앱 전체에서 반복 사용하는 고정값과 기준을 모아두는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Constant] : 앱 전체에서 반복 사용하는 고정값과 기준을 관리
+//
+// 즉, 같은 값을 여러 위치에서 다르게 정의하는 문제를 방지하기 위해 필요한 파일이다.
+
 abstract final class AppConstants {
   static const appName = '모시겜';
   static const supportEmail = 'warmhandongne@gmail.com';

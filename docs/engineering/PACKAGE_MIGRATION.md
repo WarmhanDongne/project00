@@ -77,7 +77,7 @@ game_kit     ──▶  (내부 패키지 없음) Flutter·Firebase 등 외부 �
 
 ## 2. 새 게임의 진입점과 의존 방향
 
-[`game_template`](../../packages/game_template/lib/example_game.dart)을 복사해
+[`game_template`](../../packages/game_template/lib/game_template.dart)을 복사해
 `packages/game_<신작>/`을 만들고 package 이름·import·게임 식별자를 맞춘다.
 루트 workspace와 앱 의존성에 등록하고
 [`GameRegistry`](../../lib/games/game_registry.dart)에 게임을 추가한다.

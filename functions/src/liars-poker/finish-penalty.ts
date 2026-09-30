@@ -5,6 +5,7 @@ import {randomInt} from "node:crypto";
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {runPrimedTransaction} from "../room/room-transaction.js";
 import {processedResult, recordCommand} from "./common/commands.js";
 import {findNextAlivePlayer} from "./common/next-turn.js";
 import {RealtimeRoom} from "./common/types.js";
@@ -46,8 +47,7 @@ export const game_liars_poker_prepare_penalty = onCall<PreparePenaltyData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((rawRoom) => {
-      if (rawRoom === null) return rawRoom;
+    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       assertController(room, uid, request.data?.controllerSessionId);
@@ -109,11 +109,7 @@ export const game_liars_poker_resolve_penalty = onCall<ResolvePenaltyData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((rawRoom) => {
-      // 원격 데이터가 있어도 트랜잭션 첫 호출에는 null이 올 수 있습니다.
-      // null을 그대로 반환하면 서버 값과 동기화된 뒤 다시 호출됩니다.
-      if (rawRoom === null) return rawRoom;
-
+    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       assertController(room, uid, request.data?.controllerSessionId);

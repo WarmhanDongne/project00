@@ -10,6 +10,7 @@
 - [`Architecture Reference`](engineering/ARCHITECTURE.md)
 - [`Package Migration`](engineering/PACKAGE_MIGRATION.md) — 게임별 패키지 분리와 게임 다운로드 계획
 - [`Cloud Functions`](engineering/CLOUD_FUNCTIONS.md) — 배포된 함수 69개 전수 정리
+- [`game_kit 채택 규칙`](engineering/GAME_KIT_ADOPTION.md) — 새 게임이 무엇을 반드시 쓰고 무엇이 선택인지
 - [`Project CLI`](engineering/PROJECT_CLI.md)
 
 ## Development

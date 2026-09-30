@@ -1,12 +1,20 @@
+// [player_layout_editor.dart] 는 여러 게임이 함께 사용하는 태블릿의 플레이어 자리 배치와 편집 규칙을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [PlayerLayout] : 태블릿의 플레이어 자리 배치와 편집 규칙을 관리함
+//
+// 즉, 인원과 기기 크기에 맞춰 자리를 안정적으로 배치하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'dart:async';
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/player_layouts/player_slot_positions.dart';
 import 'package:game_kit/widgets/game_setup_back_button.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+// ============================================================
 
 typedef PlayerLayoutPrepared =
     Future<bool> Function(PlayerLayoutModel playerLayout);
@@ -166,6 +174,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   final Map<int, Offset> _draggingPositions = {};
   late final AnimationController _entranceController;
   late final AnimationController _zoomController;
+  late final Listenable _transitionAnimation;
 
   int? _draggingPlayerIndex;
   int? _hoveredSlotIndex;
@@ -188,6 +197,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       vsync: this,
       duration: const Duration(milliseconds: 650),
     );
+    _transitionAnimation = Listenable.merge([
+      _entranceController,
+      _zoomController,
+    ]);
   }
 
   @override
@@ -419,8 +432,12 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     final startCenter = _slotCenterPixel(slotIndex, boardSize, cardSize);
     final boardCenter = Offset(boardSize.width / 2, boardSize.height / 2);
     var direction = startCenter - boardCenter;
-    if (direction.distance < 1) direction = const Offset(0, -1);
-    final unit = direction / direction.distance;
+    var distance = direction.distance;
+    if (distance < 1) {
+      direction = const Offset(0, -1);
+      distance = 1;
+    }
+    final unit = direction / distance;
     return startCenter + unit * boardSize.longestSide;
   }
 
@@ -515,19 +532,17 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                       boardSize: boardSize,
                       cardSize: metrics.size,
                     );
+                    final maximumZoomScale = _maxZoomScale(boardSize);
+                    final chairSize = _chairSizeFor(boardSize);
 
                     return AnimatedBuilder(
-                      animation: Listenable.merge([
-                        _entranceController,
-                        _zoomController,
-                      ]),
+                      animation: _transitionAnimation,
                       builder: (context, _) {
                         final t = _entranceController.value;
                         final zoomT = Curves.easeInCubic.transform(
                           _zoomController.value,
                         );
-                        final zoomScale =
-                            1 + (_maxZoomScale(boardSize) - 1) * zoomT;
+                        final zoomScale = 1 + (maximumZoomScale - 1) * zoomT;
                         return Transform.scale(
                           scale: zoomScale,
                           child: Stack(
@@ -559,6 +574,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                                   seatIndex: seatIndex,
                                   boardSize: boardSize,
                                   cardSize: metrics.size,
+                                  chairSize: chairSize,
                                   t: t,
                                 ),
                               if (!_isCompleting)
@@ -767,6 +783,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     required int seatIndex,
     required Size boardSize,
     required Size cardSize,
+    required double chairSize,
     required double t,
   }) {
     final chairT = chairEntranceProgress(
@@ -780,8 +797,6 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       seatCenter,
       chairT,
     )!;
-    final chairSize = _chairSizeFor(boardSize);
-
     final chairImage = widget.chairImage;
     if (chairImage == null) {
       return Positioned(

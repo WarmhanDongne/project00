@@ -2,6 +2,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {beginGameInterruption} from "../game-interruption/state.js";
+import {runPrimedTransaction} from "../room/room-transaction.js";
 import {RealtimeRoom} from "./common/types.js";
 import {
   assertRoomExists,
@@ -22,8 +23,7 @@ export const game_liars_poker_leave_game = onCall<LeaveGameData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((rawRoom) => {
-      if (rawRoom === null) return rawRoom;
+    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       const game = requireGame(room, {allowInterruption: true});

@@ -1,6 +1,14 @@
-import 'dart:math' as math;
+// [phone_ripple_dialog.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+// ============================================================
 
 /// 상단 아이콘을 원점으로 모달을 원형으로 펼치고 다시 접는 공용 전환입니다.
 Future<T?> showPhoneRippleDialog<T>({
@@ -78,12 +86,12 @@ class _RippleDialogTransition extends StatelessWidget {
   }
 
   double _farthestCornerDistance(Size size, Offset center) {
-    return <Offset>[
-      Offset.zero,
-      Offset(size.width, 0),
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-    ].map((corner) => (corner - center).distance).reduce(math.max);
+    final farthestX = math.max(center.dx.abs(), (size.width - center.dx).abs());
+    final farthestY = math.max(
+      center.dy.abs(),
+      (size.height - center.dy).abs(),
+    );
+    return math.sqrt(farthestX * farthestX + farthestY * farthestY);
   }
 }
 

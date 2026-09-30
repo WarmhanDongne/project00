@@ -1,11 +1,19 @@
-import 'dart:async';
+// [tablet_game_settings_dialog.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/sound/providers/sound_provider.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/widgets/tablet_game_modal_frame.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:provider/provider.dart';
+// ============================================================
 
 /// 모든 태블릿 게임이 재사용하는 반응형 설정 화면입니다.
 class TabletGameSettingsDialog extends StatelessWidget {
@@ -248,19 +256,19 @@ class _SoundSettings extends StatelessWidget {
             title: '전체',
             icon: Icons.volume_up_rounded,
             value: sound.masterVolume,
-            onChanged: context.read<SoundProvider>().setMasterVolume,
+            onChanged: sound.setMasterVolume,
           ),
           _SoundSlider(
             title: '효과',
             icon: Icons.graphic_eq,
             value: sound.effectVolume,
-            onChanged: context.read<SoundProvider>().setEffectVolume,
+            onChanged: sound.setEffectVolume,
           ),
           _SoundSlider(
             title: '배경',
             icon: Icons.music_note,
             value: sound.bgmVolume,
-            onChanged: context.read<SoundProvider>().setBgmVolume,
+            onChanged: sound.setBgmVolume,
           ),
         ],
       ),
@@ -341,7 +349,7 @@ class _SettingsActions extends StatelessWidget {
               ? null
               : () => _closeAndRun(context, onRestartGame),
         ),
-        Spacer(),
+        const Spacer(),
         TabletGameDialogButton(
           text: '게임 종료',
           color: Colors.red,
@@ -349,7 +357,7 @@ class _SettingsActions extends StatelessWidget {
               ? null
               : () => _closeAndRun(context, onEndGame),
         ),
-        Spacer(),
+        const Spacer(),
         TabletGameDialogButton(
           text: '닫기',
           color: Colors.black,
