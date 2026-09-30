@@ -1,10 +1,18 @@
-import 'dart:async';
+// [countdown_tick_cue.dart] 는 여러 게임이 함께 사용하는 게임 진행 단계에 맞는 음악과 효과음을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Sound] : 게임 진행 단계에 맞는 음악과 효과음을 관리함
+//
+// 즉, 서버 진행 상태와 소리 재생 시점을 맞추기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/sound/app_sounds.dart';
 import 'package:game_kit/core/sound/providers/sound_provider.dart';
 import 'package:game_kit/core/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+// ============================================================
 
 /// 마감 직전 [leadTime] 동안 초읽기 소리를 냅니다.
 ///

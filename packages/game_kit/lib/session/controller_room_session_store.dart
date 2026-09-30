@@ -1,4 +1,13 @@
+// [controller_room_session_store.dart] 는 여러 게임이 함께 사용하는 방 세션 컨트롤러의 생성과 수명 주기를 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Session] : 방 세션 컨트롤러의 생성과 수명 주기를 관리함
+//
+// 즉, 게임이 방 연결 상태를 안전하게 공유하고 정리하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:shared_preferences/shared_preferences.dart';
+// ============================================================
 
 /// 태블릿 controller의 현재 방 세션을 앱 재실행 뒤에도 복구합니다.
 ///
@@ -71,7 +80,10 @@ Map<String, dynamic> controllerCommandData(
 ]) {
   final code = roomCode.trim().toUpperCase();
   final sessionId = ControllerRoomSessionStore.instance.sessionIdForRoom(code);
-  final data = <String, dynamic>{'roomCode': code, ...values};
+  // 호출자가 예전 payload를 그대로 넘겨도 정규화된 방 코드가 항상
+  // 최종값이 됩니다. values의 roomCode가 다시 덮어쓰면 세션 조회와
+  // callable payload가 서로 다른 방을 가리키게 됩니다.
+  final data = <String, dynamic>{...values, 'roomCode': code};
   if (sessionId != null) data['controllerSessionId'] = sessionId;
   return data;
 }

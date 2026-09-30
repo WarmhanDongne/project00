@@ -1,5 +1,14 @@
+// [shorebird_patch_screen.dart] 는 여러 게임이 함께 사용하는 Shorebird 패치 확인과 진입 차단 흐름을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Patch] : Shorebird 패치 확인과 진입 차단 흐름을 관리함
+//
+// 즉, 앱 시작 전에 필요한 코드 업데이트를 안전하게 적용하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/widgets/game_reconnect_screen.dart';
+// ============================================================
 
 //=======================Shorebird 패치 화면==============================
 /// Shorebird 패치를 받아 적용하는 동안 보여 주는 화면입니다.

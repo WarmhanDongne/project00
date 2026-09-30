@@ -1,6 +1,15 @@
+// [leave_failure_notice.dart] 는 여러 게임이 함께 사용하는 게임의 공통 단계·안내·종료 흐름을 정의하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [GameFlow] : 게임의 공통 단계·안내·종료 흐름을 정의함
+//
+// 즉, 각 게임이 같은 화면 전환 규칙과 예외 처리를 공유하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/models/game_room_context.dart';
+// ============================================================
 
 /// 게임 중 퇴장 실패 안내를 표시합니다.
 ///

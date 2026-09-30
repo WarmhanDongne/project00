@@ -180,6 +180,57 @@ def delivery_role_violations(
     return downloadable_game_packages, violations
 
 
+def file_naming_violations(
+    root: pathlib.Path,
+    package_dirs: dict[str, pathlib.Path],
+) -> list[tuple[str, str, str, str]]:
+    """패키지·기기 폴더가 제공하는 문맥을 파일명이 반복하는지 검사합니다.
+
+    game_final_call 안의 final_call_controller.dart처럼 패키지명을 되풀이하거나,
+    screens/phone/phone_game_screen.dart처럼 기기 폴더 안에서 기기명을 다시 쓰면
+    같은 역할의 파일도 게임마다 이름이 달라집니다. 공개 package 진입점과 생성
+    파일은 이 규칙의 대상이 아닙니다.
+    """
+    violations: list[tuple[str, str, str, str]] = []
+    device_tokens = {"phone", "tablet", "shared"}
+
+    for package, directory in sorted(package_dirs.items()):
+        lib_dir = directory / "lib"
+        if not lib_dir.is_dir():
+            continue
+
+        game_id = package.removeprefix("game_")
+        game_prefix = f"{game_id}_"
+
+        for file in sorted(lib_dir.rglob("*.dart")):
+            relative_to_lib = file.relative_to(lib_dir)
+            relative = file.relative_to(root).as_posix()
+            if relative_to_lib.parts[:1] == ("gen",):
+                continue
+
+            stem = file.stem
+            if package != "game_kit" and stem.startswith(game_prefix):
+                violations.append(
+                    (package, "repeated-package-name", relative, game_prefix)
+                )
+
+            parent_devices = device_tokens.intersection(relative_to_lib.parts[:-1])
+            repeated_devices = {
+                device
+                for device in parent_devices
+                if re.search(rf"(?:^|_){device}(?:_|$)", stem)
+            }
+            for device in sorted(repeated_devices):
+                # 편집기 탭에서 두 기기의 조율판을 구분하는 공식 진입점입니다.
+                if relative_to_lib.as_posix() == f"{device}/{device}_board.dart":
+                    continue
+                violations.append(
+                    (package, "repeated-device-name", relative, device)
+                )
+
+    return violations
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--detail", action="store_true", help="위반 파일 경로까지 출력")
@@ -206,6 +257,7 @@ def main() -> int:
         root,
         package_dirs,
     )
+    violations.extend(file_naming_violations(root, package_dirs))
 
     sources = [("app", root / "lib")]
     sources.extend((name, directory / "lib") for name, directory in package_dirs.items())

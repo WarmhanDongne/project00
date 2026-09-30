@@ -8,11 +8,25 @@ import unittest
 from check_package_boundaries import (
     declares_flutter_assets,
     delivery_role_violations,
+    file_naming_violations,
     is_game_implementation_package,
 )
 
 
 class PackageDeliveryBoundaryTest(unittest.TestCase):
+    def test_device_board_exception_does_not_allow_other_repeated_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            game = root / "packages" / "game_sample"
+            for relative in ("phone/phone_board.dart", "tablet/tablet_board.dart",
+                             "phone/widgets/phone_card.dart", "phone/widgets/phone_board.dart"):
+                file = game / "lib" / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text("// fixture\n", encoding="utf-8")
+            violations = file_naming_violations(root, {"game_sample": game})
+            self.assertEqual(len(violations), 2)
+            self.assertTrue(all("/widgets/" in item[2] for item in violations))
+
     def test_fixed_game_support_packages_are_not_game_implementations(self) -> None:
         self.assertFalse(is_game_implementation_package("game_contract"))
         self.assertFalse(is_game_implementation_package("game_kit"))
@@ -90,6 +104,67 @@ class PackageDeliveryBoundaryTest(unittest.TestCase):
                 "package-app-entrypoint",
                 {kind for _, kind, _, _ in violations},
             )
+
+    def test_rejects_repeated_package_and_device_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            package_dir = root / "packages" / "game_final_call"
+            phone_dir = package_dir / "lib" / "screens" / "phone"
+            phone_dir.mkdir(parents=True)
+            (package_dir / "pubspec.yaml").write_text(
+                "name: game_final_call\n",
+                encoding="utf-8",
+            )
+            (package_dir / "lib" / "final_call_controller.dart").write_text(
+                "// repeated package name\n",
+                encoding="utf-8",
+            )
+            (phone_dir / "phone_game_screen.dart").write_text(
+                "// repeated device name\n",
+                encoding="utf-8",
+            )
+            (phone_dir / "game_screen.dart").write_text(
+                "// valid\n",
+                encoding="utf-8",
+            )
+            generated_dir = package_dir / "lib" / "gen"
+            generated_dir.mkdir()
+            (generated_dir / "final_call_assets.gen.dart").write_text(
+                "// generated exception\n",
+                encoding="utf-8",
+            )
+
+            violations = file_naming_violations(
+                root,
+                {"game_final_call": package_dir},
+            )
+
+            self.assertEqual(
+                {kind for _, kind, _, _ in violations},
+                {"repeated-package-name", "repeated-device-name"},
+            )
+
+    def test_allows_device_name_without_a_device_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            package_dir = root / "packages" / "game_final_call"
+            screens_dir = package_dir / "lib" / "screens"
+            screens_dir.mkdir(parents=True)
+            (package_dir / "pubspec.yaml").write_text(
+                "name: game_final_call\n",
+                encoding="utf-8",
+            )
+            (screens_dir / "phone_game.dart").write_text(
+                "// phone and tablet files share this directory\n",
+                encoding="utf-8",
+            )
+
+            violations = file_naming_violations(
+                root,
+                {"game_final_call": package_dir},
+            )
+
+            self.assertEqual(violations, [])
 
 
 if __name__ == "__main__":

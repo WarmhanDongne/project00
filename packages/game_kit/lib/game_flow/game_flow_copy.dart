@@ -1,3 +1,10 @@
+// [game_flow_copy.dart] 는 여러 게임이 함께 사용하는 게임의 공통 단계·안내·종료 흐름을 정의하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Copy] : 게임의 공통 단계·안내·종료 흐름을 정의함
+//
+// 즉, 각 게임이 같은 화면 전환 규칙과 예외 처리를 공유하기 위해 필요한 파일이다.
+
 /// 여러 게임에서 같은 의미로 사용하는 기본 화면 문구입니다.
 abstract final class GameFlowCopy {
   static const gameStart = 'GAME START';

@@ -1,6 +1,14 @@
-import 'dart:math' as math;
+// [tablet_game_modal_frame.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+// ============================================================
 
 /// 모든 태블릿에서 13:9 기준 디자인 비율을 유지하는 게임 모달 프레임입니다.
 class TabletGameModalFrame extends StatelessWidget {

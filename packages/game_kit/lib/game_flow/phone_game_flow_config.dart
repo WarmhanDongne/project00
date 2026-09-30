@@ -1,7 +1,16 @@
+// [phone_game_flow_config.dart] 는 여러 게임이 함께 사용하는 게임의 공통 단계·안내·종료 흐름을 정의하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [FlowConfig] : 게임의 공통 단계·안내·종료 흐름을 정의함
+//
+// 즉, 각 게임이 같은 화면 전환 규칙과 예외 처리를 공유하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/game_flow/game_screen_phase.dart';
+// ============================================================
 
 /// 공용 휴대폰 게임 흐름의 클라이언트 연출 시간입니다.
 ///
@@ -41,6 +50,7 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
       GameScreenPhase.connecting: const GameFlowStep<GameScreenPhase>(
         stage: GameScreenPhase.connecting,
         showScreen: false,
+        phoneRegions: PhoneGameRegions(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),
 
@@ -59,7 +69,7 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
       // - GameFlowCopy.gameStart의 "GAME START"를 1.7초 표시
       //
       // 애니메이션:
-      // - animation.enabled로 PhoneGameStartAnimation ON/OFF
+      // - animation.enabled로 GameStartAnimation ON/OFF
       // - animation.duration과 announcementDuration은 같은 1.7초로 유지
       // - 시간을 늘리면 GAME START가 사라지고 게임 화면이 열리는 시점이 늦어짐
       //
@@ -75,11 +85,12 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
         announcement: GameFlowCopy.gameStart,
         announcementDuration: PhoneGameFlowTiming.gameStartAnnouncement,
         animation: GameFlowAnimationConfig(
-          name: 'PhoneGameStartAnimation',
+          name: 'GameStartAnimation',
           duration: PhoneGameFlowTiming.gameStartAnnouncement,
         ),
         blocksInteraction: true,
         showScrim: false,
+        phoneRegions: PhoneGameRegions(),
         advancePolicy: GameFlowAdvancePolicy.clientPresentation,
       ),
 
@@ -115,6 +126,7 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
         ),
         blocksInteraction: true,
         showScrim: false,
+        phoneRegions: const PhoneGameRegions(),
         advancePolicy: GameFlowAdvancePolicy.clientPresentation,
       ),
 
@@ -135,6 +147,12 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
       GameScreenPhase.playing: const GameFlowStep<GameScreenPhase>(
         stage: GameScreenPhase.playing,
         showScreen: true,
+        phoneRegions: PhoneGameRegions(
+          showTopBar: true,
+          showHand: true,
+          showTimer: true,
+          showActions: true,
+        ),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),
 
@@ -155,6 +173,7 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
       GameScreenPhase.result: const GameFlowStep<GameScreenPhase>(
         stage: GameScreenPhase.result,
         showScreen: true,
+        phoneRegions: PhoneGameRegions(showTopBar: true),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),
 
@@ -182,6 +201,7 @@ GameFlowConfig<GameScreenPhase> buildPhoneGameFlowConfig({
         animation: const GameFlowAnimationConfig.disabled(),
         blocksInteraction: true,
         showScrim: true,
+        phoneRegions: const PhoneGameRegions(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),
     },

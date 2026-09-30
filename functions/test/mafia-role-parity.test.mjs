@@ -20,13 +20,13 @@ import {
 // =========================================================================
 
 // Dart 파일은 저장소 루트에 있습니다(functions/ 밖).
-const DART_ROOT = "../../packages/game_mafia/lib/models";
+const DART_ROOT = "../../packages/game_mafia/lib/shared/models";
 const roleSource = readFileSync(
-  new URL(`${DART_ROOT}/mafia_roles.dart`, import.meta.url),
+  new URL(`${DART_ROOT}/role_catalog.dart`, import.meta.url),
   "utf8",
 );
 const compositionSource = readFileSync(
-  new URL(`${DART_ROOT}/mafia_composition.dart`, import.meta.url),
+  new URL(`${DART_ROOT}/game_composition.dart`, import.meta.url),
   "utf8",
 );
 

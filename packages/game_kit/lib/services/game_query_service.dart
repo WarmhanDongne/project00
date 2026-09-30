@@ -1,31 +1,22 @@
-import 'dart:async';
+// [game_query_service.dart] 는 여러 게임이 함께 사용하는 서버의 게임 상태를 조회하고 해석하는 파일이다.
 
-import 'package:firebase_database/firebase_database.dart';
+// - [Query] : 상태 조회
+
+// ========================[ import ]==========================
+import 'dart:async';
+import 'package:firebase_database/firebase_database.dart'; // 방과 게임 상태를 실시간으로 읽고 구독
+import 'package:game_kit/firebase/services/realtime_database_service.dart'; // 접근을 공통으로 처리 기능 사용
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
-import 'package:game_kit/firebase/services/realtime_database_service.dart';
+// ============================================================
 
 //=======================게임 구독 서비스 공통 베이스==============================
-/// 모든 게임의 `<game>_query_service.dart`가 상속하는 읽기 전용 베이스입니다.
-///
-/// 게임 데이터의 의미 경계는 게임과 무관하게 항상 같습니다.
-///
-/// ```text
+
 /// rooms/{roomCode}/game/public          방 참가자에게 공개할 상태
 /// rooms/{roomCode}/game/private/{uid}   해당 사용자만 읽을 상태
 /// rooms/{roomCode}/game/server          클라이언트에 노출하지 않는 서버 상태
-/// ```
-///
 /// 그래서 경로 조합은 [publicRef]와 [privateRef] 두 곳에만 둡니다. 게임별
-/// 서비스가 각자 ``rooms/{roomCode}/game/public/...`` 문자열을 만들면 경계가
-/// 바뀔 때 고칠 곳이 게임 수만큼 늘어나고, 한 게임만 빠뜨리면 그 게임은
-/// 조용히 잘못된 경로를 구독합니다.
-///
-/// 게임별 서비스는 **그 게임에만 있는 노드**만 추가하세요
-/// (예: 라이어스포커의 `table`, `turnUid`).
-///
-/// `game/server`를 읽는 메서드는 여기에 두지 않습니다. 규칙이 막고 있고,
-/// 막지 않더라도 클라이언트가 읽어서는 안 되는 값입니다.
+
 abstract class GameQueryService {
   GameQueryService({FirebaseDatabase? database})
     : database = database ?? RealtimeDatabaseService.instance;

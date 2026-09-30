@@ -1,5 +1,9 @@
+// [realtime_database_service.dart] 는 여러 게임이 함께 사용하는 Firebase Realtime Database 접근을 공통으로 처리하는 파일이다.
+
+// ========================[ import ]==========================
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+// ============================================================
 
 /// 프로젝트에서 사용하는 Firebase Realtime Database 진입점입니다.
 abstract final class RealtimeDatabaseService {

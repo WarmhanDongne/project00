@@ -19,11 +19,14 @@ dependencies:
   shorebird_code_push: ^2.0.7
   wakelock_plus: ^1.7.0
   firebase_database: ^12.5.0
+  flutter_riverpod: ^3.4.2
   flutter_markdown: ^0.7.7
   provider: ^6.1.5+1
   roulette: ^0.3.2
   video_player: ^2.10.0
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   build_runner: ^2.15.1
   flutter_gen_runner: ^5.15.0
 flutter:

@@ -1,6 +1,15 @@
+// [app_orientation.dart] 는 여러 게임이 함께 사용하는 기기 종류·화면 방향·시스템 UI 기준을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Layout] : 기기 종류·화면 방향·시스템 UI 기준을 관리함
+//
+// 즉, 휴대폰과 태블릿 화면을 일관된 규칙으로 배치하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
+// ============================================================
 
 /// 휴대폰 게임이 허용하는 화면 방향입니다.
 ///

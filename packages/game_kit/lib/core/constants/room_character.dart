@@ -1,3 +1,10 @@
+// [room_character.dart] 는 여러 게임이 함께 사용하는 앱 전체에서 반복 사용하는 고정값과 기준을 모아두는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Constant] : 앱 전체에서 반복 사용하는 고정값과 기준을 관리
+//
+// 즉, 같은 값을 여러 위치에서 다르게 정의하는 문제를 방지하기 위해 필요한 파일이다.
+
 /// 방 참가자가 고르는 동물 캐릭터 목록입니다.
 ///
 /// 방에서 고르지만 **게임 화면이 더 많이 씁니다** — 좌석, 관전 목록, 결과 화면,
@@ -18,8 +25,7 @@ class RoomCharacter {
   final String id;
   final String label;
 
-  String get assetPath =>
-      'packages/game_kit/assets/images/character/$id.webp';
+  String get assetPath => 'packages/game_kit/assets/images/character/$id.webp';
 }
 
 const roomCharacters = <RoomCharacter>[
@@ -44,13 +50,11 @@ const roomCharacters = <RoomCharacter>[
 
 const defaultRoomCharacterId = 'frog';
 
-RoomCharacter roomCharacterById(String? id) {
-  for (final character in roomCharacters) {
-    if (character.id == id) return character;
-  }
-  return roomCharacters.firstWhere(
-    (character) => character.id == defaultRoomCharacterId,
-  );
-}
+final Map<String, RoomCharacter> _roomCharactersById = Map.unmodifiable({
+  for (final character in roomCharacters) character.id: character,
+});
+
+RoomCharacter roomCharacterById(String? id) =>
+    _roomCharactersById[id] ?? _roomCharactersById[defaultRoomCharacterId]!;
 
 String roomCharacterAssetPath(String? id) => roomCharacterById(id).assetPath;

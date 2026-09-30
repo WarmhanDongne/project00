@@ -1,8 +1,17 @@
-import 'dart:math' as math;
+// [network_unavailable_modal.dart] 는 여러 게임이 함께 사용하는 네트워크 연결 상태와 재연결 흐름을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Network] : 네트워크 연결 상태와 재연결 흐름을 관리함
+//
+// 즉, 통신이 끊겨도 연결 문제를 안내하고 안전하게 복구하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
 import 'package:game_kit/gen/assets.gen.dart';
+
+// ============================================================
 
 /// 인터넷 연결이 끊겼을 때 앱 전체에서 공통으로 사용하는 반응형 모달입니다.
 class NetworkUnavailableModal extends StatelessWidget {
@@ -10,6 +19,7 @@ class NetworkUnavailableModal extends StatelessWidget {
     super.key,
     required this.onRetry,
     this.isRetrying = false,
+    this.retryEnabled = true,
     this.onExit,
     this.exitLabel = '홈으로',
     this.title = '네트워크에 접속할 수 없습니다.',
@@ -21,6 +31,9 @@ class NetworkUnavailableModal extends StatelessWidget {
 
   final VoidCallback onRetry;
   final bool isRetrying;
+
+  /// 오프라인에는 SDK 재연결을 기다리며 실행할 수 없는 재시도 버튼을 비활성화합니다.
+  final bool retryEnabled;
   final VoidCallback? onExit;
   final String exitLabel;
   final String title;
@@ -128,6 +141,7 @@ class NetworkUnavailableModal extends StatelessWidget {
                             isTablet: isTablet,
                             isCompact: isCompact,
                             isRetrying: isRetrying,
+                            enabled: retryEnabled,
                             onPressed: onRetry,
                           ),
                           if (onExit != null) ...[
@@ -164,12 +178,14 @@ class _RetryButton extends StatelessWidget {
     required this.isTablet,
     required this.isCompact,
     required this.isRetrying,
+    required this.enabled,
     required this.onPressed,
   });
 
   final bool isTablet;
   final bool isCompact;
   final bool isRetrying;
+  final bool enabled;
   final VoidCallback onPressed;
 
   @override
@@ -181,10 +197,10 @@ class _RetryButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      enabled: !isRetrying,
+      enabled: enabled && !isRetrying,
       label: '네트워크 연결 재시도',
       child: Opacity(
-        opacity: isRetrying ? 0.76 : 1,
+        opacity: isRetrying || !enabled ? 0.76 : 1,
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(999),
@@ -206,7 +222,7 @@ class _RetryButton extends StatelessWidget {
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(999),
-              onTap: isRetrying ? null : onPressed,
+              onTap: isRetrying || !enabled ? null : onPressed,
               child: Center(
                 child: isRetrying
                     ? SizedBox(
@@ -218,7 +234,7 @@ class _RetryButton extends StatelessWidget {
                         ),
                       )
                     : Text(
-                        '재시도',
+                        enabled ? '재시도' : '연결 대기 중',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isTablet ? 28 : 21,

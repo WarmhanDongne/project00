@@ -1,30 +1,34 @@
-import 'package:flutter/services.dart';
+// [game_feedback.dart]는 게임 중 발생하는 기기 진동을 공통으로 관리하는 파일이다.
+//
+// - [Select] : 카드를 선택할 때 약한 진동
+// - [Commit] : 카드를 제출할 때 중간 진동
+// - [Declare] : LIAR, CALL 선언 시 강한 진동
+// - [Alert] : 내 턴이나 상대방의 중요 행동을 일반 진동으로 알림
 
-/// 게임의 결정적인 순간에 주는 진동 피드백입니다.
-///
-/// 모바일 게임에서 선언·제출 같은 되돌릴 수 없는 행동은 손끝으로도 느껴져야
-/// 합니다. 세기를 게임마다 다르게 정하지 않도록 여기서 한 번만 정의합니다.
+// - [abstract ] : 직접 생성하지 않고 상속해서 사용
+
+// ========================[ import ]==========================
+import 'package:flutter/services.dart';
+// ============================================================
+
+//==========[ 기기 진동 효과 ]==========
 abstract final class GameFeedback {
-  /// LIAR·CALL처럼 판을 뒤집는 선언입니다. 가장 강하게 울립니다.
+  //무거운 진동
   static void declare() {
     HapticFeedback.heavyImpact();
   }
 
-  /// 카드 제출처럼 되돌릴 수 없는 확정 동작입니다.
+  //중간 진동
   static void commit() {
     HapticFeedback.mediumImpact();
   }
 
-  /// 카드 선택처럼 가벼운 조작입니다.
+  //가벼운 진동
   static void select() {
     HapticFeedback.selectionClick();
   }
 
-  /// 내 턴 시작, 다른 플레이어의 LIAR·CALL 선언처럼 화면을 보고 있지 않아도
-  /// 알아채야 하는 순간입니다. 짧은 햅틱이 아니라 기기 진동을 울립니다.
-  ///
-  /// 선언한 본인은 버튼을 누를 때 [declare]를 받으므로 여기서 다시 울리지
-  /// 않습니다.
+  //일반 진동
   static void alert() {
     HapticFeedback.vibrate();
   }

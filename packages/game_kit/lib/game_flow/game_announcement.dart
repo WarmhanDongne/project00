@@ -1,5 +1,14 @@
+// [game_announcement.dart] 는 여러 게임이 함께 사용하는 게임의 공통 단계·안내·종료 흐름을 정의하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [GameFlow] : 게임의 공통 단계·안내·종료 흐름을 정의함
+//
+// 즉, 각 게임이 같은 화면 전환 규칙과 예외 처리를 공유하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+// ============================================================
 
 /// 화면 중앙 또는 고정 안내 슬롯에 표시할 문구의 의미입니다.
 enum GameAnnouncementKind { gameStart, round, transient, persistent }

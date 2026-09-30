@@ -1,10 +1,20 @@
+// [game_communication_log.dart] 는 여러 게임이 함께 사용하는 게임 통신과 실행 오류를 기록하거나 화면에 보여주는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [CommunicationLog] : 게임 통신과 실행 오류를 기록하고 화면에 표시
+//
+// 즉, 문제가 난 시점과 원인을 개발 화면에서 바로 확인하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+import 'package:game_kit/core/diagnostics/frame_safe_notifier.dart';
+// ============================================================
 
 /// 게임 명령과 Realtime Database 수신을 같은 시간축에 남기는 개발용 기록입니다.
 ///
 /// 카드, 방 코드, UID 같은 값은 저장하지 않습니다. 디버그 빌드에서만
 /// 메모리에 유지하며 릴리스 빌드에서 [add]는 아무 일도 하지 않습니다.
-class GameCommunicationLog extends ChangeNotifier {
+class GameCommunicationLog extends ChangeNotifier with FrameSafeNotifier {
   GameCommunicationLog._();
 
   static final GameCommunicationLog instance = GameCommunicationLog._();
@@ -50,7 +60,7 @@ class GameCommunicationLog extends ChangeNotifier {
       'operation=${_safeToken(operation ?? 'none')} '
       'detail=${_safeToken(detail)}',
     );
-    notifyListeners();
+    notifySafely();
   }
 
   void recordConnection(bool connected) {
@@ -101,7 +111,7 @@ class GameCommunicationLog extends ChangeNotifier {
   void markSeen() {
     if (_unseenProblemCount == 0) return;
     _unseenProblemCount = 0;
-    notifyListeners();
+    notifySafely();
   }
 
   /// 현재 연결 상태는 유지하고 화면에 나열된 기록만 지웁니다.
@@ -109,7 +119,7 @@ class GameCommunicationLog extends ChangeNotifier {
     if (_entries.isEmpty && _unseenProblemCount == 0) return;
     _entries.clear();
     _unseenProblemCount = 0;
-    notifyListeners();
+    notifySafely();
   }
 
   /// 테스트·세션 초기화용 전체 초기화입니다.
@@ -124,7 +134,7 @@ class GameCommunicationLog extends ChangeNotifier {
     _unseenProblemCount = 0;
     _isRealtimeConnected = null;
     _lastRealtimeEventAt = null;
-    notifyListeners();
+    notifySafely();
   }
 }
 
@@ -156,10 +166,15 @@ class GameCommunicationEntry {
   }
 }
 
+final RegExp _whitespacePattern = RegExp(r'\s+');
+final RegExp _unsafeCommunicationTokenPattern = RegExp(
+  r'[^A-Za-z0-9_./:=\-\uAC00-\uD7A3]',
+);
+
 String _safeToken(String value) {
   final normalized = value
-      .replaceAll(RegExp(r'\s+'), '_')
-      .replaceAll(RegExp(r'[^A-Za-z0-9_./:=\-\uAC00-\uD7A3]'), '');
+      .replaceAll(_whitespacePattern, '_')
+      .replaceAll(_unsafeCommunicationTokenPattern, '');
   return normalized.length <= 180 ? normalized : normalized.substring(0, 180);
 }
 

@@ -5,6 +5,7 @@ import {randomInt} from "node:crypto";
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {runPrimedTransaction} from "../room/room-transaction.js";
 import {createDeck} from "./common/deck.js";
 import {dealCards} from "./common/deal-card.js";
 import {createTable} from "./common/table.js";
@@ -155,16 +156,20 @@ export const game_liars_poker_start_game =
 
       // 검증과 기록을 방 루트의 한 트랜잭션에서 다시 수행합니다. game 하위
       // 노드만 잠그면 사전 조회 뒤 좌석이 바뀌어도 오래된 게임이 시작됩니다.
-      const transaction = await roomRef.transaction((currentRawRoom) => {
-        if (currentRawRoom === null) return currentRawRoom;
-        assertRoomExists(currentRawRoom);
-        const currentRoom = currentRawRoom as RealtimeRoom;
-        assertController(currentRoom, uid, request.data?.controllerSessionId);
-        assertStartGameSnapshot(startFingerprint, currentRoom);
-        if (currentRoom.game?.public?.status === "playing" && !restart) return;
-        currentRoom.game = initialGame;
-        return currentRoom;
-      });
+      const transaction = await runPrimedTransaction(
+        roomRef,
+        (currentRawRoom) => {
+          assertRoomExists(currentRawRoom);
+          const currentRoom = currentRawRoom as RealtimeRoom;
+          assertController(currentRoom, uid, request.data?.controllerSessionId);
+          assertStartGameSnapshot(startFingerprint, currentRoom);
+          if (currentRoom.game?.public?.status === "playing" && !restart) {
+            return;
+          }
+          currentRoom.game = initialGame;
+          return currentRoom;
+        },
+      );
 
       if (!transaction.committed) {
         throw new HttpsError(

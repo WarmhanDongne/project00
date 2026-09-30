@@ -1,7 +1,15 @@
-import 'dart:async';
+// [game_connecting_overlay.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+// ============================================================
 
 /// 첫 서버 상태가 병적으로 오래 오지 않을 때의 탈출구 레이어입니다.
 ///
@@ -50,14 +58,13 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
   @override
   void didUpdateWidget(GameConnectingOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isWaiting == oldWidget.isWaiting) return;
-    if (widget.isWaiting) {
+    if (widget.isWaiting &&
+        (!oldWidget.isWaiting || oldWidget.exitDelay != widget.exitDelay)) {
+      _showExit = false;
       _startTimer();
-    } else {
+    } else if (!widget.isWaiting && oldWidget.isWaiting) {
       _stopTimer();
-      if (_showExit) {
-        setState(() => _showExit = false);
-      }
+      _showExit = false;
     }
   }
 

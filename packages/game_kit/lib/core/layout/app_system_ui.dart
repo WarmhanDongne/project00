@@ -1,7 +1,15 @@
-import 'dart:async';
+// [app_system_ui.dart] 는 여러 게임이 함께 사용하는 기기 종류·화면 방향·시스템 UI 기준을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Layout] : 기기 종류·화면 방향·시스템 UI 기준을 관리함
+//
+// 즉, 휴대폰과 태블릿 화면을 일관된 규칙으로 배치하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+// ============================================================
 
 /// 플랫폼 화면과 게임 화면의 시스템 상태바 정책을 한곳에서 관리합니다.
 ///

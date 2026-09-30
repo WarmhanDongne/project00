@@ -1,6 +1,7 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {runPrimedTransaction} from "../room/room-transaction.js";
 import {processedResult, recordCommand} from "./common/commands.js";
 import {RealtimeRoom, TURN_DURATION_MS} from "./common/types.js";
 import {
@@ -28,9 +29,7 @@ export const game_liars_poker_ready_turn = onCall<ReadyTurnData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((rawRoom) => {
-      if (rawRoom === null) return rawRoom;
-
+    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       const game = requireGame(room);

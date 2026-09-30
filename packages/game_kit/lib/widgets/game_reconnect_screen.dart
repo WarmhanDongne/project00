@@ -1,7 +1,15 @@
+// [game_reconnect_screen.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'dart:async';
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+// ============================================================
 
 //=======================게임 재접속 화면==============================
 /// 연결이 끊겼거나 돌아갈 세션이 있을 때 보여 주는 화면입니다.
@@ -122,7 +130,8 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
     super.didUpdateWidget(oldWidget);
     // 같은 자리에서 문구와 대기 시간만 바꿔 다시 쓰는 경우(예: 패치 화면의
     // 단계 전환)가 있습니다. 이전 시계를 그대로 두면 새 시간이 무시됩니다.
-    if (oldWidget.homeButtonDelay != widget.homeButtonDelay) {
+    if (oldWidget.homeButtonDelay != widget.homeButtonDelay ||
+        oldWidget.actions.isEmpty != widget.actions.isEmpty) {
       _showsHomeButton = false;
       _startHomeTimer();
     }
@@ -440,6 +449,19 @@ class _SparkleFieldState extends State<_SparkleField>
       _SparkleField.count,
       (index) => _spawn(startMs: -_random.nextDouble() * 2600),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant _SparkleField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controllerSide == widget.controllerSide) return;
+
+    final elapsedMs = _ticker.value * _clock.inMilliseconds;
+    for (var index = 0; index < _sparkles.length; index += 1) {
+      _sparkles[index] = _spawn(
+        startMs: elapsedMs - _random.nextDouble() * 2600,
+      );
+    }
   }
 
   /// 별 하나를 새로 만듭니다.
