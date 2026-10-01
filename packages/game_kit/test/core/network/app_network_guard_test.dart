@@ -1,7 +1,6 @@
 // 실제 서버 없이 연결 신호와 복구 응답을 조절하는 회귀 테스트입니다.
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
