@@ -1,10 +1,18 @@
-import 'dart:async';
+// [game_command_service.dart] 는 여러 게임이 함께 사용하는 서버의 게임 상태를 변경하는 명령을 모아둔 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Command] : 서버의 게임 상태를 변경하는 명령을 모아둔
+//
+// 즉, 화면에서 발생한 행동을 정해진 서버 쓰기 경계로 전달하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/services/callable_retry_policy.dart';
 import 'package:game_kit/session/controller_room_session_store.dart';
+// ============================================================
 
 //=======================게임 명령 서비스 공통 베이스==============================
 /// 모든 게임의 `<game>_command_service.dart`가 상속하는 쓰기 전용 베이스입니다.
@@ -108,9 +116,7 @@ abstract class GameCommandService {
       totalElapsed.stop();
       final success = result['success'];
       final reason = result['reason'];
-      final safeReason =
-          reason is String &&
-              RegExp(r'^[A-Za-z][A-Za-z0-9_-]{0,63}$').hasMatch(reason)
+      final safeReason = reason is String && _safeReasonPattern.hasMatch(reason)
           ? reason
           : null;
       final responseSummary = <String>[
@@ -179,6 +185,9 @@ String _commandLabel(String functionName) => switch (functionName) {
   _ => functionName,
 };
 
+final RegExp _safeReasonPattern = RegExp(r'^[A-Za-z][A-Za-z0-9_-]{0,63}$');
+final RegExp _safeKoreanMessagePattern = RegExp(r'^[ㄱ-ㆎ가-힣\s.,!?()\-]+$');
+
 String _communicationErrorDescription(Object error) {
   if (error is TimeoutException) return '서버 응답 시간초과';
   if (error is FirebaseFunctionsException) {
@@ -199,7 +208,7 @@ String _communicationErrorDescription(Object error) {
         message != null &&
         message.isNotEmpty &&
         message.length <= 120 &&
-        RegExp(r'^[ㄱ-ㆎ가-힣\s.,!?()\-]+$').hasMatch(message);
+        _safeKoreanMessagePattern.hasMatch(message);
     return safeKoreanMessage
         ? '$base (${error.code}) · $message'
         : '$base (${error.code})';

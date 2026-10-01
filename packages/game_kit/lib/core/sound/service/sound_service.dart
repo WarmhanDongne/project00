@@ -1,6 +1,15 @@
+// [sound_service.dart] 는 여러 게임이 함께 사용하는 앱 공통 효과음과 재생 상태를 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Sound] : 앱 공통 효과음과 재생 상태를 관리함
+//
+// 즉, 각 게임이 같은 소리 설정과 재생 규칙을 공유하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:audioplayers/audioplayers.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:flutter/foundation.dart';
+// ============================================================
 
 /// 앱 전체에서 사용하는 공용 사운드 서비스.
 ///
@@ -80,12 +89,21 @@ class SoundService {
   /// 지금 BGM 플레이어에 걸어야 하는 볼륨입니다.
   double get _playingBgmVolume => _bgmVolume * _bgmFade;
 
-  Future<void> initialize() {
-    if (_initialized) {
-      return Future.value();
-    }
+  Future<void> initialize() async {
+    if (_initialized) return;
 
-    return _initialization ??= _initialize();
+    final inFlight = _initialization;
+    if (inFlight != null) return inFlight;
+
+    final operation = _initialize();
+    _initialization = operation;
+    try {
+      await operation;
+    } finally {
+      if (identical(_initialization, operation)) {
+        _initialization = null;
+      }
+    }
   }
 
   Future<void> _initialize() async {
@@ -99,12 +117,19 @@ class SoundService {
 
     // 효과음 플레이어를 미리 만들어 둡니다. 재생 시점에 네이티브 플레이어를
     // 만들면 그만큼 소리가 늦게 시작됩니다.
-    for (var index = 0; index < _effectPlayerPoolSize; index += 1) {
-      final player = AudioPlayer();
-      await player.setReleaseMode(ReleaseMode.stop);
-      _effectPlayers.add(player);
+    final newEffectPlayers = <AudioPlayer>[];
+    try {
+      for (var index = 0; index < _effectPlayerPoolSize; index += 1) {
+        final player = AudioPlayer();
+        newEffectPlayers.add(player);
+        await player.setReleaseMode(ReleaseMode.stop);
+      }
+    } catch (_) {
+      await Future.wait(newEffectPlayers.map(_disposeQuietly));
+      rethrow;
     }
 
+    _effectPlayers.addAll(newEffectPlayers);
     _initialized = true;
   }
 
@@ -452,6 +477,27 @@ class SoundService {
   /// 일반적으로 앱 전체에서 Singleton으로 사용한다면
   /// 앱 실행 중에는 호출하지 않아도 됩니다.
   Future<void> dispose() async {
-    await _bgmPlayer.dispose();
+    // 초기화와 정리가 겹치면 늦게 생성된 플레이어가 남을 수 있으므로
+    // 진행 중인 작업을 먼저 마무리합니다. 실패는 이제 재시도를 열어 둔
+    // 상태이므로 정리 진행을 막지 않습니다.
+    try {
+      await _initialization;
+    } catch (_) {}
+
+    _bgmFadeToken += 1;
+    final players = <AudioPlayer>{
+      _bgmPlayer,
+      _sustainedEffectPlayer,
+      ..._effectPlayers,
+      for (final prepared in _preparedEffects.values) ...prepared,
+    };
+    _effectPlayers.clear();
+    _preparedEffects.clear();
+    _nextPreparedEffect.clear();
+    _scopedEffects.clear();
+    _effectScope = null;
+    _nextEffectPlayer = 0;
+
+    await Future.wait(players.map(_disposeQuietly));
   }
 }

@@ -1,124 +1,148 @@
-// ============================================================
-// import
-// ============================================================
+// [template_game.dart] 는 모든 게임이 따라야 하는 공통 규칙을 정의하는 파일이다.
+//
+// - [GameCatalog] : 등록된 게임 목록 관리
+// - [GameGateway] : 게임 시작, 상태 구독 등 서버 통신 규칙
+// - [TemplateGame] : 실제 게임들이 공통으로 구현해야 하는 전체 규칙
+//
+// [MafiaGame], [LiarsPokerGame] 같은 실제 게임은 [TemplateGame]을 상속하며,
+// 템플릿에 선언된 필수 함수와 값을 구현해야 한다.
+//
+// - [abstract] : 직접 생성하지 않고 상속해서 사용
+// - [interface] : 구현해야 할 규칙 정의
+// - [final] : 다른 클래스가 상속하지 못하게 함
+// - [Widget] : Flutter 화면 요소를 반환하는 타입
+//
+// 즉, 게임마다 구조가 달라지는 것을 막고
+// 플랫폼에서 모든 게임을 같은 방식으로 다루기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/models/game_room_context.dart';
 // ============================================================
-// import
-// ============================================================
 
-//=====[ 게임 목록 관리 규칙 ]=====
+//==========[ 게임 목록 관리 규칙 ]==========
 abstract interface class GameCatalog {
+  //[목록조회] 등록되어 있는 전체 게임
   Iterable<TemplateGame> get games;
+
+  //[게임검색] id로 등록된 게임 찾기
   TemplateGame? find(String id);
 }
 
-//=====[ 비어 있는 기본 카탈로그 ]=====
+//==========[ 비어 있는 기본 카탈로그 ]==========
 final class EmptyGameCatalog implements GameCatalog {
   const EmptyGameCatalog();
 
+  //[목록조회] 등록된 게임 없음
   @override
   Iterable<TemplateGame> get games => const <TemplateGame>[];
 
+  //[게임검색] 항상 null 반환
   @override
   TemplateGame? find(String id) => null;
 }
 
-//=====[ 서버와 통신할 때 필요한 최소 규칙 ]=====
+//==========[ 서버 통신 규칙 ]==========
 abstract interface class GameGateway {
+  //[시작요청] 서버에 게임 시작 요청
   Future<void> startGame(String roomCode, {Map<String, Object?>? options});
+
+  //[상태구독] 서버의 게임 상태 실시간 감시
   Stream<String?> watchStatus(String roomCode);
 }
 
-//=====[ 실제 게임 하나가 구현해야 하는 전체 규칙 ]=====
+//==========[ 게임 공통 규칙 ]==========
 abstract class TemplateGame implements GameGateway {
   const TemplateGame();
 
-  //[기본 정보] 게임의 식별자와 이름 
-  // 서버:id / 사용자 보여주기용:title
-  String get id;
-  String get title; 
+  //==========[ 기본 정보 ]==========
 
-  /// 런타임 다운로드 게임이 요구하는 정확한 에셋 버전입니다. 번들 게임은 0입니다.
+  //[식별정보] 서버에서 사용하는 게임 id
+  String get id;
+
+  //[표시정보] 사용자에게 보여주는 게임 이름
+  String get title;
+
+  //[에셋버전] 게임 실행에 필요한 에셋 버전
+  // 번들 게임이면 0
+  // 다운로드 게임이면 해당 게임이 요구하는 버전
   int get requiredAssetVersion => 0;
 
-  //[플레이어 인원] 
-  // 고정 인원이면 => (고정숫자)
-  // Firestore 있는 최소/최대 인원으로 진행할 경우 NULL
+  //[인원설정] 게임에 필요한 플레이어 인원
+  // 고정 인원이면 => 고정 숫자
+  // Firestore의 최소/최대 인원을 사용할 경우 => null
   int? get fixedPlayerCount => null;
 
-  //[함수호출] 플레이어 중도 게임 퇴장
-  //
+  //[퇴장처리] 게임 도중 퇴장할 때 사용할 Cloud Function 이름
   String get leaveFunctionName;
 
-  //[설정][화면 방향]
-  // 가로/세로/둘다  어떤 방향을 지원하는지 정의
+  //[화면방향] 휴대폰에서 지원하는 화면 방향
+  // 가로 / 세로 / 둘 다
   PhoneGameOrientation get phoneOrientation;
 
-  //[에셋][입장테이블]
-  // 기본적인 테이블 색상값
+  //==========[ 에셋 ]==========
+  //없으면 null => 기본 이미지나 아이콘 사용
+
+  //[테이블색상]
   Color get tableColor;
 
-  //[에셋][배경있는 테이블]
-  // 배경이미지 입힌 테이블
+  //[테이블배경]
   ImageProvider? get tableBackgroundImage;
 
-  /// 태블릿의 게임 선택 팝업에 표시할 실제 게임 구성 요소 미리보기입니다.
-  Widget buildTabletPreviewArtwork();
-
-  /// 자리 배치 완료 연출에 쓸 위에서 내려다본 테이블 이미지입니다.
-  /// null이면 [tableColor]·[tableBackgroundImage]로 그린 원형 테이블을 씁니다.
+  //[테이블이미지]
   ImageProvider? get layoutTableImage => null;
 
-  /// 자리 배치 완료 연출에 쓸 위에서 내려다본 의자 이미지입니다.
-  /// 등받이가 위, 앉는 방향이 아래를 향하는 그림이어야 테이블 쪽으로 정확히
-  /// 회전합니다. null이면 기본 아이콘 의자를 씁니다.
+  //[의자이미지]
   ImageProvider? get layoutChairImage => null;
 
-  /// 좌석 배치가 끝난 뒤 실제 게임을 시작합니다.
-  ///
-  /// [options]는 **게임별 시작 설정**입니다. [buildStartSetupScreen]이 만든
-  /// 준비 화면이 고른 값을 그대로 넘겨 줍니다(마피아: `composition` =
-  /// `역할 id → 인원수`). 준비 화면이 없는 게임은 null입니다.
+  //==========[ 게임 시작 ]==========
+
+  //[게임시작] 좌석 배치 또는 시작 설정 완료 후 서버에 게임 시작 요청
+  // roomCode => 시작할 방 코드
+  // options => 게임별 추가 시작 설정
   @override
   Future<void> startGame(String roomCode, {Map<String, Object?>? options});
 
-  /// 자리 배치 **대신** 쓸 게임별 준비 화면입니다. null이면 자리 배치를 씁니다.
-  ///
-  /// 확정(2026-08): 마피아는 누가 어디 앉는지보다 **이번 판에 어떤 신분이
-  /// 들어가는지**가 판을 좌우해서, 이 자리에 역할 배치 화면을 넣습니다.
-  ///
-  /// 플랫폼 화면이 게임 id로 분기하지 않도록 이 자리를 만들었습니다. 게임을
-  /// 추가할 때 플랫폼 코드는 손대지 않습니다.
-  ///
-  /// [onPrepare]는 자리를 저장하고 [startGame]까지 부릅니다(실패하면 false).
-  /// [onComplete]는 게임 화면으로 넘어갑니다. [onCancel]은 게임 선택을 풉니다.
+  //==========[ 게임 상태 ]==========
+
+  //[상태구독]
+  //[waiting / starting / playing / result / finished]
+  @override
+  Stream<String?> watchStatus(String roomCode);
+
+  // ========================[ 게임 화면 ]==========================
+
+  //=============[ 게임 진입 ]=============
+  //[     좌석 위치 지정 / 게임 시작 요청     ]
   Widget? buildStartSetupScreen({
+    //[Dto] 좌석정보
     required PlayerLayoutModel layout,
+
+    //[요청] 좌석 저장/게임 준비
     required Future<bool> Function(
       PlayerLayoutModel layout, {
       Map<String, Object?>? options,
     })
     onPrepare,
+    //[이동] 게임 화면 이동
     required void Function(PlayerLayoutModel layout) onComplete,
+
+    //[요청] 퇴장/종료
     required Future<bool> Function() onCancel,
   }) => null;
 
-  /// Realtime Database의 게임 status(`waiting`/`playing`/...)를 흘려보냅니다.
-  /// `playing`이 되는 시점에 화면을 엽니다.
-  @override
-  Stream<String?> watchStatus(String roomCode);
+  //==========[ UI ]==========
 
-  /// 휴대폰 진행 화면을 생성합니다.
+  //[휴대폰]
   Widget buildPhoneScreen({
     required String roomCode,
     required GameRoomContext provider,
     required Future<bool> Function() onExitRoom,
   });
 
-  /// 태블릿 진행 화면을 생성합니다. [playerLayout]을 쓰지 않는 게임은 무시해도 됩니다.
+  //[태블릿]
   Widget buildTabletScreen({
     required PlayerLayoutModel playerLayout,
     required GameRoomContext provider,

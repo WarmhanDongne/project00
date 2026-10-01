@@ -1,9 +1,17 @@
-import 'dart:async';
+// [crash_reporting.dart] 는 여러 게임이 함께 사용하는 게임 통신과 실행 오류를 기록하거나 화면에 보여주는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [CrashReport] : 게임 통신과 실행 오류를 기록하고 화면에 표시
+//
+// 즉, 문제가 난 시점과 원인을 개발 화면에서 바로 확인하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
+// ============================================================
 
 //=======================오류 수집==============================
 /// 앱에서 나는 오류를 한곳에서 받습니다.

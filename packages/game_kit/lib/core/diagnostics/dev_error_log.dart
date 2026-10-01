@@ -1,4 +1,14 @@
+// [dev_error_log.dart] 는 여러 게임이 함께 사용하는 게임 통신과 실행 오류를 기록하거나 화면에 보여주는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [ErrorLog] : 게임 통신과 실행 오류를 기록하고 화면에 표시
+//
+// 즉, 문제가 난 시점과 원인을 개발 화면에서 바로 확인하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+import 'package:game_kit/core/diagnostics/frame_safe_notifier.dart';
+// ============================================================
 
 //=======================개발용 오류 기록==============================
 /// 개발 중 콘솔과 ADB logcat에서 확인하는 오류 기록입니다.
@@ -8,7 +18,7 @@ import 'package:flutter/foundation.dart';
 /// (릴리스에서는 [add]가 아무 일도 하지 않습니다).
 ///
 /// 오류를 서버로 보내는 일은 [CrashReporting]이 맡습니다. 화면에는 표시하지 않습니다.
-class DevErrorLog extends ChangeNotifier {
+class DevErrorLog extends ChangeNotifier with FrameSafeNotifier {
   DevErrorLog._();
 
   static final DevErrorLog instance = DevErrorLog._();
@@ -52,26 +62,27 @@ class DevErrorLog extends ChangeNotifier {
       'errorType=${_safeToken(error.runtimeType.toString())} '
       'frame=${_safeFrame(entry.firstProjectFrame)}',
     );
-    notifyListeners();
+    notifySafely();
   }
 
   /// 목록을 열어 확인했다고 표시합니다.
   void markSeen() {
     if (_unseenCount == 0) return;
     _unseenCount = 0;
-    notifyListeners();
+    notifySafely();
   }
 
   void clear() {
     if (_entries.isEmpty && _unseenCount == 0) return;
     _entries.clear();
     _unseenCount = 0;
-    notifyListeners();
+    notifySafely();
   }
 }
 
-String _safeToken(String value) =>
-    value.replaceAll(RegExp(r'[^A-Za-z0-9_./:-]'), '_');
+final RegExp _unsafeTokenPattern = RegExp(r'[^A-Za-z0-9_./:-]');
+
+String _safeToken(String value) => value.replaceAll(_unsafeTokenPattern, '_');
 
 String _safeFrame(String? value) {
   if (value == null || value.isEmpty) return 'none';
@@ -104,7 +115,9 @@ class DevErrorEntry {
 
   /// 목록에 한 줄로 보여 줄 요약입니다.
   String get summary {
-    final firstLine = error.split('\n').first.trim();
+    final newlineIndex = error.indexOf('\n');
+    final firstLine =
+        (newlineIndex < 0 ? error : error.substring(0, newlineIndex)).trim();
     return firstLine.length <= 120
         ? firstLine
         : '${firstLine.substring(0, 120)}…';

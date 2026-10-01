@@ -1,8 +1,18 @@
+// [dev_error_overlay.dart] 는 여러 게임이 함께 사용하는 게임 통신과 실행 오류를 기록하거나 화면에 보여주는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [ErrorOverlay] : 게임 통신과 실행 오류를 기록하고 화면에 표시
+//
+// 즉, 문제가 난 시점과 원인을 개발 화면에서 바로 확인하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
+// ============================================================
 
 /// 휴대폰과 태블릿 모두에서 게임 통신 기록을 여는 개발용 경계입니다.
 ///
@@ -29,6 +39,7 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
     with WidgetsBindingObserver {
   GameCommunicationLog get _log => GameCommunicationLog.instance;
   bool _isDiagnosticsOpen = false;
+  bool _refreshScheduled = false;
 
   @override
   void initState() {
@@ -38,7 +49,25 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
   }
 
   void _refresh() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    // Provider/Widget build 중에도 서버 예열이나 RTDB 구독이 통신 로그를 남길 수
+    // 있습니다. 이때 조상인 진단 오버레이를 즉시 setState하면 Flutter의
+    // "setState() or markNeedsBuild() called during build" 예외가 발생합니다.
+    // 현재 프레임이 빌드 중일 때만 프레임 뒤로 미루고, 같은 프레임의 여러 로그는
+    // 한 번의 갱신으로 합칩니다. 빌드 밖에서는 기존처럼 즉시 반영합니다.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      if (_refreshScheduled) return;
+      _refreshScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshScheduled = false;
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+
+    setState(() {});
   }
 
   @override
@@ -195,40 +224,43 @@ class _GameCommunicationSheet extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: AnimatedBuilder(
               animation: log,
-              builder: (context, _) => Column(
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(2),
+              builder: (context, _) {
+                final entries = log.entries;
+                return Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  _DiagnosticsHeader(log: log, onClose: onClose),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: log.entries.isEmpty
-                        ? const Center(
-                            child: Text(
-                              '아직 기록된 게임 통신이 없습니다.',
-                              style: TextStyle(color: Colors.black54),
+                    _DiagnosticsHeader(log: log, onClose: onClose),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: entries.isEmpty
+                          ? const Center(
+                              child: Text(
+                                '아직 기록된 게임 통신이 없습니다.',
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                              itemCount: entries.length,
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) =>
+                                  _CommunicationEntryTile(
+                                    entry: entries[index],
+                                  ),
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-                            itemCount: log.entries.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) =>
-                                _CommunicationEntryTile(
-                                  entry: log.entries[index],
-                                ),
-                          ),
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -245,6 +277,7 @@ class _DiagnosticsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final entries = log.entries;
     final connected = log.isRealtimeConnected;
     final connectionColor = switch (connected) {
       true => const Color(0xFF2E7D32),
@@ -309,10 +342,10 @@ class _DiagnosticsHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: '기록 복사',
-            onPressed: log.entries.isEmpty
+            onPressed: entries.isEmpty
                 ? null
                 : () async {
-                    final text = log.entries.reversed
+                    final text = entries.reversed
                         .map((entry) => entry.asText)
                         .join('\n');
                     await Clipboard.setData(ClipboardData(text: text));
@@ -325,7 +358,7 @@ class _DiagnosticsHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: '기록 지우기',
-            onPressed: log.entries.isEmpty ? null : log.clearEntries,
+            onPressed: entries.isEmpty ? null : log.clearEntries,
             icon: const Icon(Icons.delete_outline),
           ),
           IconButton(

@@ -1,6 +1,7 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {runPrimedTransaction} from "../room/room-transaction.js";
 import {RealtimeRoom} from "./common/types.js";
 import {
   assertController,
@@ -25,9 +26,7 @@ export const game_liars_poker_end_game = onCall<EndGameData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((rawRoom) => {
-      if (rawRoom === null) return rawRoom;
-
+    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
       assertRoomExists(rawRoom);
       const room = rawRoom as RealtimeRoom;
       assertController(room, uid, request.data?.controllerSessionId);

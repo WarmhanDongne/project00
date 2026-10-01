@@ -1,8 +1,16 @@
-import 'dart:async';
+// [shorebird_patch_gate.dart] 는 여러 게임이 함께 사용하는 Shorebird 패치 확인과 진입 차단 흐름을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Patch] : Shorebird 패치 확인과 진입 차단 흐름을 관리함
+//
+// 즉, 앱 시작 전에 필요한 코드 업데이트를 안전하게 적용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/update/shorebird_patch_screen.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+// ============================================================
 
 //=======================Shorebird 패치 배선==============================
 /// 앱을 켤 때 새 패치가 있으면 내려받고, 받는 동안 [ShorebirdPatchScreen]을
@@ -47,7 +55,7 @@ enum _PatchPhase {
 
 class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
     with WidgetsBindingObserver {
-  late final ShorebirdUpdater _updater;
+  late ShorebirdUpdater _updater;
   _PatchPhase _phase = _PatchPhase.hidden;
 
   /// 확인·내려받기가 지금 돌고 있는지입니다(겹쳐 부르지 않게 합니다).
@@ -55,19 +63,50 @@ class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
 
   /// 이미 받아 둔 패치가 있는지입니다. 있으면 다시 묻지 않습니다.
   bool _patchReady = false;
+  bool _observingLifecycle = false;
+  int _updaterGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     _updater = widget.updater ?? ShorebirdUpdater();
-    if (!_updater.isAvailable) return;
-    WidgetsBinding.instance.addObserver(this);
-    unawaited(_checkAndDownload());
+    _syncLifecycleObserver();
+    if (_updater.isAvailable) unawaited(_checkAndDownload());
+  }
+
+  @override
+  void didUpdateWidget(covariant ShorebirdPatchGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.updater, widget.updater)) return;
+
+    // 이전 업데이터의 늦은 응답이 새 업데이터 상태를 덮어쓰지 못하게
+    // 작업 세대를 바꾸고 초기 상태에서 다시 확인합니다.
+    _updaterGeneration += 1;
+    _updater = widget.updater ?? ShorebirdUpdater();
+    _phase = _PatchPhase.hidden;
+    _busy = false;
+    _patchReady = false;
+    _syncLifecycleObserver();
+    if (_updater.isAvailable) unawaited(_checkAndDownload());
+  }
+
+  void _syncLifecycleObserver() {
+    final shouldObserve = _updater.isAvailable;
+    if (shouldObserve == _observingLifecycle) return;
+    _observingLifecycle = shouldObserve;
+    if (shouldObserve) {
+      WidgetsBinding.instance.addObserver(this);
+    } else {
+      WidgetsBinding.instance.removeObserver(this);
+    }
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    _updaterGeneration += 1;
+    if (_observingLifecycle) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
     super.dispose();
   }
 
@@ -85,39 +124,47 @@ class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
 
   Future<void> _checkAndDownload() async {
     if (_busy || _patchReady || !_updater.isAvailable) return;
+    final updater = _updater;
+    final generation = _updaterGeneration;
     _busy = true;
     try {
       final UpdateStatus status;
       try {
-        status = await _updater.checkForUpdate();
+        status = await updater.checkForUpdate();
       } catch (error) {
         debugPrint('[Shorebird] 패치 확인 실패: $error');
         return;
       }
       // restartRequired는 이미 받아 둔 패치가 다음 실행을 기다리는 상태입니다.
       // 여기서 안내하면 다시 켤 때까지 매번 같은 화면을 보게 되어 넘어갑니다.
-      if (!mounted || status != UpdateStatus.outdated) return;
+      if (!mounted ||
+          generation != _updaterGeneration ||
+          status != UpdateStatus.outdated) {
+        return;
+      }
 
       final showsScreen = _isTopMost;
       if (showsScreen) setState(() => _phase = _PatchPhase.downloading);
       try {
-        await _updater.update();
+        await updater.update();
       } catch (error) {
         debugPrint('[Shorebird] 패치 내려받기 실패: $error');
-        if (mounted && showsScreen) {
+        if (mounted && generation == _updaterGeneration && showsScreen) {
           setState(() => _phase = _PatchPhase.hidden);
         }
         return;
       }
+      if (!mounted || generation != _updaterGeneration) return;
       _patchReady = true;
-      if (!mounted) return;
       // 화면을 덮지 않고 받았거나, 받는 사이에 다른 화면이 올라왔으면 조용히
       // 끝냅니다. 다음 실행에 적용됩니다.
       if (showsScreen && _isTopMost) {
         setState(() => _phase = _PatchPhase.downloaded);
       }
     } finally {
-      _busy = false;
+      if (generation == _updaterGeneration) {
+        _busy = false;
+      }
     }
   }
 

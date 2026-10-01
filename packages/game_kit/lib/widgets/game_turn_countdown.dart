@@ -1,7 +1,15 @@
-import 'dart:async';
+// [game_turn_countdown.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+// ============================================================
 
 //=======================남은 시간 세기==============================
 /// 남은 시간을 **1초마다 다시 계산해** 넘겨 주는 위젯입니다.
@@ -57,6 +65,7 @@ class _GameTurnCountdownState extends State<GameTurnCountdown> {
   Timer? _timer;
   bool _hasFiredTimeout = false;
   Duration? _remaining;
+  int _configurationGeneration = 0;
 
   @override
   void initState() {
@@ -68,7 +77,9 @@ class _GameTurnCountdownState extends State<GameTurnCountdown> {
   @override
   void didUpdateWidget(GameTurnCountdown oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.expiresAt != oldWidget.expiresAt) {
+    if (widget.expiresAt != oldWidget.expiresAt ||
+        widget.nowMillis != oldWidget.nowMillis) {
+      _configurationGeneration += 1;
       _hasFiredTimeout = false;
       _remaining = _calculateRemaining();
       _startTimer();
@@ -90,9 +101,12 @@ class _GameTurnCountdownState extends State<GameTurnCountdown> {
         _hasFiredTimeout = true;
         final onTimeout = widget.onTimeout;
         if (onTimeout != null) {
+          final generation = _configurationGeneration;
           // 빌드 도중 부모 상태가 바뀌지 않도록 이 프레임 뒤로 미룹니다.
           Future<void>.microtask(() {
-            if (mounted) onTimeout();
+            if (mounted && generation == _configurationGeneration) {
+              widget.onTimeout?.call();
+            }
           });
         }
       }
@@ -116,6 +130,7 @@ class _GameTurnCountdownState extends State<GameTurnCountdown> {
 
   @override
   void dispose() {
+    _configurationGeneration += 1;
     _timer?.cancel();
     super.dispose();
   }

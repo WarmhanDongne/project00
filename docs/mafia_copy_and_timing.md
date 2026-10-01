@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|---|---|
 | 시간 | 90초 | 120초 | 150초 | 180초 | 210초 | 240초 | 300초 |
 
-Dart 사본: `packages/game_mafia/lib/mafia_flow_config.dart`. 태블릿·휴대폰 진행 화면이
+Dart 사본: `packages/game_mafia/lib/game_flow_config.dart`. 태블릿·휴대폰 진행 화면이
 남은 시간을 미리 그리는 데 씁니다.
 두 값이 갈리면 `functions/test/mafia-discussion-parity.test.mjs`가 실패합니다.
 
@@ -146,7 +146,7 @@ Dart 사본: `packages/game_mafia/lib/mafia_flow_config.dart`. 태블릿·휴대
 ## 5. 문구 목록
 
 ### 단계 안내 (태블릿, 화면 가운데 64px)
-`packages/game_mafia/lib/mafia_copy.dart`
+`packages/game_mafia/lib/game_copy.dart`
 
 | 문구 | 언제 |
 |---|---|

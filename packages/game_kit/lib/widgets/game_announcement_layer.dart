@@ -1,7 +1,17 @@
+// [game_announcement_layer.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:game_kit/animations/fade_hold_fade.dart';
-import 'package:game_kit/animations/phone_game_start_animation.dart';
+import 'package:game_kit/shared/animations/fade_hold_fade.dart';
+import 'package:game_kit/phone/animations/game_start_animation.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
+// ============================================================
 
 /// 모든 게임에서 동일한 위치에 유지하는 문구 레이어의 시각 설정입니다.
 @immutable
@@ -133,7 +143,7 @@ class GameAnnouncementLayer extends StatelessWidget {
       );
     }
     return switch (current.kind) {
-      GameAnnouncementKind.gameStart => PhoneGameStartAnimation(
+      GameAnnouncementKind.gameStart => GameStartAnimation(
         key: ValueKey(current.id),
         text: current.text,
         textStyle: textStyle,
@@ -181,12 +191,33 @@ class _StaticTimedAnnouncement extends StatefulWidget {
 }
 
 class _StaticTimedAnnouncementState extends State<_StaticTimedAnnouncement> {
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(widget.duration, () {
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StaticTimedAnnouncement oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer(widget.duration, () {
       if (mounted) widget.onCompleted();
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

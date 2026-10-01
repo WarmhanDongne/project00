@@ -73,7 +73,10 @@ Map<String, dynamic> controllerCommandData(
 ]) {
   final code = roomCode.trim().toUpperCase();
   final sessionId = ControllerRoomSessionStore.instance.sessionIdForRoom(code);
-  final data = <String, dynamic>{'roomCode': code, ...values};
+  // 호출자가 예전 payload를 그대로 넘겨도 정규화된 방 코드가 항상
+  // 최종값이 됩니다. values의 roomCode가 다시 덮어쓰면 세션 조회와
+  // callable payload가 서로 다른 방을 가리키게 됩니다.
+  final data = <String, dynamic>{...values, 'roomCode': code};
   if (sessionId != null) data['controllerSessionId'] = sessionId;
   return data;
 }

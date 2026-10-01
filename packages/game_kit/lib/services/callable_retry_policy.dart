@@ -1,6 +1,14 @@
-import 'dart:async';
+// [callable_retry_policy.dart] 는 여러 게임이 함께 사용하는 게임의 조회·명령 서비스를 묶어 제공하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Retry] : 게임의 조회·명령 서비스를 묶어 제공함
+//
+// 즉, 게임 로직이 서버 접근 방식을 한곳에서 사용하기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
+// ============================================================
 
 /// 멱등성을 보장하는 게임 명령의 Cloud Functions 일시 오류 재전송 정책입니다.
 ///

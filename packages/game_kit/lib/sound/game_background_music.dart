@@ -1,8 +1,16 @@
-import 'dart:async';
+// [game_background_music.dart] 는 여러 게임이 함께 사용하는 게임 진행 단계에 맞는 음악과 효과음을 관리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Sound] : 게임 진행 단계에 맞는 음악과 효과음을 관리함
+//
+// 즉, 서버 진행 상태와 소리 재생 시점을 맞추기 위해 필요한 파일이다.
 
+// ========================[ import ]==========================
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/sound/providers/sound_provider.dart';
 import 'package:game_kit/core/sound/sound_effects.dart';
+// ============================================================
 
 /// 게임 화면이 살아 있는 동안 배경음악을 관리합니다.
 ///
@@ -31,6 +39,8 @@ import 'package:game_kit/core/sound/sound_effects.dart';
 class GameBackgroundMusic {
   SoundProvider? _sound;
   bool _isPlaying = false;
+  bool _isPlaybackRequested = false;
+  int _operationGeneration = 0;
 
   /// 배경음악이 재생 중인지 여부입니다.
   bool get isPlaying => _isPlaying;
@@ -51,20 +61,45 @@ class GameBackgroundMusic {
   /// [asset]은 게임마다 다릅니다. 각 게임의 `sound/<game>_sounds.dart`에 있는
   /// 값을 넘기세요. 곡을 바꾸려면 [stop]으로 멈춘 뒤 다시 부릅니다.
   void start(String asset) {
-    if (_isPlaying) return;
+    if (_isPlaybackRequested) return;
 
     final sound = _sound;
     if (sound == null) return;
 
-    _isPlaying = true;
-    _run(sound.playBgm(asset), '배경음악을 재생하지 못했습니다');
+    _isPlaybackRequested = true;
+    final generation = ++_operationGeneration;
+    unawaited(
+      sound
+          .playBgm(asset)
+          .then((_) {
+            // stop/fadeOut이 더 나중에 호출됐다면 이 재생 완료는
+            // 현재 상태를 다시 되돌리지 않습니다.
+            if (generation == _operationGeneration && _isPlaybackRequested) {
+              _isPlaying = true;
+            } else if (!_isPlaybackRequested) {
+              // 재생이 완료되기 전 stop/fadeOut이 들어온 경우, 늦게 시작된
+              // 네이티브 재생이 화면을 나간 뒤 남지 않도록 한 번 더 멈춥니다.
+              _run(sound.stopBgm(), '배경음악을 멈추지 못했습니다');
+            }
+          })
+          .catchError((Object error) {
+            if (generation == _operationGeneration) {
+              _isPlaybackRequested = false;
+              _isPlaying = false;
+            }
+            // 사운드는 보조 기능이라 실패해도 게임 진행을 막지 않습니다.
+            debugPrint('배경음악을 재생하지 못했습니다: $error');
+          }),
+    );
   }
 
   /// 배경음악을 멈춥니다. 화면의 `dispose`에서 반드시 호출하세요.
   void stop() {
-    if (!_isPlaying) return;
+    if (!_isPlaybackRequested && !_isPlaying) return;
 
+    _isPlaybackRequested = false;
     _isPlaying = false;
+    _operationGeneration += 1;
     _run(_sound?.stopBgm(), '배경음악을 멈추지 못했습니다');
   }
 
@@ -77,9 +112,11 @@ class GameBackgroundMusic {
   /// ⚠️ 화면의 `dispose`에서는 [stop]을 쓰세요. 화면이 사라진 뒤에도 소리가
   /// 몇 초 더 들리면 안 됩니다.
   void fadeOut({Duration duration = const Duration(milliseconds: 1200)}) {
-    if (!_isPlaying) return;
+    if (!_isPlaybackRequested && !_isPlaying) return;
 
+    _isPlaybackRequested = false;
     _isPlaying = false;
+    _operationGeneration += 1;
     _run(_sound?.fadeOutBgm(duration: duration), '배경음악을 서서히 줄이지 못했습니다');
   }
 

@@ -1,4 +1,13 @@
+// [game_interruption.dart] 는 여러 게임이 함께 사용하는 게임의 공통 단계·안내·종료 흐름을 정의하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [GameFlow] : 게임의 공통 단계·안내·종료 흐름을 정의함
+//
+// 즉, 각 게임이 같은 화면 전환 규칙과 예외 처리를 공유하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+// ============================================================
 
 enum GameInterruptionReason { disconnected, left }
 
@@ -58,6 +67,46 @@ class GameInterruption {
   int get voteCount => voterUids.length;
   bool canVote(String uid) => canContinue && eligibleVoterUids.contains(uid);
   bool hasVoted(String uid) => voterUids.contains(uid);
+
+  //=======================값 동등성==============================
+  // Riverpod 의 Notifier 는 `previous != next` 일 때만 알림을 보냅니다.
+  // == 가 없으면 copyWith 가 만든 새 객체는 내용이 같아도 늘 다른 것으로
+  // 취급되어, 바뀐 게 없는 스냅샷에도 화면 전체가 다시 그려집니다.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GameInterruption &&
+        id == other.id &&
+        playerUid == other.playerUid &&
+        playerNickname == other.playerNickname &&
+        playerCharacterId == other.playerCharacterId &&
+        reason == other.reason &&
+        startedAt == other.startedAt &&
+        deadlineAt == other.deadlineAt &&
+        listEquals(eligibleVoterUids, other.eligibleVoterUids) &&
+        requiredVotes == other.requiredVotes &&
+        setEquals(voterUids, other.voterUids) &&
+        remainingPlayerCount == other.remainingPlayerCount &&
+        minimumPlayerCount == other.minimumPlayerCount &&
+        canContinue == other.canContinue;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    playerUid,
+    playerNickname,
+    playerCharacterId,
+    reason,
+    startedAt,
+    deadlineAt,
+    Object.hashAll(eligibleVoterUids),
+    requiredVotes,
+    Object.hashAllUnordered(voterUids),
+    remainingPlayerCount,
+    minimumPlayerCount,
+    canContinue,
+  );
 }
 
 List<String> _stringValues(Object? value) {

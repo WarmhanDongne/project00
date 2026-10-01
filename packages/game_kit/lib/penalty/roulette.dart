@@ -1,6 +1,13 @@
+// [roulette.dart] 는 여러 게임이 함께 사용하는 패널티 룰렛의 상태와 회전 결과를 표현하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Roulette] : 패널티 룰렛의 상태와 회전 결과를 표현함
+//
+// 즉, 룰렛 연출과 서버 결과를 같은 값으로 연결하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'dart:async';
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/core/sound/app_sounds.dart';
@@ -10,6 +17,8 @@ import 'package:game_kit/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:roulette/roulette.dart';
 import 'package:game_kit/game_assets.dart';
+
+// ============================================================
 
 enum RouletteResult { safe, eliminated }
 
@@ -41,6 +50,58 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   /// ============================================================
   static const double _designWidth = 1300;
   static const double _designHeight = 900;
+  static const double _upperLeverStickEnd = 0.27499999999999986;
+  static const double _lowerLeverStickStart = 0.7387499999999977;
+
+  static const List<bool> _firstAttemptSections = [
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+  ];
+  static const List<bool> _secondAttemptSections = [
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+  ];
+  static const List<bool> _finalAttemptSections = [
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ];
 
   final RouletteController _controller = RouletteController();
   final math.Random _random = math.Random.secure();
@@ -50,12 +111,21 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   bool _isLeverDragActive = false;
 
   late final AnimationController _leverController;
+  late RouletteGroup _group;
 
-  /// 원판이 도는 시간입니다. 효과음도 이 길이에 맞춰 끝을 정렬합니다.
-  static const Duration _spinDuration = Duration(seconds: 4);
+  /// 서버 응답이 빠를 때의 전체 연출 시간입니다. 효과음 재생 구간도 함께 늘어납니다.
+  /// 길게 설정할수록 마지막 칸을 천천히 지나는 시간이 늘어납니다.
+  static const Duration _spinDuration = Duration(seconds: 6);
 
-  /// 서버 응답이 느려도 결과 칸으로 자연스럽게 감속할 최소 시간입니다.
-  static const Duration _minimumSettleDuration = Duration(milliseconds: 1200);
+  /// 서버 결과를 기다리는 동안 한 바퀴에 걸리는 시간입니다.
+  /// 300ms = 초당 약 3.3바퀴입니다(기존 125ms = 초당 8바퀴).
+  /// 값을 늘리면 시작 속도가 느려집니다. 가속 구간 없이 이 속도로 시작합니다.
+  static const Duration _fastSpinPeriod = Duration(milliseconds: 300);
+
+  /// 서버가 늦게 응답해도 마지막 감속을 급하게 압축하지 않습니다.
+  /// 이 경우 전체 회전은 6초보다 길어질 수 있습니다. 결과 수신 후 최소 4초 동안
+  /// 감속하며, 네트워크 지연 중에는 클라이언트가 임의의 결과 칸에 멈추지 않습니다.
+  static const Duration _minimumSettleDuration = Duration(seconds: 4);
 
   /// dispose에서도 사운드를 멈춰야 해서 미리 잡아 둡니다.
   SoundProvider? _sound;
@@ -71,6 +141,15 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
         )..addListener(() {
           setState(() {});
         });
+    _group = _createGroup(_sections);
+  }
+
+  @override
+  void didUpdateWidget(covariant PenaltyRoulette oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.attemptCount != widget.attemptCount) {
+      _group = _createGroup(_sections);
+    }
   }
 
   // ============================================================
@@ -130,38 +209,15 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
 
   /// true  = 탈락
   /// false = 생존
-  List<bool> get _sections {
-    switch (widget.attemptCount) {
-      case 0:
+  /// 회차별 탈락 확률은 고정 목록을 재사용합니다. 각 불 프레임마다
+  /// 같은 불 목록을 다시 만들 필요가 없습니다.
+  List<bool> get _sections => switch (widget.attemptCount) {
+    0 => _firstAttemptSections,
+    1 => _secondAttemptSections,
+    _ => _finalAttemptSections,
+  };
 
-        /// 총 16칸
-        /// 탈락 4
-        /// 생존 12
-        ///
-        /// 탈락 : 생존 = 1 : 3
-        return List.generate(16, (index) => index % 4 == 0);
-
-      case 1:
-
-        /// 총 15칸
-        /// 탈락 5
-        /// 생존 10
-        ///
-        /// 탈락 : 생존 = 1 : 2
-        return List.generate(15, (index) => index % 3 == 0);
-
-      default:
-
-        /// 총 12칸
-        /// 탈락 11
-        /// 생존 1
-        return List<bool>.generate(12, (index) => index != 0);
-    }
-  }
-
-  RouletteGroup get _group {
-    final sections = _sections;
-
+  RouletteGroup _createGroup(List<bool> sections) {
     return RouletteGroup.uniform(
       sections.length,
       colorBuilder: (index) {
@@ -196,14 +252,12 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     _sound?.playSustainedEffect(AppSounds.roulette, window: _spinDuration);
 
     // 서버가 추첨할 때까지 원판을 멈춰 두면 네트워크 응답 시간이 그대로
-    // 레버 지연으로 보입니다. 먼저 일정 속도로 회전하고, 서버 결과가 오면
-    // rollTo가 현재 각도에서 서버가 정한 칸으로 감속합니다.
+    // 레버 지연으로 보입니다. 처음부터 빠른 일정 속도로 회전하고, 서버 결과가
+    // 오면 이 속도를 넘지 않는 회전 수로 감속합니다. 결과를 기다리는 동안에는
+    // 임의의 칸에서 멈추거나 클라이언트가 생존/탈락을 결정하지 않습니다.
     final spinElapsed = Stopwatch()..start();
     unawaited(
-      _controller.rollInfinitely(
-        period: const Duration(milliseconds: 700),
-        curve: Curves.linear,
-      ),
+      _controller.rollInfinitely(period: _fastSpinPeriod, curve: Curves.linear),
     );
 
     final result = await widget.onPrepareResult();
@@ -249,12 +303,29 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
         ? remaining
         : _minimumSettleDuration;
 
+    // 기본 12바퀴를 고정하면 서버 응답이 늦을수록 짧은 시간에 더 빨리 돌아
+    // '느림 → 급가속 → 감속'이 됩니다. 감속 구간의 시작 속도가 대기 회전보다
+    // 빨라지지 않도록, 남은 시간과 시작 속도에 맞춰 회전 수를 제한합니다.
+    // 전용 감속 곡선의 최대 기울기는 시작점의 3입니다. 목표 칸까지의
+    // 추가 각도(최대 한 바퀴)도 예산에 포함하려고 계산값에서 1을 뺍니다.
+    final settleCircles = math.max(
+      1,
+      (settleDuration.inMicroseconds /
+                  (_fastSpinPeriod.inMicroseconds *
+                      _SuspenseDecelerationCurve.initialSlope))
+              .floor() -
+          1,
+    );
+
     final completed = await _controller.rollTo(
       selectedIndex,
+      minRotateCircles: settleCircles,
       offset: 0.15 + (_random.nextDouble() * 0.7),
       animationConfig: CurveAnimationConfig(
         duration: settleDuration,
-        curve: Curves.easeOutCubic,
+        // 중반부터 확실히 감속하고 마지막에는 몇 칸을 천천히 지나갑니다.
+        // 가짜 정지/재가속 없이 끝까지 같은 방향으로 서버 결과 칸에 도착합니다.
+        curve: const _SuspenseDecelerationCurve(),
       ),
     );
 
@@ -381,6 +452,24 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     _controller.dispose();
 
     super.dispose();
+  }
+}
+
+/// 진행률 1 - (1 - t)³: 속도가 3(1 - t)²로 줄어드는 감속 전용 곡선입니다.
+///
+/// 기본 6초 연출에서 마지막 2초에 이동 거리의 약 3.7%만 남겨, 포인터 아래
+/// 몇 칸을 천천히 지나는 긴장감을 만듭니다. 끝에 별도 정지 시간을 붙이지 않아
+/// 결과를 이미 보여 준 채 callback만 지연시키는 연출이 되지 않습니다.
+/// 곡선을 바꿀 때 initialSlope도 함께 바꿔야 서버 응답 직후 급가속을 막을 수 있습니다.
+class _SuspenseDecelerationCurve extends Curve {
+  const _SuspenseDecelerationCurve();
+
+  static const double initialSlope = 3;
+
+  @override
+  double transformInternal(double t) {
+    final remaining = 1 - t;
+    return 1 - remaining * remaining * remaining;
   }
 }
 
@@ -564,7 +653,7 @@ class RouletteWheel extends StatelessWidget {
           // ========================================================
           // 레버 스틱 - 위
           // ========================================================
-          if (leverProgress < 0.27499999999999986)
+          if (leverProgress < _PenaltyRouletteState._upperLeverStickEnd)
             Positioned(
               right: -230,
               top: -120,
@@ -585,7 +674,7 @@ class RouletteWheel extends StatelessWidget {
           // ========================================================
           // 레버 스틱 - 아래
           // ========================================================
-          if (leverProgress > 0.7387499999999977)
+          if (leverProgress > _PenaltyRouletteState._lowerLeverStickStart)
             Positioned(
               right: -230,
               top: 120,

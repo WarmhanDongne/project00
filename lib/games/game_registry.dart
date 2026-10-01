@@ -1,7 +1,7 @@
 import 'package:game_kit/template_game.dart';
-import 'package:game_final_call/final_call_game.dart';
-import 'package:game_liars_poker/liars_poker_game.dart';
-import 'package:game_mafia/mafia_game.dart';
+import 'package:game_final_call/game_final_call.dart';
+import 'package:game_liars_poker/game_liars_poker.dart';
+import 'package:game_mafia/game_mafia.dart';
 
 final class GameRegistry implements GameCatalog {
   const GameRegistry();

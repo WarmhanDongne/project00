@@ -1,10 +1,18 @@
+// [user_error_message.dart] 는 여러 게임이 함께 사용하는 앱과 게임에서 발생하는 오류를 공통 형태로 정리하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Error] : 앱과 게임에서 발생하는 오류를 공통 형태로 정리함
+//
+// 즉, 내부 오류를 사용자 메시지와 복구 판단으로 연결하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'dart:async';
 import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/error/app_exception.dart';
 import 'package:game_kit/core/error/room_command_exception.dart';
+// ============================================================
 
 /// 오류가 난 문맥입니다.
 ///

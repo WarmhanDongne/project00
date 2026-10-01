@@ -1,6 +1,15 @@
+// [critical_network_guard.dart] 는 여러 게임이 함께 사용하는 게임 화면에서 반복 사용하는 공통 UI를 구성하는 파일이다.
+//
+// - [Package] : 게임 공통 기반
+// - [Widget] : 게임 화면에서 반복 사용하는 공통 UI를 구성함
+//
+// 즉, 같은 표시와 조작 방식을 여러 화면에서 재사용하기 위해 필요한 파일이다.
+
+// ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/network/app_network_guard.dart';
 import 'package:game_kit/models/game_room_context.dart';
+// ============================================================
 
 /// 게임/방 세션이 살아 있는 동안 RTDB 연결을 감시하는 계약 기반 경계입니다.
 class CriticalNetworkGuard extends StatefulWidget {
