@@ -20,6 +20,8 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   late final AnimationController _exitMatController;
   bool _hasScheduledInsufficientPlayersExit = false;
   bool _isExitingToLobby = false;
+  final _dealingCommand = GameProgressCommand();
+  int? _previousGameStartedAt;
 
   // ---------------------------------------------------------------------------
   // 태블릿 전용 연출 상태
@@ -162,6 +164,11 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     // 첫 공개 상태가 오기 전의 명령 상태 변화(메뉴 잠금 등)에는 연출 상태를
     // 만들지 않습니다.
     if (game.isInitialLoading) return;
+    if (_previousGameStartedAt != game.gameStartedAt) {
+      _previousGameStartedAt = game.gameStartedAt;
+      _dealingCommand.cancel();
+      _hasReceivedFirstState = false;
+    }
 
     if (game.phase != 'penalty') {
       _penaltyTransitionTimer?.cancel();
@@ -259,6 +266,10 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     } else if (game.phase == 'penalty' &&
         _stage != LiarsPokerTabletStage.cardsRevealing) {
       _stage = LiarsPokerTabletStage.penalty;
+    } else if (wasDealing && game.phase == 'playing') {
+      // 서버가 분배 완료를 확인한 뒤에만 다음 연출을 엽니다. 실패 시 이미
+      // 끝난 분배를 다시 재생하지 않고 공용 완료 명령만 재시도합니다.
+      _stage = LiarsPokerTabletStage.roundStarting;
     } else if (isRoundChanged) {
       // 새 라운드에서도 태블릿 카드 배분 애니메이션을 다시 실행합니다.
       _stage = LiarsPokerTabletStage.roundStarting;
@@ -384,9 +395,27 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   // ---------------------------------------------------------------------------
   // 화면 애니메이션 완료 이벤트
   // ---------------------------------------------------------------------------
-  Future<void> _onDealCompleted() async {
-    _changeStage(LiarsPokerTabletStage.roundStarting);
-    await _controller?.completeDealing();
+  void _onDealCompleted() {
+    final game = _controller;
+    if (game == null) return;
+    // 기존 playing 스냅샷으로 화면을 복구한 경우에는 서버 분배 명령이 필요 없습니다.
+    if (game.phase != 'dealing') {
+      _changeStage(LiarsPokerTabletStage.roundStarting);
+      return;
+    }
+    final key = (game.gameStartedAt, game.round);
+    _dealingCommand.run(
+      key: key,
+      isCurrent: () =>
+          mounted &&
+          !_isExitingToLobby &&
+          !game.isFinished &&
+          game.phase == 'dealing' &&
+          (game.gameStartedAt, game.round) == key,
+      send: () => game.interruption != null
+          ? Future.value(false)
+          : game.completeDealing(),
+    );
   }
 
   void _onRoundRevealCompleted() {
@@ -759,6 +788,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
 
   @override
   void dispose() {
+    _dealingCommand.dispose();
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     _backgroundMusic.stop();
     _penaltyTransitionTimer?.cancel();

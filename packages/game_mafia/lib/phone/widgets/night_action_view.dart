@@ -14,6 +14,7 @@ import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
 import 'package:game_mafia/shared/widgets/profile_image.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 /// 경찰·정보원이 조사한 결과입니다.
@@ -108,6 +109,7 @@ class MafiaNightActionView extends StatelessWidget {
     this.onConfirm,
     this.investigationResult,
     this.onConfirmResult,
+    this.waitingMessage = '다른 플레이어의 행동을 기다리는 중…',
   });
 
   /// 내 역할입니다. null이면 아직 역할을 받지 못한 것으로 보고 대기 화면을 그립니다.
@@ -147,6 +149,7 @@ class MafiaNightActionView extends StatelessWidget {
 
   /// 결과 화면의 '확인'을 눌렀을 때입니다.
   final VoidCallback? onConfirmResult;
+  final String waitingMessage;
 
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
@@ -441,7 +444,7 @@ class MafiaNightActionView extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              '다른 플레이어의 행동을 기다리는 중…',
+              waitingMessage,
               maxLines: 1,
               textAlign: TextAlign.center,
               style: TextStyle(

@@ -7,6 +7,8 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/game_flow/game_presentation_sequence.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/shared/models/player.dart';
@@ -20,6 +22,7 @@ import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/tablet/screens/night_bird.dart';
 import 'package:game_mafia/tablet/screens/tally_view.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -246,16 +249,11 @@ class MafiaTabletMorningView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // T3 아침 순서
 // ---------------------------------------------------------------------------
-/// 아침을 세 박자로 알립니다(확정 2026-08).
-///
-///   '아침이 되었습니다'(2.5초) → 사망자 발표(8초) → '토론을 시작합니다'(2.5초)
-///
-/// 각 박자는 **떠올랐다가 물러납니다**([MafiaAnnouncementReveal]). 그래서 안내가
-/// 뜨는 동안 사망자 발표가 뒤에 깔려 있지 않고, 발표도 다 읽은 뒤 물러납니다.
-///
-/// 마지막 안내가 끝나면 화면(tablet_game.dart)이 서버에 아침 완료를 알려
-/// 토론으로 넘어갑니다. 그래서 이 세 박자의 합이 아침 단계의 시간입니다
-/// ([MafiaTabletStage.announcementHold]와 반드시 같아야 합니다).
+/// 아침 안내 → 사망자 발표 → 취재 공개(있는 경우) → 토론 안내 순서입니다.
+/// 각 유지 시간은 휴대폰과 공유하는 [MafiaPresentationTiming]에서 조절합니다.
+/// 중단 중에는 남은 연출 시간을 보존하고, 마지막 화면은 서버 phase가 바뀔
+/// 때까지 유지해 완료 요청이 늦어져도 빈 화면이 나타나지 않도록 합니다.
+/// 서버 완료 요청은 tablet board가 담당하며 이 위젯은 표시만 담당합니다.
 class MafiaTabletMorningSequence extends StatelessWidget {
   const MafiaTabletMorningSequence({
     super.key,
@@ -273,16 +271,17 @@ class MafiaTabletMorningSequence extends StatelessWidget {
   final MafiaRole? exposedRole;
 
   /// '아침이 되었습니다'를 보여 주는 시간입니다.
-  static const Duration openingHold = Duration(milliseconds: 2500);
+  static const Duration openingHold = MafiaPresentationTiming.morningOpening;
 
   /// 사망자 발표를 읽을 시간입니다(확정: 8초).
-  static const Duration announcementHold = Duration(milliseconds: 8000);
+  static const Duration announcementHold =
+      MafiaPresentationTiming.morningDeaths;
 
   /// 기자의 취재 공개를 보여 주는 시간입니다(처형 공개와 같은 9초).
-  static const Duration exposureHold = Duration(milliseconds: 9000);
+  static const Duration exposureHold = MafiaPresentationTiming.exposure;
 
   /// '토론을 시작합니다'를 보여 주는 시간입니다.
-  static const Duration closingHold = Duration(milliseconds: 2500);
+  static const Duration closingHold = MafiaPresentationTiming.nextPhase;
 
   /// 세 박자를 합한 아침 전체 시간입니다(취재 공개 없음).
   static Duration get totalHold => openingHold + announcementHold + closingHold;
@@ -310,44 +309,39 @@ class MafiaTabletMorningSequence extends StatelessWidget {
   Widget build(BuildContext context) {
     final exposedUid = result?.exposedUid;
     final exposed = exposedUid == null ? null : players[exposedUid];
-    // 취재 대상이 명단에서 사라진 경우(퇴장)에는 박자를 건너뜁니다.
-    final showsExposure = exposed != null;
-    final afterAnnouncement = openingHold + announcementHold;
-    final afterExposure =
-        afterAnnouncement + (showsExposure ? exposureHold : Duration.zero);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
+    // 명단이 일시적으로 비어도 시간표 길이는 서버 결과와 동일하게 유지합니다.
+    final showsExposure = result?.hasExposure ?? false;
+    return GamePresentationSequence(
+      beats: [
         // 1박자: 아침 안내가 떠올랐다 물러납니다.
-        MafiaAnnouncementReveal(
-          visibleFor: openingHold,
+        GamePresentationBeat(
+          hold: openingHold,
           child: const MafiaTabletNotice.day(text: MafiaCopy.morningNotice),
         ),
         // 2박자: 안내가 물러난 뒤 사망자 발표가 떠오르고, 다 읽으면 물러납니다.
-        MafiaAnnouncementReveal(
-          delay: openingHold,
-          visibleFor: announcementHold,
+        GamePresentationBeat(
+          hold: announcementHold,
           child: MafiaTabletMorningView(result: result, players: players),
         ),
         // 3박자(있을 때만): 기자의 취재 공개입니다. **처형 공개와 같은 연출**을
         // 그대로 씁니다 — 카드가 뒤집혀 신분이 드러나고, 그 사람은 죽지 않습니다.
         if (showsExposure)
-          MafiaAnnouncementReveal(
-            delay: afterAnnouncement,
-            visibleFor: exposureHold,
-            child: MafiaTabletExecutionView(
-              executed: exposed,
-              executedRole: exposedRole,
-              isTie: false,
-              headlineBeats: MafiaCopy.exposureBeats,
-            ),
+          GamePresentationBeat(
+            hold: exposureHold,
+            child: exposed == null
+                ? const MafiaTabletNotice.day(text: '취재 정보를 확인하고 있습니다.')
+                : MafiaTabletExecutionView(
+                    executed: exposed,
+                    executedRole: exposedRole,
+                    isTie: false,
+                    headlineBeats: MafiaCopy.exposureBeats,
+                  ),
           ),
         // 마지막 박자: 토론 시작 안내입니다. 단계가 넘어갈 때까지 남습니다.
         // 이 발표로 게임이 끝나면 띄우지 않습니다.
         if (!(result?.endsGame ?? false))
-          MafiaAnnouncementReveal(
-            delay: afterExposure,
+          GamePresentationBeat(
+            hold: closingHold,
             child: const MafiaTabletNotice.day(
               text: MafiaCopy.discussionNotice,
               // '지금부터 토론을 시작합니다' 음성(2.24초)이 2.5초 안내에 맞습니다.
@@ -381,13 +375,15 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
   final MafiaRole? executedRole;
 
   /// 개표판을 보여 주는 시간입니다(확정: 4초).
-  static const Duration tallyHold = Duration(milliseconds: 4000);
+  static const Duration tallyHold = MafiaPresentationTiming.voteTally;
 
   /// 처형 발표(이름 4초 + 신분 공개 5초)를 보여 주는 시간입니다.
-  static const Duration executionHold = Duration(milliseconds: 9000);
+  static Duration get executionHold =>
+      MafiaPresentationTiming.executionName +
+      MafiaPresentationTiming.executionReveal;
 
   /// 마지막에 '밤이 되었습니다'를 보여 주는 시간입니다.
-  static const Duration nightNoticeHold = Duration(milliseconds: 2500);
+  static const Duration nightNoticeHold = MafiaPresentationTiming.nextPhase;
 
   /// 개표부터 밤 안내까지 합한 전체 시간입니다.
   static Duration get totalHold => tallyHold + executionHold + nightNoticeHold;
@@ -403,16 +399,14 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 아침 발표와 같은 말투입니다 — 각 박자가 떠올랐다 물러납니다.
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        MafiaAnnouncementReveal(
-          visibleFor: tallyHold,
+    return GamePresentationSequence(
+      beats: [
+        GamePresentationBeat(
+          hold: tallyHold,
           child: MafiaTabletTallyView(result: result, players: players),
         ),
-        MafiaAnnouncementReveal(
-          delay: tallyHold,
-          visibleFor: executionHold,
+        GamePresentationBeat(
+          hold: executionHold,
           child: MafiaTabletExecutionView(
             executed: executed,
             executedRole: executedRole,
@@ -422,8 +416,8 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
         // 확정(2026-08): 밤으로 가기 전에 안내를 띄우고 그 뒤에 배경이 바뀝니다.
         // 이 처형으로 게임이 끝나면 띄우지 않습니다.
         if (!(result?.endsGame ?? false))
-          MafiaAnnouncementReveal(
-            delay: tallyHold + executionHold,
+          GamePresentationBeat(
+            hold: nightNoticeHold,
             child: const MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
           ),
       ],

@@ -6,8 +6,9 @@
 // 즉, 게임 진행과 화면 연출이 같은 타이밍으로 움직이게 구성하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -63,11 +64,13 @@ class MafiaAnnouncementReveal extends StatefulWidget {
 }
 
 class _MafiaAnnouncementRevealState extends State<MafiaAnnouncementReveal>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_enter, _exit];
   late final AnimationController _enter;
   late final AnimationController _exit;
-  Timer? _delayTimer;
-  Timer? _exitTimer;
+  PresentationTimer? _delayTimer;
+  PresentationTimer? _exitTimer;
 
   /// 아직 차례가 오지 않았거나 이미 물러났으면 false입니다.
   bool _mountedContent = false;
@@ -87,7 +90,7 @@ class _MafiaAnnouncementRevealState extends State<MafiaAnnouncementReveal>
     if (widget.delay == Duration.zero) {
       _appear();
     } else {
-      _delayTimer = Timer(widget.delay, _appear);
+      _delayTimer = presentationTimer(widget.delay, _appear);
     }
   }
 
@@ -100,9 +103,12 @@ class _MafiaAnnouncementRevealState extends State<MafiaAnnouncementReveal>
     if (visibleFor == null) return;
     // 물러나기 시작할 시각입니다. 물러나는 시간까지 합쳐 visibleFor를 지킵니다.
     final untilExit = visibleFor - MafiaAnnouncementReveal.exitDuration;
-    _exitTimer = Timer(untilExit.isNegative ? Duration.zero : untilExit, () {
-      if (mounted) _exit.forward(from: 0);
-    });
+    _exitTimer = presentationTimer(
+      untilExit.isNegative ? Duration.zero : untilExit,
+      () {
+        if (mounted) _exit.forward(from: 0);
+      },
+    );
   }
 
   void _handleExitDone(AnimationStatus status) {

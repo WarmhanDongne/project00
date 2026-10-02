@@ -34,8 +34,14 @@ MafiaPhoneStage resolveMafiaPhoneStage(MafiaController game) {
     return MafiaPhoneStage.closing;
   }
   if (game.isFinished) return MafiaPhoneStage.result;
+  if (!game.privateDataReady) return MafiaPhoneStage.connecting;
   // 처형 직후에는 사망자도 발표를 먼저 봐야 하므로 관전보다 우선합니다.
   if (game.isVoteResult) return MafiaPhoneStage.voteResult;
+  // 오늘 밤 사망한 당사자도 아침 발표를 본 뒤 관전으로 이동합니다.
+  if (game.isMorning &&
+      (game.morningResult?.deadUids.contains(game.uid) ?? false)) {
+    return MafiaPhoneStage.morning;
+  }
   if (game.isSpectating) return MafiaPhoneStage.spectator;
   return switch (game.phase) {
     'roleReveal' => MafiaPhoneStage.roleReveal,
@@ -43,6 +49,6 @@ MafiaPhoneStage resolveMafiaPhoneStage(MafiaController game) {
     'morning' => MafiaPhoneStage.morning,
     'day' => MafiaPhoneStage.day,
     'voting' => MafiaPhoneStage.voting,
-    _ => MafiaPhoneStage.day,
+    _ => MafiaPhoneStage.connecting,
   };
 }

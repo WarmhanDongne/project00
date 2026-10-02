@@ -17,6 +17,7 @@ import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_auto_complete.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/game_flow/game_progress_command.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/shared/animations/mat_unroll_animation.dart';

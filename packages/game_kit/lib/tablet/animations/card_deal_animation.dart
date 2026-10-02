@@ -16,6 +16,7 @@ import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_kit/widgets/game_card_face.dart';
 import 'package:game_kit/player_layouts/player_slot_positions.dart';
 import 'package:game_kit/game_assets.dart';
+
 // ============================================================
 
 typedef DealCardBuilder =
@@ -40,6 +41,8 @@ class CardDealAnimation extends StatefulWidget {
     this.cardBuilder,
     this.cardWidth = 168,
     this.duration = const Duration(milliseconds: 2800),
+    this.beforeDelay = Duration.zero,
+    this.afterDelay = Duration.zero,
     this.autoplay = false,
     this.tapToStart = true,
     this.backgroundColor,
@@ -92,6 +95,13 @@ class CardDealAnimation extends StatefulWidget {
   /// [_deckEntryDuration]으로 별도 관리됩니다.
   final Duration duration;
 
+  /// 시작 탭(또는 autoplay) 뒤 분배를 시작하기 전 대기시간입니다.
+  /// 덱 등장 620ms와 별개이며, 첫 라운드의 tapToStart 정책은 바꾸지 않습니다.
+  final Duration beforeDelay;
+
+  /// 분배 연출이 끝난 뒤 서버 완료 콜백을 보내기 전 대기시간입니다.
+  final Duration afterDelay;
+
   /// 위젯이 화면에 나타나면 바로 재생할지 여부입니다.
   final bool autoplay;
 
@@ -117,6 +127,9 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
   late final AnimationController _controller;
   late final Listenable _animation;
+  Timer? _startDelayTimer;
+  Timer? _completionTimer;
+  bool _hasStarted = false;
 
   /// 현재까지 분배 효과음을 재생한 카드 수입니다.
   int _dealtSoundCount = 0;
@@ -149,7 +162,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
       if (!mounted || !widget.autoplay) return;
 
-      _controller.forward();
+      _startDeal(restart: false);
     });
   }
 
@@ -168,7 +181,14 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
   void _onStatusChanged(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
-      widget.onCompleted?.call();
+      _completionTimer?.cancel();
+      if (widget.afterDelay == Duration.zero) {
+        widget.onCompleted?.call();
+        return;
+      }
+      _completionTimer = Timer(widget.afterDelay, () {
+        if (mounted) widget.onCompleted?.call();
+      });
     }
   }
 
@@ -193,15 +213,24 @@ class CardDealAnimationState extends State<CardDealAnimation>
   }
 
   void _startDeal({required bool restart}) {
-    if (restart || _controller.isCompleted) {
-      _controller.forward(from: 0);
-    } else {
-      _controller.forward();
+    // 서버 완료를 기다리는 중 다시 탭해도 분배를 두 번 재생하지 않습니다.
+    if (_hasStarted && !restart) return;
+    _hasStarted = true;
+    _startDelayTimer?.cancel();
+    _completionTimer?.cancel();
+    if (widget.beforeDelay == Duration.zero) {
+      _controller.forward(from: restart ? 0 : null);
+      return;
     }
+    _startDelayTimer = Timer(widget.beforeDelay, () {
+      if (mounted) _controller.forward(from: restart ? 0 : null);
+    });
   }
 
   @override
   void dispose() {
+    _startDelayTimer?.cancel();
+    _completionTimer?.cancel();
     _controller
       ..removeStatusListener(_onStatusChanged)
       ..dispose();

@@ -25,6 +25,10 @@ import 'package:game_mafia/phone/widgets/execution_view.dart';
 import 'package:game_mafia/phone/widgets/night_action_view.dart';
 import 'package:game_mafia/phone/widgets/spectator_roster_view.dart';
 import 'package:game_mafia/phone/widgets/vote_view.dart';
+import 'package:game_mafia/phone/widgets/phase_notice.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
+import 'package:game_kit/game_flow/game_presentation_sequence.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -38,13 +42,13 @@ import 'package:game_mafia/phone/widgets/vote_view.dart';
 /// |---|---|
 /// | `roleReveal` | P1 역할 카드 확인 |
 /// | `night` | P2~P5 밤 행동 (조사 결과 포함) |
-/// | `morning` | P6 (아침 — 태블릿이 발표, 휴대폰은 대기) |
+/// | `morning` | 아침 → 사망 발표 → 취재 공개(있는 경우) → 토론 안내 |
 /// | `day` | P6 자유 토론 |
 /// | `voting` | P7 투표 |
-/// | `voteResult` | P7 처형 발표 → 신분 공개 (2박자) |
+/// | `voteResult` | 개표 대기 → 처형 발표 → 신분 공개 → 밤 안내 |
 ///
-/// 사망하면 단계와 무관하게 P8 관전 명단을 보여 줍니다. 단, 자기가 처형된
-/// 순간에는 당사자 화면을 먼저 보여 준 뒤 관전으로 넘어갑니다.
+/// 사망자는 관전 명단을 봅니다. 단, 자신의 아침 사망이나 처형 결과는 먼저
+/// 발표한 뒤 관전으로 넘어가므로 사망 이유를 놓치지 않습니다.
 class MafiaPhoneGameScreen extends StatefulWidget {
   const MafiaPhoneGameScreen({
     super.key,
@@ -61,23 +65,10 @@ class MafiaPhoneGameScreen extends StatefulWidget {
   State<MafiaPhoneGameScreen> createState() => _MafiaPhoneGameScreenState();
 }
 
-/// 처형 발표의 지역 진행 단계입니다.
-///
-/// 서버는 `voteResult` 하나로만 알려 주므로 발표 → 신분 공개 순서는 화면이
-/// 직접 셉니다. 연출 상태라 컨트롤러에 두지 않습니다.
-///
-/// 서버는 `voteResult` 하나로만 알려 주므로 발표 → 신분 공개 순서는 화면이
-/// 직접 셉니다. 연출 상태라 컨트롤러에 두지 않습니다.
-enum _ExecutionStage { announce, reveal, done }
-
+/// 제출 전 대상 선택과 조사 결과 확인 여부만 로컬 상태로 보관합니다.
+/// 발표 순서·유지 시간은 공용 Sequence/Timing에서 관리하며, 연출이 끝나도
+/// 이 화면이 서버 phase를 임의로 바꾸지는 않습니다.
 class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
-  /// 처형자 이름을 보여 주는 시간입니다(확정: 이름 4초). 이 뒤에 카드를 뒤집습니다.
-  static const Duration _announceHold = MafiaPhoneTiming.executionAnnouncement;
-
-  _ExecutionStage _executionStage = _ExecutionStage.done;
-  int? _executionRound;
-  Timer? _announceTimer;
-
   // ---------------------------------------------------------------------------
   // 밤 행동 로컬 상태
   // ---------------------------------------------------------------------------
@@ -95,49 +86,6 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
 
   /// 조사 결과에서 '확인'을 누른 라운드입니다. 누르면 대기 화면으로 넘어갑니다.
   int? _acknowledgedInvestigationRound;
-
-  @override
-  void didUpdateWidget(MafiaPhoneGameScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncExecutionStage();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _syncExecutionStage();
-  }
-
-  /// 서버가 새 개표 결과를 주면 발표부터 다시 시작합니다.
-  void _syncExecutionStage() {
-    final game = widget.controller;
-    if (!game.isVoteResult) {
-      if (_executionStage != _ExecutionStage.done) {
-        _announceTimer?.cancel();
-        _executionStage = _ExecutionStage.done;
-        _executionRound = null;
-      }
-      return;
-    }
-    if (_executionRound == game.round) return;
-
-    _announceTimer?.cancel();
-    _executionRound = game.round;
-    _executionStage = _ExecutionStage.announce;
-
-    // 아무도 처형되지 않았으면 뒤집을 카드가 없어 발표에서 멈춥니다.
-    if (game.executedPlayer == null) return;
-    _announceTimer = Timer(_announceHold, () {
-      if (!mounted) return;
-      setState(() => _executionStage = _ExecutionStage.reveal);
-    });
-  }
-
-  @override
-  void dispose() {
-    _announceTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +133,19 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             // 그 사람만의 안내입니다(처형자의 목표, 신분이 바뀌었다는 알림).
             notice: _roleNotice(game),
             onRevealed: game.confirmRole,
+          ),
+        // 개인 기록은 휴대폰에서만 엽니다. 태블릿으로 전달하거나 공개 문구에 섞지 않습니다.
+        if (game.privateDataReady &&
+            !game.isFinished &&
+            (game.currentInvestigation != null || game.roleChangedThisRound))
+          Positioned(
+            top: 72,
+            right: 12,
+            child: FilledButton.tonalIcon(
+              onPressed: () => _showPrivateRecord(game),
+              icon: const Icon(Icons.info_outline, size: 18),
+              label: Text(game.roleChangedThisRound ? '신분 변경 확인' : '내 조사 기록'),
+            ),
           ),
       ],
     );
@@ -244,9 +205,6 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   ///
   /// 같은 화면 안의 상태 변화(선택·집계·타이머)로는 바뀌지 않아야 합니다.
   String _pageKey(MafiaController game) {
-    if (game.isVoteResult && _executionStage != _ExecutionStage.done) {
-      return 'execution';
-    }
     return widget.stage.name;
   }
 
@@ -258,25 +216,13 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   Widget _buildPage(MafiaController game, Duration? remaining) {
     // 처형 발표는 사망 여부보다 먼저 봅니다. 자기가 처형된 사람도 발표를
     // 봐야 하기 때문입니다.
-    if (widget.stage == MafiaPhoneStage.voteResult &&
-        _executionStage != _ExecutionStage.done) {
+    if (widget.stage == MafiaPhoneStage.voteResult) {
       return _buildExecution(game);
     }
 
     // 사망자는 단계와 무관하게 관전 명단을 봅니다.
     if (widget.stage == MafiaPhoneStage.spectator) {
-      return MafiaSpectatorRosterView(
-        myRole: game.myRole,
-        myUid: game.uid,
-        isNight: game.isNight,
-        revealed: [
-          for (final player in game.orderedPlayers)
-            MafiaRevealedPlayer(
-              player: player,
-              role: game.spectatorRoles[player.uid],
-            ),
-        ],
-      );
+      return _spectator(game);
     }
 
     return switch (widget.stage) {
@@ -284,11 +230,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       MafiaPhoneStage.roleReveal => const SizedBox.shrink(),
       MafiaPhoneStage.night => _buildNight(game, remaining),
       // 아침은 태블릿과 같은 발표 문구를 보여 줍니다(확정).
-      MafiaPhoneStage.morning => MafiaMorningAnnouncementView(
-        role: game.myRole,
-        result: game.morningResult,
-        players: game.players,
-      ),
+      MafiaPhoneStage.morning => _buildMorning(game),
       MafiaPhoneStage.day => MafiaDayDiscussionView(
         role: game.myRole,
         remainingSeconds: widget.regions.showTimer
@@ -314,6 +256,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       _nightSelectionRound = game.round;
       _nightSelection = null;
     }
+    if (_nightSelection != null &&
+        !game.nightTargets.any((player) => player.uid == _nightSelection)) {
+      _nightSelection = null;
+    }
 
     final investigation = game.currentInvestigation;
     final target = investigation == null
@@ -328,9 +274,11 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     // 확정(2026-08): 밤은 **1~4 → 5~8 → 9~14 → 마무리**로 흐릅니다.
     // 내 차례가 아닌 구간에서는 격자를 감추고 대기 화면을 보여 줍니다.
     // 서버가 구간을 알려 주므로 남은 시간으로 되짚지 않습니다.
-    final actionWindowClosed = game.nightStageClosed;
+    final actionWindowClosed =
+        game.nightStageClosed || game.actionDeadlinePassed;
 
     return MafiaNightActionView(
+      waitingMessage: game.nightWaitingMessage,
       role: game.myRole,
       actionWindowClosed: actionWindowClosed,
       // 능력을 다 쓴 밤은 대기 화면입니다(자경단원의 한 발).
@@ -386,8 +334,14 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       _voteSelectionRound = game.round;
       _voteSelection = null;
     }
+    if (_voteSelection != null &&
+        !game.voteTargets.any((player) => player.uid == _voteSelection)) {
+      _voteSelection = null;
+    }
 
     return MafiaVoteView(
+      requestInFlight: game.commandInFlight,
+      timeExpired: game.actionDeadlinePassed,
       role: game.myRole,
       players: game.voteTargets,
       selectedUid: game.hasVoted ? game.voteTargetUid : _voteSelection,
@@ -408,17 +362,146 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
 
   Widget _buildExecution(MafiaController game) {
     final executed = game.executedPlayer;
-    if (_executionStage == _ExecutionStage.announce || executed == null) {
-      return MafiaExecutionResultView(
-        role: game.myRole,
-        executed: executed,
-        isMe: game.isExecutedMe,
-      );
-    }
-    return MafiaExecutionRevealView(
-      myRole: game.myRole,
-      executed: executed,
-      executedRole: game.revealedRoleOf(executed.uid),
+    return GamePresentationSequence(
+      key: ValueKey(('vote', game.gameStartedAt, game.round)),
+      beats: [
+        const GamePresentationBeat(
+          hold: MafiaPresentationTiming.voteTally,
+          child: MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
+        ),
+        GamePresentationBeat(
+          hold: MafiaPresentationTiming.executionName,
+          child: MafiaExecutionResultView(
+            role: game.myRole,
+            executed: executed,
+            isMe: game.isExecutedMe,
+          ),
+        ),
+        GamePresentationBeat(
+          hold: MafiaPresentationTiming.executionReveal,
+          child: executed == null
+              ? const MafiaPhonePhaseNotice(message: '아무도 처형되지 않았습니다.')
+              : MafiaExecutionRevealView(
+                  myRole: game.myRole,
+                  executed: executed,
+                  executedRole: game.revealedRoleOf(executed.uid),
+                ),
+        ),
+        if (!(game.voteResult?.endsGame ?? false))
+          const GamePresentationBeat(
+            hold: MafiaPresentationTiming.nextPhase,
+            child: MafiaPhonePhaseNotice(message: '밤이 되었습니다.'),
+          ),
+      ],
+    );
+  }
+
+  /// 아침 안내 → 밤 결과 → 취재 공개 → 토론/관전. 시간표는 태블릿과 공유합니다.
+  Widget _buildMorning(MafiaController game) {
+    final result = game.morningResult;
+    final exposed = game.players[result?.exposedUid];
+    return GamePresentationSequence(
+      key: ValueKey(('morning', game.gameStartedAt, game.round)),
+      completed: game.isSpectating ? _spectator(game) : null,
+      beats: [
+        const GamePresentationBeat(
+          hold: MafiaPresentationTiming.morningOpening,
+          child: MafiaPhonePhaseNotice(message: '아침이 되었습니다.'),
+        ),
+        GamePresentationBeat(
+          hold: MafiaPresentationTiming.morningDeaths,
+          child: game.isSpectating
+              ? const MafiaPhonePhaseNotice(
+                  message: '당신은 밤사이 사망했습니다.',
+                  detail:
+                      '발표가 끝나면 관전할 수 있습니다.\n알게 된 신분은 게임이 끝날 때까지 비밀로 유지해 주세요.',
+                )
+              : MafiaMorningAnnouncementView(
+                  role: game.myRole,
+                  result: result,
+                  players: game.players,
+                ),
+        ),
+        if (result?.hasExposure ?? false)
+          GamePresentationBeat(
+            hold: MafiaPresentationTiming.exposure,
+            child: exposed == null
+                ? const MafiaPhonePhaseNotice(message: '취재 결과를 확인하고 있습니다.')
+                : GamePresentationSequence(
+                    beats: [
+                      GamePresentationBeat(
+                        hold: MafiaPresentationTiming.executionName,
+                        child: MafiaPhonePhaseNotice(
+                          message: '${exposed.nickname}님의 신분이 공개됩니다.',
+                        ),
+                      ),
+                      GamePresentationBeat(
+                        hold: MafiaPresentationTiming.executionReveal,
+                        child: MafiaExecutionRevealView(
+                          myRole: game.myRole,
+                          executed: exposed,
+                          executedRole: game.revealedRoleOf(exposed.uid),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        if (!(result?.endsGame ?? false))
+          GamePresentationBeat(
+            hold: MafiaPresentationTiming.nextPhase,
+            child: game.isSpectating
+                ? _spectator(game)
+                : const MafiaPhonePhaseNotice(message: '토론을 시작합니다.'),
+          ),
+      ],
+    );
+  }
+
+  Widget _spectator(MafiaController game) => MafiaSpectatorRosterView(
+    myRole: game.myRole,
+    myUid: game.uid,
+    isNight: game.isNight,
+    revealed: [
+      for (final player in game.orderedPlayers)
+        MafiaRevealedPlayer(
+          player: player,
+          role: game.spectatorRoles[player.uid],
+        ),
+    ],
+  );
+
+  void _showPrivateRecord(MafiaController game) {
+    final investigation = game.currentInvestigation;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('나만 볼 수 있는 정보'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (game.roleChangedThisRound) ...[
+                Text('현재 신분: ${game.myRole?.displayName ?? '확인 중'}'),
+                const SizedBox(height: 8),
+                Text(game.myRole?.description ?? ''),
+                const SizedBox(height: 16),
+              ],
+              if (investigation != null)
+                Text(
+                  '${game.round}라운드 조사 기록\n'
+                  '${game.players[investigation.targetUid]?.nickname ?? '플레이어'}: ${investigation.verdict}',
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
     );
   }
 }

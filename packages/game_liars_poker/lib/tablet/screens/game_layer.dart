@@ -69,6 +69,8 @@ class _RoundDealLayerState extends State<_RoundDealLayer> {
                   cardAsset:
                       Assets.games.liarsPoker.images.cards.whiteBack.game,
                   duration: widget.flowStep.animation.duration,
+                  beforeDelay: widget.flowStep.beforeDelay,
+                  afterDelay: widget.flowStep.afterDelay,
                   // 첫 라운드만 중앙 덱을 직접 눌러 시작합니다. 2라운드부터는
                   // ROUND 안내가 끝나는 순간 자동 재생해 게임 흐름을 끊지 않습니다.
                   autoplay: widget.roundNumber > 1 && !_showRoundIntro,
