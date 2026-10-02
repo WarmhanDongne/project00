@@ -6,8 +6,9 @@
 // 즉, 모든 플레이어가 함께 보는 진행 상태와 연출을 표시하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/shared/models/player.dart';
@@ -16,6 +17,7 @@ import 'package:game_mafia/shared/widgets/flip_card.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/shared/widgets/profile_image.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ class MafiaTabletExecutionView extends StatefulWidget {
   // 연출 시간
   // ---------------------------------------------------------------------------
   /// 이름을 보여 주는 시간입니다(확정: 4초). 이 뒤에 카드가 나옵니다.
-  static const Duration nameHold = Duration(milliseconds: 4000);
+  static const Duration nameHold = MafiaPresentationTiming.executionName;
 
   /// 뒷면 카드를 보여 주는 시간입니다. 이 뒤에 뒤집혀 공개 5초가 이어집니다.
   static const Duration cardHold = Duration(milliseconds: 1000);
@@ -77,7 +79,9 @@ class MafiaTabletExecutionView extends StatefulWidget {
 }
 
 class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_flip];
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
   // ---------------------------------------------------------------------------
@@ -96,8 +100,8 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
   static const Duration _sentenceBeatHold = Duration(milliseconds: 1000);
 
   late final AnimationController _flip;
-  Timer? _nameTimer;
-  Timer? _cardTimer;
+  PresentationTimer? _nameTimer;
+  PresentationTimer? _cardTimer;
   bool _showsCard = false;
 
   /// 신분 문구를 찍기 시작했는지입니다.
@@ -116,10 +120,10 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
     )..addListener(_handleFlipProgress);
     if (widget.executed == null) return;
 
-    _nameTimer = Timer(MafiaTabletExecutionView.nameHold, () {
+    _nameTimer = presentationTimer(MafiaTabletExecutionView.nameHold, () {
       if (!mounted) return;
       setState(() => _showsCard = true);
-      _cardTimer = Timer(MafiaTabletExecutionView.cardHold, () {
+      _cardTimer = presentationTimer(MafiaTabletExecutionView.cardHold, () {
         if (mounted) _flip.forward();
       });
     });

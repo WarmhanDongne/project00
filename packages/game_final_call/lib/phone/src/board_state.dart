@@ -16,6 +16,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   Timer? callNoticeTimer;
   bool hasScheduledManualExit = false;
   bool gameStartCompleted = false;
+  int? previousGameStartedAt;
   int? announcedRound;
   String? previousStatus;
   bool replacementInProgress = false;
@@ -74,11 +75,14 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       unawaited(
         preloadFinalCallAssets(
           context,
+          isPhone: true,
           characterIds: game.players.values.map((player) => player.characterId),
         ),
       );
     }
-    if (previousStatus == 'finished' && !game.isFinished) {
+    if (previousGameStartedAt != game.gameStartedAt ||
+        (previousStatus == 'finished' && !game.isFinished)) {
+      previousGameStartedAt = game.gameStartedAt;
       gameStartCompleted = false;
       announcedRound = null;
       revealedRound = 0;

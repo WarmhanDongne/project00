@@ -20,10 +20,12 @@ import 'package:game_kit/game_flow/game_interruption.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_kit/game_flow/game_session_controller.dart';
+import 'package:game_kit/game_flow/game_progress_command.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/services/game_interruption_command_service.dart';
 export 'package:game_liars_poker/shared/models/game_models.dart'
     show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult, PublicLastPlay;
+
 // ============================================================
 
 // LiarsPokerController
@@ -83,6 +85,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   final bool watchPrivateHand;
 
   bool _hasPublicSnapshot = false;
+  final _readyTurnCommand = GameProgressCommand();
   bool _hasHandSnapshot = false;
   final Completer<void> _initialDataCompleter = Completer<void>();
   String? _lastDealtHandSignature;
@@ -124,6 +127,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     }
     startSession(watchPrivate: watchPrivateHand);
     ref.onDispose(() {
+      _readyTurnCommand.dispose();
       _liarVerdictDelayTimer?.cancel();
       _liarVerdictTimer?.cancel();
       _penaltyResultTimer?.cancel();
@@ -792,14 +796,16 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   }
 
   /// 태블릿의 카드 배분 애니메이션이 끝났음을 서버에 알립니다.
-  Future<void> completeDealing() async {
+  Future<bool> completeDealing() async {
     // 이전 서버 버전이나 개발용 로컬 상태에서는 별도 완료 호출이 필요 없습니다.
-    if (phase != 'dealing') return;
+    if (phase != 'dealing') return true;
 
     try {
-      await service.command.completeDealing(roomCode: roomCode);
+      final result = await service.command.completeDealing(roomCode: roomCode);
+      return result['success'] != false;
     } catch (error) {
       _reportError('카드 배분 완료 상태를 반영하지 못했습니다.', error);
+      return false;
     }
   }
 
@@ -889,7 +895,27 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     final shouldReadyTurn = !hasRevealedHand && isMyTurn && phase == 'playing';
     _update((current) => current.copyWith(hasRevealedHand: true));
     if (shouldReadyTurn) {
-      unawaited(service.command.readyTurn(roomCode: roomCode));
+      final key = (gameStartedAt, round);
+      _readyTurnCommand.run(
+        key: key,
+        isCurrent: () =>
+            ref.mounted &&
+            !isFinished &&
+            phase == 'playing' &&
+            isMyTurn &&
+            turnDeadlineAt == null &&
+            (gameStartedAt, round) == key,
+        send: () async {
+          if (interruption != null) return false;
+          try {
+            final result = await service.command.readyTurn(roomCode: roomCode);
+            return result['success'] != false;
+          } catch (error) {
+            _reportError('첫 턴 시작을 확인하고 있습니다.', error);
+            return false;
+          }
+        },
+      );
     }
   }
 

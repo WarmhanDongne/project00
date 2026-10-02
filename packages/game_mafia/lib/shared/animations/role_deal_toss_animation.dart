@@ -8,12 +8,14 @@
 // ========================[ import ]==========================
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_kit/core/sound/app_sounds.dart';
 import 'package:game_kit/core/sound/sound_effects.dart';
 import 'package:game_kit/player_layouts/player_slot_positions.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -86,7 +88,12 @@ class MafiaRoleDealTossAnimation extends StatefulWidget {
 }
 
 class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [
+    _entryController,
+    _tossController,
+  ];
   // 시간표는 위젯 쪽(공개 상수)에 있습니다. 휴대폰도 같은 값을 봅니다.
   static const Duration _deckEntry =
       MafiaRoleDealTossAnimation.deckEntryDuration;
@@ -110,15 +117,19 @@ class _MafiaRoleDealTossAnimationState extends State<MafiaRoleDealTossAnimation>
     super.initState();
     _order = [...widget.playerSeatIndexes]..sort();
     final total = _launchGap * math.max(0, _order.length - 1) + _flight;
-    _entryController = AnimationController(vsync: this, duration: _deckEntry);
+    _entryController = AnimationController(vsync: this, duration: _deckEntry)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          _tossController.forward();
+        }
+      });
     _tossController = AnimationController(vsync: this, duration: total)
       ..addListener(_handleTossTick);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      await _entryController.forward();
-      if (!mounted) return;
-      await _tossController.forward();
+      // 중단 후 forward()가 새 TickerFuture를 만들므로 await로 연결하지 않습니다.
+      _entryController.forward();
     });
   }
 

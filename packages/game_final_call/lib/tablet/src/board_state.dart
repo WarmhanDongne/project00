@@ -13,7 +13,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   Timer? turnTimer;
   int? scheduledDeadline;
   int? completedRevealRound;
-  bool resultRevealSignalInFlight = false;
+  int? previousGameStartedAt;
+  final _dealingCommand = GameProgressCommand();
+  final _resultRevealCommand = GameProgressCommand();
   Timer? closingExitTimer;
 
   /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
@@ -83,12 +85,27 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   void _handleState() {
     final game = controller;
     if (game == null || !mounted) return;
+    // round는 다시하기 때 1로 돌아옵니다. 이전 판의 공개 완료 표시가 새 판의
+    // 같은 라운드를 건너뛰지 않도록 서버 startedAt 변경으로 함께 초기화합니다.
+    if (previousGameStartedAt != game.gameStartedAt) {
+      previousGameStartedAt = game.gameStartedAt;
+      completedRevealRound = null;
+      previousPhase = null;
+      scheduledDeadline = null;
+      phaseTimer?.cancel();
+      turnTimer?.cancel();
+      _dealingCommand.cancel();
+      _resultRevealCommand.cancel();
+      hasPlayedWinSound = false;
+      _announcedCallerUid = null;
+    }
     // 첫 스냅샷이 오면 이미지·캐릭터를 미리 디코딩합니다(LP와 같은 규약).
     if (!_hasPreloadedAssets && game.players.isNotEmpty) {
       _hasPreloadedAssets = true;
       unawaited(
         preloadFinalCallAssets(
           context,
+          isPhone: false,
           characterIds: game.players.values.map((player) => player.characterId),
         ),
       );
@@ -134,15 +151,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     // 라운드 공개 없이 승자가 결정된 경우에는 태블릿 결과 화면이 즉시
     // 준비되므로 같은 시점에 휴대폰 결과 화면도 해제합니다.
     if (game.isFinished &&
-        game.roundResult == null &&
-        game.resultRevealCompletedAt == null &&
-        !resultRevealSignalInFlight) {
-      resultRevealSignalInFlight = true;
-      unawaited(
-        game.completeResultReveal().whenComplete(() {
-          resultRevealSignalInFlight = false;
-        }),
-      );
+        (game.roundResult == null || completedRevealRound == game.round) &&
+        game.resultRevealCompletedAt == null) {
+      _confirmResultReveal();
     }
 
     _celebrateWinIfNeeded(game);
@@ -246,7 +257,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     setState(() {});
     if (game.isFinished) {
       _celebrateWinIfNeeded(game);
-      unawaited(game.completeResultReveal());
+      _confirmResultReveal();
       return;
     }
     if (game.phase != 'roundResult') return;
@@ -254,6 +265,42 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     phaseTimer = Timer(
       FinalCallTabletTiming.roundResultAfterDelay,
       _advanceRound,
+    );
+  }
+
+  /// 화면 연출은 한 번만 재생하고, 실패한 서버 완료 알림만 다시 보냅니다.
+  void _handleDealingCompleted() {
+    final game = controller;
+    if (game == null) return;
+    final key = (game.gameStartedAt, game.round);
+    _dealingCommand.run(
+      key: key,
+      isCurrent: () =>
+          mounted &&
+          !isEndingGame &&
+          !game.isFinished &&
+          game.phase == 'dealing' &&
+          (game.gameStartedAt, game.round) == key,
+      send: () => game.interruption != null
+          ? Future.value(false)
+          : game.completeDealing(),
+    );
+  }
+
+  void _confirmResultReveal() {
+    final game = controller;
+    if (game == null) return;
+    final key = (game.gameStartedAt, game.round);
+    _resultRevealCommand.run(
+      key: key,
+      isCurrent: () =>
+          mounted &&
+          !isEndingGame &&
+          game.isNaturalResult &&
+          game.isFinished &&
+          game.resultRevealCompletedAt == null &&
+          (game.gameStartedAt, game.round) == key,
+      send: game.completeResultReveal,
     );
   }
 
@@ -369,6 +416,8 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
 
   @override
   void dispose() {
+    _dealingCommand.dispose();
+    _resultRevealCommand.dispose();
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     backgroundMusic.stop();
     phaseTimer?.cancel();
@@ -424,6 +473,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
               stage: stage,
               flowConfig: flowConfig,
               onRoundRevealCompleted: _handleRoundRevealCompleted,
+              onDealingCompleted: _handleDealingCompleted,
             ),
           if (stage == FinalCallTabletStage.playing)
             FinalCallTabletCallAnimation(

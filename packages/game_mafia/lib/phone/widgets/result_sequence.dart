@@ -6,13 +6,14 @@
 // 즉, 플레이어 조작과 상태 표시를 화면별로 나눠 관리하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/phone/widgets/result_view.dart';
 import 'package:game_mafia/phone/widgets/spectator_roster_view.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -81,14 +82,15 @@ class MafiaPhoneResultSequence extends StatefulWidget {
       _MafiaPhoneResultSequenceState();
 }
 
-class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence> {
+class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence>
+    with GamePresentationState {
   bool _showsRoster = false;
-  Timer? _timer;
+  PresentationTimer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer(widget.posterHold, () {
+    _timer = presentationTimer(widget.posterHold, () {
       if (mounted) setState(() => _showsRoster = true);
     });
   }

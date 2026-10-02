@@ -7,11 +7,13 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_mafia/shared/animations/ballot_animations.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -43,6 +45,8 @@ class MafiaVoteView extends StatefulWidget {
     this.voteBanned = false,
     this.onSelect,
     this.onConfirm,
+    this.requestInFlight = false,
+    this.timeExpired = false,
   });
 
   /// 내 역할입니다. 아래 보관 카드에만 씁니다.
@@ -67,6 +71,10 @@ class MafiaVoteView extends StatefulWidget {
 
   final ValueChanged<String>? onSelect;
   final VoidCallback? onConfirm;
+
+  /// 투표지 연출과 서버의 처리 완료는 별개입니다. 응답 전 선택 화면으로 되돌리지 않습니다.
+  final bool requestInFlight;
+  final bool timeExpired;
 
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
@@ -100,7 +108,9 @@ class MafiaVoteView extends StatefulWidget {
 }
 
 class _MafiaVoteViewState extends State<MafiaVoteView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_submit];
   late final AnimationController _submit;
 
   /// 내가 눌러서 연출이 돌아가는 중인지입니다.
@@ -161,7 +171,11 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
         // 연출 중에는 서버 상태와 무관하게 연출 화면을 보여 줍니다.
-        final showsWaiting = !_isSubmitting && widget.isSubmitted;
+        final showsWaiting =
+            !_isSubmitting &&
+            (widget.isSubmitted ||
+                widget.requestInFlight ||
+                widget.timeExpired);
         final showsBanned =
             !_isSubmitting && !showsWaiting && widget.voteBanned;
 
@@ -364,7 +378,11 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '다른 플레이어의 투표를\n기다리는 중입니다…',
+            widget.requestInFlight && !widget.isSubmitted
+                ? '투표를 전송하고 있습니다…'
+                : widget.timeExpired && !widget.isSubmitted
+                ? '투표 시간이 종료되었습니다.\n결과를 기다려 주세요.'
+                : '다른 플레이어의 투표를\n기다리는 중입니다…',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.black,
