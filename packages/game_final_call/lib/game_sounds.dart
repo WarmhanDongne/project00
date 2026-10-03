@@ -6,8 +6,9 @@
 // 즉, 화면 전환과 서버 상태에 맞춰 소리를 한 번만 재생하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
+
 // ============================================================
 
 /// Final Call 전용 사운드 경로입니다.

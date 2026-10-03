@@ -1,12 +1,12 @@
-// 실제 서버 없이 연결 신호와 복구 응답을 조절하는 회귀 테스트입니다.
+// recovery/widgets의 연결 차단·안내 흐름을 실제 서버 없이 검증합니다.
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_kit/core/network/app_network_guard.dart';
-import 'package:game_kit/core/network/network_unavailable_modal.dart';
+import 'package:game_kit/recovery/widgets/app_network_guard.dart';
+import 'package:game_kit/recovery/widgets/network_unavailable_modal.dart';
 
 void main() {
   testWidgets('3초 미만 단절은 안내 없이 복구하고 그동안 입력을 막는다', (tester) async {

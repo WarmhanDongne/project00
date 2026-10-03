@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_template/shared/models/game_state.dart';
 import 'package:game_template/shared/providers/game_controller.dart';
 import 'package:game_template/shared/services/game_service.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -68,9 +69,7 @@ class TemplateSessionArgs {
 /// ref.watch(templateSessionProvider(_args)); // 다시 그리기
 /// ```
 final templateSessionProvider = NotifierProvider.autoDispose
-    .family<TemplateController, TemplateGameState, TemplateSessionArgs>((
-      args,
-    ) {
+    .family<TemplateController, TemplateGameState, TemplateSessionArgs>((args) {
       return TemplateController(
         roomCode: args.roomCode,
         uid: args.uid,

@@ -10,11 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/game_copy.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
-import 'package:game_kit/widgets/phone_game_top_bar.dart';
-import 'package:game_kit/widgets/phone_rule_dialog.dart';
-import 'package:game_kit/widgets/phone_ripple_dialog.dart';
+import 'package:game_kit/phone/widgets/game_top_bar.dart';
+import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_final_call/game_assets.dart';
+
 // ============================================================
 
 /// 상단바가 차지하는 높이입니다(위 여백 4 + 바 48).

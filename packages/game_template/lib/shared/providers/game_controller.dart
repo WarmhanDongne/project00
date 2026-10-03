@@ -8,12 +8,14 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_controller.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/providers/game_session_controller.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_template/shared/models/game_state.dart';
 import 'package:game_template/shared/services/game_service.dart';
+import 'package:game_template/shared/services/public_state_mapper.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -90,17 +92,20 @@ class TemplateController extends GameSessionController<TemplateGameState> {
   void applyPublicValue(Object? value) {
     // 빈 스냅샷 처리와 방 삭제 확인은 공용 뼈대가 먼저 합니다.
     if (value is! Map) return;
-    final data = Map<Object?, Object?>.from(value);
-    final rawInterruption = data['interruption'];
+    final snapshot = TemplatePublicSnapshot.fromValue(
+      value,
+      fallbackStatus: state.status,
+      fallbackPhase: state.phase,
+      fallbackRound: state.round,
+      fallbackRevision: state.revision,
+    );
     state = state.copyWith(
       loading: false,
-      status: data['status']?.toString() ?? state.status,
-      phase: data['phase']?.toString() ?? state.phase,
-      round: (data['round'] as num?)?.toInt() ?? state.round,
-      revision: (data['revision'] as num?)?.toInt() ?? state.revision,
-      interruption: rawInterruption is Map
-          ? GameInterruption.fromMap(Map<Object?, Object?>.from(rawInterruption))
-          : null,
+      status: snapshot.status,
+      phase: snapshot.phase,
+      round: snapshot.round,
+      revision: snapshot.revision,
+      interruption: snapshot.interruption,
     );
   }
 

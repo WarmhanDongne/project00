@@ -551,7 +551,9 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       context: context,
       builder: (_) => TabletGameRulebookDialog(
         title: '마피아',
-        markdown: MafiaCopy.tabletRulebook,
+        markdown: _controller == null
+            ? MafiaCopy.tabletRulebook
+            : MafiaCopy.rulesFor(_controller!.ruleState),
         // 역할 카드를 함께 보여 줍니다. 규칙을 읽으며 카드를 대조할 수 있습니다.
         cardImages: [
           for (final role in MafiaRoles.implemented)

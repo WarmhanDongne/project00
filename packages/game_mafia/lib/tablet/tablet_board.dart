@@ -10,27 +10,28 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
-import 'package:game_kit/game_flow/game_progress_command.dart';
+import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';
-import 'package:game_kit/widgets/game_request_notice.dart';
-import 'package:game_kit/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/recovery/widgets/game_request_notice.dart';
+import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
 import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/sound/countdown_tick_cue.dart';
 import 'package:game_kit/sound/game_background_music.dart';
-import 'package:game_kit/widgets/game_interruption_layer.dart';
-import 'package:game_kit/widgets/game_route_exit.dart';
-import 'package:game_kit/widgets/game_turn_countdown.dart';
-import 'package:game_kit/widgets/tablet_game_rulebook_dialog.dart';
-import 'package:game_kit/widgets/tablet_game_settings_dialog.dart';
+import 'package:game_kit/recovery/widgets/game_interruption_layer.dart';
+import 'package:game_kit/shared/widgets/game_route_exit.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
+import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
+import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
 import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/game_sounds.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
@@ -283,6 +284,15 @@ class MafiaTabletStageView extends StatelessWidget {
       stage == MafiaTabletStage.voting;
 
   Widget _buildStage() {
+    final trial = controller.ruleState;
+    if (stage == MafiaTabletStage.voting && trial.trialStage != null) {
+      return MafiaTrialView(
+        candidate: controller.players[trial.candidateUid]?.nickname ?? '후보',
+        defending: trial.trialStage == 'defense',
+        isTablet: true,
+        remainingSeconds: remainingSeconds,
+      );
+    }
     // 기자가 취재한 사람입니다. 아침 발표가 이 사람의 카드를 뒤집습니다.
     final exposedUid = controller.morningResult?.exposedUid;
 
@@ -365,6 +375,12 @@ class MafiaTabletStageView extends StatelessWidget {
   Widget _buildVoteResult() {
     final result = controller.voteResult;
     return MafiaTabletVoteResultSequence(
+      limitedDisclosure: controller.ruleState.rules.executionReveal != 'role',
+      revealedFaction: controller.ruleState.rules.executionReveal == 'faction'
+          ? controller.ruleState.revealedFactions[controller
+                .voteResult
+                ?.executedUid]
+          : null,
       key: ValueKey('voteResult_${controller.round}'),
       result: result,
       players: controller.players,

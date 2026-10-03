@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:game_kit/game_flow/game_presentation_sequence.dart';
 import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_mafia/game_assets.dart';
@@ -367,12 +368,16 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
     required this.players,
     required this.executed,
     required this.executedRole,
+    this.limitedDisclosure = false,
+    this.revealedFaction,
   });
 
   final MafiaVoteResult? result;
   final Map<String, MafiaPlayer> players;
   final MafiaPlayer? executed;
   final MafiaRole? executedRole;
+  final bool limitedDisclosure;
+  final String? revealedFaction;
 
   /// 개표판을 보여 주는 시간입니다(확정: 4초).
   static const Duration tallyHold = MafiaPresentationTiming.voteTally;
@@ -403,15 +408,22 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
       beats: [
         GamePresentationBeat(
           hold: tallyHold,
-          child: MafiaTabletTallyView(result: result, players: players),
+          child: result?.hasVerdict == true
+              ? MafiaVerdictSummary(result: result!)
+              : MafiaTabletTallyView(result: result, players: players),
         ),
         GamePresentationBeat(
           hold: executionHold,
-          child: MafiaTabletExecutionView(
-            executed: executed,
-            executedRole: executedRole,
-            isTie: result?.tie ?? false,
-          ),
+          child: limitedDisclosure && executed != null
+              ? MafiaLimitedDisclosure(
+                  nickname: executed!.nickname,
+                  faction: revealedFaction,
+                )
+              : MafiaTabletExecutionView(
+                  executed: executed,
+                  executedRole: executedRole,
+                  isTie: result?.tie ?? false,
+                ),
         ),
         // 확정(2026-08): 밤으로 가기 전에 안내를 띄우고 그 뒤에 배경이 바뀝니다.
         // 이 처형으로 게임이 끝나면 띄우지 않습니다.

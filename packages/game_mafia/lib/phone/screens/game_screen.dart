@@ -7,6 +7,7 @@
 
 import 'package:game_mafia/phone/phone_board.dart';
 import 'dart:async';
+import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
@@ -16,7 +17,7 @@ import 'package:game_mafia/shared/animations/role_deal_toss_animation.dart';
 import 'package:game_mafia/shared/providers/game_controller.dart';
 import 'package:game_mafia/shared/models/server_timing.dart';
 import 'package:game_mafia/shared/models/role.dart';
-import 'package:game_kit/widgets/game_turn_countdown.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
 import 'package:game_mafia/phone/widgets/day_discussion_view.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/role_card_layer.dart';
@@ -329,6 +330,24 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   }
 
   Widget _buildVoting(MafiaController game, Duration? remaining) {
+    final trial = game.ruleState;
+    if (trial.trialStage != null) {
+      return MafiaTrialView(
+        candidate: game.players[trial.candidateUid]?.nickname ?? '후보',
+        defending: trial.trialStage == 'defense',
+        isCandidate: trial.candidateUid == game.uid,
+        remainingSeconds: remaining?.inSeconds,
+        hasVoted: game.trialVote != null,
+        onVote:
+            game.canAct &&
+                !game.isVoteBanned &&
+                !game.actionDeadlinePassed &&
+                trial.trialStage == 'verdict' &&
+                game.trialVote == null
+            ? (value) => unawaited(game.submitTrialVote(value))
+            : null,
+      );
+    }
     // 라운드가 바뀌면 지난 투표의 선택을 버립니다.
     if (_voteSelectionRound != game.round) {
       _voteSelectionRound = game.round;
@@ -365,9 +384,11 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     return GamePresentationSequence(
       key: ValueKey(('vote', game.gameStartedAt, game.round)),
       beats: [
-        const GamePresentationBeat(
+        GamePresentationBeat(
           hold: MafiaPresentationTiming.voteTally,
-          child: MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
+          child: game.voteResult?.hasVerdict == true
+              ? MafiaVerdictSummary(result: game.voteResult!)
+              : const MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
         ),
         GamePresentationBeat(
           hold: MafiaPresentationTiming.executionName,
@@ -381,6 +402,13 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
           hold: MafiaPresentationTiming.executionReveal,
           child: executed == null
               ? const MafiaPhonePhaseNotice(message: '아무도 처형되지 않았습니다.')
+              : game.ruleState.rules.executionReveal != 'role'
+              ? MafiaLimitedDisclosure(
+                  nickname: executed.nickname,
+                  faction: game.ruleState.rules.executionReveal == 'faction'
+                      ? game.ruleState.revealedFactions[executed.uid]
+                      : null,
+                )
               : MafiaExecutionRevealView(
                   myRole: game.myRole,
                   executed: executed,

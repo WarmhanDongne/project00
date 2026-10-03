@@ -5,7 +5,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_liars_poker/game_copy.dart';
 import 'package:game_kit/shared/animations/fade_hold_fade.dart';
@@ -13,6 +13,7 @@ import 'package:game_liars_poker/shared/providers/game_controller.dart';
 import 'package:game_liars_poker/phone/widgets/turn_action_switcher.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
+
 // ============================================================
 
 /// 벌칙 대상 프로필과 룰렛 결과 스탬프 연출을 표시합니다.

@@ -7,7 +7,8 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
+
 // ============================================================
 
 /// 연출 진행도가 임계값에 닿는 순간 효과음을 정확히 한 번 재생합니다.

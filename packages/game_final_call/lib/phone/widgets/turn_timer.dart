@@ -7,7 +7,8 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_kit/widgets/game_turn_countdown_face.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown_face.dart';
+
 // ============================================================
 
 /// 내 턴의 남은 시간입니다(시안: `00:초` 7세그먼트 표시).

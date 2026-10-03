@@ -10,9 +10,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_mafia/game_assets.dart';
-import 'package:game_kit/core/sound/app_sounds.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
-import 'package:game_kit/player_layouts/player_slot_positions.dart';
+import 'package:game_kit/sound/app_sounds.dart';
+import 'package:game_kit/sound/sound_effects.dart';
+import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
 

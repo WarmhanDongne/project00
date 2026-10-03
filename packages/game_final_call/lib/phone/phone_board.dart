@@ -29,13 +29,13 @@ import 'package:game_kit/game_feedback.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
-import 'package:game_kit/game_flow/leave_failure_notice.dart';
+import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/game_flow/phone_game_shell.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/widgets/game_interruption_layer.dart';
-import 'package:game_kit/widgets/game_route_exit.dart';
-import 'package:game_kit/widgets/phone_exit_modal.dart';
-import 'package:game_kit/widgets/phone_result_dialog.dart';
+import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
+import 'package:game_kit/shared/widgets/game_route_exit.dart';
+import 'package:game_kit/phone/widgets/exit_modal.dart';
+import 'package:game_kit/phone/widgets/result_dialog.dart';
 
 part 'src/board_state.dart';
 

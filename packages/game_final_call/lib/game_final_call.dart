@@ -13,10 +13,11 @@ import 'package:game_kit/template_game.dart';
 import 'package:game_final_call/phone/phone_board.dart';
 import 'package:game_final_call/tablet/tablet_board.dart';
 import 'package:game_final_call/shared/services/game_service.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_final_call/game_assets.dart';
-import 'package:game_kit/widgets/critical_network_guard.dart';
+import 'package:game_kit/recovery/widgets/critical_network_guard.dart';
+
 // ============================================================
 
 class FinalCallGame extends TemplateGame {

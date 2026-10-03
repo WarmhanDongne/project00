@@ -8,8 +8,9 @@
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_state.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_session_state.dart';
+
 // ============================================================
 
 const Object _notProvided = Object();

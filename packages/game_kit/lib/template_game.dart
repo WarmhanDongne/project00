@@ -18,8 +18,9 @@
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/models/game_room_context.dart';
+
 // ============================================================
 
 //==========[ 게임 목록 관리 규칙 ]==========

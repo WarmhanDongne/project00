@@ -10,8 +10,9 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
-import 'package:game_kit/services/callable_retry_policy.dart';
-import 'package:game_kit/session/controller_room_session_store.dart';
+import 'package:game_kit/recovery/services/callable_retry_policy.dart';
+import 'package:game_kit/recovery/services/controller_room_session_store.dart';
+
 // ============================================================
 
 //=======================게임 명령 서비스 공통 베이스==============================

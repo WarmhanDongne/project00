@@ -6,7 +6,8 @@
 - 기기별 상세 화면/위젯/연출: `phone/` 또는 `tablet/`의 `screens`, `widgets`, `animations`
 - DTO·서버 읽기 상태: `shared/models/`
 - 단일 세션 구독·명령 상태: `shared/providers/`
-- 서버 명령/조회: `shared/services/`
+- 서버 snapshot 파싱: `shared/services/public_state_mapper.dart`, `private_state_mapper.dart`
+- 서버 명령/조회: `shared/services/command_service.dart`, `query_service.dart`
 - 문구·디자인·소리: `game_copy.dart`, `game_theme.dart`, `game_sounds.dart` (해당 파일이 있는 게임)
 - 세션 수명·타이머·재접속 내부 처리: 기기별 `src/board_state.dart`
 - 자동 생성 에셋: `gen/` — 직접 편집하지 않고 패키지의 생성 절차 사용
@@ -25,7 +26,9 @@ board에서 새로 계산하지 마세요. 문구/연출을 생략해도 서버 
 이미 들어 있는 것 — 세 게임과 같은 모양입니다.
 
 - `shared/models/game_state.dart` — 공용 뼈대 계약(명령 진행·오류·방 삭제)을 채운 불변 상태
-- `shared/providers/game_controller.dart` — `GameSessionController` 상속. 채울 곳은 `applyPublicValue`·`handlePrivateEvent` 두 곳
+- `shared/providers/game_controller.dart` — 구독 수명과 상태 발행의 단일 소유자
+- `shared/services/public_state_mapper.dart` — 공개 Map을 immutable 값으로 바꾸는 순수 파서
+- `shared/services/private_state_mapper.dart` — 개인 Map을 immutable 값으로 바꾸는 순수 파서
 - `shared/providers/session_provider.dart` — Provider와 화면 연결 사용 예(다시 그리기는 `ref.watch`, 부수효과는 `listenManual`)
 - `game_copy.dart`, `game_theme.dart`
 

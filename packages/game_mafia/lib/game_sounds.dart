@@ -6,8 +6,9 @@
 // 즉, 서버 진행 상태와 소리 재생 시점을 맞추기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_mafia/shared/models/role.dart';
+
 // ============================================================
 
 /// 마피아 전용 효과음 경로입니다.

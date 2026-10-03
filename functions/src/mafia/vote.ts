@@ -8,6 +8,7 @@ import {
   advanceMafiaAfterDeaths,
   isMafiaVoteBanned,
   resolveMafiaVoting,
+  submitMafiaTrialVote,
 } from "./game.js";
 import {MafiaRoom} from "./types.js";
 import {
@@ -26,6 +27,7 @@ type SubmitData = {
   roomCode?: unknown;
   commandId?: unknown;
   targetUid?: unknown;
+  execute?: unknown;
 };
 
 /**
@@ -43,7 +45,7 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
     const uid = mafiaUid(request);
     const roomCode = mafiaRoomCode(request.data?.roomCode);
     const commandId = mafiaCommandId(request.data?.commandId);
-    const targetUid = mafiaTargetUid(request.data?.targetUid);
+    const execute = request.data?.execute;
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
@@ -58,6 +60,15 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
       }
       assertMafiaPhase(game, "voting");
       assertMafiaAlive(game, uid);
+      if (game.public.trial) {
+        if (typeof execute !== "boolean") throw new HttpsError("invalid-argument", "찬반을 선택해 주세요.");
+        const now = Date.now();
+        submitMafiaTrialVote(game, uid, execute, now);
+        response = {success: true, phase: game.public.phase};
+        recordMafiaCommand(game, commandId, uid, "trialVote", now, response);
+        return room;
+      }
+      const targetUid = mafiaTargetUid(request.data?.targetUid);
       if (game.server.votes?.[uid]) {
         throw new HttpsError("failed-precondition", "이미 투표했습니다.");
       }

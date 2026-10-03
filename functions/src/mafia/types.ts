@@ -139,6 +139,11 @@ export type MafiaWinConditionId =
 /** 조사에 어떻게 보이는지입니다. */
 export type MafiaInvestigationAppearanceId = "actual" | "asMafia" | "asCitizen";
 
+export interface MafiaRules {
+  trial: boolean;
+  executionReveal: "role" | "faction" | "hidden";
+}
+
 export type MafiaPhase =
   | "roleReveal" | "night" | "morning" | "day" | "voting" | "voteResult"
   | "finished";
@@ -212,6 +217,8 @@ export interface MafiaVoteResult {
    * 되었습니다' 안내를 띄우지 않도록** 미리 알려 주기 위한 것입니다.
    */
   endsGame?: boolean;
+  rejected?: boolean;
+  verdict?: {yes: number; no: number};
   resolvedAt: number;
 }
 
@@ -240,6 +247,10 @@ export interface MafiaPublicState {
   finishReason?: "citizenWin" | "mafiaWin" | "neutralWin" | "manual" |
     "insufficientPlayers" | "interruptionVoteExpired";
   phase: MafiaPhase;
+  rules?: MafiaRules;
+  composition?: Record<string, number>;
+  trial?: {stage: "defense" | "verdict"; candidateUid: string};
+  revealedFactions?: Record<string, MafiaFactionId>;
   /** 밤/낮 한 바퀴를 1로 셉니다. */
   round: number;
   revision: number;
@@ -374,6 +385,7 @@ export interface MafiaPrivatePlayer {
   investigations?: Record<string, MafiaInvestigationRecord>;
   /** 내가 투표한 대상입니다. */
   voteTargetUid?: string;
+  trialVote?: boolean;
   /**
    * 처형자에게 지정된 목표입니다. 처형자 본인에게만 넣습니다.
    *
@@ -433,6 +445,8 @@ export interface MafiaServerState {
   nightActions?: Record<string, string>;
   /** 이번 투표의 표입니다. `uid → 대상 uid`. */
   votes?: Record<string, string>;
+  trialVotes?: Record<string, boolean>;
+  nominationTally?: Record<string, number>;
   /** 토론 조기 종료에 동의한 사람입니다. `uid → true`. */
   discussionSkipVotes?: Record<string, true>;
   /**

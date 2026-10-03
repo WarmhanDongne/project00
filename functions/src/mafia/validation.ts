@@ -4,7 +4,7 @@ import {CallableRequest, HttpsError} from "firebase-functions/v2/https";
 
 import {assertControllerSession} from "../room/controller-session.js";
 import {mafiaRole} from "./roles.js";
-import {MafiaGameState, MafiaPhase, MafiaRoom} from "./types.js";
+import {MafiaGameState, MafiaPhase, MafiaRoom, MafiaRules} from "./types.js";
 
 export const MAFIA_REGION = "asia-northeast3";
 const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
@@ -96,8 +96,10 @@ export function mafiaComposition(
   if (mafiaCount < 1) {
     throw new HttpsError("failed-precondition", "마피아가 최소 1명 있어야 합니다.");
   }
-  if (mafiaCount >= playerCount) {
-    throw new HttpsError("failed-precondition", "마피아만으로는 진행할 수 없습니다.");
+  const competingNeutral = Object.keys(composition).some((id) =>
+    ["lastStanding", "factionDominance"].includes(mafiaRole(id)?.winCondition ?? ""));
+  if (mafiaCount >= playerCount || (!competingNeutral && mafiaCount * 2 >= playerCount)) {
+    throw new HttpsError("failed-precondition", "시작부터 마피아 승리 조건을 만족합니다. 구성을 바꿔 주세요.");
   }
   return composition;
 }
@@ -138,4 +140,18 @@ export function assertMafiaAlive(game: MafiaGameState, uid: string): void {
   if (game.public.players[uid]?.status !== "alive") {
     throw new HttpsError("failed-precondition", "사망한 플레이어입니다.");
   }
+}
+
+/** 누락된 옵션은 기존 게임 규칙으로 해석합니다. */
+export function mafiaRules(value: unknown): MafiaRules {
+  if (value == null) return {trial: false, executionReveal: "role"};
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", "게임 규칙을 읽을 수 없습니다.");
+  }
+  const rules = value as Record<string, unknown>;
+  if (typeof rules.trial !== "boolean" ||
+      !["role", "faction", "hidden"].includes(String(rules.executionReveal))) {
+    throw new HttpsError("invalid-argument", "지원하지 않는 게임 규칙입니다.");
+  }
+  return {trial: rules.trial, executionReveal: rules.executionReveal as MafiaRules["executionReveal"]};
 }

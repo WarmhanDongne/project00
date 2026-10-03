@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,17 @@ enum MafiaGameMode {
 }
 
 abstract final class MafiaComposition {
+  /// 처음 하는 사람을 위한 네 가지 역할 구성입니다.
+  static Map<String, int> basicFor(int count) {
+    final mafia = count >= 7 ? 2 : 1;
+    return {
+      'citizen': count - mafia - 2,
+      'mafia': mafia,
+      'police': 1,
+      'doctor': 1,
+    };
+  }
+
   /// 지원 인원입니다.
   static const int minPlayers = 4;
   static const int maxPlayers = 12;

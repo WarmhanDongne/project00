@@ -3,28 +3,22 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
-// ============================================================
 
+// ============================================================
 
 // ---------------------------------------------------------------------------
 // 카드
 // ---------------------------------------------------------------------------
 @immutable
 class PhoneHandCard {
-  const PhoneHandCard({
-    required this.id,
-    required this.cardValue,
-  });
+  const PhoneHandCard({required this.id, required this.cardValue});
 
   final String id;
   final String cardValue;
 
   // ===[ 카드 형식 변환 ]===
   // RTDB에서 받은 카드 데이터를 PhoneHandCard 객체로 변환한다.
-  static PhoneHandCard? fromMap(
-    String key,
-    Map<Object?, Object?> map,
-  ) {
+  static PhoneHandCard? fromMap(String key, Map<Object?, Object?> map) {
     final id = map['id']?.toString();
 
     // RTDB의 `rank`는 기존 앱과 서버가 공유하는 배포된 키이므로 유지한다.
@@ -58,7 +52,6 @@ class PhoneHandCard {
   int get hashCode => Object.hash(id, cardValue);
 }
 
-
 // ---------------------------------------------------------------------------
 // 플레이어
 // ---------------------------------------------------------------------------
@@ -88,10 +81,7 @@ class PhoneGamePlayer {
 
   // ===[ 플레이어 형식 변환 ]===
   // RTDB에서 받은 플레이어 데이터를 PhoneGamePlayer 객체로 변환한다.
-  factory PhoneGamePlayer.fromMap(
-    String key,
-    Map<Object?, Object?> map,
-  ) {
+  factory PhoneGamePlayer.fromMap(String key, Map<Object?, Object?> map) {
     final uid = map['uid']?.toString();
 
     return PhoneGamePlayer(
@@ -102,8 +92,7 @@ class PhoneGamePlayer {
       nickname: map['nickname']?.toString() ?? 'Player',
       characterId: map['characterId']?.toString() ?? 'frog',
       status: map['status']?.toString() ?? 'alive',
-      remainingCardCount:
-          (map['remainingCardCount'] as num?)?.toInt() ?? 0,
+      remainingCardCount: (map['remainingCardCount'] as num?)?.toInt() ?? 0,
       seatIndex: (map['seatIndex'] as num?)?.toInt() ?? 0,
       penaltyCount: (map['penaltyCount'] as num?)?.toInt() ?? 0,
     );
@@ -128,16 +117,15 @@ class PhoneGamePlayer {
   // == 비교 기준과 동일한 값으로 hashCode를 생성한다.
   @override
   int get hashCode => Object.hash(
-        uid,
-        nickname,
-        characterId,
-        status,
-        remainingCardCount,
-        seatIndex,
-        penaltyCount,
-      );
+    uid,
+    nickname,
+    characterId,
+    status,
+    remainingCardCount,
+    seatIndex,
+    penaltyCount,
+  );
 }
-
 
 // ---------------------------------------------------------------------------
 // 룰렛 결과
@@ -161,9 +149,7 @@ class PhonePenaltyResult {
 
   // ===[ 룰렛 결과 형식 변환 ]===
   // RTDB에서 받은 룰렛 결과를 PhonePenaltyResult 객체로 변환한다.
-  static PhonePenaltyResult? fromMap(
-    Map<Object?, Object?> map,
-  ) {
+  static PhonePenaltyResult? fromMap(Map<Object?, Object?> map) {
     final targetUid = map['targetUid']?.toString();
     final result = map['result']?.toString();
     final resolvedAt = (map['resolvedAt'] as num?)?.toInt();
@@ -198,13 +184,8 @@ class PhonePenaltyResult {
 
   // == 비교 기준과 동일한 값으로 hashCode를 생성한다.
   @override
-  int get hashCode => Object.hash(
-        targetUid,
-        result,
-        resolvedAt,
-      );
+  int get hashCode => Object.hash(targetUid, result, resolvedAt);
 }
-
 
 // ---------------------------------------------------------------------------
 // 카드 제출 기록
@@ -306,17 +287,16 @@ class PublicLastPlay {
   // == 비교 기준과 동일한 값으로 hashCode를 생성한다.
   @override
   int get hashCode => Object.hash(
-        playId,
-        round,
-        playerUid,
-        cardCount,
-        declaredCardValue,
-        revealed,
-        Object.hashAll(actualCardValues),
-        submittedAt,
-      );
+    playId,
+    round,
+    playerUid,
+    cardCount,
+    declaredCardValue,
+    revealed,
+    Object.hashAll(actualCardValues),
+    submittedAt,
+  );
 }
-
 
 // ---------------------------------------------------------------------------
 // 현재 라운드 카드 제출 기록 병합
@@ -342,15 +322,12 @@ List<PublicLastPlay> mergeRoundPlays({
 
   // lastPlay가 현재 라운드에서 사용할 수 있는 기록인지 확인한다.
   final canUseLastPlay =
-      lastPlay != null &&
-      (lastPlay.round == null || lastPlay.round == round);
+      lastPlay != null && (lastPlay.round == null || lastPlay.round == round);
 
   // roundPlays 안에 이미 같은 lastPlay가 들어 있는지 확인한다.
   final containsLastPlay =
       lastPlay != null &&
-      roundPlays.any(
-        (play) => play.playId == lastPlay.playId,
-      );
+      roundPlays.any((play) => play.playId == lastPlay.playId);
 
   // 사용할 수 있는 lastPlay가 목록에 없다면 추가한다.
   if (canUseLastPlay && !containsLastPlay) {
@@ -360,17 +337,13 @@ List<PublicLastPlay> mergeRoundPlays({
   // 제출 시간을 기준으로 오래된 기록부터 정렬한다.
   // 시간이 같으면 playId를 기준으로 다시 정렬한다.
   roundPlays.sort((left, right) {
-    final timeOrder =
-        left.submittedAt.compareTo(right.submittedAt);
+    final timeOrder = left.submittedAt.compareTo(right.submittedAt);
 
-    return timeOrder != 0
-        ? timeOrder
-        : left.playId.compareTo(right.playId);
+    return timeOrder != 0 ? timeOrder : left.playId.compareTo(right.playId);
   });
 
   return roundPlays;
 }
-
 
 // ---------------------------------------------------------------------------
 // 카드 제출 기록 목록 변환
@@ -384,24 +357,19 @@ List<PublicLastPlay> _parseRoundPlays(Object? value) {
   final plays = value.values
       // 각각의 RTDB 데이터를 PublicLastPlay로 변환한다.
       .map(PublicLastPlay.tryParse)
-
       // 변환에 실패해 null이 된 데이터는 제거한다.
       .whereType<PublicLastPlay>()
       .toList();
 
   // 제출 시간을 기준으로 순서대로 정렬한다.
   plays.sort((left, right) {
-    final timeOrder =
-        left.submittedAt.compareTo(right.submittedAt);
+    final timeOrder = left.submittedAt.compareTo(right.submittedAt);
 
-    return timeOrder != 0
-        ? timeOrder
-        : left.playId.compareTo(right.playId);
+    return timeOrder != 0 ? timeOrder : left.playId.compareTo(right.playId);
   });
 
   return plays;
 }
-
 
 // ---------------------------------------------------------------------------
 // 공통 형식 변환 함수
@@ -413,25 +381,20 @@ int? _asInt(Object? value) {
   return value is num ? value.toInt() : null;
 }
 
-
 // ===[ 문자열 목록 형식 변환 ]===
 // RTDB에서 받은 값을 List<String> 형태로 변환한다.
 List<String> _asStringList(Object? value) {
   // 일반적인 List 형태로 전달된 경우
   if (value is List) {
-    return value
-        .whereType<String>()
-        .toList(growable: false);
+    return value.whereType<String>().toList(growable: false);
   }
 
   // RTDB 배열이 숫자 key를 가진 Map 형태로 반환되는 경우도 처리한다.
   if (value is Map) {
     final entries = value.entries.toList()
       ..sort((left, right) {
-        final leftIndex =
-            int.tryParse(left.key.toString()) ?? 0;
-        final rightIndex =
-            int.tryParse(right.key.toString()) ?? 0;
+        final leftIndex = int.tryParse(left.key.toString()) ?? 0;
+        final rightIndex = int.tryParse(right.key.toString()) ?? 0;
 
         return leftIndex.compareTo(rightIndex);
       });

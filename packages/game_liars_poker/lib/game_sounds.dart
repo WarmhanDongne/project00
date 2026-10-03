@@ -2,7 +2,8 @@
 // 배경음·효과음·음성 자산의 경로를 관리하는 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/sound/app_sounds.dart';
+
 // ============================================================
 /// Liar's Poker 전용 효과음 경로입니다.
 

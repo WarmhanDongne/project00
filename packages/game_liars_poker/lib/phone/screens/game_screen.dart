@@ -12,7 +12,7 @@ import 'package:game_liars_poker/phone/phone_board.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
-import 'package:game_kit/game_flow/leave_failure_notice.dart';
+import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_liars_poker/shared/providers/game_controller.dart';
 import 'package:game_liars_poker/phone/widgets/hand_card_stack.dart';
@@ -24,9 +24,9 @@ import 'package:game_liars_poker/phone/widgets/turn_timer.dart';
 import 'package:game_liars_poker/phone/widgets/top_bar.dart';
 import 'package:game_liars_poker/phone/widgets/turn_action_switcher.dart';
 import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
-import 'package:game_kit/widgets/phone_rule_dialog.dart';
-import 'package:game_kit/widgets/phone_ripple_dialog.dart';
-import 'package:game_kit/widgets/game_announcement_layer.dart';
+import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/ripple_dialog.dart';
+import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_liars_poker/game_theme.dart';
@@ -36,6 +36,7 @@ part 'game_screen/landscape_view.dart';
 part 'game_screen/penalty_stage_switcher.dart';
 part 'game_screen/portrait_view.dart';
 part 'game_screen/supporting_view.dart';
+
 // ============================================================
 
 // LiarsPokerPhoneGameScreen

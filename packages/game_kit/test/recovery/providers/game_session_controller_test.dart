@@ -1,12 +1,13 @@
+// recovery/provider의 구독 복구와 늦은 응답 무시 동작을 검증합니다.
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_controller.dart';
-import 'package:game_kit/game_flow/game_session_state.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_session_state.dart';
+import 'package:game_kit/recovery/providers/game_session_controller.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
 
 void main() {

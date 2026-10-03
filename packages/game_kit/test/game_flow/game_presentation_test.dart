@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_kit/game_flow/game_presentation_sequence.dart';
-import 'package:game_kit/widgets/game_request_notice.dart';
+import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 void main() {
   testWidgets(

@@ -1,3 +1,7 @@
+import 'package:game_mafia/shared/models/game_rules.dart';
+import 'package:game_mafia/shared/models/role_catalog.dart';
+import 'package:game_mafia/shared/models/role.dart';
+
 // [game_copy.dart] 는 마피아에서 사용하는 게임 화면에서 사용하는 문구를 한곳에 모아둔 파일이다.
 //
 // - [Package] : 마피아
@@ -110,15 +114,15 @@ abstract final class MafiaCopy {
   /// 마크다운은 쓸 수 없어 문장만 넣습니다. **확정된 규칙만** 담고, 아직 정해지지
   /// 않은 것(토론 조기 종료 권한 등)은 넣지 않습니다.
   static const phoneRules =
-      '밤에는 특수한 신분들이 동시에 행동합니다. 시민은 아무것도 하지 않습니다. '
-      '누가 무엇을 했는지는 아무에게도 보이지 않습니다.\n\n'
+      '밤에는 세 구간으로 나눠 행동하며 같은 구간의 신분들은 함께 선택합니다. 시민은 아무것도 하지 않습니다. '
+      '선택한 대상과 조사 결과는 비공개입니다.\n\n'
       '아침이 되면 밤 사이 일어난 일이 발표됩니다.\n\n'
       '낮에는 자유롭게 토론한 뒤 비밀 투표로 한 명을 처형합니다. 표가 같으면 '
       '아무도 처형되지 않습니다.\n\n'
       '처형된 사람의 신분은 모두에게 공개됩니다.\n\n'
       '사망하면 모든 사람의 신분을 볼 수 있습니다. 다른 사람에게 보여주지 마세요.\n\n'
-      '마피아가 모두 사라지면 시민 팀이 이깁니다. 마피아 수가 남은 사람 수와 '
-      '같아지면 마피아 팀이 이깁니다.';
+      '마피아·교단·연쇄살인마가 모두 사라지면 시민 팀이 이깁니다. 마피아 진영 수가 나머지 생존자 수 이상이 되면 '
+      '마피아 팀이 이깁니다. 교단이나 연쇄살인마가 살아 있으면 아직 끝나지 않습니다.';
 
   /// 태블릿 룰북 문구입니다. 마크다운을 씁니다.
   static const tabletRulebook = '''
@@ -128,8 +132,8 @@ abstract final class MafiaCopy {
 
 ## 밤
 
-특수한 신분들이 **동시에** 행동합니다. 시민은 아무것도 하지 않습니다.
-누가 무엇을 했는지는 아무에게도 보이지 않습니다.
+밤은 **세 행동 구간**으로 진행하며 같은 구간의 신분들은 함께 선택합니다. 시민은 아무것도 하지 않습니다.
+선택한 대상과 조사 결과는 비공개입니다.
 
 마피아가 여럿이면 **다수결**로 한 명을 지목하고, 표가 갈리면 무작위로 정합니다.
 
@@ -146,7 +150,64 @@ abstract final class MafiaCopy {
 
 ## 승리 조건
 
-- 마피아가 모두 사라지면 **시민 팀** 승리
-- 마피아 수가 남은 사람 수와 같아지면 **마피아 팀** 승리
+- 마피아·교단·연쇄살인마가 모두 사라지면 **시민 팀** 승리
+- 마피아 진영 수가 나머지 생존자 수 이상이 되면 **마피아 팀** 승리
 ''';
+  static String roleRules(MafiaRole role) => switch (role.id) {
+    'citizen' => '밤 능력은 없습니다. 토론과 투표로 마피아를 찾아내세요.',
+    'police' =>
+      '밤마다 한 명을 조사합니다. 모든 행동이 확정되면 진영 판정 결과를 본인만 확인합니다. 마피아 보스는 시민으로 보입니다.',
+    'doctor' => '밤마다 한 명을 보호합니다. 자신도 선택할 수 있으며 보호받은 사람은 그날 밤 공격에서 살아남습니다.',
+    'bodyguard' => '밤마다 한 명을 보호합니다. 현재 규칙은 의사와 같으며 대신 사망하는 능력은 없습니다.',
+    'detective' =>
+      '밤마다 한 명을 추적해 그 사람이 최종 선택한 대상을 확인합니다. 선택하지 않았다면 방문 없음으로 표시됩니다.',
+    'reporter' => '밤마다 한 명을 취재해 다음 아침 정확한 직업을 전체에 공개합니다. 사용 횟수 제한은 없습니다.',
+    'mafia' =>
+      '동료를 알고 시작합니다. 밤마다 제거 대상을 골라 마피아의 다수결로 한 명을 공격합니다. 진영 승리는 사망한 동료도 함께 받습니다.',
+    'mafia_boss' => '마피아와 함께 공격하고 승리합니다. 경찰의 진영 조사에서는 시민으로 보입니다.',
+    'politician' => '낮 지목 투표가 2표로 계산됩니다. 최후 변론 뒤 찬반 투표는 다른 사람과 같은 1표입니다.',
+    _ => role.description.replaceAll('\n', ' '),
+  };
+
+  static String rulesFor(MafiaRuleState state) {
+    final reveal = {
+      'role': '정확한 직업',
+      'faction': '진영만',
+      'hidden': '공개하지 않음',
+    }[state.rules.executionReveal];
+    final roles = state.composition.keys
+        .map(MafiaRoles.find)
+        .whereType<MafiaRole>();
+    final neutral = <String>[];
+    if (state.composition.containsKey('jester')) {
+      neutral.add('광대: 자신이 낮 투표로 처형되면 단독 승리');
+    }
+    if (state.composition.containsKey('executioner')) {
+      neutral.add('처형자: 자신이 살아 있을 때 지정 목표가 처형되면 승리');
+    }
+    if (state.composition.containsKey('serial_killer')) {
+      neutral.add('연쇄살인마: 생존자가 연쇄살인마뿐이면 승리');
+    }
+    if (state.composition.containsKey('cult_leader') ||
+        state.composition.containsKey('cultist')) {
+      neutral.add('교단: 모든 생존자가 교단이면 승리');
+    }
+    return [
+      '밤 → 아침 → 토론 → 비밀 투표 → 처형 발표',
+      '밤에는 세 구간으로 행동합니다. 선택은 한 번 확정하며 조사 결과는 차단 등 판정 후 공개됩니다.',
+      '의사는 자신을 보호할 수 있습니다. 마피아는 동료를 공격할 수 없고, 공격 투표 동률은 무작위로 정합니다.',
+      '낮의 지목 투표는 최다 득표자를 고릅니다. 동률이면 처형하지 않습니다. 미투표는 기권입니다.',
+      state.rules.trial
+          ? '후보의 30초 변론 후 찬반 투표를 합니다. 찬반은 1인 1표이며 투표권자 과반수가 찬성해야 처형됩니다.'
+          : '최후 변론·찬반 재투표 없이 처형합니다.',
+      '처형 신분: $reveal. 기자가 공개한 정보는 유지됩니다.',
+      '토론은 생존자 과반수가 종료를 요청하면 일찍 끝납니다.',
+      '마피아·연쇄살인마·교단이 모두 없어지면 시민 진영 승리. 교단·연쇄살인마가 없고 마피아 진영이 나머지 생존자 이상이면 마피아 진영 승리.',
+      ...neutral,
+      '사망자는 누르고 있는 동안만 전원의 역할을 볼 수 있습니다. 주변에 화면을 보여주거나 정보를 알려주지 마세요.',
+      if (state.composition.isNotEmpty) '이번 판 역할',
+      for (final role in roles)
+        '${role.displayName} ${state.composition[role.id]}명: ${roleRules(role)}',
+    ].join('\n\n');
+  }
 }

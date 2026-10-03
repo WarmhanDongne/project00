@@ -9,12 +9,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:game_liars_poker/game_copy.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
-import 'package:game_kit/widgets/game_announcement_layer.dart';
-import 'package:game_kit/widgets/game_card_face.dart';
+import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
+import 'package:game_kit/shared/widgets/game_card_face.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
 import 'package:game_liars_poker/phone/providers/game_stage.dart';
+
 // ============================================================
 
 // LiarsPokerHandCardStack

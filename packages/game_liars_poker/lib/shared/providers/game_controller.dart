@@ -3,7 +3,7 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
-import 'package:game_kit/core/error/user_error_message.dart';
+import 'package:game_kit/errors/services/user_error_message.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -12,17 +12,19 @@ import 'package:game_liars_poker/game_copy.dart';
 import 'package:game_liars_poker/shared/models/game_models.dart';
 import 'package:game_liars_poker/shared/models/game_state.dart';
 import 'package:game_liars_poker/shared/services/game_service.dart';
+import 'package:game_liars_poker/shared/services/private_state_mapper.dart';
+import 'package:game_liars_poker/shared/services/public_state_mapper.dart';
 import 'package:game_liars_poker/shared/providers/penalty_coordinator.dart';
 import 'package:game_kit/penalty/roulette.dart';
 import 'package:game_kit/game_flow/game_finish.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_kit/game_flow/game_session_controller.dart';
-import 'package:game_kit/game_flow/game_progress_command.dart';
+import 'package:game_kit/recovery/providers/game_session_controller.dart';
+import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/services/game_query_service.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 export 'package:game_liars_poker/shared/models/game_models.dart'
     show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult, PublicLastPlay;
 
@@ -354,23 +356,30 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
     final hadPublicSnapshot = _hasPublicSnapshot;
     final data = Map<Object?, Object?>.from(value);
-    final nextStatus = _string(data['status'], fallback: 'playing');
-    final nextFinishReason = _nullableString(data['finishReason']);
-    final nextPhase = _string(data['phase'], fallback: 'playing');
-    final nextTable = _string(data['table'], fallback: 'K').toUpperCase();
-    final nextTurnUid = _nullableString(data['turnUid']);
-    final nextWinnerUid = _nullableString(data['winnerUid']);
-    final nextPenaltyTargetUid = _nullableString(data['penaltyTargetUid']);
-    final nextRound = _integer(data['round']) ?? 1;
-    final nextRevision = _integer(data['revision']) ?? revision;
-    final nextTurnDeadlineAt = _integer(data['turnDeadlineAt']);
-    final nextPenaltyResult = _parsePenaltyResult(data['penaltyResult']);
+    final nextStatus = liarsPokerString(data['status'], fallback: 'playing');
+    final nextFinishReason = liarsPokerNullableString(data['finishReason']);
+    final nextPhase = liarsPokerString(data['phase'], fallback: 'playing');
+    final nextTable = liarsPokerString(
+      data['table'],
+      fallback: 'K',
+    ).toUpperCase();
+    final nextTurnUid = liarsPokerNullableString(data['turnUid']);
+    final nextWinnerUid = liarsPokerNullableString(data['winnerUid']);
+    final nextPenaltyTargetUid = liarsPokerNullableString(
+      data['penaltyTargetUid'],
+    );
+    final nextRound = liarsPokerInteger(data['round']) ?? 1;
+    final nextRevision = liarsPokerInteger(data['revision']) ?? revision;
+    final nextTurnDeadlineAt = liarsPokerInteger(data['turnDeadlineAt']);
+    final nextPenaltyResult = parseLiarsPokerPenaltyResult(
+      data['penaltyResult'],
+    );
     final rawInterruption = data['interruption'];
     final nextInterruption = rawInterruption is Map
         ? GameInterruption.fromMap(Map<Object?, Object?>.from(rawInterruption))
         : null;
     final Map<String, PhoneGamePlayer> nextPlayers = Map.unmodifiable(
-      _parsePlayers(data['players']),
+      parseLiarsPokerPlayers(data['players']),
     );
     final nextRoundPlays = mergeRoundPlays(
       roundPlaysValue: data['roundPlays'],
@@ -378,20 +387,12 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
       round: nextRound,
     );
 
-    final lastPlay = data['lastPlay'];
-    String? nextLastPlayId;
-    String? nextLastPlayPlayerUid;
-    var nextLastPlayRevealed = false;
-    var nextLastPlayCardCount = 0;
-    var nextActualCardValues = const <String>[];
-    if (lastPlay is Map) {
-      final lastPlayData = Map<Object?, Object?>.from(lastPlay);
-      nextLastPlayId = _nullableString(lastPlayData['playId']);
-      nextLastPlayPlayerUid = _nullableString(lastPlayData['playerUid']);
-      nextLastPlayRevealed = lastPlayData['revealed'] == true;
-      nextLastPlayCardCount = _integer(lastPlayData['cardCount']) ?? 0;
-      nextActualCardValues = _stringList(lastPlayData['actualRanks']);
-    }
+    final lastPlay = LiarsPokerLastPlaySnapshot.fromValue(data['lastPlay']);
+    final nextLastPlayId = lastPlay.playId;
+    final nextLastPlayPlayerUid = lastPlay.playerUid;
+    final nextLastPlayRevealed = lastPlay.revealed;
+    final nextLastPlayCardCount = lastPlay.cardCount;
+    final nextActualCardValues = lastPlay.actualCardValues;
 
     final didRevealLiarCards =
         _hasPublicSnapshot &&
@@ -541,22 +542,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   void handlePrivateEvent(DatabaseEvent event) {
     final hadHandSnapshot = _hasHandSnapshot;
     _hasHandSnapshot = true;
-    final parsedCards = <PhoneHandCard>[];
-    final value = event.snapshot.value;
-
-    if (value is Map) {
-      for (final entry in value.entries) {
-        if (entry.value is! Map) continue;
-        final card = PhoneHandCard.fromMap(
-          entry.key.toString(),
-          Map<Object?, Object?>.from(entry.value as Map),
-        );
-        if (card != null) parsedCards.add(card);
-      }
-    }
-
-    // RTDB Map의 순서에 의존하지 않고 카드 ID 기준으로 화면 순서를 고정합니다.
-    parsedCards.sort((left, right) => left.id.compareTo(right.id));
+    final parsedCards = parseLiarsPokerHand(event.snapshot.value);
 
     // 카드 배분 단계와 개인 손패 이벤트의 도착 순서는 기기마다 달라질 수
     // 있습니다. 따라서 공개 상태는 phase가 아니라 실제 새 5장 카드 ID를
@@ -601,26 +587,6 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   void _completeInitialDataIfReady() {
     if (!isEntryDataReady || _initialDataCompleter.isCompleted) return;
     _initialDataCompleter.complete();
-  }
-
-  Map<String, PhoneGamePlayer> _parsePlayers(Object? value) {
-    if (value is! Map) return const {};
-
-    final result = <String, PhoneGamePlayer>{};
-    for (final entry in value.entries) {
-      if (entry.value is! Map) continue;
-      final player = PhoneGamePlayer.fromMap(
-        entry.key.toString(),
-        Map<Object?, Object?>.from(entry.value as Map),
-      );
-      result[player.uid] = player;
-    }
-    return result;
-  }
-
-  PhonePenaltyResult? _parsePenaltyResult(Object? value) {
-    if (value is! Map) return null;
-    return PhonePenaltyResult.fromMap(Map<Object?, Object?>.from(value));
   }
 
   /// 룰렛 결과를 보여 줄지 정하고, 필요하면 숨김 타이머를 겁니다.
@@ -940,26 +906,6 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     if (!_initialDataCompleter.isCompleted) {
       _initialDataCompleter.completeError(error);
     }
-  }
-
-  String _string(Object? value, {required String fallback}) {
-    return value is String && value.isNotEmpty ? value : fallback;
-  }
-
-  String? _nullableString(Object? value) {
-    return value is String && value.isNotEmpty ? value : null;
-  }
-
-  int? _integer(Object? value) {
-    return value is int ? value : (value is num ? value.toInt() : null);
-  }
-
-  List<String> _stringList(Object? value) {
-    if (value is! List) return const [];
-    return value
-        .whereType<String>()
-        .map((cardValue) => cardValue.toUpperCase())
-        .toList(growable: false);
   }
 
   GameImage _cardAssetForValue(String cardValue) {

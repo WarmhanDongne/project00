@@ -4,10 +4,11 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+
 // ============================================================
 
 /// 게임 종료 후 우승자와 다음 동작을 보여주는 태블릿 결과 화면입니다.

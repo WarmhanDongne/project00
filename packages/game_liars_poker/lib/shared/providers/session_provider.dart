@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_liars_poker/shared/models/game_state.dart';
 import 'package:game_liars_poker/shared/providers/game_controller.dart';
 import 'package:game_liars_poker/shared/services/game_service.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -28,7 +29,6 @@ class LiarsPokerSessionArgs {
   /// 휴대폰은 true(내 손패 구독), 태블릿(진행 기기)은 false입니다.
   final bool watchPrivateHand;
 
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -39,12 +39,8 @@ class LiarsPokerSessionArgs {
           watchPrivateHand == other.watchPrivateHand;
 
   @override
-  int get hashCode => Object.hash(
-    roomCode,
-    uid,
-    identityHashCode(service),
-    watchPrivateHand,
-  );
+  int get hashCode =>
+      Object.hash(roomCode, uid, identityHashCode(service), watchPrivateHand);
 }
 
 // ---------------------------------------------------------------------------

@@ -4,12 +4,13 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_liars_poker/tablet/widgets/rolebook.dart';
-import 'package:game_kit/widgets/tablet_game_settings_dialog.dart';
+import 'package:game_liars_poker/tablet/widgets/rulebook.dart';
+import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
 import 'package:game_liars_poker/tablet/providers/game_stage.dart';
-import 'package:game_kit/widgets/tablet_game_menu_overlay.dart';
+import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/models/game_room_context.dart';
+
 // ============================================================
 
 /// 게임 중 사용할 규칙/설정 메뉴와 현재 테이블 라벨을 화면 위에 배치합니다.
@@ -79,7 +80,8 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
           visible: true,
           roleIcon: icons.iconRole.image(fit: BoxFit.contain),
           settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
-          roleDialogBuilder: (_) => RoleBook(provider: provider),
+          roleDialogBuilder: (_) =>
+              LiarsPokerTabletRulebook(provider: provider),
           settingDialogBuilder: (_) => TabletGameSettingsDialog(
             provider: provider,
             onRestartGame: onRestartGame,

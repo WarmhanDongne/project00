@@ -9,16 +9,17 @@
 import 'package:flutter/widgets.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
-import 'package:game_kit/widgets/critical_network_guard.dart';
+import 'package:game_kit/recovery/widgets/critical_network_guard.dart';
 import 'package:game_mafia/phone/phone_board.dart';
 import 'package:game_mafia/tablet/screens/role_setup_screen.dart';
 import 'package:game_mafia/tablet/tablet_board.dart';
 import 'package:game_mafia/shared/services/game_service.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 /// 마피아를 플랫폼(방 생성·대기·미리보기·퇴장)에 연결합니다.
@@ -62,6 +63,9 @@ class MafiaGame extends TemplateGame {
     return MafiaService().command.startGame(
       roomCode: roomCode,
       composition: composition is Map<String, int> ? composition : null,
+      rules: options?['rules'] is Map<String, Object>
+          ? options!['rules'] as Map<String, Object>
+          : null,
     );
   }
 
@@ -83,13 +87,15 @@ class MafiaGame extends TemplateGame {
     required void Function(PlayerLayoutModel layout) onComplete,
     required Future<bool> Function() onCancel,
   }) {
+    Map<String, Object>? rules;
     return MafiaRoleSetupScreen(
       playerCount: layout.playerCount,
       onCancel: onCancel,
+      onRulesChanged: (value) => rules = value.toMap(),
       onConfirm: (composition) async {
         final started = await onPrepare(
           layout,
-          options: {'composition': composition},
+          options: {'composition': composition, 'rules': ?rules},
         );
         if (!started) return false;
         onComplete(layout);

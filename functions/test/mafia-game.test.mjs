@@ -110,7 +110,10 @@ test("살아 있는 사람의 신분은 public에 절대 없다", () => {
   assert.equal(game.public.revealedRoles, undefined);
 
   // `gameType: "mafia"`는 역할이 아니라 게임 이름이므로 검사에서 뺍니다.
-  const {gameType, ...rest} = game.public;
+  const {gameType, composition, ...rest} = game.public;
+  // 공개 구성은 역할별 인원수뿐이며 uid별 배정은 포함하지 않습니다.
+  assert.deepEqual(composition, MAFIA_COMPOSITION[8]);
+  assert.ok(Object.values(composition).every(Number.isInteger));
   assert.equal(gameType, "mafia");
   const serialized = JSON.stringify(rest);
   for (const roleId of new Set(Object.values(game.server.roles))) {
@@ -514,18 +517,18 @@ test("투표를 시작해도 밤 선택·표가 초기화된다 (기존 규칙 �
   assert.equal(game.public.voteEligibleCount, 6);
 });
 
-// ===== 제출 즉시 조사 결과 =====
+// ===== 행동 확정 후 조사 결과 =====
 
 import {
   finalizeMafiaInvestigations,
-  recordImmediateInvestigation,
 } from "../lib/mafia/game.js";
 
-test("경찰은 제출한 순간 결과를 받는다", () => {
+test("경찰도 모든 행동 판정이 끝나야 결과를 받는다", () => {
   const game = makeGame(SIX);
   game.server.nightActions = {p1: "m1"};
-  recordImmediateInvestigation(game, "p1", "m1", 1000);
 
+  assert.equal(game.private.p1.investigations, undefined);
+  finalizeMafiaInvestigations(game);
   assert.equal(game.private.p1.investigations.r1.verdict, "마피아");
 });
 
@@ -539,7 +542,6 @@ test("탐정은 제출 즉시 결과를 받지 않는다", () => {
   const game = makeGame(roles);
   // 탐정이 먼저 제출한 시점에는 마피아가 아직 아무도 안 골랐습니다.
   game.server.nightActions = {c3: "m1"};
-  recordImmediateInvestigation(game, "c3", "m1", 1000);
   assert.equal(game.private.c3.investigations, undefined);
 });
 
@@ -547,7 +549,6 @@ test("탐정 결과는 행동이 모두 끝난 뒤 최종값으로 생긴다", (
   const roles = {...SIX, c3: "detective"};
   const game = makeGame(roles);
   game.server.nightActions = {c3: "m1"};
-  recordImmediateInvestigation(game, "c3", "m1", 1000);
 
   // 그 뒤 마피아가 c1을 골랐습니다.
   game.server.nightActions.m1 = "c1";
@@ -562,7 +563,6 @@ test("탐정 결과는 행동이 모두 끝난 뒤 최종값으로 생긴다", (
 test("일반 시민 제출은 즉시 결과를 만들지 않는다", () => {
   const game = makeGame(SIX);
   game.server.nightActions = {d1: "c1"};
-  recordImmediateInvestigation(game, "d1", "c1", 1000);
   assert.equal(game.private.d1.investigations, undefined);
 });
 
@@ -636,7 +636,7 @@ test("이 빌드가 구현하지 않은 역할은 거부한다", () => {
 
 test("마피아가 없거나 전원 마피아면 거부한다", () => {
   assert.throws(() => mafiaComposition({police: 1, citizen: 5}, 6), /마피아가 최소/);
-  assert.throws(() => mafiaComposition({mafia: 6}, 6), /마피아만으로는/);
+  assert.throws(() => mafiaComposition({mafia: 6}, 6), /시작부터 마피아 승리/);
 });
 
 test("고른 구성대로 역할이 배분된다", () => {
