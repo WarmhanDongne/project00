@@ -36,6 +36,7 @@ import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_auto_complete.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/game_flow/game_progress_command.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/player_slot_positions.dart';
 import 'package:game_kit/shared/animations/one_shot_timeline.dart';
@@ -221,12 +222,14 @@ class FinalCallTabletGameLayer extends StatelessWidget {
     required this.stage,
     required this.flowConfig,
     required this.onRoundRevealCompleted,
+    required this.onDealingCompleted,
   });
 
   final FinalCallController controller;
   final FinalCallTabletStage stage;
   final GameFlowConfig<FinalCallTabletStage> flowConfig;
   final VoidCallback onRoundRevealCompleted;
+  final VoidCallback onDealingCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -259,14 +262,18 @@ class FinalCallTabletGameLayer extends StatelessWidget {
     final flowStep = flowConfig.stepFor(stage);
     if (!flowStep.animation.enabled) {
       return GameFlowAutoComplete(
-        key: ValueKey('final-call-deal-skipped-${controller.round}'),
+        key: ValueKey((
+          'deal-skipped',
+          controller.gameStartedAt,
+          controller.round,
+        )),
         delay: flowStep.beforeDelay + flowStep.afterDelay,
-        onCompleted: () => controller.completeDealing(),
+        onCompleted: onDealingCompleted,
       );
     }
     return CardDealAnimation(
       key: ValueKey(
-        'final-call-deal-${controller.round}-${activeSeatIndexes.join('-')}',
+        'final-call-deal-${controller.gameStartedAt}-${controller.round}-${activeSeatIndexes.join('-')}',
       ),
       playerCount: players.length,
       boardSeatCount: controller.players.length,
@@ -275,11 +282,13 @@ class FinalCallTabletGameLayer extends StatelessWidget {
       cardAsset: Assets.games.finalCall.images.cards.cardBack.game,
       cardWidth: 146,
       duration: flowStep.animation.duration,
+      beforeDelay: flowStep.beforeDelay,
+      afterDelay: flowStep.afterDelay,
       // 첫 라운드만 중앙 덱을 눌러 시작하고, 이후 라운드는 서버가 dealing에
       // 진입하면 라이어스 포커와 동일하게 자동 분배합니다.
       autoplay: controller.round > 1,
       tapToStart: controller.round == 1,
-      onCompleted: () => controller.completeDealing(),
+      onCompleted: onDealingCompleted,
     );
   }
 

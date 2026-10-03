@@ -15,6 +15,7 @@ import 'package:game_kit/core/sound/sound_effects.dart';
 import 'package:game_final_call/game_sounds.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ import 'package:game_kit/core/constants/room_character.dart';
 Future<void> preloadFinalCallAssets(
   BuildContext context, {
   required Iterable<String> characterIds,
+  bool isPhone = false,
 }) async {
   // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행하므로 게임
   // 진입을 막지 않습니다. (initState의 호출과 중복돼도 안전합니다)
@@ -65,16 +67,23 @@ Future<void> preloadFinalCallAssets(
   final localAssets = <GameImage>[
     // 분배가 끝나면 손패가 곧바로 펼쳐지므로 카드는 전부 준비합니다.
     ...images.cards.values.game,
-    ...images.background.values.game,
+    // 휴대폰은 휴대폰 배경만, 태블릿은 공용 판 배경만 준비합니다.
+    // 보이지 않는 반대 기기 배경/자리 배치를 디코딩하지 않습니다.
+    if (isPhone)
+      images.background.phoneBackground.game
+    else
+      images.background.background.game,
     ...images.button.values.game,
     ...images.icons.values.game,
-    ...images.layout.values.game,
+    if (!isPhone) ...images.layout.values.game,
     ...images.modal.values.game,
     ...images.other.values.game,
   ];
 
   // 한꺼번에 모든 대형 PNG를 디코딩해 메모리가 튀지 않도록 작은 묶음으로 준비합니다.
   for (var index = 0; index < localAssets.length; index += 4) {
+    // 직전 묶음을 읽는 사이 게임을 나갔다면 더 이상 context를 사용하지 않습니다.
+    if (!context.mounted) return;
     final end = (index + 4).clamp(0, localAssets.length);
     await Future.wait(
       localAssets
@@ -84,6 +93,7 @@ Future<void> preloadFinalCallAssets(
   }
 
   final uniqueCharacterIds = characterIds.toSet();
+  if (!context.mounted) return;
   await Future.wait(
     uniqueCharacterIds.map(
       (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),

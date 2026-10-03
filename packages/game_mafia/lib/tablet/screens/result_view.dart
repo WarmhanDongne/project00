@@ -6,7 +6,7 @@
 // 즉, 모든 플레이어가 함께 보는 진행 상태와 연출을 표시하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/widgets/result_art.dart';
@@ -15,6 +15,7 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/shared/widgets/flip_card.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -94,7 +95,9 @@ class MafiaTabletResultView extends StatefulWidget {
 }
 
 class _MafiaTabletResultViewState extends State<MafiaTabletResultView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_reveal];
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표(1194 × 834)
   // ---------------------------------------------------------------------------
@@ -135,7 +138,7 @@ class _MafiaTabletResultViewState extends State<MafiaTabletResultView>
   static const Rect _homeButton = Rect.fromLTWH(859, 684, 231, 79);
 
   late final AnimationController _reveal;
-  Timer? _posterTimer;
+  PresentationTimer? _posterTimer;
   bool _showsBoard = false;
 
   /// 카드 놓는 순서입니다. 자리 번호대로 정렬합니다.
@@ -159,7 +162,10 @@ class _MafiaTabletResultViewState extends State<MafiaTabletResultView>
       _reveal.forward();
       return;
     }
-    _posterTimer = Timer(MafiaTabletResultView.posterHold, _openBoard);
+    _posterTimer = presentationTimer(
+      MafiaTabletResultView.posterHold,
+      _openBoard,
+    );
   }
 
   /// 판을 올립니다. 시간이 다 됐거나 화면을 눌렀을 때입니다.

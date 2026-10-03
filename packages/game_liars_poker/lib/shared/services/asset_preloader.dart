@@ -11,6 +11,7 @@ import 'package:game_kit/core/sound/sound_effects.dart';
 import 'package:game_liars_poker/game_sounds.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+
 // ============================================================
 
 /// Liar's Poker 로딩 화면에 표시할 전략 팁입니다.
@@ -98,6 +99,7 @@ Future<void> preloadLiarsPokerAssets(
 
   // 한꺼번에 모든 대형 PNG를 디코딩해 메모리가 튀지 않도록 작은 묶음으로 준비합니다.
   for (var index = 0; index < localAssets.length; index += 4) {
+    if (!context.mounted) return;
     final end = (index + 4).clamp(0, localAssets.length);
     await Future.wait(
       localAssets
@@ -107,6 +109,7 @@ Future<void> preloadLiarsPokerAssets(
   }
 
   final uniqueCharacterIds = characterIds.toSet();
+  if (!context.mounted) return;
   await Future.wait(
     uniqueCharacterIds.map(
       (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),

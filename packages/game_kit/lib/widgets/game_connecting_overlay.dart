@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+
 // ============================================================
 
 /// 첫 서버 상태가 병적으로 오래 오지 않을 때의 탈출구 레이어입니다.
@@ -29,6 +30,8 @@ class GameConnectingOverlay extends StatefulWidget {
     required this.isWaiting,
     this.onExit,
     this.exitDelay = const Duration(seconds: 20),
+    this.message,
+    this.onRetry,
   });
 
   /// true인 동안 대기 중으로 간주합니다. false가 되는 즉시 사라집니다.
@@ -40,6 +43,10 @@ class GameConnectingOverlay extends StatefulWidget {
 
   /// 대기가 이 시간을 넘기면 나가기 버튼을 표시합니다.
   final Duration exitDelay;
+
+  /// 필요한 게임만 긴 대기의 이유를 표시합니다. 기존 게임의 무문구 정책은 유지합니다.
+  final String? message;
+  final VoidCallback? onRetry;
 
   @override
   State<GameConnectingOverlay> createState() => _GameConnectingOverlayState();
@@ -89,6 +96,7 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
   @override
   Widget build(BuildContext context) {
     final visible = widget.isWaiting && _showExit && widget.onExit != null;
+    final hasDetails = widget.message != null || widget.onRetry != null;
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: !visible,
@@ -100,17 +108,49 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
           child: !visible
               ? const SizedBox.shrink()
               : Center(
-                  child: OutlinedButton(
-                    onPressed: widget.onExit,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white54),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 10,
-                      ),
+                  child: Container(
+                    margin: hasDetails
+                        ? const EdgeInsets.all(24)
+                        : EdgeInsets.zero,
+                    padding: hasDetails
+                        ? const EdgeInsets.all(20)
+                        : EdgeInsets.zero,
+                    decoration: hasDetails
+                        ? BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(16),
+                          )
+                        : null,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.message != null) ...[
+                          Text(
+                            widget.message!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        if (widget.onRetry != null)
+                          TextButton(
+                            onPressed: widget.onRetry,
+                            child: const Text('다시 연결하기'),
+                          ),
+                        OutlinedButton(
+                          onPressed: widget.onExit,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white54),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 10,
+                            ),
+                          ),
+                          child: const Text(GameFlowCopy.leaveGame),
+                        ),
+                      ],
                     ),
-                    child: const Text(GameFlowCopy.leaveGame),
                   ),
                 ),
         ),

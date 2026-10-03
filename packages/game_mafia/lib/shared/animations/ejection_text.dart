@@ -6,10 +6,11 @@
 // 즉, 게임 진행과 화면 연출이 같은 타이밍으로 움직이게 구성하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -109,12 +110,15 @@ class MafiaEjectionText extends StatefulWidget {
 }
 
 class _MafiaEjectionTextState extends State<MafiaEjectionText>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_slam, _exit];
+
   /// 내려찍기 + 충격을 한 컨트롤러로 돌립니다. 흔들림이 찍힌 순간에 정확히
   /// 이어져야 해서 둘을 나누면 프레임이 어긋납니다.
   late final AnimationController _slam;
   late final AnimationController _exit;
-  Timer? _holdTimer;
+  PresentationTimer? _holdTimer;
 
   /// 지금 찍고 있는 박자입니다.
   int _index = 0;
@@ -180,7 +184,7 @@ class _MafiaEjectionTextState extends State<MafiaEjectionText>
     if (status != AnimationStatus.completed || !mounted) return;
     // 마지막 박자는 물러나지 않습니다. 부모가 화면을 걷어 갑니다.
     if (_isLastBeat) return;
-    _holdTimer = Timer(
+    _holdTimer = presentationTimer(
       MafiaEjectionText.scaledFor(widget.beatHold, _beatCount),
       () {
         if (mounted) _exit.forward(from: 0);

@@ -9,11 +9,13 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/flip_card.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -77,7 +79,7 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
   final String? notice;
 
   /// 처음 확인이 끝난 시점에 한 번 호출됩니다. 서버에 확인을 알립니다.
-  final VoidCallback? onRevealed;
+  final Future<bool> Function()? onRevealed;
 
   /// 처음 확인한 신분을 열어 두는 시간입니다.
   static const Duration firstRevealHold = Duration(seconds: 60);
@@ -126,7 +128,16 @@ enum _CardStage {
 }
 
 class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [
+    _travel,
+    _flip,
+    _text,
+    _bob,
+  ];
+  @override
+  Iterable<AnimationController> get repeatingPresentationAnimations => [_bob];
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
   // ---------------------------------------------------------------------------
@@ -159,9 +170,9 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
   late final AnimationController _text;
   late final AnimationController _bob;
 
-  Timer? _holdTimer;
-  Timer? _textTimer;
-  Timer? _entranceTimer;
+  PresentationTimer? _holdTimer;
+  PresentationTimer? _textTimer;
+  PresentationTimer? _entranceTimer;
 
   _CardStage _stage = _CardStage.stored;
 
@@ -174,6 +185,22 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   /// 처음 확인을 이미 알렸는지입니다. 확인은 한 번만 보냅니다.
   bool _hasReportedReveal = false;
+  bool _reportingReveal = false;
+
+  Future<void> _reportReveal() async {
+    if (!widget.isFirstReveal || _hasReportedReveal || _reportingReveal) return;
+    _reportingReveal = true;
+    try {
+      // 서버 성공 전에는 완료로 고정하지 않습니다. 실패 후 다시 열면 재전송합니다.
+      final success = await widget.onRevealed?.call() ?? false;
+      if (mounted) _hasReportedReveal = success;
+    } catch (_) {
+      // 콜백 오류도 다음 확인 시도를 막지 않습니다.
+      _hasReportedReveal = false;
+    } finally {
+      _reportingReveal = false;
+    }
+  }
 
   @override
   void initState() {
@@ -204,7 +231,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
     }
     // 태블릿에서 카드가 다 날아갈 때까지 기다립니다.
     _stage = _CardStage.undelivered;
-    _entranceTimer = Timer(widget.entranceDelay, () {
+    _entranceTimer = presentationTimer(widget.entranceDelay, () {
       if (!mounted) return;
       setState(_startEntrance);
     });
@@ -238,14 +265,11 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
     if (status == AnimationStatus.completed) {
       // 열렸습니다. 0.3초 뒤에 문구가 떠오릅니다.
       setState(() => _stage = _CardStage.revealed);
-      if (!_hasReportedReveal) {
-        _hasReportedReveal = true;
-        widget.onRevealed?.call();
-      }
-      _textTimer = Timer(MafiaPhoneRoleCardLayer.textDelay, () {
+      unawaited(_reportReveal());
+      _textTimer = presentationTimer(MafiaPhoneRoleCardLayer.textDelay, () {
         if (mounted) _text.forward();
       });
-      _holdTimer = Timer(_hold, _close);
+      _holdTimer = presentationTimer(_hold, _close);
       return;
     }
     if (status == AnimationStatus.dismissed && _stage == _CardStage.returning) {
@@ -293,6 +317,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
 
   /// 카드를 눌렀을 때입니다. 상황에 따라 열거나 닫습니다.
   void _handleCardTap() {
+    if (widget.role == null) return;
     switch (_stage) {
       case _CardStage.stored:
         _open();

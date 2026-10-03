@@ -17,6 +17,11 @@ import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/core/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
+import 'package:game_kit/game_flow/game_progress_command.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
+import 'package:game_kit/widgets/game_request_notice.dart';
+import 'package:game_kit/widgets/game_connecting_overlay.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/sound/countdown_tick_cue.dart';
@@ -56,7 +61,7 @@ part 'src/board_state.dart';
 /// 대기시간을 늘리면 밤 시작 요청도 늦어집니다. 실제 서버 마감은 바꾸지 않습니다.
 abstract final class MafiaTabletTiming {
   /// 승부 없이 종료할 때 화면을 닫기 전 안내를 유지하는 시간입니다.
-  static const closingRouteDelay = Duration(seconds: 1);
+  static const closingRouteDelay = MafiaPresentationTiming.closing;
   static const howlEarliest = Duration(seconds: 10);
   static const howlLatestBeforeEnd = Duration(seconds: 12);
   static const nightNoticeDelay = Duration(seconds: 10);

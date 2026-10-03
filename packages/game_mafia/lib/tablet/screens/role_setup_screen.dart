@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:game_kit/widgets/game_request_notice.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/game_composition.dart';
 import 'package:game_mafia/shared/models/role.dart';
@@ -15,6 +16,7 @@ import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_kit/widgets/game_setup_back_button.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -285,29 +287,48 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
 
   /// 뒤로 가기를 처리하는 중인지입니다(자리 배치 화면과 같은 동작).
   bool _isCancelling = false;
+  String? _requestError;
 
   /// 뒤로 갑니다. 게임 선택이 풀리면 화면을 닫습니다.
   Future<void> _cancel() async {
     if (_isSubmitting || _isCancelling || !mounted) return;
     setState(() => _isCancelling = true);
-    final canLeave = await widget.onCancel();
-    if (!mounted) return;
-    if (canLeave) {
-      Navigator.of(context).pop();
-      return;
+    try {
+      final canLeave = await widget.onCancel();
+      if (!mounted) return;
+      if (canLeave) {
+        Navigator.of(context).pop();
+      } else {
+        _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.';
+      }
+    } catch (_) {
+      _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.';
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
     }
-    setState(() => _isCancelling = false);
   }
 
   Future<void> _confirm() async {
-    if (_isSubmitting || !_canStart) return;
-    setState(() => _isSubmitting = true);
-    final started = await widget.onConfirm(_composition);
-    if (!mounted || started) return;
-    setState(() => _isSubmitting = false);
+    if (_isSubmitting || _isCancelling || !_canStart) return;
+    setState(() {
+      _isSubmitting = true;
+      _requestError = null;
+    });
+    var started = false;
+    try {
+      started = await widget.onConfirm(_composition);
+      if (!started) _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
+    } catch (_) {
+      _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
+    } finally {
+      // 콜백이 실패해도 버튼이 영구 비활성으로 남지 않도록 풀어 줍니다.
+      if (mounted && !started) setState(() => _isSubmitting = false);
+    }
   }
 
   void _toggle(String roleId) {
+    // 전송 중 구성을 바꾸면 화면의 선택과 서버에 보낸 구성이 달라집니다.
+    if (_isSubmitting || _isCancelling) return;
     // 필수 신분은 끌 수 없습니다. 눌러도 아무 일도 일어나지 않습니다.
     if (_requiredRoleIds.contains(roleId)) return;
     setState(() {
@@ -360,6 +381,8 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                 ..._buildPanel(_mafiaPanel, _mafiaSlots, scale, place),
                 ..._buildTip(scale, place),
                 place(_confirmButton, _buildConfirmButton(scale)),
+                if (_requestError != null)
+                  GameRequestNotice(message: _requestError),
                 // 뒤로가기는 자리 배치 화면과 **같은 버튼·같은 자리**입니다.
                 Positioned(
                   left: 0,
@@ -567,7 +590,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   // 설정 완료
   // ---------------------------------------------------------------------------
   Widget _buildConfirmButton(double scale) {
-    final enabled = _canStart && !_isSubmitting;
+    final enabled = _canStart && !_isSubmitting && !_isCancelling;
     return Semantics(
       button: true,
       enabled: enabled,

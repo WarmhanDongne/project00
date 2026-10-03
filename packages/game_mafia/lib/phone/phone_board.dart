@@ -18,6 +18,10 @@ import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/game_flow/leave_failure_notice.dart';
 import 'package:game_kit/game_flow/phone_game_shell.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
+import 'package:game_kit/widgets/game_request_notice.dart';
+import 'package:game_kit/widgets/game_connecting_overlay.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/widgets/game_interruption_layer.dart';
 import 'package:game_kit/widgets/game_route_exit.dart';
@@ -151,7 +155,8 @@ abstract final class MafiaPhoneScreens {
 
 /// 휴대폰 전용 연출 시간입니다. 서버 토론/밤 제한시간은 여기에 두지 않습니다.
 abstract final class MafiaPhoneTiming {
-  static const executionAnnouncement = Duration(milliseconds: 4000);
+  static const executionAnnouncement = MafiaPresentationTiming.executionName;
+  static const closingRouteDelay = MafiaPresentationTiming.closing;
   static const backgroundTransition = Duration(milliseconds: 400);
 }
 

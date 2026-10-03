@@ -6,7 +6,7 @@
 // 즉, 플레이어 조작과 상태 표시를 화면별로 나눠 관리하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
@@ -16,6 +16,7 @@ import 'package:game_mafia/shared/widgets/flip_card.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/shared/widgets/profile_image.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 /// 처형자 발표 화면의 좌표입니다.
@@ -272,7 +273,9 @@ class MafiaExecutionRevealView extends StatefulWidget {
 }
 
 class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_flipController];
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
   // ---------------------------------------------------------------------------
@@ -287,7 +290,7 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
   static const Duration _sentenceBeatHold = Duration(milliseconds: 1200);
 
   late final AnimationController _flipController;
-  Timer? _startTimer;
+  PresentationTimer? _startTimer;
 
   /// 신분 문구를 찍기 시작했는지입니다. 카드가 절반 돌아가면 붙습니다.
   ///
@@ -312,7 +315,7 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
       // 재접속 복원은 연출을 건너뜁니다. 이미 지나간 장면입니다.
       return;
     }
-    _startTimer = Timer(MafiaExecutionRevealView.revealDelay, () {
+    _startTimer = presentationTimer(MafiaExecutionRevealView.revealDelay, () {
       if (!mounted) return;
       _flipController.forward();
     });

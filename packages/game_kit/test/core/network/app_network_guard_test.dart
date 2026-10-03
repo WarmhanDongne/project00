@@ -34,6 +34,9 @@ void main() {
     expect(recoveries, 0, reason: '오프라인에는 복구 callable을 호출하지 않는다');
     connection.add(true);
     await tester.pump();
+    // 복구 Future 완료 뒤 예약된 setState를 다음 프레임에 반영합니다.
+    await tester.pump();
+    expect(_gameInputIsBlocked(tester), isFalse);
     await tester.tap(find.text('카드 제출'));
     expect(recoveries, 1);
     expect(taps, 1);
@@ -96,6 +99,8 @@ void main() {
     expect(taps, 0);
     recovery.complete();
     await tester.pump();
+    await tester.pump();
+    expect(_gameInputIsBlocked(tester), isFalse);
     await tester.tap(find.text('CALL'));
     expect(taps, 1);
     expect(find.text('연결 확인 중…'), findsNothing);
@@ -167,6 +172,8 @@ void main() {
     expect(calls, 2);
     second.complete();
     await tester.pump();
+    await tester.pump();
+    expect(_gameInputIsBlocked(tester), isFalse);
     await tester.tap(find.text('카드 제출'));
     expect(taps, 1);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -238,6 +245,15 @@ Future<void> _mount(WidgetTester tester, Widget child) async {
     ),
   );
 }
+
+bool _gameInputIsBlocked(WidgetTester tester) => tester
+    .widgetList<AbsorbPointer>(
+      find.descendant(
+        of: find.byType(AppNetworkGuard),
+        matching: find.byType(AbsorbPointer),
+      ),
+    )
+    .any((pointer) => pointer.absorbing);
 
 // 모달 이미지가 실제 번들 다운로드 상태에 의존하지 않도록 테스트용 PNG를 사용합니다.
 class _TestAssets extends CachingAssetBundle {

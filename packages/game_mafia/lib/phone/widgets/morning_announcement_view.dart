@@ -12,6 +12,7 @@ import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -52,9 +53,7 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
       ...deadNames.isEmpty
           ? MafiaCopy.noDeathBeats
           : MafiaCopy.deathBeats(deadNames.join(' · ')),
-      // 기자가 취재에 성공한 아침이면 그 사실도 알립니다. 카드를 뒤집어
-      // 보여 주는 것은 방 가운데 태블릿이 맡습니다.
-      if (current?.hasExposure ?? false) ...MafiaCopy.exposureBeats,
+      // 취재 공개는 공통 시간표의 다음 박자에서 별도로 표시합니다.
     ];
 
     return Stack(

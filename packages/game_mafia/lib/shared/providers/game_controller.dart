@@ -16,8 +16,10 @@ import 'package:game_mafia/shared/models/game_state.dart';
 import 'package:game_mafia/shared/services/game_service.dart';
 import 'package:game_kit/game_flow/game_interruption.dart';
 import 'package:game_kit/game_flow/game_session_controller.dart';
+import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/services/game_interruption_command_service.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -69,6 +71,10 @@ class MafiaController extends GameSessionController<MafiaGameState> {
   // ---------------------------------------------------------------------------
   bool get loading => state.loading;
   bool get commandInFlight => state.commandInFlight;
+
+  /// 공개 phase만 도착했는데 역할도 없는 화면을 정상 플레이로 열지 않습니다.
+  /// 재접속 epoch 검증은 서버/플랫폼 계약이 필요하므로 이것만으로 복원을 확정하지 않습니다.
+  bool get privateDataReady => !watchPrivate || myRole != null;
   String? get errorMessage => state.errorMessage;
   String get status => state.status;
   String? get finishReason => state.finishReason;
@@ -355,19 +361,52 @@ class MafiaController extends GameSessionController<MafiaGameState> {
   /// 지금 서버에 명령을 보낼 수 있는 상태인지입니다.
   bool get canAct =>
       status == 'playing' &&
+      privateDataReady &&
       interruption == null &&
       isAlive &&
       !commandInFlight;
 
   bool get canSubmitNightAction =>
       canAct &&
+      !actionDeadlinePassed &&
       isNight &&
       actsAtNight &&
       !hasSubmittedNight &&
       !abilityExhausted &&
       canActInNightStage;
-  bool get canVote => canAct && isVoting && !hasVoted && !isVoteBanned;
-  bool get canEndDiscussion => canAct && isDay && !hasVotedToSkipDiscussion;
+  bool get actionDeadlinePassed =>
+      ServerClock.hasSynced &&
+      turnDeadlineAt != null &&
+      ServerClock.hasPassed(turnDeadlineAt!);
+  bool get canVote =>
+      canAct && !actionDeadlinePassed && isVoting && !hasVoted && !isVoteBanned;
+  bool get canEndDiscussion =>
+      canAct && !actionDeadlinePassed && isDay && !hasVotedToSkipDiscussion;
+
+  /// 본인 화면에서만 쓰는 대기 사유입니다. 태블릿에 역할별 진행을 공개하지 않습니다.
+  String get nightWaitingMessage {
+    if (!privateDataReady) return '내 게임 정보를 불러오는 중입니다.';
+    if (hasSubmittedNight) return '다른 플레이어의 행동을 기다리는 중…';
+    if (!actsAtNight) return '밤이 지나기를 기다려 주세요.';
+    if (abilityExhausted) return '이번 게임의 능력을 모두 사용했습니다.';
+    if (nightTargets.isEmpty) return '이번 밤에는 선택 가능한 대상이 없습니다.';
+    if (actionDeadlinePassed && canActInNightStage) return '선택 시간이 종료되었습니다.';
+    final order = myRole?.nightOrder ?? 0;
+    final myWindow = order <= 4
+        ? 0
+        : order <= 8
+        ? 1
+        : 2;
+    final window = const {
+      'priority': 0,
+      'attack': 1,
+      'support': 2,
+      'wrapUp': 3,
+    }[nightStage];
+    if (window != null && window > myWindow) return '선택 시간이 종료되었습니다.';
+    if (nightStageClosed) return '내 행동 차례를 기다리고 있습니다.';
+    return '밤이 지나기를 기다려 주세요.';
+  }
 
   String get actionErrorMessage =>
       errorMessage == null || errorMessage!.trim().isEmpty

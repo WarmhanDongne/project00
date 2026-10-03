@@ -16,6 +16,7 @@ import 'package:game_kit/game_flow/game_interruption.dart';
 import 'package:game_kit/game_flow/game_session_state.dart';
 import 'package:game_kit/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
+
 // ============================================================
 
 //=======================게임 세션 공통 뼈대==============================
@@ -30,8 +31,7 @@ import 'package:game_kit/services/game_query_service.dart';
 /// 1. 공개·개인 상태 구독을 열고, provider 폐기 때 닫습니다.
 /// 2. 공개 상태가 비면 **바로 끝내지 않고** 1.5초 뒤 한 번 더 읽어 확인합니다.
 ///    (재연결 직후 캐시가 잠깐 비는 것을 게임 삭제로 오인하지 않기 위해)
-/// 3. 읽기가 거부되면(`permission_denied`) 방이 사라진 것으로 보고 같은 확인을
-///    거칩니다.
+/// 3. 읽기가 거부되면 재확인하되, 권한 오류만으로 방 삭제를 확정하지 않습니다.
 /// 4. 서버 명령을 하나씩만 보내고, 실패를 사용자 문구와 Crashlytics로 나눕니다.
 /// 5. 게임 중단(끊김) 명령 네 가지를 제공합니다.
 ///
@@ -74,6 +74,18 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   StreamSubscription<DatabaseEvent>? _publicSubscription;
   StreamSubscription<DatabaseEvent>? _privateSubscription;
   Timer? _missingPublicTimer;
+  int _publicGeneration = 0;
+  int? _gameStartedAt;
+  int? _publicRevision;
+  bool _acceptingNewGame = false;
+
+  /// 서버가 이미 내려주는 새 판 식별자입니다. 다시하기는 round를 1로 되돌리므로
+  /// 연출 완료/재시도 키에는 round만 쓰지 말고 이 값도 함께 사용합니다.
+  int? get gameStartedAt => _gameStartedAt;
+
+  @override
+  bool updateShouldNotify(TState previous, TState next) =>
+      _acceptingNewGame || super.updateShouldNotify(previous, next);
 
   /// [build] 안에서 한 번 부르세요. 구독을 열고 폐기 처리를 등록합니다.
   ///
@@ -91,6 +103,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       );
     }
     ref.onDispose(() {
+      _publicGeneration += 1;
       _missingPublicTimer?.cancel();
       unawaited(_publicSubscription?.cancel());
       unawaited(_privateSubscription?.cancel());
@@ -116,7 +129,37 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
     _missingPublicTimer?.cancel();
     _missingPublicTimer = null;
-    applyPublicValue(event.snapshot.value);
+    // Timer.cancel은 이미 시작한 get()을 취소하지 못합니다. 정상 스트림이
+    // 돌아오면 그보다 먼저 시작한 삭제 확인 결과도 버려야 합니다.
+    _publicGeneration += 1;
+    _applyPublicSnapshot(event.snapshot.value);
+  }
+
+  void _applyPublicSnapshot(Object? value) {
+    if (value is! Map) return;
+    final startedAt = (value['startedAt'] as num?)?.toInt();
+    final revision = (value['revision'] as num?)?.toInt();
+    if (startedAt != null && _gameStartedAt != null) {
+      if (startedAt < _gameStartedAt!) return;
+      if (startedAt == _gameStartedAt &&
+          revision != null &&
+          _publicRevision != null &&
+          revision < _publicRevision!) {
+        return;
+      }
+    }
+    final newGame = startedAt != _gameStartedAt;
+    if (newGame) _publicRevision = null;
+    _gameStartedAt = startedAt;
+    _publicRevision = revision;
+    // 1라운드 분배 중 다시하기는 DTO 값이 이전과 같을 수 있습니다. DTO가
+    // startedAt을 직접 저장하지 않아도 Board에는 새 판 시작을 반드시 알립니다.
+    _acceptingNewGame = newGame;
+    try {
+      applyPublicValue(value);
+    } finally {
+      _acceptingNewGame = false;
+    }
   }
 
   /// 구독 오류를 어떻게 알릴지 결정합니다.
@@ -137,42 +180,35 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
 
   /// 공개 상태 구독이 끊긴 경우입니다.
   ///
-  /// **읽기가 거부되면(`permission_denied`) 방이 사라진 것으로 봅니다.** 방이
-  /// 지워지거나 이 기기가 방에서 빠지면 규칙이 읽기를 막습니다. 예전에는 이때
-  /// '연결이 불안정합니다'만 띄우고 **마지막 상태에 그대로 머물렀습니다** —
-  /// 태블릿이 밤 화면에 굳은 채 마감 처리를 끝없이 다시 시도하며 오류만
-  /// 쌓였습니다(2026-08 시뮬레이터에서 확인).
-  ///
-  /// 로그아웃·토큰 갱신 직후에도 잠깐 거부될 수 있어, 곧바로 끝내지 않고
-  /// [_confirmMissingPublicGame]으로 한 번 더 읽어 확인합니다.
+  /// 토큰 갱신과 실제 퇴장 모두 읽기 거부를 만들 수 있습니다. 여기서는 게임을
+  /// 임의 종료하지 않고 재확인합니다. 참가 자격·방 종료의 최종 판정과 구독
+  /// 재개는 플랫폼 복구 흐름의 책임이며 패키지 밖 후속 TODO로 분리합니다.
   void _handlePublicError(Object error) {
     if (!isPermissionDenied(error)) {
       handleSubscriptionError(error);
       return;
     }
-    setError('게임을 읽을 수 없습니다. 방이 사라졌는지 확인합니다…');
+    handleSubscriptionError(error);
     _confirmMissingPublicGame();
   }
 
   void _confirmMissingPublicGame() {
     if (_missingPublicTimer != null) return;
+    final generation = ++_publicGeneration;
     _missingPublicTimer = Timer(const Duration(milliseconds: 1500), () async {
       _missingPublicTimer = null;
       try {
         final snapshot = await query.readPublicGame(roomCode);
-        if (!ref.mounted) return;
+        if (!ref.mounted || generation != _publicGeneration) return;
         if (snapshot.exists && snapshot.value != null) {
-          applyPublicValue(snapshot.value);
+          _applyPublicSnapshot(snapshot.value);
           return;
         }
         _finishForRemovedGame();
       } catch (error) {
-        if (!ref.mounted) return;
-        // 다시 읽어도 거부되면 방이 없는 것이 확실합니다.
-        if (isPermissionDenied(error)) {
-          _finishForRemovedGame();
-          return;
-        }
+        if (!ref.mounted || generation != _publicGeneration) return;
+        // 반복된 권한 오류도 방 삭제의 증거는 아닙니다. 마지막 정상 화면을
+        // 유지합니다. 실제 종료/강퇴는 플랫폼이 서버 참가 상태로 판정합니다.
         // 네트워크가 아직 복구 중이면 마지막 정상 상태를 유지합니다. onValue가
         // 재연결 후 현재 공개 상태를 다시 전달하므로 임의 종료하지 않습니다.
       }

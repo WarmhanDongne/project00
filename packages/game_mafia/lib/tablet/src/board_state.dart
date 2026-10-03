@@ -19,17 +19,14 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 지금 화면에 보여 주는 단계입니다. 서버 단계를 연출 단위로 옮긴 값입니다.
   MafiaTabletStage _stage = MafiaTabletStage.connecting;
 
-  /// 이미 서버에 넘긴 단계입니다. 같은 단계를 두 번 넘기지 않게 막습니다.
-  String? _advancedPhaseKey;
+  /// 같은 밤에도 세부 단계별로 한 번씩 완료를 알려야 합니다.
+  final _advanceCommand = GameProgressCommand();
+  int? _previousGameStartedAt;
+  final _presentationClock = GamePresentationClock();
+  late final Stream<bool> _connectionChanges;
   Timer? _deadlineTimer;
 
-  /// 진행 명령이 실패·드롭됐을 때 다시 시도하는 타이머입니다.
-  ///
-  /// 아침·개표 같은 발표 단계는 마감이 없어 [_scheduleDeadlineCheck]가 아무
-  /// 일도 하지 않습니다. 이 타이머가 없으면 한 번 실패한 단계는 영원히
-  /// 넘어가지 않습니다(진행자가 수동 재시작해야 복구).
-  Timer? _advanceRetryTimer;
-  Timer? _stageTimer;
+  PresentationTimer? _stageTimer;
 
   /// 승부 없이 끝난 판에서 게임 화면을 닫는 타이머입니다.
   Timer? _closingExitTimer;
@@ -46,7 +43,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 하울링은 약 6초입니다. 여유를 두지 않으면 소리가 아침 발표로 넘어가거나
   /// 마지막 5초 초읽기와 겹칩니다.
 
-  Timer? _howlTimer;
+  PresentationTimer? _howlTimer;
   final math.Random _howlRandom = math.Random();
 
   /// 지금 깔아 둔 곡입니다. null이면 아무것도 깔지 않은 상태입니다.
@@ -76,25 +73,21 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
 
   /// 승리 효과음 뒤에 나레이션을 이어 내기까지의 간격입니다.
 
-  Timer? _winVoiceTimer;
-  Timer? _gameStartNoticeTimer;
+  PresentationTimer? _winVoiceTimer;
+  PresentationTimer? _gameStartNoticeTimer;
   bool _showsGameStartNotice = false;
-
-  /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
-  ///
-  /// 서버가 '아직 마감 전'이라고 답한 경우에도 이 간격으로 다시 물어보므로,
-  /// 시계 오차만큼만 짧게 반복하고 마감이 지나면 곧바로 넘어갑니다.
-  static const Duration _advanceRetryDelay = Duration(seconds: 3);
 
   /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
   static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
-  Timer? _nightNoticeTimer;
+  PresentationTimer? _nightNoticeTimer;
   bool _showsNightNotice = false;
   bool _nightNoticeScheduled = false;
 
   @override
   void initState() {
     super.initState();
+    _connectionChanges = widget.provider.watchServerConnection();
+    _presentationClock.addListener(_syncPresentationAudio);
     unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.lockTabletGameLandscape());
     unawaited(GameAssetStore.instance.prepareGame('mafia').catchError((_) {}));
@@ -127,8 +120,10 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
 
   @override
   void dispose() {
+    _presentationClock.removeListener(_syncPresentationAudio);
+    _presentationClock.dispose();
     _deadlineTimer?.cancel();
-    _advanceRetryTimer?.cancel();
+    _advanceCommand.dispose();
     _stageTimer?.cancel();
     _closingExitTimer?.cancel();
     _howlTimer?.cancel();
@@ -149,6 +144,19 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   void _handleState() {
     final game = _controller;
     if (game == null || !mounted) return;
+    // Boundary의 다음 build를 기다리기 전에 서버 중단을 연출 시계에 반영합니다.
+    _presentationClock.setPaused(
+      'mafia-server-interruption',
+      game.interruption != null,
+    );
+    final newGame = _previousGameStartedAt != game.gameStartedAt;
+    if (newGame) {
+      _previousGameStartedAt = game.gameStartedAt;
+      _advanceCommand.cancel();
+      _winVoiceTimer?.cancel();
+      _closingExitTimer?.cancel();
+      _closingExitTimer = null;
+    }
 
     // 승부가 나지 않은 종료(수동 종료·인원 부족·즉시 종료)는 결과 화면을 띄우지
     // 않고 대기실로 돌아갑니다. 사유를 나열하지 않고 '정상 결과가 아니면
@@ -158,8 +166,14 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     // 진행자가 HOME을 직접 누를 때까지 대기실로 돌아가지 못했습니다.
     if (game.isFinished && !game.isNaturalResult) {
       _deadlineTimer?.cancel();
-      _advanceRetryTimer?.cancel();
+      _advanceCommand.cancel();
       _stageTimer?.cancel();
+      _nightNoticeTimer?.cancel();
+      _gameStartNoticeTimer?.cancel();
+      _howlTimer?.cancel();
+      _winVoiceTimer?.cancel();
+      _bgm.stop();
+      _countdownTick.stop();
       _closingExitTimer ??= Timer(MafiaTabletTiming.closingRouteDelay, () {
         // maybePop은 위에 쌓인 설정·룰북 다이얼로그만 닫아 게임 화면에
         // 갇힙니다(game_route_exit.dart 참고).
@@ -170,7 +184,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     }
 
     final nextStage = resolveMafiaTabletStage(game);
-    if (nextStage != _stage) {
+    if (newGame || nextStage != _stage) {
       _stage = nextStage;
       _onStageEntered(game, nextStage);
       // 단계가 바뀌면 밤 안내 상태를 처음으로 돌립니다(재시작 대비).
@@ -186,7 +200,11 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _scheduleDeadlineCheck(game);
     // 제한시간이 있는 단계(밤·토론·투표)에서만 초읽기를 겁니다. 역할 확인은
     // 마감이 있어도 화면에 남은 시간을 보여 주지 않으므로 제외합니다.
-    _countdownTick.schedule(_stage.hasDeadline ? game.turnDeadlineAt : null);
+    _countdownTick.schedule(
+      _stage.hasDeadline && !_presentationClock.paused
+          ? game.turnDeadlineAt
+          : null,
+    );
     setState(() {});
   }
 
@@ -200,7 +218,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (hold == null) return;
 
     // 발표 연출은 정해진 시간만 보여 준 뒤 서버에 완료를 알립니다.
-    _stageTimer = Timer(hold, () {
+    _stageTimer = _presentationClock.schedule(hold, () {
       if (!mounted) return;
       _advance(game, stage);
     });
@@ -224,7 +242,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     final delay =
         MafiaTabletTiming.howlEarliest +
         Duration(milliseconds: _howlRandom.nextInt(spanMs + 1));
-    _howlTimer = Timer(delay, () {
+    _howlTimer = _presentationClock.schedule(delay, () {
       // 밤을 벗어났으면 울리지 않습니다.
       if (!mounted || _stage != MafiaTabletStage.night) return;
       SoundEffects.play(context, MafiaSounds.wolfHowl);
@@ -249,9 +267,12 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       SoundEffects.play(context, voice);
       return;
     }
-    _winVoiceTimer = Timer(MafiaTabletTiming.winVoiceDelay, () {
-      if (mounted) SoundEffects.play(context, voice);
-    });
+    _winVoiceTimer = _presentationClock.schedule(
+      MafiaTabletTiming.winVoiceDelay,
+      () {
+        if (mounted) SoundEffects.play(context, voice);
+      },
+    );
   }
 
   /// 누군가 밤 행동을 마친 순간 그 직업의 효과음을 냅니다.
@@ -260,7 +281,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 붙는 순간의 신호 금지).
   void _playNightActionCue(MafiaController game) {
     final sound = _nightCueSpeaker.soundFor(game.nightActionCue);
-    if (sound == null) return;
+    if (sound == null || _presentationClock.paused) return;
     SoundEffects.play(context, sound);
   }
 
@@ -269,6 +290,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   /// 확정(2026-08): **밤에만** 곡이 깔립니다. 아침이 되면 서서히 작아지며
   /// 사라집니다 — 뚝 끊으면 소리만 먼저 사라져 화면 전환과 어긋납니다.
   void _syncBackgroundMusic(MafiaController game) {
+    if (_presentationClock.paused) return;
     final target = mafiaBackgroundMusicFor(
       isNight: game.isNight,
       isFinished: game.isFinished,
@@ -285,6 +307,19 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _bgm.start(target);
   }
 
+  void _syncPresentationAudio() {
+    if (_presentationClock.paused) {
+      _bgm.stop();
+      _countdownTick.stop();
+      _bgmAsset = null;
+    } else {
+      final game = _controller;
+      if (game == null || !mounted) return;
+      _syncBackgroundMusic(game);
+      _countdownTick.schedule(_stage.hasDeadline ? game.turnDeadlineAt : null);
+    }
+  }
+
   /// 전원이 역할을 확인하면 게임 시작을 알리고, 10초 뒤 밤 안내를 예약합니다.
   ///
   /// 확정(2026-08): 전원이 확인한 순간 '게임을 시작하겠습니다'를 소리와 함께
@@ -297,7 +332,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
 
     _nightNoticeScheduled = true;
     _showGameStartNotice();
-    _nightNoticeTimer = Timer(
+    _nightNoticeTimer = _presentationClock.schedule(
       MafiaTabletTiming.nightNoticeDelay,
       _showNightNotice,
     );
@@ -308,20 +343,26 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (!mounted) return;
     setState(() => _showsGameStartNotice = true);
     SoundEffects.play(context, MafiaSounds.gameStart);
-    _gameStartNoticeTimer = Timer(MafiaTabletTiming.gameStartNoticeHold, () {
-      if (mounted) setState(() => _showsGameStartNotice = false);
-    });
+    _gameStartNoticeTimer = _presentationClock.schedule(
+      MafiaTabletTiming.gameStartNoticeHold,
+      () {
+        if (mounted) setState(() => _showsGameStartNotice = false);
+      },
+    );
   }
 
   /// '밤이 되었습니다'를 잠시 보여 준 뒤 서버에 밤 시작을 알립니다.
   void _showNightNotice() {
     if (!mounted || _stage != MafiaTabletStage.roleDeal) return;
     setState(() => _showsNightNotice = true);
-    _nightNoticeTimer = Timer(MafiaTabletTiming.nightNoticeHold, () {
-      if (!mounted) return;
-      final game = _controller;
-      if (game != null) _advance(game, MafiaTabletStage.roleDeal);
-    });
+    _nightNoticeTimer = _presentationClock.schedule(
+      MafiaTabletTiming.nightNoticeHold,
+      () {
+        if (!mounted) return;
+        final game = _controller;
+        if (game != null) _advance(game, MafiaTabletStage.roleDeal);
+      },
+    );
   }
 
   /// 마감이 있는 단계는 시간이 지났을 때 서버에 알립니다.
@@ -379,25 +420,25 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
 
   /// 서버에 다음 단계로 넘기라고 알립니다. 같은 단계는 한 번만 넘깁니다.
   void _advance(MafiaController game, MafiaTabletStage stage) {
-    final key = '${stage.name}_${game.round}';
-    if (_advancedPhaseKey == key) return;
-    _advancedPhaseKey = key;
     final command = stage.advance(game);
     if (command == null) return;
-    unawaited(
-      command().then((success) {
-        if (success || !mounted || _advancedPhaseKey != key) return;
-        // 실패·드롭·'아직 마감 전' 응답이면 표시를 풀고 다시 시도합니다.
-        // 다른 명령이 진행 중이라 드롭된 경우(commandInFlight)와 발표 단계처럼
-        // 마감이 없어 재시도 경로가 없는 경우를 모두 이 타이머가 받습니다.
-        _advancedPhaseKey = null;
-        _advanceRetryTimer?.cancel();
-        _advanceRetryTimer = Timer(_advanceRetryDelay, () {
-          if (!mounted || _stage != stage) return;
-          final current = _controller;
-          if (current != null) _advance(current, stage);
-        });
-      }),
+    // stage+round만 사용하면 첫 밤 시간 초과 이후 같은 밤의 support/wrapUp이
+    // 이미 처리된 것으로 오인됩니다. 마감 변경도 구분해 재접속 후 재개합니다.
+    Object currentKey() => (
+      game.gameStartedAt,
+      game.round,
+      stage,
+      stage == MafiaTabletStage.night ? game.nightStage : null,
+      stage.hasDeadline ? game.turnDeadlineAt : null,
+    );
+    final key = currentKey();
+    _advanceCommand.run(
+      key: key,
+      isCurrent: () =>
+          mounted && !game.isFinished && _stage == stage && currentKey() == key,
+      send: () => game.interruption != null || _presentationClock.paused
+          ? Future.value(false)
+          : command(),
     );
   }
 
@@ -415,46 +456,91 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
-          MafiaTabletBackground(isNight: game.isNight),
-          // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
-          // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
-          GameTurnCountdown(
-            expiresAt: game.turnDeadlineAt,
-            builder: (context, remaining) => MafiaTabletStageView(
-              stage: _stage,
-              controller: game,
-              playerLayout: widget.playerLayout,
-              remainingSeconds: remaining?.inSeconds,
-              showsNightNotice: _showsNightNotice,
-              showsGameStartNotice: _showsGameStartNotice,
-              onRulebookPressed: _openRulebook,
-              onSettingsPressed: () => _openSettings(game),
-              onRestart: () => unawaited(game.restartGame()),
-              onHome: () => unawaited(_endGameAndLeave(game)),
+    return GamePresentationBoundary(
+      clock: _presentationClock,
+      connectionChanges: _connectionChanges,
+      interrupted: game.interruption != null,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
+            MafiaTabletBackground(isNight: game.isNight),
+            // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
+            // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
+            GameTurnCountdown(
+              expiresAt: game.turnDeadlineAt,
+              builder: (context, remaining) => MafiaTabletStageView(
+                key: ValueKey(game.gameStartedAt),
+                stage: _stage,
+                controller: game,
+                playerLayout: widget.playerLayout,
+                remainingSeconds: remaining?.inSeconds,
+                showsNightNotice: _showsNightNotice,
+                showsGameStartNotice: _showsGameStartNotice,
+                onRulebookPressed: _openRulebook,
+                onSettingsPressed: () => _openSettings(game),
+                onRestart: game.commandInFlight
+                    ? null
+                    : () => unawaited(game.restartGame()),
+                onHome: game.commandInFlight
+                    ? null
+                    : () => unawaited(_endGameAndLeave(game)),
+              ),
             ),
-          ),
-          // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
-          // 그래서 진행자 화면에는 투표 UI를 띄우지 않고, presentation으로
-          // 진행자용 분기를 고릅니다(라이어스 포커·파이널 콜과 동일).
-          GameInterruptionLayer(
-            interruption: game.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-            presentation: GameInterruptionPresentation.tabletController,
-            isSubmitting: game.commandInFlight,
-            failureMessage: game.errorMessage,
-            onContinue: game.excludeInterruptedPlayerAndContinue,
-            onFinishNow: game.finishInterruptedGameNow,
-            onExpired: game.expireInterruption,
-          ),
-        ],
+            if (game.interruption == null)
+              GameRequestNotice(
+                busy: game.commandInFlight,
+                message: game.errorMessage,
+              ),
+            GameConnectingOverlay(
+              isWaiting: _stage == MafiaTabletStage.connecting,
+              exitDelay: const Duration(seconds: 10),
+              message: '게임 정보를 불러오고 있습니다.\n잠시 후에도 그대로라면 다시 연결해 주세요.',
+              onExit: () => exitGameRoute(context),
+              onRetry: () => unawaited(_retryConnection()),
+            ),
+            if (game.isFinished && !game.isNaturalResult)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black87,
+                  child: Center(
+                    child: Text(
+                      game.finishReason == 'insufficientPlayers'
+                          ? '계속 진행할 인원이 부족해 게임이 종료되었습니다.\n대기실로 이동합니다.'
+                          : '게임이 종료되었습니다.\n대기실로 이동합니다.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                ),
+              ),
+            // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
+            // 그래서 진행자 화면에는 투표 UI를 띄우지 않고, presentation으로
+            // 진행자용 분기를 고릅니다(라이어스 포커·파이널 콜과 동일).
+            GameInterruptionLayer(
+              interruption: game.interruption,
+              currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+              presentation: GameInterruptionPresentation.tabletController,
+              isSubmitting: game.commandInFlight,
+              failureMessage: game.errorMessage,
+              onContinue: game.excludeInterruptedPlayerAndContinue,
+              onFinishNow: game.finishInterruptedGameNow,
+              onExpired: game.expireInterruption,
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _retryConnection() async {
+    try {
+      await widget.provider.retryConnectionRecovery();
+    } catch (_) {
+      // 현재 화면을 보존합니다. 서버 상태가 확인되기 전 임의로 종료하지 않습니다.
+    }
   }
 
   // ---------------------------------------------------------------------------

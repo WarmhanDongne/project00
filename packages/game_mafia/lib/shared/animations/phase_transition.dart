@@ -7,6 +7,8 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/game_flow/game_presentation_clock.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -46,7 +48,9 @@ class MafiaPhaseTransition extends StatefulWidget {
 }
 
 class _MafiaPhaseTransitionState extends State<MafiaPhaseTransition>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, GamePresentationState {
+  @override
+  Iterable<AnimationController> get presentationAnimations => [_exit, _enter];
   late final AnimationController _exit;
   late final AnimationController _enter;
 
@@ -89,6 +93,12 @@ class _MafiaPhaseTransitionState extends State<MafiaPhaseTransition>
     super.didUpdateWidget(oldWidget);
     // 같은 화면이 갱신된 것뿐이면 그대로 이어 그립니다.
     if (Widget.canUpdate(_current, widget.child)) {
+      // 전환 중 원래 단계로 돌아오면 대기 중인 옛 화면을 버립니다.
+      if (_pending != null) {
+        _pending = null;
+        _exit.reset();
+        _enter.value = 1;
+      }
       setState(() => _current = widget.child);
       return;
     }
@@ -123,11 +133,14 @@ class _MafiaPhaseTransitionState extends State<MafiaPhaseTransition>
             ? -MafiaPhaseTransition.slideDistance * progress
             : MafiaPhaseTransition.slideDistance * (1 - progress);
 
-        return Opacity(
-          opacity: opacity.clamp(0.0, 1.0),
-          child: Transform.translate(
-            offset: Offset(0, offset),
-            child: _current,
+        return IgnorePointer(
+          ignoring: isLeaving,
+          child: Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, offset),
+              child: _current,
+            ),
           ),
         );
       },
