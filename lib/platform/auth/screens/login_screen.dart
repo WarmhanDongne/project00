@@ -39,15 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  String _email() {
-    final input = _emailController.text.trim().toLowerCase();
-    if (input.contains('@')) return input;
-    final domain = _isCustomDomain
-        ? _customDomainController.text.trim().toLowerCase()
-        : _emailDomain;
-    return '$input@$domain';
-  }
-
+  //===========================[ 기본 로그인 ]======================
   Future<void> _signIn() async {
     if (_action != null) return;
     final email = _email();
@@ -89,6 +81,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // _sign()에서 사용
+  String _email() {
+    final input = _emailController.text.trim().toLowerCase();
+    if (input.contains('@')) return input;
+    final domain = _isCustomDomain
+        ? _customDomainController.text.trim().toLowerCase()
+        : _emailDomain;
+    return '$input@$domain';
+  }
+
+  //===========================[ 구글 로그인 ]======================
   Future<void> _signInWithGoogle() async {
     if (_action != null) return;
     setState(() {
@@ -107,11 +110,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Apple 로그인은 애플 플랫폼에서만 네이티브로 동작합니다. Android/웹에서 쓰려면
   // sign_in_with_apple의 webAuthenticationOptions 설정이 추가로 필요합니다.
-  bool get _isAppleSignInAvailable =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS);
 
+  //==========================[ 애플 로그인 ]======================
   Future<void> _signInWithApple() async {
     if (_action != null) return;
     setState(() {
@@ -129,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  // 도메인 선택 시 드롭다운 또는 직접 입력 실행
   void _changeDomain(String? value) {
     if (value == null) return;
     setState(() {
@@ -137,6 +138,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if (_isCustomDomain) _customDomainFocusNode.requestFocus();
   }
+
+  // Apple 로그인 버튼을 표시할지 결정할 때 사용
+  bool get _isAppleSignInAvailable =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// 구글, 애플 로그인 버튼
 class SocialLoginButton extends StatelessWidget {
   const SocialLoginButton({
     super.key,

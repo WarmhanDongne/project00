@@ -49,17 +49,18 @@ class RoomService {
     return user;
   }
 
-  // [방 생성]
+  //===================================[방 생성]=================================
+  // 방 코드를 반환
   Future<String> createRoom({String? operationId}) async {
     final user = _auth.currentUser;
 
-    // 가드 조건문
+    // 가드 조건문: 로그인 상태 확인
     if (user == null) {
       throw const RoomCommandException('방을 만들려면 로그인이 필요합니다.');
     }
 
     try {
-      // cloud function 호출
+      // cloud function 호출: 방 생성 작업 요청
       final response = await _functions
           .httpsCallable('createRealtimeRoom')
           .call(operationId == null ? null : {'operationId': operationId});
@@ -81,6 +82,7 @@ class RoomService {
         sessionId: controllerSessionId,
       );
       await markControllerConnected(roomCode);
+      // 호출한 함수에 방 코드 리턴
       return roomCode;
     } on FirebaseFunctionsException catch (error) {
       throw RoomCommandException(error.message ?? '방을 생성하지 못했습니다.');
