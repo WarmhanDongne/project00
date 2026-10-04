@@ -11,9 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/game_sounds.dart';
-import 'package:game_kit/player_layouts/player_slot_positions.dart';
+import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------

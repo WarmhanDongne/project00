@@ -7,10 +7,12 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+import 'package:game_mafia/shared/models/game_rules.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_state.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_session_state.dart';
+
 // ============================================================
 
 const Object _notProvided = Object();
@@ -26,6 +28,8 @@ const Object _notProvided = Object();
 @immutable
 class MafiaGameState implements GameSessionState<MafiaGameState> {
   const MafiaGameState({
+    this.ruleState = const MafiaRuleState(),
+    this.trialVote,
     required this.loading,
     required this.commandInFlight,
     required this.errorMessage,
@@ -114,6 +118,8 @@ class MafiaGameState implements GameSessionState<MafiaGameState> {
   // ---------------------------------------------------------------------------
   // 전원 공개
   // ---------------------------------------------------------------------------
+  final MafiaRuleState ruleState;
+  final bool? trialVote;
   final bool loading;
   @override
   final bool commandInFlight;
@@ -239,6 +245,8 @@ class MafiaGameState implements GameSessionState<MafiaGameState> {
   final int? roleChangedRound;
 
   MafiaGameState copyWith({
+    MafiaRuleState? ruleState,
+    Object? trialVote = _notProvided,
     bool? loading,
     bool? commandInFlight,
     Object? errorMessage = _notProvided,
@@ -281,6 +289,10 @@ class MafiaGameState implements GameSessionState<MafiaGameState> {
     Object? roleChangedRound = _notProvided,
   }) {
     return MafiaGameState(
+      ruleState: ruleState ?? this.ruleState,
+      trialVote: identical(trialVote, _notProvided)
+          ? this.trialVote
+          : trialVote as bool?,
       loading: loading ?? this.loading,
       commandInFlight: commandInFlight ?? this.commandInFlight,
       errorMessage: identical(errorMessage, _notProvided)
@@ -373,6 +385,8 @@ class MafiaGameState implements GameSessionState<MafiaGameState> {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is MafiaGameState &&
+        ruleState == other.ruleState &&
+        trialVote == other.trialVote &&
         loading == other.loading &&
         commandInFlight == other.commandInFlight &&
         errorMessage == other.errorMessage &&
@@ -417,6 +431,8 @@ class MafiaGameState implements GameSessionState<MafiaGameState> {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
+    ruleState,
+    trialVote,
     loading,
     commandInFlight,
     errorMessage,

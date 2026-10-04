@@ -11,11 +11,14 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/models/game_state.dart';
 import 'package:game_final_call/shared/services/game_service.dart';
+import 'package:game_final_call/shared/services/private_state_mapper.dart';
+import 'package:game_final_call/shared/services/public_state_mapper.dart';
 import 'package:game_kit/game_flow/game_finish.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_controller.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/services/game_query_service.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -118,6 +121,12 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
   // 파생 게임 상태
   // ---------------------------------------------------------------------------
   bool get isMyTurn => turnUid == uid;
+  bool get isEliminated => players[uid]?.status == 'eliminated';
+  int get remainingTeamCount => players.values
+      .where((player) => player.status == 'alive')
+      .map((player) => player.team)
+      .toSet()
+      .length;
   bool get isFinished => status == 'finished';
 
   /// 마지막 생존자가 정해져 정상적으로 끝났는지 여부입니다.
@@ -182,10 +191,8 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
         (current.loading ||
             current.phase != 'dealing' ||
             current.round != nextRound);
-    final rawDiscard = map['discardCard'];
-    final nextDiscardCard = rawDiscard is Map
-        ? FinalCallCard.fromMap(Map<Object?, Object?>.from(rawDiscard))
-        : current.discardCard;
+    final nextDiscardCard =
+        parseFinalCallCard(map['discardCard']) ?? current.discardCard;
 
     var nextDiscardEvent = current.discardEvent;
     if (!current.loading &&
@@ -204,39 +211,11 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
       );
     }
 
-    final parsedPlayers = <String, FinalCallPlayer>{};
-    final rawPlayers = map['players'];
-    if (rawPlayers is Map) {
-      for (final entry in rawPlayers.entries) {
-        if (entry.value is Map) {
-          parsedPlayers[entry.key.toString()] = FinalCallPlayer.fromMap(
-            entry.key.toString(),
-            Map<Object?, Object?>.from(entry.value as Map),
-          );
-        }
-      }
-    }
-
-    final rawFinalTurns = map['finalTurnPendingUids'];
-    final finalTurnUids = rawFinalTurns is List
-        ? rawFinalTurns.whereType<String>().toList(growable: false)
-        : rawFinalTurns is Map
-        ? rawFinalTurns.values.whereType<String>().toList(growable: false)
-        : const <String>[];
-    final rawResult = map['roundResult'];
-    final rawInterruption = map['interruption'];
-    final rawWinnerUids = map['winnerUids'];
-    final winnerUids = rawWinnerUids is List
-        ? rawWinnerUids.map((value) => value.toString()).toList(growable: false)
-        : rawWinnerUids is Map
-        ? rawWinnerUids.values
-              .map((value) => value.toString())
-              .toList(growable: false)
-        : const <String>[];
-    final winningTeamValue = map['winningTeam'];
-    final winningTeam = winningTeamValue == null
-        ? null
-        : FinalCallTeam.fromWire(winningTeamValue, seatIndex: 0);
+    final parsedPlayers = parseFinalCallPlayers(map['players']);
+    final finalTurnUids = parseFinalCallStringCollection(
+      map['finalTurnPendingUids'],
+    );
+    final winnerUids = parseFinalCallStringCollection(map['winnerUids']);
 
     state = current.copyWith(
       loading: false,
@@ -256,7 +235,7 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
       finalTurnPendingUids: finalTurnUids,
       winnerUid: map['winnerUid']?.toString(),
       winnerUids: winnerUids,
-      winningTeam: winningTeam,
+      winningTeam: parseFinalCallWinningTeam(map['winningTeam']),
       resultRevealCompletedAt: (map['resultRevealCompletedAt'] as num?)
           ?.toInt(),
       players: parsedPlayers,
@@ -268,15 +247,9 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
       // 다시 만드는 이중 분배 현상이 발생합니다.
       hand: enteredNewDealing ? const <FinalCallCard>[] : current.hand,
       pendingDraw: enteredNewDealing ? null : current.pendingDraw,
-      roundResult: rawResult is Map
-          ? FinalCallRoundResult.fromMap(Map<Object?, Object?>.from(rawResult))
-          : null,
+      roundResult: parseFinalCallRoundResult(map['roundResult']),
       discardEvent: nextDiscardEvent,
-      interruption: rawInterruption is Map
-          ? GameInterruption.fromMap(
-              Map<Object?, Object?>.from(rawInterruption),
-            )
-          : null,
+      interruption: parseFinalCallInterruption(map['interruption']),
     );
   }
 
@@ -293,28 +266,10 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
       // 연결 복구 중의 일시적인 null로 손패와 이미 받은 새 카드를 지우지 않습니다.
       return;
     }
-    final cards = <FinalCallCard>[];
-    FinalCallCard? nextPendingDraw;
-    if (value is Map) {
-      final map = Map<Object?, Object?>.from(value);
-      final rawHand = map['hand'];
-      if (rawHand is Map) {
-        for (final raw in rawHand.values) {
-          if (raw is Map) {
-            cards.add(FinalCallCard.fromMap(Map<Object?, Object?>.from(raw)));
-          }
-        }
-      }
-      final rawPending = map['pendingDraw'];
-      if (rawPending is Map) {
-        nextPendingDraw = FinalCallCard.fromMap(
-          Map<Object?, Object?>.from(rawPending),
-        );
-      }
-    }
+    final privateSnapshot = FinalCallPrivateSnapshot.fromValue(value);
     state = state.copyWith(
-      hand: _preserveHandSlots(cards),
-      pendingDraw: nextPendingDraw,
+      hand: _preserveHandSlots(privateSnapshot.hand),
+      pendingDraw: privateSnapshot.pendingDraw,
     );
   }
 

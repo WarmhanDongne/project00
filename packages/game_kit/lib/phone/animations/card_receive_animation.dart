@@ -10,8 +10,9 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
-import 'package:game_kit/widgets/game_card_face.dart';
+import 'package:game_kit/shared/widgets/game_card_face.dart';
 import 'package:game_kit/game_assets.dart';
+
 // ============================================================
 
 /// 받은 카드 덱이 중앙으로 들어온 뒤, 사용자의 탭을 기다렸다가 공개됩니다.

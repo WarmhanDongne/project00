@@ -8,7 +8,8 @@
 // ========================[ import ]==========================
 import 'command_service.dart';
 import 'query_service.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+
 // ============================================================
 
 /// Final Call의 읽기 구독과 서버 명령을 분리해 제공하는 진입 서비스입니다.

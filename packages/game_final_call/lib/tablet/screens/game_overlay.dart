@@ -7,11 +7,12 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_final_call/tablet/widgets/rolebook.dart';
-import 'package:game_kit/widgets/tablet_game_settings_dialog.dart';
-import 'package:game_kit/widgets/tablet_game_menu_overlay.dart';
+import 'package:game_final_call/tablet/widgets/rulebook.dart';
+import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
+import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_kit/models/game_room_context.dart';
+
 // ============================================================
 
 /// Final Call 정보와 자산을 공통 태블릿 사이드바에 연결합니다.

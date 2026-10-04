@@ -59,7 +59,7 @@ export const game_common_interruption_report_stale_player = onCall<Data>(
         playerUid,
         observedLastSeen,
         Date.now(),
-        {minimumPlayerCount: minimumPlayerCount(room.selectedGame)},
+        {minimumPlayerCount: minimumPlayerCount(room)},
       );
       response = {success: true, outcome};
       return room;
@@ -256,7 +256,7 @@ export const game_common_interruption_on_connection_changed = onValueWritten(
         wasConnected,
         isConnected,
         Date.now(),
-        {minimumPlayerCount: minimumPlayerCount(room.selectedGame)},
+        {minimumPlayerCount: minimumPlayerCount(room)},
       );
       return room;
     });
@@ -277,7 +277,13 @@ function excludePlayer(room: GameRoom, uid: string, now: number): void {
   }
 }
 
-function minimumPlayerCount(selectedGame: string | undefined): number {
+function minimumPlayerCount(room: GameRoom): number {
+  // 팀 게임은 실제 참가자 제외로 2인 팀이 깨지면 계속할 수 없습니다.
+  if (room.selectedGame === "final_call") {
+    return Object.values(room.game?.public.players ?? {})
+      .filter((player) => player.status === "alive").length;
+  }
+  const selectedGame = room.selectedGame;
   return selectedGame ? MINIMUM_PLAYER_COUNTS[selectedGame] ?? 2 : 2;
 }
 

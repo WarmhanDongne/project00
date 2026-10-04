@@ -10,27 +10,28 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
-import 'package:game_kit/game_flow/game_progress_command.dart';
+import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';
-import 'package:game_kit/widgets/game_request_notice.dart';
-import 'package:game_kit/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/recovery/widgets/game_request_notice.dart';
+import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
 import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/sound/countdown_tick_cue.dart';
 import 'package:game_kit/sound/game_background_music.dart';
-import 'package:game_kit/widgets/game_interruption_layer.dart';
-import 'package:game_kit/widgets/game_route_exit.dart';
-import 'package:game_kit/widgets/game_turn_countdown.dart';
-import 'package:game_kit/widgets/tablet_game_rulebook_dialog.dart';
-import 'package:game_kit/widgets/tablet_game_settings_dialog.dart';
+import 'package:game_kit/recovery/widgets/game_interruption_layer.dart';
+import 'package:game_kit/shared/widgets/game_route_exit.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
+import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
+import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
 import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/game_sounds.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
@@ -49,6 +50,7 @@ import 'package:game_mafia/tablet/screens/phase_views.dart';
 import 'package:game_mafia/tablet/screens/result_view.dart';
 import 'package:game_mafia/tablet/services/bgm_plan.dart';
 import 'package:game_mafia/tablet/services/night_cue_speaker.dart';
+import 'package:game_mafia/shared/widgets/delayed_connection_hint.dart';
 
 part 'src/board_state.dart';
 
@@ -283,6 +285,15 @@ class MafiaTabletStageView extends StatelessWidget {
       stage == MafiaTabletStage.voting;
 
   Widget _buildStage() {
+    final trial = controller.ruleState;
+    if (stage == MafiaTabletStage.voting && trial.trialStage != null) {
+      return MafiaTrialView(
+        candidate: controller.players[trial.candidateUid]?.nickname ?? '후보',
+        defending: trial.trialStage == 'defense',
+        isTablet: true,
+        remainingSeconds: remainingSeconds,
+      );
+    }
     // 기자가 취재한 사람입니다. 아침 발표가 이 사람의 카드를 뒤집습니다.
     final exposedUid = controller.morningResult?.exposedUid;
 
@@ -295,8 +306,10 @@ class MafiaTabletStageView extends StatelessWidget {
         showsNightNotice: showsNightNotice,
         showsGameStartNotice: showsGameStartNotice,
       ),
-      // 시안에 문구가 없어 진행 현황도 넣지 않습니다.
-      MafiaTabletStage.night => MafiaTabletNightView(),
+      // 역할·완료 인원은 숨기고, 공통 마무리 구간에만 새벽 전환을 보여 줍니다.
+      MafiaTabletStage.night => MafiaTabletNightView(
+        isWrappingUp: controller.nightStage == 'wrapUp',
+      ),
       MafiaTabletStage.morning => MafiaTabletMorningSequence(
         result: controller.morningResult,
         players: controller.players,
@@ -365,6 +378,12 @@ class MafiaTabletStageView extends StatelessWidget {
   Widget _buildVoteResult() {
     final result = controller.voteResult;
     return MafiaTabletVoteResultSequence(
+      limitedDisclosure: controller.ruleState.rules.executionReveal != 'role',
+      revealedFaction: controller.ruleState.rules.executionReveal == 'faction'
+          ? controller.ruleState.revealedFactions[controller
+                .voteResult
+                ?.executedUid]
+          : null,
       key: ValueKey('voteResult_${controller.round}'),
       result: result,
       players: controller.players,

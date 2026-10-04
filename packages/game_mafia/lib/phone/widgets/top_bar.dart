@@ -9,11 +9,12 @@
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
-import 'package:game_kit/widgets/phone_game_top_bar.dart';
-import 'package:game_kit/widgets/phone_rule_dialog.dart';
-import 'package:game_kit/widgets/phone_ripple_dialog.dart';
+import 'package:game_kit/phone/widgets/game_top_bar.dart';
+import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 /// 상단바가 차지하는 높이입니다(위 여백 4 + 바 50).
@@ -59,14 +60,14 @@ class MafiaPhoneTopBar extends StatelessWidget {
 /// 룰 다이얼로그를 엽니다. 상단바 책 버튼이 부릅니다.
 ///
 /// 배경이 밝은 시안이라 파이널콜과 달리 흰 바탕 + 검은 글자를 씁니다.
-void showMafiaRules(BuildContext context, [Offset? origin]) {
+void showMafiaRules(BuildContext context, [Offset? origin, String? rules]) {
   final screenSize = MediaQuery.sizeOf(context);
   showPhoneRippleDialog<void>(
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
-    builder: (_) => const PhoneGameRuleDialog(
+    builder: (_) => PhoneGameRuleDialog(
       title: '마피아',
-      rules: MafiaCopy.phoneRules,
+      rules: rules ?? MafiaCopy.phoneRules,
       surfaceColor: MafiaColors.surface,
       foregroundColor: MafiaColors.ink,
       dismissOnAnyTap: true,

@@ -342,102 +342,104 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         ? 'DRAW'
         : '${game.winningTeam?.name.toUpperCase() ?? ''} TEAM WINNER'.trim();
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        PhoneGameShell<FinalCallPhoneStage>(
-          flowConfig: flowConfig,
-          stage: stage,
-          stageRole: stage.shellRole,
-          roundNumber: game.round,
-          closingMessage: closingMessage,
-          introTextColor: Colors.black,
-          background: Assets
-              .games
-              .finalCall
-              .images
-              .background
-              .phoneBackground
-              .game
-              .image(fit: BoxFit.cover),
-          // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
-          contentReady: game.hand.isNotEmpty,
-          contentRevealed: revealedRound == game.round,
-          onIntroCompleted: () {
-            if (mounted) setState(() => gameStartCompleted = true);
-          },
-          onRoundIntroCompleted: () {
-            if (mounted) setState(() => announcedRound = game.round);
-          },
-          // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
-          onConnectingExit: () => unawaited(_leaveRoom()),
-          topBar: FinalCallPhoneTopBar(
-            controller: game,
-            onExitRoom: () => unawaited(_leaveRoom()),
-            onRulesPressed: (origin) => showFinalCallRules(context, origin),
-          ),
-          // 정상 승자/무승부가 확정된 경우에만 결과 위젯을 구성합니다.
-          // 수동 종료나 인원 부족 종료가 phase 분기 오류로 result에 도달해도
-          // 승자 없는 결과 화면이 노출되지 않게 하는 마지막 안전장치입니다.
-          result: game.isNaturalResult
-              ? FinalCallPhoneScreens.result(
-                  nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
-                  characterId: resultProfile?.characterId ?? 'frog',
-                  resultLabel: resultLabel,
-                )
-              : const SizedBox.shrink(),
-          content: Stack(
-            fit: StackFit.expand,
-            children: [
-              RepaintBoundary(
-                child: FinalCallPhoneScreens.playing(
-                  controller: game,
-                  handRevealed: revealedRound == game.round,
-                  selectedCardId: selectedCardId,
-                  selectedFinalCardIds: selectedFinalCardIds,
-                  visibleCallerUid: visibleCallerUid,
-                  onRevealStarted: () {},
-                  onRevealCompleted: () =>
-                      setState(() => revealedRound = game.round),
-                  onSelectedCardChanged: (id) =>
-                      setState(() => selectedCardId = id),
-                  onFinalCardSelected: (id) => setState(() {
-                    if (!selectedFinalCardIds.remove(id)) {
-                      selectedFinalCardIds.add(id);
-                    }
-                  }),
-                  onCompleteTurn: _completeTurn,
-                  replacingCardId: replacingCardId,
-                  replacementInProgress: replacementInProgress,
-                  onExitRoom: () => unawaited(_leaveRoom()),
-                  regions: flowConfig.stepFor(stage).phoneRegions!,
+    return GameRecoveryLayer(
+      interruption: GameInterruptionRecovery(
+        state: game.interruption,
+        currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+        isSubmitting: game.commandInFlight,
+        failureMessage: game.errorMessage,
+        onVote: () async {
+          await game.voteToContinueInterruption();
+        },
+        onFinishNow: game.finishInterruptedGameNow,
+        onExpired: game.expireInterruption,
+      ),
+      child: PhoneGameShell<FinalCallPhoneStage>(
+        flowConfig: flowConfig,
+        stage: stage,
+        stageRole: stage.shellRole,
+        roundNumber: game.round,
+        closingMessage: closingMessage,
+        introTextColor: Colors.black,
+        background: Assets
+            .games
+            .finalCall
+            .images
+            .background
+            .phoneBackground
+            .game
+            .image(fit: BoxFit.cover),
+        // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
+        contentReady: game.isEliminated || game.hand.isNotEmpty,
+        contentRevealed: game.isEliminated || revealedRound == game.round,
+        onIntroCompleted: () {
+          if (mounted) setState(() => gameStartCompleted = true);
+        },
+        onRoundIntroCompleted: () {
+          if (mounted) setState(() => announcedRound = game.round);
+        },
+        // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
+        onConnectingExit: () => unawaited(_leaveRoom()),
+        topBar: FinalCallPhoneTopBar(
+          controller: game,
+          onExitRoom: () => unawaited(_leaveRoom()),
+          onRulesPressed: (origin) => showFinalCallRules(context, origin),
+        ),
+        // 정상 승자/무승부가 확정된 경우에만 결과 위젯을 구성합니다.
+        // 수동 종료나 인원 부족 종료가 phase 분기 오류로 result에 도달해도
+        // 승자 없는 결과 화면이 노출되지 않게 하는 마지막 안전장치입니다.
+        result: game.isNaturalResult
+            ? FinalCallPhoneScreens.result(
+                nickname: resultNickname.isEmpty ? 'WINNER' : resultNickname,
+                characterId: resultProfile?.characterId ?? 'frog',
+                resultLabel: resultLabel,
+              )
+            : const SizedBox.shrink(),
+        content: Stack(
+          fit: StackFit.expand,
+          children: [
+            RepaintBoundary(
+              child: game.isEliminated
+                  ? FinalCallSpectatorView(
+                      remainingTeamCount: game.remainingTeamCount,
+                      waitingForResult: game.isFinished,
+                    )
+                  : FinalCallPhoneScreens.playing(
+                      controller: game,
+                      handRevealed: revealedRound == game.round,
+                      selectedCardId: selectedCardId,
+                      selectedFinalCardIds: selectedFinalCardIds,
+                      visibleCallerUid: visibleCallerUid,
+                      onRevealStarted: () {},
+                      onRevealCompleted: () =>
+                          setState(() => revealedRound = game.round),
+                      onSelectedCardChanged: (id) =>
+                          setState(() => selectedCardId = id),
+                      onFinalCardSelected: (id) => setState(() {
+                        if (!selectedFinalCardIds.remove(id)) {
+                          selectedFinalCardIds.add(id);
+                        }
+                      }),
+                      onCompleteTurn: _completeTurn,
+                      replacingCardId: replacingCardId,
+                      replacementInProgress: replacementInProgress,
+                      onExitRoom: () => unawaited(_leaveRoom()),
+                      regions: flowConfig.stepFor(stage).phoneRegions!,
+                    ),
+            ),
+            if (game.commandInFlight)
+              const Positioned(
+                right: 14,
+                bottom: 14,
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              if (game.commandInFlight)
-                const Positioned(
-                  right: 14,
-                  bottom: 14,
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
-        GameInterruptionLayer(
-          interruption: game.interruption,
-          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-          isSubmitting: game.commandInFlight,
-          failureMessage: game.errorMessage,
-          onVote: () async {
-            await game.voteToContinueInterruption();
-          },
-          onFinishNow: game.finishInterruptedGameNow,
-          onExpired: game.expireInterruption,
-        ),
-      ],
+      ),
     );
   }
 }

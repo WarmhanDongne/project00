@@ -477,7 +477,9 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
       case "invalid-player-count":
         rejection = new HttpsError(
           "failed-precondition",
-          `게임 참가 인원은 ${minPlayers}~${maxPlayers}명이어야 합니다.`,
+          selectedGame === "final_call" ?
+            "Final Call은 4명 또는 6명이 참여해야 합니다." :
+            `게임 참가 인원은 ${minPlayers}~${maxPlayers}명이어야 합니다.`,
         );
         return;
       case "begin":

@@ -19,6 +19,8 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   @override
   void initState() {
     super.initState();
+    // 공용 연결 모니터의 broadcast 스트림을 화면 연출 정지와 지연 안내가
+    // 함께 구독합니다. 각 구독에는 최신 연결 상태가 즉시 재생됩니다.
     _connectionChanges = widget.provider.watchServerConnection();
     // 게임에 들어가면 시스템 UI를 감추고 시안대로 세로로 고정합니다.
     // 플랫폼 화면으로 돌아갈 때 dispose에서 복원합니다.
@@ -134,90 +136,98 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       clock: _presentationClock,
       connectionChanges: _connectionChanges,
       interrupted: game.interruption != null,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          PhoneGameShell<MafiaPhoneStage>(
-            flowConfig: flowConfig,
-            stage: stage,
-            stageRole: stage.shellRole,
-            roundNumber: game.round,
-            closingMessage: closingMessage,
-            introTextColor: Colors.black,
-            // 연결·종료 단계에서 보이는 바탕입니다. 진행 화면은 각 시안 위젯이
-            // 자기 배경을 그립니다.
-            background: MafiaPhoneBackground(isNight: game.isNight),
-            onIntroCompleted: () {},
-            onRoundIntroCompleted: () {},
-            // 아래 복구 안내가 담당합니다. 셸의 20초 탈출 버튼과 중복하지 않습니다.
-            onConnectingExit: null,
-            topBar: MafiaPhoneTopBar(
-              onExitRoom: () => unawaited(_leaveRoom()),
-              onRulesPressed: (origin) => showMafiaRules(context, origin),
+      child: GameRecoveryLayer(
+        request: GameRequestRecovery(
+          visible: !game.isFinished,
+          // 플레이 입력은 각 화면이 즉시 완료 상태로 전환합니다. 여기서 전역
+          // 로딩 알림까지 띄우면 느린 네트워크가 그대로 드러나고 화면 아래
+          // 액션과 겹치므로, 실제 실패만 마지막 정상 화면 위에 표시합니다.
+          busy: false,
+          message: game.errorMessage,
+          onRetry:
+              game.isRoleReveal &&
+                  !game.hasConfirmedRole &&
+                  game.privateDataReady
+              ? () => unawaited(game.confirmRole())
+              : null,
+        ),
+        connection: GameConnectionRecovery(
+          isWaiting: stage == MafiaPhoneStage.connecting,
+          exitDelay: const Duration(seconds: 10),
+          message: '게임 정보를 불러오고 있습니다.\n연결이 복구되면 현재 게임으로 돌아갑니다.',
+          onExit: () => unawaited(_leaveRoom()),
+          onRetry: () => unawaited(_retryConnection()),
+        ),
+        interruption: GameInterruptionRecovery(
+          state: game.interruption,
+          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
+          onVote: () async {
+            await game.voteToContinueInterruption();
+          },
+          onFinishNow: game.finishInterruptedGameNow,
+          onExpired: game.expireInterruption,
+        ),
+        child: PhoneGameShell<MafiaPhoneStage>(
+          flowConfig: flowConfig,
+          stage: stage,
+          stageRole: stage.shellRole,
+          roundNumber: game.round,
+          closingMessage: closingMessage,
+          introTextColor: Colors.black,
+          // 연결·종료 단계에서 보이는 바탕입니다. 진행 화면은 각 시안 위젯이
+          // 자기 배경을 그립니다.
+          background: MafiaPhoneBackground(isNight: game.isNight),
+          onIntroCompleted: () {},
+          onRoundIntroCompleted: () {},
+          // 아래 복구 안내가 담당합니다. 셸의 20초 탈출 버튼과 중복하지 않습니다.
+          onConnectingExit: null,
+          topBar: MafiaPhoneTopBar(
+            onExitRoom: () => unawaited(_leaveRoom()),
+            onRulesPressed: (origin) => showMafiaRules(
+              context,
+              origin,
+              MafiaCopy.rulesFor(game.ruleState),
             ),
-            // 확정(2026-08): 승리 그림 2초 → 전원 신분 명단.
-            result: game.isNaturalResult
-                ? MafiaPhoneScreens.result(
-                    winner: game.winnerFaction,
-                    // 중립은 이긴 **역할**로 포스터가 갈립니다(광대/처형자/
-                    // 연쇄살인마/교단).
-                    winnerRoleIds: game.winnerRoleIds,
-                    // 중립은 "중립 승리"로는 무슨 일이 있었는지 알 수 없어
-                    // 역할 이름으로 알려 줍니다(예: `광대 승리`).
-                    winnerLabel: game.winnerLabel,
-                    players: game.orderedPlayers,
-                    revealedRoles: {
-                      for (final player in game.orderedPlayers)
-                        player.uid: game.revealedRoleOf(player.uid),
-                    },
-                    myRole: game.myRole,
-                    myUid: game.uid,
-                  )
-                : const SizedBox.shrink(),
-            content: Stack(
-              fit: StackFit.expand,
-              children: [
-                RepaintBoundary(
-                  child: MafiaPhoneScreens.playing(
-                    key: ValueKey(game.gameStartedAt),
-                    controller: game,
-                    stage: stage,
-                    regions: flowConfig.stepFor(stage).phoneRegions!,
-                  ),
+          ),
+          // 확정(2026-08): 승리 그림 2초 → 전원 신분 명단.
+          result: game.isNaturalResult
+              ? MafiaPhoneScreens.result(
+                  winner: game.winnerFaction,
+                  // 중립은 이긴 **역할**로 포스터가 갈립니다(광대/처형자/
+                  // 연쇄살인마/교단).
+                  winnerRoleIds: game.winnerRoleIds,
+                  // 중립은 "중립 승리"로는 무슨 일이 있었는지 알 수 없어
+                  // 역할 이름으로 알려 줍니다(예: `광대 승리`).
+                  winnerLabel: game.winnerLabel,
+                  players: game.orderedPlayers,
+                  revealedRoles: {
+                    for (final player in game.orderedPlayers)
+                      player.uid: game.revealedRoleOf(player.uid),
+                  },
+                  myRole: game.myRole,
+                  myUid: game.uid,
+                )
+              : const SizedBox.shrink(),
+          content: Stack(
+            fit: StackFit.expand,
+            children: [
+              RepaintBoundary(
+                child: MafiaPhoneScreens.playing(
+                  key: ValueKey(game.gameStartedAt),
+                  controller: game,
+                  stage: stage,
+                  regions: flowConfig.stepFor(stage).phoneRegions!,
                 ),
-              ],
-            ),
+              ),
+              MafiaDelayedConnectionHint(
+                connectionChanges: _connectionChanges,
+                enabled: stage != MafiaPhoneStage.connecting,
+              ),
+            ],
           ),
-          if (game.interruption == null && !game.isFinished)
-            GameRequestNotice(
-              busy: game.commandInFlight,
-              message: game.errorMessage,
-              onRetry:
-                  game.isRoleReveal &&
-                      !game.hasConfirmedRole &&
-                      game.privateDataReady
-                  ? () => unawaited(game.confirmRole())
-                  : null,
-            ),
-          GameConnectingOverlay(
-            isWaiting: stage == MafiaPhoneStage.connecting,
-            exitDelay: const Duration(seconds: 10),
-            message: '게임 정보를 불러오고 있습니다.\n연결이 복구되면 현재 게임으로 돌아갑니다.',
-            onExit: () => unawaited(_leaveRoom()),
-            onRetry: () => unawaited(_retryConnection()),
-          ),
-          GameInterruptionLayer(
-            interruption: game.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-            isSubmitting: game.commandInFlight,
-            failureMessage: game.errorMessage,
-            onVote: () async {
-              await game.voteToContinueInterruption();
-            },
-            onFinishNow: game.finishInterruptedGameNow,
-            onExpired: game.expireInterruption,
-          ),
-        ],
+        ),
       ),
     );
   }

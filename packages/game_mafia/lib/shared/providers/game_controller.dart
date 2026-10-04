@@ -13,12 +13,15 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
 import 'package:game_mafia/shared/models/game_state.dart';
+import 'package:game_mafia/shared/models/game_rules.dart';
 import 'package:game_mafia/shared/services/game_service.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_controller.dart';
+import 'package:game_mafia/shared/services/private_state_mapper.dart';
+import 'package:game_mafia/shared/services/public_state_mapper.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/services/game_query_service.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 
 // ============================================================
 
@@ -94,6 +97,8 @@ class MafiaController extends GameSessionController<MafiaGameState> {
   bool get isMorning => phase == 'morning';
   bool get isDay => phase == 'day';
   bool get isVoting => phase == 'voting';
+  MafiaRuleState get ruleState => state.ruleState;
+  bool? get trialVote => state.trialVote;
   bool get isVoteResult => phase == 'voteResult';
 
   /// 승자가 정해져 정상적으로 끝났는지입니다.
@@ -419,37 +424,8 @@ class MafiaController extends GameSessionController<MafiaGameState> {
     final current = state;
     final map = Map<Object?, Object?>.from(value);
 
-    final parsedPlayers = <String, MafiaPlayer>{};
-    final rawPlayers = map['players'];
-    if (rawPlayers is Map) {
-      for (final entry in rawPlayers.entries) {
-        if (entry.value is Map) {
-          parsedPlayers[entry.key.toString()] = MafiaPlayer.fromMap(
-            entry.key.toString(),
-            Map<Object?, Object?>.from(entry.value as Map),
-          );
-        }
-      }
-    }
-    // 좌석 순서로 정렬해 화면마다 다시 정렬하지 않게 합니다.
-    final sortedPlayers = <String, MafiaPlayer>{
-      for (final player
-          in parsedPlayers.values.toList()
-            ..sort((a, b) => a.seatIndex.compareTo(b.seatIndex)))
-        player.uid: player,
-    };
-
-    final rawRevealed = map['revealedRoles'];
-    final revealedRoles = <String, String>{};
-    if (rawRevealed is Map) {
-      for (final entry in rawRevealed.entries) {
-        revealedRoles[entry.key.toString()] = entry.value.toString();
-      }
-    }
-
-    final rawMorning = map['morningResult'];
-    final rawVote = map['voteResult'];
-    final rawInterruption = map['interruption'];
+    // 좌석 순서 정렬과 하위 객체 파싱은 순수 mapper에서 한 번만 수행합니다.
+    final sortedPlayers = parseMafiaPlayers(map['players']);
 
     state = current.copyWith(
       loading: false,
@@ -464,6 +440,7 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       roleRevealedUids: mafiaStringList(map['roleRevealedUids']),
       nightSubmittedCount: (map['nightSubmittedCount'] as num?)?.toInt() ?? 0,
       nightActorCount: (map['nightActorCount'] as num?)?.toInt() ?? 0,
+      ruleState: MafiaRuleState.fromMap(map),
       nightActionCue: MafiaNightActionCue.fromMap(map['nightActionCue']),
       // 밤의 구간입니다(확정 2026-08: 차단 → 행동 → 마무리).
       nightStage: map['nightStage']?.toString(),
@@ -478,20 +455,12 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       discussionSkipCount: (map['discussionSkipCount'] as num?)?.toInt() ?? 0,
       voteSubmittedUids: mafiaStringList(map['voteSubmittedUids']),
       voteEligibleCount: (map['voteEligibleCount'] as num?)?.toInt() ?? 0,
-      morningResult: rawMorning is Map
-          ? MafiaMorningResult.fromMap(Map<Object?, Object?>.from(rawMorning))
-          : null,
-      voteResult: rawVote is Map
-          ? MafiaVoteResult.fromMap(Map<Object?, Object?>.from(rawVote))
-          : null,
-      revealedRoles: revealedRoles,
+      morningResult: parseMafiaMorningResult(map['morningResult']),
+      voteResult: parseMafiaVoteResult(map['voteResult']),
+      revealedRoles: parseMafiaStringMap(map['revealedRoles']),
       winner: map['winner']?.toString(),
       winnerUids: mafiaStringList(map['winnerUids']),
-      interruption: rawInterruption is Map
-          ? GameInterruption.fromMap(
-              Map<Object?, Object?>.from(rawInterruption),
-            )
-          : null,
+      interruption: parseMafiaInterruption(map['interruption']),
     );
   }
 
@@ -506,50 +475,22 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       // 재시작 직후 잠깐 비는 경우가 있어 마지막 값을 유지합니다.
       return;
     }
-    final map = Map<Object?, Object?>.from(value);
-
-    final rawAllySelections = map['allySelections'];
-    final allySelections = <String, String>{};
-    if (rawAllySelections is Map) {
-      for (final entry in rawAllySelections.entries) {
-        allySelections[entry.key.toString()] = entry.value.toString();
-      }
-    }
-
-    final rawSpectator = map['spectatorRoles'];
-    final spectatorRoles = <String, String>{};
-    if (rawSpectator is Map) {
-      for (final entry in rawSpectator.entries) {
-        spectatorRoles[entry.key.toString()] = entry.value.toString();
-      }
-    }
-
-    // 조사 기록은 라운드별로 쌓입니다. 가장 최근 라운드만 화면에 씁니다.
-    MafiaInvestigation? latest;
-    final rawInvestigations = map['investigations'];
-    if (rawInvestigations is Map) {
-      for (final entry in rawInvestigations.entries) {
-        if (entry.value is! Map) continue;
-        final record = MafiaInvestigation.fromMap(
-          Map<Object?, Object?>.from(entry.value as Map),
-        );
-        if (latest == null || record.round > latest.round) latest = record;
-      }
-    }
+    final privateSnapshot = MafiaPrivateSnapshot.fromValue(value);
 
     state = state.copyWith(
-      myRoleId: map['roleId']?.toString(),
-      allyUids: mafiaStringList(map['allyUids']),
-      nightTargetUid: map['nightTargetUid']?.toString(),
-      allySelections: allySelections,
-      latestInvestigation: latest,
-      voteTargetUid: map['voteTargetUid']?.toString(),
-      discussionSkipVoted: map['discussionSkipVoted'] == true,
-      spectatorRoles: spectatorRoles,
-      executionerTargetUid: map['executionerTargetUid']?.toString(),
-      abilityUsesLeft: (map['abilityUsesLeft'] as num?)?.toInt(),
-      voteBanned: map['voteBanned'] == true,
-      roleChangedRound: (map['roleChangedRound'] as num?)?.toInt(),
+      myRoleId: privateSnapshot.roleId,
+      allyUids: privateSnapshot.allyUids,
+      nightTargetUid: privateSnapshot.nightTargetUid,
+      trialVote: privateSnapshot.trialVote,
+      allySelections: privateSnapshot.allySelections,
+      latestInvestigation: privateSnapshot.latestInvestigation,
+      voteTargetUid: privateSnapshot.voteTargetUid,
+      discussionSkipVoted: privateSnapshot.discussionSkipVoted,
+      spectatorRoles: privateSnapshot.spectatorRoles,
+      executionerTargetUid: privateSnapshot.executionerTargetUid,
+      abilityUsesLeft: privateSnapshot.abilityUsesLeft,
+      voteBanned: privateSnapshot.voteBanned,
+      roleChangedRound: privateSnapshot.roleChangedRound,
     );
   }
 
@@ -568,6 +509,10 @@ class MafiaController extends GameSessionController<MafiaGameState> {
 
   Future<bool> endDiscussion() =>
       run(() => service.command.endDiscussion(roomCode: roomCode));
+
+  Future<bool> submitTrialVote(bool execute) => run(
+    () => service.command.submitTrialVote(roomCode: roomCode, execute: execute),
+  );
 
   Future<bool> submitVote(String targetUid) => run(
     () => service.command.submitVote(roomCode: roomCode, targetUid: targetUid),

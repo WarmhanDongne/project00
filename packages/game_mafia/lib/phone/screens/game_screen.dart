@@ -7,6 +7,7 @@
 
 import 'package:game_mafia/phone/phone_board.dart';
 import 'dart:async';
+import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
@@ -16,7 +17,7 @@ import 'package:game_mafia/shared/animations/role_deal_toss_animation.dart';
 import 'package:game_mafia/shared/providers/game_controller.dart';
 import 'package:game_mafia/shared/models/server_timing.dart';
 import 'package:game_mafia/shared/models/role.dart';
-import 'package:game_kit/widgets/game_turn_countdown.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
 import 'package:game_mafia/phone/widgets/day_discussion_view.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/role_card_layer.dart';
@@ -84,12 +85,26 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   String? _voteSelection;
   int? _voteSelectionRound;
 
+  // 서버 응답을 기다리는 동안에도 누른 결과를 즉시 유지합니다. 서버가
+  // 거절했을 때만 선택 화면으로 돌아가므로 느린 네트워크에서 화면이
+  // 선택→로딩→선택으로 튀지 않습니다.
+  String? _pendingNightTargetUid;
+  int? _pendingNightRound;
+  String? _pendingVoteTargetUid;
+  int? _pendingVoteRound;
+  bool? _pendingTrialVote;
+  String? _pendingTrialKey;
+  bool _pendingDiscussionSkip = false;
+  int? _pendingDiscussionRound;
+  int _discussionSkipCountAtSubmit = 0;
+
   /// 조사 결과에서 '확인'을 누른 라운드입니다. 누르면 대기 화면으로 넘어갑니다.
   int? _acknowledgedInvestigationRound;
 
   @override
   Widget build(BuildContext context) {
     final game = widget.controller;
+    _discardSettledSubmissions(game);
 
     // 확정(2026-08): 단계가 바뀔 때 화면 전체가 새로 그려지는 느낌을 없애려고
     // **배경과 내 보관 카드는 셸이 계속 그립니다.** 바뀌는 내용만 전환합니다.
@@ -114,7 +129,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
                 expiresAt: widget.regions.showTimer
                     ? game.turnDeadlineAt
                     : null,
-                builder: (context, remaining) => _buildPage(game, remaining),
+                builder: (context, remaining) => _buildPage(
+                  game,
+                  game.actionDeadlinePassed ? null : remaining,
+                ),
               ),
             ),
           ),
@@ -238,11 +256,15 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             : null,
         // 과반수 투표로 끝난 낮입니다. 안내만 남기고 곧 투표로 넘어갑니다.
         endedByVote: game.isDayEndedByVote,
-        canEndDiscussion: game.canEndDiscussion,
-        skipVoteCount: game.discussionSkipCount,
+        canEndDiscussion:
+            game.canEndDiscussion && !_isPendingDiscussionSkip(game),
+        skipVoteCount: _discussionSkipCount(game),
         aliveCount: game.alivePlayers.length,
-        hasVotedToSkip: game.hasVotedToSkipDiscussion,
-        onEndDiscussion: widget.regions.showActions ? game.endDiscussion : null,
+        hasVotedToSkip:
+            game.hasVotedToSkipDiscussion || _isPendingDiscussionSkip(game),
+        onEndDiscussion: widget.regions.showActions
+            ? () => unawaited(_submitDiscussionSkip(game))
+            : null,
       ),
       MafiaPhoneStage.voting => _buildVoting(game, remaining),
       // 그 밖의 단계(연결 중·종료)는 셸이 처리합니다.
@@ -277,8 +299,16 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     final actionWindowClosed =
         game.nightStageClosed || game.actionDeadlinePassed;
 
+    final pendingTarget = _pendingNightTarget(game);
+    final isSubmitted = game.hasSubmittedNight || pendingTarget != null;
+
     return MafiaNightActionView(
-      waitingMessage: game.nightWaitingMessage,
+      waitingMessage: game.nightStage == 'wrapUp'
+          ? '밤이 지나가고 있습니다'
+          : pendingTarget == null
+          ? game.nightWaitingMessage
+          : '다른 플레이어의 행동을 기다리는 중…',
+      isWrappingUp: game.nightStage == 'wrapUp',
       role: game.myRole,
       actionWindowClosed: actionWindowClosed,
       // 능력을 다 쓴 밤은 대기 화면입니다(자경단원의 한 발).
@@ -286,23 +316,25 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       players: game.nightTargets,
       selectedUid: game.hasSubmittedNight
           ? game.nightTargetUid
-          : _nightSelection,
+          : pendingTarget ?? _nightSelection,
       allySelectedUids: game.allySelectedUids,
       remainingSeconds: widget.regions.showTimer ? remaining?.inSeconds : null,
-      isSubmitted: game.hasSubmittedNight,
+      isSubmitted: isSubmitted,
       // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
       onSelect:
           widget.regions.showActions &&
               game.canSubmitNightAction &&
+              pendingTarget == null &&
               !actionWindowClosed
           ? (uid) => setState(() => _nightSelection = uid)
           : null,
       onConfirm:
           widget.regions.showActions &&
               game.canSubmitNightAction &&
+              pendingTarget == null &&
               !actionWindowClosed &&
               _nightSelection != null
-          ? () => unawaited(game.submitNightAction(_nightSelection!))
+          ? () => unawaited(_submitNightAction(game, _nightSelection!))
           : null,
       investigationResult: showsResult
           ? MafiaNightInvestigationResult(
@@ -329,6 +361,26 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   }
 
   Widget _buildVoting(MafiaController game, Duration? remaining) {
+    final trial = game.ruleState;
+    if (trial.trialStage != null) {
+      final pendingTrialVote = _pendingTrialValue(game);
+      return MafiaTrialView(
+        candidate: game.players[trial.candidateUid]?.nickname ?? '후보',
+        defending: trial.trialStage == 'defense',
+        isCandidate: trial.candidateUid == game.uid,
+        remainingSeconds: remaining?.inSeconds,
+        hasVoted: game.trialVote != null || pendingTrialVote != null,
+        onVote:
+            game.canAct &&
+                !game.isVoteBanned &&
+                !game.actionDeadlinePassed &&
+                trial.trialStage == 'verdict' &&
+                game.trialVote == null &&
+                pendingTrialVote == null
+            ? (value) => unawaited(_submitTrialVote(game, value))
+            : null,
+      );
+    }
     // 라운드가 바뀌면 지난 투표의 선택을 버립니다.
     if (_voteSelectionRound != game.round) {
       _voteSelectionRound = game.round;
@@ -339,25 +391,167 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       _voteSelection = null;
     }
 
+    final pendingTarget = _pendingVoteTarget(game);
+    final isSubmitted = game.hasVoted || pendingTarget != null;
     return MafiaVoteView(
       requestInFlight: game.commandInFlight,
       timeExpired: game.actionDeadlinePassed,
       role: game.myRole,
       players: game.voteTargets,
-      selectedUid: game.hasVoted ? game.voteTargetUid : _voteSelection,
+      selectedUid: game.hasVoted
+          ? game.voteTargetUid
+          : pendingTarget ?? _voteSelection,
       remainingSeconds: widget.regions.showTimer ? remaining?.inSeconds : null,
-      isSubmitted: game.hasVoted,
+      isSubmitted: isSubmitted,
       // 마담에게 유혹당하면 이번 낮에는 표를 낼 수 없습니다.
       voteBanned: game.isVoteBanned,
       // 탭은 선택만 바꿉니다. 제출은 아래 '선택 완료' 버튼이 합니다.
-      onSelect: widget.regions.showActions && game.canVote
+      onSelect:
+          widget.regions.showActions && game.canVote && pendingTarget == null
           ? (uid) => setState(() => _voteSelection = uid)
           : null,
       onConfirm:
-          widget.regions.showActions && game.canVote && _voteSelection != null
-          ? () => unawaited(game.submitVote(_voteSelection!))
+          widget.regions.showActions &&
+              game.canVote &&
+              pendingTarget == null &&
+              _voteSelection != null
+          ? () => unawaited(_submitVote(game, _voteSelection!))
           : null,
     );
+  }
+
+  String? _pendingNightTarget(MafiaController game) =>
+      _pendingNightRound == game.round && game.isNight
+      ? _pendingNightTargetUid
+      : null;
+
+  String? _pendingVoteTarget(MafiaController game) =>
+      _pendingVoteRound == game.round &&
+          game.isVoting &&
+          game.ruleState.trialStage == null
+      ? _pendingVoteTargetUid
+      : null;
+
+  String _trialKey(MafiaController game) =>
+      '${game.gameStartedAt}:${game.round}:${game.ruleState.trialStage}:${game.ruleState.candidateUid}';
+
+  bool? _pendingTrialValue(MafiaController game) =>
+      _pendingTrialKey == _trialKey(game) ? _pendingTrialVote : null;
+
+  bool _isPendingDiscussionSkip(MafiaController game) =>
+      _pendingDiscussionSkip &&
+      _pendingDiscussionRound == game.round &&
+      game.isDay;
+
+  int _discussionSkipCount(MafiaController game) {
+    if (!_isPendingDiscussionSkip(game)) return game.discussionSkipCount;
+    final optimisticCount = _discussionSkipCountAtSubmit + 1;
+    return game.discussionSkipCount < optimisticCount
+        ? optimisticCount
+        : game.discussionSkipCount;
+  }
+
+  void _discardSettledSubmissions(MafiaController game) {
+    if (!game.isNight ||
+        _pendingNightRound != game.round ||
+        game.hasSubmittedNight) {
+      _pendingNightTargetUid = null;
+      _pendingNightRound = null;
+    }
+    if (!game.isVoting ||
+        game.ruleState.trialStage != null ||
+        _pendingVoteRound != game.round ||
+        game.hasVoted) {
+      _pendingVoteTargetUid = null;
+      _pendingVoteRound = null;
+    }
+    if (_pendingTrialKey != _trialKey(game) || game.trialVote != null) {
+      _pendingTrialVote = null;
+      _pendingTrialKey = null;
+    }
+    if (!game.isDay ||
+        _pendingDiscussionRound != game.round ||
+        game.hasVotedToSkipDiscussion) {
+      _pendingDiscussionSkip = false;
+      _pendingDiscussionRound = null;
+    }
+  }
+
+  Future<void> _submitNightAction(
+    MafiaController game,
+    String targetUid,
+  ) async {
+    final submittedRound = game.round;
+    setState(() {
+      _pendingNightTargetUid = targetUid;
+      _pendingNightRound = submittedRound;
+    });
+    final accepted = await game.submitNightAction(targetUid);
+    if (!mounted ||
+        _pendingNightRound != submittedRound ||
+        _pendingNightTargetUid != targetUid) {
+      return;
+    }
+    if (!accepted && !game.hasSubmittedNight) {
+      setState(() {
+        _pendingNightTargetUid = null;
+        _pendingNightRound = null;
+      });
+    }
+  }
+
+  Future<void> _submitDiscussionSkip(MafiaController game) async {
+    if (_isPendingDiscussionSkip(game)) return;
+    final submittedRound = game.round;
+    setState(() {
+      _pendingDiscussionSkip = true;
+      _pendingDiscussionRound = submittedRound;
+      _discussionSkipCountAtSubmit = game.discussionSkipCount;
+    });
+    final accepted = await game.endDiscussion();
+    if (!mounted || _pendingDiscussionRound != submittedRound) return;
+    if (!accepted && !game.hasVotedToSkipDiscussion) {
+      setState(() {
+        _pendingDiscussionSkip = false;
+        _pendingDiscussionRound = null;
+      });
+    }
+  }
+
+  Future<void> _submitVote(MafiaController game, String targetUid) async {
+    final submittedRound = game.round;
+    setState(() {
+      _pendingVoteTargetUid = targetUid;
+      _pendingVoteRound = submittedRound;
+    });
+    final accepted = await game.submitVote(targetUid);
+    if (!mounted ||
+        _pendingVoteRound != submittedRound ||
+        _pendingVoteTargetUid != targetUid) {
+      return;
+    }
+    if (!accepted && !game.hasVoted) {
+      setState(() {
+        _pendingVoteTargetUid = null;
+        _pendingVoteRound = null;
+      });
+    }
+  }
+
+  Future<void> _submitTrialVote(MafiaController game, bool execute) async {
+    final submittedKey = _trialKey(game);
+    setState(() {
+      _pendingTrialVote = execute;
+      _pendingTrialKey = submittedKey;
+    });
+    final accepted = await game.submitTrialVote(execute);
+    if (!mounted || _pendingTrialKey != submittedKey) return;
+    if (!accepted && game.trialVote == null) {
+      setState(() {
+        _pendingTrialVote = null;
+        _pendingTrialKey = null;
+      });
+    }
   }
 
   Widget _buildExecution(MafiaController game) {
@@ -365,9 +559,11 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     return GamePresentationSequence(
       key: ValueKey(('vote', game.gameStartedAt, game.round)),
       beats: [
-        const GamePresentationBeat(
+        GamePresentationBeat(
           hold: MafiaPresentationTiming.voteTally,
-          child: MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
+          child: game.voteResult?.hasVerdict == true
+              ? MafiaVerdictSummary(result: game.voteResult!)
+              : const MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
         ),
         GamePresentationBeat(
           hold: MafiaPresentationTiming.executionName,
@@ -381,6 +577,13 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
           hold: MafiaPresentationTiming.executionReveal,
           child: executed == null
               ? const MafiaPhonePhaseNotice(message: '아무도 처형되지 않았습니다.')
+              : game.ruleState.rules.executionReveal != 'role'
+              ? MafiaLimitedDisclosure(
+                  nickname: executed.nickname,
+                  faction: game.ruleState.rules.executionReveal == 'faction'
+                      ? game.ruleState.revealedFactions[executed.uid]
+                      : null,
+                )
               : MafiaExecutionRevealView(
                   myRole: game.myRole,
                   executed: executed,

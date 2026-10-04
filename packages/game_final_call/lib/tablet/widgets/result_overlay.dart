@@ -12,6 +12,7 @@ import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 /// Final Call 태블릿에서 최종 승리자를 발표하는 결과 화면입니다.
@@ -220,14 +221,18 @@ class _WinnerPresentation extends StatelessWidget {
         .map((winner) => winner.nickname.trim())
         .where((nickname) => nickname.isNotEmpty)
         .join('  ·  ');
-    final accentColor = winningTeam == FinalCallTeam.blue
-        ? const Color(0xFF1686E8)
-        : _ResultColors.red;
+    final accentColor = switch (winningTeam) {
+      FinalCallTeam.blue => const Color(0xFF1686E8),
+      FinalCallTeam.green => const Color(0xFF269B60),
+      _ => _ResultColors.red,
+    };
     final victoryLabel = isDraw
         ? '무승부'
-        : winningTeam == FinalCallTeam.blue
-        ? '블루팀 승리'
-        : '레드팀 승리';
+        : switch (winningTeam) {
+            FinalCallTeam.blue => '블루팀 승리',
+            FinalCallTeam.green => '그린팀 승리',
+            _ => '레드팀 승리',
+          };
     return Stack(
       clipBehavior: Clip.none,
       children: [

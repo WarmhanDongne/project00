@@ -14,8 +14,9 @@ import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/phone_game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_auto_complete.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
-import 'package:game_kit/widgets/game_announcement_layer.dart';
-import 'package:game_kit/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
+import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
+
 // ============================================================
 
 /// 게임별 휴대폰 Stage가 공용 셸에서 어떤 역할을 하는지 알려 줍니다.

@@ -12,9 +12,10 @@ import 'package:game_template/phone/phone_board.dart';
 import 'package:game_template/tablet/tablet_board.dart';
 import 'package:game_template/shared/services/game_service.dart';
 import 'package:game_kit/template_game.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_template/game_theme.dart';
+
 // ============================================================
 
 /// 새 게임을 만들 때 복사할 참조 구현입니다.

@@ -7,12 +7,14 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_mafia/shared/widgets/private_peek.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 /// 관전자에게 공개된 플레이어 한 명입니다.
@@ -137,7 +139,18 @@ class MafiaSpectatorRosterView extends StatelessWidget {
               left: 0,
               right: 0,
               top: MafiaPhoneDesign.top(size, gridTop),
-              child: _buildRoster(scale, textColor),
+              child: isFinished
+                  ? _buildRoster(scale, textColor)
+                  : MafiaPrivatePeek(
+                      foregroundColor: textColor,
+                      height:
+                          MafiaTileGridSpec.of(revealed.length).cellHeight *
+                          MafiaTileGridSpec.of(
+                            revealed.length,
+                          ).rowsFor(revealed.length) *
+                          scale,
+                      child: _buildRoster(scale, textColor),
+                    ),
             ),
             MafiaStoredRoleCard(role: myRole),
           ],

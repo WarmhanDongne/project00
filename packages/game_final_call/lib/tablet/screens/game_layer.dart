@@ -464,6 +464,23 @@ class _FinalCallLifeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (player.status == 'eliminated' && (loss == 0 || lossProgress >= 1)) {
+      return SizedBox(
+        width: 124,
+        height: 48,
+        child: Center(
+          child: Text(
+            '${player.team.label} 탈락',
+            key: ValueKey('final-call-eliminated-${player.uid}'),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+          ),
+        ),
+      );
+    }
     final previousLives = (player.lives + loss).clamp(0, 3);
     final heart = player.team == FinalCallTeam.blue
         ? Assets.games.finalCall.images.icons.iconHeartBlue.game
@@ -494,6 +511,9 @@ class _FinalCallLifeRow extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: index < player.lives
                       ? heart.image(
+                          color: player.team == FinalCallTeam.green
+                              ? const Color(0xFF269B60)
+                              : null,
                           key: ValueKey(
                             'final-call-${player.team.name}-heart-$index',
                           ),
@@ -555,6 +575,9 @@ class _BreakingHeart extends StatelessWidget {
                   child: ClipPath(
                     clipper: _HeartShardClipper(index),
                     child: heart.image(
+                      color: team == FinalCallTeam.green
+                          ? const Color(0xFF269B60)
+                          : null,
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                     ),

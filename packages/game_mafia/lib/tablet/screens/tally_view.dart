@@ -9,7 +9,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_assets.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_mafia/shared/animations/ballot_animations.dart';
 import 'package:game_mafia/shared/models/player.dart';
@@ -20,6 +20,7 @@ import 'package:game_mafia/shared/widgets/profile_image.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------

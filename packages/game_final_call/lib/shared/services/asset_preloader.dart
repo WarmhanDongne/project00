@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_final_call/game_assets.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_final_call/game_sounds.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';

@@ -8,8 +8,9 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/widgets.dart';
-import 'package:game_kit/core/sound/providers/sound_provider.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/providers/sound_provider.dart';
+import 'package:game_kit/sound/sound_effects.dart';
+
 // ============================================================
 
 /// 게임 화면이 살아 있는 동안 배경음악을 관리합니다.

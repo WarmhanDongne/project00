@@ -184,13 +184,11 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     ).stepFor(FinalCallTabletStage.result).sound;
     if (winSound != null) SoundEffects.play(context, winSound);
     // 승리음(음악) 위에 결과 나레이션을 얹습니다.
-    SoundEffects.play(
-      context,
-      FinalCallSounds.resultVoiceFor(
-        isDraw: game.finishReason == 'draw',
-        winningTeam: game.winningTeam,
-      ),
+    final resultVoice = FinalCallSounds.resultVoiceFor(
+      isDraw: game.finishReason == 'draw',
+      winningTeam: game.winningTeam,
     );
+    if (resultVoice != null) SoundEffects.play(context, resultVoice);
   }
 
   // ============================================================================
@@ -456,93 +454,95 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     );
     final flowStep = flowConfig.stepFor(stage);
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ---------------------------------------------------------------------------
-          // 공통 배경
-          // ---------------------------------------------------------------------------
-          Assets.games.finalCall.images.background.background.game.image(
-            fit: BoxFit.cover,
-          ),
-          // 단계별 카드·하트·판정 화면입니다. 화면 표시 여부는 Flow Config에서
-          // 확인하고, 실제 Widget 선택은 exhaustive stage switch가 담당합니다.
-          if (flowStep.showScreen)
-            FinalCallTabletGameLayer(
-              controller: game,
-              stage: stage,
-              flowConfig: flowConfig,
-              onRoundRevealCompleted: _handleRoundRevealCompleted,
-              onDealingCompleted: _handleDealingCompleted,
+      body: GameRecoveryLayer(
+        interruption: GameInterruptionRecovery(
+          state: game.interruption,
+          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          presentation: GameInterruptionPresentation.tabletController,
+          isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
+          onContinue: game.excludeInterruptedPlayerAndContinue,
+          onFinishNow: game.finishInterruptedGameNow,
+          onExpired: game.expireInterruption,
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ---------------------------------------------------------------------------
+            // 공통 배경
+            // ---------------------------------------------------------------------------
+            Assets.games.finalCall.images.background.background.game.image(
+              fit: BoxFit.cover,
             ),
-          if (stage == FinalCallTabletStage.playing)
-            FinalCallTabletCallAnimation(
-              controller: game,
-              playerCount: game.players.length,
+            // 단계별 카드·하트·판정 화면입니다. 화면 표시 여부는 Flow Config에서
+            // 확인하고, 실제 Widget 선택은 exhaustive stage switch가 담당합니다.
+            if (flowStep.showScreen)
+              FinalCallTabletGameLayer(
+                controller: game,
+                stage: stage,
+                flowConfig: flowConfig,
+                onRoundRevealCompleted: _handleRoundRevealCompleted,
+                onDealingCompleted: _handleDealingCompleted,
+              ),
+            if (stage == FinalCallTabletStage.playing)
+              FinalCallTabletCallAnimation(
+                controller: game,
+                playerCount: game.players.length,
+              ),
+            if (stage == FinalCallTabletStage.playing &&
+                game.roundResult == null &&
+                game.discardEvent != null)
+              FinalCallTabletDiscardAnimation(
+                key: ValueKey('discard-${game.discardEvent!.version}'),
+                controller: game,
+                event: game.discardEvent!,
+                playerCount: game.players.length,
+              ),
+            // ---------------------------------------------------------------------------
+            // 공용 태블릿 사이드바
+            // ---------------------------------------------------------------------------
+            FinalCallTabletGameOverlay(
+              provider: widget.provider,
+              visible:
+                  stage != FinalCallTabletStage.connecting &&
+                  stage != FinalCallTabletStage.result &&
+                  stage != FinalCallTabletStage.closing,
+              onRestartGame: _restartGame,
+              onEndGame: _endGame,
             ),
-          if (stage == FinalCallTabletStage.playing &&
-              game.roundResult == null &&
-              game.discardEvent != null)
-            FinalCallTabletDiscardAnimation(
-              key: ValueKey('discard-${game.discardEvent!.version}'),
-              controller: game,
-              event: game.discardEvent!,
-              playerCount: game.players.length,
-            ),
-          // ---------------------------------------------------------------------------
-          // 공용 태블릿 사이드바
-          // ---------------------------------------------------------------------------
-          FinalCallTabletGameOverlay(
-            provider: widget.provider,
-            visible:
-                stage != FinalCallTabletStage.connecting &&
-                stage != FinalCallTabletStage.result &&
-                stage != FinalCallTabletStage.closing,
-            onRestartGame: _restartGame,
-            onEndGame: _endGame,
-          ),
-          // 설정 종료·인원 부족 등 승자가 없는 종료에는 결과 화면을 절대
-          // 만들지 않습니다. stage 검사와 자연 종료 검사로 이중 차단합니다.
-          if (!isEndingGame &&
-              game.isNaturalResult &&
-              stage == FinalCallTabletStage.result)
-            FinalCallResultOverlay(
-              winners: game.winners,
-              winningTeam: game.winningTeam,
-              isDraw: game.finishReason == 'draw',
-              onRestart: () => game.restartGame(),
-              onHome: () => unawaited(_returnHomeAfterResult()),
-            ),
-          Positioned.fill(
-            child: GameAnnouncementLayer(
-              announcement: flowStep.buildAnnouncement(),
-              style: const GameAnnouncementStyle(
-                fontFamily: null,
-                fontSize: 28,
-                gameStartFontSize: 58,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-                shadows: [Shadow(color: Colors.black, blurRadius: 12)],
+            // 설정 종료·인원 부족 등 승자가 없는 종료에는 결과 화면을 절대
+            // 만들지 않습니다. stage 검사와 자연 종료 검사로 이중 차단합니다.
+            if (!isEndingGame &&
+                game.isNaturalResult &&
+                stage == FinalCallTabletStage.result)
+              FinalCallResultOverlay(
+                winners: game.winners,
+                winningTeam: game.winningTeam,
+                isDraw: game.finishReason == 'draw',
+                onRestart: () => game.restartGame(),
+                onHome: () => unawaited(_returnHomeAfterResult()),
+              ),
+            Positioned.fill(
+              child: GameAnnouncementLayer(
+                announcement: flowStep.buildAnnouncement(),
+                style: const GameAnnouncementStyle(
+                  fontFamily: null,
+                  fontSize: 28,
+                  gameStartFontSize: 58,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 12)],
+                ),
               ),
             ),
-          ),
-          GameInterruptionLayer(
-            interruption: game.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-            presentation: GameInterruptionPresentation.tabletController,
-            isSubmitting: game.commandInFlight,
-            failureMessage: game.errorMessage,
-            onContinue: game.excludeInterruptedPlayerAndContinue,
-            onFinishNow: game.finishInterruptedGameNow,
-            onExpired: game.expireInterruption,
-          ),
-          if (game.commandInFlight)
-            const Positioned(
-              right: 22,
-              bottom: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-        ],
+            if (game.commandInFlight)
+              const Positioned(
+                right: 22,
+                bottom: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
       ),
     );
   }

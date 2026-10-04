@@ -7,8 +7,9 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
-import 'package:game_kit/game_flow/game_interruption.dart';
-import 'package:game_kit/game_flow/game_session_state.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_session_state.dart';
+
 // ============================================================
 
 /// [TemplateGameState.copyWith]에서 "넘기지 않음"과 "null로 비움"을 구분합니다.

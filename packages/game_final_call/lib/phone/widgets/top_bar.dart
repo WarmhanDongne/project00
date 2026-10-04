@@ -10,11 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/game_copy.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
-import 'package:game_kit/widgets/phone_game_top_bar.dart';
-import 'package:game_kit/widgets/phone_rule_dialog.dart';
-import 'package:game_kit/widgets/phone_ripple_dialog.dart';
+import 'package:game_kit/phone/widgets/game_top_bar.dart';
+import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_final_call/game_assets.dart';
+
 // ============================================================
 
 /// 상단바가 차지하는 높이입니다(위 여백 4 + 바 48).
@@ -60,17 +61,28 @@ class FinalCallPhoneTopBar extends StatelessWidget {
 
   Widget _buildLives() {
     final player = controller.players[controller.uid];
-    final lives = player?.lives ?? 0;
+    final lives = player?.status == 'eliminated' ? 0 : player?.lives ?? 0;
     final heart = player?.team == FinalCallTeam.blue
         ? Assets.games.finalCall.images.icons.iconHeartBlue.game
         : Assets.games.finalCall.images.icons.iconHeartRed.game;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (player != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(
+              player.team.label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
         for (var index = 0; index < lives; index++)
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: heart.image(
+              color: player?.team == FinalCallTeam.green
+                  ? const Color(0xFF269B60)
+                  : null,
               key: ValueKey(
                 'final-call-${player?.team.name ?? 'red'}-heart-$index',
               ),

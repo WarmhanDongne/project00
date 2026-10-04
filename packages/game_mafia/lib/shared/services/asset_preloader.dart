@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_mafia/game_assets.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_mafia/game_sounds.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 

@@ -8,10 +8,11 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/widgets.dart';
-import 'package:game_kit/core/sound/app_sounds.dart';
-import 'package:game_kit/core/sound/providers/sound_provider.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/app_sounds.dart';
+import 'package:game_kit/sound/providers/sound_provider.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+
 // ============================================================
 
 /// 마감 직전 [leadTime] 동안 초읽기 소리를 냅니다.

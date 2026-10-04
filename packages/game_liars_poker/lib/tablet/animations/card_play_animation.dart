@@ -8,11 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:game_liars_poker/game_sounds.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
-import 'package:game_kit/widgets/game_card_face.dart';
-import 'package:game_kit/player_layouts/player_slot_positions.dart';
+import 'package:game_kit/shared/widgets/game_card_face.dart';
+import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 /// 플레이어 자리에서 패를 뒷면으로 중앙에 던지고, 라이어 선언 시 공개합니다.

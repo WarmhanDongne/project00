@@ -1,6 +1,7 @@
+// recovery/service의 진행 명령 재시도와 무효화 동작을 검증합니다.
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:game_kit/game_flow/game_progress_command.dart';
+import 'package:game_kit/recovery/services/game_progress_command.dart';
 
 void main() {
   testWidgets('실패·명령 잠금은 재시도하고 성공 뒤에는 다시 보내지 않는다', (tester) async {

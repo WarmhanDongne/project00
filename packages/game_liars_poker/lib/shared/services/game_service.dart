@@ -4,7 +4,8 @@
 // ========================[ import ]==========================
 import 'query_service.dart';
 import 'command_service.dart';
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------

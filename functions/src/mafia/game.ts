@@ -26,6 +26,7 @@ import {
   MafiaPublicPlayer,
   MafiaPublicState,
   MafiaRoom,
+  MafiaRules,
 } from "./types.js";
 
 // =========================================================================
@@ -262,6 +263,7 @@ export function createInitialMafiaGame(
   players: Record<string, MafiaPublicPlayer>,
   now: number,
   composition: Record<string, number> | null = null,
+  rules: MafiaRules = {trial: false, executionReveal: "role"},
 ): MafiaGameState {
   const roles = assignMafiaRoles(players, composition);
   // 다시하기가 같은 구성으로 돌 수 있게 실제로 쓴 구성을 남깁니다.
@@ -284,6 +286,8 @@ export function createInitialMafiaGame(
   return {
     public: {
       gameType: "mafia",
+      rules,
+      ...(usedComposition ? {composition: usedComposition} : {}),
       status: "playing",
       phase: "roleReveal",
       round: 1,
@@ -481,6 +485,7 @@ export function beginMafiaNight(game: MafiaGameState, now: number): void {
   delete game.public.dayEndReason;
   delete game.server.nightActions;
   delete game.server.votes;
+  clearMafiaTrial(game);
 
   for (const entry of Object.values(game.private)) {
     delete entry.nightTargetUid;
@@ -536,6 +541,7 @@ export function beginMafiaVoting(game: MafiaGameState, now: number): void {
   const bans = game.server.voteBans ?? {};
   const alive = alivePlayers(game.public.players);
 
+  clearMafiaTrial(game);
   game.public.phase = "voting";
   game.public.turnDeadlineAt = now + MAFIA_VOTE_MS;
   game.public.voteSubmittedCount = 0;
@@ -619,86 +625,18 @@ function recordInvestigation(
   actorPrivate.investigations[`r${round}`] = {round, targetUid, verdict};
 }
 
-/**
- * 제출한 순간 조사·추적 결과를 본인 private에 기록합니다.
- *
- * 확정 흐름이 "선택 완료 → 결과 → 확인"이라 결과를 밤이 끝날 때까지 기다릴 수
- * 없습니다. 다만 이 시점에는 프레이머 조작이나 대상의 최종 행동을 알 수 없어
- * **잠정값**이고, 밤 해결 때 같은 자리(`r{round}`)에 최종값을 덮어씁니다.
- */
-export function recordImmediateInvestigation(
-  game: MafiaGameState,
-  actorUid: string,
-  targetUid: string,
-  now: number,
-): void {
-  const role = mafiaRole(game.server.roles[actorUid]);
-  if (role === null) return;
-  const round = game.public.round;
-  switch (role.nightAction) {
-  case "investigate": {
-    const verdict = mafiaInvestigationVerdict(
-      game.server.roles[targetUid],
-      false,
-    );
-    recordInvestigation(game, actorUid, targetUid, verdict, round);
-    break;
-  }
-  case "investigateRole":
-  case "steal": {
-    // 영매·도둑은 **사망자**를 봅니다. 죽은 사람의 신분은 밤 사이에 바뀌지
-    // 않으므로 이 값은 잠정값이 아니라 그대로 최종값입니다.
-    const verdict = mafiaRoleDisplayName(game.server.roles[targetUid]);
-    recordInvestigation(game, actorUid, targetUid, verdict, round);
-    break;
-  }
-  case "track":
-    // 추적은 **여기서 알려 줄 수 없습니다.** 대상이 나보다 늦게 고르면 그
-    // 순간에는 "방문 없음"이고, 그 값을 보여 주면 거짓말이 됩니다. 행동
-    // 구간이 닫힐 때 [finalizeMafiaInvestigations]가 최종값을 넣습니다.
-    break;
-  default:
-    break;
-  }
-  // touch는 호출부(제출 트랜잭션)가 이미 합니다. now는 서명 일관성용입니다.
-  void now;
-}
-
-/**
- * 조사·추적 결과를 **최종값으로** 확정합니다(밤의 마무리 구간 시작 시점).
- *
- * 이 시점에는 모든 제출이 끝나 있어, 대상이 누구를 찾아갔는지가 확정됩니다.
- * 그래서 사립탐정의 결과는 여기서 처음 생깁니다. 경찰의 진영 조사는 제출 즉시
- * 알려 준 값과 같지만, 같은 자리(`r{round}`)에 한 번 더 덮어써 두 경로가
- * 어긋나지 않게 합니다.
- */
+/** 전체 행동이 확정된 뒤 동일한 해결 엔진으로 차단·전향을 반영합니다. */
 export function finalizeMafiaInvestigations(game: MafiaGameState): void {
-  const actions = game.server.nightActions ?? {};
-  const round = game.public.round;
-  for (const [actorUid, targetUid] of Object.entries(actions)) {
-    if (game.public.players[actorUid]?.status !== "alive") continue;
-    const role = mafiaRole(game.server.roles[actorUid]);
-    if (!role) continue;
-    switch (role.nightAction) {
-    case "investigate":
-      recordInvestigation(
-        game,
-        actorUid,
-        targetUid,
-        mafiaInvestigationVerdict(game.server.roles[targetUid], false),
-        round,
-      );
-      break;
-    case "track": {
-      const visitedUid = actions[targetUid];
-      const verdict = visitedUid ?
-        game.public.players[visitedUid]?.nickname ?? "알 수 없음" :
-        "방문 없음";
-      recordInvestigation(game, actorUid, targetUid, verdict, round);
-      break;
-    }
-    default:
-      break;
+  const resolved = structuredClone(game);
+  const key = `r${game.public.round}`;
+  for (const entry of Object.values(resolved.private)) delete entry.investigations?.[key];
+  resolveMafiaNight(resolved, game.public.updatedAt, true);
+  for (const [uid, entry] of Object.entries(game.private)) {
+    delete entry.investigations?.[key];
+    const result = resolved.private[uid]?.investigations?.[key];
+    if (result) {
+      entry.investigations ??= {};
+      entry.investigations[key] = result;
     }
   }
 }
@@ -743,7 +681,9 @@ function tallyVotes(
  * 보호·방어 판정을 마지막으로 미루는 이유는, 마피아 다수결 결과가 나오기 전에
  * 는 누가 공격받는지 확정되지 않기 때문입니다.
  */
-export function resolveMafiaNight(game: MafiaGameState, now: number): void {
+export function resolveMafiaNight(
+  game: MafiaGameState, now: number, investigationsOnly = false,
+): void {
   const actions = game.server.nightActions ?? {};
   const roles = game.server.roles;
   const round = game.public.round;
@@ -893,6 +833,8 @@ export function resolveMafiaNight(game: MafiaGameState, now: number): void {
     }
   }
 
+  if (investigationsOnly) return;
+
   // 마피아 공격 판정 — 다수결, 동표면 무작위(확정 규칙).
   const attack = tallyVotes(mafiaAttackVotes);
   if (attack.leaders.length > 0) {
@@ -1035,6 +977,10 @@ export function mafiaAbilityUsesLeft(
  * 처형 장면을 보여 주지 못하고 결과 화면으로 튕깁니다.
  */
 export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
+  if (game.public.trial) {
+    advanceMafiaTrial(game, now);
+    return;
+  }
   const votes = game.server.votes ?? {};
   const {tally, leaders} = tallyVotes(
     votes,
@@ -1044,12 +990,37 @@ export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
   const tie = leaders.length > 1;
   const executedUid = leaders.length === 1 ? leaders[0] : null;
 
+  if (executedUid && game.public.rules?.trial) {
+    game.public.trial = {stage: "defense", candidateUid: executedUid};
+    game.server.nominationTally = tally;
+    delete game.server.votes;
+    for (const entry of Object.values(game.private)) delete entry.voteTargetUid;
+    game.public.voteSubmittedCount = 0;
+    game.public.voteSubmittedUids = [];
+    game.public.turnDeadlineAt = now + 30000;
+    touch(game, now);
+    return;
+  }
+  finishMafiaVote(game, now, executedUid, tally, tie,
+    Math.max(0, eligibleCount - Object.keys(votes).length));
+}
+
+function finishMafiaVote(
+  game: MafiaGameState, now: number, executedUid: string | null,
+  tally: Record<string, number>, tie: boolean, abstainCount: number,
+  verdict?: {yes: number; no: number},
+): void {
   if (executedUid) {
     const lynchWinners = lynchWinnerUids(game, executedUid);
     killMafiaPlayer(game, executedUid, "execution", now);
-    // 처형자 신분은 공개합니다(확정 규칙).
-    game.public.revealedRoles ??= {};
-    game.public.revealedRoles[executedUid] = game.server.roles[executedUid];
+    const reveal = game.public.rules?.executionReveal ?? "role";
+    if (reveal === "role") {
+      game.public.revealedRoles ??= {};
+      game.public.revealedRoles[executedUid] = game.server.roles[executedUid];
+    } else if (reveal === "faction") {
+      game.public.revealedFactions ??= {};
+      game.public.revealedFactions[executedUid] = mafiaRole(game.server.roles[executedUid])!.faction;
+    }
     if (lynchWinners.length > 0) {
       game.server.pendingNeutralWinUids = lynchWinners;
     }
@@ -1059,10 +1030,12 @@ export function resolveMafiaVoting(game: MafiaGameState, now: number): void {
     tally,
     executedUid,
     tie,
-    abstainCount: Math.max(0, eligibleCount - Object.keys(votes).length),
+    abstainCount,
+    ...(verdict ? {verdict, rejected: executedUid === null} : {}),
     endsGame: mafiaAnnouncementEndsGame(game),
     resolvedAt: now,
   };
+  clearMafiaTrial(game);
   game.public.phase = "voteResult";
   // 개표·처형 발표는 태블릿 연출이 끝나면 넘어갑니다.
   game.public.turnDeadlineAt = null;
@@ -1238,6 +1211,7 @@ export function finishMafiaGame(
   now: number,
   winnerUids?: string[],
 ): void {
+  clearMafiaTrial(game);
   game.public.status = "finished";
   game.public.phase = "finished";
   game.public.turnDeadlineAt = null;
@@ -1317,4 +1291,60 @@ export function advanceMafiaAfterDeaths(
     beginMafiaNight(game, now);
   }
   return null;
+}
+
+/** 투표의 하위 단계만 추가하여 기존 phase/마감 callable을 유지합니다. */
+export function clearMafiaTrial(game: MafiaGameState): void {
+  delete game.public.trial;
+  delete game.server.trialVotes;
+  delete game.server.nominationTally;
+  for (const entry of Object.values(game.private)) delete entry.trialVote;
+}
+
+export function advanceMafiaTrial(game: MafiaGameState, now: number): void {
+  const trial = game.public.trial;
+  if (!trial) return;
+  const tally = game.server.nominationTally ?? {};
+  if (game.public.players[trial.candidateUid]?.status !== "alive") {
+    finishMafiaVote(game, now, null, tally, false, 0, {yes: 0, no: 0});
+    return;
+  }
+  if (trial.stage === "defense") {
+    if (game.public.turnDeadlineAt !== null && now < game.public.turnDeadlineAt) return;
+    trial.stage = "verdict";
+    game.public.turnDeadlineAt = now + MAFIA_VOTE_MS;
+    game.public.voteEligibleCount = alivePlayers(game.public.players)
+      .filter((p) => !isMafiaVoteBanned(game, p.uid)).length;
+    touch(game, now);
+    return;
+  }
+  const votes = Object.values(game.server.trialVotes ?? {});
+  const yes = votes.filter(Boolean).length;
+  const no = votes.length - yes;
+  // 찬반 투표는 역할에 관계없이 1인 1표, 기권 포함 유권자 과반수 찬성입니다.
+  const executedUid = yes * 2 > game.public.voteEligibleCount ? trial.candidateUid : null;
+  finishMafiaVote(game, now, executedUid, tally, false,
+    Math.max(0, game.public.voteEligibleCount - votes.length), {yes, no});
+}
+
+export function submitMafiaTrialVote(
+  game: MafiaGameState, uid: string, execute: boolean, now: number,
+): void {
+  if (game.public.phase !== "voting" || game.public.trial?.stage !== "verdict" ||
+      game.public.players[uid]?.status !== "alive" || isMafiaVoteBanned(game, uid)) {
+    throw new HttpsError("failed-precondition", "지금 찬반 투표를 할 수 없습니다.");
+  }
+  if (game.public.turnDeadlineAt !== null && now >= game.public.turnDeadlineAt) {
+    throw new HttpsError("failed-precondition", "투표 시간이 끝났습니다.");
+  }
+  if (game.server.trialVotes?.[uid] !== undefined) {
+    throw new HttpsError("failed-precondition", "이미 투표했습니다.");
+  }
+  game.server.trialVotes ??= {};
+  game.server.trialVotes[uid] = execute;
+  game.private[uid].trialVote = execute;
+  game.public.voteSubmittedUids = Object.keys(game.server.trialVotes);
+  game.public.voteSubmittedCount = game.public.voteSubmittedUids.length;
+  touch(game, now);
+  if (game.public.voteSubmittedCount >= game.public.voteEligibleCount) advanceMafiaTrial(game, now);
 }

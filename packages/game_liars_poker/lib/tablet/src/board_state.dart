@@ -578,161 +578,163 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
           }
           // 다른 게임 화면과 동일하게 expand로 둡니다. 느슨한 Stack은 크기가
           // 0인 non-positioned 자식 하나만 있어도 통째로 0×0이 됩니다.
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              const Positioned.fill(child: _GameBackground()),
-              // ---------------------------------------------------------------------------
-              // 단계별 기본 게임 레이어
-              // ---------------------------------------------------------------------------
-              Positioned.fill(
-                child: LiarsPokerTabletGameLayer(
-                  stage: _stage,
-                  flowConfig: flowConfig,
-                  playerCount: _playerCount,
-                  playerSeatIndexes: _seatIndexes,
-                  dealPlayerSeatIndexes: _activeSeatIndexes,
-                  cardsPerPlayer: cardsPerPlayer,
-                  roundNumber: game.round,
-                  cardPileVersion: _cardPileVersion,
-                  table: game.table,
-                  winnerPlayer: _playerByUid(game.winnerUid),
-                  remainingCardCounts: _remainingCardCounts,
-                  currentTurnPlayerIndex: _currentTurnPlayerIndex,
-                  onDealCompleted: _onDealCompleted,
-                  onRoundRevealCompleted: _onRoundRevealCompleted,
-                  onRestartGame: _restartGame,
-                  onExitToLobby: _endGame,
-                ),
-              ),
-              // 제출/공개 이벤트는 서버 미러 상태와 분리된 태블릿 연출입니다.
-              if (_shouldShowSubmittedPlay)
+          return GameRecoveryLayer(
+            interruption: GameInterruptionRecovery(
+              state: game.interruption,
+              currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+              presentation: GameInterruptionPresentation.tabletController,
+              isSubmitting: game.isMenuCommandInFlight,
+              // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
+              // onError 콜백으로 이미 SnackBar를 띄웁니다(_showGameError).
+              onContinue: game.excludeInterruptedPlayerAndContinue,
+              onFinishNow: game.finishInterruptedGameNowFromController,
+              onExpired: game.expireInterruptionFromController,
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const Positioned.fill(child: _GameBackground()),
+                // ---------------------------------------------------------------------------
+                // 단계별 기본 게임 레이어
+                // ---------------------------------------------------------------------------
                 Positioned.fill(
-                  child:
-                      _stage != LiarsPokerTabletStage.playing &&
-                          !flowConfig.stepFor(_stage).animation.enabled
-                      ? GameFlowAutoComplete(
-                          key: ValueKey(
-                            'card-event-skipped-$_activeAnimationPlayId',
-                          ),
-                          onCompleted:
-                              _stage == LiarsPokerTabletStage.cardsRevealing
-                              ? _onCardsRevealed
-                              : _onCardsPlayed,
-                        )
-                      : ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            game.isInsufficientPlayersEnding
-                                ? const Color(0xA6000000)
-                                : const Color(0x00000000),
-                            BlendMode.srcATop,
-                          ),
-                          child: LiarsPokerTabletGameAnimation(
+                  child: LiarsPokerTabletGameLayer(
+                    stage: _stage,
+                    flowConfig: flowConfig,
+                    playerCount: _playerCount,
+                    playerSeatIndexes: _seatIndexes,
+                    dealPlayerSeatIndexes: _activeSeatIndexes,
+                    cardsPerPlayer: cardsPerPlayer,
+                    roundNumber: game.round,
+                    cardPileVersion: _cardPileVersion,
+                    table: game.table,
+                    winnerPlayer: _playerByUid(game.winnerUid),
+                    remainingCardCounts: _remainingCardCounts,
+                    currentTurnPlayerIndex: _currentTurnPlayerIndex,
+                    onDealCompleted: _onDealCompleted,
+                    onRoundRevealCompleted: _onRoundRevealCompleted,
+                    onRestartGame: _restartGame,
+                    onExitToLobby: _endGame,
+                  ),
+                ),
+                // 제출/공개 이벤트는 서버 미러 상태와 분리된 태블릿 연출입니다.
+                if (_shouldShowSubmittedPlay)
+                  Positioned.fill(
+                    child:
+                        _stage != LiarsPokerTabletStage.playing &&
+                            !flowConfig.stepFor(_stage).animation.enabled
+                        ? GameFlowAutoComplete(
                             key: ValueKey(
-                              'card-pile-${game.round}-$_cardPileVersion',
+                              'card-event-skipped-$_activeAnimationPlayId',
                             ),
-                            roundPlays: _roundPlays,
-                            activePlayId: _activeAnimationPlayId,
-                            playerCount: _playerCount,
-                            playerSeatIndexes: _seatIndexes,
-                            onCardsPlayed: _onCardsPlayed,
-                            onCardsRevealed: _onCardsRevealed,
+                            onCompleted:
+                                _stage == LiarsPokerTabletStage.cardsRevealing
+                                ? _onCardsRevealed
+                                : _onCardsPlayed,
+                          )
+                        : ColorFiltered(
+                            colorFilter: ColorFilter.mode(
+                              game.isInsufficientPlayersEnding
+                                  ? const Color(0xA6000000)
+                                  : const Color(0x00000000),
+                              BlendMode.srcATop,
+                            ),
+                            child: LiarsPokerTabletGameAnimation(
+                              key: ValueKey(
+                                'card-pile-${game.round}-$_cardPileVersion',
+                              ),
+                              roundPlays: _roundPlays,
+                              activePlayId: _activeAnimationPlayId,
+                              playerCount: _playerCount,
+                              playerSeatIndexes: _seatIndexes,
+                              onCardsPlayed: _onCardsPlayed,
+                              onCardsRevealed: _onCardsRevealed,
+                            ),
                           ),
-                        ),
-                ),
-
-              if (game.isInsufficientPlayersEnding)
-                Positioned.fill(
-                  child: GameAnnouncementLayer(
-                    announcement: GameAnnouncement.persistent(
-                      id: 'insufficient-players',
-                      text:
-                          game.endingMessage ??
-                          GameFlowCopy.insufficientPlayers,
-                      blocksInteraction: true,
-                      showScrim: true,
-                    ),
-                    style: const GameAnnouncementStyle(
-                      fontFamily: null,
-                      fontSize: 28,
-                      gameStartFontSize: 58,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 12)],
-                    ),
                   ),
-                ),
 
-              // ---------------------------------------------------------------------------
-              // 벌칙 룰렛 진입·퇴장
-              // ---------------------------------------------------------------------------
-              // 이 슬롯은 항상 유지합니다. 상태가 dealing으로 바뀌면 아래 기본
-              // 레이어에 다음 카드팩이 먼저 생성되고, 이전 룰렛만 축소·페이드됩니다.
-              Positioned.fill(
-                child: AnimatedSwitcher(
-                  duration: LiarsPokerTabletTiming.penaltySwitch,
-                  reverseDuration: LiarsPokerTabletTiming.penaltySwitch,
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  layoutBuilder: (currentChild, previousChildren) => Stack(
-                    fit: StackFit.expand,
-                    children: [...previousChildren, ?currentChild],
-                  ),
-                  transitionBuilder: (child, animation) {
-                    final scale = Tween<double>(begin: 0.72, end: 1).animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
+                if (game.isInsufficientPlayersEnding)
+                  Positioned.fill(
+                    child: GameAnnouncementLayer(
+                      announcement: GameAnnouncement.persistent(
+                        id: 'insufficient-players',
+                        text:
+                            game.endingMessage ??
+                            GameFlowCopy.insufficientPlayers,
+                        blocksInteraction: true,
+                        showScrim: true,
                       ),
-                    );
-                    return FadeTransition(
-                      opacity: animation,
-                      child: ScaleTransition(scale: scale, child: child),
-                    );
-                  },
-                  child:
-                      _stage == LiarsPokerTabletStage.penalty &&
-                          !game.isInsufficientPlayersEnding
-                      ? LiarsPokerTabletGamePenalty(
-                          key: ValueKey(
-                            '${game.penaltyTargetUid}_'
-                            '${game.penaltyAttemptCount}_'
-                            '${game.rouletteRetry}',
-                          ),
-                          attemptCount: game.penaltyAttemptCount,
-                          characterId:
-                              _playerByUid(
-                                game.penaltyTargetUid,
-                              )?.characterId ??
-                              'frog',
-                          isResolving: game.isResolvingPenalty,
-                          onPrepareResult: game.prepareRoulette,
-                          onResult: game.resolveRoulette,
-                        )
-                      : null,
+                      style: const GameAnnouncementStyle(
+                        fontFamily: null,
+                        fontSize: 28,
+                        gameStartFontSize: 58,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 12)],
+                      ),
+                    ),
+                  ),
+
+                // ---------------------------------------------------------------------------
+                // 벌칙 룰렛 진입·퇴장
+                // ---------------------------------------------------------------------------
+                // 이 슬롯은 항상 유지합니다. 상태가 dealing으로 바뀌면 아래 기본
+                // 레이어에 다음 카드팩이 먼저 생성되고, 이전 룰렛만 축소·페이드됩니다.
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: LiarsPokerTabletTiming.penaltySwitch,
+                    reverseDuration: LiarsPokerTabletTiming.penaltySwitch,
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    layoutBuilder: (currentChild, previousChildren) => Stack(
+                      fit: StackFit.expand,
+                      children: [...previousChildren, ?currentChild],
+                    ),
+                    transitionBuilder: (child, animation) {
+                      final scale = Tween<double>(begin: 0.72, end: 1).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      );
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(scale: scale, child: child),
+                      );
+                    },
+                    child:
+                        _stage == LiarsPokerTabletStage.penalty &&
+                            !game.isInsufficientPlayersEnding
+                        ? LiarsPokerTabletGamePenalty(
+                            key: ValueKey(
+                              '${game.penaltyTargetUid}_'
+                              '${game.penaltyAttemptCount}_'
+                              '${game.rouletteRetry}',
+                            ),
+                            attemptCount: game.penaltyAttemptCount,
+                            characterId:
+                                _playerByUid(
+                                  game.penaltyTargetUid,
+                                )?.characterId ??
+                                'frog',
+                            isResolving: game.isResolvingPenalty,
+                            onPrepareResult: game.prepareRoulette,
+                            onResult: game.resolveRoulette,
+                          )
+                        : null,
+                  ),
                 ),
-              ),
-              Positioned.fill(
-                child: LiarsPokerTabletGameOverlay(
-                  provider: widget.provider,
-                  stage: _stage,
-                  tableCardValue: game.table,
-                  onRestartGame: _restartGame,
-                  onEndGame: _endGame,
+                Positioned.fill(
+                  child: LiarsPokerTabletGameOverlay(
+                    provider: widget.provider,
+                    stage: _stage,
+                    tableCardValue: game.table,
+                    onRestartGame: _restartGame,
+                    onEndGame: _endGame,
+                  ),
                 ),
-              ),
-              GameInterruptionLayer(
-                interruption: game.interruption,
-                currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-                presentation: GameInterruptionPresentation.tabletController,
-                isSubmitting: game.isMenuCommandInFlight,
-                // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
-                // onError 콜백으로 이미 SnackBar를 띄웁니다(_showGameError).
-                onContinue: game.excludeInterruptedPlayerAndContinue,
-                onFinishNow: game.finishInterruptedGameNowFromController,
-                onExpired: game.expireInterruptionFromController,
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
