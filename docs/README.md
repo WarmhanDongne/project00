@@ -27,7 +27,7 @@
 - [`네트워크 복구와 세션 관리 동작 명세`](operations/SESSION_EVENT_FLOWS.md) — 현재 구현의 상태 전이·의사코드·18개 대표 시나리오와 구현 공백
 - [`Real-device Auth/Network/Session Checklist`](operations/REAL_DEVICE_AUTH_NETWORK_SESSION_CHECKLIST.md)
 - [`개발 전 현재 기준 수동 테스트`](operations/PRE_DEVELOPMENT_AUTH_NETWORK_SESSION_TEST.md) — 과거 완료·현재 문제를 함께 재검증하고 task 후보를 기록
-- [`Codex Android Emulator 실행 준비`](operations/EMULATOR_TEST_EXECUTION.md) — 62개 실행 범위, ADB 제어 근거와 로컬 backend 준비
+- [`AI Emulator 테스트 재구축 참고`](operations/EMULATOR_TEST_EXECUTION.md) — 제거한 환경의 설계·실행 근거·한계와 62개 재구축 분류
 - [`User Auth/Network/Session Guide`](operations/USER_AUTH_NETWORK_SESSION_GUIDE.md)
 
 ## Planning
