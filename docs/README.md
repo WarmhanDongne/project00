@@ -24,7 +24,10 @@
 - [`Firebase MCP RTDB Read-only Pilot`](operations/FIREBASE_MCP.md)
 - [`Emulator Pilot`](operations/EMULATOR_PILOT.md)
 - [`Auth/Network/Session Technical Reference`](operations/AUTH_NETWORK_SESSION_TECHNICAL_REFERENCE.md)
+- [`네트워크 복구와 세션 관리 동작 명세`](operations/SESSION_EVENT_FLOWS.md) — 현재 구현의 상태 전이·의사코드·18개 대표 시나리오와 구현 공백
 - [`Real-device Auth/Network/Session Checklist`](operations/REAL_DEVICE_AUTH_NETWORK_SESSION_CHECKLIST.md)
+- [`개발 전 현재 기준 수동 테스트`](operations/PRE_DEVELOPMENT_AUTH_NETWORK_SESSION_TEST.md) — 과거 완료·현재 문제를 함께 재검증하고 task 후보를 기록
+- [`Codex Android Emulator 실행 준비`](operations/EMULATOR_TEST_EXECUTION.md) — 62개 실행 범위, ADB 제어 근거와 로컬 backend 준비
 - [`User Auth/Network/Session Guide`](operations/USER_AUTH_NETWORK_SESSION_GUIDE.md)
 
 ## Planning
