@@ -19,6 +19,8 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   @override
   void initState() {
     super.initState();
+    // 공용 연결 모니터의 broadcast 스트림을 화면 연출 정지와 지연 안내가
+    // 함께 구독합니다. 각 구독에는 최신 연결 상태가 즉시 재생됩니다.
     _connectionChanges = widget.provider.watchServerConnection();
     // 게임에 들어가면 시스템 UI를 감추고 시안대로 세로로 고정합니다.
     // 플랫폼 화면으로 돌아갈 때 dispose에서 복원합니다.
@@ -137,7 +139,10 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       child: GameRecoveryLayer(
         request: GameRequestRecovery(
           visible: !game.isFinished,
-          busy: game.commandInFlight,
+          // 플레이 입력은 각 화면이 즉시 완료 상태로 전환합니다. 여기서 전역
+          // 로딩 알림까지 띄우면 느린 네트워크가 그대로 드러나고 화면 아래
+          // 액션과 겹치므로, 실제 실패만 마지막 정상 화면 위에 표시합니다.
+          busy: false,
           message: game.errorMessage,
           onRetry:
               game.isRoleReveal &&
@@ -215,6 +220,10 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
                   stage: stage,
                   regions: flowConfig.stepFor(stage).phoneRegions!,
                 ),
+              ),
+              MafiaDelayedConnectionHint(
+                connectionChanges: _connectionChanges,
+                enabled: stage != MafiaPhoneStage.connecting,
               ),
             ],
           ),

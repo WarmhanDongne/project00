@@ -184,13 +184,11 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     ).stepFor(FinalCallTabletStage.result).sound;
     if (winSound != null) SoundEffects.play(context, winSound);
     // 승리음(음악) 위에 결과 나레이션을 얹습니다.
-    SoundEffects.play(
-      context,
-      FinalCallSounds.resultVoiceFor(
-        isDraw: game.finishReason == 'draw',
-        winningTeam: game.winningTeam,
-      ),
+    final resultVoice = FinalCallSounds.resultVoiceFor(
+      isDraw: game.finishReason == 'draw',
+      winningTeam: game.winningTeam,
     );
+    if (resultVoice != null) SoundEffects.play(context, resultVoice);
   }
 
   // ============================================================================

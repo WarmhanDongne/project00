@@ -55,11 +55,13 @@ abstract final class FinalCallSounds {
       'packages/game_final_call/assets/games/final_call/sounds/voice_draw.m4a';
 
   /// 결과에 맞는 나레이션입니다.
-  static String resultVoiceFor({
+  static String? resultVoiceFor({
     required bool isDraw,
     required FinalCallTeam? winningTeam,
   }) {
     if (isDraw) return voiceDraw;
+    // 그린팀 전용 음성이 준비되기 전에는 공용 승리 효과음만 재생합니다.
+    if (winningTeam == FinalCallTeam.green) return null;
     return winningTeam == FinalCallTeam.blue ? voiceWinBlue : voiceWinRed;
   }
 

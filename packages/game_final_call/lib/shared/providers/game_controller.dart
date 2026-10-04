@@ -121,6 +121,12 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
   // 파생 게임 상태
   // ---------------------------------------------------------------------------
   bool get isMyTurn => turnUid == uid;
+  bool get isEliminated => players[uid]?.status == 'eliminated';
+  int get remainingTeamCount => players.values
+      .where((player) => player.status == 'alive')
+      .map((player) => player.team)
+      .toSet()
+      .length;
   bool get isFinished => status == 'finished';
 
   /// 마지막 생존자가 정해져 정상적으로 끝났는지 여부입니다.

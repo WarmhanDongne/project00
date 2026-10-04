@@ -154,10 +154,14 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
 // ---------------------------------------------------------------------------
 /// 밤 화면입니다(시안 `tablet-T2`).
 ///
-/// **시안에 문구가 하나도 없습니다.** 달만 뜹니다. 진행 현황도 넣지 않습니다 —
-/// 누가 행동을 마쳤는지 보이면 특수직이 드러나고, 인원수조차 시안에 없습니다.
+/// 행동 중에는 달과 새만 보이며 진행 현황을 표시하지 않습니다. 모든 행동이
+/// 끝나는 공통 마무리 구간에만 새벽빛과 중립적인 안내를 표시합니다. 누가 행동을
+/// 마쳤는지 보이면 특수직이 드러나므로 역할·완료 인원은 보여 주지 않습니다.
 class MafiaTabletNightView extends StatelessWidget {
-  const MafiaTabletNightView({super.key});
+  const MafiaTabletNightView({super.key, this.isWrappingUp = false});
+
+  /// 모든 역할 행동이 끝나고 아침 결과를 정리하는 공통 10초 구간입니다.
+  final bool isWrappingUp;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +171,98 @@ class MafiaTabletNightView extends StatelessWidget {
         const MafiaTabletMoon(),
         // 새가 한 번씩 오른쪽에서 왼쪽으로 지나갑니다.
         const MafiaTabletNightBird(),
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            child: isWrappingUp
+                ? const _MafiaTabletNightWrapUp(
+                    key: ValueKey('mafia-night-wrap-up'),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+/// 밤의 마지막 10초를 서버 대기가 아니라 새벽이 다가오는 장면으로 보여 줍니다.
+class _MafiaTabletNightWrapUp extends StatefulWidget {
+  const _MafiaTabletNightWrapUp({super.key});
+
+  @override
+  State<_MafiaTabletNightWrapUp> createState() =>
+      _MafiaTabletNightWrapUpState();
+}
+
+class _MafiaTabletNightWrapUpState extends State<_MafiaTabletNightWrapUp>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _dawn;
+
+  @override
+  void initState() {
+    super.initState();
+    _dawn = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _dawn.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _dawn,
+      builder: (context, _) {
+        final progress = Curves.easeInOut.transform(_dawn.value);
+        final textOpacity = Curves.easeOut.transform(
+          ((_dawn.value - 0.08) / 0.28).clamp(0.0, 1.0),
+        );
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    const Color(0xFFD5A17A).withValues(alpha: 0.26 * progress),
+                    const Color(0xFF6E667A).withValues(alpha: 0.13 * progress),
+                    Colors.transparent,
+                  ],
+                  stops: const [0, 0.42, 0.82],
+                ),
+              ),
+            ),
+            Align(
+              alignment: const Alignment(0, 0.58),
+              child: Opacity(
+                opacity: textOpacity,
+                child: Transform.translate(
+                  offset: Offset(0, 12 * (1 - textOpacity)),
+                  child: const Text(
+                    '밤이 지나가고 있습니다',
+                    key: ValueKey('mafia-night-wrap-up-text'),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.4,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 12)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

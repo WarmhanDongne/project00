@@ -86,6 +86,8 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   @override
   void initState() {
     super.initState();
+    // 공용 연결 모니터의 broadcast 스트림을 연출 정지와 지연 안내가 함께
+    // 구독합니다. 각 구독에는 최신 연결 상태가 즉시 재생됩니다.
     _connectionChanges = widget.provider.watchServerConnection();
     _presentationClock.addListener(_syncPresentationAudio);
     unawaited(AppSystemUi.enterGameFullscreen());
@@ -476,7 +478,11 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
                 stage: _stage,
                 controller: game,
                 playerLayout: widget.playerLayout,
-                remainingSeconds: remaining?.inSeconds,
+                // 마감 뒤 서버 응답이 늦어져도 0초가 화면에 붙어 있지 않게
+                // 타이머만 감추고 마지막 정상 장면을 그대로 유지합니다.
+                remainingSeconds: game.actionDeadlinePassed
+                    ? null
+                    : remaining?.inSeconds,
                 showsNightNotice: _showsNightNotice,
                 showsGameStartNotice: _showsGameStartNotice,
                 onRulebookPressed: _openRulebook,
@@ -491,9 +497,18 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
             ),
             if (game.interruption == null)
               GameRequestNotice(
-                busy: game.commandInFlight,
+                // 자동 단계 진행은 현재 장면을 유지한 채 뒤에서 재시도합니다.
+                // 공용 태블릿에 서버 대기 스피너를 띄우지 않아 지연을 연출처럼
+                // 보이게 하고, 실제 실패 문구만 표시합니다.
+                busy: false,
                 message: game.errorMessage,
               ),
+            MafiaDelayedConnectionHint(
+              connectionChanges: _connectionChanges,
+              enabled: _stage != MafiaTabletStage.connecting,
+              alignment: Alignment.topRight,
+              margin: const EdgeInsets.only(top: 28, right: 104),
+            ),
             GameConnectingOverlay(
               isWaiting: _stage == MafiaTabletStage.connecting,
               exitDelay: const Duration(seconds: 10),

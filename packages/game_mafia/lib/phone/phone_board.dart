@@ -36,6 +36,7 @@ import 'package:game_mafia/shared/providers/game_controller.dart';
 import 'package:game_mafia/shared/providers/session_provider.dart';
 import 'package:game_mafia/shared/services/asset_preloader.dart';
 import 'package:game_mafia/shared/services/game_service.dart';
+import 'package:game_mafia/shared/widgets/delayed_connection_hint.dart';
 
 part 'src/board_state.dart';
 

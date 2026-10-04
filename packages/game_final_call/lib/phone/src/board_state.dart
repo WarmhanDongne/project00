@@ -370,8 +370,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
             .game
             .image(fit: BoxFit.cover),
         // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
-        contentReady: game.hand.isNotEmpty,
-        contentRevealed: revealedRound == game.round,
+        contentReady: game.isEliminated || game.hand.isNotEmpty,
+        contentRevealed: game.isEliminated || revealedRound == game.round,
         onIntroCompleted: () {
           if (mounted) setState(() => gameStartCompleted = true);
         },
@@ -399,28 +399,33 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           fit: StackFit.expand,
           children: [
             RepaintBoundary(
-              child: FinalCallPhoneScreens.playing(
-                controller: game,
-                handRevealed: revealedRound == game.round,
-                selectedCardId: selectedCardId,
-                selectedFinalCardIds: selectedFinalCardIds,
-                visibleCallerUid: visibleCallerUid,
-                onRevealStarted: () {},
-                onRevealCompleted: () =>
-                    setState(() => revealedRound = game.round),
-                onSelectedCardChanged: (id) =>
-                    setState(() => selectedCardId = id),
-                onFinalCardSelected: (id) => setState(() {
-                  if (!selectedFinalCardIds.remove(id)) {
-                    selectedFinalCardIds.add(id);
-                  }
-                }),
-                onCompleteTurn: _completeTurn,
-                replacingCardId: replacingCardId,
-                replacementInProgress: replacementInProgress,
-                onExitRoom: () => unawaited(_leaveRoom()),
-                regions: flowConfig.stepFor(stage).phoneRegions!,
-              ),
+              child: game.isEliminated
+                  ? FinalCallSpectatorView(
+                      remainingTeamCount: game.remainingTeamCount,
+                      waitingForResult: game.isFinished,
+                    )
+                  : FinalCallPhoneScreens.playing(
+                      controller: game,
+                      handRevealed: revealedRound == game.round,
+                      selectedCardId: selectedCardId,
+                      selectedFinalCardIds: selectedFinalCardIds,
+                      visibleCallerUid: visibleCallerUid,
+                      onRevealStarted: () {},
+                      onRevealCompleted: () =>
+                          setState(() => revealedRound = game.round),
+                      onSelectedCardChanged: (id) =>
+                          setState(() => selectedCardId = id),
+                      onFinalCardSelected: (id) => setState(() {
+                        if (!selectedFinalCardIds.remove(id)) {
+                          selectedFinalCardIds.add(id);
+                        }
+                      }),
+                      onCompleteTurn: _completeTurn,
+                      replacingCardId: replacingCardId,
+                      replacementInProgress: replacementInProgress,
+                      onExitRoom: () => unawaited(_leaveRoom()),
+                      regions: flowConfig.stepFor(stage).phoneRegions!,
+                    ),
             ),
             if (game.commandInFlight)
               const Positioned(

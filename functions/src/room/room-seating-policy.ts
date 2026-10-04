@@ -31,8 +31,12 @@ export function decideRoomSeating(
     return "invalid-status";
   }
   if (state.selectedGame !== state.expectedGame) return "game-changed";
-  if (state.activePlayerCount < state.minPlayers ||
-      state.activePlayerCount > state.maxPlayers) {
+  // 내장 팀 게임의 정확한 인원은 시작 검증과 동일하게 적용합니다.
+  const validCount = state.expectedGame === "final_call" ?
+    [4, 6].includes(state.activePlayerCount) :
+    state.activePlayerCount >= state.minPlayers &&
+      state.activePlayerCount <= state.maxPlayers;
+  if (!validCount) {
     return "invalid-player-count";
   }
   return "begin";

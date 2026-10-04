@@ -50,6 +50,7 @@ import 'package:game_mafia/tablet/screens/phase_views.dart';
 import 'package:game_mafia/tablet/screens/result_view.dart';
 import 'package:game_mafia/tablet/services/bgm_plan.dart';
 import 'package:game_mafia/tablet/services/night_cue_speaker.dart';
+import 'package:game_mafia/shared/widgets/delayed_connection_hint.dart';
 
 part 'src/board_state.dart';
 
@@ -305,8 +306,10 @@ class MafiaTabletStageView extends StatelessWidget {
         showsNightNotice: showsNightNotice,
         showsGameStartNotice: showsGameStartNotice,
       ),
-      // 시안에 문구가 없어 진행 현황도 넣지 않습니다.
-      MafiaTabletStage.night => MafiaTabletNightView(),
+      // 역할·완료 인원은 숨기고, 공통 마무리 구간에만 새벽 전환을 보여 줍니다.
+      MafiaTabletStage.night => MafiaTabletNightView(
+        isWrappingUp: controller.nightStage == 'wrapUp',
+      ),
       MafiaTabletStage.morning => MafiaTabletMorningSequence(
         result: controller.morningResult,
         players: controller.players,

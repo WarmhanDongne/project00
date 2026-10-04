@@ -6,7 +6,7 @@ export const FINAL_CALL_TURN_MS = 30000;
 export const FINAL_CALL_CARDS_PER_PLAYER = 4;
 
 export type FinalCallColor = "red" | "blue" | "yellow" | "green";
-export type FinalCallTeam = "red" | "blue";
+export type FinalCallTeam = "red" | "blue" | "green";
 
 export interface FinalCallCard {
   id: string;

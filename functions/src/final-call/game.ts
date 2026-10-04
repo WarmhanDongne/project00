@@ -41,9 +41,10 @@ export async function createFinalCallPlayers(
     throw new HttpsError("failed-precondition", "참가 플레이어가 없습니다.");
   }
 
+  const activeEntries = Object.entries(roomPlayers)
+    .filter(([, value]) => value.role === "player" && value.status === "active");
   const players: Record<string, FinalCallPlayer> = {};
-  for (const [uid, value] of Object.entries(roomPlayers)) {
-    if (value.role !== "player" || value.status !== "active") continue;
+  for (const [uid, value] of activeEntries) {
     if (!Number.isInteger(value.seatIndex)) {
       throw new HttpsError(
         "failed-precondition",
@@ -56,7 +57,7 @@ export async function createFinalCallPlayers(
       characterId: typeof value.characterId === "string" ?
         value.characterId : "frog",
       seatIndex: value.seatIndex as number,
-      team: finalCallTeamForSeat(value.seatIndex as number),
+      team: finalCallTeamForSeat(value.seatIndex as number, activeEntries.length),
       status: "alive",
       lives: 3,
     };
@@ -238,28 +239,21 @@ export function resolveFinalCallRound(
       .filter((player) => player.lives === 0)
       .map((player) => player.team),
   );
-  if (defeatedTeams.size > 0) {
+  // 한 팀원이 하트를 모두 잃으면 파트너도 탈락합니다. 남은 팀끼리는
+  // 기존 좌석·팀을 유지하고 다음 라운드를 진행합니다.
+  for (const player of Object.values(game.public.players)) {
+    if (defeatedTeams.has(player.team)) player.status = "eliminated";
+  }
+  const survivors = orderedAlivePlayers(game.public.players);
+  const survivingTeams = new Set(survivors.map((player) => player.team));
+  if (survivingTeams.size <= 1) {
     game.public.status = "finished";
     game.public.phase = "finished";
-    if (defeatedTeams.size === 1) {
-      const defeatedTeam = [...defeatedTeams][0];
-      const winningTeam: FinalCallTeam = defeatedTeam === "red" ? "blue" : "red";
-      const winners = orderedPlayers(game.public.players)
-        .filter((player) => player.team === winningTeam);
-      game.public.finishReason = "winner";
-      game.public.winningTeam = winningTeam;
-      game.public.winnerUids = winners.map((player) => player.uid);
-      // 구버전 클라이언트가 결과 화면을 열 수 있도록 첫 팀원을 함께 유지합니다.
-      game.public.winnerUid = winners[0]?.uid ?? null;
-      for (const player of Object.values(game.public.players)) {
-        if (player.team === defeatedTeam) player.status = "eliminated";
-      }
-    } else {
-      game.public.finishReason = "draw";
-      game.public.winningTeam = null;
-      game.public.winnerUids = [];
-      game.public.winnerUid = null;
-    }
+    game.public.finishReason = survivingTeams.size === 1 ? "winner" : "draw";
+    game.public.winningTeam = survivors[0]?.team ?? null;
+    game.public.winnerUids = survivors.map((player) => player.uid);
+    // 구버전 결과 읽기와의 호환을 위해 대표 승자도 유지합니다.
+    game.public.winnerUid = survivors[0]?.uid ?? null;
     game.public.finishedAt = now;
   } else {
     game.public.phase = "roundResult";
@@ -319,9 +313,10 @@ export function orderedPlayers(
     .sort((left, right) => left.seatIndex - right.seatIndex);
 }
 
-/** 4인 테이블에서 마주 보는 좌석(0·2, 1·3)을 같은 팀으로 지정합니다. */
-export function finalCallTeamForSeat(seatIndex: number): FinalCallTeam {
-  return seatIndex % 2 === 0 ? "red" : "blue";
+/** 4인(0·2, 1·3)과 6인(0·3, 1·4, 2·5)의 반대 좌석을 같은 팀으로 지정합니다. */
+export function finalCallTeamForSeat(seatIndex: number, playerCount = 4): FinalCallTeam {
+  const teams: FinalCallTeam[] = ["red", "blue", "green"];
+  return teams[seatIndex % (playerCount / 2)];
 }
 
 /**
@@ -337,13 +332,13 @@ export function removeFinalTurnPendingPlayer(
 
 function assertValidSeats(players: Record<string, FinalCallPlayer>): void {
   const seats = Object.values(players).map((player) => player.seatIndex);
-  const valid = seats.length === 4 &&
+  const valid = (seats.length === 4 || seats.length === 6) &&
     new Set(seats).size === seats.length &&
-    seats.every((seat) => seat >= 0 && seat < 4);
+    seats.every((seat) => seat >= 0 && seat < seats.length);
   if (!valid) {
     throw new HttpsError(
       "failed-precondition",
-      "Final Call은 정확히 4명의 자리를 중복 없이 지정해야 합니다.",
+      "Final Call은 4명 또는 6명의 자리를 중복 없이 지정해야 합니다.",
     );
   }
 }

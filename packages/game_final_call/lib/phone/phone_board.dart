@@ -16,6 +16,7 @@ import 'package:game_final_call/phone/providers/game_stage.dart';
 import 'package:game_final_call/phone/screens/game_screen.dart';
 import 'package:game_final_call/phone/widgets/card_change_dialog.dart';
 import 'package:game_final_call/phone/widgets/top_bar.dart';
+import 'package:game_final_call/phone/widgets/spectator_view.dart';
 import 'package:game_final_call/shared/models/game_state.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/shared/providers/session_provider.dart';
@@ -144,6 +145,13 @@ GameFlowConfig<FinalCallPhoneStage> buildFinalCallPhoneFlowConfig({
         showTimer: true,
         showActions: true,
       ),
+      advancePolicy: GameFlowAdvancePolicy.waitsForServer,
+    ),
+    FinalCallPhoneStage.spectating: const GameFlowStep(
+      stage: FinalCallPhoneStage.spectating,
+      description: '탈락한 팀은 최종 승부까지 관전한다',
+      showScreen: true,
+      phoneRegions: PhoneGameRegions(showTopBar: true),
       advancePolicy: GameFlowAdvancePolicy.waitsForServer,
     ),
     FinalCallPhoneStage.finalSelection: const GameFlowStep(

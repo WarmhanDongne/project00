@@ -28,7 +28,7 @@ class FinalCallGame extends TemplateGame {
   @override
   String get title => 'Final Call';
   @override
-  int get fixedPlayerCount => 4;
+  List<int> get supportedPlayerCounts => const [4, 6];
   @override
   String get leaveFunctionName => 'game_final_call_leave_game';
   @override

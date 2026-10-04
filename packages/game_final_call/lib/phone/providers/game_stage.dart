@@ -12,6 +12,7 @@ enum FinalCallPhoneStage {
   roundIntro,
   handReveal,
   playing,
+  spectating,
   finalSelection,
   roundResultWaiting,
   result,
@@ -44,6 +45,13 @@ FinalCallPhoneStage resolveFinalCallPhoneStage({
   if (game.isFinished && !game.isNaturalResult) {
     return FinalCallPhoneStage.closing;
   }
+  // 관전자는 새 손패를 받지 않으므로 손패 대기보다 종료·관전을 먼저 판정합니다.
+  if (game.isFinished && game.isEliminated) {
+    return game.resultRevealCompletedAt == null
+        ? FinalCallPhoneStage.roundResultWaiting
+        : FinalCallPhoneStage.result;
+  }
+  if (game.isEliminated) return FinalCallPhoneStage.spectating;
   if (game.phase == 'dealing') return FinalCallPhoneStage.dealing;
   if (announcedRound != game.round && game.hand.isEmpty) {
     return FinalCallPhoneStage.dealing;
