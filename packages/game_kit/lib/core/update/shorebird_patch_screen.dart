@@ -7,7 +7,8 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_kit/widgets/game_reconnect_screen.dart';
+import 'package:game_kit/recovery/widgets/game_reconnect_screen.dart';
+
 // ============================================================
 
 //=======================Shorebird 패치 화면==============================

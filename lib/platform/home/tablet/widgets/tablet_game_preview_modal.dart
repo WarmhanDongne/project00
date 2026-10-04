@@ -103,10 +103,12 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
   }
 
   String _playerCountText() {
-    final fixedPlayerCount = widget.roomProvider.gameCatalog
+    final supportedCounts = widget.roomProvider.gameCatalog
         .find(widget.game.id)
-        ?.fixedPlayerCount;
-    if (fixedPlayerCount != null) return '플레이 인원 $fixedPlayerCount명';
+        ?.supportedPlayerCounts;
+    if (supportedCounts != null) {
+      return '플레이 인원 ${supportedCounts.join(' 또는 ')}명';
+    }
     if (widget.game.minPlayers > 0 && widget.game.maxPlayers > 0) {
       return '플레이 인원 ${widget.game.minPlayers}~${widget.game.maxPlayers}명';
     }
@@ -181,17 +183,18 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       _showMessage(context, gameRequiresUpdateMessage);
       return;
     }
-    final fixedPlayerCount = templateGame.fixedPlayerCount;
-    if (fixedPlayerCount != null && currentPlayerCount != fixedPlayerCount) {
+    final supportedCounts = templateGame.supportedPlayerCounts;
+    if (supportedCounts != null &&
+        !supportedCounts.contains(currentPlayerCount)) {
       _showMessage(
         context,
-        '이 게임은 $fixedPlayerCount명이 모이면 시작할 수 있어요. '
+        '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. '
         '현재 $currentPlayerCount명이 참여 중입니다.',
       );
       return;
     }
 
-    if (currentPlayerCount < minPlayers) {
+    if (supportedCounts == null && currentPlayerCount < minPlayers) {
       _showMessage(
         context,
         '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. '
@@ -200,7 +203,7 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
       return;
     }
 
-    if (currentPlayerCount > maxPlayers) {
+    if (supportedCounts == null && currentPlayerCount > maxPlayers) {
       _showMessage(
         context,
         '이 게임은 최대 $maxPlayers명까지 함께할 수 있어요. '
@@ -429,13 +432,13 @@ class _GamePreviewDialogState extends State<GamePreviewDialog> {
         .where((player) => player.isActive && player.isPlayer)
         .length;
     final templateGame = widget.roomProvider.gameCatalog.find(widget.game.id);
-    final fixedPlayerCount = templateGame?.fixedPlayerCount;
+    final supportedCounts = templateGame?.supportedPlayerCounts;
     final minPlayers = widget.game.minPlayers > 0 ? widget.game.minPlayers : 2;
     final warningMessage =
-        fixedPlayerCount != null && activePlayerCount != fixedPlayerCount
-        ? '이 게임은 $fixedPlayerCount명이 모이면 시작할 수 있어요. '
+        supportedCounts != null && !supportedCounts.contains(activePlayerCount)
+        ? '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. '
               '현재 $activePlayerCount명이 참여 중입니다.'
-        : fixedPlayerCount == null && activePlayerCount < minPlayers
+        : supportedCounts == null && activePlayerCount < minPlayers
         ? '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. '
               '현재 $activePlayerCount명이 참여 중입니다.'
         : null;

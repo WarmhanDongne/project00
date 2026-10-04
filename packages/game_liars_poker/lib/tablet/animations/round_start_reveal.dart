@@ -5,9 +5,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/tablet/animations/board_element_entrance.dart';
-import 'package:game_kit/player_layouts/player_slot_positions.dart';
+import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
+
 // ============================================================
 
 /// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.

@@ -302,60 +302,57 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     _hasEnteredGame |= controller.isEntryDataReady;
 
     return GameEntryUnroll(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
-          // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
-          // key를 사용하므로, 관전 화면이 등장하거나 사라질 때만 한 번 페이드합니다.
-          AnimatedSwitcher(
-            duration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
-            reverseDuration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            layoutBuilder: (currentChild, previousChildren) => Stack(
-              fit: StackFit.expand,
-              children: [...previousChildren, ?currentChild],
-            ),
-            // 양쪽 화면을 동시에 반투명하게 만들면 중간 프레임에서 뒤의 검은
-            // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
-            // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
-            transitionBuilder: _buildSpectatorTransition,
-            child: _hasEnteredGame
-                ? _buildGameContent(controller)
-                : const KeyedSubtree(
-                    key: ValueKey('liars-poker-game'),
-                    child: _PhoneGameBackground(),
-                  ),
+      child: GameRecoveryLayer(
+        interruption: GameInterruptionRecovery(
+          state: controller.interruption,
+          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          isSubmitting: controller.commandInFlight,
+          failureMessage: controller.errorMessage,
+          onVote: () async {
+            await controller.voteToContinueInterruption();
+          },
+          onFinishNow: controller.finishInterruptedGameNow,
+          onExpired: controller.expireInterruption,
+        ),
+        // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
+        // 나가기 버튼을 표시해 영구 대기를 막습니다.
+        //
+        // 카드 분배·손패 공개 구간도 같은 탈출구를 씁니다. 그 구간에 상단바를
+        // 숨기는 것은 **연출 의도**입니다 — 패가 들어올 때 다른 요소가 없어야
+        // 합니다. 다만 그동안 나갈 수단이 하나도 없어서, 서버가 다음 상태를
+        // 주지 않으면 앱을 강제 종료하는 수밖에 없었습니다. 정상 흐름(분배
+        // 2.8초 + 공개)에서는 절대 뜨지 않는 지연 시간을 두어, 연출은 그대로
+        // 두고 갇히는 경우만 막습니다.
+        //
+        // 관전자와 종료 화면은 제외합니다. 둘 다 이미 나갈 방법이 있어
+        // 버튼이 겹칩니다.
+        connection: GameConnectionRecovery(
+          isWaiting: !_hasEnteredGame || _isAwaitingHandTooLong(controller),
+          onExit: () => unawaited(_leaveRoom()),
+        ),
+        // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
+        // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
+        // key를 사용하므로, 관전 화면이 등장하거나 사라질 때만 한 번 페이드합니다.
+        child: AnimatedSwitcher(
+          duration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
+          reverseDuration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) => Stack(
+            fit: StackFit.expand,
+            children: [...previousChildren, ?currentChild],
           ),
-          GameInterruptionLayer(
-            interruption: controller.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-            isSubmitting: controller.commandInFlight,
-            failureMessage: controller.errorMessage,
-            onVote: () async {
-              await controller.voteToContinueInterruption();
-            },
-            onFinishNow: controller.finishInterruptedGameNow,
-            onExpired: controller.expireInterruption,
-          ),
-          // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
-          // 나가기 버튼을 표시해 영구 대기를 막습니다.
-          //
-          // 카드 분배·손패 공개 구간도 같은 탈출구를 씁니다. 그 구간에 상단바를
-          // 숨기는 것은 **연출 의도**입니다 — 패가 들어올 때 다른 요소가 없어야
-          // 합니다. 다만 그동안 나갈 수단이 하나도 없어서, 서버가 다음 상태를
-          // 주지 않으면 앱을 강제 종료하는 수밖에 없었습니다. 정상 흐름(분배
-          // 2.8초 + 공개)에서는 절대 뜨지 않는 지연 시간을 두어, 연출은 그대로
-          // 두고 갇히는 경우만 막습니다.
-          //
-          // 관전자와 종료 화면은 제외합니다. 둘 다 이미 나갈 방법이 있어
-          // 버튼이 겹칩니다.
-          GameConnectingOverlay(
-            isWaiting: !_hasEnteredGame || _isAwaitingHandTooLong(controller),
-            onExit: () => unawaited(_leaveRoom()),
-          ),
-        ],
+          // 양쪽 화면을 동시에 반투명하게 만들면 중간 프레임에서 뒤의 검은
+          // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
+          // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
+          transitionBuilder: _buildSpectatorTransition,
+          child: _hasEnteredGame
+              ? _buildGameContent(controller)
+              : const KeyedSubtree(
+                  key: ValueKey('liars-poker-game'),
+                  child: _PhoneGameBackground(),
+                ),
+        ),
       ),
     );
   }

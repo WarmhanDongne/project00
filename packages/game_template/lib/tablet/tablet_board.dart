@@ -10,8 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
-import 'package:game_kit/widgets/game_announcement_layer.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
+import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
 import 'package:game_template/tablet/providers/game_stage.dart';
 
 part 'src/board_state.dart';

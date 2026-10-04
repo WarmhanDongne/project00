@@ -18,8 +18,9 @@
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/models/game_room_context.dart';
+
 // ============================================================
 
 //==========[ 게임 목록 관리 규칙 ]==========
@@ -74,6 +75,10 @@ abstract class TemplateGame implements GameGateway {
   // 고정 인원이면 => 고정 숫자
   // Firestore의 최소/최대 인원을 사용할 경우 => null
   int? get fixedPlayerCount => null;
+
+  /// 지원 인원이 불연속일 때 사용합니다. null이면 기존 고정 인원/카탈로그를 따릅니다.
+  List<int>? get supportedPlayerCounts =>
+      fixedPlayerCount == null ? null : [fixedPlayerCount!];
 
   //[퇴장처리] 게임 도중 퇴장할 때 사용할 Cloud Function 이름
   String get leaveFunctionName;

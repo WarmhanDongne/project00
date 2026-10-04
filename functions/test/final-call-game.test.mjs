@@ -3,11 +3,17 @@ import test from "node:test";
 
 import {
   createFinalCallPlayers,
+  createInitialFinalCallGame,
   finalCallTeamForSeat,
   nextFinalCallRoundStarter,
+  nextFinalCallPlayer,
+  prepareFinalCallRound,
   removeFinalTurnPendingPlayer,
   resolveFinalCallRound,
 } from "../lib/final-call/game.js";
+
+import {excludeFinalCallPlayer} from "../lib/final-call/exclude-player.js";
+import {assertFinalCallTurn} from "../lib/final-call/validation.js";
 
 function card(id, color, value) {
   return {id, color, value};
@@ -109,7 +115,7 @@ test("마주 보는 좌석은 같은 팀으로 자동 지정된다", () => {
   assert.equal(finalCallTeamForSeat(3), "blue");
 });
 
-test("Final Call은 정확히 4명만 시작할 수 있다", async () => {
+test("Final Call의 기존 4인 시작과 팀 배치를 유지한다", async () => {
   const roomPlayer = (seatIndex) => ({
     role: "player",
     status: "active",
@@ -121,7 +127,7 @@ test("Final Call은 정확히 4명만 시작할 수 있다", async () => {
     uid1: roomPlayer(0),
     uid2: roomPlayer(1),
     uid3: roomPlayer(2),
-  }), /정확히 4명/);
+  }), /4명 또는 6명/);
 
   const players = await createFinalCallPlayers({
     uid1: roomPlayer(0),
@@ -329,4 +335,148 @@ test("생명을 잃은 플레이어가 탈락했으면 생존자 중 생명이 �
   });
 
   assert.equal(nextFinalCallRoundStarter(game), "uid2");
+});
+
+function roomPlayersForSeats(seats) {
+  return Object.fromEntries(seats.map((seatIndex, index) => [`p${index}`, {
+    role: "player", status: "active", seatIndex, nickname: `P${index}`,
+  }]));
+}
+
+test("6인은 반대 좌석끼리 세 팀을 구성하고 40장에서 중복 없이 배분한다", async () => {
+  const players = await createFinalCallPlayers(roomPlayersForSeats([0, 1, 2, 3, 4, 5]));
+  assert.deepEqual(Object.values(players).map((player) => player.team),
+    ["red", "blue", "green", "red", "blue", "green"]);
+  const game = createInitialFinalCallGame(players, 100);
+  const hands = Object.values(game.server.pendingHands);
+  assert.equal(hands.length, 6);
+  for (const player of hands) assert.equal(Object.keys(player.hand).length, 4);
+  assert.equal(game.public.deckRemainingCount, 15);
+  const cards = [...hands.flatMap((player) => Object.values(player.hand)),
+    ...game.server.deck, game.public.discardCard];
+  assert.equal(new Set(cards.map((card) => card.id)).size, 40);
+  assert.deepEqual(game.private, {});
+});
+
+test("4·6인 외 인원과 중복·범위 밖 좌석은 시작을 거부한다", async () => {
+  for (const seats of [[0, 1], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4, 5, 6],
+    [0, 1, 2, 3, 4, 4], [0, 1, 2, 3, 4, 6], [-1, 0, 1, 2, 3, 4],
+    [0, 1, 2, 3, 4, 4.5]]) {
+    await assert.rejects(() => createFinalCallPlayers(roomPlayersForSeats(seats)));
+  }
+});
+
+async function sixPlayerGame() {
+  const players = await createFinalCallPlayers(roomPlayersForSeats([0, 1, 2, 3, 4, 5]));
+  const game = createInitialFinalCallGame(players, 100);
+  game.private = game.server.pendingHands;
+  delete game.server.pendingHands;
+  game.public.phase = "finalSubmit";
+  game.public.callerUid = "p0";
+  setScores(game, {p0: 10, p1: 9, p2: 1, p3: 8, p4: 7, p5: 6});
+  return game;
+}
+
+function setScores(game, scores) {
+  game.server.finalSubmissions = Object.fromEntries(Object.entries(scores)
+    .map(([uid, value]) => [uid, [card(`${uid}-score`, "red", value)]]));
+}
+
+test("6인 첫 팀 탈락 후 원래 팀·좌석으로 계속하고 탈락자는 배분·턴에서 제외한다", async () => {
+  const game = await sixPlayerGame();
+  game.public.players.p2.lives = 1;
+  resolveFinalCallRound(game, 200, false);
+  assert.equal(game.public.status, "playing");
+  assert.equal(game.public.phase, "roundResult");
+  assert.equal(game.public.players.p2.status, "eliminated");
+  assert.equal(game.public.players.p5.status, "eliminated");
+  assert.equal(game.public.players.p5.lives, 3);
+  assert.equal(game.public.winningTeam, null);
+  assert.deepEqual(game.public.winnerUids, []);
+  assert.equal(game.public.finishedAt, undefined);
+  assert.equal(nextFinalCallRoundStarter(game), "p0");
+  prepareFinalCallRound(game, nextFinalCallRoundStarter(game), 2, 300);
+  assert.deepEqual(Object.keys(game.server.pendingHands), ["p0", "p1", "p3", "p4"]);
+  assert.equal(game.public.deckRemainingCount, 23);
+  assert.equal(nextFinalCallPlayer(game.public.players, "p1"), "p3");
+  assert.equal(nextFinalCallPlayer(game.public.players, "p4"), "p0");
+  assert.equal(game.public.players.p3.team, "red");
+  assert.equal(game.public.players.p4.seatIndex, 4);
+  game.public.turnUid = "p5";
+  assert.throws(() => assertFinalCallTurn(game, "p5"), /탈락/);
+
+  game.private = game.server.pendingHands;
+  setScores(game, {p0: 10, p1: 1, p3: 8, p4: 7});
+  game.public.players.p1.lives = 1;
+  resolveFinalCallRound(game, 400, false);
+  assert.equal(game.public.status, "finished");
+  assert.equal(game.public.winningTeam, "red");
+  assert.deepEqual(game.public.winnerUids, ["p0", "p3"]);
+  assert.equal(game.public.players.p4.status, "eliminated");
+  assert.equal(game.public.roundResult.scores.p2, undefined);
+});
+
+test("두 팀이 동시에 탈락하면 남은 그린팀이 승리한다", async () => {
+  const game = await sixPlayerGame();
+  setScores(game, {p0: 1, p1: 1, p2: 5, p3: 8, p4: 7, p5: 6});
+  game.public.players.p0.lives = 1;
+  game.public.players.p1.lives = 1;
+  resolveFinalCallRound(game, 200, false);
+  assert.equal(game.public.finishReason, "winner");
+  assert.equal(game.public.winningTeam, "green");
+  assert.deepEqual(game.public.winnerUids, ["p2", "p5"]);
+  for (const uid of ["p0", "p1", "p3", "p4"]) {
+    assert.equal(game.public.players[uid].status, "eliminated");
+  }
+});
+
+test("세 팀이 동시에 탈락하면 무승부로 종료한다", async () => {
+  const game = await sixPlayerGame();
+  setScores(game, {p0: 1, p1: 1, p2: 1, p3: 8, p4: 7, p5: 6});
+  for (const uid of ["p0", "p1", "p2"]) game.public.players[uid].lives = 1;
+  resolveFinalCallRound(game, 200, false);
+  assert.equal(game.public.finishReason, "draw");
+  assert.equal(game.public.winningTeam, null);
+  assert.deepEqual(game.public.winnerUids, []);
+  assert.ok(Object.values(game.public.players).every((player) => player.status === "eliminated"));
+});
+
+test("6인 포카드 CALL은 상대 두 팀 네 명에게만 하트 손실을 적용한다", async () => {
+  const game = await sixPlayerGame();
+  game.server.finalSubmissions.p0 = ["red", "blue", "green", "yellow"]
+    .map((color) => card(`${color}-7`, color, 7));
+  resolveFinalCallRound(game, 200, false);
+  assert.deepEqual(game.public.roundResult.lifeLosses, {p1: 1, p2: 1, p4: 1, p5: 1});
+  assert.equal(game.public.players.p0.lives, 3);
+  assert.equal(game.public.players.p3.lives, 3);
+  assert.equal(game.public.status, "playing");
+});
+
+test("6인 덱 소진 자동 판정도 팀 탈락 뒤 남은 팀끼리 계속한다", async () => {
+  const game = await sixPlayerGame();
+  for (const [uid, hand] of Object.entries(game.server.finalSubmissions)) {
+    game.private[uid] = {hand: Object.fromEntries(hand.map((card) => [card.id, card]))};
+  }
+  game.public.players.p2.lives = 1;
+  resolveFinalCallRound(game, 200, true);
+  assert.equal(game.public.status, "playing");
+  assert.equal(game.public.players.p5.status, "eliminated");
+  assert.equal(game.public.roundResult.automaticCall, true);
+});
+
+test("관전자 제외는 게임에 영향을 주지 않고 실제 참가자 퇴장은 팀 구성 부족으로 종료한다", async () => {
+  const game = await sixPlayerGame();
+  game.public.players.p2.lives = 1;
+  resolveFinalCallRound(game, 200, false);
+  const before = structuredClone(game);
+  excludeFinalCallPlayer(game, "p5", 250);
+  assert.deepEqual(game, before);
+  excludeFinalCallPlayer(game, "p0", 300);
+  assert.equal(game.public.finishReason, "insufficientPlayers");
+  assert.deepEqual(game.private, {});
+  assert.equal(game.public.winningTeam, null);
+
+  const six = await sixPlayerGame();
+  excludeFinalCallPlayer(six, "p0", 300);
+  assert.equal(six.public.finishReason, "insufficientPlayers");
 });

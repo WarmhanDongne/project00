@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:game_kit/services/game_command_service.dart';
+
 // ============================================================
 
 /// 마피아 Cloud Functions 명령 전용 서비스입니다.
@@ -26,11 +27,13 @@ class MafiaCommandService extends GameCommandService {
   Future<Map<String, dynamic>> startGame({
     required String roomCode,
     Map<String, int>? composition,
+    Map<String, Object>? rules,
   }) {
     return invoke('game_mafia_start_game', {
       'roomCode': roomCode,
       if (composition != null && composition.isNotEmpty)
         'composition': composition,
+      'rules': ?rules,
     });
   }
 
@@ -79,7 +82,7 @@ class MafiaCommandService extends GameCommandService {
     return invoke('game_mafia_submit_night_action', {
       'roomCode': roomCode,
       'targetUid': targetUid,
-      // 대상을 바꿀 수 있어야 하므로 호출마다 새 id를 씁니다.
+      // 논리적 제출마다 새 id를 쓰고 네트워크 재시도는 같은 id를 유지합니다.
       'commandId': commandId('night'),
     }, retryTransientFailure: true);
   }
@@ -119,6 +122,15 @@ class MafiaCommandService extends GameCommandService {
       'commandId': commandId('vote'),
     }, retryTransientFailure: true);
   }
+
+  Future<Map<String, dynamic>> submitTrialVote({
+    required String roomCode,
+    required bool execute,
+  }) => invoke('game_mafia_submit_vote', {
+    'roomCode': roomCode,
+    'execute': execute,
+    'commandId': commandId('trial_vote'),
+  }, retryTransientFailure: true);
 
   Future<Map<String, dynamic>> timeoutVote({required String roomCode}) {
     return invoke('game_mafia_timeout_vote', {'roomCode': roomCode});

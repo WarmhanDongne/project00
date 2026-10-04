@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+
 // ============================================================
 
 class FinalCallCard {
@@ -225,13 +226,21 @@ class FinalCallPlayer {
       Object.hash(uid, nickname, characterId, seatIndex, team, status, lives);
 }
 
-/// 반대 좌석끼리 묶이는 Final Call의 고정 2대2 팀입니다.
+/// 4인 또는 6인 테이블에서 반대 좌석끼리 묶이는 2인 팀입니다.
 enum FinalCallTeam {
   red,
-  blue;
+  blue,
+  green;
+
+  String get label => switch (this) {
+    red => '레드팀',
+    blue => '블루팀',
+    green => '그린팀',
+  };
 
   static FinalCallTeam fromWire(Object? value, {required int seatIndex}) {
     return switch (value?.toString()) {
+      'green' => FinalCallTeam.green,
       'blue' => FinalCallTeam.blue,
       'red' => FinalCallTeam.red,
       // 이전 서버 상태를 읽더라도 반대 좌석(0·2 / 1·3)이 같은 팀이 됩니다.

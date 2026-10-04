@@ -1,297 +1,435 @@
-// [role_setup_screen.dart] 는 마피아에서 사용하는 태블릿에서 보이는 공용 게임 진행 화면을 구성하는 파일이다.
-//
-// - [Package] : 마피아
-// - [TabletScreen] : 태블릿에서 보이는 공용 게임 진행 화면을 구성함
-//
-// 즉, 모든 플레이어가 함께 보는 진행 상태와 연출을 표시하기 위해 필요한 파일이다.
-
-// ========================[ import ]==========================
+// 태블릿 게임 시작 전, 추천 신분을 카드로 보여 주고 추가·삭제하는 화면.
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:game_kit/widgets/game_request_notice.dart';
-import 'package:game_mafia/game_assets.dart';
+import 'package:game_kit/recovery/widgets/game_request_notice.dart';
+import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
 import 'package:game_mafia/shared/models/game_composition.dart';
+import 'package:game_mafia/shared/models/game_rules.dart';
+import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
-import 'package:game_kit/widgets/game_setup_back_button.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
-import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/tablet/widgets/role_setup_card.dart';
 
-// ============================================================
-
-// ---------------------------------------------------------------------------
-// 역할 배치 (게임 시작 전)
-// ---------------------------------------------------------------------------
-/// 마피아는 게임을 시작할 때 **자리 배치 대신 역할 배치**를 합니다
-/// (시안 `1149:334`, 확정 2026-08).
-///
-/// 다른 게임은 누가 어디 앉는지가 중요해서 자리 배치 화면을 지나갑니다. 마피아는
-/// 자리보다 **이번 판에 어떤 신분이 들어가는지**가 판을 좌우하므로, 그 자리에
-/// 이 화면을 넣습니다. 자리는 참여 순서대로 자동 배정합니다.
-///
-/// 고르는 방식(확정 2026-08):
-///
-/// - 역할을 누르면 **색이 들어오고**(선택), 다시 누르면 회색으로 돌아갑니다.
-/// - 고른 역할은 **한 자리씩** 차지합니다.
-/// - 남은 자리는 **시민**이 채웁니다. 그래서 시민을 켜 두면 인원이 몇이든
-///   구성이 완성되고, 시민을 끄면 고른 역할 수가 인원과 정확히 같아야 합니다.
-/// - 마피아 진영이 최소 1명은 있어야 하고, 전원 마피아는 안 됩니다.
-///   (서버 `mafiaComposition`이 같은 규칙으로 한 번 더 막습니다)
-///
-/// 오른쪽 Tip은 **인원별 추천 조합**입니다([MafiaComposition.recommended]).
-/// 서버가 쓰는 표와 같은 값이라, 아무것도 건드리지 않고 시작하면 추천 조합으로
-/// 진행됩니다.
+/// 신분 한 종류를 세로 카드 한 장으로 표시합니다. 추천 인원수는 보존하고,
+/// 시민을 선택한 동안에는 남은 자리를 시민으로 채웁니다.
+/// 서버에 전달하는 구성과 검증 규칙은 기존 역할 배치 계약을 따릅니다.
 class MafiaRoleSetupScreen extends StatefulWidget {
   const MafiaRoleSetupScreen({
     super.key,
     required this.playerCount,
     required this.onConfirm,
     required this.onCancel,
+    this.onRulesChanged,
   });
 
-  /// 이번 판 인원입니다. 고른 역할의 합이 이 수와 맞아야 시작할 수 있습니다.
+  final ValueChanged<MafiaRules>? onRulesChanged;
   final int playerCount;
-
-  /// 고른 구성(`역할 id → 인원수`)으로 게임을 시작합니다.
-  ///
-  /// false를 돌려주면 화면에 그대로 머무릅니다(서버가 거절한 경우).
   final Future<bool> Function(Map<String, int> composition) onConfirm;
-
-  /// 뒤로 나갑니다(게임 선택 해제). 시안에 버튼이 없어 기기 뒤로 가기만 받습니다.
   final Future<bool> Function() onCancel;
 
-  // ---------------------------------------------------------------------------
-  // 시안 좌표 (1280 × 800)
-  // ---------------------------------------------------------------------------
   static const Size designSize = Size(1280, 800);
 
   @override
   State<MafiaRoleSetupScreen> createState() => _MafiaRoleSetupScreenState();
 }
 
-/// 시안 색입니다(스크린샷에서 그대로 읽은 값).
-abstract final class _Palette {
-  static const page = Color(0xFFFBFAF9);
-  static const panel = Colors.white;
-  static const citizenHeader = Color(0xFF72B4FF);
-  static const mafiaHeader = Color(0xFFFF8585);
-  static const neutralHeader = Color(0xFFF0FF4C);
-  static const divider = Color(0xFFE8E8E8);
-  static const shadow = Color(0x22000000);
-  static const confirm = Color(0xFF534AB7);
-  static const confirmOff = MafiaColors.disabled;
-
-  /// 고르지 않은 역할의 이름 색입니다(확정: 선택하면 검정, 아니면 회색).
-  static const unselectedText = MafiaColors.disabled;
-}
-
-/// 한 팀 판입니다. 시안은 색 띠(머리) 위에 흰 판이 얹혀 있습니다.
-@immutable
-class _Panel {
-  const _Panel({
-    required this.title,
-    required this.headerColor,
-    required this.titleColor,
-    required this.header,
-    required this.body,
-    required this.titleOffset,
-    required this.rowDividers,
-    required this.dividerLeft,
-  });
-
-  final String title;
-  final Color headerColor;
-  final Color titleColor;
-
-  /// 색 띠입니다(흰 판이 아래쪽을 덮어 위쪽만 보입니다).
-  final Rect header;
-  final Rect body;
-
-  /// 제목 글자 왼쪽·위 자리입니다.
-  final Offset titleOffset;
-
-  /// 줄을 나누는 가로선의 y입니다. 줄 높이도 이 값으로 정합니다.
-  final List<double> rowDividers;
-
-  /// 가로선이 시작하는 x입니다(시안이 판마다 조금 다릅니다).
-  final double dividerLeft;
-
-  /// [index]번째 줄의 가운데 y입니다.
-  double rowCenter(int index) {
-    final edges = [body.top, ...rowDividers, body.bottom];
-    return (edges[index] + edges[index + 1]) / 2;
-  }
-
-  /// [index]번째 줄에서 가로선이 닿는 오른쪽 x입니다.
-  double dividerRight(int index, List<_RoleSlot> slots) {
-    // 시안은 그 줄에 놓인 마지막 칸까지만 선을 긋습니다.
-    final row = slots.where((slot) => slot.row == index);
-    if (row.isEmpty) return body.right - 66;
-    final lastX = row
-        .map((slot) => slot.iconLeft)
-        .reduce((a, b) => a > b ? a : b);
-    return (lastX + 238).clamp(body.left, body.right - 66);
-  }
-}
-
-/// 판 안에 놓이는 역할 한 칸입니다(아이콘 80 × 80 + 이름).
-@immutable
-class _RoleSlot {
-  const _RoleSlot(this.roleId, {required this.iconLeft, required this.row});
-
-  final String roleId;
-
-  /// 시안 기준 아이콘 왼쪽 x입니다.
-  final double iconLeft;
-
-  /// 판 안에서 몇 번째 줄인지입니다.
-  final int row;
-}
-
 class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
-  // ---------------------------------------------------------------------------
-  // 시안 좌표
-  // ---------------------------------------------------------------------------
-  static const double _iconSize = 80;
+  static const _page = Color(0xFFF6F3E9);
+  static const _ink = Color(0xFF18353B);
+  static const _motion = Duration(milliseconds: 280);
 
-  /// 아이콘 오른쪽에서 이름까지의 거리입니다(시안 98 → 181).
-  static const double _labelGap = 83;
-
-  static const _citizenPanel = _Panel(
-    title: '시민팀',
-    headerColor: _Palette.citizenHeader,
-    titleColor: Colors.white,
-    header: Rect.fromLTWH(59, 51, 1188, 275.5),
-    body: Rect.fromLTWH(59, 111.4, 1188, 275.5),
-    titleOffset: Offset(108, 62),
-    rowDividers: [207.6, 292],
-    dividerLeft: 97.5,
-  );
-
-  static const _mafiaPanel = _Panel(
-    title: '마피아팀',
-    headerColor: _Palette.mafiaHeader,
-    titleColor: Colors.white,
-    header: Rect.fromLTWH(59, 430, 494, 275.5),
-    body: Rect.fromLTWH(59, 490.5, 494, 275.5),
-    titleOffset: Offset(108, 441),
-    rowDividers: [586, 670],
-    dividerLeft: 87,
-  );
-
-  static const _neutralPanel = _Panel(
-    title: '중립',
-    headerColor: _Palette.neutralHeader,
-    titleColor: Colors.black,
-    header: Rect.fromLTWH(465, 430, 531, 275.5),
-    body: Rect.fromLTWH(465, 490.4, 531, 275.5),
-    titleOffset: Offset(607, 441),
-    rowDividers: [586.6, 670.6],
-    dividerLeft: 512.4,
-  );
-
-  /// 시안에 그려진 역할과 자리입니다. **순서·자리 모두 시안 그대로**입니다.
-  ///
-  /// ⚠️ 시안은 `영매`와 `자경단원`의 그림이 서로 바뀌어 있습니다(십자선을 든
-  /// 그림이 영매 쪽에, 눈+불꽃이 자경단원 쪽에). 그림 뜻에 맞게 넣었습니다.
-  static const _citizenSlots = <_RoleSlot>[
-    _RoleSlot('citizen', iconLeft: 98, row: 0),
-    _RoleSlot('soldier', iconLeft: 340, row: 0),
-    _RoleSlot('reporter', iconLeft: 613, row: 0),
-    _RoleSlot('vigilante', iconLeft: 890, row: 0),
-    _RoleSlot('police', iconLeft: 98, row: 1),
-    _RoleSlot('politician', iconLeft: 340, row: 1),
-    _RoleSlot('gangster', iconLeft: 613, row: 1),
-    _RoleSlot('doctor', iconLeft: 98, row: 2),
-    _RoleSlot('medium', iconLeft: 340, row: 2),
-    _RoleSlot('detective', iconLeft: 613, row: 2),
+  // 기존 설정 화면에서 선택 가능했던 19종만 제공합니다.
+  static const _roleIds = [
+    'citizen',
+    'mafia',
+    'police',
+    'doctor',
+    'soldier',
+    'politician',
+    'medium',
+    'gangster',
+    'detective',
+    'reporter',
+    'vigilante',
+    'spy',
+    'beast',
+    'madam',
+    'thief',
+    'jester',
+    'executioner',
+    'serial_killer',
+    'cult_leader',
   ];
 
-  static const _mafiaSlots = <_RoleSlot>[
-    _RoleSlot('mafia', iconLeft: 98, row: 0),
-    _RoleSlot('madam', iconLeft: 340, row: 0),
-    _RoleSlot('spy', iconLeft: 98, row: 1),
-    _RoleSlot('thief', iconLeft: 340, row: 1),
-    _RoleSlot('beast', iconLeft: 98, row: 2),
-  ];
+  late Map<String, int> _selected;
+  bool _pickerOpen = false;
+  bool _isSubmitting = false;
+  bool _isCancelling = false;
+  String? _requestError;
+  String? _lastAdded;
+  MafiaRules _rules = const MafiaRules();
+  String _preset = '확장';
+  String? _editingRole;
+  Timer? _editTimer;
+  final Set<int> _heldPointers = {};
+  double _dragOffset = 0;
 
-  static const _neutralSlots = <_RoleSlot>[
-    _RoleSlot('jester', iconLeft: 613, row: 0),
-    _RoleSlot('cult_leader', iconLeft: 771, row: 0),
-    _RoleSlot('executioner', iconLeft: 613, row: 1),
-    _RoleSlot('serial_killer', iconLeft: 613, row: 2),
-  ];
-
-  /// 오른쪽 Tip 카드와 시작 버튼입니다.
-  static const Rect _tipCard = Rect.fromLTWH(1040, 430, 208, 257);
-  static const Rect _tipIcon = Rect.fromLTWH(1048, 441, 41, 41);
-  static const Offset _tipTitle = Offset(1093, 441);
-  static const Offset _tipSubtitle = Offset(1069, 492);
-  static const Rect _tipList = Rect.fromLTWH(1069, 510, 168, 168);
-  static const Rect _confirmButton = Rect.fromLTWH(1039, 702, 208, 64);
-
-  /// 남은 자리를 채우는 역할입니다. 이 역할만 인원수가 1보다 커질 수 있습니다.
-  static const String _fillerRoleId = 'citizen';
-
-  /// **끌 수 없는 필수 신분**입니다(확정 2026-08).
-  ///
-  /// 마피아가 없으면 아무 일도 일어나지 않는 판이 되고, 시민이 없으면 남은
-  /// 자리를 채울 역할이 없어 인원과 딱 맞는 조합만 시작할 수 있습니다. 둘은
-  /// 게임의 바탕이라 회색으로 되돌릴 수 없게 잠가 둡니다.
-  static const Set<String> _requiredRoleIds = {'mafia', _fillerRoleId};
-
-  /// 지금 고른 역할입니다.
-  late Set<String> _selected;
+  bool get _busy => _isSubmitting || _isCancelling;
 
   @override
   void initState() {
     super.initState();
-    // 아무것도 건드리지 않고 시작하면 추천 조합으로 진행됩니다.
-    _selected = {..._recommended.keys, ..._requiredRoleIds};
+    _resetRecommended();
   }
 
-  Map<String, int> get _recommended =>
-      MafiaComposition.recommended[widget.playerCount] ??
-      const {'mafia': 1, 'citizen': 3};
+  @override
+  void didUpdateWidget(covariant MafiaRoleSetupScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playerCount != widget.playerCount) {
+      _endEditing();
+      _resetRecommended();
+      _preset = '확장';
+      _pickerOpen = false;
+      _lastAdded = null;
+      _requestError = null;
+    }
+  }
 
-  /// 시민(채우는 역할)을 뺀, 한 자리씩 차지하는 역할 수입니다.
-  int get _specialCount => _selected.where((id) => id != _fillerRoleId).length;
+  @override
+  void dispose() {
+    _editTimer?.cancel();
+    super.dispose();
+  }
 
-  /// 시민이 채우게 되는 자리 수입니다.
-  int get _fillerCount => _selected.contains(_fillerRoleId)
-      ? widget.playerCount - _specialCount
-      : 0;
+  void _endEditing() {
+    _editTimer?.cancel();
+    _editingRole = null;
+    _dragOffset = 0;
+  }
 
-  /// 지금 고른 구성입니다(`역할 id → 인원수`).
+  void _scheduleEditingEnd() {
+    _editTimer?.cancel();
+    if (_editingRole == null || _heldPointers.isNotEmpty) return;
+    _editTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(_endEditing);
+    });
+  }
+
+  void _beginEditing(String id) {
+    if (_busy || id == 'citizen') return;
+    _editTimer?.cancel();
+    setState(() {
+      if (_editingRole != id) _dragOffset = 0;
+      _editingRole = id;
+      _pickerOpen = false;
+    });
+    _scheduleEditingEnd();
+  }
+
+  int _maximumCount(String id) =>
+      widget.playerCount -
+      (_specialCount - (_selected[id] ?? 0)) -
+      (_selected.containsKey('citizen') ? 1 : 0);
+
+  void _changeCount(String id, int delta) {
+    if (_busy || id == 'citizen' || !_selected.containsKey(id)) return;
+    final next = (_selected[id]! + delta).clamp(1, _maximumCount(id));
+    if (next != _selected[id]) {
+      setState(() {
+        _preset = '자유';
+        _selected[id] = next;
+        _requestError = null;
+      });
+    }
+    _scheduleEditingEnd();
+  }
+
+  void _dragCount(String id, DragUpdateDetails details) {
+    if (_busy || _editingRole != id) return;
+    // 숫자 열이 손가락을 따라 움직입니다. 위의 큰 숫자를 아래로 끌어 선택합니다.
+    _dragOffset += details.delta.dy;
+    // 한 칸마다 44 logical pixels. 경계에서 쌓인 이동량은 남기지 않습니다.
+    final steps = (_dragOffset / 44).truncate();
+    if (steps == 0) return;
+    _dragOffset -= steps * 44;
+    _changeCount(id, steps);
+  }
+
+  Widget _buildSelectedCard(String id) {
+    final editable = !_busy && id != 'citizen';
+    final count = id == 'citizen' ? _citizenCount : _selected[id]!;
+    return Listener(
+      onPointerDown: (event) {
+        _heldPointers.add(event.pointer);
+        _editTimer?.cancel();
+      },
+      onPointerUp: (event) {
+        _heldPointers.remove(event.pointer);
+        _scheduleEditingEnd();
+      },
+      onPointerCancel: (event) {
+        _heldPointers.remove(event.pointer);
+        _scheduleEditingEnd();
+      },
+      child: Semantics(
+        excludeSemantics: true,
+        label: '${MafiaRoles.find(id)!.displayName} 인원',
+        value: '$count',
+        increasedValue: editable && count < _maximumCount(id)
+            ? '${count + 1}'
+            : null,
+        decreasedValue: editable && count > 1 ? '${count - 1}' : null,
+        onIncrease: editable && count < _maximumCount(id)
+            ? () {
+                _beginEditing(id);
+                _changeCount(id, 1);
+              }
+            : null,
+        onDecrease: editable && count > 1
+            ? () {
+                _beginEditing(id);
+                _changeCount(id, -1);
+              }
+            : null,
+        child: GestureDetector(
+          key: ValueKey('edit-role-$id'),
+          behavior: HitTestBehavior.opaque,
+          onTap: editable ? () => _beginEditing(id) : null,
+          onVerticalDragStart: editable
+              ? (_) {
+                  _dragOffset = 0;
+                  _beginEditing(id);
+                }
+              : null,
+          onVerticalDragUpdate: editable
+              ? (details) => _dragCount(id, details)
+              : null,
+          onVerticalDragEnd: editable ? (_) => _scheduleEditingEnd() : null,
+          onVerticalDragCancel: editable ? _scheduleEditingEnd : null,
+          child: MafiaSetupRoleCard(
+            role: MafiaRoles.find(id)!,
+            count: count,
+            highlighted: _lastAdded == id,
+            editing: _editingRole == id,
+            maximumCount: id == 'citizen' ? count : _maximumCount(id),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _resetRecommended() {
+    final recommended =
+        MafiaComposition.recommended[widget.playerCount] ??
+        const {'mafia': 1, 'citizen': 3};
+    _selected = {
+      if (recommended.containsKey('citizen'))
+        'citizen': recommended['citizen']!,
+      for (final entry in recommended.entries)
+        if (entry.key != 'citizen') entry.key: entry.value,
+    };
+  }
+
+  int get _specialCount => _selected.entries
+      .where((entry) => entry.key != 'citizen')
+      .fold(0, (sum, entry) => sum + entry.value);
+
+  int get _citizenCount => math.max(0, widget.playerCount - _specialCount);
+
+  bool _canAddRole(String id) {
+    if (_selected.containsKey(id)) return false;
+    // 시민이 선택돼 있으면 최소 한 자리를 남깁니다. 추천 마피아 2명도
+    // 카드 종류 수가 아니라 실제 배정 인원수에 포함합니다.
+    final citizenMinimum = _selected.containsKey('citizen') || id == 'citizen'
+        ? 1
+        : 0;
+    final additionalCount = id == 'citizen' ? 0 : 1;
+    return _specialCount + additionalCount + citizenMinimum <=
+        widget.playerCount;
+  }
+
+  bool get _canAddAnyRole => _roleIds.any(_canAddRole);
+
   Map<String, int> get _composition => {
-    for (final id in _selected)
-      if (id != _fillerRoleId) id: 1,
-    if (_fillerCount > 0) _fillerRoleId: _fillerCount,
+    for (final entry in _selected.entries)
+      if (entry.key != 'citizen') entry.key: entry.value,
+    if (_selected.containsKey('citizen') && _citizenCount > 0)
+      'citizen': _citizenCount,
   };
 
-  /// 이 구성으로 시작할 수 있는지입니다. 서버와 같은 규칙입니다.
-  bool get _canStart {
-    final composition = _composition;
-    final total = composition.values.fold<int>(0, (sum, n) => sum + n);
-    if (total != widget.playerCount) return false;
-    var mafiaCount = 0;
-    for (final entry in composition.entries) {
-      if (MafiaRoles.find(entry.key)?.faction == MafiaFaction.mafia) {
-        mafiaCount += entry.value;
-      }
+  String? get _compositionError {
+    if (!MafiaComposition.recommended.containsKey(widget.playerCount)) {
+      return '마피아는 4~12명이 함께할 수 있어요.';
     }
-    return mafiaCount >= 1 && mafiaCount < widget.playerCount;
+    final composition = _composition;
+    final total = composition.values.fold(0, (sum, count) => sum + count);
+    if (total > widget.playerCount) return '참여 인원보다 신분이 많아요. 카드를 삭제해 주세요.';
+    if (total < widget.playerCount) return '신분이 부족해요. 시민이나 다른 신분을 추가해 주세요.';
+    final mafiaCount = composition.entries
+        .where(
+          (entry) => MafiaRoles.find(entry.key)?.faction == MafiaFaction.mafia,
+        )
+        .fold(0, (sum, entry) => sum + entry.value);
+    if (mafiaCount == 0) return '마피아팀 신분을 하나 이상 추가해 주세요.';
+    final competingNeutral = composition.keys.any(
+      (id) => ['serial_killer', 'cult_leader', 'cultist'].contains(id),
+    );
+    if (mafiaCount >= widget.playerCount ||
+        (!competingNeutral && mafiaCount * 2 >= widget.playerCount)) {
+      return '시작부터 마피아 승리 조건입니다. 인원을 줄여 주세요.';
+    }
+    return null;
   }
 
-  bool _isSubmitting = false;
+  void _add(String id) {
+    if (_busy || !_canAddRole(id)) return;
+    setState(() {
+      _endEditing();
+      _preset = '자유';
+      _selected[id] = 1;
+      _lastAdded = id;
+      _pickerOpen = false;
+      _requestError = null;
+    });
+  }
 
-  /// 뒤로 가기를 처리하는 중인지입니다(자리 배치 화면과 같은 동작).
-  bool _isCancelling = false;
-  String? _requestError;
+  void _remove(String id) {
+    if (_busy) return;
+    setState(() {
+      _endEditing();
+      _preset = '자유';
+      _selected.remove(id);
+      _lastAdded = null;
+      _requestError = null;
+    });
+  }
 
-  /// 뒤로 갑니다. 게임 선택이 풀리면 화면을 닫습니다.
+  int _factionCount(MafiaFaction faction) => _composition.entries
+      .where((e) => MafiaRoles.find(e.key)?.faction == faction)
+      .fold(0, (sum, e) => sum + e.value);
+
+  String? get _balanceWarning {
+    if (_compositionError != null) return null;
+    if (_factionCount(MafiaFaction.mafia) * 3 > widget.playerCount) {
+      return '마피아 진영 비중이 높습니다';
+    }
+    if (_composition.keys.length > 6) return '특수 역할이 많은 숙련자 구성입니다';
+    for (final id in ['police', 'doctor', 'reporter', 'detective']) {
+      if ((_selected[id] ?? 0) > 1) {
+        return '${MafiaRoles.find(id)!.displayName}은 1명을 권장합니다';
+      }
+    }
+    return null;
+  }
+
+  void _choosePreset(String preset) {
+    if (_busy) return;
+    setState(() {
+      _endEditing();
+      _preset = preset;
+      _pickerOpen = false;
+      if (preset == '기본') {
+        _selected = Map.of(MafiaComposition.basicFor(widget.playerCount));
+      } else if (preset == '확장') {
+        _resetRecommended();
+      }
+      _lastAdded = null;
+      _requestError = null;
+    });
+  }
+
+  Future<void> _showRules() async {
+    final result = await showDialog<MafiaRules>(
+      context: context,
+      builder: (context) {
+        var draft = _rules;
+        return StatefulBuilder(
+          builder: (context, update) => AlertDialog(
+            title: const Text('이번 판 규칙'),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SwitchListTile(
+                      title: const Text('최후 변론과 찬반 투표'),
+                      subtitle: const Text('30초 변론 후 1인 1표 · 투표권자 과반수 찬성 시 처형'),
+                      value: draft.trial,
+                      onChanged: (value) => update(
+                        () => draft = MafiaRules(
+                          trial: value,
+                          executionReveal: draft.executionReveal,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('처형된 사람의 신분 공개', style: TextStyle(fontSize: 20)),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'role', label: Text('직업')),
+                        ButtonSegment(value: 'faction', label: Text('진영만')),
+                        ButtonSegment(value: 'hidden', label: Text('비공개')),
+                      ],
+                      selected: {draft.executionReveal},
+                      onSelectionChanged: (value) => update(
+                        () => draft = MafiaRules(
+                          trial: draft.trial,
+                          executionReveal: value.single,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      '이번 판 역할',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    for (final entry in _composition.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          '${MafiaRoles.find(entry.key)!.displayName} ${entry.value}명 — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                          style: const TextStyle(fontSize: 17),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, draft),
+                child: const Text('적용'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result != null && mounted) setState(() => _rules = result);
+  }
+
   Future<void> _cancel() async {
-    if (_isSubmitting || _isCancelling || !mounted) return;
+    if (_busy || !mounted) return;
+    if (_editingRole != null) {
+      setState(_endEditing);
+      return;
+    }
+    if (_pickerOpen) {
+      setState(() => _pickerOpen = false);
+      return;
+    }
     setState(() => _isCancelling = true);
     try {
       final canLeave = await widget.onCancel();
@@ -309,334 +447,368 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   }
 
   Future<void> _confirm() async {
-    if (_isSubmitting || _isCancelling || !_canStart) return;
+    if (_busy || _compositionError != null) return;
     setState(() {
+      _endEditing();
       _isSubmitting = true;
       _requestError = null;
     });
     var started = false;
     try {
+      widget.onRulesChanged?.call(_rules);
       started = await widget.onConfirm(_composition);
       if (!started) _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
     } catch (_) {
       _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
     } finally {
-      // 콜백이 실패해도 버튼이 영구 비활성으로 남지 않도록 풀어 줍니다.
       if (mounted && !started) setState(() => _isSubmitting = false);
     }
   }
 
-  void _toggle(String roleId) {
-    // 전송 중 구성을 바꾸면 화면의 선택과 서버에 보낸 구성이 달라집니다.
-    if (_isSubmitting || _isCancelling) return;
-    // 필수 신분은 끌 수 없습니다. 눌러도 아무 일도 일어나지 않습니다.
-    if (_requiredRoleIds.contains(roleId)) return;
-    setState(() {
-      if (!_selected.remove(roleId)) _selected.add(roleId);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final error = _compositionError ?? _balanceWarning;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_cancel());
       },
       child: Scaffold(
-        backgroundColor: _Palette.page,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final size = Size(
-              constraints.hasBoundedWidth
-                  ? constraints.maxWidth
-                  : MafiaRoleSetupScreen.designSize.width,
-              constraints.hasBoundedHeight
-                  ? constraints.maxHeight
-                  : MafiaRoleSetupScreen.designSize.height,
-            );
-            final design = MafiaRoleSetupScreen.designSize;
-            final scale =
-                (size.width / design.width) < (size.height / design.height)
-                ? size.width / design.width
-                : size.height / design.height;
-            // 화면 비율이 시안과 달라도 전체를 가운데로 모읍니다.
-            final dx = (size.width - design.width * scale) / 2;
-            final dy = (size.height - design.height * scale) / 2;
-
-            Widget place(Rect rect, Widget child) => Positioned(
-              left: dx + rect.left * scale,
-              top: dy + rect.top * scale,
-              width: rect.width * scale,
-              height: rect.height * scale,
-              child: child,
-            );
-
-            return Stack(
-              children: [
-                ..._buildPanel(_citizenPanel, _citizenSlots, scale, place),
-                // 시안은 두 판이 x 465~553에서 겹치고, **마피아팀이 위**에
-                // 그려집니다. 순서를 바꾸면 마담·도둑 이름이 중립 판에 가립니다.
-                ..._buildPanel(_neutralPanel, _neutralSlots, scale, place),
-                ..._buildPanel(_mafiaPanel, _mafiaSlots, scale, place),
-                ..._buildTip(scale, place),
-                place(_confirmButton, _buildConfirmButton(scale)),
-                if (_requestError != null)
-                  GameRequestNotice(message: _requestError),
-                // 뒤로가기는 자리 배치 화면과 **같은 버튼·같은 자리**입니다.
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: GameSetupBackButton.rowPadding,
-                      child: SizedBox(
-                        height: GameSetupBackButton.rowHeight,
-                        child: GameSetupBackButton(
-                          isBusy: _isCancelling,
-                          onPressed: () => unawaited(_cancel()),
+        backgroundColor: _page,
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 76,
+                      child: Row(
+                        children: [
+                          GameSetupBackButton(
+                            isBusy: _busy,
+                            onPressed: () => unawaited(_cancel()),
+                          ),
+                          const Expanded(
+                            child: Text(
+                              '신분 선택',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${widget.playerCount}명',
+                            semanticsLabel: '참여 인원 ${widget.playerCount}명',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final preset in ['기본', '확장', '자유'])
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: SizedBox(
+                                    width: 44,
+                                    child: Text(
+                                      preset,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                  selected: _preset == preset,
+                                  onSelected: _busy
+                                      ? null
+                                      : (_) => _choosePreset(preset),
+                                ),
+                              ),
+                            const SizedBox(width: 16),
+                            Text(
+                              '시민 진영 ${_factionCount(MafiaFaction.citizen)}  ·  마피아 진영 ${_factionCount(MafiaFaction.mafia)}  ·  중립 ${_factionCount(MafiaFaction.neutral)}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            TextButton.icon(
+                              key: const ValueKey('setup-rules'),
+                              onPressed: _busy ? null : _showRules,
+                              icon: const Icon(Icons.tune),
+                              label: const Text(
+                                '이번 판 규칙',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Expanded(child: _buildCards()),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: error == null
+                              ? const SizedBox.shrink()
+                              : Text(
+                                  error,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF9B3E30),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 16),
+                        FilledButton(
+                          key: const ValueKey('confirm-roles'),
+                          onPressed: !_busy && _compositionError == null
+                              ? _confirm
+                              : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _ink,
+                            foregroundColor: _page,
+                            textStyle: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            minimumSize: const Size(152, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _page,
+                                  ),
+                                )
+                              : const Text('설정 완료'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+            if (_requestError != null)
+              GameRequestNotice(message: _requestError),
+          ],
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // 팀 판
-  // ---------------------------------------------------------------------------
-  List<Widget> _buildPanel(
-    _Panel panel,
-    List<_RoleSlot> slots,
-    double scale,
-    Widget Function(Rect, Widget) place,
-  ) {
-    final radius = BorderRadius.circular(24 * scale);
-    return [
-      // 색 띠 → 흰 판 순서로 얹으면 시안처럼 위쪽만 색이 남습니다.
-      place(
-        panel.header,
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: panel.headerColor,
-            borderRadius: radius,
-          ),
-        ),
-      ),
-      place(
-        Rect.fromLTWH(
-          panel.titleOffset.dx,
-          panel.titleOffset.dy,
-          panel.header.right - panel.titleOffset.dx,
-          48,
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            panel.title,
-            style: TextStyle(
-              color: panel.titleColor,
-              fontSize: 28 * scale,
-              fontWeight: FontWeight.w700,
+  Widget _buildCards() => LayoutBuilder(
+    builder: (context, constraints) {
+      const gap = 6.0;
+      const rowGap = 12.0;
+      const removeHeight = 44.0;
+      final width = constraints.maxWidth;
+      final height = constraints.maxHeight;
+      final closedRailWidth = (width * .14).clamp(76.0, 180.0);
+      final railWidth = _pickerOpen
+          ? (width * .32).clamp(190.0, 340.0)
+          : closedRailWidth;
+      final gridWidth = math.max(0.0, width - railWidth - gap);
+      final ids = _selected.keys.toList();
+      // 선택 목록을 여닫을 때 줄 수가 출렁이지 않도록 닫힌 상태 폭으로 판정합니다.
+      // 넓은 화면에서도 한 줄에 7종 이상 몰아 그림을 가늘게 자르지 않습니다.
+      const maxSingleRowCards = 6;
+      const minSingleCardWidth = 160.0;
+      final singleWidth =
+          (width - closedRailWidth - gap * math.max(1, ids.length)) /
+          math.max(1, ids.length);
+      final rows =
+          ids.length > 1 &&
+              (ids.length > maxSingleRowCards ||
+                  singleWidth < minSingleCardWidth)
+          ? 2
+          : 1;
+      final columns = math.max(1, (ids.length / rows).ceil());
+      final cardWidth = math.max(
+        0.0,
+        (gridWidth - gap * (columns - 1)) / columns,
+      );
+      final rowHeight = (height - rowGap * (rows - 1)) / rows;
+      final railHeight = math.max(0.0, height - removeHeight);
+
+      return Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          if (ids.isEmpty)
+            Positioned(
+              left: 0,
+              top: 0,
+              width: gridWidth,
+              height: height,
+              child: const Center(child: Text('오른쪽 +에서 신분을 추가해 주세요.')),
             ),
-          ),
-        ),
-      ),
-      place(
-        panel.body,
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: _Palette.panel,
-            borderRadius: radius,
-            boxShadow: [
-              BoxShadow(
-                color: _Palette.shadow,
-                blurRadius: 6 * scale,
-                offset: Offset(0, 2 * scale),
+          for (var index = 0; index < ids.length; index++)
+            AnimatedPositioned(
+              key: ValueKey('selected-role-${ids[index]}'),
+              duration: _motion,
+              curve: Curves.easeInOutCubic,
+              left: (index % columns) * (cardWidth + gap),
+              top: (index ~/ columns) * (rowHeight + rowGap),
+              width: cardWidth,
+              height: rowHeight,
+              child: Column(
+                children: [
+                  Expanded(child: _buildSelectedCard(ids[index])),
+                  SizedBox(
+                    height: removeHeight,
+                    child: IconButton(
+                      key: ValueKey('remove-role-${ids[index]}'),
+                      tooltip: '${MafiaRoles.find(ids[index])!.displayName} 삭제',
+                      onPressed: _busy ? null : () => _remove(ids[index]),
+                      icon: const Icon(
+                        Icons.cancel_outlined,
+                        size: 22,
+                        color: _ink,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
-      // 줄을 나누는 가로선입니다.
-      for (var index = 0; index < panel.rowDividers.length; index += 1)
-        place(
-          Rect.fromLTWH(
-            panel.dividerLeft,
-            panel.rowDividers[index],
-            panel.dividerRight(index, slots) - panel.dividerLeft,
-            1,
-          ),
-          const ColoredBox(color: _Palette.divider),
-        ),
-      for (final slot in slots) _buildSlot(panel, slots, slot, scale, place),
-    ];
-  }
-
-  Widget _buildSlot(
-    _Panel panel,
-    List<_RoleSlot> slots,
-    _RoleSlot slot,
-    double scale,
-    Widget Function(Rect, Widget) place,
-  ) {
-    final role = MafiaRoles.find(slot.roleId);
-    final selected = _selected.contains(slot.roleId);
-    final centerY = panel.rowCenter(slot.row);
-    // 이름이 다음 칸까지 넘치지 않게, 같은 줄의 다음 칸까지를 폭으로 씁니다.
-    final sameRow = slots.where((other) => other.row == slot.row).toList()
-      ..sort((a, b) => a.iconLeft.compareTo(b.iconLeft));
-    final nextIndex = sameRow.indexOf(slot) + 1;
-    final right = nextIndex < sameRow.length
-        ? sameRow[nextIndex].iconLeft - 12
-        : panel.body.right - 24;
-
-    return place(
-      Rect.fromLTWH(
-        slot.iconLeft,
-        centerY - _iconSize / 2,
-        right - slot.iconLeft,
-        _iconSize,
-      ),
-      _RoleTile(
-        role: role,
-        selected: selected,
-        isRequired: _requiredRoleIds.contains(slot.roleId),
-        scale: scale,
-        iconSize: _iconSize,
-        labelGap: _labelGap,
-        onTap: () => _toggle(slot.roleId),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tip: 인원별 추천 조합
-  // ---------------------------------------------------------------------------
-  List<Widget> _buildTip(double scale, Widget Function(Rect, Widget) place) {
-    final entries = _recommended.entries.toList();
-    return [
-      place(
-        _tipCard,
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: _Palette.panel,
-            borderRadius: BorderRadius.circular(16 * scale),
-            boxShadow: [
-              BoxShadow(
-                color: _Palette.shadow,
-                blurRadius: 6 * scale,
-                offset: Offset(0, 2 * scale),
-              ),
-            ],
-          ),
-        ),
-      ),
-      place(_tipIcon, _tipBulb()),
-      place(
-        Rect.fromLTWH(_tipTitle.dx, _tipTitle.dy, 120, 44),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Tip',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 28 * scale,
-              fontWeight: FontWeight.w700,
             ),
+          AnimatedPositioned(
+            key: const ValueKey('role-add-rail'),
+            duration: _motion,
+            curve: Curves.easeInOutCubic,
+            left: gridWidth + gap,
+            top: 0,
+            width: railWidth,
+            height: railHeight,
+            child: _pickerOpen ? _buildPicker() : _buildAddButton(),
           ),
-        ),
-      ),
-      place(
-        Rect.fromLTWH(_tipSubtitle.dx, _tipSubtitle.dy, 170, 18),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            '${widget.playerCount}인원수일때 추천하는 조합',
-            style: TextStyle(color: Colors.black, fontSize: 11 * scale),
-          ),
-        ),
-      ),
-      place(
-        _tipList,
-        // 확정(2026-08): 아이콘만 보여 줍니다(`x1` 같은 숫자는 빼기로 했습니다).
-        // 인원이 많으면 추천 역할도 늘어나므로 넘치지 않게 담습니다.
-        SingleChildScrollView(
-          child: Wrap(
-            spacing: 10 * scale,
-            runSpacing: 8 * scale,
-            children: [
-              for (final entry in entries)
-                _TipIcon(role: MafiaRoles.find(entry.key), scale: scale),
-            ],
-          ),
-        ),
-      ),
-    ];
-  }
-
-  Widget _tipBulb() => Assets.games.mafia.images.icons.iconTipBulb.game.image(
-    fit: BoxFit.contain,
-    filterQuality: FilterQuality.high,
+        ],
+      );
+    },
   );
 
-  // ---------------------------------------------------------------------------
-  // 설정 완료
-  // ---------------------------------------------------------------------------
-  Widget _buildConfirmButton(double scale) {
-    final enabled = _canStart && !_isSubmitting && !_isCancelling;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: '설정 완료',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? _confirm : null,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: enabled ? _Palette.confirm : _Palette.confirmOff,
-            borderRadius: BorderRadius.circular(14 * scale),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: _Palette.shadow,
-                      blurRadius: 8 * scale,
-                      offset: Offset(0, 3 * scale),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              '설정 완료',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20 * scale,
-                fontWeight: FontWeight.w700,
-              ),
+  Widget _buildAddButton() => Material(
+    color: const Color(0xFFEFECE2),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(5),
+      side: const BorderSide(color: Color(0xFFD4CFC0)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      key: const ValueKey('add-role'),
+      onTap: _busy || !_canAddAnyRole
+          ? null
+          : () => setState(() {
+              _endEditing();
+              _pickerOpen = true;
+            }),
+      child: Center(
+        child: Icon(
+          Icons.add,
+          size: 56,
+          color: _busy || !_canAddAnyRole ? const Color(0xFFB9B6AE) : _ink,
+          semanticLabel: '신분 추가',
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildPicker() {
+    final available = _roleIds
+        .where((id) => !_selected.containsKey(id))
+        .toList();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFECE2),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: const Color(0xFFD4CFC0)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '신분 추가',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('close-role-picker'),
+                  tooltip: '신분 목록 닫기',
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() => _pickerOpen = false),
+                  icon: const Icon(Icons.close, size: 20),
+                ),
+              ],
             ),
           ),
-        ),
+          Expanded(
+            child: available.isEmpty
+                ? const Center(
+                    child: Text(
+                      '모든 신분을 추가했어요.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  )
+                : GridView.builder(
+                    key: const ValueKey('role-picker-grid'),
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: .64,
+                        ),
+                    itemCount: available.length,
+                    itemBuilder: (context, index) {
+                      final role = MafiaRoles.find(available[index])!;
+                      return Semantics(
+                        button: true,
+                        enabled: !_busy && _canAddRole(role.id),
+                        label: '${role.displayName} 추가',
+                        child: GestureDetector(
+                          key: ValueKey('pick-role-${role.id}'),
+                          onTap: _busy || !_canAddRole(role.id)
+                              ? null
+                              : () => _add(role.id),
+                          child: MafiaSetupRoleCard(role: role),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// 아이콘 색 입히기
-// ---------------------------------------------------------------------------
-/// 역할 아이콘에 입힐 색 행렬입니다. [t]가 1이면 원색, 0이면 옅은 회색조입니다.
-///
-/// ⚠️ **투명도를 [Opacity]로 따로 겹치지 않습니다.** 색 필터 위에 투명도를
-/// 겹치면 Impeller가 `SetInheritedOpacity ... CanAcceptOpacity returns false`로
-/// 경고를 쏟습니다 — 색 필터는 투명도를 물려받을 수 없습니다. 그래서 투명도까지
-/// 이 행렬의 알파 칸에 함께 넣어 **필터 한 겹**으로 끝냅니다.
+// 기존 색 필터 helper를 사용하는 외부 테스트와의 호환성을 유지합니다.
 @visibleForTesting
 List<double> mafiaRoleIconTint(double t) {
   // 사람 눈이 느끼는 밝기 비율입니다(회색조로 만들 때 씁니다).
@@ -654,116 +826,4 @@ List<double> mafiaRoleIconTint(double t) {
     toColor(red, 0), toColor(green, 0), toColor(blue, 1), 0, 0, //
     0, 0, 0, alpha, 0, //
   ];
-}
-
-// ---------------------------------------------------------------------------
-// 역할 한 칸
-// ---------------------------------------------------------------------------
-/// 아이콘 + 이름입니다. 확정(2026-08): **고르면 색이 들어오고, 고르지 않으면
-/// 회색**입니다. 이름도 고르면 검정, 아니면 회색입니다.
-///
-/// 마피아·시민처럼 [isRequired]인 신분은 **끌 수 없습니다.** 늘 색이 들어와
-/// 있고 눌러도 회색으로 돌아가지 않습니다.
-class _RoleTile extends StatelessWidget {
-  const _RoleTile({
-    required this.role,
-    required this.selected,
-    required this.scale,
-    required this.iconSize,
-    required this.labelGap,
-    required this.onTap,
-    this.isRequired = false,
-  });
-
-  final MafiaRole? role;
-  final bool selected;
-  final double scale;
-  final double iconSize;
-  final double labelGap;
-  final VoidCallback onTap;
-
-  /// 끌 수 없는 필수 신분인지입니다.
-  final bool isRequired;
-
-  static const Duration _fade = Duration(milliseconds: 180);
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = role?.icon;
-    final side = iconSize * scale;
-
-    return Semantics(
-      button: !isRequired,
-      selected: selected,
-      enabled: !isRequired,
-      label: isRequired
-          ? '${role?.displayName ?? ''} (필수 신분)'
-          : role?.displayName ?? '',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        // 필수 신분은 누름을 받지 않습니다.
-        onTap: isRequired ? null : onTap,
-        child: Row(
-          children: [
-            SizedBox(
-              width: side,
-              height: side,
-              child: icon == null
-                  ? const SizedBox.shrink()
-                  // 고른 상태·안 고른 상태 모두 같은 필터 한 겹을 유지합니다.
-                  // 겹 구조가 바뀌면 그림이 한 프레임 튑니다.
-                  : TweenAnimationBuilder<double>(
-                      tween: Tween<double>(end: selected ? 1 : 0),
-                      duration: _fade,
-                      builder: (context, t, child) => ColorFiltered(
-                        colorFilter: ColorFilter.matrix(mafiaRoleIconTint(t)),
-                        child: child,
-                      ),
-                      child: icon.image(fit: BoxFit.contain),
-                    ),
-            ),
-            SizedBox(width: (labelGap - iconSize) * scale),
-            Expanded(
-              child: AnimatedDefaultTextStyle(
-                duration: _fade,
-                style: TextStyle(
-                  color: selected ? Colors.black : _Palette.unselectedText,
-                  fontSize: 28 * scale,
-                  fontWeight: FontWeight.w700,
-                ),
-                child: Text(
-                  role?.displayName ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tip 카드의 추천 역할 하나입니다.
-///
-/// 확정(2026-08): 아이콘만 둡니다. `x1` 같은 숫자는 빼기로 했습니다.
-class _TipIcon extends StatelessWidget {
-  const _TipIcon({required this.role, required this.scale});
-
-  final MafiaRole? role;
-  final double scale;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = role?.icon;
-    final side = 40 * scale;
-    return SizedBox(
-      width: side,
-      height: side,
-      child: icon == null
-          ? const SizedBox.shrink()
-          : icon.image(fit: BoxFit.contain),
-    );
-  }
 }

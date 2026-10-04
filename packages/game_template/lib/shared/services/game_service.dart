@@ -6,10 +6,11 @@
 // 즉, 게임 로직이 서버 접근 방식을 한곳에서 사용하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 
 import 'command_service.dart';
 import 'query_service.dart';
+
 // ============================================================
 
 /// Command/Query 서비스를 묶는 파사드입니다. 모든 게임이 이 모양을 따릅니다.

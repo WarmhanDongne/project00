@@ -72,16 +72,16 @@ game_common_<영역>_<동작>   예: game_common_interruption_expire
 
 | 함수 | 하는 일 |
 | --- | --- |
-| `game_mafia_start_game` | 역할 배분하고 게임 시작. 역할 구성은 태블릿이 고른 값 |
+| `game_mafia_start_game` | 역할 배분하고 게임 시작. 태블릿이 역할 구성·변론·처형 공개 규칙을 선택 |
 | `game_mafia_confirm_role` | 내 역할 카드를 확인했다고 알림. 전원 확인하면 곧바로 밤으로 |
 | `game_mafia_complete_role_reveal` | 태블릿 배분 연출 종료. **미확인자가 있어도 넘어감** — 한 명 때문에 판이 멈추지 않게 |
-| `game_mafia_submit_night_action` | 밤 행동 대상 제출. 마감 전엔 여러 번 바꿀 수 있음 |
+| `game_mafia_submit_night_action` | 밤 행동 대상 1회 확정. 동일 commandId 재시도만 기존 응답 반환 |
 | `game_mafia_timeout_night` | 밤 마감. 안 고른 사람은 아무 일도 안 한 것으로 처리 |
 | `game_mafia_complete_morning` | 아침 발표 연출 종료. **여기서 첫 번째 승패 판정** |
 | `game_mafia_end_discussion` | 토론 조기 종료에 한 표. 생존자 과반수가 누르면 투표로 |
 | `game_mafia_timeout_day` | 토론 시간 종료 → 투표 |
-| `game_mafia_submit_vote` | 비밀 투표. 누가 누굴 찍었는지는 `server` 에만, public 엔 제출 인원수만 |
-| `game_mafia_timeout_vote` | 투표 마감. 미제출은 기권 |
+| `game_mafia_submit_vote` | 비밀 지목 투표. 재판 옵션에서는 `execute`로 찬반 투표. 선택 내용은 서버와 본인만 읽음 |
+| `game_mafia_timeout_vote` | 지목·변론·찬반 단계의 마감 처리. 미제출은 기권 |
 | `game_mafia_complete_vote_result` | 개표·처형 연출 종료. **여기서 두 번째 승패 판정** |
 | `game_mafia_end_game` | 게임 종료 |
 | `game_mafia_leave_game` | 방에서는 즉시 나가되, 사망자는 바로 / 생존자는 남은 사람 투표 뒤 제외 |

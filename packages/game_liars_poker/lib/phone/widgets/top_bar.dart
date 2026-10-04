@@ -4,9 +4,10 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
-import 'package:game_kit/widgets/phone_game_top_bar.dart';
+import 'package:game_kit/phone/widgets/game_top_bar.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
+
 // ============================================================
 
 /// Liar's Poker 자산을 공용 휴대폰 상단 바에 연결합니다.

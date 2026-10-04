@@ -9,6 +9,7 @@
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
+
 // ============================================================
 
 /// 카드 공개가 끝난 뒤 나타나는 휴대폰 게임 조작 요소의 등장 방식입니다.
@@ -75,14 +76,8 @@ class ControlEntryAnimation extends StatelessWidget {
           child: Opacity(
             opacity: opacity,
             child: switch (style) {
-              ControlEntryStyle.header => _buildHeaderEntry(
-                progress,
-                child!,
-              ),
-              ControlEntryStyle.heavyDrop => _buildHeavyDrop(
-                progress,
-                child!,
-              ),
+              ControlEntryStyle.header => _buildHeaderEntry(progress, child!),
+              ControlEntryStyle.heavyDrop => _buildHeavyDrop(progress, child!),
             },
           ),
         );

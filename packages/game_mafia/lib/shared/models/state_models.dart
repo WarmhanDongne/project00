@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -145,6 +146,8 @@ class MafiaVoteResult {
     required this.tie,
     required this.abstainCount,
     this.endsGame = false,
+    this.verdictYes,
+    this.verdictNo,
   });
 
   /// `대상 uid → 득표수`입니다. 누가 찍었는지는 서버가 보내지 않습니다.
@@ -155,6 +158,9 @@ class MafiaVoteResult {
 
   /// 동표로 무처형인지입니다.
   final bool tie;
+  final int? verdictYes;
+  final int? verdictNo;
+  bool get hasVerdict => verdictYes != null;
 
   /// 기권(미투표) 인원입니다.
   final int abstainCount;
@@ -166,6 +172,7 @@ class MafiaVoteResult {
   final bool endsGame;
 
   factory MafiaVoteResult.fromMap(Map<Object?, Object?> map) {
+    final verdict = map['verdict'] is Map ? map['verdict'] as Map : const {};
     final rawTally = map['tally'];
     final tally = <String, int>{};
     if (rawTally is Map) {
@@ -178,6 +185,8 @@ class MafiaVoteResult {
       tally: Map.unmodifiable(tally),
       executedUid: map['executedUid']?.toString(),
       tie: map['tie'] == true,
+      verdictYes: (verdict['yes'] as num?)?.toInt(),
+      verdictNo: (verdict['no'] as num?)?.toInt(),
       abstainCount: (map['abstainCount'] as num?)?.toInt() ?? 0,
       endsGame: map['endsGame'] == true,
     );
@@ -206,6 +215,8 @@ class MafiaVoteResult {
         mapEquals(tally, other.tally) &&
         executedUid == other.executedUid &&
         tie == other.tie &&
+        verdictYes == other.verdictYes &&
+        verdictNo == other.verdictNo &&
         abstainCount == other.abstainCount &&
         endsGame == other.endsGame;
   }
@@ -217,6 +228,8 @@ class MafiaVoteResult {
     ),
     executedUid,
     tie,
+    verdictYes,
+    verdictNo,
     abstainCount,
     endsGame,
   );

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_kit/core/sound/sound_effects.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_liars_poker/game_sounds.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
@@ -17,7 +17,7 @@ import 'package:game_kit/core/constants/room_character.dart';
 /// Liar's Poker 로딩 화면에 표시할 전략 팁입니다.
 ///
 /// 실제 규칙과 어긋나면 안내가 아니라 혼란이 되므로, 규칙이 바뀌면 태블릿
-/// 룰북(`widgets/tablet/rolebook.dart`)과 함께 고칩니다.
+/// 룰북(`tablet/widgets/rulebook.dart`)의 대표 카드 목록과 함께 고칩니다.
 const liarsPokerLoadingTips = <String>[
   '기준 카드는 라운드마다 바뀝니다. 새 라운드가 시작되면 먼저 확인하세요.',
   '조커는 어떤 기준 카드로든 인정됩니다. 아껴 두면 위기에서 진실이 됩니다.',

@@ -110,6 +110,7 @@ class MafiaNightActionView extends StatelessWidget {
     this.investigationResult,
     this.onConfirmResult,
     this.waitingMessage = '다른 플레이어의 행동을 기다리는 중…',
+    this.isWrappingUp = false,
   });
 
   /// 내 역할입니다. null이면 아직 역할을 받지 못한 것으로 보고 대기 화면을 그립니다.
@@ -150,6 +151,9 @@ class MafiaNightActionView extends StatelessWidget {
   /// 결과 화면의 '확인'을 눌렀을 때입니다.
   final VoidCallback? onConfirmResult;
   final String waitingMessage;
+
+  /// 모든 밤 행동이 끝나고 아침 결과를 정리하는 공통 10초 구간인지입니다.
+  final bool isWrappingUp;
 
   // ---------------------------------------------------------------------------
   // 시안 기준 좌표
@@ -194,6 +198,8 @@ class MafiaNightActionView extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             const Positioned.fill(child: MafiaPhoneBackground.night()),
+            if (isWrappingUp)
+              const Positioned.fill(child: _MafiaPhoneNightWrapUp()),
             // 확정(2026-08): 화면이 바뀔 때 **안내 문구·선택 그리드·버튼이 한
             // 덩어리로 함께** 흐려지고, 다음 화면이 겹쳐 들어옵니다. 예전에는
             // 버튼만 따로 흐려져서 문구는 툭 끊기고 버튼만 남아 보였습니다.
@@ -214,11 +220,20 @@ class MafiaNightActionView extends StatelessWidget {
                   key: ValueKey(mode),
                   fit: StackFit.expand,
                   children: switch (mode) {
-                    _NightViewMode.result => _buildInvestigationResult(
-                      size,
-                      scale,
-                      result!,
-                    ),
+                    _NightViewMode.result => [
+                      Positioned.fill(
+                        child: _MafiaInvestigationReveal(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: _buildInvestigationResult(
+                              size,
+                              scale,
+                              result!,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     _NightViewMode.selection => [
                       ..._buildSelectionLayer(size, scale),
                       MafiaPhoneActionButton(
@@ -421,16 +436,11 @@ class MafiaNightActionView extends StatelessWidget {
         Positioned(
           left: 0,
           right: 0,
-          top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop),
+          top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop - 62),
           child: IgnorePointer(
-            child: Text(
-              '선택을 완료했습니다',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
-                fontWeight: FontWeight.w700,
-              ),
+            child: _MafiaSubmissionConfirmation(
+              scale: scale,
+              label: '선택을 완료했습니다',
             ),
           ),
         ),
@@ -462,3 +472,167 @@ class MafiaNightActionView extends StatelessWidget {
 
 /// 밤 화면이 지금 무엇을 보여 주는지입니다. 이 값이 바뀌면 화면이 교차됩니다.
 enum _NightViewMode { result, selection, waiting }
+
+/// 선택 직후 서버 응답을 기다리는 시간을 확정 동작처럼 보여 주는 연출입니다.
+class _MafiaSubmissionConfirmation extends StatefulWidget {
+  const _MafiaSubmissionConfirmation({
+    required this.scale,
+    required this.label,
+  });
+
+  final double scale;
+  final String label;
+
+  @override
+  State<_MafiaSubmissionConfirmation> createState() =>
+      _MafiaSubmissionConfirmationState();
+}
+
+class _MafiaSubmissionConfirmationState
+    extends State<_MafiaSubmissionConfirmation>
+    with TickerProviderStateMixin {
+  late final AnimationController _seal;
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _seal = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 560),
+    )..forward();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    _seal.addStatusListener(_startPulse);
+  }
+
+  void _startPulse(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _seal
+      ..removeStatusListener(_startPulse)
+      ..dispose();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_seal, _pulse]),
+      builder: (context, _) {
+        final intro = Curves.easeOutBack.transform(_seal.value);
+        final glow = _pulse.value;
+        return Opacity(
+          key: const ValueKey('mafia-submission-confirmation'),
+          opacity: _seal.value.clamp(0, 1),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Transform.scale(
+                scale: (0.62 + intro * 0.38) * (1 + glow * 0.025),
+                child: Container(
+                  width: 46 * widget.scale,
+                  height: 46 * widget.scale,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.55 + glow * 0.25),
+                      width: 1.5 * widget.scale,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withValues(
+                          alpha: 0.08 + glow * 0.08,
+                        ),
+                        blurRadius: (12 + glow * 8) * widget.scale,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 30 * widget.scale,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16 * widget.scale),
+              Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: MafiaPhoneStatusText.waitingFontSize * widget.scale,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 서버에서 확정된 조사 결과가 기록 카드처럼 자리 잡는 짧은 등장 연출입니다.
+class _MafiaInvestigationReveal extends StatelessWidget {
+  const _MafiaInvestigationReveal({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      key: const ValueKey('mafia-investigation-reveal'),
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 640),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, result) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - value)),
+            child: Transform.scale(scale: 0.94 + value * 0.06, child: result),
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+/// 휴대폰에서도 밤 마지막 구간이 멈춘 화면처럼 보이지 않게 새벽빛을 올립니다.
+class _MafiaPhoneNightWrapUp extends StatelessWidget {
+  const _MafiaPhoneNightWrapUp();
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(seconds: 8),
+      curve: Curves.easeInOut,
+      builder: (context, value, _) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                const Color(0xFFB99378).withValues(alpha: 0.18 * value),
+                const Color(0xFF4B5067).withValues(alpha: 0.08 * value),
+                Colors.transparent,
+              ],
+              stops: const [0, 0.48, 1],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

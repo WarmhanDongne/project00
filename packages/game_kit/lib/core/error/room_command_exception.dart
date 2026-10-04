@@ -1,9 +1,2 @@
-// [error message] 외부에서 주입 받은 에러 메세지를 전달한다.
-class RoomCommandException implements Exception {
-  const RoomCommandException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
+// 기존 import 경로와 패키지 밖 소비자를 위한 호환 파일입니다.
+export 'package:game_kit/errors/models/room_command_exception.dart';

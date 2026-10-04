@@ -2,6 +2,7 @@
 
 import {
   alivePlayers,
+  advanceMafiaTrial,
   checkMafiaWinner,
   finishMafiaGame,
   isMafiaVoteBanned,
@@ -32,6 +33,7 @@ export function excludeMafiaPlayer(
   // 남긴 선택을 지웁니다. 지우지 않으면 없는 사람의 표가 개표에 섞입니다.
   delete game.server.nightActions?.[uid];
   delete game.server.votes?.[uid];
+  delete game.server.trialVotes?.[uid];
   for (const entry of Object.values(game.private)) {
     delete entry.allySelections?.[uid];
   }
@@ -66,8 +68,18 @@ export function excludeMafiaPlayer(
     // 유혹당해 투표권이 없는 사람은 참여 인원에서 빠집니다(마담).
     game.public.voteEligibleCount =
       alive.filter((player) => !isMafiaVoteBanned(game, player.uid)).length;
-    game.public.voteSubmittedCount = Object.keys(game.server.votes ?? {}).length;
-    game.public.voteSubmittedUids = Object.keys(game.server.votes ?? {});
+    const votes = game.public.trial ? game.server.trialVotes : game.server.votes;
+    game.public.voteSubmittedCount = Object.keys(votes ?? {}).length;
+    game.public.voteSubmittedUids = Object.keys(votes ?? {});
+    if (game.public.trial?.candidateUid === uid) {
+      advanceMafiaTrial(game, now);
+      return;
+    }
+    if (game.public.trial?.stage === "defense") {
+      game.public.revision += 1;
+      game.public.updatedAt = now;
+      return;
+    }
     if (game.public.voteSubmittedCount >= game.public.voteEligibleCount) {
       resolveMafiaVoting(game, now);
       return;

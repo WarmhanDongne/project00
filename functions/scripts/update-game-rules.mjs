@@ -39,9 +39,9 @@ export const gameRules = Object.freeze({
   final_call: `🃏 게임 기본 규칙
 
 [게임 목표]
-- Final Call은 4명이 2대2로 진행하는 팀전입니다.
-- 서로 마주 보는 플레이어가 같은 팀이 되며 빨간 팀과 파란 팀으로 나뉩니다.
-- 모든 플레이어는 하트 3개로 시작하며, 팀원 중 한 명이라도 하트를 모두 잃으면 해당 팀이 패배합니다.
+- Final Call은 4명이 2대2 또는 6명이 2대2대2로 진행하는 팀전입니다.
+- 서로 마주 보는 플레이어가 같은 팀이 되며 레드·블루팀으로 나뉘며, 6인에서는 그린팀이 추가됩니다.
+- 모든 플레이어는 하트 3개로 시작하며, 팀원 중 한 명이라도 하트를 모두 잃으면 해당 팀 두 명 모두 탈락하고 관전합니다.
 
 [카드와 점수]
 - 카드는 네 가지 색과 1~10의 숫자로 구성된 총 40장이며 각 플레이어는 4장을 받습니다.
@@ -61,19 +61,20 @@ export const gameRules = Object.freeze({
 [라운드 판정]
 - 최저 점수 플레이어는 하트 1개를 잃고, CALL 선언자가 최하위라면 하트 2개를 잃습니다.
 - 최하위가 여러 명이면 해당 플레이어 모두가 하트를 잃습니다.
-- CALL 선언자가 같은 숫자 카드 4장을 제출하면 점수 비교 없이 상대 팀 두 명이 각각 하트 1개를 잃습니다.
+- CALL 선언자가 같은 숫자 카드 4장을 제출하면 점수 비교 없이 생존한 상대 팀 전원이 각각 하트 1개를 잃습니다.
 - 카드 더미가 소진되면 서버가 각 플레이어의 최고 점수 조합을 선택해 자동 판정합니다.
 
 [다음 라운드와 승리]
 - 직전 라운드에서 하트를 잃은 생존자가 다음 라운드를 시작합니다.
 - 후보가 여러 명이면 남은 하트가 가장 적은 플레이어, 그다음 좌석 순서로 정합니다.
-- 한 팀의 플레이어가 하트를 모두 잃으면 상대 팀이 승리하며, 양 팀이 동시에 조건을 충족하면 무승부입니다.`,
+- 팀이 탈락해도 남은 팀끼리 계속 진행하고 마지막까지 살아남은 팀이 승리합니다. 남은 팀이 동시에 모두 탈락하면 무승부입니다.`,
 });
 
 export async function updateGameRules({dryRun = false} = {}) {
   if (dryRun) {
     for (const [gameId, rules] of Object.entries(gameRules)) {
       console.log(`${gameId}: ${rules.length} characters`);
+      if (gameId === "final_call") console.log("  minPlayers: 4, maxPlayers: 6");
     }
     return;
   }
@@ -86,7 +87,12 @@ export async function updateGameRules({dryRun = false} = {}) {
   for (const [gameId, rules] of Object.entries(gameRules)) {
     batch.set(
       firestore.collection("games").doc(gameId),
-      {rules, accessType: "free"},
+      {
+        rules,
+        accessType: "free",
+        // 목록의 인원 범위도 새 6인 게임에 맞춥니다. 실제 시작은 4·6인만 허용합니다.
+        ...(gameId === "final_call" ? {minPlayers: 4, maxPlayers: 6} : {}),
+      },
       {merge: true},
     );
   }

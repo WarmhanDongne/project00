@@ -11,7 +11,6 @@ import {
   canActInNightStage,
   mafiaAbilityUsesLeft,
   nextMafiaNightStage,
-  recordImmediateInvestigation,
   resolveMafiaNight,
 } from "./game.js";
 import {mafiaRole} from "./roles.js";
@@ -42,11 +41,14 @@ import {
  * 알려 주는 셈입니다. 그런 경우는 제출을 받아 두고 밤 해결에서 조용히
  * 불발시킵니다([resolveMafiaNight]).
  */
-function assertValidNightTarget(
+export function assertValidNightTarget(
   game: MafiaGameState,
   actorUid: string,
   targetUid: string,
 ): void {
+  if (game.server.nightActions?.[actorUid] !== undefined) {
+    throw new HttpsError("failed-precondition", "이미 행동을 확정했습니다.");
+  }
   const role = mafiaRole(game.server.roles[actorUid]);
   if (!role || role.nightAction === "none") {
     throw new HttpsError("failed-precondition", "밤에 할 수 있는 행동이 없습니다.");
@@ -112,10 +114,8 @@ type SubmitData = {
 /**
  * 밤 행동 대상을 제출합니다(시안 P2~P4).
  *
- * 마감 전에는 여러 번 불러 바꿀 수 있습니다. 그래서 제출 인원은 세어 두는 값이
- * 아니라 **실제 제출 목록의 크기**로 계산합니다.
- *
- * 행동해야 하는 사람이 전원 제출하면 그 자리에서 밤을 해결합니다.
+ * 한 번 확정한 선택은 변경할 수 없습니다. 같은 commandId 재시도는 기존 응답을
+ * 돌려줍니다. 전원 제출하면 다음 행동 구간으로 이동하며 밤의 마감은 유지합니다.
  */
 export const game_mafia_submit_night_action = onCall<SubmitData>(
   {region: MAFIA_REGION},
@@ -158,9 +158,7 @@ export const game_mafia_submit_night_action = onCall<SubmitData>(
       game.private[uid] ??= {roleId: game.server.roles[uid]};
       game.private[uid].nightTargetUid = targetUid;
       shareSelectionWithAllies(game, uid, targetUid);
-      // 조사류 결과는 제출한 순간 보여 줍니다(확정 흐름: 선택 완료 → 결과 →
-      // 확인). 밤이 끝날 때 최종값으로 한 번 더 덮어씁니다.
-      recordImmediateInvestigation(game, uid, targetUid, Date.now());
+      // 조사 결과는 모든 선택이 끝난 뒤 차단·전향을 반영하여 공개합니다.
 
       const submitted = Object.keys(game.server.nightActions).length;
       game.public.nightSubmittedCount = submitted;

@@ -6,8 +6,9 @@
 // 즉, 화면 전환과 서버 상태에 맞춰 소리를 한 번만 재생하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/core/sound/app_sounds.dart';
+import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
+
 // ============================================================
 
 /// Final Call 전용 사운드 경로입니다.
@@ -54,11 +55,13 @@ abstract final class FinalCallSounds {
       'packages/game_final_call/assets/games/final_call/sounds/voice_draw.m4a';
 
   /// 결과에 맞는 나레이션입니다.
-  static String resultVoiceFor({
+  static String? resultVoiceFor({
     required bool isDraw,
     required FinalCallTeam? winningTeam,
   }) {
     if (isDraw) return voiceDraw;
+    // 그린팀 전용 음성이 준비되기 전에는 공용 승리 효과음만 재생합니다.
+    if (winningTeam == FinalCallTeam.green) return null;
     return winningTeam == FinalCallTeam.blue ? voiceWinBlue : voiceWinRed;
   }
 

@@ -16,6 +16,7 @@ import 'package:game_final_call/phone/providers/game_stage.dart';
 import 'package:game_final_call/phone/screens/game_screen.dart';
 import 'package:game_final_call/phone/widgets/card_change_dialog.dart';
 import 'package:game_final_call/phone/widgets/top_bar.dart';
+import 'package:game_final_call/phone/widgets/spectator_view.dart';
 import 'package:game_final_call/shared/models/game_state.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/shared/providers/session_provider.dart';
@@ -29,13 +30,13 @@ import 'package:game_kit/game_feedback.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
-import 'package:game_kit/game_flow/leave_failure_notice.dart';
+import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/game_flow/phone_game_shell.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/widgets/game_interruption_layer.dart';
-import 'package:game_kit/widgets/game_route_exit.dart';
-import 'package:game_kit/widgets/phone_exit_modal.dart';
-import 'package:game_kit/widgets/phone_result_dialog.dart';
+import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
+import 'package:game_kit/shared/widgets/game_route_exit.dart';
+import 'package:game_kit/phone/widgets/exit_modal.dart';
+import 'package:game_kit/phone/widgets/result_dialog.dart';
 
 part 'src/board_state.dart';
 
@@ -144,6 +145,13 @@ GameFlowConfig<FinalCallPhoneStage> buildFinalCallPhoneFlowConfig({
         showTimer: true,
         showActions: true,
       ),
+      advancePolicy: GameFlowAdvancePolicy.waitsForServer,
+    ),
+    FinalCallPhoneStage.spectating: const GameFlowStep(
+      stage: FinalCallPhoneStage.spectating,
+      description: '탈락한 팀은 최종 승부까지 관전한다',
+      showScreen: true,
+      phoneRegions: PhoneGameRegions(showTopBar: true),
       advancePolicy: GameFlowAdvancePolicy.waitsForServer,
     ),
     FinalCallPhoneStage.finalSelection: const GameFlowStep(

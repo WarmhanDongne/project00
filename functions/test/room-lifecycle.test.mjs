@@ -362,3 +362,15 @@ test("RTDB 트랜잭션은 첫 서버 값을 받은 뒤 실행하고 리스너�
   assert.equal(await pending, expectedResult);
   assert.deepEqual(calls, ["on:value", "transaction", "off:value:true"]);
 });
+
+
+test("파이널콜 자리 배치는 이전 카탈로그에서도 4·6인만 허용한다", () => {
+  const state = {roomStatus: "waiting", selectedGame: "final_call",
+    expectedGame: "final_call", minPlayers: 4, maxPlayers: 4};
+  for (const count of [4, 6]) {
+    assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "begin");
+  }
+  for (const count of [2, 3, 5, 7, 8]) {
+    assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "invalid-player-count");
+  }
+});

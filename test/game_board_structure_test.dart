@@ -22,7 +22,7 @@ import 'package:game_kit/core/layout/app_orientation.dart';
 void main() {
   test('패키지 진입점은 기존 게임 ID·인원·기기 방향을 보존한다', () {
     expect(const FinalCallGame().id, 'final_call');
-    expect(const FinalCallGame().fixedPlayerCount, 4);
+    expect(const FinalCallGame().supportedPlayerCounts, [4, 6]);
     expect(
       const FinalCallGame().phoneOrientation,
       PhoneGameOrientation.landscapeOnly,

@@ -39,7 +39,7 @@ const ROOM_CODE_PATTERN =
   /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
 
 // 마피아가 최대 12명이라 방 상한을 12로 올렸습니다. 게임별 인원 제한은 각
-// 게임의 start_game이 따로 확인합니다(예: 파이널콜은 4인 고정).
+// 게임의 start_game이 따로 확인합니다(예: 파이널콜은 4인 또는 6인).
 const DEFAULT_MAX_PLAYERS = 12;
 const MAX_ROOM_CODE_ATTEMPTS = 20;
 const ROOM_CHARACTER_IDS = new Set([

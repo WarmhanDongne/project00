@@ -10,14 +10,15 @@ import 'package:game_liars_poker/game_copy.dart';
 import 'package:game_liars_poker/phone/widgets/exit_modal.dart';
 import 'package:game_liars_poker/phone/widgets/settings_dialog.dart';
 import 'package:game_liars_poker/phone/widgets/top_bar.dart';
-import 'package:game_kit/game_flow/leave_failure_notice.dart';
+import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/player_layouts/player_layout_model.dart';
-import 'package:game_kit/widgets/phone_ripple_dialog.dart';
-import 'package:game_kit/widgets/phone_rule_dialog.dart';
+import 'package:game_kit/player_layouts/models/player_layout.dart';
+import 'package:game_kit/phone/widgets/ripple_dialog.dart';
+import 'package:game_kit/phone/widgets/rule_dialog.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_liars_poker/game_theme.dart';
+
 // ============================================================
 
 /// 화면 방향에 맞게 생존 플레이어를 표시하는 휴대폰 관전 화면입니다.

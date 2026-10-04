@@ -3,13 +3,14 @@
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {createInitialMafiaGame, createMafiaPlayers} from "./game.js";
+import {createInitialMafiaGame, createMafiaPlayers, mafiaCompositionToUse} from "./game.js";
 import {MAFIA_MAX_PLAYERS, MAFIA_MIN_PLAYERS} from "./roles.js";
 import {MafiaRoom} from "./types.js";
 import {
   assertMafiaController,
   MAFIA_REGION,
   mafiaComposition,
+  mafiaRules,
   mafiaRoomCode,
   mafiaUid,
 } from "./validation.js";
@@ -26,6 +27,7 @@ type StartData = {
   warmup?: unknown;
   /** 역할 배치 화면에서 고른 구성입니다(`역할 id → 인원수`). */
   composition?: unknown;
+  rules?: unknown;
 };
 
 export const game_mafia_start_game = onCall<StartData>(
@@ -72,7 +74,10 @@ export const game_mafia_start_game = onCall<StartData>(
 
     // 역할 배분은 여기서 한 번만 합니다. 트랜잭션 콜백은 여러 번 실행될 수 있어
     // 안에서 배분하면 매번 다른 결과가 나옵니다.
-    const game = createInitialMafiaGame(players, Date.now(), composition);
+    mafiaComposition(mafiaCompositionToUse(count, composition), count);
+    const rules = mafiaRules(request.data?.rules ??
+      (restart ? room.game?.public?.rules : undefined));
+    const game = createInitialMafiaGame(players, Date.now(), composition, rules);
     const transaction = await roomRef.transaction((current) => {
       if (current === null) return current;
       const currentRoom = current as MafiaRoom;
