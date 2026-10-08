@@ -53,8 +53,8 @@ class MosiGameArt {
     koreanName: '파이널콜',
     englishName: 'FINAL CALL',
     shelfTheme: MosiShelfTheme.court,
-    spineColor: Color(0xFF141414),
-    spineText: MosiColors.white,
+    spineColor: Color(0xFFEFEDE8),
+    spineText: Color(0xFF141414),
     accent: MosiColors.sun,
   );
 
@@ -72,9 +72,19 @@ class MosiGameArt {
     id: 'holdem',
     koreanName: '홀덤',
     englishName: "TEXAS HOLD'EM",
-    shelfTheme: MosiShelfTheme.court,
-    spineColor: Color(0xFF063B2B),
-    spineText: Color(0xFFF7F1DE),
+    shelfTheme: MosiShelfTheme(
+      ground: MosiColors.green,
+      fg: MosiColors.white,
+      fgDim: Color(0x99FFFFFF),
+      deep: Color(0xFF103C2A),
+      btnBg: Color(0xFFD7B56D),
+      btnFg: MosiColors.navy,
+      accA: Color(0xFFD7B56D),
+      accB: Color(0xFFD7B56D),
+    ),
+    // 원본 빨간 표지의 장식 없는 영역 대표색.
+    spineColor: Color(0xFFC42732),
+    spineText: MosiColors.white,
     accent: Color(0xFFD7B56D),
   );
 
@@ -95,7 +105,7 @@ class MosiGameArt {
         koreanName: fallbackName ?? id,
         englishName: (fallbackName ?? id).toUpperCase(),
         shelfTheme: MosiShelfTheme.paper,
-        spineColor: MosiColors.navy,
+        spineColor: MosiColors.violet,
         spineText: MosiColors.white,
         accent: MosiColors.violet,
       );
@@ -133,13 +143,29 @@ class MosiGameCover extends StatelessWidget {
     final imageUrl = fallbackImageUrl;
     Widget art;
     if (gameId == 'holdem') {
-      art = Image.asset(
-        'packages/game_kit/assets/images/covers/holdem_cardbox.webp',
-        key: const Key('holdem-cardbox-cover'),
+      // 원본의 왼쪽 빨간 표지(749×1050)만 비율을 유지해 보여 줍니다.
+      // 합쳐 놓은 빨강/파랑 표지를 가로로 압축하지 않습니다.
+      const source = Size(1560, 1050);
+      const redWidth = 749.0;
+      final scale = math.max(width / redWidth, height / source.height);
+      art = SizedBox(
         width: width,
         height: height,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            child: Image.asset(
+              'packages/game_kit/assets/images/covers/poker_cardbox.png',
+              key: const Key('holdem-cardbox-cover'),
+              width: source.width * scale,
+              height: source.height * scale,
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
       );
     } else if (known) {
       art = CustomPaint(
@@ -311,7 +337,7 @@ void _withTransform(
 void _paintLiar(Canvas canvas) {
   canvas.drawRect(
     const Rect.fromLTWH(0, 0, 300, 400),
-    _fill(const Color(0xFF4A1A5E)),
+    _fill(MosiGameArt.liarsPoker.spineColor),
   );
   canvas.drawCircle(
     const Offset(150, 300),
@@ -410,7 +436,7 @@ void _paintLiar(Canvas canvas) {
 void _paintFinal(Canvas canvas) {
   canvas.drawRect(
     const Rect.fromLTWH(0, 0, 300, 400),
-    _fill(const Color(0xFFEFEDE8)),
+    _fill(MosiGameArt.finalCall.spineColor),
   );
   canvas.drawCircle(
     const Offset(150, 300),
@@ -506,7 +532,7 @@ void _paintFinal(Canvas canvas) {
 
 //=======================마피아==============================
 void _paintMafia(Canvas canvas) {
-  const night = Color(0xFF10131A);
+  final night = MosiGameArt.mafia.spineColor;
   const gold = Color(0xFFFFC400);
   canvas.drawRect(const Rect.fromLTWH(0, 0, 300, 400), _fill(night));
   canvas.drawCircle(const Offset(206, 92), 56, _fill(gold));
@@ -717,7 +743,7 @@ class MosiGameSpine extends StatelessWidget {
                     style: MosiFonts.sans(
                       size: 11,
                       weight: FontWeight.w700,
-                      color: const Color(0xFFC7B8CC),
+                      color: art.spineText,
                     ),
                   ),
                 ),

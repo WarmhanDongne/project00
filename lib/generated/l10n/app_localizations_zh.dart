@@ -168,7 +168,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get releaseSoon => '即将公布';
 
   @override
-  String get galleryTitle => 'Mosi 游戏画廊';
+  String get galleryTitle => 'Mosi 书店';
 
   @override
   String get restorePurchases => '恢复购买';
@@ -177,10 +177,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreSoon => '恢复购买功能即将推出。';
 
   @override
-  String get chooseFrame => '点击画框选择游戏';
+  String get chooseFrame => '点击封面选择游戏';
 
   @override
-  String get ownedDot => '红点 = 已拥有';
+  String get ownedDot => '书签 = 已拥有';
 
   @override
   String get purchaseNotice => '购买功能尚未开放。';
@@ -239,6 +239,164 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String startWithPlayers(int count) {
     return '$count 人开始';
+  }
+
+  @override
+  String get previewSara => '莎拉';
+
+  @override
+  String get previewMinjun => '敏俊';
+
+  @override
+  String get previewHarin => '夏琳';
+
+  @override
+  String get previewJiwoo => '智友';
+
+  @override
+  String get previewTableAce => '基准牌 · A';
+
+  @override
+  String get previewNextMinjun => '莎拉 → 下一位敏俊';
+
+  @override
+  String get previewYourTurn => '我的回合';
+
+  @override
+  String get previewTwoAces => '两张 A！';
+
+  @override
+  String get previewCaught => '被发现了…转轮盘';
+
+  @override
+  String get previewLiarClaim => 'LIAR！你在骗人';
+
+  @override
+  String get previewWatching => '观战中';
+
+  @override
+  String get previewCallReveal => 'CALL！全部亮牌';
+
+  @override
+  String get previewDrawSwap => '摸牌 · 换牌';
+
+  @override
+  String get previewTeamAskSara => '莎拉，分数够了吗？';
+
+  @override
+  String get previewTeamSaraScore => '拿到 7！现在 14 分';
+
+  @override
+  String get previewTeamAskJiwoo => '智友，够喊 CALL 吗？';
+
+  @override
+  String get previewTeamJiwooScore => '我有 12 分！喊 CALL 吧';
+
+  @override
+  String get previewSaraRedTeam => '莎拉 · 红队';
+
+  @override
+  String get previewRed => '红色';
+
+  @override
+  String get previewBlue => '蓝色';
+
+  @override
+  String get previewYellow => '黄色';
+
+  @override
+  String get previewSameColor => '同色 7 + 3 = 10';
+
+  @override
+  String get previewSameRank => '同点数 7 + 7 = 14';
+
+  @override
+  String get previewMyScore => '我的分数';
+
+  @override
+  String get previewNight => '天黑了';
+
+  @override
+  String get previewChoosePrivately => '请在各自手机上秘密选择';
+
+  @override
+  String get previewMorning => '天亮了';
+
+  @override
+  String get previewNobodyDied => '无人死亡';
+
+  @override
+  String get previewCitizen => '平民';
+
+  @override
+  String get previewWaitMorning => '闭上眼睛\n等待天亮';
+
+  @override
+  String get previewDiscussion => '开始讨论';
+
+  @override
+  String get previewMafiaPrivate => '黑手党 · 仅自己可见';
+
+  @override
+  String get previewNightTarget => '今晚选谁？';
+
+  @override
+  String get previewTargetChosen => '已选定目标';
+
+  @override
+  String get previewDoctorSave => '医生 · 救一人';
+
+  @override
+  String get previewSaved => '呼，得救了…！';
+
+  @override
+  String get previewBlinds => '盲注 10/20';
+
+  @override
+  String get previewFlopTurn => '翻牌 · 莎拉回合';
+
+  @override
+  String get previewTurnRiver => '转牌 · 河牌';
+
+  @override
+  String get previewShowdown => '摊牌';
+
+  @override
+  String get previewRaiseClaim => '加注到 400！';
+
+  @override
+  String get previewFlushWin => '同花赢得 +830';
+
+  @override
+  String get previewThinking => '思考中';
+
+  @override
+  String get previewCallClaim => '跟注！我跟了';
+
+  @override
+  String get previewFolded => '本局已弃牌';
+
+  @override
+  String get previewFoldClaim => '弃牌…';
+
+  @override
+  String get previewWin => '获胜';
+
+  @override
+  String get previewSpadeFlush => '黑桃同花';
+
+  @override
+  String get previewRaise => '加注';
+
+  @override
+  String get previewCall => '跟注';
+
+  @override
+  String get previewFold => '弃牌';
+
+  @override
+  String previewPot(String chips) {
+    return '底池 $chips';
   }
 }
 
@@ -406,7 +564,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get releaseSoon => '即将公布';
 
   @override
-  String get galleryTitle => 'Mosi 游戏画廊';
+  String get galleryTitle => 'Mosi 书店';
 
   @override
   String get restorePurchases => '恢复购买';
@@ -415,10 +573,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get restoreSoon => '恢复购买功能即将推出。';
 
   @override
-  String get chooseFrame => '点击画框选择游戏';
+  String get chooseFrame => '点击封面选择游戏';
 
   @override
-  String get ownedDot => '红点 = 已拥有';
+  String get ownedDot => '书签 = 已拥有';
 
   @override
   String get purchaseNotice => '购买功能尚未开放。';
@@ -477,6 +635,164 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String startWithPlayers(int count) {
     return '$count 人开始';
+  }
+
+  @override
+  String get previewSara => '莎拉';
+
+  @override
+  String get previewMinjun => '敏俊';
+
+  @override
+  String get previewHarin => '夏琳';
+
+  @override
+  String get previewJiwoo => '智友';
+
+  @override
+  String get previewTableAce => '基准牌 · A';
+
+  @override
+  String get previewNextMinjun => '莎拉 → 下一位敏俊';
+
+  @override
+  String get previewYourTurn => '我的回合';
+
+  @override
+  String get previewTwoAces => '两张 A！';
+
+  @override
+  String get previewCaught => '被发现了…转轮盘';
+
+  @override
+  String get previewLiarClaim => 'LIAR！你在骗人';
+
+  @override
+  String get previewWatching => '观战中';
+
+  @override
+  String get previewCallReveal => 'CALL！全部亮牌';
+
+  @override
+  String get previewDrawSwap => '摸牌 · 换牌';
+
+  @override
+  String get previewTeamAskSara => '莎拉，分数够了吗？';
+
+  @override
+  String get previewTeamSaraScore => '拿到 7！现在 14 分';
+
+  @override
+  String get previewTeamAskJiwoo => '智友，够喊 CALL 吗？';
+
+  @override
+  String get previewTeamJiwooScore => '我有 12 分！喊 CALL 吧';
+
+  @override
+  String get previewSaraRedTeam => '莎拉 · 红队';
+
+  @override
+  String get previewRed => '红色';
+
+  @override
+  String get previewBlue => '蓝色';
+
+  @override
+  String get previewYellow => '黄色';
+
+  @override
+  String get previewSameColor => '同色 7 + 3 = 10';
+
+  @override
+  String get previewSameRank => '同点数 7 + 7 = 14';
+
+  @override
+  String get previewMyScore => '我的分数';
+
+  @override
+  String get previewNight => '天黑了';
+
+  @override
+  String get previewChoosePrivately => '请在各自手机上秘密选择';
+
+  @override
+  String get previewMorning => '天亮了';
+
+  @override
+  String get previewNobodyDied => '无人死亡';
+
+  @override
+  String get previewCitizen => '平民';
+
+  @override
+  String get previewWaitMorning => '闭上眼睛\n等待天亮';
+
+  @override
+  String get previewDiscussion => '开始讨论';
+
+  @override
+  String get previewMafiaPrivate => '黑手党 · 仅自己可见';
+
+  @override
+  String get previewNightTarget => '今晚选谁？';
+
+  @override
+  String get previewTargetChosen => '已选定目标';
+
+  @override
+  String get previewDoctorSave => '医生 · 救一人';
+
+  @override
+  String get previewSaved => '呼，得救了…！';
+
+  @override
+  String get previewBlinds => '盲注 10/20';
+
+  @override
+  String get previewFlopTurn => '翻牌 · 莎拉回合';
+
+  @override
+  String get previewTurnRiver => '转牌 · 河牌';
+
+  @override
+  String get previewShowdown => '摊牌';
+
+  @override
+  String get previewRaiseClaim => '加注到 400！';
+
+  @override
+  String get previewFlushWin => '同花赢得 +830';
+
+  @override
+  String get previewThinking => '思考中';
+
+  @override
+  String get previewCallClaim => '跟注！我跟了';
+
+  @override
+  String get previewFolded => '本局已弃牌';
+
+  @override
+  String get previewFoldClaim => '弃牌…';
+
+  @override
+  String get previewWin => '获胜';
+
+  @override
+  String get previewSpadeFlush => '黑桃同花';
+
+  @override
+  String get previewRaise => '加注';
+
+  @override
+  String get previewCall => '跟注';
+
+  @override
+  String get previewFold => '弃牌';
+
+  @override
+  String previewPot(String chips) {
+    return '底池 $chips';
   }
 }
 
@@ -644,7 +960,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get releaseSoon => '即將公布';
 
   @override
-  String get galleryTitle => 'Mosi 遊戲藝廊';
+  String get galleryTitle => 'Mosi 書店';
 
   @override
   String get restorePurchases => '回復購買';
@@ -653,10 +969,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get restoreSoon => '回復購買功能即將推出。';
 
   @override
-  String get chooseFrame => '點選畫框選擇遊戲';
+  String get chooseFrame => '點選封面選擇遊戲';
 
   @override
-  String get ownedDot => '紅點 = 已擁有';
+  String get ownedDot => '書籤 = 已擁有';
 
   @override
   String get purchaseNotice => '購買功能尚未開放。';
@@ -715,5 +1031,163 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String startWithPlayers(int count) {
     return '$count 人開始';
+  }
+
+  @override
+  String get previewSara => '莎拉';
+
+  @override
+  String get previewMinjun => '敏俊';
+
+  @override
+  String get previewHarin => '夏琳';
+
+  @override
+  String get previewJiwoo => '智友';
+
+  @override
+  String get previewTableAce => '基準牌 · A';
+
+  @override
+  String get previewNextMinjun => '莎拉 → 下一位敏俊';
+
+  @override
+  String get previewYourTurn => '我的回合';
+
+  @override
+  String get previewTwoAces => '兩張 A！';
+
+  @override
+  String get previewCaught => '被發現了…轉輪盤';
+
+  @override
+  String get previewLiarClaim => 'LIAR！你在騙人';
+
+  @override
+  String get previewWatching => '觀戰中';
+
+  @override
+  String get previewCallReveal => 'CALL！全部亮牌';
+
+  @override
+  String get previewDrawSwap => '抽牌 · 換牌';
+
+  @override
+  String get previewTeamAskSara => '莎拉，分數夠了嗎？';
+
+  @override
+  String get previewTeamSaraScore => '拿到 7！現在 14 分';
+
+  @override
+  String get previewTeamAskJiwoo => '智友，夠喊 CALL 嗎？';
+
+  @override
+  String get previewTeamJiwooScore => '我有 12 分！喊 CALL 吧';
+
+  @override
+  String get previewSaraRedTeam => '莎拉 · 紅隊';
+
+  @override
+  String get previewRed => '紅色';
+
+  @override
+  String get previewBlue => '藍色';
+
+  @override
+  String get previewYellow => '黃色';
+
+  @override
+  String get previewSameColor => '同色 7 + 3 = 10';
+
+  @override
+  String get previewSameRank => '同點數 7 + 7 = 14';
+
+  @override
+  String get previewMyScore => '我的分數';
+
+  @override
+  String get previewNight => '天黑了';
+
+  @override
+  String get previewChoosePrivately => '請在各自手機上秘密選擇';
+
+  @override
+  String get previewMorning => '天亮了';
+
+  @override
+  String get previewNobodyDied => '無人死亡';
+
+  @override
+  String get previewCitizen => '平民';
+
+  @override
+  String get previewWaitMorning => '閉上眼睛\n等待天亮';
+
+  @override
+  String get previewDiscussion => '開始討論';
+
+  @override
+  String get previewMafiaPrivate => '黑手黨 · 僅自己可見';
+
+  @override
+  String get previewNightTarget => '今晚選誰？';
+
+  @override
+  String get previewTargetChosen => '已選定目標';
+
+  @override
+  String get previewDoctorSave => '醫生 · 救一人';
+
+  @override
+  String get previewSaved => '呼，得救了…！';
+
+  @override
+  String get previewBlinds => '盲注 10/20';
+
+  @override
+  String get previewFlopTurn => '翻牌 · 莎拉回合';
+
+  @override
+  String get previewTurnRiver => '轉牌 · 河牌';
+
+  @override
+  String get previewShowdown => '攤牌';
+
+  @override
+  String get previewRaiseClaim => '加注到 400！';
+
+  @override
+  String get previewFlushWin => '同花贏得 +830';
+
+  @override
+  String get previewThinking => '思考中';
+
+  @override
+  String get previewCallClaim => '跟注！我跟了';
+
+  @override
+  String get previewFolded => '本局已棄牌';
+
+  @override
+  String get previewFoldClaim => '棄牌…';
+
+  @override
+  String get previewWin => '獲勝';
+
+  @override
+  String get previewSpadeFlush => '黑桃同花';
+
+  @override
+  String get previewRaise => '加注';
+
+  @override
+  String get previewCall => '跟注';
+
+  @override
+  String get previewFold => '棄牌';
+
+  @override
+  String previewPot(String chips) {
+    return '底池 $chips';
   }
 }

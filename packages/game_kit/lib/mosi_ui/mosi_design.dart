@@ -182,9 +182,9 @@ class MosiShelfTheme {
     fg: MosiColors.white,
     fgDim: Color(0x99FFFFFF),
     deep: MosiColors.navy,
-    btnBg: MosiColors.lime,
+    btnBg: MosiColors.sun,
     btnFg: MosiColors.navy,
-    accA: MosiColors.lime,
+    accA: MosiColors.sun,
     accB: MosiColors.sun,
   );
 
@@ -193,10 +193,10 @@ class MosiShelfTheme {
     fg: MosiColors.white,
     fgDim: Color(0x80FFFFFF),
     deep: MosiColors.navyDeepest,
-    btnBg: MosiColors.sun,
+    btnBg: MosiColors.coral,
     btnFg: MosiColors.navy,
-    accA: MosiColors.lime,
-    accB: MosiColors.sun,
+    accA: MosiColors.coral,
+    accB: MosiColors.coral,
   );
 
   static const paper = MosiShelfTheme(

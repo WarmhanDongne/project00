@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_connection.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -66,52 +67,41 @@ class _LobbyReconnectGuardState extends State<LobbyReconnectGuard> {
                 dismissible: false,
                 color: MosiColors.scrim,
               ),
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: MosiDialogFrame(
-                    semanticLabel: '태블릿 연결 끊김',
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '태블릿에 다시 연결하는 중',
-                          style: MosiFonts.sans(
-                            size: 22,
-                            weight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '태블릿의 앱과 인터넷 연결을 확인해 주세요.\n연결되면 이 화면에서 자동으로 이어집니다.',
-                          style: MosiFonts.sans(size: 15, height: 1.5),
-                        ),
-                        const SizedBox(height: 20),
-                        const Center(child: CircularProgressIndicator()),
-                        if (_error != null) ...[
-                          const SizedBox(height: 16),
-                          Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              _error!,
-                              style: MosiFonts.sans(
-                                size: 14,
-                                color: MosiColors.red,
-                              ),
+              Positioned.fill(
+                child: MosiConnectionLayout(
+                  semanticLabel: '태블릿 연결 끊김',
+                  background: mosiConnectionLavender,
+                  scene: MosiLobbyLostScene(
+                    characterIds: [
+                      for (final player in widget.provider.players)
+                        if (player.isActive) player.characterId,
+                    ],
+                  ),
+                  tag: '대기실 · 태블릿',
+                  tagColor: mosiConnectionLavender,
+                  title: '태블릿에 다시 연결하는 중',
+                  body: '태블릿의 앱과 인터넷 연결을 확인해 주세요.\n연결되면 이 화면에서 자동으로 이어져요.',
+                  status: const MosiConnectionStatus(text: '그룹은 그대로 유지돼요'),
+                  extra: _error == null
+                      ? null
+                      : Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            _error!,
+                            style: MosiFonts.sans(
+                              size: 14,
+                              weight: FontWeight.w700,
+                              color: MosiColors.red,
                             ),
                           ),
-                        ],
-                        const SizedBox(height: 24),
-                        MosiButton(
-                          label: '그룹 나가고 홈으로',
-                          expand: true,
-                          loading: _exiting || widget.provider.isLeaving,
-                          onPressed: _exit,
                         ),
-                      ],
+                  actions: [
+                    MosiConnectionButton(
+                      label: '그룹 나가고 홈으로',
+                      loading: _exiting || widget.provider.isLeaving,
+                      onPressed: _exit,
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],

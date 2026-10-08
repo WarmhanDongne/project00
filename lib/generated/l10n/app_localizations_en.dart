@@ -171,7 +171,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get releaseSoon => 'Coming soon';
 
   @override
-  String get galleryTitle => 'Mosi Game Gallery';
+  String get galleryTitle => 'Mosi Bookstore';
 
   @override
   String get restorePurchases => 'Restore purchases';
@@ -180,10 +180,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreSoon => 'Purchase restoration is coming soon.';
 
   @override
-  String get chooseFrame => 'Select a frame to choose a game';
+  String get chooseFrame => 'Tap a cover to choose a game';
 
   @override
-  String get ownedDot => 'Red dot = owned';
+  String get ownedDot => 'Bookmark = owned';
 
   @override
   String get purchaseNotice => 'Purchases are not available yet.';
@@ -243,5 +243,163 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String startWithPlayers(int count) {
     return 'Start with $count players';
+  }
+
+  @override
+  String get previewSara => 'Sara';
+
+  @override
+  String get previewMinjun => 'Minjun';
+
+  @override
+  String get previewHarin => 'Harin';
+
+  @override
+  String get previewJiwoo => 'Jiwoo';
+
+  @override
+  String get previewTableAce => 'Table card · A';
+
+  @override
+  String get previewNextMinjun => 'Sara → Minjun next';
+
+  @override
+  String get previewYourTurn => 'Your turn';
+
+  @override
+  String get previewTwoAces => 'Two aces!';
+
+  @override
+  String get previewCaught => 'Caught… roulette time';
+
+  @override
+  String get previewLiarClaim => 'LIAR! That\'s a bluff';
+
+  @override
+  String get previewWatching => 'Watching';
+
+  @override
+  String get previewCallReveal => 'CALL! Reveal all';
+
+  @override
+  String get previewDrawSwap => 'Draw · Swap';
+
+  @override
+  String get previewTeamAskSara => 'Sara, how\'s your score?';
+
+  @override
+  String get previewTeamSaraScore => 'Got a 7! Now 14';
+
+  @override
+  String get previewTeamAskJiwoo => 'Jiwoo, enough to call?';
+
+  @override
+  String get previewTeamJiwooScore => 'I\'m at 12! Let\'s call';
+
+  @override
+  String get previewSaraRedTeam => 'Sara · Red team';
+
+  @override
+  String get previewRed => 'Red';
+
+  @override
+  String get previewBlue => 'Blue';
+
+  @override
+  String get previewYellow => 'Yellow';
+
+  @override
+  String get previewSameColor => 'Same color: 7 + 3 = 10';
+
+  @override
+  String get previewSameRank => 'Same rank: 7 + 7 = 14';
+
+  @override
+  String get previewMyScore => 'My score';
+
+  @override
+  String get previewNight => 'Night falls';
+
+  @override
+  String get previewChoosePrivately => 'Choose privately on your phone';
+
+  @override
+  String get previewMorning => 'Morning breaks';
+
+  @override
+  String get previewNobodyDied => 'Nobody died';
+
+  @override
+  String get previewCitizen => 'Citizen';
+
+  @override
+  String get previewWaitMorning => 'Eyes closed.\nWait for morning';
+
+  @override
+  String get previewDiscussion => 'Discuss!';
+
+  @override
+  String get previewMafiaPrivate => 'Mafia · Private';
+
+  @override
+  String get previewNightTarget => 'Who tonight?';
+
+  @override
+  String get previewTargetChosen => 'Target chosen';
+
+  @override
+  String get previewDoctorSave => 'Doctor · Save one';
+
+  @override
+  String get previewSaved => 'Phew, I\'m alive!';
+
+  @override
+  String get previewBlinds => 'Blinds 10/20';
+
+  @override
+  String get previewFlopTurn => 'FLOP · Sara\'s turn';
+
+  @override
+  String get previewTurnRiver => 'TURN · RIVER';
+
+  @override
+  String get previewShowdown => 'SHOWDOWN';
+
+  @override
+  String get previewRaiseClaim => 'Raise to 400!';
+
+  @override
+  String get previewFlushWin => 'Flush wins +830';
+
+  @override
+  String get previewThinking => 'Thinking';
+
+  @override
+  String get previewCallClaim => 'Call! I\'m in';
+
+  @override
+  String get previewFolded => 'Folded';
+
+  @override
+  String get previewFoldClaim => 'Fold…';
+
+  @override
+  String get previewWin => 'WIN';
+
+  @override
+  String get previewSpadeFlush => 'Spade flush';
+
+  @override
+  String get previewRaise => 'Raise';
+
+  @override
+  String get previewCall => 'Call';
+
+  @override
+  String get previewFold => 'Fold';
+
+  @override
+  String previewPot(String chips) {
+    return 'POT $chips';
   }
 }

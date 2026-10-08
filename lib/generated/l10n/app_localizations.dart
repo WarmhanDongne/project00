@@ -423,7 +423,7 @@ abstract class AppLocalizations {
   /// No description provided for @galleryTitle.
   ///
   /// In ko, this message translates to:
-  /// **'모시 게임 미술관'**
+  /// **'모시 서점'**
   String get galleryTitle;
 
   /// No description provided for @restorePurchases.
@@ -441,13 +441,13 @@ abstract class AppLocalizations {
   /// No description provided for @chooseFrame.
   ///
   /// In ko, this message translates to:
-  /// **'액자를 눌러 게임을 골라 보세요'**
+  /// **'표지를 눌러 게임을 골라 보세요'**
   String get chooseFrame;
 
   /// No description provided for @ownedDot.
   ///
   /// In ko, this message translates to:
-  /// **'빨간 점 = 소장 중'**
+  /// **'책갈피 = 소장 중'**
   String get ownedDot;
 
   /// No description provided for @purchaseNotice.
@@ -563,6 +563,318 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{count}명으로 시작하기'**
   String startWithPlayers(int count);
+
+  /// No description provided for @previewSara.
+  ///
+  /// In ko, this message translates to:
+  /// **'사라'**
+  String get previewSara;
+
+  /// No description provided for @previewMinjun.
+  ///
+  /// In ko, this message translates to:
+  /// **'민준'**
+  String get previewMinjun;
+
+  /// No description provided for @previewHarin.
+  ///
+  /// In ko, this message translates to:
+  /// **'하린'**
+  String get previewHarin;
+
+  /// No description provided for @previewJiwoo.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우'**
+  String get previewJiwoo;
+
+  /// No description provided for @previewTableAce.
+  ///
+  /// In ko, this message translates to:
+  /// **'기준 카드 · A'**
+  String get previewTableAce;
+
+  /// No description provided for @previewNextMinjun.
+  ///
+  /// In ko, this message translates to:
+  /// **'사라 → 다음은 민준'**
+  String get previewNextMinjun;
+
+  /// No description provided for @previewYourTurn.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 차례'**
+  String get previewYourTurn;
+
+  /// No description provided for @previewTwoAces.
+  ///
+  /// In ko, this message translates to:
+  /// **'A 두 장!'**
+  String get previewTwoAces;
+
+  /// No description provided for @previewCaught.
+  ///
+  /// In ko, this message translates to:
+  /// **'들켰다… 룰렛으로'**
+  String get previewCaught;
+
+  /// No description provided for @previewLiarClaim.
+  ///
+  /// In ko, this message translates to:
+  /// **'LIAR! 거짓말'**
+  String get previewLiarClaim;
+
+  /// No description provided for @previewWatching.
+  ///
+  /// In ko, this message translates to:
+  /// **'지켜보는 중'**
+  String get previewWatching;
+
+  /// No description provided for @previewCallReveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'CALL! 모두 공개'**
+  String get previewCallReveal;
+
+  /// No description provided for @previewDrawSwap.
+  ///
+  /// In ko, this message translates to:
+  /// **'가져오기 · 교체'**
+  String get previewDrawSwap;
+
+  /// No description provided for @previewTeamAskSara.
+  ///
+  /// In ko, this message translates to:
+  /// **'사라, 숫자 좀 됐어?'**
+  String get previewTeamAskSara;
+
+  /// No description provided for @previewTeamSaraScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'7 들어왔어! 지금 14'**
+  String get previewTeamSaraScore;
+
+  /// No description provided for @previewTeamAskJiwoo.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우야, 우리 이 정도면 충분해?'**
+  String get previewTeamAskJiwoo;
+
+  /// No description provided for @previewTeamJiwooScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'난 12! 꼴찌는 아냐, 콜 가자'**
+  String get previewTeamJiwooScore;
+
+  /// No description provided for @previewSaraRedTeam.
+  ///
+  /// In ko, this message translates to:
+  /// **'사라 · 레드팀'**
+  String get previewSaraRedTeam;
+
+  /// No description provided for @previewRed.
+  ///
+  /// In ko, this message translates to:
+  /// **'빨강'**
+  String get previewRed;
+
+  /// No description provided for @previewBlue.
+  ///
+  /// In ko, this message translates to:
+  /// **'파랑'**
+  String get previewBlue;
+
+  /// No description provided for @previewYellow.
+  ///
+  /// In ko, this message translates to:
+  /// **'노랑'**
+  String get previewYellow;
+
+  /// No description provided for @previewSameColor.
+  ///
+  /// In ko, this message translates to:
+  /// **'같은 색 7 + 3 = 10'**
+  String get previewSameColor;
+
+  /// No description provided for @previewSameRank.
+  ///
+  /// In ko, this message translates to:
+  /// **'같은 숫자 7 + 7 = 14'**
+  String get previewSameRank;
+
+  /// No description provided for @previewMyScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 점수'**
+  String get previewMyScore;
+
+  /// No description provided for @previewNight.
+  ///
+  /// In ko, this message translates to:
+  /// **'밤이 되었습니다'**
+  String get previewNight;
+
+  /// No description provided for @previewChoosePrivately.
+  ///
+  /// In ko, this message translates to:
+  /// **'각자 휴대폰에서 몰래 고르세요'**
+  String get previewChoosePrivately;
+
+  /// No description provided for @previewMorning.
+  ///
+  /// In ko, this message translates to:
+  /// **'아침이 밝았습니다'**
+  String get previewMorning;
+
+  /// No description provided for @previewNobodyDied.
+  ///
+  /// In ko, this message translates to:
+  /// **'아무도 죽지 않았어요'**
+  String get previewNobodyDied;
+
+  /// No description provided for @previewCitizen.
+  ///
+  /// In ko, this message translates to:
+  /// **'시민'**
+  String get previewCitizen;
+
+  /// No description provided for @previewWaitMorning.
+  ///
+  /// In ko, this message translates to:
+  /// **'눈 감고\n아침을 기다려요'**
+  String get previewWaitMorning;
+
+  /// No description provided for @previewDiscussion.
+  ///
+  /// In ko, this message translates to:
+  /// **'토론 시작'**
+  String get previewDiscussion;
+
+  /// No description provided for @previewMafiaPrivate.
+  ///
+  /// In ko, this message translates to:
+  /// **'마피아 · 나만 보여요'**
+  String get previewMafiaPrivate;
+
+  /// No description provided for @previewNightTarget.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 밤 누구를?'**
+  String get previewNightTarget;
+
+  /// No description provided for @previewTargetChosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'지목 완료'**
+  String get previewTargetChosen;
+
+  /// No description provided for @previewDoctorSave.
+  ///
+  /// In ko, this message translates to:
+  /// **'의사 · 한 명 살리기'**
+  String get previewDoctorSave;
+
+  /// No description provided for @previewSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'휴, 살았다…!'**
+  String get previewSaved;
+
+  /// No description provided for @previewBlinds.
+  ///
+  /// In ko, this message translates to:
+  /// **'블라인드 10/20'**
+  String get previewBlinds;
+
+  /// No description provided for @previewFlopTurn.
+  ///
+  /// In ko, this message translates to:
+  /// **'FLOP · 사라 차례'**
+  String get previewFlopTurn;
+
+  /// No description provided for @previewTurnRiver.
+  ///
+  /// In ko, this message translates to:
+  /// **'TURN · RIVER'**
+  String get previewTurnRiver;
+
+  /// No description provided for @previewShowdown.
+  ///
+  /// In ko, this message translates to:
+  /// **'SHOWDOWN'**
+  String get previewShowdown;
+
+  /// No description provided for @previewRaiseClaim.
+  ///
+  /// In ko, this message translates to:
+  /// **'400 레이즈!'**
+  String get previewRaiseClaim;
+
+  /// No description provided for @previewFlushWin.
+  ///
+  /// In ko, this message translates to:
+  /// **'플러시로 +830'**
+  String get previewFlushWin;
+
+  /// No description provided for @previewThinking.
+  ///
+  /// In ko, this message translates to:
+  /// **'고민 중'**
+  String get previewThinking;
+
+  /// No description provided for @previewCallClaim.
+  ///
+  /// In ko, this message translates to:
+  /// **'콜! 따라갈게'**
+  String get previewCallClaim;
+
+  /// No description provided for @previewFolded.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 판 폴드'**
+  String get previewFolded;
+
+  /// No description provided for @previewFoldClaim.
+  ///
+  /// In ko, this message translates to:
+  /// **'폴드…'**
+  String get previewFoldClaim;
+
+  /// No description provided for @previewWin.
+  ///
+  /// In ko, this message translates to:
+  /// **'WIN'**
+  String get previewWin;
+
+  /// No description provided for @previewSpadeFlush.
+  ///
+  /// In ko, this message translates to:
+  /// **'스페이드 플러시'**
+  String get previewSpadeFlush;
+
+  /// No description provided for @previewRaise.
+  ///
+  /// In ko, this message translates to:
+  /// **'Raise'**
+  String get previewRaise;
+
+  /// No description provided for @previewCall.
+  ///
+  /// In ko, this message translates to:
+  /// **'Call'**
+  String get previewCall;
+
+  /// No description provided for @previewFold.
+  ///
+  /// In ko, this message translates to:
+  /// **'Fold'**
+  String get previewFold;
+
+  /// No description provided for @previewPot.
+  ///
+  /// In ko, this message translates to:
+  /// **'POT {chips}'**
+  String previewPot(String chips);
 }
 
 class _AppLocalizationsDelegate

@@ -162,7 +162,7 @@ void main() {
     expect(calls, 0);
   });
 
-  for (final game in ['liars_poker', 'final_call', 'mafia']) {
+  for (final game in ['liars_poker', 'final_call', 'mafia', 'holdem']) {
     testWidgets('$game 구성품이 패키지 원본 에셋을 표시하고 배치를 유지한다', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -179,7 +179,8 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
       final images = tester.widgetList<Image>(find.byType(Image)).toList();
-      expect(images, isNotEmpty);
+      // 홀덤은 다운로드형 게임이라 로비 구성품을 에셋 없이 코드로 그립니다.
+      expect(images, game == 'holdem' ? isEmpty : isNotEmpty);
       final names = <String>{};
       for (final image in images) {
         final asset = image.image as AssetImage;
@@ -208,6 +209,13 @@ void main() {
         }
         expect(names.any((p) => p.endsWith('button_call.webp')), isTrue);
         expect(names.any((p) => p.endsWith('icon_heart_red.webp')), isTrue);
+      } else if (game == 'holdem') {
+        expect(find.bySemanticsLabel('카드 뒷면'), findsNWidgets(4));
+        for (final suit in ['스페이드', '하트', '다이아', '클로버']) {
+          expect(find.text(suit), findsOneWidget);
+        }
+        expect(find.bySemanticsLabel('스페이드 A'), findsWidgets);
+        expect(find.bySemanticsLabel('Fold, Call, Raise 버튼'), findsOneWidget);
       } else {
         expect(names.where((p) => p.contains('/cards/role_')).length, 12);
         expect(names.any((p) => p.endsWith('role_mafia_boss.webp')), isTrue);
@@ -216,4 +224,31 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('홀덤 플레이 미리보기는 한 판을 반복하며 쇼다운까지 보여 준다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 694,
+              height: 560,
+              child: buildGamePlayPreview('holdem')!,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 2400));
+    expect(find.text('400 레이즈!'), findsOneWidget);
+    expect(find.bySemanticsLabel('스페이드 K'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 5000));
+    expect(find.text('WIN'), findsOneWidget);
+    expect(find.text('POT 830'), findsOneWidget);
+    // 10초 주기로 처음 장면으로 돌아옵니다.
+    await tester.pump(const Duration(milliseconds: 2800));
+    expect(find.text('POT 30'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

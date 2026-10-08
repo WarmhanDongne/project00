@@ -8,8 +8,13 @@ import 'package:game_final_call/gen/assets.gen.dart' as final_call;
 import 'package:game_final_call/game_assets.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
+import 'package:game_holdem/game_theme.dart';
+import 'package:game_holdem/shared/models/game_models.dart';
+import 'package:game_holdem/shared/widgets/card_view.dart';
+import 'package:game_holdem/shared/widgets/table_ui.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/localization/platform_localizations.dart';
 
 //=======================게임 상세 · 플레이 미리보기와 구성품==============================
 // 시안(게임 상세)의 CSS 키프레임을 그대로 옮긴 반복 연출입니다. 모든 장면은
@@ -24,6 +29,7 @@ Widget? buildGamePlayPreview(String gameId) => switch (gameId) {
   'liars_poker' => const _LiarPlayScene(),
   'final_call' => const _FinalPlayScene(),
   'mafia' => const _MafiaPlayScene(),
+  'holdem' => const _HoldemPlayScene(),
   _ => null,
 };
 
@@ -32,6 +38,7 @@ Widget? buildGameParts(String gameId) => switch (gameId) {
   'liars_poker' => const _LiarParts(),
   'final_call' => const _FinalParts(),
   'mafia' => const _MafiaParts(),
+  'holdem' => const _HoldemParts(),
   _ => null,
 };
 
@@ -264,18 +271,21 @@ Widget _nameTag(
   Color background,
   Color foreground, {
   double size = 11,
-}) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-  decoration: BoxDecoration(
-    color: background,
-    borderRadius: BorderRadius.circular(999),
-  ),
-  child: Text(
-    name,
-    style: MosiFonts.sans(
-      size: size,
-      weight: FontWeight.w700,
-      color: foreground,
+}) => Builder(
+  builder: (context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      name,
+      style: MosiFonts.sans(
+        locale: Localizations.maybeLocaleOf(context),
+        size: size,
+        weight: FontWeight.w700,
+        color: foreground,
+      ),
     ),
   ),
 );
@@ -316,58 +326,68 @@ Widget _speech(
   double fontSize = 18,
   bool serif = false,
   bool tailRight = false,
-}) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-  decoration: BoxDecoration(
-    color: background,
-    border: Border.all(color: MosiColors.ink, width: 3),
-    borderRadius: BorderRadius.only(
-      topLeft: const Radius.circular(14),
-      topRight: const Radius.circular(14),
-      bottomLeft: Radius.circular(tailRight ? 14 : 3),
-      bottomRight: Radius.circular(tailRight ? 3 : 14),
+}) => Builder(
+  builder: (context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    decoration: BoxDecoration(
+      color: background,
+      border: Border.all(color: MosiColors.ink, width: 3),
+      borderRadius: BorderRadius.only(
+        topLeft: const Radius.circular(14),
+        topRight: const Radius.circular(14),
+        bottomLeft: Radius.circular(tailRight ? 14 : 3),
+        bottomRight: Radius.circular(tailRight ? 3 : 14),
+      ),
     ),
-  ),
-  child: Text(
-    text,
-    style: serif
-        ? MosiFonts.playfair(size: fontSize, color: foreground)
-        : MosiFonts.sans(
-            size: fontSize,
-            weight: FontWeight.w700,
-            color: foreground,
-          ),
+    child: Text(
+      text,
+      style: serif
+          ? MosiFonts.playfair(
+              locale: Localizations.maybeLocaleOf(context),
+              size: fontSize,
+              color: foreground,
+            )
+          : MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: fontSize,
+              weight: FontWeight.w700,
+              color: foreground,
+            ),
+    ),
   ),
 );
 
 /// 팀 대화 말풍선(왼쪽에 팀 색 띠).
 Widget _teamBubble(String text, {required Color tint, required Color team}) =>
-    Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: tint,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MosiColors.ink, width: 2.5),
-        boxShadow: const [BoxShadow(color: _deepest, offset: Offset(3, 3))],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 4, color: team),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(9, 7, 11, 7),
-              child: Text(
-                text,
-                style: MosiFonts.sans(
-                  size: 12,
-                  weight: FontWeight.w700,
-                  color: const Color(0xFF141414),
+    Builder(
+      builder: (context) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: tint,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MosiColors.ink, width: 2.5),
+          boxShadow: const [BoxShadow(color: _deepest, offset: Offset(3, 3))],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: team),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(9, 7, 11, 7),
+                child: Text(
+                  text,
+                  style: MosiFonts.sans(
+                    locale: Localizations.maybeLocaleOf(context),
+                    size: 12,
+                    weight: FontWeight.w700,
+                    color: const Color(0xFF141414),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -500,8 +520,9 @@ class _LiarPlayScene extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            '기준 카드 · A',
+                            context.l10n.previewTableAce,
                             style: MosiFonts.sans(
+                              locale: Localizations.maybeLocaleOf(context),
                               size: 11,
                               weight: FontWeight.w700,
                               color: const Color(0xFF1B1022),
@@ -515,6 +536,7 @@ class _LiarPlayScene extends StatelessWidget {
                         child: Text(
                           'TABLE',
                           style: MosiFonts.grotesk(
+                            locale: Localizations.maybeLocaleOf(context),
                             size: 10,
                             color: const Color(0xFFC7B8CC),
                             letterSpacing: 2,
@@ -535,8 +557,9 @@ class _LiarPlayScene extends StatelessWidget {
                         left: 10,
                         bottom: 9,
                         child: Text(
-                          '사라 → 다음은 민준',
+                          context.l10n.previewNextMinjun,
                           style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
                             size: 11,
                             weight: FontWeight.w600,
                             color: const Color(0xFFE2D2E8),
@@ -603,14 +626,17 @@ class _LiarPlayScene extends StatelessWidget {
                                 child: Column(
                                   children: [
                                     _nameTag(
-                                      '사라',
+                                      context.l10n.previewSara,
                                       MosiColors.lime,
                                       MosiColors.navy,
                                     ),
                                     const SizedBox(height: 14),
                                     Text(
-                                      '내 차례',
+                                      context.l10n.previewYourTurn,
                                       style: MosiFonts.sans(
+                                        locale: Localizations.maybeLocaleOf(
+                                          context,
+                                        ),
                                         size: 10,
                                         weight: FontWeight.w600,
                                         color: const Color(0xFFE2D2E8),
@@ -633,7 +659,7 @@ class _LiarPlayScene extends StatelessWidget {
                             scale: claimScale,
                             alignment: const Alignment(-0.8, 1),
                             child: _speech(
-                              'A 두 장!',
+                              context.l10n.previewTwoAces,
                               background: MosiColors.lime,
                             ),
                           ),
@@ -647,7 +673,7 @@ class _LiarPlayScene extends StatelessWidget {
                           Transform.translate(
                             offset: Offset(0, resultY),
                             child: _speech(
-                              '들켰다… 룰렛으로',
+                              context.l10n.previewCaught,
                               background: MosiColors.white,
                               fontSize: 15,
                             ),
@@ -684,7 +710,7 @@ class _LiarPlayScene extends StatelessWidget {
                                 child: Column(
                                   children: [
                                     _nameTag(
-                                      '민준',
+                                      context.l10n.previewMinjun,
                                       MosiColors.sky,
                                       MosiColors.navy,
                                     ),
@@ -737,6 +763,10 @@ class _LiarPlayScene extends StatelessWidget {
                                               child: Text(
                                                 'Liar',
                                                 style: MosiFonts.playfair(
+                                                  locale:
+                                                      Localizations.maybeLocaleOf(
+                                                        context,
+                                                      ),
                                                   size: 17,
                                                   color: MosiColors.ink,
                                                 ),
@@ -765,7 +795,7 @@ class _LiarPlayScene extends StatelessWidget {
                             scale: callScale,
                             alignment: const Alignment(0.8, 1),
                             child: _speech(
-                              'LIAR! 거짓말',
+                              context.l10n.previewLiarClaim,
                               background: MosiColors.coral,
                               tailRight: true,
                             ),
@@ -791,11 +821,16 @@ class _LiarPlayScene extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 10),
                         child: Column(
                           children: [
-                            _nameTag('하린', MosiColors.sun, MosiColors.navy),
+                            _nameTag(
+                              context.l10n.previewHarin,
+                              MosiColors.sun,
+                              MosiColors.navy,
+                            ),
                             const SizedBox(height: 14),
                             Text(
-                              '지켜보는 중',
+                              context.l10n.previewWatching,
                               style: MosiFonts.sans(
+                                locale: Localizations.maybeLocaleOf(context),
                                 size: 10,
                                 weight: FontWeight.w600,
                                 color: const Color(0xFFE2D2E8),
@@ -831,6 +866,7 @@ class _LiarPlayScene extends StatelessWidget {
                       child: Text(
                         'LIAR!',
                         style: MosiFonts.playfair(
+                          locale: Localizations.maybeLocaleOf(context),
                           size: 34,
                           color: MosiColors.white,
                           letterSpacing: 1,
@@ -905,7 +941,14 @@ class _LiarCardFace extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
         border: Border.all(color: MosiColors.ink, width: 2.5),
       ),
-      child: Text(label, style: MosiFonts.playfair(size: 30, color: color)),
+      child: Text(
+        label,
+        style: MosiFonts.playfair(
+          locale: Localizations.maybeLocaleOf(context),
+          size: 30,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -1068,7 +1111,14 @@ class _FinalPlayScene extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: border, width: 2),
               ),
-              child: Text(text, style: MosiFonts.grotesk(size: 13, color: fg)),
+              child: Text(
+                text,
+                style: MosiFonts.grotesk(
+                  locale: Localizations.maybeLocaleOf(context),
+                  size: 13,
+                  color: fg,
+                ),
+              ),
             ),
           ),
         );
@@ -1097,11 +1147,19 @@ class _FinalPlayScene extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(n, style: MosiFonts.playfair(size: 36, color: color)),
+                  Text(
+                    n,
+                    style: MosiFonts.playfair(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 36,
+                      color: color,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     label,
                     style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
                       size: 9,
                       weight: FontWeight.w700,
                       color: const Color(0xFFB9B4A8),
@@ -1159,8 +1217,9 @@ class _FinalPlayScene extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                'CALL! 모두 공개',
+                                context.l10n.previewCallReveal,
                                 style: MosiFonts.sans(
+                                  locale: Localizations.maybeLocaleOf(context),
                                   size: 11,
                                   weight: FontWeight.w700,
                                   color: _black,
@@ -1287,7 +1346,7 @@ class _FinalPlayScene extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: _nameTag(
-                            '지우',
+                            context.l10n.previewJiwoo,
                             _blue,
                             MosiColors.white,
                             size: 10,
@@ -1337,11 +1396,16 @@ class _FinalPlayScene extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 10),
                           child: Column(
                             children: [
-                              _nameTag('사라', _red, MosiColors.white),
+                              _nameTag(
+                                context.l10n.previewSara,
+                                _red,
+                                MosiColors.white,
+                              ),
                               const SizedBox(height: 14),
                               Text(
-                                '가져오기 · 교체',
+                                context.l10n.previewDrawSwap,
                                 style: MosiFonts.sans(
+                                  locale: Localizations.maybeLocaleOf(context),
                                   size: 10,
                                   weight: FontWeight.w600,
                                   color: const Color(0xFFB9B4A8),
@@ -1398,7 +1462,11 @@ class _FinalPlayScene extends StatelessWidget {
                                 padding: const EdgeInsets.only(top: 10),
                                 child: Column(
                                   children: [
-                                    _nameTag('민준', _blue, MosiColors.white),
+                                    _nameTag(
+                                      context.l10n.previewMinjun,
+                                      _blue,
+                                      MosiColors.white,
+                                    ),
                                     const SizedBox(height: 22),
                                     SizedBox(
                                       width: 70,
@@ -1446,6 +1514,10 @@ class _FinalPlayScene extends StatelessWidget {
                                               child: Text(
                                                 'CALL',
                                                 style: MosiFonts.playfair(
+                                                  locale:
+                                                      Localizations.maybeLocaleOf(
+                                                        context,
+                                                      ),
                                                   size: 15,
                                                   color: _black,
                                                 ),
@@ -1515,7 +1587,11 @@ class _FinalPlayScene extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 10),
                         child: Column(
                           children: [
-                            _nameTag('하린', _red, MosiColors.white),
+                            _nameTag(
+                              context.l10n.previewHarin,
+                              _red,
+                              MosiColors.white,
+                            ),
                             const SizedBox(height: 14),
                             Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1562,7 +1638,7 @@ class _FinalPlayScene extends StatelessWidget {
               _fade(
                 t1,
                 _teamBubble(
-                  '사라, 숫자 좀 됐어?',
+                  context.l10n.previewTeamAskSara,
                   tint: const Color(0xFFFFE3E1),
                   team: _red,
                 ),
@@ -1574,7 +1650,7 @@ class _FinalPlayScene extends StatelessWidget {
               _fade(
                 t2,
                 _teamBubble(
-                  '7 들어왔어! 지금 14',
+                  context.l10n.previewTeamSaraScore,
                   tint: const Color(0xFFFFE3E1),
                   team: _red,
                 ),
@@ -1586,7 +1662,7 @@ class _FinalPlayScene extends StatelessWidget {
               _fade(
                 t3,
                 _teamBubble(
-                  '지우야, 우리 이 정도면 충분해?',
+                  context.l10n.previewTeamAskJiwoo,
                   tint: const Color(0xFFE1E9FF),
                   team: _blue,
                 ),
@@ -1598,7 +1674,7 @@ class _FinalPlayScene extends StatelessWidget {
               _fade(
                 t4,
                 _teamBubble(
-                  '난 12! 꼴찌는 아냐, 콜 가자',
+                  context.l10n.previewTeamJiwooScore,
                   tint: const Color(0xFFE1E9FF),
                   team: _blue,
                 ),
@@ -1653,7 +1729,7 @@ class _FinalPlayScene extends StatelessWidget {
                                 left: -4,
                                 top: -4,
                                 child: _nameTag(
-                                  '사라 · 레드팀',
+                                  context.l10n.previewSaraRedTeam,
                                   _red,
                                   MosiColors.white,
                                 ),
@@ -1665,21 +1741,31 @@ class _FinalPlayScene extends StatelessWidget {
                                     padding: const EdgeInsets.only(top: 18),
                                     child: Row(
                                       children: [
-                                        bigCard('7', '빨강', _red, dy: r7),
+                                        bigCard(
+                                          '7',
+                                          context.l10n.previewRed,
+                                          _red,
+                                          dy: r7,
+                                        ),
                                         const SizedBox(width: 8),
                                         bigCard(
                                           '3',
-                                          '빨강',
+                                          context.l10n.previewRed,
                                           _red,
                                           dy: r3y,
                                           opacity: r3o,
                                         ),
                                         const SizedBox(width: 8),
-                                        bigCard('7', '파랑', _blue, dy: b7),
+                                        bigCard(
+                                          '7',
+                                          context.l10n.previewBlue,
+                                          _blue,
+                                          dy: b7,
+                                        ),
                                         const SizedBox(width: 8),
                                         bigCard(
                                           '2',
-                                          '노랑',
+                                          context.l10n.previewYellow,
                                           _yellow,
                                           opacity: y2,
                                         ),
@@ -1723,8 +1809,14 @@ class _FinalPlayScene extends StatelessWidget {
                                                       ),
                                                     ),
                                                     child: Text(
-                                                      '같은 색 7 + 3 = 10',
+                                                      context
+                                                          .l10n
+                                                          .previewSameColor,
                                                       style: MosiFonts.sans(
+                                                        locale:
+                                                            Localizations.maybeLocaleOf(
+                                                              context,
+                                                            ),
                                                         size: 13,
                                                         weight: FontWeight.w700,
                                                         color: MosiColors.white,
@@ -1777,8 +1869,12 @@ class _FinalPlayScene extends StatelessWidget {
                                                   ),
                                                 ),
                                                 child: Text(
-                                                  '같은 숫자 7 + 7 = 14',
+                                                  context.l10n.previewSameRank,
                                                   style: MosiFonts.sans(
+                                                    locale:
+                                                        Localizations.maybeLocaleOf(
+                                                          context,
+                                                        ),
                                                     size: 13,
                                                     weight: FontWeight.w700,
                                                     color: _black,
@@ -1826,14 +1922,22 @@ class _FinalPlayScene extends StatelessWidget {
                                             Text(
                                               '14',
                                               style: MosiFonts.grotesk(
+                                                locale:
+                                                    Localizations.maybeLocaleOf(
+                                                      context,
+                                                    ),
                                                 size: 32,
                                                 color: _black,
                                                 height: 1,
                                               ),
                                             ),
                                             Text(
-                                              '내 점수',
+                                              context.l10n.previewMyScore,
                                               style: MosiFonts.sans(
+                                                locale:
+                                                    Localizations.maybeLocaleOf(
+                                                      context,
+                                                    ),
                                                 size: 10,
                                                 weight: FontWeight.w700,
                                                 color: _black,
@@ -2007,6 +2111,7 @@ class _MafiaPlayScene extends StatelessWidget {
                 child: Text(
                   name,
                   style: MosiFonts.sans(
+                    locale: Localizations.maybeLocaleOf(context),
                     size: 10,
                     weight: FontWeight.w700,
                     color: MosiColors.white,
@@ -2104,9 +2209,12 @@ class _MafiaPlayScene extends StatelessWidget {
                                 right: 0,
                                 top: 72,
                                 child: Text(
-                                  '밤이 되었습니다',
+                                  context.l10n.previewNight,
                                   textAlign: TextAlign.center,
                                   style: MosiFonts.sans(
+                                    locale: Localizations.maybeLocaleOf(
+                                      context,
+                                    ),
                                     size: 22,
                                     weight: FontWeight.w700,
                                     color: MosiColors.white,
@@ -2118,9 +2226,12 @@ class _MafiaPlayScene extends StatelessWidget {
                                 right: 0,
                                 top: 108,
                                 child: Text(
-                                  '각자 휴대폰에서 몰래 고르세요',
+                                  context.l10n.previewChoosePrivately,
                                   textAlign: TextAlign.center,
                                   style: MosiFonts.sans(
+                                    locale: Localizations.maybeLocaleOf(
+                                      context,
+                                    ),
                                     size: 11,
                                     color: const Color(0xFFB9BDC9),
                                   ),
@@ -2190,8 +2301,11 @@ class _MafiaPlayScene extends StatelessWidget {
                                     child: Column(
                                       children: [
                                         Text(
-                                          '아침이 밝았습니다',
+                                          context.l10n.previewMorning,
                                           style: MosiFonts.sans(
+                                            locale: Localizations.maybeLocaleOf(
+                                              context,
+                                            ),
                                             size: 20,
                                             weight: FontWeight.w700,
                                             color: MosiColors.ink,
@@ -2214,8 +2328,12 @@ class _MafiaPlayScene extends StatelessWidget {
                                             ),
                                           ),
                                           child: Text(
-                                            '아무도 죽지 않았어요',
+                                            context.l10n.previewNobodyDied,
                                             style: MosiFonts.sans(
+                                              locale:
+                                                  Localizations.maybeLocaleOf(
+                                                    context,
+                                                  ),
                                               size: 12,
                                               weight: FontWeight.w700,
                                               color: MosiColors.ink,
@@ -2269,11 +2387,16 @@ class _MafiaPlayScene extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 10),
                           child: Column(
                             children: [
-                              _nameTag('사라', MosiColors.sky, MosiColors.white),
+                              _nameTag(
+                                context.l10n.previewSara,
+                                MosiColors.sky,
+                                MosiColors.white,
+                              ),
                               const SizedBox(height: 6),
                               Text(
-                                '시민',
+                                context.l10n.previewCitizen,
                                 style: MosiFonts.sans(
+                                  locale: Localizations.maybeLocaleOf(context),
                                   size: 10,
                                   weight: FontWeight.w700,
                                   color: const Color(0xFF8FB6FF),
@@ -2283,9 +2406,12 @@ class _MafiaPlayScene extends StatelessWidget {
                               _fade(
                                 nightO,
                                 Text(
-                                  '눈 감고\n아침을 기다려요',
+                                  context.l10n.previewWaitMorning,
                                   textAlign: TextAlign.center,
                                   style: MosiFonts.sans(
+                                    locale: Localizations.maybeLocaleOf(
+                                      context,
+                                    ),
                                     size: 10,
                                     weight: FontWeight.w600,
                                     color: const Color(0xFFB9BDC9),
@@ -2305,6 +2431,7 @@ class _MafiaPlayScene extends StatelessWidget {
                           Text(
                             'z',
                             style: MosiFonts.grotesk(
+                              locale: Localizations.maybeLocaleOf(context),
                               size: 13,
                               color: const Color(0xFF8FB6FF),
                             ),
@@ -2325,8 +2452,9 @@ class _MafiaPlayScene extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              '토론 시작',
+                              context.l10n.previewDiscussion,
                               style: MosiFonts.sans(
+                                locale: Localizations.maybeLocaleOf(context),
                                 size: 10,
                                 weight: FontWeight.w700,
                                 color: MosiColors.ink,
@@ -2353,14 +2481,16 @@ class _MafiaPlayScene extends StatelessWidget {
                     child: Column(
                       children: [
                         _nameTag(
-                          '민준',
+                          context.l10n.previewMinjun,
                           const Color(0xFFFF0000),
                           MosiColors.white,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '마피아 · 나만 보여요',
+                          context.l10n.previewMafiaPrivate,
+                          textAlign: TextAlign.center,
                           style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
                             size: 10,
                             weight: FontWeight.w700,
                             color: const Color(0xFFFF8A8A),
@@ -2368,17 +2498,18 @@ class _MafiaPlayScene extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '오늘 밤 누구를?',
+                          context.l10n.previewNightTarget,
                           style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
                             size: 9,
                             color: const Color(0xFFB9BDC9),
                           ),
                         ),
                         const SizedBox(height: 6),
-                        choice('사라'),
+                        choice(context.l10n.previewSara),
                         const SizedBox(height: 6),
                         choice(
-                          '지우',
+                          context.l10n.previewJiwoo,
                           overlay: Positioned.fill(
                             child: Stack(
                               clipBehavior: Clip.none,
@@ -2413,13 +2544,14 @@ class _MafiaPlayScene extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        choice('하린'),
+                        choice(context.l10n.previewHarin),
                         const SizedBox(height: 6),
                         _fade(
                           doneO,
                           Text(
-                            '지목 완료',
+                            context.l10n.previewTargetChosen,
                             style: MosiFonts.sans(
+                              locale: Localizations.maybeLocaleOf(context),
                               size: 9,
                               weight: FontWeight.w700,
                               color: const Color(0xFFFF8A8A),
@@ -2442,21 +2574,26 @@ class _MafiaPlayScene extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 10),
                   child: Column(
                     children: [
-                      _nameTag('하린', MosiColors.sky, MosiColors.white),
+                      _nameTag(
+                        context.l10n.previewHarin,
+                        MosiColors.sky,
+                        MosiColors.white,
+                      ),
                       const SizedBox(height: 6),
                       Text(
-                        '의사 · 한 명 살리기',
+                        context.l10n.previewDoctorSave,
                         style: MosiFonts.sans(
+                          locale: Localizations.maybeLocaleOf(context),
                           size: 10,
                           weight: FontWeight.w700,
                           color: const Color(0xFF8FB6FF),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      choice('사라'),
+                      choice(context.l10n.previewSara),
                       const SizedBox(height: 6),
                       choice(
-                        '지우',
+                        context.l10n.previewJiwoo,
                         overlay: Positioned.fill(
                           child: Stack(
                             clipBehavior: Clip.none,
@@ -2501,6 +2638,9 @@ class _MafiaPlayScene extends StatelessWidget {
                                       child: Text(
                                         '+',
                                         style: MosiFonts.sans(
+                                          locale: Localizations.maybeLocaleOf(
+                                            context,
+                                          ),
                                           size: 13,
                                           weight: FontWeight.w700,
                                           color: MosiColors.white,
@@ -2517,7 +2657,7 @@ class _MafiaPlayScene extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      choice('민준'),
+                      choice(context.l10n.previewMinjun),
                     ],
                   ),
                 ),
@@ -2544,11 +2684,16 @@ class _MafiaPlayScene extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 8),
                           child: Column(
                             children: [
-                              _nameTag('지우', MosiColors.sky, MosiColors.white),
+                              _nameTag(
+                                context.l10n.previewJiwoo,
+                                MosiColors.sky,
+                                MosiColors.white,
+                              ),
                               const SizedBox(height: 6),
                               Text(
-                                '시민',
+                                context.l10n.previewCitizen,
                                 style: MosiFonts.sans(
+                                  locale: Localizations.maybeLocaleOf(context),
                                   size: 9,
                                   weight: FontWeight.w700,
                                   color: const Color(0xFF8FB6FF),
@@ -2562,6 +2707,9 @@ class _MafiaPlayScene extends StatelessWidget {
                                   child: Text(
                                     'z z',
                                     style: MosiFonts.grotesk(
+                                      locale: Localizations.maybeLocaleOf(
+                                        context,
+                                      ),
                                       size: 14,
                                       color: const Color(0xFF8FB6FF),
                                     ),
@@ -2581,7 +2729,7 @@ class _MafiaPlayScene extends StatelessWidget {
                             scale: aliveS,
                             alignment: const Alignment(-0.6, 1),
                             child: _teamBubble(
-                              '휴, 살았다…!',
+                              context.l10n.previewSaved,
                               tint: const Color(0xFFEAF6DA),
                               team: const Color(0xFF2EB872),
                             ),
@@ -3969,6 +4117,983 @@ class _MafiaParts extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+//=======================홀덤 미리보기 (10초)==============================
+// 플랍 공개 → 사라 레이즈 → 민준 콜(하린 폴드) → 턴·리버 → 쇼다운 WIN 순서로
+// 한 판을 보여 줍니다. 카드 앞면은 게임과 같은 `HoldemCardView`로 그립니다.
+
+HoldemCardModel _holdemCard(String rank, String suit) =>
+    HoldemCardModel(id: 'preview-${rank}_$suit', rank: rank, suit: suit);
+
+/// 홀덤 카드 뒷면입니다. 홀덤은 다운로드형 게임이라 로비에서는 에셋 없이
+/// 게임 뒷면의 흰 바탕·이중 테두리·마름모 무늬를 코드로 그립니다.
+Widget _holdemBackCard(double width) {
+  final height = width * HoldemCardView.aspectRatio;
+  final inset = width * .08;
+  return Semantics(
+    image: true,
+    label: '카드 뒷면',
+    child: Container(
+      width: width,
+      height: height,
+      padding: EdgeInsets.all(inset),
+      decoration: BoxDecoration(
+        color: MosiColors.white,
+        borderRadius: BorderRadius.circular(width * .115),
+        border: Border.all(color: MosiColors.ink, width: 1.5),
+      ),
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(width * .06),
+          border: Border.all(color: HoldemColors.accent, width: 1),
+        ),
+        child: _rotated(
+          45,
+          Container(
+            width: width * .3,
+            height: width * .3,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border.all(color: HoldemColors.accent, width: 1.2),
+            ),
+            child: Container(
+              width: width * .12,
+              height: width * .12,
+              color: HoldemColors.accent,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _HoldemPlayScene extends StatelessWidget {
+  const _HoldemPlayScene();
+
+  static final _board = [
+    _holdemCard('k', 'spades'),
+    _holdemCard('9', 'hearts'),
+    _holdemCard('4', 'clubs'),
+    _holdemCard('j', 'spades'),
+    _holdemCard('2', 'spades'),
+  ];
+
+  /// 쇼다운에서 사라의 스페이드 플러시에 들어가는 보드 카드입니다.
+  static const _winning = {0, 3, 4};
+
+  @override
+  Widget build(BuildContext context) {
+    return _Loop(
+      period: const Duration(seconds: 10),
+      builder: (context, p) {
+        final fadeAll = _kf(p, [(93, 1), (99, 0)]);
+        final showdown = _kf(p, [(64, 0), (68, 1)]);
+        final stampOpacity = _kf(p, [(66, 0), (70, 1), (90, 1), (93, 0)]);
+        final stampScale = _kf(p, [(66, 2.4), (70, 0.95), (73, 1)]);
+        final pot = p < 27
+            ? 30
+            : p < 42
+            ? 430
+            : 830;
+        final potBump = _kf(p, [
+          (26, 1),
+          (28, 1.18),
+          (31, 1),
+          (41, 1),
+          (43, 1.18),
+          (46, 1),
+        ]);
+
+        // 보드 카드 i가 [start]%부터 뒤집히며 놓입니다.
+        Widget boardCard(int index, double start) {
+          final appear = _kf(p, [(start, 0), (start + 3, 1)]);
+          final flip = _kf(p, [(start + 1, 0), (start + 4, 1)]);
+          final lose = showdown * (_winning.contains(index) ? 0 : 1);
+          return Opacity(
+            opacity: (appear * fadeAll).clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, 14 * (1 - appear)),
+              child: Opacity(
+                opacity: 1 - lose * .6,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.diagonal3Values(
+                    flip < .5 ? 1 - flip * 2 : flip * 2 - 1,
+                    1,
+                    1,
+                  ),
+                  child: flip < .5
+                      ? _holdemBackCard(34)
+                      : HoldemCardView(
+                          card: _board[index],
+                          width: 34,
+                          emphasis: showdown > .5 && _winning.contains(index)
+                              ? HoldemCardEmphasis.win
+                              : HoldemCardEmphasis.none,
+                        ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        const starts = [6.0, 8.0, 10.0, 49.0, 56.0];
+
+        // 사라
+        final glowA = _kf(p, [(16, 0), (18, 1), (28, 1), (31, 0)]);
+        final raiseOpacity = _kf(p, [(17, 0), (20, 1), (30, 1), (33, 0)]);
+        final raiseScale = _kf(p, [(17, 0.6), (20, 1)]);
+        final raisePress = _kf(p, [(22, 1), (24, 0.86), (26, 1)]);
+        final winOpacity = _kf(p, [(70, 0), (74, 1), (90, 1), (93, 0)]);
+        final winY = _kf(p, [(70, 8), (74, 0)]);
+        // 민준
+        final glowB = _kf(p, [(33, 0), (35, 1), (44, 1), (47, 0)]);
+        final callOpacity = _kf(p, [(35, 0), (38, 1), (46, 1), (49, 0)]);
+        final callScale = _kf(p, [(35, 0.6), (38, 1)]);
+        final callPress = _kf(p, [(38, 1), (40, 0.86), (42, 1)]);
+        // 하린
+        final foldOpacity = _kf(p, [(11, 0), (14, 1), (22, 1), (25, 0)]);
+        final foldDim = _kf(p, [(14, 0), (18, 1), (93, 1), (99, 0)]);
+
+        Widget phoneHand(List<HoldemCardModel>? cards, {double dim = 0}) =>
+            Opacity(
+              opacity: 1 - dim * .55,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (i, rotation) in const [(0, -8.0), (1, 8.0)])
+                    Transform.translate(
+                      offset: Offset(i == 0 ? 4 : -4, 0),
+                      child: _rotated(
+                        rotation,
+                        cards == null
+                            ? _holdemBackCard(30)
+                            : HoldemCardView(
+                                card: cards[i],
+                                width: 30,
+                                layout: HoldemCardLayout.hand,
+                              ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+
+        Widget puck(String label, double scale, {bool dark = false}) =>
+            Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 50,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: dark ? HoldemColors.puckDarkMid : MosiColors.white,
+                  border: Border.all(color: MosiColors.ink, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0xFFB3BEB7), offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Text(
+                  label,
+                  style:
+                      HoldemFonts.title(
+                        size: 14,
+                        color: dark ? HoldemColors.ivory : MosiColors.ink,
+                      ).copyWith(
+                        locale: Localizations.maybeLocaleOf(context),
+                        fontFamilyFallback: MosiFonts.fallbacks(
+                          Localizations.maybeLocaleOf(context),
+                        ),
+                      ),
+                ),
+              ),
+            );
+
+        Widget phone({
+          required String id,
+          required String name,
+          required Color tag,
+          required String status,
+          required Widget hand,
+          Widget? action,
+          double glow = 0,
+          Color glowColor = MosiColors.lime,
+        }) => _PhoneFrame(
+          screenColor: HoldemColors.felt,
+          glow: glow,
+          glowColor: glowColor,
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              _nameTag(name, tag, MosiColors.navy),
+              const SizedBox(height: 6),
+              Text(
+                status,
+                style: MosiFonts.sans(
+                  locale: Localizations.maybeLocaleOf(context),
+                  size: 10,
+                  weight: FontWeight.w600,
+                  color: HoldemColors.muted,
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: KeyedSubtree(
+                    key: ValueKey('preview-holdem-hand-$id'),
+                    child: hand,
+                  ),
+                ),
+              ),
+              SizedBox(
+                key: ValueKey('preview-holdem-action-$id'),
+                height: 54,
+                child: Center(child: action),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+
+        return _SceneBackdrop(
+          band: MosiColors.green,
+          stage: [
+            _at(
+              190,
+              30,
+              _TabletFrame(
+                screen: ColoredBox(
+                  color: HoldemColors.felt,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 10,
+                        top: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: MosiColors.white,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            context.l10n.previewBlinds,
+                            style: MosiFonts.sans(
+                              locale: Localizations.maybeLocaleOf(context),
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: HoldemColors.ink,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        top: 12,
+                        child: Text(
+                          "HOLD'EM",
+                          style: HoldemFonts.title(
+                            size: 12,
+                            color: HoldemColors.muted,
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Container(
+                          width: 236,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(60),
+                            border: Border.all(
+                              color: HoldemColors.line(.18),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: const Alignment(0, -.42),
+                        child: Transform.scale(
+                          scale: potBump,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const HoldemChip(size: 12),
+                              const SizedBox(width: 5),
+                              Text(
+                                context.l10n.previewPot(holdemChips(pot)),
+                                style: HoldemFonts.numbers(size: 20).copyWith(
+                                  locale: Localizations.maybeLocaleOf(context),
+                                  fontFamilyFallback: MosiFonts.fallbacks(
+                                    Localizations.maybeLocaleOf(context),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: const Alignment(0, .22),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var i = 0; i < 5; i++) ...[
+                              if (i > 0) const SizedBox(width: 6),
+                              SizedBox(
+                                width: 34,
+                                height: 34 * HoldemCardView.aspectRatio,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    const HoldemCardSlot(width: 34),
+                                    boardCard(i, starts[i]),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        left: 10,
+                        bottom: 9,
+                        child: Text(
+                          p < 49
+                              ? context.l10n.previewFlopTurn
+                              : p < 64
+                              ? context.l10n.previewTurnRiver
+                              : context.l10n.previewShowdown,
+                          style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
+                            size: 11,
+                            weight: FontWeight.w600,
+                            color: HoldemColors.ivory,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 휴대폰 1: 사라 (레이즈 → 승리)
+            _at(
+              40,
+              262,
+              _rotated(
+                -8,
+                SizedBox(
+                  width: 110,
+                  height: 200,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      phone(
+                        id: 'sara',
+                        name: context.l10n.previewSara,
+                        tag: MosiColors.lime,
+                        status: context.l10n.previewYourTurn,
+                        glow: math.max(glowA, showdown * stampOpacity),
+                        action: puck(context.l10n.previewRaise, raisePress),
+                        hand: phoneHand([
+                          _holdemCard('a', 'spades'),
+                          _holdemCard('7', 'spades'),
+                        ]),
+                      ),
+                      Positioned(
+                        left: -2,
+                        top: -60,
+                        child: _fade(
+                          raiseOpacity,
+                          Transform.scale(
+                            scale: raiseScale,
+                            alignment: const Alignment(-0.8, 1),
+                            child: _speech(
+                              context.l10n.previewRaiseClaim,
+                              background: MosiColors.lime,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: -2,
+                        top: -60,
+                        child: _fade(
+                          winOpacity,
+                          Transform.translate(
+                            offset: Offset(0, winY),
+                            child: _speech(
+                              context.l10n.previewFlushWin,
+                              background: MosiColors.white,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 휴대폰 2: 민준 (콜)
+            _at(
+              530,
+              262,
+              _rotated(
+                8,
+                SizedBox(
+                  width: 110,
+                  height: 200,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      phone(
+                        id: 'minjun',
+                        name: context.l10n.previewMinjun,
+                        tag: MosiColors.sky,
+                        status: p < 33
+                            ? context.l10n.previewThinking
+                            : context.l10n.previewYourTurn,
+                        glow: glowB,
+                        glowColor: MosiColors.coral,
+                        action: puck(context.l10n.previewCall, callPress),
+                        hand: phoneHand(null),
+                      ),
+                      Positioned(
+                        right: -6,
+                        top: -60,
+                        child: _fade(
+                          callOpacity,
+                          Transform.scale(
+                            scale: callScale,
+                            alignment: const Alignment(0.8, 1),
+                            child: _speech(
+                              context.l10n.previewCallClaim,
+                              background: MosiColors.coral,
+                              tailRight: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 휴대폰 3: 하린 (폴드)
+            _at(
+              285,
+              300,
+              SizedBox(
+                width: 110,
+                height: 200,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    phone(
+                      id: 'harin',
+                      name: context.l10n.previewHarin,
+                      tag: MosiColors.sun,
+                      status: foldDim > .5
+                          ? context.l10n.previewFolded
+                          : context.l10n.previewWatching,
+                      hand: phoneHand(null, dim: foldDim),
+                    ),
+                    Positioned(
+                      left: 18,
+                      top: -46,
+                      child: _fade(
+                        foldOpacity,
+                        _speech(
+                          context.l10n.previewFoldClaim,
+                          background: MosiColors.white,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _at(
+              240,
+              150,
+              _fade(
+                stampOpacity,
+                _rotated(
+                  -12,
+                  Transform.scale(
+                    scale: stampScale,
+                    child: Container(
+                      width: 200,
+                      height: 66,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: HoldemColors.accent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: MosiColors.ink, width: 4),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            context.l10n.previewWin,
+                            style:
+                                HoldemFonts.title(
+                                  size: 30,
+                                  color: MosiColors.white,
+                                ).copyWith(
+                                  locale: Localizations.maybeLocaleOf(context),
+                                  fontFamilyFallback: MosiFonts.fallbacks(
+                                    Localizations.maybeLocaleOf(context),
+                                  ),
+                                ),
+                          ),
+                          Text(
+                            context.l10n.previewSpadeFlush,
+                            style: MosiFonts.sans(
+                              locale: Localizations.maybeLocaleOf(context),
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: MosiColors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+//=======================구성품 · 홀덤==============================
+class _HoldemParts extends StatelessWidget {
+  const _HoldemParts();
+
+  @override
+  Widget build(BuildContext context) {
+    final suits = [
+      (_holdemCard('a', 'spades'), '스페이드', 0.0),
+      (_holdemCard('k', 'hearts'), '하트', 0.3),
+      (_holdemCard('q', 'diamonds'), '다이아', 0.6),
+      (_holdemCard('j', 'clubs'), '클로버', 0.9),
+    ];
+    const ranks = [
+      '스트레이트 플러시',
+      '포카드',
+      '풀하우스',
+      '플러시',
+      '스트레이트',
+      '트리플',
+      '투 페어',
+      '원 페어',
+      '하이 카드',
+    ];
+    const blinds = ['10/20', '20/40', '40/80', '80/160', '160/320'];
+
+    Widget heading(String title, String trailing) => Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(title, style: _partsTitle()),
+        const Spacer(),
+        Text(
+          trailing,
+          style: MosiFonts.grotesk(size: 13, color: MosiColors.green),
+        ),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 125,
+            child: _partsCard(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  heading('카드 덱', '52장 표준 덱'),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final (card, name, delay) in suits)
+                        Column(
+                          children: [
+                            _Float(
+                              delay: delay,
+                              child: SizedBox(
+                                width: 72,
+                                height: 100,
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 8,
+                                      top: 0,
+                                      child: _holdemBackCard(62),
+                                    ),
+                                    Positioned(
+                                      left: 0,
+                                      top: 8,
+                                      child: HoldemCardView(
+                                        card: card,
+                                        width: 62,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              name,
+                              style: MosiFonts.sans(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: MosiColors.navy,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: MosiColors.cream,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: MosiColors.ink,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                '× 13',
+                                style: MosiFonts.grotesk(
+                                  size: 13,
+                                  color: MosiColors.navy,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: MosiColors.cream,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 176,
+                          height: 74,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: HoldemColors.felt,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: MosiColors.ink, width: 2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final card in [
+                                _holdemCard('a', 'spades'),
+                                _holdemCard('7', 'spades'),
+                              ]) ...[
+                                HoldemCardView(
+                                  card: card,
+                                  width: 19,
+                                  layout: HoldemCardLayout.mini,
+                                ),
+                                const SizedBox(width: 2),
+                              ],
+                              const SizedBox(width: 8),
+                              for (final card in _HoldemPlayScene._board) ...[
+                                HoldemCardView(
+                                  card: card,
+                                  width: 19,
+                                  layout: HoldemCardLayout.mini,
+                                ),
+                                const SizedBox(width: 2),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text.rich(
+                            const TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '내 카드 2장',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: MosiColors.navy,
+                                  ),
+                                ),
+                                TextSpan(text: '과 테이블의 '),
+                                TextSpan(
+                                  text: '공용 카드 5장',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: MosiColors.navy,
+                                  ),
+                                ),
+                                TextSpan(text: ' 중 가장 강한 5장으로 겨뤄요.'),
+                              ],
+                            ),
+                            style: _partsMuted(size: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  const MosiDashedDivider(color: Color(0xFFD4CFE6)),
+                  const SizedBox(height: 12),
+                  Text(
+                    '족보 · 왼쪽일수록 강해요',
+                    style: MosiFonts.sans(
+                      size: 12,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      for (final (i, name) in ranks.indexed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: i == 0 ? MosiColors.sun : MosiColors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: MosiColors.ink, width: 2),
+                          ),
+                          child: Text(
+                            '${i + 1} $name',
+                            style: MosiFonts.sans(
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: MosiColors.navy,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _partsCard(
+                    delay: const Duration(milliseconds: 80),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        heading('칩 · 블라인드', '시작 1,000칩'),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            for (var i = 0; i < 3; i++)
+                              Transform.translate(
+                                offset: Offset(-6.0 * i, -3.0 * i),
+                                child: const HoldemChip(size: 30),
+                              ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '가상 칩이라 방이 끝나면 사라져요. 칩이 0이면 탈락이에요.',
+                                style: _partsMuted(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Text(
+                          '5판마다 블라인드가 두 배',
+                          style: MosiFonts.sans(
+                            size: 12,
+                            weight: FontWeight.w700,
+                            color: MosiColors.navy,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            for (final (i, blind) in blinds.indexed) ...[
+                              if (i > 0) const SizedBox(width: 4),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 5,
+                                  ),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: i == 0
+                                        ? MosiColors.sun
+                                        : MosiColors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: MosiColors.ink,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    child: Text(
+                                      blind,
+                                      style: MosiFonts.grotesk(
+                                        size: 12,
+                                        color: MosiColors.navy,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _partsCard(
+                  delay: const Duration(milliseconds: 160),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('내 휴대폰 버튼', style: _partsTitle()),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+                        decoration: BoxDecoration(
+                          color: HoldemColors.felt,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Semantics(
+                          image: true,
+                          label: 'Fold, Call, Raise 버튼',
+                          child: ExcludeSemantics(
+                            child: IgnorePointer(
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  HoldemPuckButton(
+                                    label: 'Fold',
+                                    dark: true,
+                                    size: 56,
+                                    onPressed: () {},
+                                  ),
+                                  HoldemPuckButton(
+                                    label: 'Call',
+                                    amount: '400',
+                                    size: 62,
+                                    onPressed: () {},
+                                  ),
+                                  HoldemPuckButton(
+                                    label: 'Raise',
+                                    size: 56,
+                                    onPressed: () {},
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '내 차례에는 카드가 보이고, 기다릴 땐 눌러야만 보여요',
+                        style: _partsMuted(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _partsCard(
+                  delay: const Duration(milliseconds: 240),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '2–8',
+                        style: MosiFonts.grotesk(
+                          size: 34,
+                          color: MosiColors.navy,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              const TextSpan(
+                                text: '명이 함께해요.\n',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(
+                                text: '딜러 D와 블라인드 SB·BB가 판마다 돌아가요.',
+                                style: _partsMuted(size: 12),
+                              ),
+                            ],
+                          ),
+                          style: MosiFonts.sans(
+                            size: 13,
+                            color: MosiColors.navy,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

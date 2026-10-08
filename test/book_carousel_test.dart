@@ -226,7 +226,7 @@ void main() {
     await tester.runAsync(() async {
       await precacheImage(
         const AssetImage(
-          'packages/game_kit/assets/images/covers/holdem_cardbox.webp',
+          'packages/game_kit/assets/images/covers/poker_cardbox.png',
         ),
         tester.element(find.byKey(const Key('holdem-cardbox-cover'))),
       );

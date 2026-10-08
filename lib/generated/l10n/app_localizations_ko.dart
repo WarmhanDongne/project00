@@ -169,7 +169,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get releaseSoon => '공개 준비 중';
 
   @override
-  String get galleryTitle => '모시 게임 미술관';
+  String get galleryTitle => '모시 서점';
 
   @override
   String get restorePurchases => '구매 내역 복원';
@@ -178,10 +178,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restoreSoon => '구매 내역 복원은 준비 중이에요.';
 
   @override
-  String get chooseFrame => '액자를 눌러 게임을 골라 보세요';
+  String get chooseFrame => '표지를 눌러 게임을 골라 보세요';
 
   @override
-  String get ownedDot => '빨간 점 = 소장 중';
+  String get ownedDot => '책갈피 = 소장 중';
 
   @override
   String get purchaseNotice => '결제 기능은 준비 중이에요. 곧 열어 드릴게요.';
@@ -240,5 +240,163 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String startWithPlayers(int count) {
     return '$count명으로 시작하기';
+  }
+
+  @override
+  String get previewSara => '사라';
+
+  @override
+  String get previewMinjun => '민준';
+
+  @override
+  String get previewHarin => '하린';
+
+  @override
+  String get previewJiwoo => '지우';
+
+  @override
+  String get previewTableAce => '기준 카드 · A';
+
+  @override
+  String get previewNextMinjun => '사라 → 다음은 민준';
+
+  @override
+  String get previewYourTurn => '내 차례';
+
+  @override
+  String get previewTwoAces => 'A 두 장!';
+
+  @override
+  String get previewCaught => '들켰다… 룰렛으로';
+
+  @override
+  String get previewLiarClaim => 'LIAR! 거짓말';
+
+  @override
+  String get previewWatching => '지켜보는 중';
+
+  @override
+  String get previewCallReveal => 'CALL! 모두 공개';
+
+  @override
+  String get previewDrawSwap => '가져오기 · 교체';
+
+  @override
+  String get previewTeamAskSara => '사라, 숫자 좀 됐어?';
+
+  @override
+  String get previewTeamSaraScore => '7 들어왔어! 지금 14';
+
+  @override
+  String get previewTeamAskJiwoo => '지우야, 우리 이 정도면 충분해?';
+
+  @override
+  String get previewTeamJiwooScore => '난 12! 꼴찌는 아냐, 콜 가자';
+
+  @override
+  String get previewSaraRedTeam => '사라 · 레드팀';
+
+  @override
+  String get previewRed => '빨강';
+
+  @override
+  String get previewBlue => '파랑';
+
+  @override
+  String get previewYellow => '노랑';
+
+  @override
+  String get previewSameColor => '같은 색 7 + 3 = 10';
+
+  @override
+  String get previewSameRank => '같은 숫자 7 + 7 = 14';
+
+  @override
+  String get previewMyScore => '내 점수';
+
+  @override
+  String get previewNight => '밤이 되었습니다';
+
+  @override
+  String get previewChoosePrivately => '각자 휴대폰에서 몰래 고르세요';
+
+  @override
+  String get previewMorning => '아침이 밝았습니다';
+
+  @override
+  String get previewNobodyDied => '아무도 죽지 않았어요';
+
+  @override
+  String get previewCitizen => '시민';
+
+  @override
+  String get previewWaitMorning => '눈 감고\n아침을 기다려요';
+
+  @override
+  String get previewDiscussion => '토론 시작';
+
+  @override
+  String get previewMafiaPrivate => '마피아 · 나만 보여요';
+
+  @override
+  String get previewNightTarget => '오늘 밤 누구를?';
+
+  @override
+  String get previewTargetChosen => '지목 완료';
+
+  @override
+  String get previewDoctorSave => '의사 · 한 명 살리기';
+
+  @override
+  String get previewSaved => '휴, 살았다…!';
+
+  @override
+  String get previewBlinds => '블라인드 10/20';
+
+  @override
+  String get previewFlopTurn => 'FLOP · 사라 차례';
+
+  @override
+  String get previewTurnRiver => 'TURN · RIVER';
+
+  @override
+  String get previewShowdown => 'SHOWDOWN';
+
+  @override
+  String get previewRaiseClaim => '400 레이즈!';
+
+  @override
+  String get previewFlushWin => '플러시로 +830';
+
+  @override
+  String get previewThinking => '고민 중';
+
+  @override
+  String get previewCallClaim => '콜! 따라갈게';
+
+  @override
+  String get previewFolded => '이번 판 폴드';
+
+  @override
+  String get previewFoldClaim => '폴드…';
+
+  @override
+  String get previewWin => 'WIN';
+
+  @override
+  String get previewSpadeFlush => '스페이드 플러시';
+
+  @override
+  String get previewRaise => 'Raise';
+
+  @override
+  String get previewCall => 'Call';
+
+  @override
+  String get previewFold => 'Fold';
+
+  @override
+  String previewPot(String chips) {
+    return 'POT $chips';
   }
 }

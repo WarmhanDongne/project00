@@ -77,6 +77,9 @@ void main() {
     expect(find.bySemanticsLabel('내 칩 4,900'), findsOneWidget);
     expect(find.textContaining('블라인드'), findsNothing);
     expect(find.textContaining('원 페어'), findsNothing);
+    for (final caption in ['포기', '넘기기', '따라가기', '금액 올리기', '모두 걸기']) {
+      expect(find.text(caption), findsNothing);
+    }
 
     await tester.tap(find.bySemanticsLabel('콜 400'));
     expect(actions, [('call', null)]);
@@ -226,7 +229,7 @@ void main() {
         .onTimeout!();
     await tester.pump();
 
-    expect(find.text('시간 종료'), findsOneWidget);
+    expect(find.text('시간 종료'), findsNothing);
     await tester.tap(find.bySemanticsLabel('체크'));
     expect(actions, isEmpty);
   });

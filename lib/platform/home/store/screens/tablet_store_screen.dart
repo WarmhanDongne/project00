@@ -10,7 +10,7 @@ import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 
 //=======================게임 상점 (UI만)==============================
-// 시안 '모시 게임 미술관'과 마피아 예고편 상세입니다. 결제·구매 복원·배경 음악은
+// 시안 '모시 서점(신간 매대)'과 마피아 예고편 상세입니다. 결제·구매 복원·배경 음악은
 // 아직 연결되지 않았습니다. 누르면 준비 중이라고만 알립니다
 // (docs/planning/NEWGUI_FEATURE_GAP.md 참고).
 
@@ -142,14 +142,28 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final (name, description) = switch (_selected) {
+    final locale = Localizations.maybeLocaleOf(context);
+    final (name, meta, description) = switch (_selected) {
       _StoreItem.mafia => (
         '마피아',
+        '역할 추리 · 2026',
         '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 되고, 내 역할은 내 휴대폰에만 보여요.',
       ),
-      _StoreItem.liar => ('라이어스 포커', '카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.'),
-      _StoreItem.finalCall => ('파이널콜', '4명은 2대2, 6명은 2대2대2 팀전이에요.'),
-      _StoreItem.soon => ('곧 나올 게임', '아직 공개 전이에요. 새 게임 소식은 이곳에서 확인해 주세요.'),
+      _StoreItem.liar => (
+        '라이어스 포커',
+        '카드 · 블러핑 · 2026',
+        '카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.',
+      ),
+      _StoreItem.finalCall => (
+        '파이널콜',
+        '팀전 카드 · 2026',
+        '4명은 2대2, 6명은 2대2대2 팀전이에요.',
+      ),
+      _StoreItem.soon => (
+        '곧 나올 게임',
+        '다음 신간',
+        '아직 공개 전이에요. 새 게임 소식은 이곳에서 확인해 주세요.',
+      ),
     };
     final chip = _status(_selected);
     final buttonLabel = widget.gameProvider.isLoading
@@ -161,24 +175,62 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
         : _selected == _StoreItem.soon
         ? context.l10n.releaseSoon
         : context.l10n.purchaseSoon;
-    const buttonColor = MosiColors.white;
 
     return Scaffold(
       backgroundColor: MosiColors.cream,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 1000;
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
+            final compact = width < 1000;
             final inset = compact ? 16.0 : 32.0;
+            // 시안의 헤더(간판 포함)·계산대 높이입니다. 매대 위 책 영역은 남은 높이에 맞춰 줄입니다.
+            final headerHeight = compact ? 84.0 : 96.0;
+            const counterHeight = 168.0;
+            final displayTop = inset + headerHeight;
+            final displayHeight = math.max(
+              0.0,
+              height - counterHeight - displayTop,
+            );
+            final scale = math.min(
+              (width - inset * 2) / _bookRow.width,
+              displayHeight / _bookRow.height,
+            );
+            final tableHeight = 78 * scale;
+            final wallBottom = counterHeight + _wallBottomRatio * 506 * scale;
+            final wallTop = math.max(
+              inset + 40,
+              height - wallBottom - 272 * scale,
+            );
             return ColoredBox(
               color: MosiColors.cream,
               child: Stack(
                 children: [
+                  // 뒷벽 책장
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: wallTop,
+                    bottom: wallBottom,
+                    child: const RepaintBoundary(
+                      child: CustomPaint(painter: _BackShelfPainter()),
+                    ),
+                  ),
+                  // 매대
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: counterHeight,
+                    height: tableHeight,
+                    child: _DisplayTable(scale: scale),
+                  ),
+                  // 계산대
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: 170,
+                    height: counterHeight,
                     child: Container(
                       decoration: const BoxDecoration(
                         color: MosiColors.violet,
@@ -188,232 +240,114 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                       ),
                     ),
                   ),
+                  // 신간 매대 위 책
                   Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 170,
-                    height: 14,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF3A27B8),
-                        border: Border(
-                          top: BorderSide(color: MosiColors.ink, width: 3),
+                    left: inset,
+                    right: inset,
+                    top: displayTop,
+                    bottom: counterHeight,
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox.fromSize(
+                        size: _bookRow,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            for (final (i, book) in _books.indexed)
+                              _StoreBook(
+                                key: ValueKey('store-book-${book.item.name}'),
+                                book: book,
+                                owned: _game(book.item)?.isOwned == true,
+                                entranceIndex: i,
+                                selected: _selected == book.item,
+                                onTap: () => book.item == _StoreItem.soon
+                                    ? _select(book.item)
+                                    : _openFrame(book.item),
+                              ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.all(inset),
-                    child: Column(
+                  // 헤더: 선반 · 간판 · 구매 내역 복원
+                  Positioned(
+                    left: inset,
+                    right: inset,
+                    top: 0,
+                    height: inset + headerHeight,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        StoreEntrance(
-                          start: .25,
-                          offset: const Offset(0, -30),
-                          child: SizedBox(
-                            height: 48,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: _StoreHeaderButton(
-                                      label: context.l10n.shelf,
-                                      icon: Icons.chevron_left_rounded,
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
-                                    ),
-                                  ),
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      context.l10n.galleryTitle,
-                                      style: MosiFonts.sans(
-                                        locale: Localizations.maybeLocaleOf(
-                                          context,
-                                        ),
-                                        size: compact ? 20 : 24,
-                                        weight: FontWeight.w700,
-                                        color: MosiColors.navy,
-                                        letterSpacing: -0.5,
-                                        height: 1.1,
-                                      ),
-                                    ),
-                                    Text(
-                                      'AUTUMN COLLECTION',
-                                      style: MosiFonts.grotesk(
-                                        locale: Localizations.maybeLocaleOf(
-                                          context,
-                                        ),
-                                        size: 11,
-                                        color: MosiColors.navy,
-                                        letterSpacing: 4,
-                                        height: 1.1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Expanded(
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: _StoreHeaderButton(
-                                      label: context.l10n.restorePurchases,
-                                      onPressed: () => _notReady(
-                                        context,
-                                        context.l10n.restoreSoon,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
                         Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: SizedBox(
-                              width: 1098,
-                              height: 480,
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 96),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    for (final (i, frame)
-                                        in _frames.indexed) ...[
-                                      if (i > 0) const SizedBox(width: 46),
-                                      _GalleryFrame(
-                                        frame: frame,
-                                        owned:
-                                            _game(frame.item)?.isOwned == true,
-                                        entranceIndex: i,
-                                        selected: _selected == frame.item,
-                                        onTap: () =>
-                                            frame.item == _StoreItem.soon
-                                            ? _select(frame.item)
-                                            : _openFrame(frame.item),
-                                      ),
-                                    ],
-                                  ],
+                          child: Padding(
+                            padding: EdgeInsets.only(top: inset),
+                            child: StoreEntrance(
+                              start: .25,
+                              offset: const Offset(0, -30),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: _StoreHeaderButton(
+                                  label: context.l10n.shelf,
+                                  icon: Icons.chevron_left_rounded,
+                                  onPressed: () => Navigator.of(context).pop(),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(height: compact ? 16 : 32),
                         StoreEntrance(
-                          start: .45,
-                          offset: const Offset(0, 80),
-                          child: MosiBox(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 22,
-                              vertical: 16,
-                            ),
-                            shadowOffset: 8,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text.rich(
-                                        TextSpan(
-                                          children: [
-                                            TextSpan(text: '$name '),
-                                            TextSpan(
-                                              text: '· $chip',
-                                              style: MosiFonts.sans(
-                                                locale:
-                                                    Localizations.maybeLocaleOf(
-                                                      context,
-                                                    ),
-                                                size: 13,
-                                                weight: FontWeight.w700,
-                                                color: MosiColors.violet,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        style: MosiFonts.sans(
-                                          locale: Localizations.maybeLocaleOf(
-                                            context,
-                                          ),
-                                          size: 22,
-                                          weight: FontWeight.w700,
-                                          color: MosiColors.navy,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        description,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: MosiFonts.sans(
-                                          locale: Localizations.maybeLocaleOf(
-                                            context,
-                                          ),
-                                          size: 13,
-                                          color: MosiColors.muted,
-                                          height: 1.5,
-                                        ),
-                                      ),
-                                    ],
+                          end: .55,
+                          offset: const Offset(0, -110),
+                          child: _HangingSign(
+                            title: context.l10n.galleryTitle,
+                            stringLength: inset + 4,
+                            compact: compact,
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: inset),
+                            child: StoreEntrance(
+                              start: .25,
+                              offset: const Offset(0, -30),
+                              child: Align(
+                                alignment: Alignment.topRight,
+                                child: _StoreHeaderButton(
+                                  label: context.l10n.restorePurchases,
+                                  onPressed: () => _notReady(
+                                    context,
+                                    context.l10n.restoreSoon,
                                   ),
                                 ),
-                                const SizedBox(width: 20),
-                                if (constraints.maxWidth >= 1100) ...[
-                                  Text(
-                                    context.l10n.chooseFrame,
-                                    style: MosiFonts.sans(
-                                      locale: Localizations.maybeLocaleOf(
-                                        context,
-                                      ),
-                                      size: 12,
-                                      weight: FontWeight.w700,
-                                      color: MosiColors.violet,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  const _OwnedDot(size: 12),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    context.l10n.ownedDot,
-                                    style: MosiFonts.sans(
-                                      locale: Localizations.maybeLocaleOf(
-                                        context,
-                                      ),
-                                      size: 12,
-                                      color: MosiColors.muted,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                ],
-                                SizedBox(
-                                  width: compact ? 168 : 200,
-                                  child: MosiButton(
-                                    label: buttonLabel,
-                                    background: buttonColor,
-                                    height: 52,
-                                    radius: 6,
-                                    shadowOffset: 4,
-                                    fontSize: 15,
-                                    expand: true,
-                                    onPressed: widget.gameProvider.isLoading
-                                        ? null
-                                        : _act,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  // 계산대 위 정보 카드
+                  Positioned(
+                    left: inset,
+                    right: inset,
+                    bottom: math.max(inset - 8, 12),
+                    height: counterHeight - 24 - math.max(inset - 8, 12),
+                    child: StoreEntrance(
+                      start: .45,
+                      offset: const Offset(0, 80),
+                      child: _CounterCard(
+                        name: name,
+                        status: chip,
+                        meta: meta,
+                        description: description,
+                        hint: width >= 1100,
+                        compact: compact,
+                        buttonLabel: buttonLabel,
+                        onPressed: widget.gameProvider.isLoading ? null : _act,
+                        locale: locale,
+                      ),
                     ),
                   ),
                 ],
@@ -425,6 +359,12 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     );
   }
 }
+
+/// 시안의 책 4권 영역(좌우 60px 여백을 뺀 1074×506)입니다.
+const _bookRow = Size(1074, 506);
+
+/// 뒷벽 책장 아래 끝이 책 영역 바닥에서 떨어진 비율입니다(시안 666-390=276).
+const _wallBottomRatio = 276 / 506;
 
 class _StoreHeaderButton extends StatelessWidget {
   const _StoreHeaderButton({
@@ -442,325 +382,528 @@ class _StoreHeaderButton extends StatelessWidget {
     return MosiButton(
       label: label,
       onPressed: onPressed,
-      variant: MosiButtonVariant.outline,
-      foreground: MosiColors.navy,
-      borderColor: MosiColors.navy,
-      borderWidth: 2,
-      shadowOffset: 0,
-      height: 44,
-      fontSize: 15,
-      radius: 6,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      background: MosiColors.white,
+      foreground: MosiColors.ink,
+      shadowOffset: 4,
+      // 그림자 4px를 더해 로비 머리줄 버튼과 같은 44px입니다.
+      height: 40,
+      fontSize: 16,
+      radius: 10,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       leading: icon == null ? null : Icon(icon),
     );
   }
 }
 
-class _OwnedDot extends StatelessWidget {
-  const _OwnedDot({required this.size});
+class _HangingSign extends StatelessWidget {
+  const _HangingSign({
+    required this.title,
+    required this.stringLength,
+    required this.compact,
+  });
 
-  final double size;
+  final String title;
+  final double stringLength;
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: MosiColors.red,
-      shape: BoxShape.circle,
-      border: Border.all(color: MosiColors.ink, width: 2),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final locale = Localizations.maybeLocaleOf(context);
+    Widget string() =>
+        Container(width: 3, height: stringLength, color: MosiColors.ink);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            string(),
+            SizedBox(width: compact ? 90 : 120),
+            string(),
+          ],
+        ),
+        Container(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 24 : 34,
+            compact ? 6 : 10,
+            compact ? 24 : 34,
+            compact ? 8 : 12,
+          ),
+          decoration: BoxDecoration(
+            color: MosiColors.navy,
+            border: Border.all(color: MosiColors.ink, width: 3),
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: const [
+              BoxShadow(color: MosiColors.ink, offset: Offset(5, 5)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: MosiFonts.sans(
+                  locale: locale,
+                  size: compact ? 22 : 30,
+                  weight: FontWeight.w700,
+                  color: MosiColors.cream,
+                  letterSpacing: 1,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'NEW ARRIVALS · AUTUMN',
+                style: MosiFonts.grotesk(
+                  locale: locale,
+                  size: compact ? 9 : 11,
+                  weight: FontWeight.w700,
+                  color: MosiColors.sun,
+                  letterSpacing: compact ? 3 : 5,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class _Frame {
-  const _Frame({
+/// 뒷벽 책장: 칸 두 줄에 장식용 책등을 꽂고 아래에 나무 선반을 둡니다.
+class _BackShelfPainter extends CustomPainter {
+  const _BackShelfPainter();
+
+  static const _wall = Color(0xFFE9DFCC);
+  static const _wood = Color(0xFFC99A5B);
+  static const _tones = [
+    Color(0xFFD9D1EE),
+    Color(0xFFE9DCC0),
+    Color(0xFFC9DACD),
+    Color(0xFFEBCFC3),
+    Color(0xFFDAD6CC),
+    Color(0xFFC8D0E6),
+    Color(0xFFEFE5B0),
+    Color(0xFFE2C9DD),
+    Color(0xFFF3EEE2),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 시안 272px 기준 비율입니다.
+    final k = size.height / 272;
+    final ink = Paint()..color = MosiColors.ink;
+    canvas.drawRect(Offset.zero & size, Paint()..color = _wall);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 3), ink);
+    canvas.drawRect(Rect.fromLTWH(0, size.height - 3, size.width, 3), ink);
+
+    final spineBorder = Paint()
+      ..color = MosiColors.ink.withValues(alpha: .45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * k;
+    for (final (row, seed) in [(0, 11), (1, 37)]) {
+      final plankTop = (row == 0 ? 122 : 256) * k;
+      var s = seed;
+      var x = 12 * k;
+      var i = 0;
+      while (x < size.width) {
+        s = (s * 9301 + 49297) % 233280;
+        final w = (18 + (s / 233280 * 20).floor()) * k;
+        final h = (74 + (((s * 7) % 233280) / 233280 * 36).floor()) * k;
+        final rect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(x, plankTop - h, w, h),
+          topLeft: Radius.circular(2 * k),
+          topRight: Radius.circular(2 * k),
+        );
+        canvas.drawRRect(rect, Paint()..color = _tones[(i * 4 + seed) % 9]);
+        canvas.drawRRect(rect.deflate(k), spineBorder);
+        x += w + 3 * k;
+        i++;
+      }
+      final plank = Rect.fromLTWH(0, plankTop, size.width, 12 * k);
+      canvas.drawRect(plank, Paint()..color = _wood);
+      canvas.drawRect(Rect.fromLTWH(0, plank.top, size.width, 3 * k), ink);
+      if (row == 0) {
+        canvas.drawRect(
+          Rect.fromLTWH(0, plank.bottom - 3 * k, size.width, 3 * k),
+          ink,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BackShelfPainter oldDelegate) => false;
+}
+
+class _DisplayTable extends StatelessWidget {
+  const _DisplayTable({required this.scale});
+
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = BorderSide(color: MosiColors.ink, width: 3 * scale);
+    return Column(
+      children: [
+        Container(
+          height: 16 * scale,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE2C48F),
+            border: Border(top: border, bottom: border),
+          ),
+        ),
+        Expanded(child: Container(color: const Color(0xFFC99A5B))),
+      ],
+    );
+  }
+}
+
+class _Book {
+  const _Book({
     required this.item,
     required this.label,
+    required this.note,
     required this.sub,
-    required this.frame,
-    required this.pad,
-    required this.mat,
-    required this.coverWidth,
-    required this.plaqueWidth,
-    required this.beam,
+    required this.tilt,
+    required this.spineShade,
   });
 
   final _StoreItem item;
   final String label;
+  final String note;
   final String sub;
-  final Color frame;
-  final double pad;
-  final double mat;
-  final double coverWidth;
-  final double plaqueWidth;
-  final double beam;
+
+  /// 손글씨 쪽지가 기울어진 각도(도)입니다.
+  final double tilt;
+  final double spineShade;
 }
 
-const _frames = [
-  _Frame(
+const _books = [
+  _Book(
     item: _StoreItem.liar,
     label: '라이어스 포커',
-    sub: '카드 · 블러핑, 2026',
-    frame: Color(0xFF2A2A2A),
-    pad: 10,
-    mat: 12,
-    coverWidth: 110,
-    plaqueWidth: 170,
-    beam: 240,
+    note: '거짓말도 실력이에요!',
+    sub: '카드 · 블러핑',
+    tilt: -2,
+    spineShade: .22,
   ),
-  _Frame(
+  _Book(
     item: _StoreItem.mafia,
     label: '마피아',
-    sub: '역할 추리, 2026',
-    frame: Color(0xFFC9A227),
-    pad: 14,
-    mat: 16,
-    coverWidth: 170,
-    plaqueWidth: 230,
-    beam: 320,
+    note: '태블릿이 사회자가 돼요',
+    sub: '역할 추리 · 점원 추천',
+    tilt: 1.5,
+    spineShade: .3,
   ),
-  _Frame(
+  _Book(
     item: _StoreItem.finalCall,
     label: '파이널콜',
-    sub: '팀전 카드, 2026',
-    frame: Color(0xFF2A2A2A),
-    pad: 10,
-    mat: 12,
-    coverWidth: 110,
-    plaqueWidth: 170,
-    beam: 240,
+    note: '둘이 한 팀, 끝까지!',
+    sub: '팀전 카드',
+    tilt: -1,
+    spineShade: .1,
   ),
-  _Frame(
+  _Book(
     item: _StoreItem.soon,
-    label: '다음 전시',
-    sub: '곧 공개',
-    frame: Color(0xFFD6D0C2),
-    pad: 10,
-    mat: 12,
-    coverWidth: 110,
-    plaqueWidth: 150,
-    beam: 200,
+    label: '곧 나올 게임',
+    note: '곧 입고돼요',
+    sub: '다음 신간',
+    tilt: 2,
+    spineShade: .12,
   ),
 ];
 
-class _GalleryFrame extends StatefulWidget {
-  const _GalleryFrame({
-    required this.frame,
+class _StoreBook extends StatelessWidget {
+  const _StoreBook({
+    super.key,
+    required this.book,
     required this.owned,
     required this.entranceIndex,
     required this.selected,
     required this.onTap,
   });
 
-  final _Frame frame;
+  final _Book book;
   final bool owned;
   final int entranceIndex;
   final bool selected;
   final VoidCallback onTap;
 
-  @override
-  State<_GalleryFrame> createState() => _GalleryFrameState();
-}
-
-class _GalleryFrameState extends State<_GalleryFrame>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _glow = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 3),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _glow.dispose();
-    super.dispose();
-  }
+  static const _coverSize = Size(180, 250);
 
   @override
   Widget build(BuildContext context) {
-    final f = widget.frame;
-    final gameId = switch (f.item) {
+    final locale = Localizations.maybeLocaleOf(context);
+    final gameId = switch (book.item) {
       _StoreItem.liar => 'liars_poker',
       _StoreItem.mafia => 'mafia',
       _StoreItem.finalCall => 'final_call',
       _StoreItem.soon => null,
     };
-    final art = gameId == null
-        ? Container(
-            width: 110,
-            height: 147,
-            alignment: Alignment.center,
-            child: MosiDashedBorder(
-              color: const Color(0xFF8C8AA8),
-              radius: 0,
-              child: SizedBox(
-                width: 110,
-                height: 147,
-                child: Center(
-                  child: Text(
-                    '전시\n준비 중',
-                    textAlign: TextAlign.center,
-                    style: MosiFonts.sans(
-                      locale: Localizations.maybeLocaleOf(context),
-                      size: 13,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFF8C8AA8),
-                      height: 1.4,
+    const radius = BorderRadius.only(
+      topLeft: Radius.circular(2),
+      bottomLeft: Radius.circular(2),
+      topRight: Radius.circular(8),
+      bottomRight: Radius.circular(8),
+    );
+    final cover = Container(
+      width: _coverSize.width,
+      height: _coverSize.height,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: const [
+          // 책장 넘김면(흰 종이)과 그 테두리
+          BoxShadow(
+            color: MosiColors.ink,
+            offset: Offset(5, 4),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Color(0xFFFBF8F0),
+            offset: Offset(5, 4),
+            spreadRadius: -1,
+          ),
+        ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: MosiColors.ink, width: 3),
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (gameId == null)
+              const _ComingSoonCover()
+            else
+              FittedBox(
+                fit: BoxFit.cover,
+                child: MosiGameCover(gameId: gameId, width: 180, shadow: 0),
+              ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 12,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: book.spineShade),
+                  border: Border(
+                    right: BorderSide(
+                      color: MosiColors.ink.withValues(alpha: .5),
+                      width: 2,
                     ),
                   ),
                 ),
               ),
             ),
-          )
-        : MosiGameCover(gameId: gameId, width: f.coverWidth, shadow: 0);
+          ],
+        ),
+      ),
+    );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              // 조명
-              Positioned(
-                top: -60,
-                child: StoreEntrance(
-                  end: .55,
-                  offset: const Offset(0, -110),
-                  child: IgnorePointer(
-                    child: AnimatedBuilder(
-                      animation: _glow,
-                      builder: (context, _) => Opacity(
-                        opacity:
-                            0.55 +
-                            0.25 * math.sin(_glow.value * math.pi * 2).abs(),
-                        child: ClipPath(
-                          clipper: const _BeamClipper(),
-                          child: Container(
-                            width: f.beam,
-                            height: 360,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Color(0xB3F2E14C), Color(0x00F2E14C)],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+    final bookBody = AnimatedScale(
+      scale: selected ? 1.1 : 1,
+      alignment: Alignment.bottomCenter,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutBack,
+      child: AnimatedSlide(
+        offset: Offset(0, selected ? -14 / 262 : 0),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutBack,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.all(6),
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected ? MosiColors.violet : Colors.transparent,
+                      width: 4,
                     ),
                   ),
+                  child: cover,
                 ),
-              ),
-              Positioned(
-                top: -66,
-                child: StoreEntrance(
-                  end: .55,
-                  offset: const Offset(0, -110),
-                  child: Container(
-                    width: 34,
-                    height: 14,
-                    decoration: const BoxDecoration(
-                      color: MosiColors.ink,
-                      borderRadius: BorderRadius.vertical(
-                        bottom: Radius.circular(10),
-                      ),
-                    ),
+                const ClipPath(
+                  clipper: _StandClipper(),
+                  child: SizedBox(
+                    width: 130,
+                    height: 12,
+                    child: ColoredBox(color: MosiColors.ink),
                   ),
                 ),
-              ),
-              StoreEntrance(
-                start: .15 + widget.entranceIndex * .08,
-                end: .7 + widget.entranceIndex * .08,
-                child: Semantics(
-                  button: true,
-                  selected: widget.selected,
-                  label: f.label,
-                  onTap: widget.onTap,
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    onTap: widget.onTap,
-                    child: Container(
-                      padding: EdgeInsets.all(f.pad),
-                      decoration: BoxDecoration(
-                        color: f.frame,
-                        border: Border.all(color: MosiColors.ink, width: 4),
-                        borderRadius: BorderRadius.circular(2),
-                        boxShadow: [
-                          const BoxShadow(
-                            color: Color(0x400E0A3D),
-                            offset: Offset(8, 8),
-                          ),
-                          if (widget.selected)
-                            const BoxShadow(
-                              color: MosiColors.violet,
-                              spreadRadius: 9,
-                            ),
-                          if (widget.selected)
-                            const BoxShadow(
-                              color: MosiColors.cream,
-                              spreadRadius: 6,
-                            ),
-                        ],
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(f.mat),
-                        decoration: BoxDecoration(
-                          color: MosiColors.white,
-                          border: Border.all(color: MosiColors.ink, width: 2),
-                        ),
-                        child: art,
-                      ),
-                    ),
-                  ),
+              ],
+            ),
+            if (owned) const Positioned(top: 0, right: 40, child: _Bookmark()),
+          ],
+        ),
+      ),
+    );
+
+    return StoreEntrance(
+      start: .15 + entranceIndex * .08,
+      end: .7 + entranceIndex * .08,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: book.label,
+        onTap: onTap,
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox(
+            width: 220,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                bookBody,
+                const SizedBox(height: 18),
+                _TapedNote(
+                  note: book.note,
+                  sub: book.sub,
+                  tilt: book.tilt,
+                  dashed: book.item == _StoreItem.soon,
+                  locale: locale,
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          StoreEntrance(
-            start: .35 + widget.entranceIndex * .08,
+        ),
+      ),
+    );
+  }
+}
+
+class _StandClipper extends CustomClipper<Path> {
+  const _StandClipper();
+
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(size.width * .08, 0)
+    ..lineTo(size.width * .92, 0)
+    ..lineTo(size.width, size.height)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+/// 소장 중인 게임 표지에 꽂힌 빨간 책갈피입니다.
+class _Bookmark extends StatelessWidget {
+  const _Bookmark({this.width = 16, this.height = 58});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size(width, height), painter: const _BookmarkPainter());
+}
+
+class _BookmarkPainter extends CustomPainter {
+  const _BookmarkPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width / 2, size.height * .8)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = MosiColors.red);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = MosiColors.ink
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.width > 12 ? 2 : 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// 아직 공개되지 않은 게임 자리의 크라프트 상자 표지입니다.
+class _ComingSoonCover extends StatelessWidget {
+  const _ComingSoonCover();
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.maybeLocaleOf(context);
+    const tape = Color(0xFF6E4B28);
+    return ColoredBox(
+      color: const Color(0xFFCDA873),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Positioned(
+            left: 94,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            child: ColoredBox(color: tape),
+          ),
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 118,
+            height: 3,
+            child: ColoredBox(color: tape),
+          ),
+          Positioned(
+            left: 60,
+            top: 84,
             child: Container(
-              width: f.plaqueWidth,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: MosiColors.white,
-                border: Border.all(color: MosiColors.ink, width: 2),
+                color: MosiColors.cream,
+                shape: BoxShape.circle,
+                border: Border.all(color: MosiColors.ink, width: 2.5),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          f.label,
-                          style: MosiFonts.sans(
-                            locale: Localizations.maybeLocaleOf(context),
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: MosiColors.navy,
-                            height: 1.3,
-                          ),
-                        ),
-                        Text(
-                          f.sub,
-                          style: MosiFonts.sans(
-                            locale: Localizations.maybeLocaleOf(context),
-                            size: 11,
-                            color: MosiColors.muted,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (widget.owned) const _OwnedDot(size: 14),
-                ],
+              child: Text(
+                '입고\n예정',
+                textAlign: TextAlign.center,
+                style: MosiFonts.sans(
+                  locale: locale,
+                  size: 15,
+                  weight: FontWeight.w700,
+                  color: MosiColors.ink,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 14,
+            child: Text(
+              'NEXT TITLE',
+              textAlign: TextAlign.center,
+              style: MosiFonts.grotesk(
+                locale: locale,
+                size: 9,
+                weight: FontWeight.w700,
+                color: const Color(0xFF5A3E1E),
+                letterSpacing: 3,
               ),
             ),
           ),
@@ -770,19 +913,275 @@ class _GalleryFrameState extends State<_GalleryFrame>
   }
 }
 
-class _BeamClipper extends CustomClipper<Path> {
-  const _BeamClipper();
+/// 책 아래 테이프로 붙인 점원 추천 쪽지입니다.
+class _TapedNote extends StatelessWidget {
+  const _TapedNote({
+    required this.note,
+    required this.sub,
+    required this.tilt,
+    required this.dashed,
+    required this.locale,
+  });
+
+  final String note;
+  final String sub;
+  final double tilt;
+  final bool dashed;
+  final Locale? locale;
 
   @override
-  Path getClip(Size size) => Path()
-    ..moveTo(size.width * 0.42, 0)
-    ..lineTo(size.width * 0.58, 0)
-    ..lineTo(size.width, size.height)
-    ..lineTo(0, size.height)
-    ..close();
+  Widget build(BuildContext context) {
+    final body = Container(
+      width: 170,
+      padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
+      decoration: BoxDecoration(
+        color: MosiColors.white,
+        border: dashed ? null : Border.all(color: MosiColors.ink, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 시안의 손글씨(Nanum Pen Script)는 번들하지 않아 굵은 본문체로 대신합니다.
+          Text(
+            note,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: MosiFonts.sans(
+              locale: locale,
+              size: 15,
+              weight: FontWeight.w700,
+              color: MosiColors.ink,
+              height: 1.25,
+            ),
+          ),
+          Text(
+            sub,
+            style: MosiFonts.sans(
+              locale: locale,
+              size: 11,
+              color: MosiColors.muted,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+    return Transform.rotate(
+      angle: tilt * math.pi / 180,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          if (dashed)
+            MosiDashedBorder(color: MosiColors.ink, radius: 0, child: body)
+          else
+            body,
+          Positioned(
+            top: -9,
+            child: Container(
+              width: 44,
+              height: 14,
+              color: MosiColors.sun.withValues(alpha: .85),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CounterCard extends StatelessWidget {
+  const _CounterCard({
+    required this.name,
+    required this.status,
+    required this.meta,
+    required this.description,
+    required this.hint,
+    required this.compact,
+    required this.buttonLabel,
+    required this.onPressed,
+    required this.locale,
+  });
+
+  final String name;
+  final String status;
+  final String meta;
+  final String description;
+  final bool hint;
+  final bool compact;
+  final String buttonLabel;
+  final VoidCallback? onPressed;
+  final Locale? locale;
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(compact ? 18 : 30, 0, compact ? 16 : 26, 0),
+      decoration: BoxDecoration(
+        color: MosiColors.white,
+        border: Border.all(color: MosiColors.ink, width: 3),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(color: Color(0xFF1E1470), offset: Offset(8, 8)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MosiFonts.sans(
+                          locale: locale,
+                          size: compact ? 22 : 30,
+                          weight: FontWeight.w700,
+                          color: MosiColors.navy,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _StatusTag(label: status, locale: locale),
+                    if (!compact) ...[
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: MosiFonts.sans(
+                            locale: locale,
+                            size: 13,
+                            color: MosiColors.muted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: MosiFonts.sans(
+                    locale: locale,
+                    size: compact ? 13 : 15,
+                    color: const Color(0xFF4A4766),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: compact ? 14 : 28),
+          if (hint) ...[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  context.l10n.chooseFrame,
+                  style: MosiFonts.sans(
+                    locale: locale,
+                    size: 14,
+                    weight: FontWeight.w700,
+                    color: MosiColors.violet,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _Bookmark(width: 10, height: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      context.l10n.ownedDot,
+                      style: MosiFonts.sans(
+                        locale: locale,
+                        size: 13,
+                        color: MosiColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(width: 28),
+          ],
+          SizedBox(
+            width: compact ? 160 : 236,
+            child: MosiButton(
+              label: buttonLabel,
+              background: MosiColors.white,
+              height: compact ? 54 : 62,
+              radius: 10,
+              shadowOffset: 5,
+              fontSize: compact ? 16 : 20,
+              expand: true,
+              onPressed: onPressed,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusTag extends StatelessWidget {
+  const _StatusTag({required this.label, required this.locale});
+
+  final String label;
+  final Locale? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.fromLTRB(10, 0, 12, 0),
+      decoration: BoxDecoration(
+        color: MosiColors.sun,
+        border: Border.all(color: MosiColors.ink, width: 2),
+        borderRadius: const BorderRadius.horizontal(
+          left: Radius.circular(4),
+          right: Radius.circular(14),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              color: MosiColors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: MosiColors.ink, width: 2),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: MosiFonts.sans(
+              locale: locale,
+              size: 14,
+              weight: FontWeight.w700,
+              color: MosiColors.ink,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 //=======================마피아 예고편 상세==============================

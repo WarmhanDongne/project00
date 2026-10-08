@@ -23,7 +23,7 @@ class PhoneRoomParticipantList extends StatelessWidget {
             Text(
               '참여자',
               style: MosiFonts.sans(
-                size: 16,
+                size: 18,
                 weight: FontWeight.w700,
                 color: MosiColors.navy,
               ),
@@ -31,7 +31,11 @@ class PhoneRoomParticipantList extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${players.length}명',
-              style: MosiFonts.grotesk(size: 14, color: MosiColors.violet),
+              style: MosiFonts.grotesk(
+                size: 14,
+                weight: FontWeight.w700,
+                color: MosiColors.violet,
+              ),
             ),
           ],
         ),
@@ -50,12 +54,16 @@ class PhoneRoomParticipantList extends StatelessWidget {
             ),
           )
         else
-          MosiBox(
+          Container(
             padding: EdgeInsets.symmetric(
               horizontal: compact ? 10 : 14,
               vertical: compact ? 6 : 10,
             ),
-            shadowOffset: 5,
+            decoration: BoxDecoration(
+              color: MosiColors.paper,
+              border: Border.all(color: MosiColors.ink, width: 2),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Column(
               children: [
                 for (final (index, player) in players.indexed) ...[

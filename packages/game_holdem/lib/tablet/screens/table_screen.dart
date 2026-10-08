@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_holdem/game_assets.dart';
 import 'package:game_holdem/game_copy.dart';
+import 'package:game_holdem/game_sounds.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
@@ -15,8 +16,10 @@ import 'package:game_holdem/tablet/animations/card_deal_animation.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
+import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
 import 'package:game_kit/shared/widgets/game_turn_countdown_face.dart';
+import 'package:game_kit/sound/game_background_music.dart';
 
 /// 시안 기준 태블릿 크기입니다. 실제 화면은 짧은 쪽 비율로 맞춥니다.
 const _designSize = Size(1366, 1024);
@@ -49,6 +52,8 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   final Map<String, String> _streetActions = {};
   (int, String)? _street;
   late final AnimationController _actionController;
+  final ProgressSoundCue _chipLandingCue = ProgressSoundCue();
+  final GameBackgroundMusic _backgroundMusic = GameBackgroundMusic();
   late final AnimationController _awardController;
   late final AnimationController _resultHoldController;
   final List<_TableActionEvent> _actionQueue = [];
@@ -64,10 +69,13 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   @override
   void initState() {
     super.initState();
-    _actionController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1450),
-    )..addStatusListener(_onActionStatus);
+    _actionController =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 1450),
+          )
+          ..addListener(_playChipLandingSound)
+          ..addStatusListener(_onActionStatus);
     _awardController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1450),
@@ -80,24 +88,45 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _backgroundMusic.attach(context);
+    _scheduleBackgroundMusic();
+  }
+
+  @override
   void didUpdateWidget(covariant HoldemTableScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     _observeForcedBlinds();
     _observeAction();
     _observeResult(oldWidget.game);
     _syncStreetActions();
+    _scheduleBackgroundMusic();
   }
 
   @override
   void dispose() {
+    _backgroundMusic.stop();
     _actionGapTimer?.cancel();
     _awardStartTimer?.cancel();
     _actionController
+      ..removeListener(_playChipLandingSound)
       ..removeStatusListener(_onActionStatus)
       ..dispose();
     _awardController.dispose();
     _resultHoldController.dispose();
     super.dispose();
+  }
+
+  void _scheduleBackgroundMusic() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!widget.game.loading && widget.game.status == 'playing') {
+        _backgroundMusic.start(HoldemSounds.background);
+      } else {
+        _backgroundMusic.stop();
+      }
+    });
   }
 
   void _observeResult(HoldemGameState previous) {
@@ -210,6 +239,7 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   void _startNextAction() {
     if (_activeAction != null || _actionQueue.isEmpty) return;
     _activeAction = _actionQueue.removeAt(0);
+    _chipLandingCue.reset();
     _actionController.duration = switch (_activeAction!.kind) {
       'blind' => const Duration(milliseconds: 1150),
       'fold' => const Duration(milliseconds: 1050),
@@ -217,6 +247,30 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
       _ => const Duration(milliseconds: 1450),
     };
     _actionController.forward(from: 0);
+  }
+
+  void _playChipLandingSound() {
+    if (!mounted ||
+        !const {
+          'blind',
+          'bet',
+          'call',
+          'raise',
+          'allIn',
+        }.contains(_activeAction?.kind)) {
+      return;
+    }
+    final durationMs = _actionController.duration?.inMilliseconds ?? 0;
+    if (durationMs <= 0) return;
+    // 첫 칩이 중앙에 닿는 진행도는 action_motion.dart의 travel 끝점 .61입니다.
+    // 기기 출력 지연만큼 먼저 요청해 실제 소리가 착지에 맞게 들리도록 합니다.
+    final threshold = .61 - ProgressSoundCue.lead.inMilliseconds / durationMs;
+    _chipLandingCue.maybePlay(
+      context,
+      HoldemSounds.chipLanding,
+      value: _actionController.value,
+      threshold: threshold,
+    );
   }
 
   void _onActionStatus(AnimationStatus status) {

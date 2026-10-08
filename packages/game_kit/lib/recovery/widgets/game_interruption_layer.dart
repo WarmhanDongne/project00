@@ -8,9 +8,10 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/mosi_ui/mosi_connection.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
 
 // ============================================================
@@ -67,6 +68,9 @@ class GameInterruptionLayer extends StatefulWidget {
   final String? failureMessage;
 
   final bool isSubmitting;
+
+  /// 예전 반투명 가림막 색입니다. 시안(연결 끊김)은 불투명 남색 장면이라
+  /// 지금은 쓰지 않지만, 부르는 쪽 호환을 위해 남겨 둡니다.
   final Color scrimColor;
 
   @override
@@ -239,229 +243,232 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
         widget.presentation == GameInterruptionPresentation.tabletController;
     final isDisconnected =
         interruption.reason == GameInterruptionReason.disconnected;
+    final nickname = interruption.playerNickname;
     final title = isDisconnected
-        ? '${interruption.playerNickname}와의 연결이 끊어졌습니다'
-        : '${interruption.playerNickname}가 게임에서 나갔습니다.';
-    final description = interruption.canContinue
-        ? '해당 플레이어를 제외하고 게임을 계속할까요?'
-        : '남은 인원이 부족해 게임을 계속할 수 없습니다.';
+        ? '$nickname 님의 연결이 끊겼어요'
+        : '$nickname 님이 게임에서 나갔어요';
+    final description = !interruption.canContinue
+        ? '남은 인원이 부족해 게임을 계속할 수 없어요.'
+        : isTabletController && isDisconnected
+        ? '$nickname 님을 빼고 게임을 계속할까요?\n시간 안에 돌아오면 그대로 이어져요.'
+        : '$nickname 님을 빼고 게임을 계속할까요?';
+    final total = interruption.deadlineAt - interruption.startedAt;
+    final remainingMs = ServerClock.remainingUntil(
+      interruption.deadlineAt,
+    ).inMilliseconds;
+
+    // ---------------------------------------------------------
+    // 버튼 영역은 presentation이 아니라 canContinue로 **먼저** 갈립니다.
+    // 계속할 수 없는 중단은 휴대폰·태블릿이 할 수 있는 일이 같기
+    // 때문입니다(종료뿐).
+    //
+    // ⚠️ 순서를 바꾸지 마세요. 아래 태블릿 분기에서 canContinue 검사를
+    // 생략할 수 있는 근거가 "이 분기가 먼저 걸러진다"는 사실입니다.
+    // ---------------------------------------------------------
+    Widget? status;
+    Widget? confirm;
+    String? footnote;
+    final actions = <Widget>[];
+    if (!interruption.canContinue) {
+      if (_isConfirmingFinish) {
+        final isSubmitting = widget.isSubmitting || _isFinishingNow;
+        confirm = Text(
+          GameFlowCopy.interruptionFinishNowConfirm(
+            nickname,
+            _remainingSeconds,
+          ),
+          style: MosiFonts.sans(
+            size: 15,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
+            height: 1.5,
+          ),
+        );
+        actions
+          ..add(
+            MosiConnectionButton(
+              label: GameFlowCopy.interruptionFinishNowCancel,
+              onPressed: isSubmitting
+                  ? null
+                  : () => setState(() => _isConfirmingFinish = false),
+            ),
+          )
+          ..add(
+            MosiConnectionButton(
+              label: GameFlowCopy.interruptionFinishNowAccept,
+              primary: true,
+              loading: _isFinishingNow,
+              onPressed: isSubmitting ? null : () => unawaited(_finishNow()),
+            ),
+          );
+      } else {
+        actions.add(
+          MosiConnectionButton(
+            label: GameFlowCopy.interruptionFinishNow,
+            primary: true,
+            onPressed:
+                widget.onFinishNow == null ||
+                    widget.isSubmitting ||
+                    _isFinishingNow
+                ? null
+                // 0초가 지난 뒤에도 활성으로 둡니다. 자동 만료가 계속
+                // 실패하는 상황에서 유일한 탈출구입니다.
+                : () => setState(() => _isConfirmingFinish = true),
+          ),
+        );
+      }
+    } else if (isTabletController) {
+      status = const MosiConnectionStatus(
+        text: '진행자는 투표 없이 바로 정할 수 있어요',
+        icon: Icons.info_outline_rounded,
+      );
+      actions.add(
+        MosiConnectionButton(
+          label: '제외하고 계속하기',
+          primary: true,
+          loading: _isContinuing,
+          onPressed:
+              widget.isSubmitting || _isContinuing || widget.onContinue == null
+              ? null
+              : () => unawaited(_continue()),
+        ),
+      );
+    } else {
+      status = MosiConnectionStatus(
+        text: canVote
+            ? '제외 동의 ${interruption.voteCount} / ${interruption.requiredVotes}'
+            : '다른 참가자의 투표를 기다리고 있어요',
+        dots: !canVote,
+        color: MosiColors.ink2,
+        trailing: canVote ? _VoteMarks(interruption: interruption) : null,
+      );
+      if (canVote) {
+        actions.add(
+          MosiConnectionButton(
+            label: hasVoted ? '동의 완료' : '제외하고 계속하기',
+            primary: true,
+            onPressed: hasVoted || widget.isSubmitting || widget.onVote == null
+                ? null
+                : () => unawaited(widget.onVote!()),
+          ),
+        );
+      }
+      if (isDisconnected) footnote = '$nickname 님이 돌아오면 그대로 이어져요';
+    }
 
     return Positioned.fill(
-      child: Material(
-        color: widget.scrimColor,
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _PlayerAvatar(
-                      characterId: interruption.playerCharacterId,
-                      nickname: interruption.playerNickname,
-                      size: isTabletController ? 116 : 96,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      '$_remainingSeconds초',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFE5E5E5),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        height: 1.45,
-                      ),
-                    ),
-                    // ---------------------------------------------------------
-                    // 버튼 영역은 presentation이 아니라 canContinue로 **먼저**
-                    // 갈립니다. 계속할 수 없는 중단은 휴대폰·태블릿이 할 수
-                    // 있는 일이 같기 때문입니다(종료뿐).
-                    //
-                    // ⚠️ 순서를 바꾸지 마세요. 아래 태블릿 분기에서
-                    // canContinue 검사를 생략할 수 있는 근거가 "이 분기가
-                    // 먼저 걸러진다"는 사실입니다.
-                    // ---------------------------------------------------------
-                    if (!interruption.canContinue) ...[
-                      const SizedBox(height: 26),
-                      if (_isConfirmingFinish)
-                        _FinishNowConfirm(
-                          message: GameFlowCopy.interruptionFinishNowConfirm(
-                            interruption.playerNickname,
-                            _remainingSeconds,
-                          ),
-                          isSubmitting: widget.isSubmitting || _isFinishingNow,
-                          onCancel: () =>
-                              setState(() => _isConfirmingFinish = false),
-                          onAccept: () => unawaited(_finishNow()),
-                        )
-                      else
-                        _InterruptionActionButton(
-                          label: GameFlowCopy.interruptionFinishNow,
-                          isEmphasized: isTabletController,
-                          onPressed:
-                              widget.onFinishNow == null ||
-                                  widget.isSubmitting ||
-                                  _isFinishingNow
-                              ? null
-                              // 0초가 지난 뒤에도 활성으로 둡니다. 자동 만료가
-                              // 계속 실패하는 상황에서 유일한 탈출구입니다.
-                              : () =>
-                                    setState(() => _isConfirmingFinish = true),
-                        ),
-                    ] else if (isTabletController) ...[
-                      const SizedBox(height: 26),
-                      _InterruptionActionButton(
-                        label: '제외하고 계속하기',
-                        isEmphasized: true,
-                        onPressed:
-                            widget.isSubmitting ||
-                                _isContinuing ||
-                                widget.onContinue == null
-                            ? null
-                            : () => unawaited(_continue()),
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        '동의 ${interruption.voteCount} / ${interruption.requiredVotes}',
-                        style: const TextStyle(
-                          color: Color(0xFFCECECE),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 26),
-                      if (canVote)
-                        _InterruptionActionButton(
-                          label: hasVoted ? '동의 완료' : '제외하고 계속하기',
-                          isEmphasized: false,
-                          onPressed:
-                              hasVoted ||
-                                  widget.isSubmitting ||
-                                  widget.onVote == null
-                              ? null
-                              : () => unawaited(widget.onVote!()),
-                        )
-                      else
-                        const Text(
-                          '다른 플레이어의 투표를 기다리고 있습니다.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFFCECECE)),
-                        ),
-                    ],
-                    // 실패 안내는 버튼 분기 **밖**에 둡니다. 즉시 종료와
-                    // 제외하고 계속하기가 같은 자리에 같은 모양으로 알려야
-                    // 하고, 분기 안에 넣으면 둘 중 하나만 표시됩니다.
-                    if (_actionFailed && widget.failureMessage != null) ...[
-                      const SizedBox(height: 16),
-                      _InterruptionFailureNotice(
-                        message: widget.failureMessage!,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
+      child: MosiConnectionLayout(
+        semanticLabel: title,
+        background: MosiColors.navy,
+        scene: MosiPlayerWaitScene(
+          characterId: interruption.playerCharacterId,
+          seconds: _remainingSeconds,
+          progress: total <= 0 ? 0 : remainingMs / total,
+          badge: isDisconnected ? '연결 끊김' : '나감',
+          caption: isDisconnected ? '돌아오기를 기다리는 중' : '결정까지 남은 시간',
         ),
+        tag: isTabletController ? '참가자 연결 · 진행자' : '참가자 연결',
+        tagColor: mosiConnectionPink,
+        title: title,
+        body: description,
+        status: status,
+        // 실패 안내는 버튼 분기 **밖**에 둡니다. 즉시 종료와 제외하고 계속하기가
+        // 같은 자리에 같은 모양으로 알려야 하고, 분기 안에 넣으면 둘 중 하나만
+        // 표시됩니다.
+        extra:
+            confirm == null && !(_actionFailed && widget.failureMessage != null)
+            ? null
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ?confirm,
+                  if (confirm != null &&
+                      _actionFailed &&
+                      widget.failureMessage != null)
+                    const SizedBox(height: 12),
+                  if (_actionFailed && widget.failureMessage != null)
+                    _InterruptionFailureNotice(message: widget.failureMessage!),
+                ],
+              ),
+        actions: actions,
+        footnote: footnote,
       ),
     );
   }
 }
 
-class _PlayerAvatar extends StatelessWidget {
-  const _PlayerAvatar({
-    required this.characterId,
-    required this.nickname,
-    required this.size,
-  });
-
-  final String characterId;
-  final String nickname;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x55FFFFFF)),
-      ),
-      child: Image.asset(
-        roomCharacterAssetPath(characterId),
-        fit: BoxFit.contain,
-      ),
-    );
-  }
-}
-
-/// 중단 레이어의 흰 배경 액션 버튼입니다.
+/// 제외 동의를 보낸 사람 수만큼 채워지는 표시입니다.
 ///
-/// [isEmphasized]는 태블릿 진행자용 강조(그림자와 진한 비활성 색)입니다.
-/// 기존 두 버튼의 차이가 elevation과 비활성 색뿐이라 하나로 묶었습니다.
-class _InterruptionActionButton extends StatelessWidget {
-  const _InterruptionActionButton({
-    required this.label,
-    required this.isEmphasized,
-    required this.onPressed,
-  });
+/// 투표자 얼굴 정보는 중단 상태에 없어 동그라미로만 보여 줍니다.
+class _VoteMarks extends StatelessWidget {
+  const _VoteMarks({required this.interruption});
 
-  final String label;
-  final bool isEmphasized;
-  final VoidCallback? onPressed;
+  final GameInterruption interruption;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        disabledBackgroundColor: isEmphasized
-            ? const Color(0xFF777777)
-            : const Color(0xFFAAAAAA),
-        disabledForegroundColor: isEmphasized
-            ? const Color(0xFFBBBBBB)
-            : const Color(0xFF444444),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-        elevation: isEmphasized ? 8 : 0,
-        shadowColor: Colors.black,
-      ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    final count = interruption.requiredVotes.clamp(0, 6);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < count; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          i < interruption.voteCount
+              ? Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: MosiColors.violet,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: MosiColors.ink, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: MosiColors.white,
+                  ),
+                )
+              : const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CustomPaint(painter: _DashedRingPainter()),
+                ),
+        ],
+      ],
     );
   }
+}
+
+class _DashedRingPainter extends CustomPainter {
+  const _DashedRingPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = MosiColors.muted
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final rect = (Offset.zero & size).deflate(1);
+    const dashes = 12;
+    const sweep = 3.141592653589793 * 2 / dashes;
+    for (var i = 0; i < dashes; i++) {
+      canvas.drawArc(rect, i * sweep, sweep * .55, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// 중단 레이어 안에서 실패를 알리는 문구입니다.
 ///
 /// 이 레이어는 화면 전체를 덮으므로 SnackBar 외에는 바깥에서 알릴 방법이
 /// 없고, SnackBar는 몇 초 뒤 사라져 무엇이 실패했는지 남지 않습니다. 다시
-/// 시도할 수 있는 버튼 바로 아래에 남겨 두는 편이 읽힙니다.
+/// 시도할 수 있는 버튼 바로 위에 남겨 두는 편이 읽힙니다.
+///
+/// 즉시 종료 확인도 showDialog로 만들지 않고 이 레이어 안에서 상태만 바꿉니다.
+/// 게임 라우트 위에 다이얼로그를 쌓으면 종료가 반영될 때 화면이 스스로 부르는
+/// `maybePop`이 다이얼로그만 닫아 게임 화면에 갇힙니다(`game_route_exit.dart`).
 class _InterruptionFailureNotice extends StatelessWidget {
   const _InterruptionFailureNotice({required this.message});
 
@@ -472,90 +479,22 @@ class _InterruptionFailureNotice extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0x33FF6B6B),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0x66FF6B6B)),
+          color: const Color(0xFFFBE3E6),
+          border: Border.all(color: MosiColors.red, width: 2),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFFFFD8D8),
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+          style: MosiFonts.sans(
+            size: 14,
+            weight: FontWeight.w700,
+            color: const Color(0xFFB02A3C),
             height: 1.4,
           ),
         ),
       ),
-    );
-  }
-}
-
-/// 즉시 종료 확인 문구와 취소·종료 버튼입니다.
-///
-/// ⚠️ **showDialog로 만들지 마세요.** 게임 라우트 위에 다이얼로그를 쌓으면
-/// 종료가 반영될 때 화면이 스스로 부르는 `maybePop`이 다이얼로그만 닫아
-/// 게임 화면에 갇힙니다(`game_route_exit.dart` 참고). 같은 레이어 안에서
-/// 상태만 바꾸면 라우트가 쌓이지 않아 그 사고가 구조적으로 불가능합니다.
-class _FinishNowConfirm extends StatelessWidget {
-  const _FinishNowConfirm({
-    required this.message,
-    required this.isSubmitting,
-    required this.onCancel,
-    required this.onAccept,
-  });
-
-  final String message;
-  final bool isSubmitting;
-  final VoidCallback onCancel;
-  final VoidCallback onAccept;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            height: 1.45,
-          ),
-        ),
-        const SizedBox(height: 18),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OutlinedButton(
-              onPressed: isSubmitting ? null : onCancel,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                disabledForegroundColor: const Color(0xFF888888),
-                side: const BorderSide(color: Color(0x55FFFFFF)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-              ),
-              child: const Text(
-                GameFlowCopy.interruptionFinishNowCancel,
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _InterruptionActionButton(
-              label: GameFlowCopy.interruptionFinishNowAccept,
-              isEmphasized: true,
-              onPressed: isSubmitting ? null : onAccept,
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

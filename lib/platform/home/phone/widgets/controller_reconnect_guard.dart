@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:game_kit/widgets/game_reconnect_screen.dart';
+import 'package:game_kit/mosi_ui/mosi_connection.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/widgets/game_route_exit.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -11,11 +14,16 @@ class ControllerReconnectGuard extends StatefulWidget {
     required this.provider,
     required this.child,
     required this.onExit,
+    this.exitDelay = const Duration(seconds: 20),
   });
 
   final RoomProvider provider;
   final Widget child;
   final VoidCallback onExit;
+
+  /// 이 시간이 지나도 연결되지 않으면 나가기 버튼을 보여 줍니다(확정 2026-08).
+  /// 일시적인 끊김에 바로 나가 버리지 않도록 잠깐 기다리게 합니다.
+  final Duration exitDelay;
 
   @override
   State<ControllerReconnectGuard> createState() =>
@@ -68,16 +76,69 @@ class _ControllerReconnectGuardState extends State<ControllerReconnectGuard> {
             ?child,
             if (reconnecting)
               Positioned.fill(
-                child: GameReconnectScreen(
-                  title: '태블릿에 다시 연결하는 중',
-                  message: '일시적인 연결 문제라면 나가지 않고 재연결을 기다릴 수 있어요',
-                  homeLabel: '게임과 그룹 나가기',
-                  onHome: widget.onExit,
+                child: _TabletLostSheet(
+                  characterId: widget.provider.currentCharacterId,
+                  exitDelay: widget.exitDelay,
+                  onExit: widget.onExit,
                 ),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+/// 시안 '게임 중 태블릿 연결 끊김'입니다.
+class _TabletLostSheet extends StatefulWidget {
+  const _TabletLostSheet({
+    required this.characterId,
+    required this.exitDelay,
+    required this.onExit,
+  });
+
+  final String? characterId;
+  final Duration exitDelay;
+  final VoidCallback onExit;
+
+  @override
+  State<_TabletLostSheet> createState() => _TabletLostSheetState();
+}
+
+class _TabletLostSheetState extends State<_TabletLostSheet> {
+  Timer? _timer;
+  bool _showsExit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.exitDelay, () {
+      if (mounted) setState(() => _showsExit = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MosiConnectionLayout(
+      semanticLabel: '태블릿 연결 끊김',
+      background: MosiColors.violet,
+      scene: MosiTabletLostScene(characterId: widget.characterId),
+      tag: '게임 중 · 태블릿',
+      tagColor: mosiConnectionLavender,
+      title: '태블릿에 다시 연결하는 중',
+      body: '태블릿 연결이 잠깐 끊겼어요.\n기다리면 이 화면에서 자동으로 이어져요.',
+      status: const MosiConnectionStatus(text: '내 자리와 손패는 그대로예요'),
+      actions: [
+        if (_showsExit)
+          MosiConnectionButton(label: '게임과 그룹 나가기', onPressed: widget.onExit),
+      ],
+      footnote: _showsExit ? '나가면 이번 게임에서 빠지게 돼요' : null,
     );
   }
 }

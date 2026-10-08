@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_holdem/game_copy.dart';
+import 'package:game_holdem/game_sounds.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_holdem/shared/models/presentation_timing.dart';
@@ -16,6 +17,7 @@ import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
 import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
 import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
@@ -43,6 +45,7 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
   Timer? _turnTimer;
   (String, int)? _scheduledPhase;
   int? _scheduledDeadline;
+  bool _soundPreloaded = false;
 
   @override
   void initState() {
@@ -56,6 +59,22 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
         watchPrivate: false,
       );
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_soundPreloaded) return;
+    final sound = SoundEffects.of(context);
+    if (sound == null) return;
+    _soundPreloaded = true;
+    unawaited(
+      sound.preloadEffects(
+        HoldemSounds.preloadTargets,
+        solo: true,
+        scope: 'holdem',
+      ),
+    );
   }
 
   void _syncAutomation(HoldemGameState game, HoldemController controller) {

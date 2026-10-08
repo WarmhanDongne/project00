@@ -216,7 +216,6 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
                               !_turnExpired &&
                               !game.commandInFlight &&
                               _submittingAction == null,
-                          turnExpired: _turnExpired,
                           submittingAction: _submittingAction,
                           onFold: () => unawaited(_submitAction('fold')),
                           onCheckOrCall: (action) =>
@@ -546,7 +545,6 @@ class _ActionPucks extends StatelessWidget {
     required this.callAmount,
     required this.checkOrCallSynchronized,
     required this.enabled,
-    required this.turnExpired,
     required this.submittingAction,
     required this.onFold,
     required this.onCheckOrCall,
@@ -557,7 +555,6 @@ class _ActionPucks extends StatelessWidget {
   final int callAmount;
   final bool checkOrCallSynchronized;
   final bool enabled;
-  final bool turnExpired;
   final String? submittingAction;
   final VoidCallback onFold;
   final ValueChanged<String> onCheckOrCall;
@@ -578,70 +575,36 @@ class _ActionPucks extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _LabeledPuck(
-            caption: '포기',
-            child: HoldemPuckButton(
-              label: 'Fold',
-              dark: true,
-              busy: submittingAction == 'fold',
-              semanticLabel: '폴드, 이번 판 포기',
-              onPressed: enabled && legal.fold ? onFold : null,
-            ),
+          HoldemPuckButton(
+            label: 'Fold',
+            dark: true,
+            busy: submittingAction == 'fold',
+            semanticLabel: '폴드, 이번 판 포기',
+            onPressed: enabled && legal.fold ? onFold : null,
           ),
-          _LabeledPuck(
-            caption: turnExpired
-                ? '시간 종료'
-                : canCheck
-                ? '넘기기'
-                : '따라가기',
-            child: HoldemPuckButton(
-              label: canCheck ? 'Check' : 'Call',
-              amount: canCheck ? null : holdemChips(callAmount),
-              size: 112,
-              busy: submittingAction == 'check' || submittingAction == 'call',
-              semanticLabel: canCheck ? '체크' : '콜 ${holdemChips(callAmount)}',
-              onPressed: enabled && checkOrCallSynchronized
-                  ? () => onCheckOrCall(checkOrCallAction)
-                  : null,
-            ),
+          HoldemPuckButton(
+            label: canCheck ? 'Check' : 'Call',
+            amount: canCheck ? null : holdemChips(callAmount),
+            size: 112,
+            busy: submittingAction == 'check' || submittingAction == 'call',
+            semanticLabel: canCheck ? '체크' : '콜 ${holdemChips(callAmount)}',
+            onPressed: enabled && checkOrCallSynchronized
+                ? () => onCheckOrCall(checkOrCallAction)
+                : null,
           ),
-          _LabeledPuck(
-            caption: canRaise && !legal.bet && !legal.raise
-                ? '모두 걸기'
-                : '금액 올리기',
-            child: HoldemPuckButton(
-              label: raiseLabel,
-              busy:
-                  submittingAction == 'bet' ||
-                  submittingAction == 'raise' ||
-                  submittingAction == 'allIn',
-              semanticLabel: '$raiseLabel 금액 고르기',
-              onPressed: enabled && canRaise ? onRaise : null,
-            ),
+          HoldemPuckButton(
+            label: raiseLabel,
+            busy:
+                submittingAction == 'bet' ||
+                submittingAction == 'raise' ||
+                submittingAction == 'allIn',
+            semanticLabel: '$raiseLabel 금액 고르기',
+            onPressed: enabled && canRaise ? onRaise : null,
           ),
         ],
       ),
     );
   }
-}
-
-class _LabeledPuck extends StatelessWidget {
-  const _LabeledPuck({required this.caption, required this.child});
-  final String caption;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      child,
-      const SizedBox(height: 10),
-      Text(
-        caption,
-        style: HoldemFonts.text(size: 12, color: HoldemColors.muted),
-      ),
-    ],
-  );
 }
 
 class _MyChips extends StatelessWidget {

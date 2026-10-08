@@ -9,6 +9,7 @@ import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:game_kit/widgets/game_exit_route.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_kit/player_layouts/player_layout_factory.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
@@ -211,21 +212,19 @@ class _TabletHomeState extends State<TabletHome>
     //================상태바 표시=================
     unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.lockTabletGameLandscape());
-    Navigator.of(context)
-        .push<void>(
-          MaterialPageRoute<void>(
-            builder: (_) => game.buildTabletScreen(
-              playerLayout: layout,
-              provider: roomProvider,
-              roomCode: roomCode,
-            ),
-          ),
-        )
-        .whenComplete(() {
-          _isOpeningRestoredGame = false;
-          // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
-          unawaited(restoreRoomToWaiting(roomProvider));
-        });
+    final gameRoute = GameExitMaterialPageRoute<void>(
+      builder: (_) => game.buildTabletScreen(
+        playerLayout: layout,
+        provider: roomProvider,
+        roomCode: roomCode,
+      ),
+    );
+    Navigator.of(context).push(gameRoute);
+    gameRoute.completed.then((_) {
+      _isOpeningRestoredGame = false;
+      // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
+      unawaited(restoreRoomToWaiting(roomProvider));
+    });
   }
 
   @override

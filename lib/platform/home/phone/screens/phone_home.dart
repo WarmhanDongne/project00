@@ -9,7 +9,6 @@ import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
-import 'package:project00/platform/home/phone/widgets/phone_owned_games_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -164,16 +163,13 @@ class _PhoneHomeState extends State<PhoneHome> {
       );
     }
     return Scaffold(
-      backgroundColor: MosiColors.cream,
+      backgroundColor: MosiColors.violet,
       body: SafeArea(
         top: false,
+        bottom: false,
         child: Column(
           children: [
             const PhoneHeader(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: const PhoneOwnedGamesHeader(),
-            ),
             PhoneOwnGameList(games: _games),
             _buildJoinBar(),
           ],
@@ -192,14 +188,28 @@ class _PhoneHomeState extends State<PhoneHome> {
         border: Border(top: BorderSide(color: MosiColors.ink, width: 3)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-      child: MosiButton(
-        label: busy ? context.l10n.reconnecting : context.l10n.joinGroup,
-        height: 56,
-        fontSize: 18,
-        shadowOffset: 5,
-        expand: true,
-        leading: const Icon(Icons.qr_code_scanner_rounded),
-        onPressed: busy ? null : () => unawaited(_openRoomJoin()),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.phonePlayHint,
+              textAlign: TextAlign.center,
+              style: MosiFonts.sans(size: 12, color: MosiColors.muted),
+            ),
+            const SizedBox(height: 10),
+            MosiButton(
+              label: busy ? context.l10n.reconnecting : context.l10n.joinGroup,
+              height: 56,
+              fontSize: 18,
+              shadowOffset: 5,
+              expand: true,
+              leading: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: busy ? null : () => unawaited(_openRoomJoin()),
+            ),
+          ],
+        ),
       ),
     );
   }

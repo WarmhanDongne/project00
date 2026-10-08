@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:game_kit/widgets/game_reconnect_screen.dart';
+import 'package:game_kit/mosi_ui/mosi_connection.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 /// 앱을 다시 켰을 때 기존 방·게임으로 돌아갈지 묻습니다.
@@ -35,65 +36,32 @@ class SessionReturnPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GameReconnectScreen(
-      title: _isGame ? '진행 중인 게임이 있어요' : '참여 중인 그룹이 있어요',
-      message: _isGame ? '이어서 하시겠어요? 자리와 손패는 그대로예요' : '그룹으로 돌아가시겠어요?',
-      actions: [
-        _PromptButton(
-          key: const ValueKey('session-return-decline'),
-          label: '나중에',
-          isPrimary: false,
-          onPressed: isBusy ? null : onDecline,
-        ),
-        _PromptButton(
-          key: const ValueKey('session-return-accept'),
-          label: _isGame ? '게임 다시 참여' : '그룹 다시 참여',
-          isPrimary: true,
-          onPressed: isBusy ? null : onReturn,
-        ),
-      ],
-    );
-  }
-}
-
-class _PromptButton extends StatelessWidget {
-  const _PromptButton({
-    super.key,
-    required this.label,
-    required this.isPrimary,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool isPrimary;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    // 재접속 화면의 색을 그대로 씁니다. 같은 화면 안에서 버튼만 다른 팔레트를
-    // 쓰면 붙여 놓은 것처럼 보입니다.
-    if (!isPrimary) {
-      return OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: GameReconnectScreen.messageColor,
-          disabledForegroundColor: const Color(0xFFBDB8C7),
-          side: const BorderSide(color: Color(0xFFCFC9DE)),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        ),
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-      );
-    }
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: GameReconnectScreen.accent,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: const Color(0xFFBDB8C7),
-        disabledForegroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+    // 시안 '앱을 다시 켰을 때': 둥근 테이블과 비워 둔 내 자리를 보여 줍니다.
+    return Scaffold(
+      body: MosiConnectionLayout(
+        semanticLabel: _isGame ? '진행 중인 게임' : '참여 중인 그룹',
+        background: MosiColors.sun,
+        scene: const MosiReturnTableScene(),
+        tag: _isGame ? '게임 진행 중' : '그룹 참여 중',
+        tagColor: MosiColors.lime,
+        title: _isGame ? '진행 중인 게임이 있어요' : '참여 중인 그룹이 있어요',
+        body: _isGame ? '이어서 하시겠어요?\n자리와 손패는 그대로예요.' : '그룹으로 돌아가시겠어요?',
+        actionFlex: const [10, 17],
+        actions: [
+          MosiConnectionButton(
+            key: const ValueKey('session-return-decline'),
+            label: '나중에',
+            onPressed: isBusy ? null : onDecline,
+          ),
+          MosiConnectionButton(
+            key: const ValueKey('session-return-accept'),
+            label: _isGame ? '게임 다시 참여' : '그룹 다시 참여',
+            primary: true,
+            loading: isBusy,
+            onPressed: isBusy ? null : onReturn,
+          ),
+        ],
       ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
     );
   }
 }

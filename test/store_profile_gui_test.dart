@@ -153,12 +153,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('₩3,900'), findsNothing);
-      await tester.tap(find.text('파이널콜').first);
+      await tester.tap(find.byKey(const ValueKey('store-book-finalCall')));
       await tester.pump();
-      expect(
-        find.textContaining(owned ? '· 보유 중' : '· 무료', findRichText: true),
-        findsOneWidget,
-      );
+      expect(find.text(owned ? '보유 중' : '무료'), findsOneWidget);
       await tester.tap(find.text('선반에서 하기'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -208,7 +205,7 @@ void main() {
       expect(backRect.height, 44);
       expect(restoreRect.right, size.width - inset);
       expect(restoreRect.top, backRect.top);
-      expect(tester.getCenter(find.text('모시 게임 미술관')).dx, size.width / 2);
+      expect(tester.getCenter(find.text('모시 서점')).dx, size.width / 2);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -224,15 +221,15 @@ void main() {
       MaterialApp(home: TabletStoreScreen(gameProvider: games)),
     );
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('구매 준비 중'), findsOneWidget);
-    await tester.tap(find.text('다음 전시'));
+    expect(find.widgetWithText(MosiButton, '구매 준비 중'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('store-book-soon')));
     await tester.pump();
     expect(find.text('공개 준비 중'), findsOneWidget);
     await tester.tap(find.text('공개 준비 중'));
     await tester.pump();
     expect(find.text('알림 켜짐'), findsNothing);
     expect(find.textContaining('알림 신청은 준비'), findsOneWidget);
-    await tester.tap(find.text('마피아').first);
+    await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('배경 음악 · 준비 중'), findsOneWidget);
@@ -241,7 +238,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('상점 등장 시간축에서 조명이 먼저 내려오고 액자는 차례로 등장한다', (tester) async {
+  testWidgets('상점 등장 시간축에서 간판이 먼저 내려오고 책은 차례로 등장한다', (tester) async {
     final games = GameProvider(service: _Games())
       ..games = [
         GameInfo.fromJson({'id': 'liars_poker', 'name': '라이어스 포커'}),
@@ -367,7 +364,7 @@ void main() {
         );
         expect(
           (image.image as AssetImage).assetName,
-          'packages/game_kit/assets/images/covers/holdem_cardbox.webp',
+          'packages/game_kit/assets/images/covers/poker_cardbox.png',
         );
       }
       expect(tester.takeException(), isNull);
