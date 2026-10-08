@@ -1,6 +1,6 @@
 # 작업 목록
 
-ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK_MANAGEMENT.md) · [완료 작업](COMPLETED_TASKS.md) · [월별 기록](logs/)
+ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK_MANAGEMENT.md) · [완료 작업](COMPLETED_TASKS.md) · [월별 기록](logs/) · [네트워크·세션 작업 보기](NETWORK_SESSION_TASKS.md)
 
 2026-10-08 네트워크·세션 조사와 `origin/newgui`의 `999c3e9` 비교를 반영했다.
 기존 오류 해결은 SESSION-RECONNECT-02, 테스트 실행 경로는 TEST-REGRESSION-01에서
