@@ -1,0 +1,687 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/operations/PRE_DEVELOPMENT_AUTH_NETWORK_SESSION_TEST.md",
+  "note": "Rebuild planning catalog only. The 2026-10-04 executable lab and product wiring were removed by user request. All 62 product scenarios remain NOT_RUN. Historical Android UI 45 / local fixture or fault 14 / iOS 1 / separate validation 2 are method classifications, not current executable coverage. Re-establish isolated routing, backend, multi-device capacity, fault control and assertions before execution.",
+  "cases": [
+    {
+      "id": "AUTH-01",
+      "title": "이메일 링크 로그인",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "로컬 이메일·비밀번호 로그인 smoke는 이메일 링크 요청·앱 처리를 검증하지 않음",
+        "로컬 이메일 링크 주입은 실제 메일 앱·발송 검증을 대체하지 않음"
+      ],
+      "task": "RELEASE-EVIDENCE-01 / TEST-REGRESSION-01",
+      "historicalBlocker": "EMAIL_LINK_FLOW_NOT_VERIFIED"
+    },
+    {
+      "id": "AUTH-02",
+      "title": "Google 로그인",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "현재 lab는 native Google 인증을 차단하고 가상 OAuth 경로도 제공하지 않음",
+        "차단 안내 관찰은 실제 Google 계정 선택·로그인 성공·취소 검증을 대체하지 않음"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "NATIVE_GOOGLE_DISABLED_IN_LAB"
+    },
+    {
+      "id": "AUTH-03",
+      "title": "Apple 로그인",
+      "mode": "ios_required",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "Android/Windows lab에서 Apple native 인증을 실행할 수 없음",
+        "현재 lab routing은 Android debug만 지원하며 별도 iOS 인증 테스트 환경이 필요함"
+      ],
+      "task": "RELEASE-EVIDENCE-01 / TEST-REGRESSION-01",
+      "historicalBlocker": "IOS_RUN_REQUIRED"
+    },
+    {
+      "id": "AUTH-04",
+      "title": "온보딩 저장·화면 복원",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "현재 합성 계정 seed는 전부 onboarding complete이며 신규·미완료 단계 준비가 필요함",
+        "기존 완료 계정 로그인 smoke는 비밀번호·프로필 단계 저장과 복원을 대체하지 않음"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "INCOMPLETE_ONBOARDING_FIXTURE_REQUIRED"
+    },
+    {
+      "id": "AUTH-05",
+      "title": "회원가입 뒤로가기",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "AUTH-BACK-01 / TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "AUTH-06",
+      "title": "로그인 요청 중 단절·취소",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "요청 처리 중 정확한 장애 시점은 추가 제어 필요"
+      ],
+      "task": "TEST-REGRESSION-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "AUTH-07",
+      "title": "계정 전환과 저장 세션",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SECURITY-01 / TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "AUTH-08",
+      "title": "오류·재전송 후 정상 로그인",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "잘못된 입력과 사용할 수 없는 링크·재전송은 독립 변형이며 오류 링크 준비가 필요함"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "FIXTURE_OR_FAULT_CONTROL_NOT_VERIFIED"
+    },
+    {
+      "id": "ROOM-01",
+      "title": "방 생성·정상 참가",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "CORE-REVIEW-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "ROOM-02",
+      "title": "참가 실패 후 다시 참가",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "ROOM-03",
+      "title": "방 생성 중 단절·재시도",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "서버 처리 후 응답만 유실됐는지 별도 입증 필요"
+      ],
+      "task": "ROOM-CREATE-REQUEST-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "ROOM-04",
+      "title": "다른 계정의 그룹 게임 목록",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "현재 seed는 A 전용 Final Call·Mafia와 무료 LP를 제공하지만 T 전용 소유 게임 변형은 없음"
+      ],
+      "task": "신규 task 후보 / TEST-REGRESSION-01",
+      "historicalBlocker": "CONTROLLER_ONLY_ENTITLEMENT_FIXTURE_REQUIRED"
+    },
+    {
+      "id": "ROOM-05",
+      "title": "대기실 단절과 명단 갱신",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "ROOM-06",
+      "title": "대기실 저장·다시 참여 선택",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-01",
+      "title": "짧은 단절과 네트워크 전환",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "실물 Wi-Fi/모바일 데이터 전환은 별도"
+      ],
+      "task": "NET-RECOVERY-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-02",
+      "title": "같은 게임에서 두 번 단절",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-03",
+      "title": "중단 이후 남은 시간 보존",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-TIMER-01 / GAME-PAUSE-UX-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-04",
+      "title": "태블릿만 단절",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "CONTROLLER-RECOVERY-01 / NET-UI-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-05",
+      "title": "A·B 단절 후 A만 복귀",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-06",
+      "title": "참가자·태블릿 중첩 단절",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-TIMER-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-07",
+      "title": "복구 중 다시 단절",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "복구 경합 시점은 구간 제어 필요"
+      ],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-08",
+      "title": "복구 뒤 실제 상태·입력 확인",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-09",
+      "title": "같은 화면의 중복 안내·재시도",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "NET-10",
+      "title": "장기 단절·보존 경계",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "backend startup과 RTDB 이벤트 trigger probe는 정기 Scheduler 실행을 보장하지 않음",
+        "보존 경계 fixture와 로컬 scheduled handler 실행 제어가 필요함"
+      ],
+      "task": "SESSION-RECONNECT-02 / ROOM-CLEANUP-01",
+      "historicalBlocker": "SCHEDULER_INVOCATION_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "RESTORE-01",
+      "title": "휴대폰 진행 중 재실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-02",
+      "title": "분배 중 휴대폰 재실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-03",
+      "title": "분배 완료 직후 태블릿 재실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-04",
+      "title": "최초 오프라인 태블릿 실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-05",
+      "title": "최초 오프라인 휴대폰 실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-06",
+      "title": "빈 손패·탈락·관전 재실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-07",
+      "title": "백그라운드·화면 잠금",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "제조사 백그라운드/Doze 제약은 별도"
+      ],
+      "task": "SESSION-RECONNECT-02 / GAME-DEVICE-BOARD-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "RESTORE-08",
+      "title": "복구 불가 방과 이전 세션",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-01",
+      "title": "대기실 직접 퇴장",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "LEAVE-CONSISTENCY-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-02",
+      "title": "게임과 그룹 직접 퇴장",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "LEAVE-CONSISTENCY-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-03",
+      "title": "퇴장 요청 실패·재시도",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-04",
+      "title": "강퇴 후 늦은 복구",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "LEAVE-CONSISTENCY-01 / SECURITY-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-05",
+      "title": "태블릿의 방 종료",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-06",
+      "title": "정상 종료와 대기실 복귀",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "FINISH-SYNC-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-07",
+      "title": "winner 직후 태블릿 재실행",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "FINISH-SYNC-01 / WINNER-CONNECTION-LAYER-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-08",
+      "title": "중복 종료·다이얼로그 경합",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "EXIT-09",
+      "title": "다중 단절 중 제외·최소 인원",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "CMD-01",
+      "title": "행동 전송 중 단절·중복 탭",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "단절 토글만으로 명령 처리·응답 유실 확정 불가"
+      ],
+      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "CMD-02",
+      "title": "서버 처리 후 응답만 유실",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "서버 처리 완료를 입증하며 응답만 유실시키는 제어가 없음"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "CMD-03",
+      "title": "분배·진행 완료 요청 실패",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "해당 판·단계의 분배 완료 callable에 일시 실패를 확정하는 제어가 없음"
+      ],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "CMD-04",
+      "title": "이전 판 요청이 새 판에 도착",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "이미 전송한 옛 요청을 보류한 뒤 새 판에 도착시키는 제어가 없음"
+      ],
+      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01",
+      "historicalBlocker": "FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "CMD-05",
+      "title": "권한 오류 뒤 구독 재개",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "읽기 구독 권한 오류·종료를 확정하고 정상 조건으로 회복시키는 제어가 없음"
+      ],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "CMD-06",
+      "title": "지연·빈 공개 상태와 최신 이벤트",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "최신 이벤트 뒤에 오래된 revision·삭제 확인·빈 조회를 도착시키는 순서 제어가 없음"
+      ],
+      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01",
+      "historicalBlocker": "FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "GAME-01",
+      "title": "LP/FC 최초 판·후속 분배",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "GAME-02",
+      "title": "LP 벌칙·룰렛 응답 지연",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "응답만 지연하는 경우는 별도 장애 주입 필요"
+      ],
+      "task": "GAME-COMM-DIAGNOSTICS-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "GAME-03",
+      "title": "FC 다시하기·최종 공개 복구",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "GAME-04",
+      "title": "Mafia 역할 확인·배치 실패",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "정상 역할 확인과 역할 배치 실패·취소는 독립 변형이며 배치 callable 실패 제어가 필요함"
+      ],
+      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "ROLE_ALLOCATION_FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "GAME-05",
+      "title": "Mafia 밤 행동·조사·시간초과",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SESSION-RECONNECT-02 / SECURITY-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "GAME-06",
+      "title": "Mafia 발표·투표·결과·관전",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "UI-01",
+      "title": "중단·복구 안내 이해도",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "사람의 안내 이해도는 사람 검증 필요"
+      ],
+      "task": "GAME-PAUSE-UX-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "UI-02",
+      "title": "debug 통신 진단·기록 복사",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "GAME-COMM-DIAGNOSTICS-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "UI-03",
+      "title": "release 진단 비노출",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "debug 전용 로컬 routing으로 release 비노출을 검증할 수 없음"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "RELEASE_LAB_BUILD_UNAVAILABLE"
+    },
+    {
+      "id": "UI-04",
+      "title": "작은 화면·글씨/화면 확대",
+      "mode": "android_ui",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "ACCESSIBILITY-SCALE-01",
+      "historicalBlocker": "SCENARIO_NOT_EXECUTED"
+    },
+    {
+      "id": "UI-05",
+      "title": "태블릿 구성품 이미지·키보드",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "현재 catalog imageUrl·componentImageUrl이 빈 값이라 서로 다른 이미지·지연 로딩 fixture가 필요함",
+        "키보드 부분은 독립 실행할 수 있으나 해당 결과만으로 이미지 변형을 통과 처리하지 않음"
+      ],
+      "task": "TABLET-ASSET-01 / TABLET-MEMBERS-01",
+      "historicalBlocker": "LOCAL_IMAGE_FIXTURE_REQUIRED"
+    },
+    {
+      "id": "OBS-01",
+      "title": "단절 신고 실패 후 같은 관측값 재시도",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "stale 신고 첫 callable만 실패시키고 같은 heartbeat 관측값을 유지하는 제어가 없음"
+      ],
+      "task": "SESSION-RECONNECT-02",
+      "historicalBlocker": "STALE_REPORT_FAULT_CONTROL_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "OBS-02",
+      "title": "방·생성 요청·유령 참가자 정리",
+      "mode": "local_fixture_or_fault",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "방 삭제 후 생성 예약 정리 trigger smoke는 기존 고아 요청·부분 실패·정기 정리 전체를 검증하지 않음",
+        "고아 요청·유령 참가자 fixture와 로컬 scheduled cleanup 실행 제어가 필요함"
+      ],
+      "task": "ROOM-CLEANUP-01 / ROOM-CREATE-REQUEST-01",
+      "historicalBlocker": "ORPHAN_FIXTURE_AND_SCHEDULER_CONTROL_REQUIRED"
+    },
+    {
+      "id": "OBS-03",
+      "title": "참가 자격·공개/개인 데이터 경계",
+      "mode": "separate_automated_validation",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [],
+      "task": "SECURITY-01",
+      "historicalBlocker": "SEPARATE_VALIDATION_NOT_RUN"
+    },
+    {
+      "id": "OBS-04",
+      "title": "자동 테스트 실행 경로",
+      "mode": "separate_automated_validation",
+      "result": "NOT_RUN",
+      "blocker": "AI_TEST_LAB_REMOVED",
+      "limitations": [
+        "현재 auth/session guarded suite는 필수 삭제 파일 누락으로 INVALID·실제 exit 1이며 제품 앱 실패와 별도임",
+        "이번 후보의 FULL과 실제 CI·package 포함 범위 검증은 미실행이며 도구 smoke로 대체하지 않음"
+      ],
+      "task": "TEST-REGRESSION-01",
+      "historicalBlocker": "REQUIRED_TEST_FILES_MISSING"
+    }
+  ]
+}

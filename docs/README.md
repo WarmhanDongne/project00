@@ -24,15 +24,20 @@
 - [`Firebase MCP RTDB Read-only Pilot`](operations/FIREBASE_MCP.md)
 - [`Emulator Pilot`](operations/EMULATOR_PILOT.md)
 - [`Auth/Network/Session Technical Reference`](operations/AUTH_NETWORK_SESSION_TECHNICAL_REFERENCE.md)
+- [`네트워크 복구와 세션 관리 동작 명세`](operations/SESSION_EVENT_FLOWS.md) — 현재 구현의 상태 전이·의사코드·18개 대표 시나리오와 구현 공백
 - [`Real-device Auth/Network/Session Checklist`](operations/REAL_DEVICE_AUTH_NETWORK_SESSION_CHECKLIST.md)
+- [`개발 전 현재 기준 수동 테스트`](operations/PRE_DEVELOPMENT_AUTH_NETWORK_SESSION_TEST.md) — 과거 완료·현재 문제를 함께 재검증하고 task 후보를 기록
+- [`AI Emulator 테스트 재구축 참고`](operations/EMULATOR_TEST_EXECUTION.md) — 제거한 환경의 설계·실행 근거·한계와 62개 재구축 분류
 - [`User Auth/Network/Session Guide`](operations/USER_AUTH_NETWORK_SESSION_GUIDE.md)
 
 ## Planning
 
-- [`작업 목록`](planning/TASKS.md): 출시 전 필수·권장·출시 후 작업, 현재 상태와 완료 조건
+- [`작업 목록`](planning/TASKS.md): 구현 검증 대기·출시 전 필수·권장·출시 후 작업의 분류·상태·다음 행동 요약 표
+- [`작업별 상세`](planning/tasks/): 작업 ID별 목적·범위·근거·완료 조건
+- [`작업 관리 방법`](planning/TASK_MANAGEMENT.md): 상태·분류 관리, 완료 처리와 출시 판정 기준
 - [`완료 작업`](planning/COMPLETED_TASKS.md): 최종 변경, 완료일, 검증 근거와 한계
 - [`월별 작업 기록`](planning/logs/): 월별 파일 안에서 태스크별 과정과 날짜별 목차 관리
-  — [2026년 8월](planning/logs/2026-08.md)·[2026년 9월](planning/logs/2026-09.md)
+  — [2026년 8월](planning/logs/2026-08.md)·[2026년 9월](planning/logs/2026-09.md)·[2026년 10월](planning/logs/2026-10.md)
 
 진행 과정은 기록에, 현재 구현 설명은 Engineering/Operations의 해당 기술 문서에 둔다.
-문서 작성·이동과 상태 관리 방법은 작업 목록의 관리 방법을 따른다.
+문서 작성·이동과 상태 관리 방법은 [작업 관리 방법](planning/TASK_MANAGEMENT.md)을 따른다.

@@ -1,0 +1,198 @@
+# SESSION-RECONNECT-02
+
+게임 재접속 보완·단절 신고 재시도·네트워크 가드·기기별 검증
+
+[작업 목록으로 돌아가기](../TASKS.md) · [관리 방법](../TASK_MANAGEMENT.md)
+
+현재 분류·상태·다음 행동은 작업 목록을 기준으로 확인한다. 아래 날짜가 붙은 상태·결정은 당시 기록이다.
+
+**서버 상태 기반 게임 복귀와 공용 재접속 처리 보완**
+
+- 등록일: 2026-09-30.
+- 최초 결정(2026-09-30): 브랜치 병합 충돌을 피하기 위해 수정은 추후 진행하고 TODO를 등록했다.
+- 현재 분류·상태(2026-10-04): 사용자가 출시 전 필수로 지정했다. 담당 범위·복구 계약 합의
+  전까지 구현 착수는 보류하며, 필수 분류를 배포나 계약 변경 승인으로 해석하지 않는다.
+- 협업 경계: 개발자 2명이 분담하며 사용자 담당은 `packages/`다. 플랫폼·서버 수정도
+  필요하므로 팀원과 범위를 합의한다. 별도 승인 없이 패키지 밖 구현을 수정하지 않는다.
+- 목적: 순간 단절과 앱 재실행 모두에서 기존 참가 자격·게임 상태를 유지하고,
+  데이터·구독·화면이 준비된 뒤 안전하게 게임으로 복귀한다.
+- 관련 기록: 2026-09-29~30 재접속 분석·설계 대화와 보류 요청을 아래에 요약했다.
+  기존 [SESSION-RECONNECT-01 완료 기록](../COMPLETED_TASKS.md)은 당시 검증 범위로
+  유지한다. [NET-RECOVERY-01](NET-RECOVERY-01.md#net-recovery-01)의 순수 체감 지연과 구분한다.
+
+## 확인 근거와 추가 재현 대상 — 원 검토 기준
+
+아래는 `fa4ad54` 기준의 코드·변경 이력 확인이며 운영 서버·실기기 PASS 판정은 아니다.
+분배 중 복원·다중 단절은 기존 결함, 준비 완료·옛 요청 도착은 계약 공백, 빈 조회와
+재진입 연출의 실제 영향은 추가 재현 대상으로 관리한다. 9월 30일 구조 변경·10월 2일
+안정성 보완이 병합됐어도 외부 플랫폼·서버 범위는 자동 착수된 것으로 보지 않는다.
+
+## 분배 중 복원 판정과 로컬 세션 삭제
+
+[복원 판정](../../../lib/platform/home/room/services/room_common.dart)은 진행 중 게임에서
+`privateGameDataExists`를 필수로 요구한다. 그러나 라이어스포커와 파이널콜은 분배 중
+손패를 `game/server.pendingHands`에 두고 `game/private`를 비운다.
+정상 분배 상태가 복원 불가로 판정되면 `detectRestorableSession`과 `restorePlayerRoom`이
+저장 세션을 지운다.
+
+이 불일치는 8월 비교 코드에도 있다. 9월 회귀로 단정하지 않는다. 빈 손패·탈락 관전의
+영향은 각 게임의 실제 private 노드 유지 여부를 별도 확인해야 한다.
+
+## 다중 참가자 단절과 시간 보존
+
+[중단 상태 처리](../../../functions/src/game-interruption/state.ts)의 `beginGameInterruption`은
+이미 다른 참가자의 중단이 있으면 추가 단절을 등록하지 않는다. A 단절 → B 단절 →
+A 복귀 순서에서 A의 중단을 취소할 때 B의 단절 상태 전체를 다시 검사하지 않는다.
+controller pause가 남아 있지 않다면 deadline을 복원할 수 있다.
+
+이 코드는 `ea27b79` 이후 변경되지 않았다. 8월에 검증한 단일 참가자 반복 단절 및
+참가자+controller 중첩 중단과, 여러 참가자 동시 단절은 서로 다른 경우다.
+기존 시간 보존 통과를 취소하기보다 추가 실패 조건을 따로 관리해야 한다.
+
+- 앞선 분석의 서버 메모리 실행에서는 A 단절 → B 단절 → A 복귀 때 B가 끊긴 채
+  턴이 재개되는 조건을 재현했다. 운영 서버·실기기 재현과 구분한다.
+
+## 연결 복구·구독 재개·실제 준비 완료
+
+`RoomProvider._performConnectionRecovery`는 controller/player presence를 복구하고
+heartbeat를 시작하면 반환한다. 공개·개인 스냅샷이 같은 판·라운드의 최신 데이터인지,
+권한 오류로 끝난 구독이 다시 열렸는지를 기다리는 계약은 없다.
+
+[AppNetworkGuard](../../../packages/game_kit/lib/core/network/app_network_guard.dart)는
+`onRetry`가 정상 반환하면 입력 보호를 해제한다.
+[GameSessionController](../../../packages/game_kit/lib/game_flow/game_session_controller.dart)는
+구독을 최초 `startSession`에서 열지만 오류로 끝난 구독을 다시 여는 경로가 없다.
+연결 표시 정상화 뒤에도 화면이 굳거나 오래된 손패로 입력할 위험을 조사해야 한다.
+일반적인 RTDB 자동 재연결과 취소된 구독 재생성은 구분한다.
+
+## 태블릿 최초 오프라인 복구
+
+[TabletHome](../../../lib/platform/home/tablet/screens/tablet_home.dart)은 `initState`에서
+`restoreControllerRoom`을 한 번 호출한다. 실패하면 provider의 roomCode가 없는 상태로
+남는다. lifecycle 복귀는 `resumeControllerPresence`만 호출하고, 이는 roomCode가 없으면
+반환한다. 휴대폰 홈과 달리 최초 복구 실패 뒤 연결 true 이벤트로 저장 방 복구를 다시
+시작하는 경로가 없다. 앱을 다시 열어야 복구가 재시도되는지 실기기 확인이 필요하다.
+
+## 재진입 연출과 이미 전송된 요청
+
+- [라이어스포커 태블릿 board](../../../packages/game_liars_poker/lib/tablet/src/board_state.dart)는
+  첫 스냅샷에서 카드 더미가 비어 있으면 서버 phase가 playing이어도 로컬 stage를 dealing으로
+  선택한다. 이미 분배가 끝났고 아직 제출 카드가 없는 시점의 재실행을 우선 재현한다.
+  기존 더미를 복원해 바로 현재 단계로 가는 다른 분기도 있으므로 모든 복귀가 실패한다고
+  일반화하지 않는다.
+- 10월 2일 추가된 [GameProgressCommand](../../../packages/game_kit/lib/game_flow/game_progress_command.dart)는
+  새 판·단계로 바뀌면 후속 재시도를 무효화한다. 이미 전송된 callable은 취소하지 못한다.
+- [Final Call 분배 완료](../../../functions/src/final-call/complete-dealing.ts)와
+  [Liar's Poker 분배 완료](../../../functions/src/liars-poker/complete-dealing.ts)는 요청에
+  기대 startedAt·round를 받지 않는다. 같은 controller session의 옛 요청이 새 판의 dealing
+  상태에 도착하면 현재 phase 검사만으로 구분할 수 없다. 다른 단계 진행 함수도 함께 조사한다.
+  재시도 기능 자체를 제거하기보다 서버의 판·단계 정합성 검증을 설계해야 한다.
+
+## 빈 조회를 삭제로 해석하는 경로
+
+`GameSessionController._confirmMissingPublicGame`은 1.5초 뒤 공개 상태를 조회하고,
+빈 값이면 제거된 게임으로 바꾼다. 최신 정상 이벤트가 돌아온 뒤 옛 조회가 화면을 닫는
+경합은 10월 2일 세대 검사로 보완됐다. 다만 빈 조회 자체를 서버의 실제 삭제로 확정하는
+경로에는 서버 연결·참가 자격 확인이 함께 연결되어 있지 않다.
+오프라인 캐시 조건에서 실제로 빈 결과가 반환되는지는 이번에 재현하지 않았다.
+
+## 예정 작업 — 아직 미구현
+
+- [ ] 플랫폼: 손패 유무가 아닌 서버의 기존 참가 자격·게임 상태로 복귀를 판정하고,
+  분배 중·빈 손패·관전자 상태를 구분한다. 일시 오류만으로 저장 세션을 삭제하지 않는다.
+- [ ] 서버: 다중 단절을 추적하고 복귀·제외 때 남은 중단 사유와 최소 인원을 재검사한다.
+  마지막 중단 사유가 해소되기 전에는 턴을 재개하지 않고 기존 남은 시간을 보존한다.
+- [ ] 공용 패키지: 재접속·상태 동기화·준비 완료를 구분하는 공용 복구 관리와 구독 재연결,
+  중복 복구 방지, 제한된 재시도, 입력 차단·안내 UI를 정리한다.
+- [ ] 게임 패키지: 라이어스 포커·파이널 콜의 phone/tablet board가 신규 입장과 복귀를
+  구분하도록 한다. 현재 단계로 복원하고 완료된 시작·분배·벌칙 연출을 중복 실행하지 않는다.
+- [ ] 플랫폼: 태블릿 오프라인 실행 후 네트워크 복구 시 저장된 controller 방 복구를 재시도한다.
+- [ ] 플랫폼: stale 참가자 신고의 일시 실패 후 같은 heartbeat 관측값으로도 제한적으로
+  재시도한다. 현재는 요청 전에 관측값을 기록하고 실패해도 유지해 다음 신고가 막힌다.
+  온라인 상태·최신 heartbeat·퇴장·방 변경을 확인하고 서버 최신 presence 재검사와
+  중복 신고 방지를 유지한다. [2026-10-04 분류 결정](../logs/2026-10.md#session-reconnect-02) 참고.
+- [ ] 플랫폼·공용 패키지: 실시간 연결 필수 화면의 네트워크 가드 누락·중복, 복구 완료 전
+  입력 차단과 요청 실패 안내를 점검한다. 앱 전체 모달·최소 재전송 횟수를 일괄 적용하지 않는다.
+- [ ] 기기별 검증: Android/iOS 휴대폰·물리 태블릿에서 라이어스포커·Final Call·Mafia의
+  단절·재실행 복귀를 확인하고 기기·OS·빌드·게임·시나리오별 결과를 남긴다.
+- [ ] 서버·공용 패키지: 기존 UID·세션과 게임/분배 버전의 정합성, `commandId` 중복 방지,
+  오래된 라운드 요청 거절, 공개/본인 개인/서버 전용 데이터 경계를 유지한다.
+
+## 착수 시 합의 및 완료 조건
+
+- 제안 방향은 기존 Firebase·서버 권위 구조 유지 + 현재 상태 복원 + 공용 재접속 관리자다.
+  휴대폰 자동 복귀/다시 참여 확인 정책, 준비 완료와 턴 재개의 계약, 세션·영속 데이터·API
+  변경은 병합 후 영향 분석과 별도 승인으로 확정한다. 새 프레임워크 도입은 현재 범위가 아니다.
+- 분배 중 재실행, 제출 성공 직후 응답 유실, 두 명 동시 단절, 복구 중 재단절,
+  태블릿 재실행, 오프라인 실행 후 연결 복구, 빈 손패·관전 복귀를 회귀 검증한다.
+- 직접 퇴장·강퇴·제외·방 종료 시 부당한 재참가가 없고, 손패·턴·남은 시간 보존,
+  중복 행동·구독·연출 방지와 최소 인원 정책을 검증한다.
+- 관련 Flutter·Functions 테스트와 합의한 기기 조합의 검증 근거를 남긴다.
+  iOS·물리 태블릿·Final Call·Mafia의 단절·재실행 복귀는 별도 확인하며 8월 라이어스포커/
+  Android 태블릿 에뮬레이터·A32·A35 통과를 확대 적용하지 않는다. 실시간 연결 필수 화면의
+  네트워크 가드 누락·중복과 요청별 재시도도 점검하되 앱 전체 모달·최소 재전송 횟수는
+  캡처의 제안만으로 새 계약으로 확정하지 않는다.
+  현재 등록은 수정·테스트·배포 완료를 뜻하지 않는다.
+- 핵심 회귀 테스트와 공식 검증 실행 경로는 [TEST-REGRESSION-01](TEST-REGRESSION-01.md#test-regression-01)과
+  함께 완료하며, 자동 검증을 실기기 확인의 대체 근거로 사용하지 않는다.
+- 다음 행동: 병합된 코드에서 문제 존속 여부를 재확인하고 담당 파일·수정 순서를 합의한다.
+  패키지 밖 수정 및 서버 배포는 각각 승인된 범위에서만 진행한다.
+- 기록: [2026-10-04 필수 분류 결정](../logs/2026-10.md#session-reconnect-02).
+
+## 2026-10-08 보완 — newgui 후보 기준의 오류·복구 검증
+
+조사 기준은 현재 checkout `02669c7`과 UI 구현 후보
+[`origin/newgui`의 `999c3e9`](https://github.com/WarmhanDongne/project00/tree/999c3e99086b9f917ea941cd8f283b8ac40f3f85)다.
+아래는 코드 대조로 확인한 공백과 필요한 후속 작업이며, 병합·수정·자동 테스트·실기기
+검증·배포 완료 기록이 아니다. 기존 담당 범위·보류·승인 경계를 유지한다.
+새 UI의 작업 위치와 연결 화면별 점검은
+[NEWGUI-RECOVERY-01](NEWGUI-RECOVERY-01.md#newgui-recovery-01)에서 함께 관리한다.
+
+### 원 조사 1~13의 후속 체크리스트
+
+| 원 번호 | 확인 수준과 해결·검증할 내용 |
+| --- | --- |
+| 1 | **관찰·원인 미확정:** NET-07의 반복 단절 뒤 전 휴대폰 방 이탈·태블릿 진행/종료 실패를 실제 삭제, 참가 자격 상실, 구독 취소, 잘못된 종료 판정으로 나눠 재현한다. 상태 유실을 순수 체감 지연으로 처리하지 않는다. |
+| 2·3 | **코드 확인·완료 계약 미확정:** presence 복구와 heartbeat 재개 뒤 반환하는 [플랫폼 복구](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/room/providers/room_provider.dart#L1003)를 같은 판의 public/private 데이터·필요한 구독 정상화와 연결한다. [최초 구독](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/packages/game_kit/lib/recovery/providers/game_session_controller.dart#L95) 이후 SDK 자동 재연결과 오류로 취소된 구독의 재생성을 구분하고, 준비 전에 입력 보호를 풀지 않는다. |
+| 4 | **코드 확인·단절 정책 미확정:** [단일 중단 슬롯](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/game-interruption/state.ts#L105)이 다른 참가자의 단절을 기록하지 않는 흐름을 보완한다. A 단절 → B 단절 → A 복귀/제외 때 남은 유효한 중단 사유와 최소 인원을 다시 확인한다. 어느 참가자의 단절을 중단 사유로 삼을지는 별도 합의한다. |
+| 5 | **코드 확인·증상 연결은 추가 재현:** 태블릿 `controllerPause` 중 타임아웃·진행 명령의 서버 차단을 점검한다. [LP](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/liars-poker/forced-timeout-resolution.ts#L39)·[FC](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/final-call/timeout-turn.ts#L34)의 `deadline === null` 검사에는 RTDB에서 삭제된 값의 `undefined`·비숫자 조건도 검증한다. NET-04·06 시간 손실의 확정 원인으로 단정하지 않는다. |
+| 6 | **코드 확인:** [복원 조회](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/room/services/room_service.dart#L389)의 private 노드 존재와 참가 자격을 분리한다. 분배 중 재실행·빈 손패·탈락·관전에서 정상 참가자의 로컬 세션이 지워지지 않는지 게임별로 확인한다. |
+| 7 | **코드 확인·실기기 재현 필요:** [태블릿 최초 복원](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/tablet/screens/tablet_home.dart#L81)은 한 번만 실행된다. 오프라인 시작 실패 뒤 연결 복구와 lifecycle 복귀로 저장 controller 방을 다시 확인하는 경로를 마련한다. |
+| 8·9 | **코드 확인·재진입 영향은 추가 재현·요청 계약 미확정:** 완료된 분배 연출의 재실행과 새 판에 도착한 옛 분배 완료 요청을 구분한다. [LP](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/liars-poker/complete-dealing.ts)·[FC](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/final-call/complete-dealing.ts)의 서버 판·라운드·단계 검사와 재시도 식별자를 합의하고, 이미 전송된 요청은 클라이언트 재시도 취소로 취소되지 않음을 검증한다. |
+| 10 | **코드 확인·오판은 미재현:** [빈 public 재조회](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/packages/game_kit/lib/recovery/providers/game_session_controller.dart#L195)를 실제 삭제로 확정하기 전에 연결·멤버십·판 identity를 함께 확인한다. 기존 세대 검사를 보존한다. |
+| 11 | **코드 확인:** [stale 관측값 선등록](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/room/providers/room_provider.dart#L756) 후 일시 실패한 동일 값의 제한적 재시도와 [onDisconnect 등록](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/room/services/room_service.dart#L587)의 성공/실패 관찰을 보완한다. 10초 heartbeat·20초 stale 기준과 중복 신고 방지는 유지한다. |
+| 12 | **코드 확인·응답 유실 재현 필요:** [퇴장 실패 재확인](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/room/providers/room_provider.dart#L1463)의 room/active 노드 존재만으로 게임 참가 상태를 판단하지 않는다. 서버 퇴장 성공 뒤 응답 유실, active 방 노드 잔류, 퇴장 의도 해제와 heartbeat 재개를 함께 검사한다. |
+| 13 | **코드 확인·표시 우선순위 미확정:** 내 단절·태블릿 단절·다른 참가자 단절·명령 실패를 나누고 중복 가드·숨은 실패·재시도 busy/성공/실패를 점검한다. [휴대폰 복귀 실패](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/phone/screens/phone_home.dart#L90)는 새 디자인에서도 오류를 Prompt에 전달하지 않는다. 동일 `commandId`·판 identity, 시도별 timeout·전체 예산을 유지하며 요청별 재시도 정책을 검증한다. |
+
+- [ ] 인증: [AuthGate 정상 수신 callback](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/auth/widgets/auth_gate.dart#L211)이
+  `_onboardingLoaded`만 설정하고 `_onboardingFailed`를 해제하지 않는 공백을 보완한다.
+  조회 timeout/일시 오류 뒤 정상 데이터 수신, 이전 UID의 늦은 callback, 수동 재시도를
+  구분하고 인증 담당 범위를 확인한다.
+
+### newgui에서 함께 검증할 통합 경계
+
+- [ ] [새 launcher](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/tablet/tablet_game_launcher.dart#L115)와
+  [선택 직렬화](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/tablet/tablet_lobby_selection.dart#L28)의
+  방·선택 generation 검사를 보존한다. 복구 중 선택/해제/시작·방 종료가 겹칠 때
+  오래된 요청이 새 방이나 판을 건드리지 않는지 확인한다.
+- [ ] 새 연결 UI 6종의 상세 점검은 [NEWGUI-RECOVERY-01](NEWGUI-RECOVERY-01.md#newgui-recovery-01)과
+  연결한다. 디자인 완료와 실제 복구 완료·퇴장 성공을 같은 판정으로 취급하지 않는다.
+- [ ] [에셋 준비 helper](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/game_assets/game_asset_prepare.dart#L5)는
+  캐시 확인 실패 시 다운로드를 시도한다. 에셋 없는 상태·다운로드 중 단절·실패·늦은
+  완료를 복구 단계 및 route/방/판 identity 검사와 함께 다룬다. 자동 복원 때 다운로드하는
+  정책은 기존 cache-only 설명과 대조하고 의도를 확정한다.
+- [ ] [퇴장 route](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/packages/game_kit/lib/widgets/game_exit_route.dart#L5)의
+  960ms 연출 및 `route.completed` 뒤 정리를 검증한다. 일반 퇴장·강퇴·방 종료·dialog·back
+  stack·provider dispose와 늦은 요청이 겹쳐 중복 pop/재진입/유령 참가자가 생기지 않아야 한다.
+- [ ] **추가 재현할 UI 경합:** [TabletHome 복원 진입](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/platform/home/tablet/screens/tablet_home.dart#L143)은
+  상세·스토어·시작 처리 중 반환하고, 같은 방의 provider callback은 finished만 다시
+  확인한다. playing 이벤트가 이때 도착한 뒤 상세/스토어를 닫으면 복원 재검사가 필요한지
+  실제 접근 조건과 함께 재현한다. 현재 기록은 확정 재현이나 newgui 회귀 판정이 아니다.
+- [ ] 검증 범위를 라이어스포커·Final Call·Mafia·**홀덤 4게임**의 휴대폰/태블릿으로 잡는다.
+  후보의 [게임 registry](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/lib/games/game_registry.dart#L9)에
+  홀덤이 추가됐으므로 공용 복구 수정 후 이를 제외하지 않는다. 기존 3게임 통과를 홀덤의
+  중단·타임아웃·퇴장 계약 검증으로 확대하지 않는다.
+
+복구 완료·턴 재개·다중 단절·요청 fencing·홀덤의 상태 계약과 public API/persistent data
+변경은 담당 범위 및 호환성 검토 후 별도 합의한다. production 조회·배포·migration은
+이 체크리스트 등록으로 승인되지 않는다.

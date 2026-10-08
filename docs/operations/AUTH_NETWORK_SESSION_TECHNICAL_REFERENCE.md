@@ -7,6 +7,12 @@
 [`ARCHITECTURE.md`](../engineering/ARCHITECTURE.md), 실제 코드·테스트가 정한다. 아래의 수동 자료는
 2026-08-27 실제 기기 관찰 근거일 뿐 API나 상태 계약을 새로 정의하지 않는다.
 
+현재 코드의 단절·재연결·앱 재실행·명령 응답 유실·퇴장/강퇴는
+[`네트워크 복구와 세션 관리 동작 명세`](SESSION_EVENT_FLOWS.md)에서 상태 전이·의사코드와 감지·판단·변경·성공 확인·
+실패 잔류 순서로 읽는다. 2026-10-04 `fa4ad54`에 고정한 코드·실존 테스트 링크와
+참가 자격/데이터 준비 불일치를 포함한다. 아래 자동 테스트 목록은 과거 검증 범위이며,
+현재 파일 존재·검증 실행 배선과 공백은 새 문서의 설명을 함께 확인한다.
+
 최신 사용자 검증은 2026-08-31 라이어스포커 / Medium Tablet Android 에뮬레이터 +
 Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전체 통과다.
 반복 단절·시간 보존·태블릿 복구·퇴장 명단·winner 이후 복귀의 통과를 보고 환경에서
@@ -155,7 +161,7 @@ deadline을 쓰던 경로와 늦은 연결 이벤트가 새 중단을 취소하�
 재현해 수정했다. 이후 수정 APK 테스트에서 사용자는 태블릿 중단 화면 뒤 30초 기다렸다가
 복구해 6초가 남았고 서버가 멈춘 시간부터 재개한 것으로 보인다고 보고하며 전체 통과를
 확정했다. 중단 직전 수치는 추정하지 않는다. 이 방식의 사용자 이해도는
-[GAME-PAUSE-UX-01](../planning/TASKS.md#game-pause-ux-01--단절-후-남은-시간-재개-안내)로
+[GAME-PAUSE-UX-01](../planning/tasks/GAME-PAUSE-UX-01.md#game-pause-ux-01)로
 분리하며 시간 보존 실패로 기록하지 않는다.
 최종 판정은 [완료·검증 근거](../planning/COMPLETED_TASKS.md), 당시 원인 후보와 수정 계획은
 [조사 기록](../planning/logs/2026-08.md#batch-0831-initial)을 따른다.
@@ -194,18 +200,21 @@ finished 이벤트의 중복 처리로 보존 기한을 연장하지 않고 play
 사용자가 모두 통과로 확인했다. 태블릿 역할은 Medium Tablet 에뮬레이터였다.
 강제 종료 동안 winner 아래 `태블릿 오류 화면`이 나타나는 관찰은 사용자가 추후 개선으로
 지정했다. 정확한 화면 문구·route는 미확인이며
-[WINNER-CONNECTION-LAYER-01](../planning/TASKS.md#winner-connection-layer-01--winner-아래-태블릿-연결-안내-겹침)에서
+[WINNER-CONNECTION-LAYER-01](../planning/tasks/WINNER-CONNECTION-LAYER-01.md#winner-connection-layer-01)에서
 추적한다. winner 잔류나 검정 화면 재발로 해석하지 않는다.
 
 ## 퇴장·강퇴·방 종료 계약
 
 - `leaveRealtimeRoom`: 게임 중이 아닐 때 본인 `players/{uid}`만 제거한다.
-- 게임별 `*_leave_game`: 게임 명단과 방 참가자를 함께 정리하고, 필요하면 중단·다음 턴
-  또는 인원 부족 종료를 계산한다.
+- 게임별 `*_leave_game`: 진행 중 생존자는 방 참가자를 disconnected로 남기고 `left`
+  중단을 만든다. 세 게임 모두 이 경로가 있으며 최종 제외·만료 처리와 구분한다.
+  이미 탈락/사망했거나 종료된 게임의 참가자는 별도 즉시 정리 경로를 사용한다.
 - `removePlayer`: 컨트롤러가 지정 UID를 방에서 제거한다.
 - `closeRoom`: 컨트롤러만 방을 닫고 mapping을 해제하며 보존 후 삭제 대상으로 만든다.
 
 클라이언트 `leaveRoom`과 `leaveGame`은 성공 뒤 heartbeat와 로컬 세션을 함께 지운다.
+응답 실패 때에는 서버의 방·본인 active 노드를 재조회해 이미 퇴장했는지 확인한다.
+생존자의 게임 퇴장 중단은 노드가 남으므로 이 재조회만으로 성공을 증명하지 못할 수 있다.
 따라서 게임 나가기를 대기실 복귀로 바꾸려면 세 게임의 roster/private state, 방
 participant status, 재접속·강퇴·중단 계약을 먼저 설계하고 승인받아야 한다.
 
@@ -288,9 +297,9 @@ production RTDB를 다시 읽지 않아도 이 원인 분류와 안전한 UI 수
   승인된 단일 상태 경로의 null 결과로 정리를 확인했다. 이번 작업의 재조회는 아니다.
   2026-08-31 보고된 퇴장 참가자 잔류와 같은 원인이라고 단정하지 않는다.
 - 네트워크 복구 체감 시간은 OS/Firebase 재연결 시간과 앱의 8초 복구 시도를 합친다.
-  세션을 보존하며 복구에 성공한 경우의 순수 체감 시간만 P2 관찰 항목이며, 보류 근거·
-  착수 조건·완료 기준은
-  [`NET-RECOVERY-01`](../planning/TASKS.md#net-recovery-01--네트워크-복구-체감-지연)에서
+  세션을 보존하며 복구에 성공한 경우의 순수 체감 시간은 기존 P2 관찰 범위였다.
+  2026-10-08 사용자 결정으로 출시 전 필수로 분류했으며, 과거 보류 근거·착수 조건·완료 기준은
+  [`NET-RECOVERY-01`](../planning/tasks/NET-RECOVERY-01.md#net-recovery-01)에서
   관리한다.
 - 과거 DevErrorLog 배지 사진의 두 오류 원문은 미확정이며 새 빌드에서는 화면에 표시하지 않는다.
 - 2026-08-31 사용자 확인으로 이번 실기기 테스트 중 DevErrorLog 배지·오류 원문·
@@ -302,7 +311,7 @@ production RTDB를 다시 읽지 않아도 이 원인 분류와 안전한 UI 수
 - A32·A35에서는 작은 화면 overflow가 재현되지 않았다. 2026-08-31 사용자는 실제
   S20+의 이전 UT 성공과 기존 깨짐의 글씨/화면 확대 설정 연관성을 설명했다. 빌드와
   설정값은 미제공이므로 최신 수정 빌드 확인과 구분한다. 확대 설정 대응은
-  [출시 후 개선](../planning/TASKS.md#accessibility-scale-01--글씨화면-확대-설정-대응)에 기록한다.
+  [출시 후 개선](../planning/tasks/ACCESSIBILITY-SCALE-01.md#accessibility-scale-01)에 기록한다.
 - iOS 네이티브 `onDisconnect` 오류와 실제 태블릿/휴대폰 중첩 종료의 수정 후 재검증은
   에이전트가 직접 실행하지 못했다. 사용자가 실행한 태블릿 역할은 Android 에뮬레이터이므로
   물리 태블릿·iOS의 검증 근거로 확대하지 않는다.
@@ -311,7 +320,8 @@ production RTDB를 다시 읽지 않아도 이 원인 분류와 안전한 UI 수
 
 기존 출시 차단 항목의 최종 변경과 판정은
 [`완료 작업과 검증 근거`](../planning/COMPLETED_TASKS.md)를 따른다. 새 미해결 항목과
-출시 판정 조건은 [작업 목록](../planning/TASKS.md)에서 관리한다.
+현재 상태·분류는 [작업 목록](../planning/TASKS.md), 출시 판정 조건은
+[작업 관리 방법](../planning/TASK_MANAGEMENT.md#출시-판정-기준)에서 관리한다.
 
 ## 승인이 필요한 개선 후보
 

@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "kind": "RTDB_FIXTURE_PROBE",
+  "projectId": "demo-mosigame-lab",
+  "runId": "49886644-786f-408f-a801-038f035be4e3",
+  "command": "node tool/emulator_lab/rtdb_trigger_probe.mjs",
+  "limits": {"observationTimeoutMs": 120000, "totalTimeoutMs": 600000, "cleanupReserveMs": 30000},
+  "elapsedMs": 19033,
+  "productScenariosExecuted": 0,
+  "roomPath": "rooms/LAB_PROBE_49886644-786f-408f-a801-038f035be4e3",
+  "reservationPath": "roomCreateRequests/lab-probe-controller-49886644-786f-408f-a801-038f035be4e3/lab-probe-operation-49886644-786f-408f-a801-038f035be4e3",
+  "evidence": [
+    {"trigger": "game_common_interruption_on_connection_changed", "pauseRevision": 1, "resumeRevision": 2, "remainingTimeSaved": true, "pauseAndResumeObserved": true},
+    {"trigger": "game_common_controller_presence_changed", "pauseRevision": 3, "resumeRevision": 4, "remainingTimeSaved": true, "pauseAndResumeObserved": true},
+    {"trigger": "syncRealtimeRoomGameStatus", "playingMirrored": true, "finishedMirrored": true, "retentionMs": 900000},
+    {"trigger": "cleanupDeletedRoomCreationRequest", "reservationExistedBefore": true, "reservationRemovedByTrigger": true}
+  ],
+  "cleanup": {"roomRemoved": true, "reservationRemoved": true}
+}
