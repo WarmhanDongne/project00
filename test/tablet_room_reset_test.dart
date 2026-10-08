@@ -144,12 +144,13 @@ void main() {
         tester.widget<Transform>(motionFinder).transform.getTranslation().x,
         greaterThan(0),
       );
-      expect(find.text('초대하기'), findsNothing);
+      expect(find.byKey(const Key('room-waiting-for-players')), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 130));
       await tester.pump();
       expect(find.text('애니메이션 플레이어'), findsNothing);
-      expect(find.text('초대하기'), findsOneWidget);
+      // 마지막 참가자가 나가면 QR 카드는 그대로 두고 '기다리는 중' 안내로 돌아갑니다.
+      expect(find.byKey(const Key('room-waiting-for-players')), findsOneWidget);
       provider.dispose();
     });
 
@@ -196,7 +197,7 @@ void main() {
       final provider = _provider(service)..roomCode = 'ABCDE';
       await _pumpPanel(tester, provider);
 
-      expect(find.text('초대하기'), findsOneWidget);
+      expect(find.byKey(const Key('room-waiting-for-players')), findsOneWidget);
       expect(find.text('초기화'), findsOneWidget);
 
       await tester.tap(find.text('초기화'));
@@ -206,6 +207,7 @@ void main() {
       expect(service.createCalls, 0);
       expect(find.text('구성원 목록'), findsOneWidget);
       expect(find.text('아직 아무도 없습니다'), findsOneWidget);
+      expect(find.text('초대하기'), findsOneWidget);
       provider.dispose();
     });
 
@@ -227,7 +229,7 @@ void main() {
         ];
       await _pumpPanel(tester, provider);
 
-      expect(find.text('현 인원  1명'), findsOneWidget);
+      expect(find.text('1 / 12'), findsOneWidget);
 
       await tester.tap(find.text('초기화'));
       await tester.pump();
@@ -277,12 +279,19 @@ void main() {
       provider.dispose();
     });
 
-    testWidgets('구성원이 없을 때 큰 초대 QR은 확대 버튼이 아니다', (tester) async {
-      final provider = _provider(_FakeRoomService())..roomCode = 'ABCDE';
+    // 시안은 참가자 유무와 관계없이 같은 크기의 QR 하나를 둡니다. 그래서
+    // 초대 상태에서도 QR을 눌러 크게 볼 수 있습니다.
+    testWidgets('구성원이 없을 때도 초대 QR을 눌러 확대할 수 있다', (tester) async {
+      final service = _FakeRoomService();
+      final provider = _provider(service)..roomCode = 'ABCDE';
       await _pumpPanel(tester, provider);
 
       expect(find.byKey(const Key('active-room-qr-expand')), findsNothing);
-      expect(find.byTooltip('QR 코드 확대'), findsNothing);
+      await tester.tap(find.byKey(const Key('invite-room-qr-expand')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('expanded-room-qr-dialog')), findsOneWidget);
+      expect(service.createCalls, 0);
+      expect(service.closeCalls, 0);
       provider.dispose();
     });
   });

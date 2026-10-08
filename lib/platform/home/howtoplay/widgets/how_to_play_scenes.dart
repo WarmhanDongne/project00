@@ -12,7 +12,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 // 달라도 같은 그림이 나오도록 4:3 판 안에서 정규화 좌표로 배치합니다.
 
 /// 안내 예시에 등장하는 참여자 캐릭터입니다.
-const _characterIds = <String>['frog', 'rabbit', 'bear', 'penguin', 'cat'];
+const _characterIds = <String>['burger', 'tissue', 'bucket', 'milk', 'popcorn'];
 
 /// 안내에 보여 주는 예시 참여 코드입니다.
 const _sampleRoomCode = 'QRTEQ';

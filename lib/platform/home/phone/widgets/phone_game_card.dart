@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
+/// 휴대폰 홈의 게임 카드입니다: 상자 표지 + 이름 + 인원·시간 + 소개.
 class PhoneGameCard extends StatelessWidget {
-  // 게임 포스터와 설명을 한 쌍으로 묶어 위젯으로 만듦.
-
   final GameInfo gameInfo;
   const PhoneGameCard({super.key, required this.gameInfo, this.inset = true});
 
@@ -13,38 +13,22 @@ class PhoneGameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
+    final known = MosiGameArt.isKnown(gameInfo.id);
+    final art = MosiGameArt.of(gameInfo.id, fallbackName: gameInfo.name);
     return Padding(
-      padding: EdgeInsets.fromLTRB(inset ? 16 : 0, 0, inset ? 16 : 0, 12),
-      child: PlatformPanel(
-        padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.fromLTRB(inset ? 20 : 0, 0, inset ? 26 : 6, 16),
+      child: MosiBox(
+        padding: const EdgeInsets.all(12),
+        shadowOffset: 6,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: gameInfo.imageUrl.isEmpty
-                  ? Container(
-                      width: 90,
-                      height: 118,
-                      color: colors.surfaceMuted,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.image_outlined),
-                    )
-                  : Image.network(
-                      gameInfo.imageUrl,
-                      width: 90,
-                      height: 118,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 90,
-                          height: 118,
-                          color: colors.surfaceMuted,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.broken_image_outlined),
-                        );
-                      },
-                    ),
+            MosiGameCover(
+              gameId: gameInfo.id,
+              width: 84,
+              shadow: 0,
+              fallbackName: gameInfo.name,
+              fallbackImageUrl: gameInfo.imageUrl,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -52,25 +36,36 @@ class PhoneGameCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    gameInfo.name,
+                    known ? art.koreanName : gameInfo.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+                    style: MosiFonts.sans(
+                      size: 18,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
                     ),
                   ),
+                  if (known)
+                    Text(
+                      art.englishName,
+                      style: MosiFonts.grotesk(
+                        size: 10,
+                        color: MosiColors.violet,
+                        letterSpacing: 2,
+                      ),
+                    ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 5,
                     runSpacing: 5,
                     children: [
-                      PlatformTag(label: '${gameInfo.playTime}분'),
-                      PlatformTag(
-                        label: '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
-                      ),
-                      for (final genre in gameInfo.genres.take(2))
-                        PlatformTag(label: genre, highlighted: true),
+                      if (gameInfo.playTime > 0)
+                        PlatformTag(label: '${gameInfo.playTime}분'),
+                      if (gameInfo.minPlayers > 0)
+                        PlatformTag(
+                          label:
+                              '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -78,9 +73,9 @@ class PhoneGameCard extends StatelessWidget {
                     gameInfo.description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 11,
+                    style: MosiFonts.sans(
+                      size: 12,
+                      color: MosiColors.muted,
                       height: 1.45,
                     ),
                   ),

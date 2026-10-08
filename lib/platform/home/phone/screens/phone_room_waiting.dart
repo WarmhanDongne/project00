@@ -1,13 +1,18 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:game_kit/core/assets/game_asset_store.dart';
+import 'package:flutter/services.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/widgets/critical_network_guard.dart';
 import 'package:game_kit/core/error/user_error_message.dart';
 import 'package:game_kit/template_game.dart';
+import 'package:project00/game_assets/game_asset_prepare.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_leave_button.dart';
@@ -15,6 +20,7 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 import 'package:project00/platform/home/phone/widgets/controller_reconnect_guard.dart';
+import 'package:project00/platform/home/phone/widgets/lobby_reconnect_guard.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -151,16 +157,14 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     _isOpeningGame = true;
 
     try {
-      // 다운로드 게임도 여기서는 네트워크 요청을 시작하지 않습니다. 사용자가
-      // 미리 받은 영구 캐시가 완전한지만 확인하고, 없으면 대기실에 남습니다.
-      await GameAssetStore.instance.prepareGame(game.id);
+      await prepareGameAssetsForPlay(game);
     } catch (error, stack) {
       CrashReporting.recordError(error, stack, reason: '휴대폰 게임 에셋 확인');
       _isOpeningGame = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('게임 파일을 먼저 다운로드해 주세요.')));
+        ..showSnackBar(const SnackBar(content: Text('게임 파일을 다운로드하지 못했습니다.')));
       return;
     }
     if (!mounted) {
@@ -256,100 +260,91 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
         unawaited(AppSystemUi.showPlatformSystemBars());
         Navigator.of(context).popUntil((route) => route.isFirst);
       },
-      child: AnimatedBuilder(
-        animation: widget.provider,
-        builder: (context, _) {
-          final selectedGameId = widget.provider.selectedGameId;
-          // 게임이 끝난 방은 selectedGame이 그대로 남습니다. 종료 경로 어디에서도
-          // 지우지 않기 때문입니다. 그 값만 보고 그리면 룰북과 `곧 시작합니다`가
-          // 영원히 남아 대기실로 돌아오지 못합니다(P-02).
-          //
-          // 태블릿이 정리하기 전에도 화면이 갇히지 않도록 방 상태를 우선합니다.
-          final hasSelectedGame =
-              selectedGameId != null &&
-              selectedGameId.isNotEmpty &&
-              !widget.provider.isRoomFinished;
-          final players = widget.provider.players
-              .where((player) => player.isActive)
-              .toList(growable: false);
-
-          return Scaffold(
-            body: SafeArea(
-              child: Column(
-                children: [
-                  widget.headerForTesting ??
-                      _PhoneRoomHeader(
-                        provider: widget.provider,
-                        onPressed: () async {
-                          final left = await widget.provider.leaveRoom();
-                          if (!context.mounted || !left) return;
-                          //================상태바 표시=================
-                          unawaited(AppSystemUi.showPlatformSystemBars());
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
-                        },
-                      ),
-                  if (widget.provider.isServerConnected &&
-                      widget.provider.controllerPresenceState ==
-                          ControllerPresenceState.reconnecting)
-                    const _ControllerReconnectBanner(),
-                  if (hasSelectedGame) ...[
-                    Expanded(
-                      child: _SelectedGameContent(provider: widget.provider),
-                    ),
-                    const _StartingSoonBar(),
-                  ] else
-                    Expanded(
-                      child: _GroupWaitingContent(
-                        provider: widget.provider,
-                        players: players,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
+      child: LobbyReconnectGuard(
+        provider: widget.provider,
+        onExit: () async {
+          final left = await widget.provider.leaveRoom();
+          if (!context.mounted || !left) return left;
+          unawaited(AppSystemUi.showPlatformSystemBars());
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          return true;
         },
-      ),
-    );
-  }
-}
+        child: AnimatedBuilder(
+          animation: widget.provider,
+          builder: (context, _) {
+            final selectedGameId = widget.provider.selectedGameId;
+            // 게임이 끝난 방은 selectedGame이 그대로 남습니다. 종료 경로 어디에서도
+            // 지우지 않기 때문입니다. 그 값만 보고 그리면 룰북과 `곧 시작합니다`가
+            // 영원히 남아 대기실로 돌아오지 못합니다(P-02).
+            //
+            // 태블릿이 정리하기 전에도 화면이 갇히지 않도록 방 상태를 우선합니다.
+            final hasSelectedGame =
+                selectedGameId != null &&
+                selectedGameId.isNotEmpty &&
+                !widget.provider.isRoomFinished;
+            final players = widget.provider.players
+                .where((player) => player.isActive)
+                .toList(growable: false);
 
-class _ControllerReconnectBanner extends StatelessWidget {
-  const _ControllerReconnectBanner();
+            // 태블릿이 자리를 맞추는 동안에는 시안의 '자리 정하는 동안' 화면을
+            // 보여 줍니다. 헤더(나가기)는 그대로 둡니다.
+            final isSeating =
+                hasSelectedGame && widget.provider.roomStatus == 'seating';
+            if (isSeating) {
+              return _PhoneSeatingView(
+                provider: widget.provider,
+                header:
+                    widget.headerForTesting ??
+                    _PhoneRoomHeader(
+                      provider: widget.provider,
+                      dark: true,
+                      onPressed: () async {
+                        final left = await widget.provider.leaveRoom();
+                        if (!context.mounted || !left) return;
+                        unawaited(AppSystemUi.showPlatformSystemBars());
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                      },
+                    ),
+              );
+            }
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Semantics(
-      liveRegion: true,
-      label: '태블릿 재접속 대기 중',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-        color: colors.primary.withValues(alpha: 0.12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colors.primary,
+            return Scaffold(
+              backgroundColor: MosiColors.cream,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    widget.headerForTesting ??
+                        _PhoneRoomHeader(
+                          provider: widget.provider,
+                          onPressed: () async {
+                            final left = await widget.provider.leaveRoom();
+                            if (!context.mounted || !left) return;
+                            //================상태바 표시=================
+                            unawaited(AppSystemUi.showPlatformSystemBars());
+                            Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst);
+                          },
+                        ),
+                    if (hasSelectedGame) ...[
+                      Expanded(
+                        child: _SelectedGameContent(provider: widget.provider),
+                      ),
+                      const _StartingSoonBar(),
+                    ] else
+                      Expanded(
+                        child: _GroupWaitingContent(
+                          provider: widget.provider,
+                          players: players,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '태블릿 재접속 대기 중',
-              style: TextStyle(
-                color: colors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -357,25 +352,43 @@ class _ControllerReconnectBanner extends StatelessWidget {
 }
 
 class _PhoneRoomHeader extends StatelessWidget {
-  const _PhoneRoomHeader({required this.provider, required this.onPressed});
+  const _PhoneRoomHeader({
+    required this.provider,
+    required this.onPressed,
+    this.dark = false,
+  });
 
   final RoomProvider provider;
   final VoidCallback onPressed;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
+    final code = provider.roomCode;
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.border)),
+        color: dark ? Colors.transparent : MosiColors.white,
+        border: dark
+            ? null
+            : const Border(bottom: BorderSide(color: MosiColors.ink, width: 3)),
       ),
       child: Row(
         children: [
           PhoneRoomLeaveButton(provider: provider, onPressed: onPressed),
           const Spacer(),
+          if (code != null) ...[
+            Text(
+              'ROOM $code',
+              style: MosiFonts.grotesk(
+                size: 13,
+                color: dark ? MosiColors.white : MosiColors.navy,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           const PhoneProfile(),
         ],
       ),
@@ -392,7 +405,7 @@ class _GroupWaitingContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 16, 26, 28),
       children: [
         _WaitingStatusBanner(
           message: provider.isRoomFinished
@@ -402,9 +415,13 @@ class _GroupWaitingContent extends StatelessWidget {
         const SizedBox(height: 20),
         PhoneRoomParticipantList(players: players),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           '그룹이 보유 중인 게임',
-          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+          style: MosiFonts.sans(
+            size: 19,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
+          ),
         ),
         const SizedBox(height: 12),
         _GroupGamesContent(provider: provider),
@@ -445,9 +462,11 @@ class _GroupGamesContent extends StatelessWidget {
               style: TextStyle(color: colors.textMuted),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
+            PlatformButton(
+              label: '다시 시도',
+              expand: false,
+              style: PlatformButtonStyle.secondary,
               onPressed: provider.retryGroupGames,
-              child: const Text('다시 시도'),
             ),
           ],
         ),
@@ -464,75 +483,8 @@ class _GroupGamesContent extends StatelessWidget {
     return Column(
       children: [
         for (final game in provider.groupGames)
-          _WaitingGameCard(gameInfo: game),
+          PhoneGameCard(gameInfo: game, inset: false),
       ],
-    );
-  }
-}
-
-class _WaitingGameCard extends StatelessWidget {
-  const _WaitingGameCard({required this.gameInfo});
-
-  final GameInfo gameInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    final metadata = [
-      '${gameInfo.playTime}분',
-      '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
-      ...gameInfo.genres,
-    ].join(' · ');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colors.surfaceMuted,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            _GameCover(gameInfo: gameInfo, size: 96),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    gameInfo.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    metadata,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 12,
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    gameInfo.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colors.textMuted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -560,9 +512,11 @@ class _SelectedGameContent extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton(
+                PlatformButton(
+                  label: '다시 시도',
+                  expand: false,
+                  style: PlatformButtonStyle.secondary,
                   onPressed: provider.retrySelectedGame,
-                  child: const Text('다시 시도'),
                 ),
               ],
             ),
@@ -582,29 +536,32 @@ class _SelectedGameDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     final rules = gameInfo.rules.trim().isEmpty
         ? '게임 규칙을 준비 중입니다.'
         : gameInfo.rules;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 22, 26, 28),
       children: [
         Text(
           '그룹이 선택한 게임',
-          style: TextStyle(color: colors.textMuted, fontSize: 14),
+          style: MosiFonts.sans(size: 14, color: MosiColors.muted),
         ),
         const SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
-            final coverSize = (constraints.maxWidth * 0.48).clamp(142.0, 210.0);
+            final coverWidth = (constraints.maxWidth * 0.4).clamp(110.0, 170.0);
             final details = _SelectedGameSummary(gameInfo: gameInfo);
+            final cover = MosiGameCover(
+              gameId: gameInfo.id,
+              width: coverWidth,
+              fallbackName: gameInfo.name,
+              fallbackImageUrl: gameInfo.imageUrl,
+            );
             if (constraints.maxWidth < 330) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: _GameCover(gameInfo: gameInfo, size: coverSize),
-                  ),
+                  Center(child: cover),
                   const SizedBox(height: 18),
                   details,
                 ],
@@ -613,20 +570,35 @@ class _SelectedGameDetails extends StatelessWidget {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _GameCover(gameInfo: gameInfo, size: coverSize),
-                const SizedBox(width: 16),
+                cover,
+                const SizedBox(width: 20),
                 Expanded(child: details),
               ],
             );
           },
         ),
         const SizedBox(height: 30),
-        const Text(
+        Text(
           '게임 규칙',
-          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+          style: MosiFonts.sans(
+            size: 19,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
+          ),
         ),
         const SizedBox(height: 12),
-        Text(rules, style: const TextStyle(fontSize: 14, height: 1.7)),
+        MosiBox(
+          padding: const EdgeInsets.all(16),
+          shadowOffset: 5,
+          child: Text(
+            rules,
+            style: MosiFonts.sans(
+              size: 14,
+              color: MosiColors.navy,
+              height: 1.7,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -639,69 +611,52 @@ class _SelectedGameSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
+    final art = MosiGameArt.of(gameInfo.id, fallbackName: gameInfo.name);
+    final known = MosiGameArt.isKnown(gameInfo.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          gameInfo.name,
-          style: const TextStyle(
-            fontSize: 24,
+          known ? art.koreanName : gameInfo.name,
+          style: MosiFonts.sans(
+            size: 24,
             height: 1.15,
-            fontWeight: FontWeight.w900,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
           ),
         ),
+        if (known)
+          Text(
+            art.englishName,
+            style: MosiFonts.grotesk(
+              size: 11,
+              color: MosiColors.violet,
+              letterSpacing: 2.5,
+            ),
+          ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 6,
           runSpacing: 6,
           children: [
-            PlatformTag(label: '${gameInfo.playTime}분'),
-            PlatformTag(
-              label: '${gameInfo.minPlayers}~${gameInfo.maxPlayers}인',
-            ),
-            for (final genre in gameInfo.genres)
-              PlatformTag(label: genre, highlighted: true),
+            if (gameInfo.playTime > 0)
+              PlatformTag(label: '${gameInfo.playTime}분'),
+            if (gameInfo.minPlayers > 0)
+              PlatformTag(
+                label: '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+              ),
           ],
         ),
         const SizedBox(height: 14),
         Text(
           gameInfo.description,
-          style: TextStyle(color: colors.textMuted, fontSize: 13, height: 1.55),
+          style: MosiFonts.sans(
+            color: MosiColors.muted,
+            size: 13,
+            height: 1.55,
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _GameCover extends StatelessWidget {
-  const _GameCover({required this.gameInfo, required this.size});
-
-  final GameInfo gameInfo;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    Widget fallback(IconData icon) => Container(
-      width: size,
-      height: size,
-      color: colors.surfaceMuted,
-      alignment: Alignment.center,
-      child: Icon(icon, color: colors.textMuted),
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: gameInfo.imageUrl.isEmpty
-          ? fallback(Icons.image_outlined)
-          : Image.network(
-              gameInfo.imageUrl,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => fallback(Icons.broken_image_outlined),
-            ),
     );
   }
 }
@@ -711,24 +666,27 @@ class _StartingSoonBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      margin: const EdgeInsets.fromLTRB(20, 8, 26, 20),
       padding: const EdgeInsets.symmetric(vertical: 17),
       decoration: BoxDecoration(
-        color: colors.primarySoft,
+        color: MosiColors.lime,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MosiColors.ink, width: 3),
+        boxShadow: const [
+          BoxShadow(color: MosiColors.navy, offset: Offset(5, 5)),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              color: colors.primary,
+              color: MosiColors.navy,
             ),
           ),
           const SizedBox(width: 10),
@@ -736,10 +694,10 @@ class _StartingSoonBar extends StatelessWidget {
             child: Text(
               '곧 시작합니다',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
+              style: MosiFonts.sans(
+                color: MosiColors.navy,
+                size: 16,
+                weight: FontWeight.w700,
               ),
             ),
           ),
@@ -747,6 +705,232 @@ class _StartingSoonBar extends StatelessWidget {
       ),
     );
   }
+}
+
+//=======================자리 정하는 동안 (휴대폰)==============================
+@immutable
+class _SeatTheme {
+  const _SeatTheme({
+    required this.ground,
+    required this.deep,
+    required this.soft,
+    required this.button,
+  });
+
+  final Color ground;
+  final Color deep;
+  final Color soft;
+  final Color button;
+
+  static _SeatTheme of(String? gameId) => switch (gameId) {
+    'final_call' => const _SeatTheme(
+      ground: Color(0xFF141414),
+      deep: Colors.black,
+      soft: Color(0xFFC9C6BC),
+      button: Color(0xFFE5DB00),
+    ),
+    'mafia' => const _SeatTheme(
+      ground: Color(0xFF10131A),
+      deep: Colors.black,
+      soft: Color(0xFFB9BDC9),
+      button: Color(0xFFFF2A2A),
+    ),
+    _ => const _SeatTheme(
+      ground: Color(0xFF4A1A5E),
+      deep: Color(0xFF1B1022),
+      soft: Color(0xFFE2D2E8),
+      button: Color(0xFFF2C14E),
+    ),
+  };
+}
+
+class _PhoneSeatingView extends StatefulWidget {
+  const _PhoneSeatingView({required this.provider, required this.header});
+
+  final RoomProvider provider;
+  final Widget header;
+
+  @override
+  State<_PhoneSeatingView> createState() => _PhoneSeatingViewState();
+}
+
+class _PhoneSeatingViewState extends State<_PhoneSeatingView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _dots = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _dots.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final gameId = provider.selectedGameId;
+    final theme = _SeatTheme.of(gameId);
+    final game = provider.selectedGame;
+    final art = MosiGameArt.of(gameId ?? '', fallbackName: game?.name);
+    final gameName = gameId != null && MosiGameArt.isKnown(gameId)
+        ? art.koreanName
+        : game?.name ?? '게임';
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final me = provider.players
+        .where((player) => player.uid == uid)
+        .firstOrNull;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: theme.ground,
+        body: CustomPaint(
+          painter: _DotGridPainter(),
+          child: SafeArea(
+            child: Column(
+              children: [
+                widget.header,
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$gameName · 대기실',
+                          style: MosiFonts.sans(size: 14, color: theme.soft),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          '태블릿에서\n자리를 맞추고 있어요',
+                          textAlign: TextAlign.center,
+                          style: MosiFonts.sans(
+                            size: 24,
+                            weight: FontWeight.w700,
+                            color: MosiColors.white,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+                        MosiBox(
+                          width: 240,
+                          padding: const EdgeInsets.all(22),
+                          radius: 18,
+                          shadowOffset: 8,
+                          shadowColor: theme.deep,
+                          child: Column(
+                            children: [
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: theme.deep,
+                                      offset: const Offset(5, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: MosiFace(
+                                  characterId: me?.characterId,
+                                  size: 104,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                me?.nickname ?? '',
+                                style: MosiFonts.sans(
+                                  size: 20,
+                                  weight: FontWeight.w700,
+                                  color: MosiColors.navy,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          '내 이름 카드가 내가 앉은 쪽에\n오면 돼요',
+                          textAlign: TextAlign.center,
+                          style: MosiFonts.sans(
+                            size: 14,
+                            color: theme.soft,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 30, 12),
+                  child: MosiButton(
+                    label: '태블릿에서 내 자리 찾기',
+                    background: theme.button,
+                    shadowColor: theme.deep,
+                    shadowOffset: 6,
+                    height: 60,
+                    fontSize: 17,
+                    radius: 12,
+                    expand: true,
+                    leading: const Icon(Icons.wifi_tethering_rounded),
+                    onPressed: () => ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        const SnackBar(
+                          content: Text('태블릿에서 내 카드 찾기는 준비 중이에요.'),
+                        ),
+                      ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: AnimatedBuilder(
+                    animation: _dots,
+                    builder: (context, _) {
+                      final active = (_dots.value * 3).floor();
+                      return Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: '방장이 완료를 누르면 시작해요 '),
+                            for (var i = 0; i < 3; i++)
+                              TextSpan(
+                                text: '·',
+                                style: TextStyle(
+                                  color: theme.soft.withValues(
+                                    alpha: i == active ? 1 : 0.25,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        style: MosiFonts.sans(size: 13, color: theme.soft),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0x12FFFFFF);
+    for (var y = 15.0; y < size.height; y += 30) {
+      for (var x = 15.0; x < size.width; x += 30) {
+        canvas.drawCircle(Offset(x, y), 2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _WaitingStatusBanner extends StatefulWidget {
@@ -780,51 +964,54 @@ class _WaitingStatusBannerState extends State<_WaitingStatusBanner>
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: colors.primarySoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              final activeIndex = (_controller.value * 3).floor().clamp(0, 2);
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  3,
-                  (index) => Container(
-                    key: ValueKey('waiting-dot-$index'),
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: index == activeIndex
-                          ? colors.primary
-                          : colors.primary.withValues(alpha: 0.22),
-                      shape: BoxShape.circle,
+    return MosiDashedBorder(
+      radius: 12,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: MosiColors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                final activeIndex = (_controller.value * 3).floor().clamp(0, 2);
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    3,
+                    (index) => Container(
+                      key: ValueKey('waiting-dot-$index'),
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: index == activeIndex
+                            ? colors.primary
+                            : colors.primary.withValues(alpha: 0.22),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.message,
+                style: MosiFonts.sans(
+                  color: MosiColors.navy,
+                  size: 14,
+                  weight: FontWeight.w700,
                 ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              widget.message,
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

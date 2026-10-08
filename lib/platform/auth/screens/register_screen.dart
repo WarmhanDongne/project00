@@ -1,3 +1,4 @@
+import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +10,7 @@ import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
 import 'package:project00/platform/auth/services/pending_email_store.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 
 enum RegisterStep {
   emailInput,
@@ -188,7 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (_action != null) return;
     final email = _normalizedEmail()!;
     if (!_isValidEmail(email)) {
-      setState(() => _errorMessage = '이메일 형식이 올바르지 않습니다.');
+      setState(() => _errorMessage = context.l10n.invalidEmail);
       return;
     }
     setState(() {
@@ -283,8 +284,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     });
     try {
       await _onboardingService.setPasswordAndAdvance(password);
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // AuthGate가 서버 온보딩 상태에 따라 카드 내용만 교체합니다.
     } on AuthServiceException catch (error) {
       if (error.code == 'requires-recent-login') {
         await _restartEmailVerification();
@@ -343,26 +343,12 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _requestBack() async {
     if (_action != null || _isLeaving) return;
-    final shouldLeave = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('회원가입을 중단할까요?'),
-        content: Text(
-          _step == RegisterStep.emailInput
-              ? '입력한 내용은 저장되지 않습니다.'
-              : '다시 로그인하면 완료하지 못한 단계부터 이어집니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('계속하기'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('중단하기'),
-          ),
-        ],
-      ),
+    final shouldLeave = await showMosiLeaveDialog(
+      context,
+      title: '회원가입을 중단할까요?',
+      message: _step == RegisterStep.emailInput
+          ? '입력한 이메일은 저장되지 않아요.'
+          : '다음에 로그인하면 여기서부터 이어서 할 수 있어요.',
     );
     if (shouldLeave != true || !mounted) return;
     _isLeaving = true;
@@ -371,7 +357,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       await FirebaseAuth.instance.signOut();
     }
     if (!mounted) return;
-    widget.onCancel?.call();
+    final onCancel = widget.onCancel;
+    if (onCancel != null) {
+      onCancel();
+      return;
+    }
     if (!mounted) return;
     setState(() => _canPop = true);
     final navigator = Navigator.of(context);
@@ -385,34 +375,36 @@ class _RegisterScreenState extends State<RegisterScreen>
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_requestBack());
       },
-      child: PlatformAuthShell(
-        maxWidth: 390,
-        showBack: true,
-        onBackPressed: () => unawaited(_requestBack()),
+      child: MosiAuthScaffold(
+        showTagline: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              '회원가입',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            MosiAuthHeader(
+              title: context.l10n.signUp,
+              onBack: () => unawaited(_requestBack()),
+              stepIndex: _step == RegisterStep.settingPassword ? 1 : 0,
             ),
-            const SizedBox(height: 18),
-            RegisterStepOne(
-              emailController: _emailController,
-              customDomainController: _customDomainController,
-              customDomainFocusNode: _customDomainFocusNode,
-              passwordController: _passwordController,
-              confirmPasswordController: _confirmPasswordController,
-              emailDomain: _emailDomain,
-              isCustomDomain: _isCustomDomain,
-              step: _step,
-              action: _action,
-              cooldownSeconds: _cooldownSeconds,
-              errorMessage: _errorMessage,
-              onDomainChanged: _changeDomain,
-              onSendEmail: _sendEmail,
-              onResendEmail: () => _sendEmail(resend: true),
-              onSetPassword: _setPassword,
+            const SizedBox(height: 16),
+            MosiAuthTransition(
+              child: RegisterStepOne(
+                key: ValueKey(_step),
+                emailController: _emailController,
+                customDomainController: _customDomainController,
+                customDomainFocusNode: _customDomainFocusNode,
+                passwordController: _passwordController,
+                confirmPasswordController: _confirmPasswordController,
+                emailDomain: _emailDomain,
+                isCustomDomain: _isCustomDomain,
+                step: _step,
+                action: _action,
+                cooldownSeconds: _cooldownSeconds,
+                errorMessage: _errorMessage,
+                onDomainChanged: _changeDomain,
+                onSendEmail: _sendEmail,
+                onResendEmail: () => _sendEmail(resend: true),
+                onSetPassword: _setPassword,
+              ),
             ),
           ],
         ),

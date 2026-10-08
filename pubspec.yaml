@@ -27,6 +27,7 @@ workspace:
   - packages/game_liars_poker
   - packages/game_final_call
   - packages/game_mafia
+  - packages/game_holdem
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -43,6 +44,7 @@ dependencies:
   game_liars_poker: any
   game_final_call: any
   game_mafia: any
+  game_holdem: any
 
   firebase_core: ^4.14.0
   firebase_database: ^12.5.0
@@ -102,6 +104,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/images/backgrounds/
     - assets/images/button/
     - assets/images/logo/
     - assets/images/others/
@@ -146,6 +149,12 @@ flutter:
     - family: BebasNeue
       fonts:
         - asset: assets/fonts/BebasNeue-Regular.ttf
+    - family: Caprasimo
+      fonts:
+        - asset: assets/fonts/Caprasimo-Regular.ttf
+    - family: BodoniModa
+      fonts:
+        - asset: assets/fonts/BodoniModa-Variable.ttf
 
 flutter_gen: 
   output: lib/gen/

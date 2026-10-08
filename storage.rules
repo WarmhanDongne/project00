@@ -22,5 +22,13 @@ service firebase.storage {
       allow delete: if isOwner(userId)
         && fileName.matches('profile\\.(jpg|jpeg|png|webp|heic|heif)');
     }
+
+    // 다운로드 게임 파일은 로그인한 앱 사용자에게 읽기만 허용합니다.
+    // 업로드·교체·삭제는 클라이언트에서 수행할 수 없습니다.
+    match /game-assets/{gameId}/{assetPath=**} {
+      allow read: if request.auth != null
+        && gameId.matches('[A-Za-z0-9_-]+');
+      allow write: if false;
+    }
   }
 }

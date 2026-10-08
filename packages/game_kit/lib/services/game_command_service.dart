@@ -183,6 +183,10 @@ String _commandLabel(String functionName) => switch (functionName) {
   'game_final_call_complete_turn' => '파이널콜 카드 교체',
   'game_final_call_declare' => '파이널콜 CALL 선언',
   'game_final_call_submit_hand' => '파이널콜 최종 카드 제출',
+  'game_holdem_act' => '홀덤 행동',
+  'game_holdem_complete_dealing' => '홀덤 카드 배분 완료',
+  'game_holdem_timeout_turn' => '홀덤 턴 시간 초과',
+  'game_holdem_complete_result' => '홀덤 핸드 결과 완료',
   _ => functionName,
 };
 

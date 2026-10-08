@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 
 //=======================플랫폼 색상 토큰==============================
 @immutable
@@ -35,21 +36,22 @@ class PlatformColors extends ThemeExtension<PlatformColors> {
   final Color danger;
   final Color dangerSoft;
 
+  // 시안(모시겜 선반) 색입니다. 흰 면 + 남색 글자 + 바이올렛 강조.
   static const light = PlatformColors(
-    canvas: Color(0xFFF5F4F1),
+    canvas: Color(0xFFF7F4EC),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F0ED),
-    border: Color(0xFFE1DFDA),
-    primary: Color(0xFF5748C8),
-    primarySoft: Color(0xFFF0EEFF),
-    text: Color(0xFF252423),
-    textMuted: Color(0xFF77736D),
-    success: Color(0xFF23855B),
-    successSoft: Color(0xFFE3F4EB),
-    warning: Color(0xFFB38310),
-    warningSoft: Color(0xFFFFF3D2),
-    danger: Color(0xFFD54D45),
-    dangerSoft: Color(0xFFFFECEA),
+    surfaceMuted: Color(0xFFF1ECE0),
+    border: Color(0x400E0A3D),
+    primary: Color(0xFF5A3FF0),
+    primarySoft: Color(0xFFEEEAFE),
+    text: Color(0xFF0E0A3D),
+    textMuted: Color(0xFF55527A),
+    success: Color(0xFF2F6B1E),
+    successSoft: Color(0xFFE6F3D3),
+    warning: Color(0xFF7A6200),
+    warningSoft: Color(0xFFFBF5C9),
+    danger: Color(0xFFA82E40),
+    dangerSoft: Color(0xFFFCE4E7),
   );
 
   static const dark = PlatformColors(
@@ -133,10 +135,16 @@ extension PlatformThemeContext on BuildContext {
 class PlatformTheme {
   const PlatformTheme._();
 
-  static ThemeData light() => _build(Brightness.light, PlatformColors.light);
-  static ThemeData dark() => _build(Brightness.dark, PlatformColors.dark);
+  static ThemeData light({Locale? locale}) =>
+      _build(Brightness.light, PlatformColors.light, locale);
+  static ThemeData dark({Locale? locale}) =>
+      _build(Brightness.dark, PlatformColors.dark, locale);
 
-  static ThemeData _build(Brightness brightness, PlatformColors colors) {
+  static ThemeData _build(
+    Brightness brightness,
+    PlatformColors colors,
+    Locale? locale,
+  ) {
     final scheme = ColorScheme.fromSeed(
       seedColor: colors.primary,
       brightness: brightness,
@@ -147,10 +155,13 @@ class PlatformTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      // 시안 본문 글꼴입니다. game_kit에 번들되어 package 경로로 지정합니다.
+      fontFamily: MosiFonts.bodyFamily(locale),
+      fontFamilyFallback: MosiFonts.fallbacks(locale),
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.canvas,
       extensions: <ThemeExtension<dynamic>>[colors],
-      textTheme: _scaledTextTheme(brightness, colors),
+      textTheme: _scaledTextTheme(brightness, colors, locale),
       dividerColor: colors.border,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -161,15 +172,44 @@ class PlatformTheme {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: colors.border),
+          borderSide: BorderSide(color: colors.text, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: colors.border),
+          borderSide: BorderSide(color: colors.text, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: colors.primary),
+          borderSide: BorderSide(color: colors.primary, width: 3),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colors.danger, width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colors.danger, width: 3),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: MosiColors.navy,
+        contentTextStyle: MosiFonts.sans(
+          size: 14,
+          weight: FontWeight.w600,
+          color: MosiColors.white,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: MosiColors.ink, width: 2),
+        ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: colors.primary),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: MosiColors.ink, width: 3),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -177,10 +217,10 @@ class PlatformTheme {
         foregroundColor: colors.text,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: MosiFonts.sans(
           color: colors.text,
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
+          size: 18,
+          weight: FontWeight.w700,
         ),
       ),
     );
@@ -192,9 +232,12 @@ class PlatformTheme {
   static TextTheme _scaledTextTheme(
     Brightness brightness,
     PlatformColors colors,
+    Locale? locale,
   ) {
     final base = ThemeData(
       brightness: brightness,
+      fontFamily: MosiFonts.bodyFamily(locale),
+      fontFamilyFallback: MosiFonts.fallbacks(locale),
     ).textTheme.apply(bodyColor: colors.text, displayColor: colors.text);
 
     TextStyle? scale(TextStyle? style) {

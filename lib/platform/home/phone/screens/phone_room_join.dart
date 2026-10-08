@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/models/room_join_feedback.dart';
@@ -124,8 +126,15 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
               const SizedBox(height: 18),
               AspectRatio(
                 aspectRatio: 1,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: MosiColors.ink, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: MosiColors.navy, offset: Offset(6, 6)),
+                    ],
+                  ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -154,23 +163,15 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin> {
                 ),
               ),
               const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: colors.border)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(
-                      'OR',
-                      style: TextStyle(color: colors.textMuted, fontSize: 11),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: colors.border)),
-                ],
-              ),
+              const MosiOrDivider(),
               const SizedBox(height: 18),
-              const Text(
-                '참여 코드 입력',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              Text(
+                '방 코드 입력',
+                style: MosiFonts.sans(
+                  size: 16,
+                  weight: FontWeight.w700,
+                  color: MosiColors.navy,
+                ),
               ),
               const SizedBox(height: 10),
               _RoomCodeBoxes(
@@ -234,22 +235,21 @@ class _RoomCodeBoxes extends StatelessWidget {
                               feedbackColor ??
                               (index == code.length.clamp(0, 4)
                                   ? colors.primary
-                                  : colors.border),
+                                  : MosiColors.navy),
                           width:
                               feedbackColor != null ||
                                   index == code.length.clamp(0, 4)
-                              ? 1.6
-                              : 1,
+                              ? 3
+                              : 2,
                         ),
                       ),
                       child: Text(
                         index < code.length ? code[index] : '',
-                        style: TextStyle(
+                        style: MosiFonts.grotesk(
                           color: feedback?.tone == RoomJoinFeedbackTone.danger
                               ? colors.danger
                               : colors.text,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -295,43 +295,18 @@ class _InlineJoinFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    final color = switch (feedback.tone) {
-      RoomJoinFeedbackTone.warning => colors.warning,
-      RoomJoinFeedbackTone.danger => colors.danger,
-    };
-    final background = switch (feedback.tone) {
-      RoomJoinFeedbackTone.warning => colors.warningSoft,
-      RoomJoinFeedbackTone.danger => colors.dangerSoft,
-    };
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_rounded, size: 20, color: color),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                feedback.message,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
+    return switch (feedback.tone) {
+      RoomJoinFeedbackTone.warning => MosiNotice(
+        message: feedback.message,
+        tone: MosiNoticeTone.info,
+        leading: const Icon(
+          Icons.error_rounded,
+          size: 18,
+          color: MosiColors.navy,
         ),
       ),
-    );
+      RoomJoinFeedbackTone.danger => MosiNotice(message: feedback.message),
+    };
   }
 }
 

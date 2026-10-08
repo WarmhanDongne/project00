@@ -42,7 +42,12 @@ const ROOM_CODE_PATTERN =
 // 게임의 start_game이 따로 확인합니다(예: 파이널콜은 4인 또는 6인).
 const DEFAULT_MAX_PLAYERS = 12;
 const MAX_ROOM_CODE_ATTEMPTS = 20;
+// 포커페이스 캐릭터 20종입니다. 예전 동물 id는 이미 배포된 앱이 보낼 수 있어
+// 함께 허용하고, 클라이언트가 포커페이스 얼굴로 바꿔 그립니다.
 const ROOM_CHARACTER_IDS = new Set([
+  "burger", "cone", "popcorn", "bucket", "pot", "parcel", "watermelon",
+  "capmask", "hood", "scarf", "astronaut", "welder", "catcher", "goggles",
+  "disguise", "bandage", "tissue", "milk", "cupnoodle", "lampshade",
   "bear", "bee", "cat", "crab", "deer", "elephant", "frog", "giraffe",
   "hedgehog", "kindbear", "octopus", "owl", "penguin", "rabbit", "shark",
   "snake", "whale",

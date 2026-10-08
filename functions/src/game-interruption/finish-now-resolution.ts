@@ -8,6 +8,8 @@ import {finishLiarsPokerForInsufficientPlayers} from "../liars-poker/exclude-pla
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
 import {finishMafiaForInsufficientPlayers} from "../mafia/exclude-player.js";
 import {MafiaGameState} from "../mafia/types.js";
+import {finishHoldemForInsufficientPlayers} from "../holdem/game.js";
+import {HoldemGameState} from "../holdem/types.js";
 import {assertControllerSession} from "../room/controller-session.js";
 import {completeGameInterruption, InterruptibleRoom} from "./state.js";
 import {InterruptibleGameState} from "./types.js";
@@ -37,6 +39,8 @@ const FINISH_FOR_INSUFFICIENT_PLAYERS: Record<
     ),
   mafia: (game, now) =>
     finishMafiaForInsufficientPlayers(game as unknown as MafiaGameState, now),
+  holdem: (game, now) =>
+    finishHoldemForInsufficientPlayers(game as unknown as HoldemGameState, now),
 };
 
 export interface FinishNowRoom extends InterruptibleRoom {

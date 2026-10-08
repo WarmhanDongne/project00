@@ -42,7 +42,7 @@
             },
             "characterId": {
               ".write": false,
-              ".validate": "newData.isString() && newData.val().matches(/^(bear|bee|cat|crab|deer|elephant|frog|giraffe|hedgehog|kindbear|octopus|owl|penguin|rabbit|shark|snake|whale)$/)"
+              ".validate": "newData.isString() && newData.val().matches(/^(burger|cone|popcorn|bucket|pot|parcel|watermelon|capmask|hood|scarf|astronaut|welder|catcher|goggles|disguise|bandage|tissue|milk|cupnoodle|lampshade|bear|bee|cat|crab|deer|elephant|frog|giraffe|hedgehog|kindbear|octopus|owl|penguin|rabbit|shark|snake|whale)$/)"
             },
             "isConnected": {
               ".write": "auth != null && auth.uid == $playerUid && root.child('rooms').child($roomCode).child('players').child($playerUid).child('nickname').exists() && (!root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').exists() || root.child('rooms').child($roomCode).child('players').child($playerUid).child('status').val() == 'active') && root.child('rooms').child($roomCode).child('status').exists() && root.child('rooms').child($roomCode).child('status').val() != 'closed'",

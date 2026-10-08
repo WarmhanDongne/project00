@@ -10,6 +10,9 @@ library;
 
 import 'dart:ui';
 
+import 'package:project00/generated/l10n/app_localizations.dart';
+import 'package:project00/platform/localization/locale_settings.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -49,26 +52,33 @@ class App extends StatelessWidget {
 
     return ScreenUtilInit(
       designSize: currentDesignSize,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Project 00',
-        theme: PlatformTheme.light(),
-        darkTheme: PlatformTheme.dark(),
-        themeMode: ThemeMode.light,
-        // 개발용 게임 통신 진단을 가장 바깥에 둡니다. 휴대폰·태블릿
-        // 어떤 화면에서든 오른쪽 아래에서 같은 타임라인을 열 수 있으며,
-        // 릴리스 빌드에서는 child를 그대로 통과시킵니다.
-        builder: (context, child) => DevErrorOverlay(
-          child: AppNetworkGuard(child: child ?? const SizedBox.shrink()),
-        ),
-        // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
-        // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
-        home: ShorebirdPatchGate(
-          child: AuthGate(
-            gameCatalog: const GameRegistry(),
-            userChanges: userChanges,
-            emailLinks: emailLinks,
-            initialEmailLink: initialEmailLink,
+      child: LocaleSettingsHost(
+        builder: (context, settings) => MaterialApp(
+          locale: settings.language.locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLanguage.values.map(
+            (language) => language.locale,
+          ),
+          debugShowCheckedModeBanner: false,
+          title: 'Project 00',
+          theme: PlatformTheme.light(locale: settings.language.locale),
+          darkTheme: PlatformTheme.dark(locale: settings.language.locale),
+          themeMode: ThemeMode.light,
+          // 개발용 게임 통신 진단을 가장 바깥에 둡니다. 휴대폰·태블릿
+          // 어떤 화면에서든 오른쪽 아래에서 같은 타임라인을 열 수 있으며,
+          // 릴리스 빌드에서는 child를 그대로 통과시킵니다.
+          builder: (context, child) => DevErrorOverlay(
+            child: AppNetworkGuard(child: child ?? const SizedBox.shrink()),
+          ),
+          // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
+          // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
+          home: ShorebirdPatchGate(
+            child: AuthGate(
+              gameCatalog: const GameRegistry(),
+              userChanges: userChanges,
+              emailLinks: emailLinks,
+              initialEmailLink: initialEmailLink,
+            ),
           ),
         ),
       ),

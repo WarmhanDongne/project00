@@ -7,7 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/auth/models/nickname_policy.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({
@@ -89,8 +91,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (_isSaving || _isPickingImage) return;
     final nickname = _nicknameController.text.trim();
     final length = nickname.runes.length;
-    if (length < 2 || length > 12) {
-      setState(() => _errorMessage = '닉네임은 2자 이상 12자 이하로 입력해주세요.');
+    if (length < nicknameMinLength || length > nicknameMaxLength) {
+      setState(
+        () => _errorMessage =
+            '닉네임은 $nicknameMinLength자 이상 $nicknameMaxLength자 이하로 입력해주세요.',
+      );
       return;
     }
 
@@ -120,22 +125,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _requestBack() async {
     if (_isSaving || _isPickingImage) return;
-    final shouldLeave = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('프로필 설정을 중단할까요?'),
-        content: const Text('다음 로그인에서 프로필 설정부터 다시 이어집니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('계속하기'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('중단하기'),
-          ),
-        ],
-      ),
+    final shouldLeave = await showMosiLeaveDialog(
+      context,
+      title: '프로필 설정을 중단할까요?',
+      message: '다음에 로그인하면 프로필 설정부터 이어서 할 수 있어요.',
     );
     if (shouldLeave != true) return;
     await FirebaseAuth.instance.signOut();
@@ -149,18 +142,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_requestBack());
       },
-      child: PlatformAuthShell(
-        maxWidth: 390,
-        showBack: true,
-        onBackPressed: () => unawaited(_requestBack()),
+      child: MosiAuthScaffold(
+        showTagline: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              '프로필 설정',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            MosiAuthHeader(
+              title: '회원가입',
+              onBack: () => unawaited(_requestBack()),
+              stepIndex: 2,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             RegisterStepTwo(
               nicknameController: _nicknameController,
               isLoading: isBusy,
@@ -168,17 +160,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               profileImageBytes: _profileImageBytes,
               onPickProfileImage: _pickProfileImage,
               onCheckNickname: _completeProfile,
+              onUseAccountPhoto: () => setState(() {
+                _profileImageBytes = null;
+                _profileImageName = null;
+                _profileImageType = null;
+              }),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 12),
-              PlatformNotice(
-                message: _errorMessage!,
-                style: PlatformNoticeStyle.danger,
-              ),
+              MosiNotice(message: _errorMessage!),
             ],
-            const SizedBox(height: 24),
-            PlatformButton(
+            const SizedBox(height: 16),
+            MosiButton(
               label: '가입 완료',
+              height: 54,
+              expand: true,
               loading: _isSaving,
               onPressed: isBusy ? null : _completeProfile,
             ),

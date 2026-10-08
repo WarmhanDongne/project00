@@ -1,8 +1,9 @@
+import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 
 class RegisterStepOne extends StatelessWidget {
   const RegisterStepOne({
@@ -51,120 +52,20 @@ class RegisterStepOne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBusy = action != null;
+    final email = emailController.text.trim();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('이메일', style: TextStyle(fontSize: 13)),
-        const SizedBox(height: 7),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: emailController,
-                enabled: _emailEditable && !isBusy,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(hintText: '이메일'),
-              ),
-            ),
-            if (_emailEditable) ...[
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 112,
-                child: isCustomDomain
-                    ? TextField(
-                        controller: customDomainController,
-                        focusNode: customDomainFocusNode,
-                        enabled: !isBusy,
-                        decoration: InputDecoration(
-                          hintText: '직접 입력',
-                          suffixIcon: IconButton(
-                            onPressed: () => onDomainChanged('gmail.com'),
-                            icon: const Icon(Icons.arrow_drop_down, size: 20),
-                          ),
-                        ),
-                      )
-                    : DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: emailDomain,
-                        decoration: const InputDecoration(),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'gmail.com',
-                            child: Text('gmail.com'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'naver.com',
-                            child: Text('naver.com'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'daum.net',
-                            child: Text('daum.net'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'custom',
-                            child: Text('직접 입력'),
-                          ),
-                        ],
-                        onChanged: isBusy ? null : onDomainChanged,
-                      ),
-              ),
-            ],
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 72,
-              child: PlatformButton(
-                label: action == RegisterAction.resendEmail
-                    ? '재전송 중…'
-                    : _emailEditable
-                    ? '인증'
-                    : (_isSettingPassword ? '완료' : '재전송'),
-                height: 48,
-                loading: action == RegisterAction.sendEmail,
-                onPressed: switch (step) {
-                  RegisterStep.emailInput => isBusy ? null : onSendEmail,
-                  RegisterStep.awaitingEmailLink ||
-                  RegisterStep.emailLinkFailed => isBusy ? null : onResendEmail,
-                  RegisterStep.settingPassword => null,
-                },
-                style: _isSettingPassword
-                    ? PlatformButtonStyle.secondary
-                    : PlatformButtonStyle.primary,
-              ),
-            ),
-          ],
-        ),
-        if (!_emailEditable || errorMessage != null) ...[
-          const SizedBox(height: 10),
-          PlatformNotice(
+        if (_isSettingPassword) ...[
+          MosiNotice(
             message:
                 errorMessage ??
-                (_isSettingPassword
-                    ? '인증이 완료되었습니다.'
-                    : _isFailed
-                    ? '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.'
-                    : cooldownSeconds > 0
-                    ? '인증 메일을 보냈습니다. 메일함을 확인해 주세요. '
-                          '(${_formatCooldown(cooldownSeconds)}, 재전송 가능)'
-                    : '메일이 오지 않았다면 인증 메일을 다시 전송해 주세요.'),
-            style: errorMessage != null || _isFailed
-                ? PlatformNoticeStyle.danger
-                : _isSettingPassword
-                ? PlatformNoticeStyle.success
-                : PlatformNoticeStyle.warning,
-            leading: _isWaiting && action == RegisterAction.completeLink
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: context.platformColors.warning,
-                    ),
-                  )
-                : null,
+                (email.isEmpty ? '이메일 인증이 완료되었어요' : '$email 인증이 완료되었어요'),
+            tone: errorMessage != null
+                ? MosiNoticeTone.error
+                : MosiNoticeTone.success,
           ),
-        ],
-        if (_isSettingPassword) ...[
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           _PasswordFields(
             passwordController: passwordController,
             controller: confirmPasswordController,
@@ -173,17 +74,58 @@ class RegisterStepOne extends StatelessWidget {
             onSetPassword: onSetPassword,
           ),
         ] else ...[
-          const SizedBox(height: 24),
-          const PlatformButton(label: '다음', onPressed: null),
+          MosiLabeledField(
+            label: context.l10n.email,
+            child: MosiEmailField(
+              emailController: emailController,
+              customDomainController: customDomainController,
+              customDomainFocusNode: customDomainFocusNode,
+              emailDomain: emailDomain,
+              isCustomDomain: isCustomDomain,
+              enabled: _emailEditable && !isBusy,
+              showDomain: _emailEditable,
+              onDomainChanged: onDomainChanged,
+            ),
+          ),
+          if (_isWaiting) ...[
+            const SizedBox(height: 14),
+            _MailSentBox(
+              email: email,
+              cooldownText: '메일이 오지 않았다면 다시 보내 주세요',
+              completing: action == RegisterAction.completeLink,
+            ),
+          ],
+          if (_isFailed && errorMessage == null) ...[
+            const SizedBox(height: 14),
+            const MosiNotice(message: '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.'),
+          ],
+          if (errorMessage != null) ...[
+            const SizedBox(height: 14),
+            MosiNotice(message: errorMessage!),
+          ],
+          const SizedBox(height: 14),
+          MosiButton(
+            key: const Key('register-send-email-button'),
+            label: _emailEditable && !_isFailed
+                ? '인증 메일 보내기'
+                : action == RegisterAction.resendEmail
+                ? '다시 보내는 중…'
+                : '인증 메일 다시 보내기',
+            background: _emailEditable && !_isFailed
+                ? MosiColors.lime
+                : MosiColors.white,
+            height: 54,
+            expand: true,
+            loading: action == RegisterAction.sendEmail,
+            onPressed: isBusy
+                ? null
+                : step == RegisterStep.emailInput
+                ? onSendEmail
+                : onResendEmail,
+          ),
         ],
       ],
     );
-  }
-
-  String _formatCooldown(int totalSeconds) {
-    final seconds = totalSeconds.clamp(0, 5999);
-    return '${(seconds ~/ 60).toString().padLeft(2, '0')}:'
-        '${(seconds % 60).toString().padLeft(2, '0')}';
   }
 }
 
@@ -226,91 +168,109 @@ class _PasswordFieldsState extends State<_PasswordFields> {
         final canSetPassword =
             PasswordPolicy.isValid(password) && passwordsMatch;
 
+        Widget eye(
+          bool obscure,
+          String show,
+          String hide,
+          VoidCallback toggle,
+        ) => IconButton(
+          tooltip: obscure ? show : hide,
+          onPressed: widget.isBusy ? null : toggle,
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            size: 18,
+            color: MosiColors.navy,
+          ),
+        );
+
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('비밀번호', style: TextStyle(fontSize: 13)),
-            const SizedBox(height: 7),
-            TextField(
-              controller: widget.passwordController,
-              enabled: !widget.isBusy,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                suffixIcon: IconButton(
-                  tooltip: _obscurePassword ? '비밀번호 보기' : '비밀번호 숨기기',
-                  onPressed: widget.isBusy
-                      ? null
-                      : () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 18,
+            MosiLabeledField(
+              label: context.l10n.password,
+              child: TextField(
+                controller: widget.passwordController,
+                enabled: !widget.isBusy,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
+                style: mosiFieldTextStyle(),
+                decoration: mosiInputDecoration(
+                  hintText: context.l10n.password,
+                  suffix: eye(
+                    _obscurePassword,
+                    '비밀번호 보기',
+                    '비밀번호 숨기기',
+                    () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            _PasswordRequirement(
-              label: '6자 이상입니다.',
-              met: PasswordPolicy.hasMinimumLength(password),
-              evaluated: passwordStarted,
-            ),
-            _PasswordRequirement(
-              label: '영문이 1개 이상 포함되었습니다.',
-              met: PasswordPolicy.hasLetter(password),
-              evaluated: passwordStarted,
-            ),
-            _PasswordRequirement(
-              label: '숫자가 1개 이상 포함되었습니다.',
-              met: PasswordPolicy.hasNumber(password),
-              evaluated: passwordStarted,
-            ),
-            _PasswordRequirement(
-              label: '특수문자가 1개 이상 포함되었습니다.',
-              met: PasswordPolicy.hasSpecialCharacter(password),
-              evaluated: passwordStarted,
+            const SizedBox(height: 10),
+            Wrap(
+              runSpacing: 6,
+              children: [
+                for (final (label, met) in [
+                  ('6자 이상', PasswordPolicy.hasMinimumLength(password)),
+                  ('영문 1개 이상', PasswordPolicy.hasLetter(password)),
+                  ('숫자 1개 이상', PasswordPolicy.hasNumber(password)),
+                  ('특수문자 1개 이상', PasswordPolicy.hasSpecialCharacter(password)),
+                ])
+                  FractionallySizedBox(
+                    widthFactor: 0.5,
+                    child: _PasswordRequirement(
+                      label: label,
+                      met: met,
+                      evaluated: passwordStarted,
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 14),
-            const Text('비밀번호 재입력', style: TextStyle(fontSize: 13)),
-            const SizedBox(height: 7),
-            TextField(
-              controller: widget.controller,
-              enabled: !widget.isBusy,
-              obscureText: _obscureConfirmation,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                if (canSetPassword && !widget.isBusy) widget.onSetPassword();
-              },
-              decoration: InputDecoration(
-                suffixIcon: IconButton(
-                  tooltip: _obscureConfirmation ? '비밀번호 확인 보기' : '비밀번호 확인 숨기기',
-                  onPressed: widget.isBusy
-                      ? null
-                      : () => setState(
-                          () => _obscureConfirmation = !_obscureConfirmation,
-                        ),
-                  icon: Icon(
-                    _obscureConfirmation
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 18,
+            MosiLabeledField(
+              label: context.l10n.passwordAgain,
+              child: TextField(
+                controller: widget.controller,
+                enabled: !widget.isBusy,
+                obscureText: _obscureConfirmation,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) {
+                  if (canSetPassword && !widget.isBusy) widget.onSetPassword();
+                },
+                style: mosiFieldTextStyle(),
+                decoration: mosiInputDecoration(
+                  hintText: context.l10n.passwordAgain,
+                  suffix: eye(
+                    _obscureConfirmation,
+                    '비밀번호 확인 보기',
+                    '비밀번호 확인 숨기기',
+                    () => setState(
+                      () => _obscureConfirmation = !_obscureConfirmation,
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            _PasswordRequirement(
-              label: passwordsMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치해야 합니다.',
-              met: passwordsMatch,
-              evaluated: confirmationStarted,
+            Text(
+              !confirmationStarted
+                  ? ' '
+                  : passwordsMatch
+                  ? '비밀번호가 일치합니다.'
+                  : '비밀번호가 일치해야 합니다.',
+              style: MosiFonts.sans(
+                locale: Localizations.maybeLocaleOf(context),
+                size: 12,
+                weight: FontWeight.w600,
+                color: passwordsMatch
+                    ? const Color(0xFF2F7A1A)
+                    : const Color(0xFFA82E40),
+              ),
             ),
-            const SizedBox(height: 24),
-            PlatformButton(
-              label: '다음',
+            const SizedBox(height: 12),
+            MosiButton(
+              label: context.l10n.next,
+              height: 54,
+              expand: true,
               loading: widget.isSaving,
               onPressed: !widget.isBusy && canSetPassword
                   ? widget.onSetPassword
@@ -321,6 +281,120 @@ class _PasswordFieldsState extends State<_PasswordFields> {
       },
     );
   }
+}
+
+class _MailSentBox extends StatelessWidget {
+  const _MailSentBox({
+    required this.email,
+    required this.cooldownText,
+    required this.completing,
+  });
+
+  final String email;
+  final String cooldownText;
+  final bool completing;
+
+  @override
+  Widget build(BuildContext context) {
+    return MosiDashedBorder(
+      radius: 10,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: MosiColors.cream,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            completing
+                ? const SizedBox(
+                    width: 56,
+                    height: 44,
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 3),
+                      ),
+                    ),
+                  )
+                : const CustomPaint(
+                    size: Size(56, 44),
+                    painter: _MailPainter(),
+                  ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    completing ? '인증을 확인하는 중이에요' : '인증 메일을 보냈어요',
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 14,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$email 메일함에서 링크를 눌러 주세요.',
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 13,
+                      color: MosiColors.navy,
+                      height: 1.5,
+                    ),
+                  ),
+                  Text(
+                    cooldownText,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 13,
+                      color: MosiColors.muted,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MailPainter extends CustomPainter {
+  const _MailPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..color = MosiColors.ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeJoin = StrokeJoin.round;
+    RRect r(double x, double y) => RRect.fromRectAndRadius(
+      Rect.fromLTWH(x, y, 48, 34),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(r(5, 7), Paint()..color = MosiColors.navy);
+    canvas.drawRRect(r(2, 4), Paint()..color = MosiColors.sun);
+    canvas.drawRRect(r(2, 4), stroke);
+    canvas.drawPath(
+      Path()
+        ..moveTo(4, 7)
+        ..lineTo(26, 24)
+        ..lineTo(48, 7),
+      stroke,
+    );
+    canvas.drawCircle(const Offset(46, 8), 6, Paint()..color = MosiColors.red);
+    canvas.drawCircle(const Offset(46, 8), 6, stroke..strokeWidth = 2);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _PasswordRequirement extends StatelessWidget {
@@ -336,28 +410,42 @@ class _PasswordRequirement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     final color = met
-        ? colors.success
+        ? const Color(0xFF2F7A1A)
         : evaluated
-        ? colors.danger
-        : colors.textMuted;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            met ? Icons.check_rounded : Icons.close_rounded,
-            size: 14,
-            color: color,
+        ? const Color(0xFFA82E40)
+        : const Color(0xFF8C8AA8);
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: met ? const Color(0xFF4C8A1E) : MosiColors.white,
+            border: Border.all(color: color, width: 2),
           ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(label, style: TextStyle(color: color, fontSize: 12)),
+          child: met
+              ? const Icon(
+                  Icons.check_rounded,
+                  size: 10,
+                  color: MosiColors.white,
+                )
+              : null,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 12,
+              weight: FontWeight.w600,
+              color: color,
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

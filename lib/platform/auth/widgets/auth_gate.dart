@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/profile_setup_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:project00/platform/home/home.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
@@ -64,6 +66,7 @@ class _AuthGateState extends State<AuthGate> {
   UserOnboarding? _onboarding;
   bool _onboardingLoaded = false;
   bool _onboardingFailed = false;
+  bool _isRestoringAuth = true;
 
   @override
   void initState() {
@@ -98,83 +101,95 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _userChanges,
       builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
-          // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
-          // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
-          return _AppInitializingView(
-            step: '로그인 상태 확인',
-            onTimeout: _handleAuthRestoreTimeout,
-          );
-        }
-        final user = authSnapshot.data;
-        if (user == null) {
-          _clearOnboardingWatch();
-          final link = _emailLink;
-          if (link != null) {
-            return RegisterScreen(
-              initialEmailLink: link,
-              onEmailLinkHandled: _handleEmailLink,
-              onboardingService: _onboardingService,
-            );
-          }
-          if (_emailLinkError != null) {
-            return RegisterScreen(
-              initialStep: RegisterStep.emailLinkFailed,
-              initialError: _emailLinkError,
-              onCancel: () => setState(() => _emailLinkError = null),
-              onboardingService: _onboardingService,
-            );
-          }
-          if (_reauthenticationEmail != null) {
-            return RegisterScreen(
-              initialStep: RegisterStep.awaitingEmailLink,
-              initialEmail: _reauthenticationEmail,
-              onCancel: () => setState(() => _reauthenticationEmail = null),
-              onboardingService: _onboardingService,
-            );
-          }
-          return const LoginScreen();
-        }
-        if (_emailLink != null) {
-          return const _AppInitializingView(step: '이메일 링크 처리');
-        }
-
-        _ensureOnboardingWatch(user.uid);
-        if (_onboardingFailed) {
-          return _GateErrorView(
-            message: '회원가입 상태를 불러오지 못했습니다.',
-            onRetry: _retryOnboardingWatch,
-          );
-        }
-        if (!_onboardingLoaded) {
-          // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
-          // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
-          // 대신 다시 시도할 화면을 보여 줍니다.
-          return _AppInitializingView(
-            step: '회원가입 상태 확인',
-            onTimeout: () {
-              if (mounted) setState(() => _onboardingFailed = true);
-            },
-          );
-        }
-        final onboarding = _onboarding;
-        if (onboarding == null) {
-          return _LegacyRecoveryView(service: _onboardingService);
-        }
-        return switch (onboarding.status) {
-          OnboardingStatus.settingPassword => RegisterScreen(
-            initialStep: RegisterStep.settingPassword,
-            initialEmail: user.email,
-            onReauthenticationStarted: (email) {
-              setState(() => _reauthenticationEmail = email);
-            },
-            onboardingService: _onboardingService,
-          ),
-          OnboardingStatus.settingProfile => const ProfileSetupScreen(),
-          OnboardingStatus.complete => Home(gameCatalog: widget.gameCatalog),
-        };
+        final view = _buildView(context, authSnapshot);
+        if (view is Home) return view;
+        return MosiAuthScaffold(child: MosiAuthTransition(child: view));
       },
     );
+  }
+
+  Widget _buildView(BuildContext context, AsyncSnapshot<User?> authSnapshot) {
+    _isRestoringAuth = authSnapshot.connectionState == ConnectionState.waiting;
+    if (_isRestoringAuth) {
+      // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
+      // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
+      return _AppInitializingView(
+        step: '로그인 상태 확인',
+        onTimeout: _handleAuthRestoreTimeout,
+      );
+    }
+    final user = authSnapshot.data;
+    if (user == null) {
+      _clearOnboardingWatch();
+      final link = _emailLink;
+      if (link != null) {
+        return RegisterScreen(
+          initialEmailLink: link,
+          onEmailLinkHandled: _handleEmailLink,
+          onboardingService: _onboardingService,
+        );
+      }
+      if (_emailLinkError != null) {
+        return RegisterScreen(
+          initialStep: RegisterStep.emailLinkFailed,
+          initialError: _emailLinkError,
+          onCancel: () => setState(() => _emailLinkError = null),
+          onboardingService: _onboardingService,
+        );
+      }
+      if (_reauthenticationEmail != null) {
+        return RegisterScreen(
+          initialStep: RegisterStep.awaitingEmailLink,
+          initialEmail: _reauthenticationEmail,
+          onCancel: () => setState(() => _reauthenticationEmail = null),
+          onboardingService: _onboardingService,
+        );
+      }
+      return const LoginScreen();
+    }
+    if (_emailLink != null) {
+      return const _AppInitializingView(step: '이메일 링크 처리');
+    }
+
+    _ensureOnboardingWatch(user.uid);
+    if (_onboardingFailed) {
+      return _GateErrorView(
+        message: '회원가입 상태를 불러오지 못했습니다.',
+        onRetry: _retryOnboardingWatch,
+      );
+    }
+    if (!_onboardingLoaded) {
+      // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
+      // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
+      // 대신 다시 시도할 화면을 보여 줍니다.
+      return _AppInitializingView(
+        step: '회원가입 상태 확인',
+        onTimeout: () {
+          // 퇴장 애니메이션 중 남아 있는 이전 대기 화면의 타이머는 무시합니다.
+          if (mounted &&
+              !_onboardingLoaded &&
+              _watchedOnboardingUid == user.uid) {
+            setState(() => _onboardingFailed = true);
+          }
+        },
+      );
+    }
+    final onboarding = _onboarding;
+    if (onboarding == null) {
+      return _LegacyRecoveryView(service: _onboardingService);
+    }
+    return switch (onboarding.status) {
+      OnboardingStatus.settingPassword => RegisterScreen(
+        initialStep: RegisterStep.settingPassword,
+        initialEmail: user.email,
+        onReauthenticationStarted: (email) {
+          setState(() => _reauthenticationEmail = email);
+        },
+        onboardingService: _onboardingService,
+      ),
+      OnboardingStatus.settingProfile => const ProfileSetupScreen(),
+      OnboardingStatus.complete => Home(gameCatalog: widget.gameCatalog),
+    };
   }
 
   /// 이 uid의 온보딩 상태를 구독합니다. 이미 같은 uid를 듣고 있으면
@@ -214,6 +229,7 @@ class _AuthGateState extends State<AuthGate> {
   /// 일어납니다) 스트림이 아무 값도 주지 않고 멈춥니다. 그대로 두면 영원히
   /// 스피너라, 세션을 비워 로그인 화면으로 되돌립니다.
   void _handleAuthRestoreTimeout() {
+    if (!_isRestoringAuth) return;
     debugPrint('[auth_gate] 로그인 상태 복원이 지연됩니다. 저장된 세션을 비웁니다.');
     final onTimeout = widget.onAuthRestoreTimeout;
     if (onTimeout != null) {
@@ -264,9 +280,7 @@ class _AuthGateState extends State<AuthGate> {
     }
     if (_emailLink?.toString() == value) return;
 
-    // LoginScreen에서 push한 RegisterScreen이 루트 AuthGate를 가리고
-    // 있을 수 있습니다. 인증 링크의 단일 소유자인 AuthGate로 복귀해
-    // 새 상태가 즉시 보이게 합니다.
+    // 가입 중단 확인 등 열린 모달을 닫고, 같은 인증 shell의 내용만 갱신합니다.
     Navigator.of(context).popUntil((route) => route.isFirst);
     setState(() {
       _emailLink = link;
@@ -350,22 +364,20 @@ class _GateErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformAuthShell(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PlatformNotice(message: message, style: PlatformNoticeStyle.danger),
-          const SizedBox(height: 12),
-          PlatformButton(label: '다시 시도', onPressed: onRetry),
-          const SizedBox(height: 8),
-          TextButton(
-            // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
-            // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
-            onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
-            child: const Text('로그아웃'),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformNotice(message: message, style: PlatformNoticeStyle.danger),
+        const SizedBox(height: 12),
+        PlatformButton(label: '다시 시도', onPressed: onRetry),
+        const SizedBox(height: 8),
+        TextButton(
+          // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
+          // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
+          onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
+          child: const Text('로그아웃'),
+        ),
+      ],
     );
   }
 }
@@ -445,21 +457,20 @@ class _AppInitializingViewState extends State<_AppInitializingView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            if (_isSlow) ...[
-              const SizedBox(height: 16),
-              Text(
-                '${widget.step} 중…',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: MosiColors.violet),
+          if (_isSlow) ...[
+            const SizedBox(height: 16),
+            Text(
+              '${widget.step} 중…',
+              style: MosiFonts.sans(size: 15, color: MosiColors.navy),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

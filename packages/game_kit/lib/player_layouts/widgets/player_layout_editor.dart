@@ -13,7 +13,8 @@ import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
-import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 
 // ============================================================
 
@@ -45,44 +46,6 @@ double chairEntranceProgress({
   ).transform(timeline.clamp(0.0, 1.0));
 }
 
-/// 자리 배치가 플랫폼 테마 확장 타입에 결합되지 않도록 Material 색으로 투영합니다.
-class _LayoutColors {
-  const _LayoutColors({
-    required this.canvas,
-    required this.surface,
-    required this.surfaceMuted,
-    required this.primary,
-    required this.primarySoft,
-    required this.border,
-    required this.text,
-    required this.textMuted,
-  });
-
-  factory _LayoutColors.of(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return _LayoutColors(
-      canvas: theme.scaffoldBackgroundColor,
-      surface: scheme.surface,
-      surfaceMuted: scheme.surfaceContainerHighest,
-      primary: scheme.primary,
-      primarySoft: scheme.primaryContainer,
-      border: scheme.outlineVariant,
-      text: scheme.onSurface,
-      textMuted: scheme.onSurfaceVariant,
-    );
-  }
-
-  final Color canvas;
-  final Color surface;
-  final Color surfaceMuted;
-  final Color primary;
-  final Color primarySoft;
-  final Color border;
-  final Color text;
-  final Color textMuted;
-}
-
 /// 2~6명의 플레이어 자리를 하나의 화면에서 배치하는 편집기입니다.
 class PlayerLayoutEditor extends StatefulWidget {
   PlayerLayoutEditor({
@@ -95,6 +58,7 @@ class PlayerLayoutEditor extends StatefulWidget {
     this.tableBackgroundImage,
     this.tableImage,
     this.chairImage,
+    this.seatTheme = MosiSeatTheme.fallback,
   }) : assert(
          initialLayout.playerCount >= 2 && initialLayout.playerCount <= 12,
          '지원하는 플레이어 수는 2~12명입니다.',
@@ -120,6 +84,9 @@ class PlayerLayoutEditor extends StatefulWidget {
   /// 위에서 내려다본 의자 이미지입니다. 등받이가 위, 앉는 방향이 아래를 향하는
   /// 그림을 기준으로 각 자리에서 테이블 중심을 바라보도록 회전시킵니다.
   final ImageProvider? chairImage;
+
+  /// 시안(SeatSync)의 게임별 색입니다. 플랫폼이 게임 id로 골라 넘깁니다.
+  final MosiSeatTheme seatTheme;
 
   @override
   State<PlayerLayoutEditor> createState() => _PlayerLayoutEditorState();
@@ -154,22 +121,33 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   /// 테이블 크기에 비례해 어느 화면에서도 같은 비율로 보이게 합니다.
   double _chairSizeFor(Size boardSize) =>
       (_tableDiameter(boardSize) * 0.34).clamp(72.0, 170.0);
-  static const Duration _zoomHold = Duration(seconds: 1);
+  static const Duration _zoomHold = Duration(milliseconds: 250);
 
   // 입장 연출(블록 퇴장 → 테이블 등장 → 의자 착석)은 [_entranceController]로,
   // 그 뒤 테이블로 카메라가 줌인해 화면이 게임 배경색으로 가득 차는 연출은
   // 별도의 [_zoomController]로 재생합니다. 둘을 분리해야 착석이 끝난 뒤 잠깐
   // 멈춰 있다가(=_zoomHold) 줌인을 시작할 수 있습니다.
-  static const Interval _exitInterval = Interval(
-    0,
-    0.42,
-    curve: Curves.easeInCubic,
-  );
-  static const Interval _tableInterval = Interval(
-    0.30,
-    0.62,
-    curve: Curves.easeOutBack,
-  );
+  /// 입장 연출 2.3초 안의 시각(초)입니다. 시안 SeatSync의 타임라인을 따릅니다.
+  static const double _entranceSeconds = 1.6;
+
+  /// [start]초부터 [duration]초 동안의 진행률(0~1)입니다.
+  double _phase(
+    double t,
+    double start,
+    double duration, [
+    Curve curve = Curves.linear,
+  ]) {
+    final seconds = t * _entranceSeconds;
+    return curve.transform(((seconds - start) / duration).clamp(0.0, 1.0));
+  }
+
+  /// 좌석 순서에 따른 시간차(초)입니다. 첫 의자는 0.4초, 마지막 의자는 0.95초에
+  /// 나타나기 시작해 1.5초 안에 모두 자리를 잡습니다.
+  double _seatDelay(int seatIndex) {
+    if (_playerCount <= 1) return 0.4;
+    return 0.4 + 0.55 * seatIndex / (_playerCount - 1);
+  }
+
   late List<int> _playerSlotIndexes;
   List<Offset> _slotPositions = const [];
   final Map<int, Offset> _draggingPositions = {};
@@ -179,6 +157,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   int? _draggingPlayerIndex;
   int? _hoveredSlotIndex;
+
+  /// 눌러서 고른 자리입니다. 다른 자리를 누르면 두 자리를 맞바꿉니다.
+  int? _selectedSlotIndex;
+  final math.Random _random = math.Random();
   bool _isCompleting = false;
   bool _isCancelling = false;
   bool _handedOffToGame = false;
@@ -192,11 +174,11 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     _entranceController = AnimationController(
       vsync: this,
       // 테이블 뒤에 의자가 좌석 순서대로 충분한 시간차를 두고 들어옵니다.
-      duration: const Duration(milliseconds: 2300),
+      duration: const Duration(milliseconds: 1600),
     );
     _zoomController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 1000),
     );
     _transitionAnimation = Listenable.merge([
       _entranceController,
@@ -234,9 +216,42 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     final currentSlotIndex = _playerSlotIndexes[playerIndex];
 
     setState(() {
+      _selectedSlotIndex = null;
       _draggingPlayerIndex = playerIndex;
       _hoveredSlotIndex = null;
       _draggingPositions[playerIndex] = _slotPositions[currentSlotIndex];
+    });
+  }
+
+  /// 카드를 눌러 고르고, 다른 카드를 눌러 맞바꿉니다(시안). 끌어서 옮기기도
+  /// 그대로 쓸 수 있습니다.
+  void _tapPlayer(int playerIndex) {
+    if (_isCompleting) return;
+    final slot = _playerSlotIndexes[playerIndex];
+    final selected = _selectedSlotIndex;
+    if (selected == null) {
+      setState(() => _selectedSlotIndex = slot);
+      return;
+    }
+    if (selected == slot) {
+      setState(() => _selectedSlotIndex = null);
+      return;
+    }
+    final selectedPlayer = _playerSlotIndexes.indexOf(selected);
+    setState(() {
+      if (selectedPlayer != -1) _playerSlotIndexes[selectedPlayer] = slot;
+      _playerSlotIndexes[playerIndex] = selected;
+      _selectedSlotIndex = null;
+    });
+  }
+
+  void _shuffle() {
+    if (_isCompleting) return;
+    final slots = List<int>.generate(_playerCount, (index) => index)
+      ..shuffle(_random);
+    setState(() {
+      _playerSlotIndexes = slots;
+      _selectedSlotIndex = null;
     });
   }
 
@@ -361,6 +376,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     debugPrint('플레이어 자리 번호: ${completedLayout.seatIndexes}');
     setState(() {
       _isCompleting = true;
+      _selectedSlotIndex = null;
     });
 
     try {
@@ -427,21 +443,6 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     );
   }
 
-  /// 화면 중심에서 바깥쪽으로 밀어낸, 화면 밖의 한 지점입니다. 블록은 이 지점을
-  /// 향해 퇴장하고, 의자는 이 지점에서부터 자리로 들어옵니다.
-  Offset _offscreenCenterPixel(int slotIndex, Size boardSize, Size cardSize) {
-    final startCenter = _slotCenterPixel(slotIndex, boardSize, cardSize);
-    final boardCenter = Offset(boardSize.width / 2, boardSize.height / 2);
-    var direction = startCenter - boardCenter;
-    var distance = direction.distance;
-    if (distance < 1) {
-      direction = const Offset(0, -1);
-      distance = 1;
-    }
-    final unit = direction / distance;
-    return startCenter + unit * boardSize.longestSide;
-  }
-
   double _tableDiameter(Size boardSize) => boardSize.shortestSide * 0.46;
 
   /// 테이블 원이 화면 대각선을 완전히 덮을 때까지 확대하는 데 필요한 배율입니다.
@@ -458,166 +459,247 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   @override
   Widget build(BuildContext context) {
-    final colors = _LayoutColors.of(context);
+    final theme = widget.seatTheme;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_cancel());
       },
       child: Scaffold(
-        backgroundColor: colors.canvas,
-        body: SafeArea(
-          child: Column(
-            children: [
-              if (!_isCompleting)
-                Padding(
-                  padding: GameSetupBackButton.rowPadding,
-                  child: SizedBox(
-                    height: GameSetupBackButton.rowHeight,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // 디자인: 696x48 알약 안에 19px 안내 문구. 뒤로가기
-                        // 버튼과 겹치지 않게 좌우를 비워 둡니다.
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 64),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 696),
-                            child: Container(
-                              height: _bannerHeight,
-                              alignment: Alignment.center,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colors.surfaceMuted,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '드래그를 사용하여 플레이어들의 실제 위치와 맞도록 조정해 주세요.',
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: colors.text,
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+        backgroundColor: theme.ground,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final viewport = constraints.biggest;
+            final safe = MediaQuery.paddingOf(context);
+            final boardTop =
+                safe.top +
+                GameSetupBackButton.rowPadding.vertical +
+                GameSetupBackButton.rowHeight +
+                12;
+            final boardRect = Rect.fromLTWH(
+              safe.left,
+              boardTop,
+              viewport.width - safe.horizontal,
+              math.max(0, viewport.height - boardTop - safe.bottom),
+            );
+            return AnimatedBuilder(
+              animation: _transitionAnimation,
+              builder: (context, _) {
+                final t = _entranceController.value;
+                final uiOpacity = _isCompleting
+                    ? 1 - _phase(t, 0, 0.3, Curves.easeIn)
+                    : 1.0;
+                // 배경은 상단 안내줄·안전 여백까지 화면 전체에 그립니다.
+                // 버튼과 좌석은 기존 안전 영역과 위치를 유지합니다.
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned.fromRect(
+                      rect: boardRect,
+                      child: Transform.scale(
+                        scale: _zoomScaleFor(boardRect.size),
+                        child: CustomPaint(
+                          painter: _DotGridPainter(theme.dots),
+                        ),
+                      ),
+                    ),
+                    _buildWorldBackground(viewport, boardRect, t),
+                    SafeArea(
+                      child: Column(
+                        children: [
+                          Opacity(
+                            opacity: uiOpacity,
+                            child: IgnorePointer(
+                              ignoring: _isCompleting,
+                              child: _buildTopBar(theme),
                             ),
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          // 역할 배치 화면과 같은 버튼입니다.
-                          child: GameSetupBackButton(
-                            isBusy: _isCancelling,
-                            onPressed: () => unawaited(_cancel()),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: _buildBoard(boardRect.size, t, uiOpacity),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(MosiSeatTheme theme) {
+    final hint = _selectedSlotIndex != null
+        ? '바꿀 상대 자리를 눌러 주세요.'
+        : '실제로 앉은 자리에 맞게 이름 카드를 옮겨 주세요.';
+    return Padding(
+      padding: GameSetupBackButton.rowPadding,
+      child: SizedBox(
+        height: GameSetupBackButton.rowHeight,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 시안: 최대 696 알약 안에 19px 안내 문구. 좌우 버튼과 겹치지 않게
+            // 비워 둡니다.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 120),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 696),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  height: _bannerHeight,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: theme.pill,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.pillLine, width: 2),
+                  ),
+                  child: Text(
+                    hint,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: MosiFonts.sans(
+                      color: MosiColors.white,
+                      size: 19,
+                      weight: FontWeight.w400,
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final boardSize = Size(
-                      constraints.maxWidth,
-                      constraints.maxHeight,
-                    );
-                    final metrics = _metricsFor(boardSize);
-                    _slotPositions = seatingCardTopLeftPositions(
-                      playerCount: _playerCount,
-                      boardSize: boardSize,
-                      cardSize: metrics.size,
-                    );
-                    final maximumZoomScale = _maxZoomScale(boardSize);
-                    final chairSize = _chairSizeFor(boardSize);
-
-                    return AnimatedBuilder(
-                      animation: _transitionAnimation,
-                      builder: (context, _) {
-                        final t = _entranceController.value;
-                        final zoomT = Curves.easeInCubic.transform(
-                          _zoomController.value,
-                        );
-                        final zoomScale = 1 + (maximumZoomScale - 1) * zoomT;
-                        return Transform.scale(
-                          scale: zoomScale,
-                          child: Stack(
-                            children: [
-                              if (!_isCompleting)
-                                _buildTabletMarker(
-                                  boardSize: boardSize,
-                                  metrics: metrics,
-                                  colors: colors,
-                                ),
-                              for (
-                                var playerIndex = 0;
-                                playerIndex < _playerCount;
-                                playerIndex++
-                              )
-                                _buildPlayer(
-                                  playerIndex: playerIndex,
-                                  boardSize: boardSize,
-                                  metrics: metrics,
-                                  t: t,
-                                ),
-                              _buildTable(boardSize: boardSize, t: t),
-                              for (
-                                var seatIndex = 0;
-                                seatIndex < _playerCount;
-                                seatIndex++
-                              )
-                                _buildChair(
-                                  seatIndex: seatIndex,
-                                  boardSize: boardSize,
-                                  cardSize: metrics.size,
-                                  chairSize: chairSize,
-                                  t: t,
-                                ),
-                              if (!_isCompleting)
-                                Positioned(
-                                  // 디자인: 208x64, radius 12, 오른쪽·아래 28
-                                  right: 28,
-                                  bottom: 28,
-                                  child: SizedBox(
-                                    width: 208,
-                                    height: 64,
-                                    child: FilledButton(
-                                      onPressed: _completeSetting,
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: colors.primary,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        '설정 완료',
-                                        style: TextStyle(
-                                          fontSize: 21,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
               ),
-            ],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MosiButton(
+                label: '대기실',
+                variant: MosiButtonVariant.outline,
+                foreground: MosiColors.white,
+                height: 44,
+                fontSize: 15,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                leading: const Icon(Icons.chevron_left_rounded),
+                loading: _isCancelling,
+                onPressed: () => unawaited(_cancel()),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: MosiButton(
+                label: '섞기',
+                variant: MosiButtonVariant.outline,
+                foreground: MosiColors.white,
+                height: 44,
+                fontSize: 15,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                leading: const Icon(Icons.shuffle_rounded),
+                onPressed: _shuffle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _zoomScaleFor(Size boardSize) {
+    final zoomT = Curves.easeInOutCubic.transform(_zoomController.value);
+    return 1 + (_maxZoomScale(boardSize) - 1) * zoomT;
+  }
+
+  Widget _buildWorldBackground(Size viewport, Rect boardRect, double t) {
+    // 원의 시작점과 줌 축을 실제 테이블 중심에 맞춥니다. 배경 이미지의
+    // cover 기준만 콘텐츠 판에서 화면 전체로 넓혀 위아래 띠를 없앱니다.
+    final center = boardRect.center;
+    final farthestX = math.max(center.dx, viewport.width - center.dx);
+    final farthestY = math.max(center.dy, viewport.height - center.dy);
+    final radius = math.sqrt(farthestX * farthestX + farthestY * farthestY) + 1;
+    final worldT = _phase(t, 0.2, 0.6, const Cubic(0.6, 0, 0.3, 1));
+    return Transform.scale(
+      scale: _zoomScaleFor(boardRect.size),
+      alignment: Alignment(
+        2 * center.dx / viewport.width - 1,
+        2 * center.dy / viewport.height - 1,
+      ),
+      child: ClipPath(
+        clipper: _CircleRevealClipper(center: center, radius: radius * worldT),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.tableColor,
+            image: widget.tableBackgroundImage == null
+                ? null
+                : DecorationImage(
+                    image: widget.tableBackgroundImage!,
+                    fit: BoxFit.cover,
+                  ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBoard(Size boardSize, double t, double uiOpacity) {
+    final theme = widget.seatTheme;
+    final metrics = _metricsFor(boardSize);
+    _slotPositions = seatingCardTopLeftPositions(
+      playerCount: _playerCount,
+      boardSize: boardSize,
+      cardSize: metrics.size,
+    );
+    final chairSize = _chairSizeFor(boardSize);
+    // 배경과 같은 테이블 중심·배율로 확대해 하나의 화면으로 이어집니다.
+    return Transform.scale(
+      scale: _zoomScaleFor(boardSize),
+      child: Stack(
+        children: [
+          _buildFlatTable(boardSize: boardSize, t: t),
+          _buildTable(boardSize: boardSize, t: t),
+          _buildTabletMarker(boardSize: boardSize, metrics: metrics, t: t),
+          for (var seatIndex = 0; seatIndex < _playerCount; seatIndex++)
+            _buildChair(
+              seatIndex: seatIndex,
+              boardSize: boardSize,
+              cardSize: metrics.size,
+              chairSize: chairSize,
+              t: t,
+            ),
+          for (var playerIndex = 0; playerIndex < _playerCount; playerIndex++)
+            _buildPlayer(
+              playerIndex: playerIndex,
+              boardSize: boardSize,
+              metrics: metrics,
+              t: t,
+            ),
+          Positioned(
+            // 시안: 208x64, radius 12, 오른쪽·아래 28
+            right: 28,
+            bottom: 28,
+            child: IgnorePointer(
+              ignoring: _isCompleting,
+              child: Opacity(
+                opacity: uiOpacity,
+                child: SizedBox(
+                  width: 208,
+                  child: MosiButton(
+                    label: '설정 완료',
+                    background: theme.button,
+                    foreground: theme.buttonFg,
+                    shadowColor: theme.deep,
+                    shadowOffset: 5,
+                    height: 64,
+                    fontSize: 21,
+                    radius: 12,
+                    expand: true,
+                    onPressed: _completeSetting,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -634,6 +716,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
     final child = GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTap: _isCompleting ? null : () => _tapPlayer(playerIndex),
       onPanStart: _isCompleting ? null : (_) => _startDragging(playerIndex),
       onPanUpdate: _isCompleting
           ? null
@@ -647,23 +730,28 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       onPanCancel: _isCompleting ? null : () => _finishDragging(playerIndex),
       child: _SeatCard(
         player: player,
+        seatNumber: slotIndex + 1,
         metrics: metrics,
+        theme: widget.seatTheme,
         isDragging: isDragging,
+        isSelected: _selectedSlotIndex == slotIndex,
       ),
     );
 
     if (_isCompleting) {
-      final exitT = _exitInterval.transform(t);
-      final center = Offset.lerp(
-        _slotCenterPixel(slotIndex, boardSize, metrics.size),
-        _offscreenCenterPixel(slotIndex, boardSize, metrics.size),
-        exitT,
-      )!;
+      // 시안: 카드는 제자리에서 작아지며 사라지고, 같은 중심에 의자가 나타납니다.
+      final cardT = _phase(t, _seatDelay(slotIndex) - 0.1, 0.5, Curves.easeIn);
+      final position = _slotPositions[slotIndex];
       return Positioned(
         key: ValueKey(player.uid),
-        left: center.dx - metrics.size.width / 2,
-        top: center.dy - metrics.size.height / 2,
-        child: child,
+        left: position.dx * boardSize.width,
+        top: position.dy * boardSize.height,
+        child: IgnorePointer(
+          child: Opacity(
+            opacity: 1 - cardT,
+            child: Transform.scale(scale: 1 - 0.45 * cardT, child: child),
+          ),
+        ),
       );
     }
 
@@ -673,11 +761,46 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
     return AnimatedPositioned(
       key: ValueKey(player.uid),
-      duration: isDragging ? Duration.zero : const Duration(milliseconds: 350),
-      curve: Curves.easeInOutCubic,
+      duration: isDragging ? Duration.zero : const Duration(milliseconds: 450),
+      curve: const Cubic(0.3, 1.3, 0.5, 1),
       left: position.dx * boardSize.width,
       top: position.dy * boardSize.height,
       child: child,
+    );
+  }
+
+  /// 자리 배치 중 보이는 플랫 테이블입니다. 실제 테이블 그림의 보이는 원과
+  /// 같은 크기·위치로 그려, 전환 때 그림만 바뀐 것처럼 보이게 합니다.
+  Widget _buildFlatTable({required Size boardSize, required double t}) {
+    final theme = widget.seatTheme;
+    final diameter = _tableDiameter(boardSize);
+    final flat = diameter * theme.tableFit;
+    final fade = _isCompleting ? _phase(t, 0.25, 0.6, Curves.easeIn) : 0.0;
+    return Positioned(
+      left: boardSize.width / 2 - flat / 2,
+      top: boardSize.height / 2 + diameter * theme.tableDy - flat / 2,
+      width: flat,
+      height: flat,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: 1 - fade,
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.table,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF1E1E1E), width: 18),
+              boxShadow: [
+                const BoxShadow(color: MosiColors.ink, spreadRadius: 4),
+                BoxShadow(
+                  color: theme.deep,
+                  offset: const Offset(10, 10),
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -685,94 +808,113 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   // 하나도 없어야 합니다. 가로 제약이 loose이기 때문에, 여기서 Positioned가
   // 아닌 위젯(SizedBox.shrink() 등)을 반환하면 Stack 전체 너비가 0으로
   // 줄어들어 자리 배치 블록·버튼이 통째로 사라집니다. 그래서 안 보일 때도
-  // Transform.scale(scale: 0)으로 숨기지, 위젯 자체를 빼지 않습니다.
+  // Opacity로 숨기지, 위젯 자체를 빼지 않습니다.
   Widget _buildTable({required Size boardSize, required double t}) {
-    final tableT = _tableInterval.transform(t);
+    final tableT = _isCompleting
+        ? _phase(t, 0.25, 0.6, const Cubic(0.3, 1.4, 0.5, 1))
+        : 0.0;
     final diameter = _tableDiameter(boardSize);
     return Positioned(
       left: boardSize.width / 2 - diameter / 2,
       top: boardSize.height / 2 - diameter / 2,
       width: diameter,
       height: diameter,
-      child: Transform.scale(
-        scale: tableT.clamp(0.0, 1.5),
-        child: widget.tableImage != null
-            // 테이블 이미지는 이미 원형과 그림자를 포함하므로 그대로 그립니다.
-            ? Image(image: widget.tableImage!, fit: BoxFit.contain)
-            : DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.tableColor,
-                  image: widget.tableBackgroundImage == null
-                      ? null
-                      : DecorationImage(
-                          image: widget.tableBackgroundImage!,
-                          fit: BoxFit.cover,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: tableT.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: 0.94 + 0.06 * tableT,
+            child: widget.tableImage != null
+                // 테이블 이미지는 이미 원형과 그림자를 포함하므로 그대로 그립니다.
+                ? Image(image: widget.tableImage!, fit: BoxFit.contain)
+                : DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.tableColor,
+                      image: widget.tableBackgroundImage == null
+                          ? null
+                          : DecorationImage(
+                              image: widget.tableBackgroundImage!,
+                              fit: BoxFit.cover,
+                            ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x40000000),
+                          blurRadius: 24,
+                          offset: Offset(0, 10),
                         ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x40000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 10),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+          ),
+        ),
       ),
     );
   }
 
   //=======================태블릿 자리 표시==============================
-  /// 디자인의 가운데 안내 상자입니다(300x200, 점선 테두리).
+  /// 시안의 가운데 안내 상자입니다(크림 바탕, 남색 점선).
   ///
   /// 실제 태블릿이 놓이는 자리를 알려 주어, 참가자들이 자기 자리를 태블릿을
-  /// 기준으로 맞출 수 있게 합니다. 설정 완료 연출이 시작되면 테이블이 이
-  /// 자리를 대신하므로 표시를 지웁니다.
+  /// 기준으로 맞출 수 있게 합니다. 설정 완료 연출이 시작되면 사라집니다.
   Widget _buildTabletMarker({
     required Size boardSize,
     required _SeatCardMetrics metrics,
-    required _LayoutColors colors,
+    required double t,
   }) {
-    // 카드와 같은 배율로 줄여, 좁은 태블릿에서도 자리 사이 여백이 유지됩니다.
-    final scale = metrics.size.width / _SeatCardMetrics.large.size.width;
+    // 시안: 앱 기본(300×200)보다 작게 그려 테이블 안에 여유가 보이게 합니다.
+    final scale = metrics.size.width / _SeatCardMetrics.large.size.width * 0.58;
     final size = Size(
       _tabletMarkerSize.width * scale,
       _tabletMarkerSize.height * scale,
     );
+    final fade = _isCompleting ? _phase(t, 0, 0.35, Curves.easeIn) : 0.0;
     return Positioned(
       left: boardSize.width / 2 - size.width / 2,
       top: boardSize.height / 2 - size.height / 2,
       width: size.width,
       height: size.height,
       child: IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.surfaceMuted,
-            borderRadius: BorderRadius.circular(20 * scale),
-          ),
-          child: _DashedRoundedRect(
-            color: colors.border,
-            radius: 20 * scale,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '태블릿',
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontSize: 21 * scale,
-                    fontWeight: FontWeight.w700,
+        child: Opacity(
+          opacity: 1 - fade,
+          child: Transform.scale(
+            scale: 1 - 0.1 * fade,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: MosiColors.cream,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _DashedRoundedRect(
+                color: MosiColors.navy,
+                radius: 12,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '태블릿',
+                          style: MosiFonts.sans(
+                            color: MosiColors.muted,
+                            size: 15,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '테이블 중앙',
+                          style: MosiFonts.sans(
+                            color: MosiColors.muted,
+                            size: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                SizedBox(height: 8 * scale),
-                Text(
-                  '테이블 중앙',
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontSize: 16 * scale,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -787,35 +929,11 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     required double chairSize,
     required double t,
   }) {
-    final chairT = chairEntranceProgress(
-      timeline: t,
-      seatIndex: seatIndex,
-      seatCount: _playerCount,
-    );
     final seatCenter = _slotCenterPixel(seatIndex, boardSize, cardSize);
-    final center = Offset.lerp(
-      _offscreenCenterPixel(seatIndex, boardSize, cardSize),
-      seatCenter,
-      chairT,
-    )!;
-    final chairImage = widget.chairImage;
-    if (chairImage == null) {
-      return Positioned(
-        left: center.dx - chairSize / 2,
-        top: center.dy - chairSize / 2,
-        width: chairSize,
-        height: chairSize,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: widget.tableColor, width: 3),
-          ),
-          child: Icon(Icons.event_seat, color: widget.tableColor, size: 40),
-        ),
-      );
-    }
-
+    final delay = _seatDelay(seatIndex);
+    final chairT = _isCompleting
+        ? _phase(t, delay, 0.55, const Cubic(0.3, 1.4, 0.5, 1))
+        : 0.0;
     //=======================의자 방향==============================
     // 의자 이미지는 등받이가 위, 앉는 방향이 아래(+Y, 각도 pi/2)입니다. 자리에서
     // 테이블 중심을 바라보는 각도로 돌려, 어느 자리든 책상을 향해 앉습니다.
@@ -823,18 +941,86 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     var towardTable = boardCenter - seatCenter;
     if (towardTable.distance < 1) towardTable = const Offset(0, 1);
     final rotation = math.atan2(towardTable.dy, towardTable.dx) - math.pi / 2;
+    final chairImage = widget.chairImage;
 
     return Positioned(
-      left: center.dx - chairSize / 2,
-      top: center.dy - chairSize / 2,
+      left: seatCenter.dx - chairSize / 2,
+      top: seatCenter.dy - chairSize / 2,
       width: chairSize,
       height: chairSize,
-      child: Transform.rotate(
-        angle: rotation,
-        child: Image(image: chairImage, fit: BoxFit.contain),
+      child: IgnorePointer(
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Opacity(
+              opacity: chairT.clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: 0.55 + 0.45 * chairT,
+                child: chairImage == null
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: widget.tableColor,
+                            width: 3,
+                          ),
+                        ),
+                        child: SizedBox.expand(
+                          child: Icon(
+                            Icons.event_seat,
+                            color: widget.tableColor,
+                            size: 40,
+                          ),
+                        ),
+                      )
+                    : Transform.rotate(
+                        angle: rotation,
+                        child: Image(image: chairImage, fit: BoxFit.contain),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _DotGridPainter extends CustomPainter {
+  const _DotGridPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    for (var y = 17.0; y < size.height; y += 34) {
+      for (var x = 17.0; x < size.width; x += 34) {
+        canvas.drawCircle(Offset(x, y), 2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DotGridPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _CircleRevealClipper extends CustomClipper<Path> {
+  const _CircleRevealClipper({required this.center, required this.radius});
+
+  final Offset center;
+  final double radius;
+
+  @override
+  Path getClip(Size size) =>
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+
+  @override
+  bool shouldReclip(covariant _CircleRevealClipper oldClipper) =>
+      oldClipper.center != center || oldClipper.radius != radius;
 }
 
 class _SeatCardMetrics {
@@ -897,71 +1083,122 @@ class _SeatCardMetrics {
 }
 
 //=======================플레이어 카드==============================
-/// 자리 하나를 나타내는 카드입니다.
+/// 자리 하나를 나타내는 카드입니다(시안 SeatSync).
 ///
-/// 디자인(Figma tablet-screen-8-seating-*): 흰 배경 + 옅은 테두리, 왼쪽에
-/// 캐릭터, 오른쪽에 닉네임. 드래그 중에는 1.06배로 커지고 테두리가 보라색으로,
-/// 배경이 연보라로 바뀌어 "지금 옮기는 카드"가 한눈에 보입니다.
-class _SeatCard extends StatelessWidget {
+/// 흰 바탕 + 굵은 검은 테두리 + 오프셋 그림자, 왼쪽에 포커페이스 얼굴, 오른쪽에
+/// 닉네임. 눌러 고른 카드는 강조색으로 칠하고 살짝 흔들립니다.
+class _SeatCard extends StatefulWidget {
   const _SeatCard({
     required this.player,
+    required this.seatNumber,
     required this.metrics,
+    required this.theme,
     required this.isDragging,
+    required this.isSelected,
   });
 
   final PlayerLayoutPlayer player;
+  final int seatNumber;
   final _SeatCardMetrics metrics;
+  final MosiSeatTheme theme;
   final bool isDragging;
+  final bool isSelected;
+
+  @override
+  State<_SeatCard> createState() => _SeatCardState();
+}
+
+class _SeatCardState extends State<_SeatCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _wiggle = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isSelected) _wiggle.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SeatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected && !_wiggle.isAnimating) {
+      _wiggle.repeat();
+    } else if (!widget.isSelected && _wiggle.isAnimating) {
+      _wiggle
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _wiggle.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colors = _LayoutColors.of(context);
-    return MouseRegion(
-      cursor: SystemMouseCursors.grab,
-      child: AnimatedScale(
-        scale: isDragging ? 1.06 : 1,
-        duration: const Duration(milliseconds: 120),
-        child: Container(
-          width: metrics.size.width,
-          height: metrics.size.height,
-          padding: EdgeInsets.symmetric(horizontal: metrics.padding),
-          decoration: BoxDecoration(
-            color: isDragging ? colors.primarySoft : colors.surface,
-            borderRadius: BorderRadius.circular(metrics.radius),
-            border: Border.all(
-              color: isDragging ? colors.primary : colors.border,
-              width: isDragging ? 3 : 1,
-            ),
+    final metrics = widget.metrics;
+    final theme = widget.theme;
+    final highlighted = widget.isSelected || widget.isDragging;
+    return Semantics(
+      button: true,
+      selected: widget.isSelected,
+      label: '${widget.seatNumber}번 자리 ${widget.player.nickname}',
+      excludeSemantics: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: AnimatedBuilder(
+          animation: _wiggle,
+          builder: (context, child) => Transform.rotate(
+            angle: widget.isSelected
+                ? 2.5 * math.pi / 180 * math.sin(_wiggle.value * 2 * math.pi)
+                : 0,
+            child: child,
           ),
-          child: Row(
-            children: [
-              Container(
-                width: metrics.avatar,
-                height: metrics.avatar,
-                padding: EdgeInsets.all(metrics.avatar * 0.08),
-                decoration: BoxDecoration(
-                  color: colors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(metrics.avatarRadius),
-                ),
-                child: Image.asset(
-                  roomCharacterAssetPath(player.characterId),
-                  fit: BoxFit.contain,
-                ),
+          child: AnimatedScale(
+            scale: widget.isDragging ? 1.06 : 1,
+            duration: const Duration(milliseconds: 120),
+            child: Container(
+              width: metrics.size.width,
+              height: metrics.size.height,
+              padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+              decoration: BoxDecoration(
+                color: highlighted ? theme.selected : MosiColors.white,
+                borderRadius: BorderRadius.circular(metrics.radius),
+                border: Border.all(color: MosiColors.ink, width: 3),
+                boxShadow: [
+                  if (highlighted)
+                    BoxShadow(color: theme.ring, spreadRadius: 5),
+                  BoxShadow(color: theme.deep, offset: const Offset(6, 6)),
+                ],
               ),
-              SizedBox(width: metrics.gap),
-              Expanded(
-                child: Text(
-                  player.nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.text,
-                    fontSize: metrics.nicknameSize,
-                    fontWeight: FontWeight.w800,
+              child: Row(
+                children: [
+                  MosiFace(
+                    characterId: widget.player.characterId,
+                    size: metrics.avatar,
                   ),
-                ),
+                  SizedBox(width: metrics.gap),
+                  Expanded(
+                    child: Text(
+                      widget.player.nickname,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: MosiFonts.sans(
+                        color: MosiColors.navy,
+                        size: metrics.nicknameSize,
+                        weight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

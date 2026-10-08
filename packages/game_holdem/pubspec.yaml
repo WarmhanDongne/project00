@@ -1,0 +1,28 @@
+name: game_holdem
+description: "Mosigame의 텍사스 홀덤 게임 패키지입니다."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  game_kit: any
+  firebase_auth: ^6.6.1
+  firebase_database: ^12.5.0
+  flutter_riverpod: ^3.4.2
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - assets/images/background/
+    - assets/images/layout/
+    - assets/images/cards/

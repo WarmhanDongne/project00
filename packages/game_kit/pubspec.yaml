@@ -37,7 +37,26 @@ flutter:
     - assets/images/patch/
     - assets/images/others/
     - assets/images/character/
+    - assets/images/covers/
     - assets/images/widgets/roulette/
+  fonts:
+    - family: IBMPlexSansKR
+      fonts:
+        - asset: assets/fonts/IBMPlexSansKR-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansKR-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansKR-Bold.ttf
+          weight: 700
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700
+    - family: PlayfairDisplay
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-Black.ttf
+          weight: 900
 flutter_gen:
   output: lib/gen/
   assets:

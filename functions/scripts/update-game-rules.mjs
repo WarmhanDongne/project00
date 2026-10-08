@@ -5,6 +5,21 @@ import {getFirestore} from "firebase-admin/firestore";
 import {pathToFileURL} from "node:url";
 
 export const gameRules = Object.freeze({
+  holdem: `🃏 게임 기본 규칙
+
+[게임 목표]
+- 홀 카드 2장과 커뮤니티 카드 5장 중 가장 강한 5장 조합을 만듭니다.
+- 마지막까지 칩을 보유한 한 명이 토너먼트에서 승리합니다.
+
+[게임 진행]
+- 프리플롭, 플롭, 턴, 리버마다 폴드·체크·콜·베트·레이즈·올인을 선택합니다.
+- 행동 제한은 20초이며 체크가 가능하면 자동 체크, 아니면 자동 폴드됩니다.
+- 둘 이상 남으면 쇼다운에서 족보와 키커를 비교하고, 한 명만 남으면 즉시 팟을 받습니다.
+
+[블라인드와 탈락]
+- 모든 플레이어는 1,000칩으로 시작합니다.
+- 블라인드는 10/20에서 시작해 5핸드마다 두 배로 오르며 최대 160/320입니다.
+- 칩이 0이면 탈락하며 리바이는 없습니다.`,
   mafia: `🌙 게임 기본 규칙
 
 [게임 목표]
@@ -92,6 +107,7 @@ export async function updateGameRules({dryRun = false} = {}) {
         accessType: "free",
         // 목록의 인원 범위도 새 6인 게임에 맞춥니다. 실제 시작은 4·6인만 허용합니다.
         ...(gameId === "final_call" ? {minPlayers: 4, maxPlayers: 6} : {}),
+        ...(gameId === "holdem" ? {minPlayers: 2, maxPlayers: 8} : {}),
       },
       {merge: true},
     );

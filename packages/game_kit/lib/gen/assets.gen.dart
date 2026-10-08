@@ -69,93 +69,108 @@ class $AssetsSoundsGen {
 class $AssetsImagesCharacterGen {
   const $AssetsImagesCharacterGen();
 
-  /// File path: assets/images/character/bear.webp
-  AssetGenImage get bear =>
-      const AssetGenImage('assets/images/character/bear.webp');
+  /// File path: assets/images/character/astronaut.webp
+  AssetGenImage get astronaut =>
+      const AssetGenImage('assets/images/character/astronaut.webp');
 
-  /// File path: assets/images/character/bee.webp
-  AssetGenImage get bee =>
-      const AssetGenImage('assets/images/character/bee.webp');
+  /// File path: assets/images/character/bandage.webp
+  AssetGenImage get bandage =>
+      const AssetGenImage('assets/images/character/bandage.webp');
 
-  /// File path: assets/images/character/cat.webp
-  AssetGenImage get cat =>
-      const AssetGenImage('assets/images/character/cat.webp');
+  /// File path: assets/images/character/bucket.webp
+  AssetGenImage get bucket =>
+      const AssetGenImage('assets/images/character/bucket.webp');
 
-  /// File path: assets/images/character/crab.webp
-  AssetGenImage get crab =>
-      const AssetGenImage('assets/images/character/crab.webp');
+  /// File path: assets/images/character/burger.webp
+  AssetGenImage get burger =>
+      const AssetGenImage('assets/images/character/burger.webp');
 
-  /// File path: assets/images/character/deer.webp
-  AssetGenImage get deer =>
-      const AssetGenImage('assets/images/character/deer.webp');
+  /// File path: assets/images/character/capmask.webp
+  AssetGenImage get capmask =>
+      const AssetGenImage('assets/images/character/capmask.webp');
 
-  /// File path: assets/images/character/elephant.webp
-  AssetGenImage get elephant =>
-      const AssetGenImage('assets/images/character/elephant.webp');
+  /// File path: assets/images/character/catcher.webp
+  AssetGenImage get catcher =>
+      const AssetGenImage('assets/images/character/catcher.webp');
 
-  /// File path: assets/images/character/frog.webp
-  AssetGenImage get frog =>
-      const AssetGenImage('assets/images/character/frog.webp');
+  /// File path: assets/images/character/cone.webp
+  AssetGenImage get cone =>
+      const AssetGenImage('assets/images/character/cone.webp');
 
-  /// File path: assets/images/character/giraffe.webp
-  AssetGenImage get giraffe =>
-      const AssetGenImage('assets/images/character/giraffe.webp');
+  /// File path: assets/images/character/cupnoodle.webp
+  AssetGenImage get cupnoodle =>
+      const AssetGenImage('assets/images/character/cupnoodle.webp');
 
-  /// File path: assets/images/character/hedgehog.webp
-  AssetGenImage get hedgehog =>
-      const AssetGenImage('assets/images/character/hedgehog.webp');
+  /// File path: assets/images/character/disguise.webp
+  AssetGenImage get disguise =>
+      const AssetGenImage('assets/images/character/disguise.webp');
 
-  /// File path: assets/images/character/kindbear.webp
-  AssetGenImage get kindbear =>
-      const AssetGenImage('assets/images/character/kindbear.webp');
+  /// File path: assets/images/character/goggles.webp
+  AssetGenImage get goggles =>
+      const AssetGenImage('assets/images/character/goggles.webp');
 
-  /// File path: assets/images/character/octopus.webp
-  AssetGenImage get octopus =>
-      const AssetGenImage('assets/images/character/octopus.webp');
+  /// File path: assets/images/character/hood.webp
+  AssetGenImage get hood =>
+      const AssetGenImage('assets/images/character/hood.webp');
 
-  /// File path: assets/images/character/owl.webp
-  AssetGenImage get owl =>
-      const AssetGenImage('assets/images/character/owl.webp');
+  /// File path: assets/images/character/lampshade.webp
+  AssetGenImage get lampshade =>
+      const AssetGenImage('assets/images/character/lampshade.webp');
 
-  /// File path: assets/images/character/penguin.webp
-  AssetGenImage get penguin =>
-      const AssetGenImage('assets/images/character/penguin.webp');
+  /// File path: assets/images/character/milk.webp
+  AssetGenImage get milk =>
+      const AssetGenImage('assets/images/character/milk.webp');
 
-  /// File path: assets/images/character/rabbit.webp
-  AssetGenImage get rabbit =>
-      const AssetGenImage('assets/images/character/rabbit.webp');
+  /// File path: assets/images/character/parcel.webp
+  AssetGenImage get parcel =>
+      const AssetGenImage('assets/images/character/parcel.webp');
 
-  /// File path: assets/images/character/shark.webp
-  AssetGenImage get shark =>
-      const AssetGenImage('assets/images/character/shark.webp');
+  /// File path: assets/images/character/popcorn.webp
+  AssetGenImage get popcorn =>
+      const AssetGenImage('assets/images/character/popcorn.webp');
 
-  /// File path: assets/images/character/snake.webp
-  AssetGenImage get snake =>
-      const AssetGenImage('assets/images/character/snake.webp');
+  /// File path: assets/images/character/pot.webp
+  AssetGenImage get pot =>
+      const AssetGenImage('assets/images/character/pot.webp');
 
-  /// File path: assets/images/character/whale.webp
-  AssetGenImage get whale =>
-      const AssetGenImage('assets/images/character/whale.webp');
+  /// File path: assets/images/character/scarf.webp
+  AssetGenImage get scarf =>
+      const AssetGenImage('assets/images/character/scarf.webp');
+
+  /// File path: assets/images/character/tissue.webp
+  AssetGenImage get tissue =>
+      const AssetGenImage('assets/images/character/tissue.webp');
+
+  /// File path: assets/images/character/watermelon.webp
+  AssetGenImage get watermelon =>
+      const AssetGenImage('assets/images/character/watermelon.webp');
+
+  /// File path: assets/images/character/welder.webp
+  AssetGenImage get welder =>
+      const AssetGenImage('assets/images/character/welder.webp');
 
   /// List of all assets
   List<AssetGenImage> get values => [
-    bear,
-    bee,
-    cat,
-    crab,
-    deer,
-    elephant,
-    frog,
-    giraffe,
-    hedgehog,
-    kindbear,
-    octopus,
-    owl,
-    penguin,
-    rabbit,
-    shark,
-    snake,
-    whale,
+    astronaut,
+    bandage,
+    bucket,
+    burger,
+    capmask,
+    catcher,
+    cone,
+    cupnoodle,
+    disguise,
+    goggles,
+    hood,
+    lampshade,
+    milk,
+    parcel,
+    popcorn,
+    pot,
+    scarf,
+    tissue,
+    watermelon,
+    welder,
   ];
 }
 

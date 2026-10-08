@@ -9,7 +9,7 @@ import {
 test("tablet preview descriptions cover the catalog and fit the target length", () => {
   assert.deepEqual(
     Object.keys(gamePreviewDescriptions).sort(),
-    ["final_call", "liars_poker", "mafia"],
+    ["final_call", "holdem", "liars_poker", "mafia"],
   );
   for (const description of Object.values(gamePreviewDescriptions)) {
     assert.equal(description, description.trim());

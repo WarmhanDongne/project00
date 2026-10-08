@@ -7,9 +7,11 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/update/shorebird_patch_screen.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+
 // ============================================================
 
 //=======================Shorebird 패치 배선==============================
@@ -55,7 +57,7 @@ enum _PatchPhase {
 
 class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
     with WidgetsBindingObserver {
-  late ShorebirdUpdater _updater;
+  ShorebirdUpdater? _updater;
   _PatchPhase _phase = _PatchPhase.hidden;
 
   /// 확인·내려받기가 지금 돌고 있는지입니다(겹쳐 부르지 않게 합니다).
@@ -69,9 +71,9 @@ class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
   @override
   void initState() {
     super.initState();
-    _updater = widget.updater ?? ShorebirdUpdater();
+    _updater = _resolveUpdater();
     _syncLifecycleObserver();
-    if (_updater.isAvailable) unawaited(_checkAndDownload());
+    if (_updater?.isAvailable ?? false) unawaited(_checkAndDownload());
   }
 
   @override
@@ -82,16 +84,25 @@ class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
     // 이전 업데이터의 늦은 응답이 새 업데이터 상태를 덮어쓰지 못하게
     // 작업 세대를 바꾸고 초기 상태에서 다시 확인합니다.
     _updaterGeneration += 1;
-    _updater = widget.updater ?? ShorebirdUpdater();
+    _updater = _resolveUpdater();
     _phase = _PatchPhase.hidden;
     _busy = false;
     _patchReady = false;
     _syncLifecycleObserver();
-    if (_updater.isAvailable) unawaited(_checkAndDownload());
+    if (_updater?.isAvailable ?? false) unawaited(_checkAndDownload());
+  }
+
+  /// Shorebird는 release 엔진에서만 동작합니다. 개발·프로필 빌드에서 생성자까지
+  /// 호출하면 패키지가 정상적인 미지원 상태를 큰 경고로 출력하므로 생성을 생략합니다.
+  /// 시험에서 주입한 업데이터는 빌드 모드와 관계없이 그대로 사용합니다.
+  ShorebirdUpdater? _resolveUpdater() {
+    if (widget.updater case final updater?) return updater;
+    if (!kReleaseMode) return null;
+    return ShorebirdUpdater();
   }
 
   void _syncLifecycleObserver() {
-    final shouldObserve = _updater.isAvailable;
+    final shouldObserve = _updater?.isAvailable ?? false;
     if (shouldObserve == _observingLifecycle) return;
     _observingLifecycle = shouldObserve;
     if (shouldObserve) {
@@ -123,8 +134,8 @@ class _ShorebirdPatchGateState extends State<ShorebirdPatchGate>
   bool get _isTopMost => ModalRoute.of(context)?.isCurrent ?? true;
 
   Future<void> _checkAndDownload() async {
-    if (_busy || _patchReady || !_updater.isAvailable) return;
     final updater = _updater;
+    if (_busy || _patchReady || updater == null || !updater.isAvailable) return;
     final generation = _updaterGeneration;
     _busy = true;
     try {

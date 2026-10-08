@@ -12,6 +12,12 @@ abstract final class FontFamily {
   /// Font family: BebasNeue
   static const String bebasNeue = 'BebasNeue';
 
+  /// Font family: BodoniModa
+  static const String bodoniModa = 'BodoniModa';
+
+  /// Font family: Caprasimo
+  static const String caprasimo = 'Caprasimo';
+
   /// Font family: DigitalTimer
   static const String digitalTimer = 'DigitalTimer';
 }
