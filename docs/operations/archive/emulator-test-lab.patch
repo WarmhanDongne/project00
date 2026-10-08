@@ -1,0 +1,2777 @@
+diff --git a/android/app/build.gradle.kts b/android/app/build.gradle.kts
+index 51321f4..4692658 100644
+--- a/android/app/build.gradle.kts
++++ b/android/app/build.gradle.kts
+@@ -1,5 +1,6 @@
+ import java.util.Properties
+ import java.io.FileInputStream
++import java.util.Base64
+ 
+ plugins {
+     id("com.android.application")
+@@ -23,11 +24,31 @@ val keystoreProperties = Properties().apply {
+ }
+ val hasReleaseKeystore = keystorePropertiesFile.exists()
+ 
++// A lab build must never let the native provider initialize the real project.
++val labFlags = (project.findProperty("dart-defines") as? String).orEmpty()
++    .split(',').filter { it.isNotEmpty() }
++    .map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
++    .filter { it.startsWith("MOSIGAME_EMULATOR_LAB=") }
++    .map { it.substringAfter('=') }
++require(labFlags.size <= 1 && labFlags.all { it == "true" || it == "false" }) {
++    "Invalid MOSIGAME_EMULATOR_LAB definition"
++}
++val emulatorLabEnabled = labFlags.singleOrNull() == "true"
++if (emulatorLabEnabled) {
++    require(gradle.startParameter.taskNames.all { it.contains("Debug", ignoreCase = true) }) {
++        "MOSIGAME_EMULATOR_LAB requires a debug Android build"
++    }
++}
++
+ android {
+     namespace = "com.warmhandongne.msg"
+     compileSdk = flutter.compileSdkVersion
+     ndkVersion = flutter.ndkVersion
+ 
++    if (emulatorLabEnabled) {
++        sourceSets.getByName("debug").manifest.srcFile("src/emulatorLab/AndroidManifest.xml")
++    }
++
+     compileOptions {
+         sourceCompatibility = JavaVersion.VERSION_17
+         targetCompatibility = JavaVersion.VERSION_17
+diff --git a/functions/src/game-interruption/controller-presence.ts b/functions/src/game-interruption/controller-presence.ts
+index 8d0935f..9368cbd 100644
+--- a/functions/src/game-interruption/controller-presence.ts
++++ b/functions/src/game-interruption/controller-presence.ts
+@@ -3,12 +3,13 @@
+ import {getDatabase} from "firebase-admin/database";
+ import {onValueWritten} from "firebase-functions/v2/database";
+ 
++import {selectDatabaseTriggerRegion} from "../emulator-test-config.js";
+ import {InterruptibleGameState} from "./types.js";
+ import {runPrimedTransaction} from "../room/room-transaction.js";
+ 
+ // Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수
+ // 있습니다. 자세한 배경은 functions.ts 상단 주석을 보세요.
+-const DATABASE_TRIGGER_REGION = "asia-southeast1";
++const DATABASE_TRIGGER_REGION = selectDatabaseTriggerRegion();
+ 
+ export type ControllerPauseOutcome = "paused" | "resumed" | "ignored";
+ 
+diff --git a/functions/src/game-interruption/functions.ts b/functions/src/game-interruption/functions.ts
+index 9497f2f..2abbbb0 100644
+--- a/functions/src/game-interruption/functions.ts
++++ b/functions/src/game-interruption/functions.ts
+@@ -4,6 +4,7 @@ import {getDatabase} from "firebase-admin/database";
+ import {onValueWritten} from "firebase-functions/v2/database";
+ import {HttpsError, onCall} from "firebase-functions/v2/https";
+ 
++import {selectDatabaseTriggerRegion} from "../emulator-test-config.js";
+ import {excludeFinalCallPlayer} from "../final-call/exclude-player.js";
+ import {FinalCallGameState} from "../final-call/types.js";
+ import {excludeLiarsPokerPlayer} from "../liars-poker/exclude-player.js";
+@@ -28,7 +29,7 @@ const REGION = "asia-northeast3";
+ // asia-northeast3로 배포하면 트리거 생성 단계에서 다음 오류로 실패합니다.
+ //   cannot create a trigger in region asia-northeast3 (not yet revealed)
+ // callable 함수는 HTTPS라 이 제약이 없으므로 REGION을 그대로 씁니다.
+-const DATABASE_TRIGGER_REGION = "asia-southeast1";
++const DATABASE_TRIGGER_REGION = selectDatabaseTriggerRegion();
+ const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
+ 
+ type Data = {
+diff --git a/functions/src/room/realtime-room-lifecycle.ts b/functions/src/room/realtime-room-lifecycle.ts
+index cefeb37..a9aaa2a 100644
+--- a/functions/src/room/realtime-room-lifecycle.ts
++++ b/functions/src/room/realtime-room-lifecycle.ts
+@@ -7,6 +7,7 @@ import {onValueDeleted, onValueWritten} from "firebase-functions/v2/database";
+ import {HttpsError, onCall} from "firebase-functions/v2/https";
+ import {onSchedule} from "firebase-functions/v2/scheduler";
+ 
++import {selectDatabaseTriggerRegion} from "../emulator-test-config.js";
+ import {
+   assertControllerSession,
+   ControllerSessionRoom,
+@@ -18,7 +19,7 @@ import {
+ import {runPrimedTransaction} from "./room-transaction.js";
+ 
+ const REGION = "asia-northeast3";
+-const DATABASE_REGION = "asia-southeast1";
++const DATABASE_REGION = selectDatabaseTriggerRegion();
+ const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
+ const CONTROLLER_RECONNECT_GRACE_MS = 3 * 60 * 1000;
+ 
+diff --git a/lib/app.dart b/lib/app.dart
+index 187ee7f..f866598 100644
+--- a/lib/app.dart
++++ b/lib/app.dart
+@@ -10,6 +10,7 @@ import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
+ import 'package:game_kit/core/layout/device_layout.dart';
+ import 'package:game_kit/core/network/app_network_guard.dart';
+ import 'package:game_kit/core/update/shorebird_patch_gate.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
+ import 'package:project00/games/game_registry.dart';
+ import 'package:project00/platform/auth/widgets/auth_gate.dart';
+ import 'package:project00/platform/theme/platform_theme.dart';
+@@ -42,6 +43,12 @@ class App extends StatelessWidget {
+     final currentDesignSize = isTablet
+         ? const Size(834, 1194)
+         : const Size(390, 844);
++    final authGate = AuthGate(
++      gameCatalog: const GameRegistry(),
++      userChanges: userChanges,
++      emailLinks: emailLinks,
++      initialEmailLink: initialEmailLink,
++    );
+ 
+     //===============================[ 앱 리턴 ]=================================
+     return ScreenUtilInit(
+@@ -61,15 +68,9 @@ class App extends StatelessWidget {
+         ),
+         // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
+         // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
+-        home: ShorebirdPatchGate(
+-          // [진입 화면 판단] 유저의 인증, 가입 상태에 따라 진입 화면 결정
+-          child: AuthGate(
+-            gameCatalog: const GameRegistry(),
+-            userChanges: userChanges,
+-            emailLinks: emailLinks,
+-            initialEmailLink: initialEmailLink,
+-          ),
+-        ),
++        home: EmulatorLabConfig.enabled
++            ? authGate
++            : ShorebirdPatchGate(child: authGate),
+       ),
+     );
+   }
+diff --git a/lib/main.dart b/lib/main.dart
+index 557aec7..0398a62 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -11,6 +11,8 @@ import 'package:firebase_core/firebase_core.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
+ import 'package:project00/app.dart';
++import 'package:project00/firebase/emulator_lab.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
+ import 'package:project00/game_assets/game_asset_bootstrap.dart';
+ import 'package:project00/games/game_registry.dart';
+ import 'package:game_kit/core/diagnostics/crash_reporting.dart';
+@@ -36,9 +38,20 @@ void main() async {
+   // 2. Firebase 네이티브 SDK 인스턴스 초기화
+   // 빌드 실패 시 오류 전송
+   try {
++    EmulatorLabConfig.validate(
++      requestedFlag: EmulatorLabConfig.flag,
++      debug: kDebugMode,
++      android: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
++    );
+     await Firebase.initializeApp(
+-      options: DefaultFirebaseOptions.currentPlatform,
++      options: EmulatorLabConfig.enabled
++          ? EmulatorLabConfig.options
++          : DefaultFirebaseOptions.currentPlatform,
+     );
++    if (EmulatorLabConfig.enabled) {
++      await connectEmulatorLab();
++      debugPrint('Emulator lab ready: ${EmulatorLabConfig.projectId}');
++    }
+   } catch (error, stack) {
+     debugPrint('Firebase 초기화 실패: $error\n$stack');
+     runApp(const _StartupFailureApp());
+@@ -50,12 +63,15 @@ void main() async {
+   // 개발 중에는 화면(오른쪽 아래 빨간 표시)에서 보고, 릴리스에서는
+   // Crashlytics로 올라갑니다.
+   installDevErrorWidgetBuilder();
+-  await CrashReporting.initialize();
++  if (!EmulatorLabConfig.enabled) await CrashReporting.initialize();
+   // 다운로드 게임은 앱 지원 디렉터리의 영구 캐시를 사용합니다. 여기서는
+   // 저장소만 연결하며 네트워크 요청은 하지 않습니다. 실제 다운로드는 향후
+   // 소유 게임 다운로드 버튼이 명시적으로 시작합니다.
+   try {
+-    await initializeGameAssets(catalog: const GameRegistry());
++    await initializeGameAssets(
++      catalog: const GameRegistry(),
++      patchNumber: EmulatorLabConfig.enabled ? () async => 0 : null,
++    );
+   } catch (error, stack) {
+     // 번들 게임은 캐시 없이도 동작하므로 시작을 막지 않습니다.
+     CrashReporting.recordError(error, stack, reason: '게임 에셋 저장소 초기화');
+@@ -63,17 +79,23 @@ void main() async {
+   // App Check는 먼저 토큰을 관찰 모드로 발급합니다. Firebase 콘솔에서 정상
+   // 요청 비율을 확인한 뒤 Functions/RTDB/Storage enforcement를 단계적으로
+   // 켜야 구버전 앱과 설정 누락 기기를 한꺼번에 차단하지 않습니다.
+-  try {
+-    await FirebaseAppCheck.instance.activate(
+-      providerAndroid: kDebugMode
+-          ? const AndroidDebugProvider()
+-          : const AndroidPlayIntegrityProvider(),
+-      providerApple: kDebugMode
+-          ? const AppleDebugProvider()
+-          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+-    );
+-  } catch (error, stack) {
+-    CrashReporting.recordError(error, stack, reason: 'Firebase App Check 초기화');
++  if (!EmulatorLabConfig.enabled) {
++    try {
++      await FirebaseAppCheck.instance.activate(
++        providerAndroid: kDebugMode
++            ? const AndroidDebugProvider()
++            : const AndroidPlayIntegrityProvider(),
++        providerApple: kDebugMode
++            ? const AppleDebugProvider()
++            : const AppleAppAttestWithDeviceCheckFallbackProvider(),
++      );
++    } catch (error, stack) {
++      CrashReporting.recordError(
++        error,
++        stack,
++        reason: 'Firebase App Check 초기화',
++      );
++    }
+   }
+   Uri? initialEmailLink;
+   try {
+@@ -89,9 +111,11 @@ void main() async {
+ 
+   //========================[ 구글 SDK 초기화 ]==================================
+   // 3. Google Sign-In SDK 초기화 및 Client ID 주입 (최신 API 필수 전제 조건)
+-  await GoogleSignIn.instance.initialize(
+-    clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
+-  );
++  if (!EmulatorLabConfig.enabled) {
++    await GoogleSignIn.instance.initialize(
++      clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
++    );
++  }
+ 
+   //===============[ 앱 실행 그리고 소리 관리 객체 생성 및 공유 ]======================
+   final soundProvider = SoundProvider();
+diff --git a/lib/platform/auth/providers/auth_provider.dart b/lib/platform/auth/providers/auth_provider.dart
+index ed773ea..be4eec8 100644
+--- a/lib/platform/auth/providers/auth_provider.dart
++++ b/lib/platform/auth/providers/auth_provider.dart
+@@ -1,6 +1,7 @@
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:flutter/foundation.dart';
+ import 'package:google_sign_in/google_sign_in.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
+ import 'package:project00/platform/auth/services/auth_service.dart';
+ import 'package:project00/platform/auth/services/apple_auth_utils.dart';
+ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+@@ -170,6 +171,7 @@ class AuthProvider extends ChangeNotifier {
+ 
+   /// Google 로그인
+   Future<UserCredential?> signInWithGoogle() async {
++    if (_rejectExternalLabAuth()) return null;
+     if (_isLoading) return null;
+ 
+     _setLoading(true);
+@@ -223,6 +225,7 @@ class AuthProvider extends ChangeNotifier {
+ 
+   /// Apple 로그인
+   Future<UserCredential?> signInWithApple() async {
++    if (_rejectExternalLabAuth()) return null;
+     if (_isLoading) return null;
+ 
+     _setLoading(true);
+@@ -340,9 +343,16 @@ class AuthProvider extends ChangeNotifier {
+ 
+   /// 로그아웃
+   Future<void> signOut() async {
+-    await GoogleSignIn.instance.signOut();
++    if (!EmulatorLabConfig.enabled) await GoogleSignIn.instance.signOut();
+     await FirebaseAuth.instance.signOut();
+ 
+     notifyListeners();
+   }
++
++  bool _rejectExternalLabAuth() {
++    if (!EmulatorLabConfig.enabled) return false;
++    _errorMessage = '로컬 테스트에서는 준비된 이메일 계정을 사용해 주세요.';
++    notifyListeners();
++    return true;
++  }
+ }
+diff --git a/lib/platform/auth/services/email_link_config.dart b/lib/platform/auth/services/email_link_config.dart
+index 7f002d8..52a9500 100644
+--- a/lib/platform/auth/services/email_link_config.dart
++++ b/lib/platform/auth/services/email_link_config.dart
+@@ -1,4 +1,5 @@
+ import 'package:firebase_auth/firebase_auth.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
+ 
+ class EmailLinkConfig {
+   const EmailLinkConfig({
+@@ -9,6 +10,13 @@ class EmailLinkConfig {
+   });
+ 
+   factory EmailLinkConfig.fromEnvironment() {
++    if (EmulatorLabConfig.enabled) {
++      return const EmailLinkConfig(
++        continueUrl: 'http://127.0.0.1/auth/email-link',
++        androidPackageName: 'com.warmhandongne.msg',
++        iOSBundleId: 'com.warmhandongne.msg',
++      );
++    }
+     const linkDomain = String.fromEnvironment('EMAIL_LINK_DOMAIN');
+     return const EmailLinkConfig(
+       continueUrl: String.fromEnvironment(
+diff --git a/android/app/src/emulatorLab/AndroidManifest.xml b/android/app/src/emulatorLab/AndroidManifest.xml
+new file mode 100644
+--- /dev/null
++++ b/android/app/src/emulatorLab/AndroidManifest.xml
+@@ -0,0 +1,13 @@
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:tools="http://schemas.android.com/tools">
++    <uses-permission android:name="android.permission.INTERNET"/>
++    <application android:usesCleartextTraffic="true">
++        <!-- Dart creates the synthetic demo app before any SDK is used. -->
++        <provider android:name="com.google.firebase.provider.FirebaseInitProvider"
++            tools:node="remove" />
++        <meta-data android:name="firebase_crashlytics_collection_enabled"
++            android:value="false" />
++        <meta-data android:name="firebase_analytics_collection_enabled"
++            android:value="false" />
++    </application>
++</manifest>
+diff --git a/lib/firebase/emulator_lab.dart b/lib/firebase/emulator_lab.dart
+new file mode 100644
+--- /dev/null
++++ b/lib/firebase/emulator_lab.dart
+@@ -0,0 +1,45 @@
++import 'package:cloud_firestore/cloud_firestore.dart';
++import 'package:cloud_functions/cloud_functions.dart';
++import 'package:firebase_auth/firebase_auth.dart';
++import 'package:firebase_core/firebase_core.dart';
++import 'package:firebase_database/firebase_database.dart';
++import 'package:firebase_storage/firebase_storage.dart';
++import 'package:game_kit/firebase/services/realtime_database_service.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
++
++/// Connect all SDKs before AuthGate, ServerClock or any repository is created.
++Future<void> connectEmulatorLab() async {
++  if (!EmulatorLabConfig.enabled ||
++      Firebase.apps.length != 1 ||
++      Firebase.app().options.projectId != EmulatorLabConfig.projectId) {
++    throw StateError('Emulator lab Firebase isolation check failed');
++  }
++  const host = EmulatorLabConfig.host;
++  await FirebaseAuth.instance.useAuthEmulator(
++    host,
++    9099,
++    automaticHostMapping: false,
++  );
++  FirebaseFirestore.instance.useFirestoreEmulator(
++    host,
++    8080,
++    automaticHostMapping: false,
++  );
++  FirebaseDatabase.instance.useDatabaseEmulator(
++    host,
++    9000,
++    automaticHostMapping: false,
++  );
++  final sharedDatabase = RealtimeDatabaseService.instance;
++  if (!identical(sharedDatabase, FirebaseDatabase.instance)) {
++    sharedDatabase.useDatabaseEmulator(host, 9000, automaticHostMapping: false);
++  }
++  FirebaseFunctions.instanceFor(
++    region: 'asia-northeast3',
++  ).useFunctionsEmulator(host, 5001, automaticHostMapping: false);
++  await FirebaseStorage.instance.useStorageEmulator(
++    host,
++    9199,
++    automaticHostMapping: false,
++  );
++}
+diff --git a/lib/firebase/emulator_lab_config.dart b/lib/firebase/emulator_lab_config.dart
+new file mode 100644
+--- /dev/null
++++ b/lib/firebase/emulator_lab_config.dart
+@@ -0,0 +1,31 @@
++import 'package:firebase_core/firebase_core.dart';
++
++/// Internal, opt-in configuration for isolated Android baseline tests.
++abstract final class EmulatorLabConfig {
++  static const flag = String.fromEnvironment('MOSIGAME_EMULATOR_LAB');
++  static const enabled = flag == 'true';
++  static const projectId = 'demo-mosigame-lab';
++  static const host = '10.0.2.2';
++
++  static const options = FirebaseOptions(
++    apiKey: 'AIzaSyEmulatorOnly00000000000000000000000',
++    appId: '1:123456789012:android:0123456789abcdef012345',
++    messagingSenderId: '123456789012',
++    projectId: projectId,
++    databaseURL: 'https://demo-mosigame-lab-default-rtdb.firebaseio.com',
++    storageBucket: 'demo-mosigame-lab.appspot.com',
++  );
++
++  static void validate({
++    required String requestedFlag,
++    required bool debug,
++    required bool android,
++  }) {
++    if (!const ['', 'false', 'true'].contains(requestedFlag)) {
++      throw StateError('Invalid MOSIGAME_EMULATOR_LAB flag');
++    }
++    if (requestedFlag == 'true' && (!debug || !android)) {
++      throw StateError('Emulator lab requires a debug Android build');
++    }
++  }
++}
+diff --git a/functions/src/emulator-test-config.ts b/functions/src/emulator-test-config.ts
+new file mode 100644
+--- /dev/null
++++ b/functions/src/emulator-test-config.ts
+@@ -0,0 +1,63 @@
++const DATABASE_TRIGGER_REGION = "asia-southeast1";
++const EMULATOR_DATABASE_TRIGGER_REGION = "us-central1";
++const EMULATOR_TEST_PROJECT = "demo-mosigame-lab";
++
++/**
++ * Keeps deployment discovery unchanged and confines the local RTDB workaround.
++ * Firebase CLI supplies these variables during both discovery and invocation.
++ *
++ * @param {Object<string, (string|undefined)>} environment Runtime environment.
++ * @return {string} The production region or the approved local-only region.
++ */
++export function selectDatabaseTriggerRegion(
++  environment: Record<string, string | undefined> = process.env,
++): string {
++  const flag = environment.FUNCTIONS_EMULATOR;
++  const databaseHost = environment.FIREBASE_DATABASE_EMULATOR_HOST;
++  if (flag === undefined && databaseHost === undefined) {
++    return DATABASE_TRIGGER_REGION;
++  }
++
++  if (flag !== "true" ||
++      environment.GCLOUD_PROJECT !== EMULATOR_TEST_PROJECT ||
++      !isLoopbackDatabaseEndpoint(databaseHost)) {
++    throw new Error(
++      "RTDB emulator test requires the approved local environment",
++    );
++  }
++  for (const projectKey of ["GCP_PROJECT", "GOOGLE_CLOUD_PROJECT"]) {
++    const project = environment[projectKey];
++    if (project !== undefined && project !== EMULATOR_TEST_PROJECT) {
++      throw new Error("RTDB emulator test project identifiers must agree");
++    }
++  }
++
++  if (environment.FIREBASE_CONFIG !== undefined) {
++    let config: unknown;
++    try {
++      config = JSON.parse(environment.FIREBASE_CONFIG);
++    } catch {
++      throw new Error("RTDB emulator test requires a valid Firebase config");
++    }
++    const firebaseProject = (config as {projectId?: unknown} | null)?.projectId;
++    if (!config || typeof config !== "object" || Array.isArray(config) ||
++        firebaseProject !== EMULATOR_TEST_PROJECT) {
++      throw new Error(
++        "RTDB emulator test Firebase config project must agree",
++      );
++    }
++  }
++  return EMULATOR_DATABASE_TRIGGER_REGION;
++}
++
++/**
++ * Accepts only explicit loopback hosts and valid ports, without DNS resolution.
++ *
++ * @param {string|undefined} endpoint Admin SDK host:port emulator setting.
++ * @return {boolean} Whether this is an allowlisted local endpoint.
++ */
++function isLoopbackDatabaseEndpoint(endpoint: string | undefined): boolean {
++  const match = /^(?:localhost|127\.0\.0\.1|\[::1\]):([1-9][0-9]{0,4})$/
++    .exec(endpoint ?? "");
++  return match !== null && Number(match[1]) <= 65535;
++}
+diff --git a/functions/test/emulator-test-config.test.mjs b/functions/test/emulator-test-config.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/functions/test/emulator-test-config.test.mjs
+@@ -0,0 +1,118 @@
++import assert from "node:assert/strict";
++import {spawnSync} from "node:child_process";
++import test from "node:test";
++import {fileURLToPath} from "node:url";
++
++import {selectDatabaseTriggerRegion} from "../lib/emulator-test-config.js";
++
++const approved = {
++  FUNCTIONS_EMULATOR: "true",
++  GCLOUD_PROJECT: "demo-mosigame-lab",
++  FIREBASE_DATABASE_EMULATOR_HOST: "127.0.0.1:9000",
++};
++
++test("ordinary deployment discovery retains Singapore without emulator markers", () => {
++  for (const environment of [{}, {GCLOUD_PROJECT: "project0000-ec01e"}, {
++    GCLOUD_PROJECT: "demo-mosigame-lab",
++    FIREBASE_CONFIG: JSON.stringify({projectId: "demo-mosigame-lab"}),
++  }]) {
++    assert.equal(selectDatabaseTriggerRegion(environment), "asia-southeast1");
++  }
++});
++
++test("approved local environment supports Firebase CLI loopback endpoint formats", () => {
++  for (const host of ["127.0.0.1:9000", "localhost:9000", "[::1]:9000", "localhost:65535"]) {
++    assert.equal(selectDatabaseTriggerRegion({
++      ...approved, FIREBASE_DATABASE_EMULATOR_HOST: host,
++      FIREBASE_CONFIG: JSON.stringify({projectId: "demo-mosigame-lab"}),
++    }), "us-central1");
++  }
++});
++
++test("partial emulator settings and conflicting project identifiers fail closed", () => {
++  for (const patch of [
++    {FUNCTIONS_EMULATOR: undefined}, {FUNCTIONS_EMULATOR: "false"},
++    {FUNCTIONS_EMULATOR: "TRUE"}, {GCLOUD_PROJECT: undefined},
++    {GCLOUD_PROJECT: "project0000-ec01e"}, {GCLOUD_PROJECT: "demo-another-lab"},
++    {FIREBASE_DATABASE_EMULATOR_HOST: undefined}, {GCP_PROJECT: "another-project"},
++    {GOOGLE_CLOUD_PROJECT: "another-project"},
++    {FIREBASE_CONFIG: JSON.stringify({projectId: "project0000-ec01e"})},
++    {FIREBASE_CONFIG: "invalid-json"}, {FIREBASE_CONFIG: "[]"},
++    {FIREBASE_CONFIG: "{}"}, {FIREBASE_CONFIG: "null"},
++  ]) {
++    assert.throws(() => selectDatabaseTriggerRegion({...approved, ...patch}), /RTDB emulator test/);
++  }
++  assert.throws(() => selectDatabaseTriggerRegion({FUNCTIONS_EMULATOR: "true"}), /RTDB emulator test/);
++});
++
++test("remote, wildcard, malformed and out-of-range database endpoints fail closed", () => {
++  for (const host of [
++    "0.0.0.0:9000", "10.0.2.2:9000", "192.168.1.2:9000", "example.com:9000",
++    "localhost.example.com:9000", "https://localhost:9000", "localhost:0",
++    "localhost:65536", "localhost:09000", "localhost:9000/path", "localhost:9000?ns=x",
++    "localhost:9000 ", "user@localhost:9000", "::1:9000", "", "localhost",
++  ]) {
++    assert.throws(() => selectDatabaseTriggerRegion({
++      ...approved, FIREBASE_DATABASE_EMULATOR_HOST: host,
++    }), /RTDB emulator test/);
++  }
++});
++
++// Inspect the real exported endpoint metadata in separate, clean processes.
++// No handler runs and no Admin SDK read/write or deploy occurs.
++function discoverEndpoints(extraEnvironment) {
++  const environment = {...process.env};
++  for (const key of Object.keys(environment)) {
++    if (key.startsWith("FIREBASE_") || key.endsWith("EMULATOR_HOST") ||
++        ["FUNCTIONS_EMULATOR", "GCLOUD_PROJECT", "GCP_PROJECT", "GOOGLE_CLOUD_PROJECT",
++          "GOOGLE_APPLICATION_CREDENTIALS"].includes(key)) delete environment[key];
++  }
++  const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
++    const exported = await import("./lib/index.js");
++    const endpoints = {};
++    for (const [name, fn] of Object.entries(exported)) {
++      if (fn?.__endpoint) endpoints[name] = fn.__endpoint;
++    }
++    process.stdout.write(JSON.stringify(endpoints));
++  `], {
++    cwd: fileURLToPath(new URL("..", import.meta.url)),
++    env: {...environment, ...extraEnvironment}, encoding: "utf8", timeout: 30_000,
++  });
++  assert.equal(result.error, undefined, result.error?.message);
++  assert.equal(result.status, 0, result.stderr);
++  return JSON.parse(result.stdout);
++}
++
++test("real discovery changes exactly four RTDB regions and preserves every other endpoint", () => {
++  const production = discoverEndpoints({GCLOUD_PROJECT: "project0000-ec01e"});
++  const emulator = discoverEndpoints({
++    ...approved,
++    FIREBASE_CONFIG: JSON.stringify({
++      projectId: "demo-mosigame-lab", databaseURL: "http://127.0.0.1:9000/?ns=demo-mosigame-lab",
++    }),
++  });
++  const triggers = [
++    "cleanupDeletedRoomCreationRequest", "game_common_controller_presence_changed",
++    "game_common_interruption_on_connection_changed", "syncRealtimeRoomGameStatus",
++  ];
++  assert.deepEqual(Object.keys(production).sort(), Object.keys(emulator).sort());
++  assert.equal(Object.keys(production).length, 69);
++  const changed = [];
++  for (const name of Object.keys(production)) {
++    const ordinary = production[name];
++    const local = emulator[name];
++    if (triggers.includes(name)) {
++      assert.equal(ordinary.eventTrigger.eventType.startsWith("google.firebase.database."), true);
++      assert.deepEqual(ordinary.region, ["asia-southeast1"]);
++      assert.deepEqual(local.region, ["us-central1"]);
++      changed.push(name);
++      const {region: ordinaryRegion, ...ordinaryRest} = ordinary;
++      const {region: localRegion, ...localRest} = local;
++      assert.deepEqual(localRest, ordinaryRest);
++    } else {
++      assert.deepEqual(local, ordinary, name);
++      assert.deepEqual(local.region, ["asia-northeast3"], name);
++    }
++  }
++  assert.deepEqual(changed.sort(), triggers.sort());
++});
+diff --git a/test/emulator_lab_config_test.dart b/test/emulator_lab_config_test.dart
+new file mode 100644
+--- /dev/null
++++ b/test/emulator_lab_config_test.dart
+@@ -0,0 +1,52 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:project00/firebase/emulator_lab_config.dart';
++
++void main() {
++  test('ordinary builds keep the lab disabled', () {
++    expect(EmulatorLabConfig.enabled, isFalse);
++    for (final flag in ['', 'false']) {
++      EmulatorLabConfig.validate(
++        requestedFlag: flag,
++        debug: false,
++        android: false,
++      );
++    }
++  });
++
++  test('invalid flags and unsupported lab builds fail before Firebase', () {
++    for (final flag in ['TRUE', '1', 'demo']) {
++      expect(
++        () => EmulatorLabConfig.validate(
++          requestedFlag: flag,
++          debug: true,
++          android: true,
++        ),
++        throwsStateError,
++      );
++    }
++    for (final platform in [(false, true), (true, false), (false, false)]) {
++      expect(
++        () => EmulatorLabConfig.validate(
++          requestedFlag: 'true',
++          debug: platform.$1,
++          android: platform.$2,
++        ),
++        throwsStateError,
++      );
++    }
++  });
++
++  test('lab configuration uses only a fixed synthetic project and host', () {
++    EmulatorLabConfig.validate(
++      requestedFlag: 'true',
++      debug: true,
++      android: true,
++    );
++    expect(EmulatorLabConfig.options.projectId, 'demo-mosigame-lab');
++    expect(EmulatorLabConfig.host, '10.0.2.2');
++    expect(
++      EmulatorLabConfig.options.databaseURL,
++      'https://demo-mosigame-lab-default-rtdb.firebaseio.com',
++    );
++  });
++}
+diff --git a/tool/emulator_lab/adb_controller.mjs b/tool/emulator_lab/adb_controller.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/adb_controller.mjs
+@@ -0,0 +1,149 @@
++import { spawnSync } from 'node:child_process';
++import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
++import { randomUUID } from 'node:crypto';
++import { inflateSync } from 'node:zlib';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
++const sdkRoot = process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME ||
++  path.join(process.env.LOCALAPPDATA || '', 'Android', 'Sdk');
++const adb = path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb');
++
++function run(args, binary = false) {
++  if (!existsSync(adb)) throw new Error('ADB_NOT_FOUND');
++  const result = spawnSync(adb, args, {
++    timeout: 20000, windowsHide: true,
++    encoding: binary ? null : 'utf8', maxBuffer: 32 * 1024 * 1024,
++  });
++  if (result.error) throw result.error;
++  if (result.status !== 0) throw new Error('ADB_COMMAND_FAILED');
++  return result.stdout;
++}
++
++export function parseRequest(argv) {
++  const [action, ...args] = argv;
++  const allowed = new Set(['devices', 'capture', 'tap', 'home', 'back']);
++  if (!allowed.has(action)) throw new Error('Unsupported action');
++  const expected = { devices: 0, capture: 2, tap: 3, home: 1, back: 1 }[action];
++  if (args.length !== expected) throw new Error('Invalid argument count');
++  if (action !== 'devices' && !/^emulator-[0-9]{4,5}$/.test(args[0])) {
++    throw new Error('Only an exact Android emulator serial is allowed');
++  }
++  if (action === 'tap') {
++    for (const value of args.slice(1)) {
++      if (!/^[0-9]+$/.test(value) || Number(value) > 8192) {
++        throw new Error('Invalid screen coordinate');
++      }
++    }
++  }
++  return { action, args };
++}
++
++function verifyEmulator(serial) {
++  const rows = run(['devices']).split(/\r?\n/).map((row) => row.trim().split(/\s+/));
++  if (!rows.some(([id, state]) => id === serial && state === 'device')) {
++    throw new Error('Emulator is not connected and ready');
++  }
++  if (run(['-s', serial, 'shell', 'getprop', 'ro.kernel.qemu']).trim() !== '1') {
++    throw new Error('Target is not an Android emulator');
++  }
++}
++
++export function resolveCaptureTarget(root, requested) {
++  const artifactRoot = path.resolve(root, 'build', 'emulator_lab');
++  const resolved = path.resolve(root, requested);
++  const relative = path.relative(artifactRoot, resolved);
++  if (!relative || relative.startsWith('..') || path.isAbsolute(relative) ||
++      path.extname(resolved).toLowerCase() !== '.png') {
++    throw new Error('Capture must be a PNG inside build/emulator_lab');
++  }
++  // Follow existing directories before creating anything, to reject escaped junctions.
++  let existing = path.dirname(resolved);
++  while (!existsSync(existing)) existing = path.dirname(existing);
++  for (let ancestor = existing; ancestor !== path.dirname(ancestor); ancestor = path.dirname(ancestor)) {
++    if (lstatSync(ancestor).isSymbolicLink()) throw new Error('Capture parent is a symbolic link or junction');
++    if (ancestor === path.resolve(root)) break;
++  }
++  const realExisting = realpathSync(existing);
++  const realRoot = realpathSync(root);
++  const realRelative = path.relative(realRoot, realExisting);
++  if (realRelative.startsWith('..') || path.isAbsolute(realRelative)) {
++    throw new Error('Capture parent resolves outside the repository');
++  }
++  if (existsSync(resolved)) throw new Error('Capture output already exists');
++  return resolved;
++}
++
++export function verifyPng(bytes) {
++  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
++  if (!bytes.subarray(0, 8).equals(signature) || bytes.length < 33) {
++    throw new Error('Capture is not a PNG');
++  }
++  const width = bytes.readUInt32BE(16);
++  const height = bytes.readUInt32BE(20);
++  const channels = { 2: 3, 6: 4 }[bytes[25]];
++  if (!width || !height || width * height > 16000000 || bytes[24] !== 8 ||
++      !channels || bytes[28] !== 0) throw new Error('Unsupported PNG dimensions or encoding');
++  const chunks = [];
++  let ended = false;
++  for (let offset = 8; offset + 12 <= bytes.length;) {
++    const length = bytes.readUInt32BE(offset);
++    if (offset + length + 12 > bytes.length) throw new Error('Incomplete PNG chunk');
++    const type = bytes.toString('ascii', offset + 4, offset + 8);
++    if (type === 'IDAT') chunks.push(bytes.subarray(offset + 8, offset + 8 + length));
++    if (type === 'IEND') { ended = true; break; }
++    offset += length + 12;
++  }
++  const expected = height * (width * channels + 1);
++  if (!ended || !chunks.length ||
++      inflateSync(Buffer.concat(chunks), { maxOutputLength: expected }).length !== expected) {
++    throw new Error('Incomplete PNG pixel data');
++  }
++}
++
++function capture(serial, target) {
++  mkdirSync(path.dirname(target), { recursive: true });
++  const temporary = mkdtempSync(path.join(path.dirname(target), '.capture-'));
++  const remote = '/sdcard/emulator-lab-' + randomUUID() + '.png';
++  try {
++    run(['-s', serial, 'shell', 'screencap', '-p', remote]);
++    run(['-s', serial, 'pull', remote, path.join(temporary, 'screen.png')]);
++    const bytes = readFileSync(path.join(temporary, 'screen.png'));
++    verifyPng(bytes);
++    writeFileSync(target, bytes, { flag: 'wx' });
++  } finally {
++    // These exact paths were newly created by this capture operation.
++    if (path.dirname(temporary) !== path.dirname(target)) throw new Error('Unexpected temporary path');
++    rmSync(temporary, { recursive: true, force: true });
++    run(['-s', serial, 'shell', 'rm', remote]);
++  }
++}
++
++function main() {
++  const request = parseRequest(process.argv.slice(2));
++  if (request.action === 'devices') {
++    const emulatorRows = run(['devices']).split(/\r?\n/).filter((row) => /^emulator-\d+\s/.test(row));
++    process.stdout.write(JSON.stringify({ emulators: emulatorRows }) + '\n');
++    return;
++  }
++  const [serial, ...args] = request.args;
++  verifyEmulator(serial);
++  if (request.action === 'capture') {
++    const target = resolveCaptureTarget(repositoryRoot, args[0]);
++    capture(serial, target);
++    process.stdout.write(JSON.stringify({ status: 'CAPTURED', path: target }) + '\n');
++  } else {
++    const actionArgs = request.action === 'tap' ? ['tap', ...args] :
++      ['keyevent', request.action === 'home' ? 'KEYCODE_HOME' : 'KEYCODE_BACK'];
++    run(['-s', serial, 'shell', 'input', ...actionArgs]);
++    process.stdout.write(JSON.stringify({ status: 'ACTION_SENT', action: request.action }) + '\n');
++  }
++}
++
++if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  try { main(); } catch (error) {
++    process.stderr.write(String(error.message) + '\n');
++    process.exitCode = 1;
++  }
++}
+diff --git a/tool/emulator_lab/adb_controller.test.mjs b/tool/emulator_lab/adb_controller.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/adb_controller.test.mjs
+@@ -0,0 +1,70 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++import { deflateSync } from 'node:zlib';
++import { parseRequest, resolveCaptureTarget, verifyPng } from './adb_controller.mjs';
++
++function withFixture(callback) {
++  const tempRoot = path.resolve(os.tmpdir());
++  const root = mkdtempSync(path.join(tempRoot, 'mosigame-adb-'));
++  try { callback(root); } finally {
++    assert.equal(path.dirname(root), tempRoot);
++    assert.ok(path.basename(root).startsWith('mosigame-adb-'));
++    rmSync(root, { recursive: true, force: true });
++  }
++}
++
++test('rejects physical serials and arbitrary shell actions', () => {
++  assert.throws(() => parseRequest(['tap', 'R58DEVICE', '10', '20']));
++  assert.throws(() => parseRequest(['shell', 'emulator-5580', 'rm', '-rf']));
++  assert.throws(() => parseRequest(['home', 'emulator-5580', 'extra']));
++  assert.throws(() => parseRequest(['tap', 'emulator-5580', '-1', '20']));
++  assert.throws(() => parseRequest(['tap', 'emulator-5580', '10;echo', '20']));
++  assert.deepEqual(parseRequest(['tap', 'emulator-5580', '10', '20']), {
++    action: 'tap', args: ['emulator-5580', '10', '20'],
++  });
++});
++
++test('captures cannot overwrite files or escape the evidence directory', () => withFixture((root) => {
++  mkdirSync(path.join(root, 'build', 'emulator_lab'), { recursive: true });
++  assert.throws(() => resolveCaptureTarget(root, '../outside.png'));
++  assert.throws(() => resolveCaptureTarget(root, 'lib/changed.png'));
++  assert.throws(() => resolveCaptureTarget(root, 'build/emulator_lab/shot.txt'));
++  writeFileSync(path.join(root, 'build/emulator_lab/existing.png'), 'evidence');
++  assert.throws(() => resolveCaptureTarget(root, 'build/emulator_lab/existing.png'));
++  assert.equal(resolveCaptureTarget(root, 'build/emulator_lab/run/shot.png'),
++    path.join(root, 'build/emulator_lab/run/shot.png'));
++}));
++
++test('rejects junctions that redirect captures into source directories', () => withFixture((root) => {
++  mkdirSync(path.join(root, 'build', 'emulator_lab'), { recursive: true });
++  mkdirSync(path.join(root, 'lib'));
++  symlinkSync(path.join(root, 'lib'), path.join(root, 'build/emulator_lab/redirect'),
++    process.platform === 'win32' ? 'junction' : 'dir');
++  assert.throws(() => resolveCaptureTarget(root, 'build/emulator_lab/redirect/source.png'));
++}));
++
++test('rejects incomplete screenshots rather than reporting a capture success', () => {
++  const header = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
++  function chunk(name, data) {
++    const result = Buffer.alloc(12 + data.length);
++    result.writeUInt32BE(data.length);
++    result.write(name, 4, 'ascii');
++    data.copy(result, 8);
++    return result;
++  }
++  const ihdr = Buffer.alloc(13);
++  ihdr.writeUInt32BE(1, 0);
++  ihdr.writeUInt32BE(1, 4);
++  ihdr[8] = 8;
++  ihdr[9] = 6;
++  const correct = Buffer.concat([header, chunk('IHDR', ihdr),
++    chunk('IDAT', deflateSync(Buffer.from([0, 1, 2, 3, 255]))), chunk('IEND', Buffer.alloc(0))]);
++  assert.doesNotThrow(() => verifyPng(correct));
++  assert.throws(() => verifyPng(correct.subarray(0, 50)));
++  const empty = Buffer.concat([header, chunk('IHDR', ihdr),
++    chunk('IDAT', deflateSync(Buffer.alloc(0))), chunk('IEND', Buffer.alloc(0))]);
++  assert.throws(() => verifyPng(empty));
++});
+diff --git a/tool/emulator_lab/local_backend.mjs b/tool/emulator_lab/local_backend.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/local_backend.mjs
+@@ -0,0 +1,323 @@
++import { spawn } from 'node:child_process';
++import { createRequire } from 'node:module';
++import { createInterface } from 'node:readline';
++import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
++import { randomUUID } from 'node:crypto';
++import net from 'node:net';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++export const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
++export const PROJECT_ID = 'demo-mosigame-lab';
++export const LAB_DATABASE_URL = `https://${PROJECT_ID}-default-rtdb.firebaseio.com`;
++export const LAB_PORTS = Object.freeze({ auth: 9099, database: 9000, firestore: 8080, functions: 5001, storage: 9199, hub: 4400, logging: 4500, eventarc: 9299, tasks: 9499 });
++export const LAB_PASSWORD = 'MosigameLab!2026';
++export const LAB_ROLES = Object.freeze(['T', 'A', 'B', 'C', 'D', 'X']);
++export const DISCOVERY_TIMEOUT_SECONDS = 60;
++const runtimeDirectory = path.join(repositoryRoot, '.firebase', 'emulator-lab');
++const requireFunctions = createRequire(path.join(repositoryRoot, 'functions', 'package.json'));
++
++export function labTargets() {
++  return {
++    projectId: PROJECT_ID,
++    databaseURL: `http://127.0.0.1:${LAB_PORTS.database}/?ns=${PROJECT_ID}-default-rtdb`,
++    hosts: Object.fromEntries(Object.entries(LAB_PORTS).map(([name, port]) => [name, `127.0.0.1:${port}`])),
++  };
++}
++
++// Deliberately exact rather than accepting arbitrary demo projects or hosts.
++export function assertLocalTargets(targets) {
++  const expected = labTargets();
++  if (targets?.projectId !== PROJECT_ID || targets.databaseURL !== expected.databaseURL) {
++    throw new Error('LAB_PROJECT_OR_NAMESPACE_REJECTED');
++  }
++  for (const name of Object.keys(LAB_PORTS)) {
++    if (targets.hosts?.[name] !== expected.hosts[name]) throw new Error('LAB_ENDPOINT_REJECTED');
++  }
++  return targets;
++}
++
++export function createLabConfig(root = repositoryRoot) {
++  const configRoot = path.join(root, '.firebase', 'emulator-lab');
++  const config = {
++    functions: [{ source: path.relative(configRoot, path.join(root, 'functions')).replaceAll('\\', '/'), configDir: '.', codebase: 'default', disallowLegacyRuntimeConfig: true }],
++    database: { rules: path.join(root, 'database.rules.json') },
++    firestore: { rules: path.join(root, 'firestore.rules') },
++    storage: { rules: path.join(root, 'storage.rules') },
++    emulators: {
++      ...Object.fromEntries(Object.entries(LAB_PORTS).map(([name, port]) => [name, { host: '127.0.0.1', port }])),
++      ui: { enabled: false },
++      singleProjectMode: true,
++    },
++  };
++  return config;
++}
++
++export function assertLabConfig(config, configPath, root = repositoryRoot) {
++  const configRoot = path.dirname(configPath);
++  const source = config?.functions;
++  if (!Array.isArray(source) || source.length !== 1 || source[0].codebase !== 'default' ||
++      path.resolve(configRoot, source[0].source) !== path.join(root, 'functions') || source[0].configDir !== '.' || source[0].predeploy) {
++    throw new Error('LAB_FUNCTIONS_SOURCE_REJECTED');
++  }
++  for (const [name, file] of [['database', 'database.rules.json'], ['firestore', 'firestore.rules'], ['storage', 'storage.rules']]) {
++    if (config[name]?.rules !== path.join(root, file)) throw new Error('LAB_RULES_PATH_REJECTED');
++  }
++  for (const [name, port] of Object.entries(LAB_PORTS)) {
++    if (config.emulators?.[name]?.host !== '127.0.0.1' || config.emulators[name].port !== port) {
++      throw new Error('LAB_BIND_REJECTED');
++    }
++  }
++  if (config.emulators?.singleProjectMode !== true || config.emulators.ui?.enabled !== false ||
++      config.hosting || config.flutter) throw new Error('LAB_CONFIG_REJECTED');
++  return config;
++}
++
++export function writeLabConfig() {
++  const configPath = path.join(runtimeDirectory, 'firebase.json');
++  const config = assertLabConfig(createLabConfig(), configPath);
++  for (const file of ['database.rules.json', 'firestore.rules', 'storage.rules', 'functions/package.json', 'functions/node_modules/firebase-tools/lib/bin/firebase.js']) {
++    const expected = path.join(repositoryRoot, file);
++    if (!existsSync(expected) || realpathSync(expected) !== expected) throw new Error('LAB_REQUIRED_FILE_MISSING_OR_REDIRECTED');
++  }
++  mkdirSync(runtimeDirectory, { recursive: true });
++  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
++  return configPath;
++}
++
++export function createLabEnvironment(inherited = process.env) {
++  // Exclude credential-bearing variables instead of inspecting or displaying them.
++  const env = Object.fromEntries(Object.entries(inherited).filter(([name]) =>
++    !/^(GOOGLE_APPLICATION_CREDENTIALS|GOOGLE_OAUTH_ACCESS_TOKEN|FIREBASE_TOKEN|FIREBASE_CONFIG|CLOUDSDK_AUTH_ACCESS_TOKEN|GCLOUD_PROJECT|GOOGLE_CLOUD_PROJECT|DATABASE_URL|FIREBASE_.*EMULATOR.*|FIREBASE_CLI_EXPERIMENTS)$/i.test(name)));
++  return {
++    ...env,
++    XDG_CONFIG_HOME: path.join(runtimeDirectory, 'cli-config'),
++    FIREBASE_CLI_DISABLE_UPDATE_CHECK: 'true',
++    // Installed firebase-tools reads this exact name, expressed in seconds.
++    FUNCTIONS_DISCOVERY_TIMEOUT: String(DISCOVERY_TIMEOUT_SECONDS),
++    GCLOUD_PROJECT: PROJECT_ID,
++    GOOGLE_CLOUD_PROJECT: PROJECT_ID,
++    // firebase-tools' demo-project Admin SDK config otherwise uses the older
++    // project-id namespace, while its rules config uses project-id-default-rtdb.
++    // This SDK selector is converted by CLI to the loopback emulator URL.
++    DATABASE_URL: LAB_DATABASE_URL,
++    FIREBASE_AUTH_EMULATOR_HOST: labTargets().hosts.auth,
++    FIREBASE_DATABASE_EMULATOR_HOST: labTargets().hosts.database,
++    FIRESTORE_EMULATOR_HOST: labTargets().hosts.firestore,
++    FIREBASE_STORAGE_EMULATOR_HOST: labTargets().hosts.storage,
++  };
++}
++
++export function firebaseStartArguments(configPath) {
++  assertLabConfig(JSON.parse(readFileSync(configPath, 'utf8')), configPath);
++  return [
++    path.join(repositoryRoot, 'functions', 'node_modules', 'firebase-tools', 'lib', 'bin', 'firebase.js'),
++    'emulators:start', '--project', PROJECT_ID, '--config', configPath,
++    '--only', 'auth,database,firestore,functions,storage', '--non-interactive',
++  ];
++}
++
++async function requireVacantPorts() {
++  for (const port of Object.values(LAB_PORTS)) {
++    await new Promise((resolve, reject) => {
++      const server = net.createServer();
++      server.once('error', () => reject(new Error(`LAB_PORT_ALREADY_IN_USE_${port}`)));
++      server.listen(port, '127.0.0.1', () => server.close(resolve));
++    });
++  }
++}
++
++export async function localJson(url, { method = 'GET', body, headers = {}, expectedStatus = 200, timeoutMs = 10000 } = {}, fetchImpl = fetch) {
++  const parsed = new URL(url);
++  if (parsed.protocol !== 'http:' || parsed.hostname !== '127.0.0.1' || parsed.username || parsed.password ||
++      !Object.values(LAB_PORTS).includes(Number(parsed.port))) throw new Error('LAB_HTTP_TARGET_REJECTED');
++  if (![200, 401].includes(expectedStatus) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 30000) {
++    throw new Error('LAB_HTTP_OPTIONS_REJECTED');
++  }
++  const result = await fetchImpl(parsed, {
++    method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
++    headers: { 'Content-Type': 'application/json', ...headers },
++    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
++  });
++  if (result.status !== expectedStatus) throw new Error(`LAB_HTTP_FAILED_${result.status}`);
++  return result.json();
++}
++
++export async function assertFunctionsLoaded(targets = labTargets(), request = localJson) {
++  assertLocalTargets(targets);
++  // createRealtimeRoom rejects missing auth before any Firestore/RTDB access.
++  // Probing without a token cannot create a room and proves handler discovery,
++  // whereas a listening Functions port or hub entry alone does not.
++  const response = await request(`http://${targets.hosts.functions}/${PROJECT_ID}/asia-northeast3/createRealtimeRoom`, {
++    method: 'POST', body: { data: {} }, expectedStatus: 401, timeoutMs: 30000,
++  });
++  if (response?.error?.status !== 'UNAUTHENTICATED') throw new Error('LAB_FUNCTIONS_PROBE_REJECTED');
++  return 'createRealtimeRoom:UNAUTHENTICATED';
++}
++
++export async function assertRunningLab(targets = labTargets(), request = localJson) {
++  assertLocalTargets(targets);
++  const mapping = await request(`http://${targets.hosts.hub}/emulators`);
++  for (const name of ['auth', 'database', 'firestore', 'functions', 'storage']) {
++    const expected = LAB_PORTS[name];
++    if (mapping[name]?.host !== '127.0.0.1' || mapping[name].port !== expected) {
++      throw new Error('LAB_RUNNING_ENDPOINT_REJECTED');
++    }
++  }
++  const functionProbe = await assertFunctionsLoaded(targets, request);
++  return { projectId: PROJECT_ID, services: ['auth', 'database', 'firestore', 'functions', 'storage'], functionProbe };
++}
++
++export function syntheticFixtures() {
++  const accounts = LAB_ROLES.map((role) => ({
++    role, uid: `mosigame-lab-${role}`, email: `${role.toLowerCase()}@example.test`,
++    password: LAB_PASSWORD, emailVerified: true, displayName: `Lab ${role}`,
++  }));
++  const games = [
++    { id: 'liars_poker', name: "Liar's Poker", minPlayers: 2, maxPlayers: 6, accessType: 'free' },
++    { id: 'final_call', name: 'Final Call', minPlayers: 4, maxPlayers: 4, accessType: 'paid' },
++    { id: 'mafia', name: 'Mafia', minPlayers: 4, maxPlayers: 12, accessType: 'paid' },
++  ].map((game, index) => ({ ...game, enabled: true, order: index, description: 'Synthetic local lab catalog',
++    tabletDescription: 'Synthetic local lab catalog', rules: 'Local lab fixture; use bundled game rules.',
++    imageUrl: '', componentImageUrl: '', ruleVideoUrl: '', genres: [], playTime: 20, minAppVersion: '' }));
++  const users = accounts.map(({ role, uid, email, displayName }) => ({
++    uid, email, nickname: displayName, profileImageUrl: null,
++    ownedGames: role === 'A' ? ['final_call', 'mafia'] : [],
++  }));
++  const onboarding = accounts.map(({ uid }) => ({ uid, status: 'complete', provider: 'legacyPassword', schemaVersion: 1 }));
++  return { accounts, games, users, onboarding };
++}
++
++export function firestoreFixtureValue(value) {
++  if (value === null) return { nullValue: null };
++  if (typeof value === 'string') return { stringValue: value };
++  if (typeof value === 'boolean') return { booleanValue: value };
++  if (Number.isSafeInteger(value)) return { integerValue: String(value) };
++  if (Array.isArray(value)) return { arrayValue: { values: value.map(firestoreFixtureValue) } };
++  throw new Error('LAB_FIRESTORE_FIXTURE_VALUE_REJECTED');
++}
++
++export function firestoreSeedWrites(fixtures = syntheticFixtures()) {
++  const document = (collection, id, data, timestampFields) => {
++    if (!['users', 'userOnboarding', 'games'].includes(collection) || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
++      throw new Error('LAB_FIRESTORE_FIXTURE_PATH_REJECTED');
++    }
++    return {
++      update: {
++        name: `projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${id}`,
++        fields: Object.fromEntries(Object.entries(data).map(([name, value]) => [name, firestoreFixtureValue(value)])),
++      },
++      updateTransforms: timestampFields.map((fieldPath) => ({ fieldPath, setToServerValue: 'REQUEST_TIME' })),
++    };
++  };
++  return [
++    ...fixtures.users.map((user) => document('users', user.uid, user, ['createdAt', 'updatedAt'])),
++    ...fixtures.onboarding.map((entry) => document('userOnboarding', entry.uid, entry, ['completedAt', 'updatedAt'])),
++    ...fixtures.games.map(({ id, ...game }) => document('games', id, game, ['createdAt', 'updatedAt'])),
++  ];
++}
++
++export async function seedLocalLab(targets = labTargets()) {
++  assertLocalTargets(targets);
++  await assertRunningLab(targets);
++  // Admin SDK is loaded only after the local target guards pass. No ADC lookup.
++  const env = createLabEnvironment();
++  for (const name of ['GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT', 'FIREBASE_AUTH_EMULATOR_HOST', 'FIREBASE_DATABASE_EMULATOR_HOST', 'FIRESTORE_EMULATOR_HOST', 'FIREBASE_STORAGE_EMULATOR_HOST']) {
++    process.env[name] = env[name];
++  }
++  const { initializeApp, deleteApp } = requireFunctions('firebase-admin/app');
++  const { getAuth } = requireFunctions('firebase-admin/auth');
++  const app = initializeApp({
++    projectId: PROJECT_ID, databaseURL: targets.databaseURL,
++    credential: { getAccessToken: async () => ({ access_token: 'owner', expires_in: 3600 }) },
++  }, `mosigame-lab-seed-${randomUUID()}`);
++  try {
++    const auth = getAuth(app);
++    const fixtures = syntheticFixtures();
++    for (const { role, ...account } of fixtures.accounts) {
++      try { await auth.createUser(account); } catch (error) {
++        if (error.code !== 'auth/uid-already-exists') throw new Error('LAB_SYNTHETIC_ACCOUNT_CREATE_FAILED');
++        await auth.updateUser(account.uid, account);
++      }
++    }
++    // firebase-admin/getFirestore requires ADC or a service account even for an
++    // emulator. The local REST commit accepts the emulator-only owner token;
++    // this avoids discovering or fabricating a Google credential entirely.
++    await localJson(`http://${targets.hosts.firestore}/v1/projects/${PROJECT_ID}/databases/(default)/documents:commit`, {
++      method: 'POST', headers: { Authorization: 'Bearer owner' }, body: { writes: firestoreSeedWrites(fixtures) },
++    });
++    return { status: 'PASS', projectId: PROJECT_ID, accountCount: fixtures.accounts.length, gameCount: fixtures.games.length };
++  } finally { await deleteApp(app); }
++}
++
++export async function startLocalLab() {
++  if (process.platform === 'win32' && process.env.MOSIGAME_LAB_JOB_OWNED !== '1') {
++    throw new Error('LAB_WINDOWS_JOB_GUARD_REQUIRED');
++  }
++  process.stderr.write('[mosigame lab] Checking fixed local service ports.\n');
++  assertLocalTargets(labTargets());
++  await requireVacantPorts();
++  const configPath = writeLabConfig();
++  const child = spawn(process.execPath, firebaseStartArguments(configPath), {
++    cwd: runtimeDirectory, env: createLabEnvironment(), windowsHide: true,
++    stdio: ['pipe', 'inherit', 'inherit'], detached: process.platform !== 'win32',
++  });
++  const exit = new Promise((resolve, reject) => {
++    child.once('error', reject);
++    child.once('exit', (code) => resolve(code ?? 1));
++  });
++  let stopRequested = false;
++  const stop = () => {
++    stopRequested = true;
++    if (child.exitCode !== null) return;
++    // On Windows the outer Job Object closes the complete owned tree after this
++    // launcher returns, including any Java workers orphaned by CLI termination.
++    if (process.platform === 'win32') child.kill();
++    else process.kill(-child.pid, 'SIGINT');
++  };
++  const input = createInterface({ input: process.stdin });
++  input.on('line', (line) => { if (line.trim() === 'stop') stop(); });
++  process.once('SIGINT', stop);
++  process.once('SIGTERM', stop);
++  try { const code = await exit; return stopRequested ? 0 : code; } finally {
++    input.close();
++    if (process.platform !== 'win32') {
++      try { process.kill(-child.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
++    }
++  }
++}
++
++export function stopRequestFromOwner(owner) {
++  if (owner?.projectId !== PROJECT_ID || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(owner.nonce ?? '') ||
++      !Number.isInteger(owner.supervisorPid) || owner.supervisorPid <= 0 || !Number.isInteger(owner.childPid) || owner.childPid <= 0) {
++    throw new Error('LAB_STOP_OWNER_REJECTED');
++  }
++  return owner.nonce + '\n';
++}
++
++export function requestLocalStop() {
++  const owner = JSON.parse(readFileSync(path.join(runtimeDirectory, 'owner.json'), 'utf8'));
++  writeFileSync(path.join(runtimeDirectory, 'stop.request'), stopRequestFromOwner(owner));
++  return { status: 'STOP_REQUESTED', projectId: PROJECT_ID };
++}
++
++export async function main(argv) {
++  if (argv.length !== 1 || !['config', 'status', 'seed', 'start', 'stop'].includes(argv[0])) throw new Error('LAB_ARGUMENTS_REJECTED');
++  if (argv[0] === 'config') return { status: 'PASS', projectId: PROJECT_ID, configPath: writeLabConfig() };
++  if (argv[0] === 'status') return { status: 'PASS', ...await assertRunningLab() };
++  if (argv[0] === 'seed') return seedLocalLab();
++  if (argv[0] === 'stop') return requestLocalStop();
++  return { status: 'STOPPED', exitCode: await startLocalLab(), projectId: PROJECT_ID };
++}
++
++if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  main(process.argv.slice(2)).then((result) => {
++    process.stdout.write(JSON.stringify(result) + '\n');
++    process.exitCode = result.exitCode ?? 0;
++  }).catch((error) => {
++    // Do not emit SDK errors containing account data, tokens, or payloads.
++    const reason = /^LAB_[A-Z0-9_]+$/.test(error.message ?? '') ? error.message : 'LAB_OPERATION_FAILED';
++    process.stderr.write(`${reason}: Local emulator lab operation failed.\n`);
++    process.exitCode = 1;
++  });
++}
+diff --git a/tool/emulator_lab/local_backend.test.mjs b/tool/emulator_lab/local_backend.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/local_backend.test.mjs
+@@ -0,0 +1,238 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
++import { spawn, spawnSync } from 'node:child_process';
++import { once } from 'node:events';
++import os from 'node:os';
++import path from 'node:path';
++import { createRequire } from 'node:module';
++import { assertLabConfig, assertLocalTargets, assertRunningLab, assertFunctionsLoaded, createLabConfig, createLabEnvironment,
++  labTargets, LAB_PORTS, PROJECT_ID, localJson, repositoryRoot, syntheticFixtures, main, DISCOVERY_TIMEOUT_SECONDS, stopRequestFromOwner,
++  firestoreFixtureValue, firestoreSeedWrites, LAB_DATABASE_URL } from './local_backend.mjs';
++
++test('rejects production project, namespace, absent or external endpoints', () => {
++  assert.equal(assertLocalTargets(labTargets()).projectId, PROJECT_ID);
++  for (const edit of [
++    (x) => { x.projectId = 'project0000-ec01e'; },
++    (x) => { x.projectId = 'demo-other'; },
++    (x) => { x.databaseURL = 'https://project0000-ec01e.firebaseio.com'; },
++    (x) => { x.databaseURL = 'http://127.0.0.1:9000/?ns=project0000-ec01e'; },
++    (x) => { delete x.hosts.auth; },
++    (x) => { x.hosts.firestore = '0.0.0.0:8080'; },
++    (x) => { x.hosts.database = '127.0.0.1:9001'; },
++  ]) {
++    const targets = labTargets(); edit(targets);
++    assert.throws(() => assertLocalTargets(targets), /REJECTED/);
++  }
++});
++
++test('exact source/rules resolution and loopback-only config', () => {
++  const configPath = path.join(repositoryRoot, '.firebase', 'emulator-lab', 'firebase.json');
++  assert.equal(assertLabConfig(createLabConfig(), configPath).emulators.singleProjectMode, true);
++  const unsafe = createLabConfig(); unsafe.database.rules = '../database.rules.json';
++  assert.throws(() => assertLabConfig(unsafe, configPath), /REJECTED/);
++  const network = createLabConfig(); network.emulators.functions.host = '0.0.0.0';
++  assert.throws(() => assertLabConfig(network, configPath), /REJECTED/);
++});
++
++test('isolates CLI auth cache and strips inherited credentials without reading their values', () => {
++  const env = createLabEnvironment({ PATH: 'allowed', FIREBASE_TOKEN: 'synthetic-secret',
++    GOOGLE_APPLICATION_CREDENTIALS: 'synthetic-path', FIREBASE_CONFIG: 'synthetic-config',
++    FIRESTORE_EMULATOR_HOST: 'external:8080', GCLOUD_PROJECT: 'production', FUNCTIONS_DISCOVERY_TIMEOUT: '86400',
++    DATABASE_URL: 'https://synthetic-external.invalid' });
++  assert.equal(env.PATH, 'allowed');
++  assert.equal(env.FIREBASE_TOKEN, undefined);
++  assert.equal(env.GOOGLE_APPLICATION_CREDENTIALS, undefined);
++  assert.equal(env.FIREBASE_CONFIG, undefined);
++  assert.equal(env.GCLOUD_PROJECT, PROJECT_ID);
++  assert.equal(env.FIRESTORE_EMULATOR_HOST, '127.0.0.1:8080');
++  assert.equal(env.FUNCTIONS_DISCOVERY_TIMEOUT, String(DISCOVERY_TIMEOUT_SECONDS));
++  assert.equal(env.DATABASE_URL, LAB_DATABASE_URL);
++  assert.equal(env.XDG_CONFIG_HOME, path.join(repositoryRoot, '.firebase', 'emulator-lab', 'cli-config'));
++});
++
++test('HTTP requests reject non-loopback endpoints and redirects', async () => {
++  let calls = 0;
++  const fakeFetch = async (_url, options) => {
++    calls++; assert.equal(options.redirect, 'error');
++    return { status: 200, json: async () => ({ ok: true }) };
++  };
++  for (const url of ['https://127.0.0.1:9099/', 'http://localhost:9099/', 'http://user:pass@127.0.0.1:9099/',
++    'http://127.0.0.1:80/', 'http://example.test:9099/']) {
++    await assert.rejects(localJson(url, {}, fakeFetch), /REJECTED/);
++  }
++  assert.equal(calls, 0);
++  assert.deepEqual(await localJson('http://127.0.0.1:9099/', {}, fakeFetch), { ok: true });
++  assert.equal(calls, 1);
++});
++
++test('seed readiness rejects missing service or different bound host before mutation', async () => {
++  const good = Object.fromEntries(Object.entries(LAB_PORTS).map(([name, port]) => [name, { host: '127.0.0.1', port }]));
++  const request = async (url, options) => {
++    if (url.endsWith('/emulators')) return good;
++    assert.equal(options.method, 'POST');
++    assert.equal(options.expectedStatus, 401);
++    assert.deepEqual(options.body, { data: {} });
++    assert.equal(options.headers, undefined);
++    return { error: { status: 'UNAUTHENTICATED' } };
++  };
++  const result = await assertRunningLab(labTargets(), request);
++  assert.equal(result.projectId, PROJECT_ID);
++  assert.equal(result.functionProbe, 'createRealtimeRoom:UNAUTHENTICATED');
++  const wrong = structuredClone(good); wrong.firestore.host = 'external';
++  await assert.rejects(assertRunningLab(labTargets(), async () => wrong), /REJECTED/);
++  const missing = structuredClone(good); delete missing.storage;
++  await assert.rejects(assertRunningLab(labTargets(), async () => missing), /REJECTED/);
++});
++
++test('function discovery probe requires exact unauthenticated handler response', async () => {
++  let calls = 0;
++  const request = async (url, options) => {
++    calls++;
++    assert.equal(url, 'http://127.0.0.1:5001/demo-mosigame-lab/asia-northeast3/createRealtimeRoom');
++    assert.equal(options.expectedStatus, 401);
++    assert.equal(options.timeoutMs, 30000);
++    assert.equal(options.headers, undefined);
++    assert.deepEqual(options.body, { data: {} });
++    return { error: { status: 'UNAUTHENTICATED' } };
++  };
++  assert.equal(await assertFunctionsLoaded(labTargets(), request), 'createRealtimeRoom:UNAUTHENTICATED');
++  assert.equal(calls, 1);
++  for (const body of [{}, { result: { success: true } }, { error: { status: 'NOT_FOUND' } }]) {
++    await assert.rejects(assertFunctionsLoaded(labTargets(), async () => body), /PROBE_REJECTED/);
++  }
++  for (const status of [200, 404, 500]) {
++    await assert.rejects(localJson('http://127.0.0.1:5001/', { expectedStatus: 401 }, async () => ({ status })),
++      new RegExp(`LAB_HTTP_FAILED_${status}`));
++  }
++  assert.deepEqual(await localJson('http://127.0.0.1:5001/', { expectedStatus: 401 }, async () => ({
++    status: 401, json: async () => ({ error: { status: 'UNAUTHENTICATED' } }),
++  })), { error: { status: 'UNAUTHENTICATED' } });
++});
++
++test('synthetic fixtures match current onboarding/catalog/entitlement shapes', () => {
++  const f = syntheticFixtures();
++  assert.deepEqual(f.accounts.map((x) => x.role), ['T', 'A', 'B', 'C', 'D', 'X']);
++  assert.ok(f.accounts.every((x) => x.email.endsWith('@example.test') && x.emailVerified && /^mosigame-lab-[TABCDX]$/.test(x.uid)));
++  assert.ok(f.onboarding.every((x) => x.status === 'complete' && x.provider === 'legacyPassword' && x.schemaVersion === 1));
++  assert.deepEqual(f.users.find((x) => x.uid === 'mosigame-lab-A').ownedGames, ['final_call', 'mafia']);
++  assert.deepEqual(f.users.find((x) => x.uid === 'mosigame-lab-T').ownedGames, []);
++  assert.equal(f.games.find((x) => x.id === 'liars_poker').accessType, 'free');
++  assert.equal(f.games.find((x) => x.id === 'liars_poker').maxPlayers, 6);
++  assert.equal(f.games.find((x) => x.id === 'final_call').minPlayers, 4);
++  assert.equal(f.games.find((x) => x.id === 'final_call').maxPlayers, 4);
++  assert.ok(f.games.every((x) => x.imageUrl === '' && x.componentImageUrl === '' && x.ruleVideoUrl === ''));
++});
++
++test('Firestore REST fixtures retain typed fields, project boundary, and server timestamps', () => {
++  const writes = firestoreSeedWrites();
++  assert.equal(writes.length, 15);
++  assert.ok(writes.every((x) => x.update.name.startsWith('projects/demo-mosigame-lab/databases/(default)/documents/')));
++  const user = writes.find((x) => x.update.name.endsWith('/users/mosigame-lab-A'));
++  assert.deepEqual(user.update.fields.ownedGames, { arrayValue: { values: [{ stringValue: 'final_call' }, { stringValue: 'mafia' }] } });
++  assert.deepEqual(user.update.fields.profileImageUrl, { nullValue: null });
++  assert.deepEqual(user.updateTransforms, [{ fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' }, { fieldPath: 'updatedAt', setToServerValue: 'REQUEST_TIME' }]);
++  const onboarding = writes.find((x) => x.update.name.endsWith('/userOnboarding/mosigame-lab-T'));
++  assert.deepEqual(onboarding.update.fields.schemaVersion, { integerValue: '1' });
++  assert.deepEqual(onboarding.update.fields.status, { stringValue: 'complete' });
++  const game = writes.find((x) => x.update.name.endsWith('/games/final_call'));
++  assert.deepEqual(game.update.fields.enabled, { booleanValue: true });
++  assert.deepEqual(game.update.fields.minPlayers, { integerValue: '4' });
++  assert.throws(() => firestoreFixtureValue(undefined), /VALUE_REJECTED/);
++  const bad = syntheticFixtures(); bad.users[0].uid = '../outside';
++  assert.throws(() => firestoreSeedWrites(bad), /PATH_REJECTED/);
++});
++
++test('rejects arbitrary CLI commands/project overrides', async () => {
++  for (const args of [[], ['deploy'], ['seed', '--project', 'project0000-ec01e'], ['delete'], ['start', '--only', 'functions']]) {
++    await assert.rejects(main(args), /ARGUMENTS_REJECTED/);
++  }
++});
++
++test('file stop request accepts only an exact synthetic owner nonce', () => {
++  const owner = { projectId: PROJECT_ID, nonce: 'e1111111-1111-1111-1111-111111111111', supervisorPid: 1, childPid: 2 };
++  assert.equal(stopRequestFromOwner(owner), owner.nonce + '\n');
++  for (const bad of [undefined, { ...owner, projectId: 'production' }, { ...owner, nonce: '../escape' },
++    { ...owner, supervisorPid: -1 }, { ...owner, childPid: '2' }]) {
++    assert.throws(() => stopRequestFromOwner(bad), /REJECTED/);
++  }
++});
++
++test('installed Firebase CLI resolves --config root, rules, and Admin SDK namespace as expected', async () => {
++  const fixture = mkdtempSync(path.join(os.tmpdir(), 'mosigame-lab-cli-resolution-'));
++  const original = process.env.XDG_CONFIG_HOME;
++  process.env.XDG_CONFIG_HOME = fixture;
++  try {
++    const requireFunctions = createRequire(path.join(repositoryRoot, 'functions', 'package.json'));
++    const { Config } = requireFunctions('firebase-tools/lib/config.js');
++    const { getProjectAdminSdkConfigOrCached } = requireFunctions('firebase-tools/lib/emulator/adminSdkConfig.js');
++    const { FunctionsEmulator } = requireFunctions('firebase-tools/lib/emulator/functionsEmulator.js');
++    const previousDatabaseURL = process.env.DATABASE_URL;
++    process.env.DATABASE_URL = createLabEnvironment({ DATABASE_URL: 'https://synthetic-external.invalid' }).DATABASE_URL;
++    try {
++      // Invoke the installed CLI methods; do not duplicate their URL algorithm.
++      const adminSdkConfig = await getProjectAdminSdkConfigOrCached(PROJECT_ID);
++      assert.equal(adminSdkConfig.databaseURL, LAB_DATABASE_URL);
++      const generatedConfig = JSON.parse(FunctionsEmulator.prototype.getFirebaseConfig.call({
++        args: { projectId: PROJECT_ID }, adminSdkConfig,
++        getEmulatorInfo: () => ({ host: '127.0.0.1', port: 9000 }),
++      }));
++      assert.equal(generatedConfig.databaseURL, labTargets().databaseURL);
++      assert.equal(generatedConfig.projectId, PROJECT_ID);
++    } finally {
++      if (previousDatabaseURL === undefined) delete process.env.DATABASE_URL;
++      else process.env.DATABASE_URL = previousDatabaseURL;
++    }
++    const { getFunctionDiscoveryTimeout } = requireFunctions('firebase-tools/lib/deploy/functions/runtimes/discovery/index.js');
++    const previousTimeout = process.env.FUNCTIONS_DISCOVERY_TIMEOUT;
++    process.env.FUNCTIONS_DISCOVERY_TIMEOUT = createLabEnvironment().FUNCTIONS_DISCOVERY_TIMEOUT;
++    try { assert.equal(getFunctionDiscoveryTimeout(), 60000); } finally {
++      if (previousTimeout === undefined) delete process.env.FUNCTIONS_DISCOVERY_TIMEOUT;
++      else process.env.FUNCTIONS_DISCOVERY_TIMEOUT = previousTimeout;
++    }
++    const configPath = path.join(repositoryRoot, '.firebase', 'emulator-lab', 'firebase.json');
++    // Constructor matches installed detectProjectRoot/config-path logic without
++    // writing test config into the product tree or consulting production aliases.
++    const config = new Config(createLabConfig(), { projectDir: path.dirname(configPath) });
++    assert.equal(path.resolve(config.projectDir, config.src.functions[0].source), path.join(repositoryRoot, 'functions'));
++    for (const [name, file] of [['database', 'database.rules.json'], ['firestore', 'firestore.rules'], ['storage', 'storage.rules']]) {
++      assert.equal(config.path(config.src[name].rules), path.join(repositoryRoot, file));
++      assert.equal(readFileSync(config.path(config.src[name].rules), 'utf8'), readFileSync(path.join(repositoryRoot, file), 'utf8'));
++    }
++  } finally {
++    if (original === undefined) delete process.env.XDG_CONFIG_HOME;
++    else process.env.XDG_CONFIG_HOME = original;
++    rmSync(fixture, { recursive: true, force: true });
++  }
++});
++
++test('Windows Job Object stops only its owned descendants', { skip: process.platform !== 'win32' }, async () => {
++  const fixture = mkdtempSync(path.join(os.tmpdir(), 'mosigame-lab-owned-job-'));
++  const fakeScript = path.join(fixture, 'fake-backend.mjs');
++  const childPidFile = path.join(fixture, 'child.pid');
++  const guardScript = path.join(repositoryRoot, 'tool', 'emulator_lab', 'start_local_backend.ps1');
++  const quote = (x) => "'" + x.replaceAll("'", "''") + "'";
++  const unrelated = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore', windowsHide: true });
++  try {
++    writeFileSync(fakeScript, `import { spawn } from 'node:child_process';\nimport { writeFileSync } from 'node:fs';\nprocess.stdout.write('fake backend stdout\\n');\nprocess.stderr.write('fake backend stderr\\n');\nconst child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore', windowsHide: true });\nwriteFileSync(${JSON.stringify(childPidFile)}, String(child.pid));\nchild.unref();\n`);
++    const ps = `$labText = Get-Content -LiteralPath ${quote(guardScript)} -Raw; ` +
++      `$labMatch = [regex]::Match($labText, "(?s)Add-Type -TypeDefinition @'\\r?\\n(.*?)\\r?\\n'@"); ` +
++      `if (-not $labMatch.Success) { throw 'Guard missing' }; ` +
++      `Add-Type -TypeDefinition $labMatch.Groups[1].Value; ` +
++      `$labCode = [MosigameLocalLabJob]::Run(${quote(process.execPath)}, ${quote(fakeScript)}, ${quote(fixture)}); exit $labCode`;
++    const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', timeout: 30000, windowsHide: true });
++    assert.equal(result.status, 0, result.stderr);
++    assert.match(result.stdout, /fake backend stdout/);
++    assert.match(result.stderr, /fake backend stderr/);
++    assert.match(result.stderr, /Owned process tree empty; cleanup confirmed/);
++    const ownedPid = Number(readFileSync(childPidFile, 'utf8'));
++    assert.throws(() => process.kill(ownedPid, 0), { code: 'ESRCH' });
++    assert.equal(unrelated.exitCode, null);
++    assert.doesNotThrow(() => process.kill(unrelated.pid, 0));
++  } finally {
++    const stopped = once(unrelated, 'exit');
++    unrelated.kill();
++    await stopped;
++    rmSync(fixture, { recursive: true, force: true });
++  }
++});
+diff --git a/tool/emulator_lab/rtdb_trigger_probe.mjs b/tool/emulator_lab/rtdb_trigger_probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/rtdb_trigger_probe.mjs
+@@ -0,0 +1,234 @@
++import { randomUUID } from 'node:crypto';
++import path from 'node:path';
++import { setTimeout as delay } from 'node:timers/promises';
++import { fileURLToPath } from 'node:url';
++import { assertLocalTargets, assertRunningLab, labTargets, localJson, PROJECT_ID } from './local_backend.mjs';
++
++export function createProbeFixture(runId, now) {
++  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(runId) ||
++      !Number.isSafeInteger(now) || now < 0) throw new Error('LAB_PROBE_ID_REJECTED');
++  // This intentionally cannot be joined through the five-character UI code.
++  const roomCode = `LAB_PROBE_${runId}`;
++  const controllerUid = `lab-probe-controller-${runId}`;
++  const operationId = `lab-probe-operation-${runId}`;
++  const playerUid = `lab-probe-player-${runId}`;
++  const otherUid = `lab-probe-other-${runId}`;
++  return {
++    roomPath: `rooms/${roomCode}`,
++    reservationPath: `roomCreateRequests/${controllerUid}/${operationId}`,
++    playerUid,
++    room: {
++      _labProbeRunId: runId, roomCode, controllerUid, creationOperationId: operationId,
++      controllerSessionId: `lab-probe-session-${runId}`,
++      status: 'waiting', selectedGame: 'liars_poker', createdAt: now,
++      updatedAt: 0, cleanupAt: now + 900_000,
++      controllerPresence: { connected: true, lastSeen: now },
++      players: Object.fromEntries([[playerUid, 'LabProbeA', 'frog'], [otherUid, 'LabProbeB', 'bear']]
++        .map(([uid, nickname, characterId], seatIndex) => [uid, {
++          nickname, characterId, seatIndex, role: 'player', status: 'active',
++          isConnected: true, lastSeen: now,
++        }])),
++      game: {
++        public: {
++          phase: 'playing', round: 1, startedAt: now, revision: 0, updatedAt: now,
++          turnUid: playerUid, turnDeadlineAt: now + 60_000,
++          players: { [playerUid]: { status: 'alive' }, [otherUid]: { status: 'alive' } },
++        },
++        // Keep a server object after RTDB drops empty maps.
++        server: { probeMarker: runId },
++      },
++    },
++    reservation: {
++      _labProbeRunId: runId, roomCode,
++      controllerSessionId: `lab-probe-session-${runId}`, createdAt: now,
++    },
++  };
++}
++
++// This fixture probe proves Emulator trigger wiring, not any of the 62 Android
++// scenarios. It never calls a game handler directly or manufactures its output.
++export async function probeRtdbTriggers({
++  targets = labTargets(), request = localJson, readiness = assertRunningLab,
++  now = Date.now, pause = delay, runId = randomUUID(), timeoutMs = 120_000,
++  totalTimeoutMs = 600_000, pollMs = 250,
++} = {}) {
++  assertLocalTargets(targets);
++  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000 ||
++      !Number.isInteger(totalTimeoutMs) || totalTimeoutMs < 1 || totalTimeoutMs > 600_000 ||
++      !Number.isInteger(pollMs) || pollMs < 1 || pollMs > 1000) throw new Error('LAB_PROBE_TIMEOUT_REJECTED');
++  const startedAt = now();
++  const fixture = createProbeFixture(runId, startedAt);
++  const totalDeadline = startedAt + totalTimeoutMs;
++  // Reserve bounded time for owned-path cleanup even after observation expires.
++  const cleanupReserveMs = Math.min(30_000, Math.floor(totalTimeoutMs / 10));
++  let activeDeadline = totalDeadline - cleanupReserveMs;
++  const boundedRequest = (url, options = {}, deadline = activeDeadline) => {
++    const remaining = Math.min(activeDeadline, deadline) - now();
++    if (remaining < 1) throw new Error('LAB_PROBE_TOTAL_TIMEOUT');
++    return request(url, {
++      ...options, timeoutMs: Math.min(options.timeoutMs ?? 10_000, 30_000, remaining),
++    });
++  };
++  await readiness(targets, boundedRequest);
++  const base = new URL(targets.databaseURL);
++  const headers = { Authorization: 'Bearer owner' }; // Emulator-only reserved identity.
++  const evidence = [];
++  const cleanup = { roomRemoved: false, reservationRemoved: false };
++  const claimAttempts = new Set();
++  let stage = 'claim';
++  let failure;
++
++  const access = (nodePath, options = {}, deadline = activeDeadline) => {
++    if (nodePath !== fixture.reservationPath && nodePath !== fixture.roomPath &&
++        !nodePath.startsWith(fixture.roomPath + '/')) throw new Error('LAB_PROBE_PATH_REJECTED');
++    const url = new URL(base);
++    url.pathname = `/${nodePath}.json`;
++    return boundedRequest(url.href, { ...options, headers: { ...headers, ...options.headers } }, deadline);
++  };
++  const readRoom = (deadline) => access(fixture.roomPath, {}, deadline);
++  const waitFor = async (read, predicate) => {
++    const deadline = Math.min(now() + timeoutMs, activeDeadline);
++    while (now() < deadline) {
++      let value;
++      try { value = await read(deadline); } catch (error) {
++        if (now() < deadline) throw error;
++        break;
++      }
++      if (now() >= deadline) break;
++      if (predicate(value)) return value;
++      await pause(Math.min(pollMs, deadline - now()));
++    }
++    throw new Error(now() >= activeDeadline ? 'LAB_PROBE_TOTAL_TIMEOUT' : 'LAB_PROBE_OBSERVATION_TIMEOUT');
++  };
++  const put = (nodePath, body) => access(nodePath, { method: 'PUT', body });
++  const deleteOwned = async (nodePath) => {
++    const value = await access(nodePath);
++    if (value !== null) {
++      if (value?._labProbeRunId !== runId) throw new Error('LAB_PROBE_OWNERSHIP_REJECTED');
++      await access(nodePath, { method: 'DELETE' });
++    }
++    await waitFor((deadline) => access(nodePath, {}, deadline), (value) => value === null);
++  };
++
++  try {
++    if (await readRoom() !== null || await access(fixture.reservationPath) !== null) {
++      throw new Error('LAB_PROBE_COLLISION');
++    }
++    // RTDB's null_etag condition prevents overwriting a concurrent claimant.
++    claimAttempts.add(fixture.reservationPath);
++    await access(fixture.reservationPath, {
++      method: 'PUT', body: fixture.reservation, headers: { 'If-Match': 'null_etag' },
++    });
++    claimAttempts.add(fixture.roomPath);
++    await access(fixture.roomPath, {
++      method: 'PUT', body: fixture.room, headers: { 'If-Match': 'null_etag' },
++    });
++
++    stage = 'room-status-mirror';
++    await put(fixture.roomPath + '/game/public/status', 'playing');
++    const playing = await waitFor(readRoom, (room) => room?.status === 'playing' &&
++      Number.isFinite(room.updatedAt) && room.updatedAt > 0 && room.cleanupAt == null);
++
++    stage = 'player-connection';
++    // Cold workers may take longer than the fixture's initial turn timer.
++    await put(fixture.roomPath + '/game/public/turnDeadlineAt', now() + 60_000);
++    const beforePlayer = playing.game.public.revision;
++    await put(`${fixture.roomPath}/players/${fixture.playerUid}/isConnected`, false);
++    const disconnected = await waitFor(readRoom, (room) => {
++      const interruption = room?.game?.public?.interruption;
++      const saved = room?.game?.server?.interruption;
++      return interruption?.playerUid === fixture.playerUid && interruption.reason === 'disconnected' &&
++        saved?.id === interruption.id && Number.isFinite(saved.previousTurnRemainingMs) &&
++        saved.previousTurnRemainingMs > 0 && room.game.public.turnDeadlineAt == null &&
++        room.game.public.revision > beforePlayer;
++    });
++    const playerPausedRevision = disconnected.game.public.revision;
++    await put(`${fixture.roomPath}/players/${fixture.playerUid}/isConnected`, true);
++    const playerResumed = await waitFor(readRoom, (room) => room?.game?.public?.interruption == null &&
++      room?.game?.server?.interruption == null && Number.isFinite(room?.game?.public?.turnDeadlineAt) &&
++      room.game.public.turnDeadlineAt > now() && room.game.public.revision > playerPausedRevision);
++    evidence.push({
++      trigger: 'game_common_interruption_on_connection_changed',
++      pauseRevision: playerPausedRevision, resumeRevision: playerResumed.game.public.revision,
++      remainingTimeSaved: true, pauseAndResumeObserved: true,
++    });
++
++    stage = 'controller-connection';
++    // Fresh probe timer is explicit fixture input, never counted as trigger output.
++    await put(fixture.roomPath + '/game/public/turnDeadlineAt', now() + 60_000);
++    const beforeController = playerResumed.game.public.revision;
++    await put(fixture.roomPath + '/controllerPresence/connected', false);
++    const controllerPaused = await waitFor(readRoom, (room) => {
++      const saved = room?.game?.server?.controllerPause;
++      return Number.isFinite(saved?.startedAt) && Number.isFinite(saved?.previousTurnRemainingMs) &&
++        saved.previousTurnRemainingMs > 0 && room.game.public.turnDeadlineAt == null &&
++        room.game.public.revision > beforeController;
++    });
++    const controllerPausedRevision = controllerPaused.game.public.revision;
++    await put(fixture.roomPath + '/controllerPresence/connected', true);
++    const controllerResumed = await waitFor(readRoom, (room) => room?.game?.server?.controllerPause == null &&
++      Number.isFinite(room?.game?.public?.turnDeadlineAt) && room.game.public.turnDeadlineAt > now() &&
++      room.game.public.revision > controllerPausedRevision);
++    evidence.push({
++      trigger: 'game_common_controller_presence_changed',
++      pauseRevision: controllerPausedRevision, resumeRevision: controllerResumed.game.public.revision,
++      remainingTimeSaved: true, pauseAndResumeObserved: true,
++    });
++
++    stage = 'room-status-mirror';
++    await put(fixture.roomPath + '/game/public/status', 'finished');
++    const finished = await waitFor(readRoom, (room) => room?.status === 'finished' &&
++      Number.isFinite(room.finishedAt) && Number.isFinite(room.retainUntil) &&
++      room.retainUntil - room.finishedAt === 900_000 && room.cleanupAt === room.retainUntil);
++    evidence.push({
++      trigger: 'syncRealtimeRoomGameStatus', playingMirrored: playing.status === 'playing',
++      finishedMirrored: finished.status === 'finished', retentionMs: 900_000,
++    });
++
++    stage = 'deleted-room-reservation';
++    const reservationBefore = await access(fixture.reservationPath);
++    if (reservationBefore?._labProbeRunId !== runId) throw new Error('LAB_PROBE_RESERVATION_MISSING');
++    // Do not delete the reservation ourselves before observing the backstop.
++    await access(fixture.roomPath, { method: 'DELETE' });
++    await waitFor((deadline) => access(fixture.reservationPath, {}, deadline), (value) => value === null);
++    evidence.push({ trigger: 'cleanupDeletedRoomCreationRequest', reservationExistedBefore: true,
++      reservationRemovedByTrigger: true });
++  } catch (error) {
++    failure = { stage, reason: /^LAB_[A-Z0-9_]+$/.test(error.message ?? '') ? error.message : 'LAB_PROBE_FAILED' };
++  } finally {
++    activeDeadline = totalDeadline;
++    for (const [nodePath, key] of [[fixture.roomPath, 'roomRemoved'], [fixture.reservationPath, 'reservationRemoved']]) {
++      try {
++        if (!claimAttempts.has(nodePath)) {
++          cleanup[key] = await access(nodePath) === null;
++          continue;
++        }
++        await deleteOwned(nodePath); cleanup[key] = true;
++      } catch (error) {
++        failure ??= { stage: 'cleanup', reason: /^LAB_[A-Z0-9_]+$/.test(error.message ?? '') ? error.message : 'LAB_PROBE_CLEANUP_FAILED' };
++      }
++    }
++  }
++  return {
++    status: !failure && evidence.length === 4 && cleanup.roomRemoved && cleanup.reservationRemoved ? 'PASS' : 'FAIL',
++    kind: 'RTDB_FIXTURE_PROBE', projectId: PROJECT_ID, runId,
++    limits: { observationTimeoutMs: timeoutMs, totalTimeoutMs, cleanupReserveMs },
++    elapsedMs: Math.max(0, now() - startedAt),
++    productScenariosExecuted: 0, roomPath: fixture.roomPath, reservationPath: fixture.reservationPath,
++    evidence, cleanup, ...(failure ? { failure } : {}),
++  };
++}
++
++if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  if (process.argv.length !== 2) {
++    process.stderr.write('LAB_PROBE_ARGUMENTS_REJECTED\n'); process.exitCode = 1;
++  } else {
++    probeRtdbTriggers().then((result) => {
++      process.stdout.write(JSON.stringify(result) + '\n');
++      process.exitCode = result.status === 'PASS' ? 0 : 1;
++    }).catch((error) => {
++      const reason = /^LAB_[A-Z0-9_]+$/.test(error.message ?? '') ? error.message : 'LAB_PROBE_SETUP_FAILED';
++      process.stderr.write(reason + '\n'); process.exitCode = 1;
++    });
++  }
++}
+diff --git a/tool/emulator_lab/rtdb_trigger_probe.test.mjs b/tool/emulator_lab/rtdb_trigger_probe.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/rtdb_trigger_probe.test.mjs
+@@ -0,0 +1,216 @@
++import assert from 'node:assert/strict';
++import test from 'node:test';
++import { createProbeFixture, probeRtdbTriggers } from './rtdb_trigger_probe.mjs';
++import { labTargets } from './local_backend.mjs';
++
++const runId = '01234567-89ab-4cde-8123-456789abcdef';
++
++// Simulated external handlers let runner tests withhold each independent output.
++// They never contact a running Emulator or any user's room.
++function backend({ missing, collision, collisionReservation, failAfterRoomWrite, hijackRoom, coldStatusMs = 0 } = {}) {
++  let clock = 1_000_000;
++  const fixture = createProbeFixture(runId, clock);
++  let room = collision ? { _labProbeRunId: 'someone-else', sentinel: true } : null;
++  let reservation = collisionReservation ? structuredClone(fixture.reservation) : null;
++  let pendingStatus;
++  const calls = [];
++  const mirrorStatus = (status) => {
++    room.status = status; room.updatedAt = clock; delete room.cleanupAt;
++    if (status === 'finished') {
++      room.finishedAt = clock; room.retainUntil = clock + 900_000; room.cleanupAt = room.retainUntil;
++    }
++  };
++  const request = async (rawUrl, options = {}) => {
++    const url = new URL(rawUrl);
++    const nodePath = url.pathname.slice(1, -5);
++    assert.equal(url.origin, 'http://127.0.0.1:9000');
++    assert.equal(url.searchParams.get('ns'), 'demo-mosigame-lab-default-rtdb');
++    assert.equal(options.headers.Authorization, 'Bearer owner');
++    assert.ok(nodePath === fixture.reservationPath || nodePath === fixture.roomPath ||
++      nodePath.startsWith(fixture.roomPath + '/'));
++    const method = options.method ?? 'GET';
++    calls.push({ nodePath, method, body: options.body, headers: options.headers, timeoutMs: options.timeoutMs });
++    assert.ok(options.timeoutMs > 0 && options.timeoutMs <= 30_000);
++    if (nodePath === fixture.reservationPath) {
++      if (method === 'PUT') { assert.equal(options.headers['If-Match'], 'null_etag'); reservation = structuredClone(options.body); }
++      if (method === 'DELETE') reservation = null;
++      return structuredClone(reservation);
++    }
++    if (nodePath === fixture.roomPath) {
++      if (room && pendingStatus && clock >= pendingStatus.at) {
++        mirrorStatus(pendingStatus.status); pendingStatus = undefined;
++      }
++      if (method === 'PUT') {
++        assert.equal(options.headers['If-Match'], 'null_etag');
++        room = structuredClone(options.body);
++        if (hijackRoom) room._labProbeRunId = 'someone-else';
++        if (failAfterRoomWrite) throw new Error('Synthetic response loss');
++      }
++      if (method === 'DELETE') { room = null; if (missing !== 'deletion') reservation = null; }
++      return structuredClone(room);
++    }
++    assert.equal(method, 'PUT');
++    if (nodePath.endsWith('/game/public/status')) {
++      room.game.public.status = options.body;
++      if (missing !== 'status') {
++        if (options.body === 'playing' && coldStatusMs) pendingStatus = { status: options.body, at: clock + coldStatusMs };
++        else mirrorStatus(options.body);
++      }
++    } else if (nodePath.endsWith('/game/public/turnDeadlineAt')) {
++      room.game.public.turnDeadlineAt = options.body;
++    } else if (nodePath.endsWith('/isConnected')) {
++      room.players[fixture.playerUid].isConnected = options.body;
++      if (missing !== 'player') {
++        if (!options.body) {
++          room.game.public.interruption = { id: 'external-player-interruption', playerUid: fixture.playerUid, reason: 'disconnected' };
++          room.game.server.interruption = {
++            id: 'external-player-interruption', previousTurnRemainingMs: Math.max(0, room.game.public.turnDeadlineAt - clock),
++          };
++          delete room.game.public.turnDeadlineAt;
++        } else {
++          delete room.game.public.interruption; delete room.game.server.interruption;
++          room.game.public.turnDeadlineAt = clock + 59_000;
++        }
++        room.game.public.revision++;
++      }
++    } else if (nodePath.endsWith('/controllerPresence/connected')) {
++      room.controllerPresence.connected = options.body;
++      if (missing !== 'controller') {
++        if (!options.body) {
++          room.game.server.controllerPause = {
++            startedAt: clock, previousTurnRemainingMs: Math.max(0, room.game.public.turnDeadlineAt - clock),
++          };
++          delete room.game.public.turnDeadlineAt;
++        } else {
++          delete room.game.server.controllerPause; room.game.public.turnDeadlineAt = clock + 59_000;
++        }
++        room.game.public.revision++;
++      }
++    } else assert.fail('Unexpected stimulus');
++    return options.body;
++  };
++  return {
++    request, readiness: async () => undefined, now: () => clock,
++    pause: async (milliseconds) => { clock += milliseconds; }, runId, timeoutMs: 20, pollMs: 5,
++    calls, contents: () => ({ room, reservation }), fixture,
++  };
++}
++
++test('fixture is isolated from UI room codes and uses handler-required fields', () => {
++  const fixture = createProbeFixture(runId, 1000);
++  assert.match(fixture.roomPath, /^rooms\/LAB_PROBE_/);
++  assert.notEqual(fixture.room.roomCode.length, 5);
++  assert.match(fixture.reservationPath, /^roomCreateRequests\/lab-probe-controller-/);
++  assert.equal(fixture.room.players[fixture.playerUid].status, 'active');
++  assert.equal(fixture.room.game.public.players[fixture.playerUid].status, 'alive');
++  assert.equal(fixture.room.game.public.status, undefined);
++  assert.throws(() => createProbeFixture('../another-room', 1000), /ID_REJECTED/);
++});
++
++test('four observed external deltas pass with exact-path cleanup and zero product scenarios', async () => {
++  const fake = backend();
++  const result = await probeRtdbTriggers(fake);
++  assert.equal(result.status, 'PASS');
++  assert.equal(result.productScenariosExecuted, 0);
++  assert.deepEqual(result.evidence.map((x) => x.trigger).sort(), [
++    'cleanupDeletedRoomCreationRequest', 'game_common_controller_presence_changed',
++    'game_common_interruption_on_connection_changed', 'syncRealtimeRoomGameStatus',
++  ]);
++  assert.deepEqual(result.cleanup, { roomRemoved: true, reservationRemoved: true });
++  assert.deepEqual(fake.contents(), { room: null, reservation: null });
++  // The runner never writes the fields it later counts as handler evidence.
++  const writes = fake.calls.filter((x) => x.method === 'PUT' && x.nodePath !== fake.fixture.roomPath &&
++    x.nodePath !== fake.fixture.reservationPath);
++  assert.ok(writes.every((x) => /\/(status|turnDeadlineAt|isConnected|connected)$/.test(x.nodePath)));
++  assert.equal(fake.calls.filter((x) => x.method === 'DELETE' && x.nodePath === fake.fixture.reservationPath).length, 0);
++});
++
++test('default 120-second observation permits cold startup and refreshes expired input timers', async () => {
++  const fake = backend({ coldStatusMs: 70_000 });
++  const result = await probeRtdbTriggers({ ...fake, timeoutMs: undefined, pollMs: 1000 });
++  assert.equal(result.status, 'PASS');
++  assert.equal(result.elapsedMs, 70_000);
++  assert.deepEqual(result.limits, { observationTimeoutMs: 120_000, totalTimeoutMs: 600_000, cleanupReserveMs: 30_000 });
++  const firstDisconnect = fake.calls.findIndex((call) => call.nodePath.endsWith('/isConnected') && call.body === false);
++  const refreshed = fake.calls.slice(0, firstDisconnect).find((call) => call.nodePath.endsWith('/turnDeadlineAt'));
++  assert.equal(refreshed.body, fake.fixture.room.createdAt + 130_000);
++  assert.equal(result.productScenariosExecuted, 0);
++});
++
++test('overall deadline bounds accumulated waiting and reserves time to clean owned paths', async () => {
++  const fake = backend({ missing: 'status' });
++  const result = await probeRtdbTriggers({ ...fake, timeoutMs: 100, totalTimeoutMs: 30 });
++  assert.equal(result.status, 'FAIL');
++  assert.equal(result.failure.reason, 'LAB_PROBE_TOTAL_TIMEOUT');
++  assert.equal(result.elapsedMs, 27);
++  assert.deepEqual(result.cleanup, { roomRemoved: true, reservationRemoved: true });
++  assert.deepEqual(fake.contents(), { room: null, reservation: null });
++  assert.ok(fake.calls.filter((call) => call.method === 'DELETE').every((call) => call.timeoutMs <= 3));
++});
++
++test('observation and overall limits reject unbounded configurations before any request', async () => {
++  let requests = 0;
++  const request = async () => { requests++; };
++  await assert.rejects(probeRtdbTriggers({ request, timeoutMs: 120_001 }), /TIMEOUT_REJECTED/);
++  await assert.rejects(probeRtdbTriggers({ request, totalTimeoutMs: 600_001 }), /TIMEOUT_REJECTED/);
++  await assert.rejects(probeRtdbTriggers({ request, totalTimeoutMs: 0 }), /TIMEOUT_REJECTED/);
++  assert.equal(requests, 0);
++});
++
++for (const missing of ['status', 'player', 'controller', 'deletion']) {
++  test(`missing ${missing} trigger output cannot pass and all owned fixtures are removed`, async () => {
++    const fake = backend({ missing });
++    const result = await probeRtdbTriggers(fake);
++    assert.equal(result.status, 'FAIL');
++    assert.equal(result.failure.reason, 'LAB_PROBE_OBSERVATION_TIMEOUT');
++    assert.ok(result.evidence.length < 4);
++    assert.deepEqual(fake.contents(), { room: null, reservation: null });
++    assert.deepEqual(result.cleanup, { roomRemoved: true, reservationRemoved: true });
++  });
++}
++
++test('unsafe targets and missing readiness cannot access any database path', async () => {
++  let calls = 0;
++  const request = async () => { calls++; throw new Error('Unexpected network request'); };
++  const unsafe = labTargets(); unsafe.projectId = 'project0000-ec01e';
++  await assert.rejects(probeRtdbTriggers({ targets: unsafe, request }), /REJECTED/);
++  await assert.rejects(probeRtdbTriggers({ request, readiness: async () => { throw new Error('Unavailable'); } }), /Unavailable/);
++  assert.equal(calls, 0);
++});
++
++test('collision preserves the existing room without writing or deleting it', async () => {
++  const fake = backend({ collision: true });
++  const result = await probeRtdbTriggers(fake);
++  assert.equal(result.status, 'FAIL');
++  assert.equal(result.failure.reason, 'LAB_PROBE_COLLISION');
++  assert.equal(result.cleanup.roomRemoved, false);
++  assert.deepEqual(fake.contents().room, { _labProbeRunId: 'someone-else', sentinel: true });
++  assert.ok(fake.calls.every((x) => x.method === 'GET'));
++});
++
++test('response loss after fixture creation still cleans only its owned paths', async () => {
++  const fake = backend({ failAfterRoomWrite: true });
++  const result = await probeRtdbTriggers(fake);
++  assert.equal(result.status, 'FAIL');
++  assert.deepEqual(fake.contents(), { room: null, reservation: null });
++  assert.deepEqual(result.cleanup, { roomRemoved: true, reservationRemoved: true });
++});
++
++test('even a matching marker never authorizes deleting a pre-existing unclaimed reservation', async () => {
++  const fake = backend({ collisionReservation: true });
++  const result = await probeRtdbTriggers(fake);
++  assert.equal(result.status, 'FAIL');
++  assert.equal(result.failure.reason, 'LAB_PROBE_COLLISION');
++  assert.equal(result.cleanup.reservationRemoved, false);
++  assert.deepEqual(fake.contents().reservation, fake.fixture.reservation);
++  assert.ok(fake.calls.every((x) => x.method === 'GET'));
++});
++
++test('ownership change blocks destructive cleanup and is reported as failure', async () => {
++  const fake = backend({ hijackRoom: true, failAfterRoomWrite: true });
++  const result = await probeRtdbTriggers(fake);
++  assert.equal(result.status, 'FAIL');
++  assert.equal(result.cleanup.roomRemoved, false);
++  assert.equal(fake.contents().room._labProbeRunId, 'someone-else');
++  assert.equal(fake.calls.some((x) => x.method === 'DELETE' && x.nodePath === fake.fixture.roomPath), false);
++});
+diff --git a/tool/emulator_lab/start_local_backend.ps1 b/tool/emulator_lab/start_local_backend.ps1
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/start_local_backend.ps1
+@@ -0,0 +1,209 @@
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++if ($args.Count -ne 0) { throw 'This launcher accepts no arguments.' }
++if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
++    throw 'On POSIX use node tool/emulator_lab/local_backend.mjs start.'
++}
++$labNodeCommand = Get-Command node.exe -CommandType Application -ErrorAction Stop |
++    Select-Object -First 1
++$labNodePath = [IO.Path]::GetFullPath($labNodeCommand.Source)
++$labScriptPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'local_backend.mjs'))
++if ($labNodePath.Contains('"') -or $labScriptPath.Contains('"')) { throw 'Invalid launcher path.' }
++$env:MOSIGAME_LAB_JOB_OWNED = '1'
++
++# Start suspended so descendants cannot escape before job admission. Closing this
++# job kills its complete tree, including emulator Java and Functions workers.
++Add-Type -TypeDefinition @'
++using System;
++using System.Diagnostics;
++using System.IO;
++using System.Runtime.InteropServices;
++using System.Text;
++using System.Threading;
++using System.Threading.Tasks;
++using Microsoft.Win32.SafeHandles;
++
++public static class MosigameLocalLabJob {
++    [StructLayout(LayoutKind.Sequential)] struct SecurityAttributes {
++        public int length; public IntPtr descriptor; public bool inherit;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct StartupInfo {
++        public int cb; public string reserved, desktop, title;
++        public int x, y, xSize, ySize, xChars, yChars, fill, flags;
++        public short show, reserved2; public IntPtr reservedPtr, input, output, error;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct ProcessInfo {
++        public IntPtr process, thread; public uint pid, tid;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct BasicLimits {
++        public long processTime, jobTime; public uint flags;
++        public UIntPtr minWorking, maxWorking; public uint activeLimit;
++        public UIntPtr affinity; public uint priority, scheduling;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct IoCounters {
++        public ulong readOps, writeOps, otherOps, readBytes, writeBytes, otherBytes;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct ExtendedLimits {
++        public BasicLimits basic; public IoCounters io;
++        public UIntPtr processMemory, jobMemory, peakProcess, peakJob;
++    }
++    [StructLayout(LayoutKind.Sequential)] struct Accounting {
++        public long user, kernel, periodUser, periodKernel;
++        public uint faults, processes, active, terminated;
++    }
++    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
++    static extern IntPtr CreateJobObject(IntPtr attrs, string name);
++    [DllImport("kernel32.dll", SetLastError=true)]
++    static extern bool SetInformationJobObject(IntPtr job, int type, IntPtr info, uint size);
++    [DllImport("kernel32.dll", SetLastError=true)]
++    static extern bool QueryInformationJobObject(IntPtr job, int type, out Accounting info, uint size, IntPtr returned);
++    [DllImport("kernel32.dll", SetLastError=true)]
++    static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
++    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
++    static extern bool CreateProcess(string app, StringBuilder cmd, IntPtr pa, IntPtr ta,
++        bool inherit, uint flags, IntPtr env, string cwd, ref StartupInfo si, out ProcessInfo pi);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern uint ResumeThread(IntPtr thread);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateProcess(IntPtr process, uint code);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr job, uint code);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process, out uint code);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool CloseHandle(IntPtr handle);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool CreatePipe(out IntPtr read, out IntPtr write, ref SecurityAttributes attrs, uint size);
++    [DllImport("kernel32.dll", SetLastError=true)] static extern bool SetHandleInformation(IntPtr handle, uint mask, uint flags);
++
++    sealed class ForwardState { public int outputObserved, stopRequested; }
++    static void Close(ref IntPtr handle) {
++        if (handle != IntPtr.Zero) { CloseHandle(handle); handle = IntPtr.Zero; }
++    }
++    static FileStream OwnStream(ref IntPtr handle, FileAccess access) {
++        SafeFileHandle safe = new SafeFileHandle(handle, true); handle = IntPtr.Zero;
++        return new FileStream(safe, access, 4096, false);
++    }
++    static void Forward(FileStream source, Stream target, ForwardState state) {
++        try {
++            byte[] buffer = new byte[4096]; int length;
++            while ((length = source.Read(buffer, 0, buffer.Length)) > 0) {
++                Interlocked.Exchange(ref state.outputObserved, 1);
++                target.Write(buffer, 0, length); target.Flush();
++            }
++        } catch (IOException) { } finally { source.Dispose(); }
++    }
++
++    static bool Empty(IntPtr job) {
++        Accounting info;
++        if (!QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(Accounting)), IntPtr.Zero))
++            throw new InvalidOperationException("Lab job accounting failed.");
++        return info.active == 0;
++    }
++    public static int Run(string executable, string script, string cwd) {
++        return Run(executable, script, cwd, null);
++    }
++    public static int Run(string executable, string script, string cwd, string controlDirectory) {
++        IntPtr job = IntPtr.Zero, limitsPtr = IntPtr.Zero;
++        IntPtr inputRead = IntPtr.Zero, inputWrite = IntPtr.Zero;
++        IntPtr outputRead = IntPtr.Zero, outputWrite = IntPtr.Zero;
++        IntPtr errorRead = IntPtr.Zero, errorWrite = IntPtr.Zero;
++        ProcessInfo pi = new ProcessInfo(); bool admitted = false;
++        FileStream ownerLock = null; StreamWriter input = null;
++        Task outputTask = null, errorTask = null;
++        ForwardState state = new ForwardState();
++        string nonce = Guid.NewGuid().ToString("D");
++        string ownerPath = null, stopPath = null;
++        try {
++            if (controlDirectory != null) {
++                Directory.CreateDirectory(controlDirectory);
++                ownerLock = new FileStream(Path.Combine(controlDirectory, "owner.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
++                ownerPath = Path.Combine(controlDirectory, "owner.json");
++                stopPath = Path.Combine(controlDirectory, "stop.request");
++            }
++            job = CreateJobObject(IntPtr.Zero, null);
++            if (job == IntPtr.Zero) throw new InvalidOperationException("Lab job creation failed.");
++            ExtendedLimits limits = new ExtendedLimits(); limits.basic.flags = 0x2000;
++            limitsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(ExtendedLimits)));
++            Marshal.StructureToPtr(limits, limitsPtr, false);
++            if (!SetInformationJobObject(job, 9, limitsPtr, (uint)Marshal.SizeOf(typeof(ExtendedLimits))))
++                throw new InvalidOperationException("Lab kill-on-close configuration failed.");
++            SecurityAttributes attrs = new SecurityAttributes();
++            attrs.length = Marshal.SizeOf(typeof(SecurityAttributes)); attrs.inherit = true;
++            if (!CreatePipe(out inputRead, out inputWrite, ref attrs, 0) || !SetHandleInformation(inputWrite, 1, 0) ||
++                !CreatePipe(out outputRead, out outputWrite, ref attrs, 0) || !SetHandleInformation(outputRead, 1, 0) ||
++                !CreatePipe(out errorRead, out errorWrite, ref attrs, 0) || !SetHandleInformation(errorRead, 1, 0))
++                throw new InvalidOperationException("Lab owned stdio pipe creation failed.");
++            StartupInfo si = new StartupInfo(); si.cb = Marshal.SizeOf(typeof(StartupInfo));
++            si.flags = 0x100; si.input = inputRead; si.output = outputWrite; si.error = errorWrite;
++            StringBuilder cmd = new StringBuilder("\"" + executable + "\" \"" + script + "\" start");
++            if (!CreateProcess(executable, cmd, IntPtr.Zero, IntPtr.Zero, true, 0x08000004,
++                IntPtr.Zero, cwd, ref si, out pi)) throw new InvalidOperationException("Lab suspended process creation failed (Win32 " + Marshal.GetLastWin32Error() + ").");
++            Close(ref inputRead); Close(ref outputWrite); Close(ref errorWrite);
++            if (!AssignProcessToJobObject(job, pi.process)) throw new InvalidOperationException("Lab job admission failed.");
++            admitted = true;
++            FileStream output = OwnStream(ref outputRead, FileAccess.Read);
++            FileStream error = OwnStream(ref errorRead, FileAccess.Read);
++            input = new StreamWriter(OwnStream(ref inputWrite, FileAccess.Write), new UTF8Encoding(false)); input.AutoFlush = true;
++            outputTask = Task.Run(delegate { Forward(output, Console.OpenStandardOutput(), state); });
++            errorTask = Task.Run(delegate { Forward(error, Console.OpenStandardError(), state); });
++            StreamWriter childInput = input;
++            Task.Run(delegate {
++                try {
++                    string line;
++                    while ((line = Console.ReadLine()) != null) {
++                        lock (childInput) { childInput.WriteLine(line); }
++                        if (line.Trim() == "stop") Interlocked.Exchange(ref state.stopRequested, 1);
++                    }
++                    // Keep the child pipe open when a tool closes its input.
++                    // An exact-owner stop.request remains available in that case.
++                } catch (IOException) { }
++            });
++            if (ownerPath != null) {
++                File.WriteAllText(ownerPath, "{\"projectId\":\"demo-mosigame-lab\",\"nonce\":\"" + nonce +
++                    "\",\"supervisorPid\":" + Process.GetCurrentProcess().Id + ",\"childPid\":" + pi.pid + "}");
++            }
++            if (ResumeThread(pi.thread) == UInt32.MaxValue) throw new InvalidOperationException("Lab launcher resume failed.");
++            Console.Error.WriteLine("[mosigame lab] Owned backend started. Send a line containing stop to finish.");
++            Stopwatch deadline = Stopwatch.StartNew(); uint exit = 259;
++            Stopwatch stopping = null;
++            while (deadline.Elapsed.TotalHours < 4) {
++                if (!GetExitCodeProcess(pi.process, out exit)) throw new InvalidOperationException("Lab launcher status failed.");
++                if (exit != 259) break;
++                if (stopPath != null && File.Exists(stopPath)) {
++                    string requestedNonce = File.ReadAllText(stopPath).Trim();
++                    if (requestedNonce == nonce) {
++                        lock (childInput) { childInput.WriteLine("stop"); }
++                        Interlocked.Exchange(ref state.stopRequested, 1);
++                        File.Delete(stopPath);
++                    }
++                }
++                if (Interlocked.CompareExchange(ref state.stopRequested, 0, 0) != 0) {
++                    if (stopping == null) stopping = Stopwatch.StartNew();
++                    if (stopping.ElapsedMilliseconds >= 5000) { exit = 0; break; }
++                }
++                if (Interlocked.CompareExchange(ref state.outputObserved, 0, 0) == 0 && deadline.ElapsedMilliseconds >= 60000) {
++                    Console.Error.WriteLine("[mosigame lab] Child startup output absent after 60 seconds.");
++                    exit = 3; break;
++                }
++                Thread.Sleep(200);
++            }
++            if (exit == 259) exit = 1;
++            if (!Empty(job) && !TerminateJobObject(job, exit)) throw new InvalidOperationException("Lab job termination failed.");
++            Stopwatch cleanup = Stopwatch.StartNew();
++            while (!Empty(job) && cleanup.ElapsedMilliseconds < 5000) Thread.Sleep(50);
++            if (!Empty(job)) throw new InvalidOperationException("Lab job cleanup unconfirmed.");
++            if (outputTask != null && errorTask != null) Task.WaitAll(new Task[] { outputTask, errorTask }, 3000);
++            Console.Error.WriteLine("[mosigame lab] Owned process tree empty; cleanup confirmed.");
++            return (int)exit;
++        } finally {
++            if (pi.process != IntPtr.Zero && !admitted) TerminateProcess(pi.process, 4);
++            if (job != IntPtr.Zero) CloseHandle(job);
++            if (input != null) input.Dispose();
++            Close(ref inputRead); Close(ref inputWrite); Close(ref outputRead); Close(ref outputWrite); Close(ref errorRead); Close(ref errorWrite);
++            if (pi.thread != IntPtr.Zero) CloseHandle(pi.thread);
++            if (pi.process != IntPtr.Zero) CloseHandle(pi.process);
++            if (limitsPtr != IntPtr.Zero) Marshal.FreeHGlobal(limitsPtr);
++            if (ownerPath != null && ownerLock != null && File.Exists(ownerPath)) File.Delete(ownerPath);
++            if (ownerLock != null) ownerLock.Dispose();
++        }
++    }
++}
++'@
++$labControlDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\.firebase\emulator-lab'))
++$labExitCode = [MosigameLocalLabJob]::Run($labNodePath, $labScriptPath, $PSScriptRoot, $labControlDirectory)
++exit $labExitCode
+diff --git a/tool/emulator_lab/scenario_coverage.json b/tool/emulator_lab/scenario_coverage.json
+new file mode 100644
+--- /dev/null
++++ b/tool/emulator_lab/scenario_coverage.json
+@@ -0,0 +1,625 @@
++{
++  "schemaVersion": 1,
++  "source": "docs/operations/PRE_DEVELOPMENT_AUTH_NETWORK_SESSION_TEST.md",
++  "note": "Support planning catalog, not executable scenario steps or test results. Android UI 45 is a method classification, not 45 ready cases. Local demo APK, email-password login, five backends and four RTDB triggers have smoke evidence only; all 62 product scenarios remain NOT_RUN. The second Tablet boot was stopped for low host RAM before app installation; concurrent two/three/five app operation is unverified. A temporary single-device tablet layout rendered, but invite input did not prove room creation and was restored. Game preparation, verified per-role network/lifecycle control and assertions are still required. The reusable ADB controller supports devices/capture/tap/back/home only. Scheduler periodic execution and precise fault injection are not implemented.",
++  "cases": [
++    {
++      "id": "AUTH-01",
++      "title": "이메일 링크 로그인",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "EMAIL_LINK_FLOW_NOT_VERIFIED",
++      "limitations": [
++        "로컬 이메일·비밀번호 로그인 smoke는 이메일 링크 요청·앱 처리를 검증하지 않음",
++        "로컬 이메일 링크 주입은 실제 메일 앱·발송 검증을 대체하지 않음"
++      ],
++      "task": "RELEASE-EVIDENCE-01 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-02",
++      "title": "Google 로그인",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "NATIVE_GOOGLE_DISABLED_IN_LAB",
++      "limitations": [
++        "현재 lab는 native Google 인증을 차단하고 가상 OAuth 경로도 제공하지 않음",
++        "차단 안내 관찰은 실제 Google 계정 선택·로그인 성공·취소 검증을 대체하지 않음"
++      ],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-03",
++      "title": "Apple 로그인",
++      "mode": "ios_required",
++      "result": "NOT_RUN",
++      "blocker": "IOS_RUN_REQUIRED",
++      "limitations": [
++        "Android/Windows lab에서 Apple native 인증을 실행할 수 없음",
++        "현재 lab routing은 Android debug만 지원하며 별도 iOS 인증 테스트 환경이 필요함"
++      ],
++      "task": "RELEASE-EVIDENCE-01 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-04",
++      "title": "온보딩 저장·화면 복원",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "INCOMPLETE_ONBOARDING_FIXTURE_REQUIRED",
++      "limitations": [
++        "현재 합성 계정 seed는 전부 onboarding complete이며 신규·미완료 단계 준비가 필요함",
++        "기존 완료 계정 로그인 smoke는 비밀번호·프로필 단계 저장과 복원을 대체하지 않음"
++      ],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-05",
++      "title": "회원가입 뒤로가기",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "AUTH-BACK-01 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-06",
++      "title": "로그인 요청 중 단절·취소",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "요청 처리 중 정확한 장애 시점은 추가 제어 필요"
++      ],
++      "task": "TEST-REGRESSION-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "AUTH-07",
++      "title": "계정 전환과 저장 세션",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SECURITY-01 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "AUTH-08",
++      "title": "오류·재전송 후 정상 로그인",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FIXTURE_OR_FAULT_CONTROL_NOT_VERIFIED",
++      "limitations": [
++        "잘못된 입력과 사용할 수 없는 링크·재전송은 독립 변형이며 오류 링크 준비가 필요함"
++      ],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "ROOM-01",
++      "title": "방 생성·정상 참가",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "CORE-REVIEW-01"
++    },
++    {
++      "id": "ROOM-02",
++      "title": "참가 실패 후 다시 참가",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "ROOM-03",
++      "title": "방 생성 중 단절·재시도",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "서버 처리 후 응답만 유실됐는지 별도 입증 필요"
++      ],
++      "task": "ROOM-CREATE-REQUEST-01"
++    },
++    {
++      "id": "ROOM-04",
++      "title": "다른 계정의 그룹 게임 목록",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "CONTROLLER_ONLY_ENTITLEMENT_FIXTURE_REQUIRED",
++      "limitations": [
++        "현재 seed는 A 전용 Final Call·Mafia와 무료 LP를 제공하지만 T 전용 소유 게임 변형은 없음"
++      ],
++      "task": "신규 task 후보 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "ROOM-05",
++      "title": "대기실 단절과 명단 갱신",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "ROOM-06",
++      "title": "대기실 저장·다시 참여 선택",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "NET-01",
++      "title": "짧은 단절과 네트워크 전환",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "실물 Wi-Fi/모바일 데이터 전환은 별도"
++      ],
++      "task": "NET-RECOVERY-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-02",
++      "title": "같은 게임에서 두 번 단절",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-03",
++      "title": "중단 이후 남은 시간 보존",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-TIMER-01 / GAME-PAUSE-UX-01"
++    },
++    {
++      "id": "NET-04",
++      "title": "태블릿만 단절",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "CONTROLLER-RECOVERY-01 / NET-UI-01"
++    },
++    {
++      "id": "NET-05",
++      "title": "A·B 단절 후 A만 복귀",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-06",
++      "title": "참가자·태블릿 중첩 단절",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-TIMER-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-07",
++      "title": "복구 중 다시 단절",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "복구 경합 시점은 구간 제어 필요"
++      ],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-08",
++      "title": "복구 뒤 실제 상태·입력 확인",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-09",
++      "title": "같은 화면의 중복 안내·재시도",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "NET-10",
++      "title": "장기 단절·보존 경계",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "SCHEDULER_INVOCATION_NOT_IMPLEMENTED",
++      "limitations": [
++        "backend startup과 RTDB 이벤트 trigger probe는 정기 Scheduler 실행을 보장하지 않음",
++        "보존 경계 fixture와 로컬 scheduled handler 실행 제어가 필요함"
++      ],
++      "task": "SESSION-RECONNECT-02 / ROOM-CLEANUP-01"
++    },
++    {
++      "id": "RESTORE-01",
++      "title": "휴대폰 진행 중 재실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-02",
++      "title": "분배 중 휴대폰 재실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-03",
++      "title": "분배 완료 직후 태블릿 재실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-04",
++      "title": "최초 오프라인 태블릿 실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-05",
++      "title": "최초 오프라인 휴대폰 실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-06",
++      "title": "빈 손패·탈락·관전 재실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "RESTORE-07",
++      "title": "백그라운드·화면 잠금",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "제조사 백그라운드/Doze 제약은 별도"
++      ],
++      "task": "SESSION-RECONNECT-02 / GAME-DEVICE-BOARD-01"
++    },
++    {
++      "id": "RESTORE-08",
++      "title": "복구 불가 방과 이전 세션",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "EXIT-01",
++      "title": "대기실 직접 퇴장",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "LEAVE-CONSISTENCY-01"
++    },
++    {
++      "id": "EXIT-02",
++      "title": "게임과 그룹 직접 퇴장",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "LEAVE-CONSISTENCY-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "EXIT-03",
++      "title": "퇴장 요청 실패·재시도",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "EXIT-04",
++      "title": "강퇴 후 늦은 복구",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "LEAVE-CONSISTENCY-01 / SECURITY-01"
++    },
++    {
++      "id": "EXIT-05",
++      "title": "태블릿의 방 종료",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "EXIT-06",
++      "title": "정상 종료와 대기실 복귀",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "FINISH-SYNC-01"
++    },
++    {
++      "id": "EXIT-07",
++      "title": "winner 직후 태블릿 재실행",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "FINISH-SYNC-01 / WINNER-CONNECTION-LAYER-01"
++    },
++    {
++      "id": "EXIT-08",
++      "title": "중복 종료·다이얼로그 경합",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "EXIT-09",
++      "title": "다중 단절 중 제외·최소 인원",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "CMD-01",
++      "title": "행동 전송 중 단절·중복 탭",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "단절 토글만으로 명령 처리·응답 유실 확정 불가"
++      ],
++      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "CMD-02",
++      "title": "서버 처리 후 응답만 유실",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "서버 처리 완료를 입증하며 응답만 유실시키는 제어가 없음"
++      ],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "CMD-03",
++      "title": "분배·진행 완료 요청 실패",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "해당 판·단계의 분배 완료 callable에 일시 실패를 확정하는 제어가 없음"
++      ],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "CMD-04",
++      "title": "이전 판 요청이 새 판에 도착",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "이미 전송한 옛 요청을 보류한 뒤 새 판에 도착시키는 제어가 없음"
++      ],
++      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "CMD-05",
++      "title": "권한 오류 뒤 구독 재개",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "읽기 구독 권한 오류·종료를 확정하고 정상 조건으로 회복시키는 제어가 없음"
++      ],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "CMD-06",
++      "title": "지연·빈 공개 상태와 최신 이벤트",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "최신 이벤트 뒤에 오래된 revision·삭제 확인·빈 조회를 도착시키는 순서 제어가 없음"
++      ],
++      "task": "SESSION-RECONNECT-02 / TEST-REGRESSION-01"
++    },
++    {
++      "id": "GAME-01",
++      "title": "LP/FC 최초 판·후속 분배",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "GAME-02",
++      "title": "LP 벌칙·룰렛 응답 지연",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "응답만 지연하는 경우는 별도 장애 주입 필요"
++      ],
++      "task": "GAME-COMM-DIAGNOSTICS-01"
++    },
++    {
++      "id": "GAME-03",
++      "title": "FC 다시하기·최종 공개 복구",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "GAME-04",
++      "title": "Mafia 역할 확인·배치 실패",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "ROLE_ALLOCATION_FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "정상 역할 확인과 역할 배치 실패·취소는 독립 변형이며 배치 callable 실패 제어가 필요함"
++      ],
++      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "GAME-05",
++      "title": "Mafia 밤 행동·조사·시간초과",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "SESSION-RECONNECT-02 / SECURITY-01"
++    },
++    {
++      "id": "GAME-06",
++      "title": "Mafia 발표·투표·결과·관전",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "GAME-DEVICE-BOARD-01 / SESSION-RECONNECT-02"
++    },
++    {
++      "id": "UI-01",
++      "title": "중단·복구 안내 이해도",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [
++        "사람의 안내 이해도는 사람 검증 필요"
++      ],
++      "task": "GAME-PAUSE-UX-01"
++    },
++    {
++      "id": "UI-02",
++      "title": "debug 통신 진단·기록 복사",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "GAME-COMM-DIAGNOSTICS-01"
++    },
++    {
++      "id": "UI-03",
++      "title": "release 진단 비노출",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "RELEASE_LAB_BUILD_UNAVAILABLE",
++      "limitations": [
++        "debug 전용 로컬 routing으로 release 비노출을 검증할 수 없음"
++      ],
++      "task": "TEST-REGRESSION-01"
++    },
++    {
++      "id": "UI-04",
++      "title": "작은 화면·글씨/화면 확대",
++      "mode": "android_ui",
++      "result": "NOT_RUN",
++      "blocker": "SCENARIO_NOT_EXECUTED",
++      "limitations": [],
++      "task": "ACCESSIBILITY-SCALE-01"
++    },
++    {
++      "id": "UI-05",
++      "title": "태블릿 구성품 이미지·키보드",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "LOCAL_IMAGE_FIXTURE_REQUIRED",
++      "limitations": [
++        "현재 catalog imageUrl·componentImageUrl이 빈 값이라 서로 다른 이미지·지연 로딩 fixture가 필요함",
++        "키보드 부분은 독립 실행할 수 있으나 해당 결과만으로 이미지 변형을 통과 처리하지 않음"
++      ],
++      "task": "TABLET-ASSET-01 / TABLET-MEMBERS-01"
++    },
++    {
++      "id": "OBS-01",
++      "title": "단절 신고 실패 후 같은 관측값 재시도",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "STALE_REPORT_FAULT_CONTROL_NOT_IMPLEMENTED",
++      "limitations": [
++        "stale 신고 첫 callable만 실패시키고 같은 heartbeat 관측값을 유지하는 제어가 없음"
++      ],
++      "task": "SESSION-RECONNECT-02"
++    },
++    {
++      "id": "OBS-02",
++      "title": "방·생성 요청·유령 참가자 정리",
++      "mode": "local_fixture_or_fault",
++      "result": "NOT_RUN",
++      "blocker": "ORPHAN_FIXTURE_AND_SCHEDULER_CONTROL_REQUIRED",
++      "limitations": [
++        "방 삭제 후 생성 예약 정리 trigger smoke는 기존 고아 요청·부분 실패·정기 정리 전체를 검증하지 않음",
++        "고아 요청·유령 참가자 fixture와 로컬 scheduled cleanup 실행 제어가 필요함"
++      ],
++      "task": "ROOM-CLEANUP-01 / ROOM-CREATE-REQUEST-01"
++    },
++    {
++      "id": "OBS-03",
++      "title": "참가 자격·공개/개인 데이터 경계",
++      "mode": "separate_automated_validation",
++      "result": "NOT_RUN",
++      "blocker": "SEPARATE_VALIDATION_NOT_RUN",
++      "limitations": [],
++      "task": "SECURITY-01"
++    },
++    {
++      "id": "OBS-04",
++      "title": "자동 테스트 실행 경로",
++      "mode": "separate_automated_validation",
++      "result": "NOT_RUN",
++      "blocker": "REQUIRED_TEST_FILES_MISSING",
++      "limitations": [
++        "현재 auth/session guarded suite는 필수 삭제 파일 누락으로 INVALID·실제 exit 1이며 제품 앱 실패와 별도임",
++        "이번 후보의 FULL과 실제 CI·package 포함 범위 검증은 미실행이며 도구 smoke로 대체하지 않음"
++      ],
++      "task": "TEST-REGRESSION-01"
++    }
++  ]
++}

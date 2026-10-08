@@ -49,14 +49,18 @@ class RoomService {
     return user;
   }
 
+  //===================================[방 생성]=================================
+  // 방 코드를 반환
   Future<String> createRoom({String? operationId}) async {
     final user = _auth.currentUser;
 
+    // 가드 조건문: 로그인 상태 확인
     if (user == null) {
       throw const RoomCommandException('방을 만들려면 로그인이 필요합니다.');
     }
 
     try {
+      // cloud function 호출: 방 생성 작업 요청
       final response = await _functions
           .httpsCallable('createRealtimeRoom')
           .call(operationId == null ? null : {'operationId': operationId});
@@ -72,11 +76,13 @@ class RoomService {
           controllerSessionId.isEmpty) {
         throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
+      // 태블릿 기기에 roomCode와 controllerSessionId을 저장.
       await ControllerRoomSessionStore.instance.save(
         roomCode: roomCode,
         sessionId: controllerSessionId,
       );
       await markControllerConnected(roomCode);
+      // 호출한 함수에 방 코드 리턴
       return roomCode;
     } on FirebaseFunctionsException catch (error) {
       throw RoomCommandException(error.message ?? '방을 생성하지 못했습니다.');
@@ -211,6 +217,7 @@ class RoomService {
         .map((event) => ControllerPresence.fromValue(event.snapshot.value));
   }
 
+  //[observe] 특정 방의 현재 상태를 파베에서 실시간으로 감시
   Stream<String?> watchRoomStatus(String roomCode) => realtime
       .ref('rooms/$roomCode/status')
       .onValue
@@ -238,7 +245,7 @@ class RoomService {
         .map((event) => _playersFromSnapshot(event.snapshot));
   }
 
-  /// Firebase 서버와 이 앱 인스턴스의 실제 연결 상태입니다.
+  //[method] Firebase 서버와 이 앱 인스턴스의 실제 연결 상태 파악하는 메서드.
   Stream<bool> watchServerConnection() =>
       RealtimeConnectionMonitor.instance.watch(realtime);
 

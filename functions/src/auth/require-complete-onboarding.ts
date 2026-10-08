@@ -8,9 +8,11 @@ import {
 } from "./onboarding-types.js";
 
 /**
+ * ==========================[ onboarding check ]===========================
  * Prevents incomplete accounts from entering room and game services.
  * @param {string} uid Authenticated account UID.
  * @return {Promise<void>} Resolves when access is allowed.
+ * 현재 로그인한 사용자가 필수 회원 설정을 완료했는지 검사하는 함수.
  */
 export async function assertOnboardingComplete(uid: string): Promise<void> {
   const db = getFirestore();
