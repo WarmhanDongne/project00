@@ -11,6 +11,9 @@
 
 - 원래 등록일: 2026-10-06. `origin/newgui`에 이미 있는 HOLDEM-01 ID를 유지해
   2026-10-08 현재 작업 목록에도 연결했다. 새 게임을 다시 구현하라는 요청이 아니다.
+- 분류 결정(2026-10-08): 사용자가 HOLDEM-01을 **출시 전 필수**로 지정했다.
+  현재 분류·상태·다음 행동의 단일 원본은 TASKS.md에 유지한다. 이 결정은 원격 후보의
+  병합·복구 검증 완료 또는 담당 범위·계약 변경·production 접근·배포 승인을 뜻하지 않는다.
 - 근거: [newgui 작업 기록과 계획](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/docs/planning/TASKS.md#holdem-01),
   [MVP 계획](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/docs/planning/HOLDEM_MVP_PLAN.md).
   가상 칩 단일 테이블, 태블릿 공용 화면·휴대폰 개인 패/행동, 서버 권위와 원격 에셋
