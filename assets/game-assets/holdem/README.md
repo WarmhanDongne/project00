@@ -33,3 +33,22 @@ game-assets/holdem/<assetVersion>/<logicalPath>
 다마스크 배경과 카드 앞면 이미지 104장을 포함한 110개 파일이며, 기존 설치 캐시와
 롤백 확인을 위해 보존한다. Storage manifest를 v2로 바꾸면 v1 코드 앱은 새로
 다운로드할 수 없고, 이미 v1을 설치한 기기만 계속 사용할 수 있다.
+
+## 개발·시뮬레이터 캐시 설치
+
+개발·profile·release 모두 v2 다운로드 캐시를 사용한다. 홀덤 패키지의 이미지는
+Flutter 번들에 등록하지 않으며, 개발 모드도 에셋 준비를 건너뛰지 않는다.
+
+네트워크 없이 시뮬레이터를 확인하려면 앱을 종료하고, 앱의 Application Support
+디렉터리 아래 `mosigame`을 캐시 루트로 지정해 로컬 원본을 설치한다.
+실제 경로는 해당 시뮬레이터의 앱 데이터 컨테이너에서 확인한다. iOS 시뮬레이터에서는
+`<앱 데이터 컨테이너>/Library/Application Support/mosigame`이다.
+
+```text
+dart run tool/install_local_game_assets.dart --source assets/game-assets/holdem --cache-root "<앱 Application Support>/mosigame"
+```
+
+도구는 기존 `GameAssetCache.install`을 사용해 매니페스트·파일 크기·SHA-256을 검증하고
+기존 버전 디렉터리·완료 마커를 만든다. 앱은 재실행 후 이 캐시를 같은 준비 경로로
+확인한다. `--patch-number`는 기본 `0`이며 로컬 테스트에 필요한 경우에만 지정한다.
+도구는 Firebase·네트워크에 접근하지 않고 앱 바이너리에 포함되지 않는다.

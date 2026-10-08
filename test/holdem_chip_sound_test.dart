@@ -6,6 +6,7 @@ import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_holdem/tablet/screens/table_screen.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
+import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/sound/providers/sound_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,6 +59,13 @@ class _Preferences implements SharedPreferencesAsync {
 }
 
 void main() {
+  late GameAssetStore previousStore;
+  setUp(() {
+    previousStore = GameAssetStore.instance;
+    GameAssetStore.instance = FakeHoldemAssetStore();
+  });
+  tearDown(() => GameAssetStore.instance = previousStore);
+
   testWidgets('홀덤 전용 배경음악 에셋이 앱에 포함된다', (tester) async {
     final bytes = await rootBundle.load(HoldemSounds.background);
     expect(bytes.lengthInBytes, greaterThan(1000000));

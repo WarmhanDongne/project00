@@ -7,7 +7,9 @@ import 'package:game_kit/core/assets/game_asset_cache.dart';
 import 'package:game_kit/core/assets/game_asset_manifest.dart';
 import 'package:game_kit/core/assets/game_asset_source.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
+import 'package:project00/game_assets/game_asset_bootstrap.dart';
 import 'package:project00/game_assets/game_asset_prepare.dart';
+import 'package:project00/games/game_registry.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -25,16 +27,48 @@ void main() {
     await temporaryDirectory.delete(recursive: true);
   });
 
-  test('시뮬레이터 개발 빌드는 원격 다운로드 없이 홀덤을 준비한다', () async {
-    final store = GameAssetStore(
-      cache: GameAssetCache(root: temporaryDirectory),
-      currentPatchNumber: 0,
+  test('개발 빌드도 홀덤을 다운로드 게임으로 등록하고 진입 전에 설치한다', () async {
+    final source = _MemorySource();
+    await initializeGameAssets(
+      catalog: const GameRegistry(),
+      supportDirectory: () async => temporaryDirectory,
+      patchNumber: () async => 0,
+      source: source,
     );
-    GameAssetStore.instance = store;
+    final store = GameAssetStore.instance;
+    expect(const HoldemGame().requiredAssetVersion, 2);
+    expect(source.manifestFetchCount, 0);
+    await expectLater(store.prepareGame('holdem'), throwsStateError);
 
     await prepareGameAssetsForPlay(const HoldemGame());
 
-    expect(const HoldemGame().requiredAssetVersion, 0);
+    expect(source.manifestFetchCount, 1);
+    expect(source.fileDownloadCount, 1);
+    expect(store.isGameCompatible('holdem', requiredAssetVersion: 2), isTrue);
+    await prepareGameAssetsForPlay(const HoldemGame());
+    expect(source.manifestFetchCount, 1);
+    expect(source.fileDownloadCount, 1);
+  });
+
+  test('홀덤 설치 실패는 진입을 거부하고 다음 진입에서 재시도한다', () async {
+    final source = _MemorySource()..failDownloads = true;
+    final store =
+        GameAssetStore(cache: GameAssetCache(root: temporaryDirectory))
+          ..registerDownloadableGame(
+            gameId: 'holdem',
+            requiredAssetVersion: 2,
+            source: source,
+          );
+    GameAssetStore.instance = store;
+    await expectLater(
+      prepareGameAssetsForPlay(const HoldemGame()),
+      throwsStateError,
+    );
+    expect(store.isGameCompatible('holdem', requiredAssetVersion: 2), isFalse);
+    source.failDownloads = false;
+    await prepareGameAssetsForPlay(const HoldemGame());
+    expect(store.isGameCompatible('holdem', requiredAssetVersion: 2), isTrue);
+    expect(source.fileDownloadCount, 2);
   });
 
   test('홀덤 운영 v2 에셋은 설치 후 캐시를 재사용한다', () async {
@@ -54,6 +88,16 @@ void main() {
     await store.prepareGame('holdem');
     await store.prepareGame('holdem');
 
+    GameAssetStore.instance =
+        GameAssetStore(cache: GameAssetCache(root: temporaryDirectory))
+          ..registerDownloadableGame(
+            gameId: 'holdem',
+            requiredAssetVersion: 2,
+            source: source,
+          );
+    source.failDownloads = true;
+    await prepareGameAssetsForPlay(const HoldemGame());
+
     expect(source.manifestFetchCount, 1);
     expect(source.fileDownloadCount, 1);
     expect(store.isGameCompatible('holdem', requiredAssetVersion: 2), isTrue);
@@ -64,6 +108,7 @@ class _MemorySource implements GameAssetSource {
   static const bytes = <int>[1, 2, 3, 4];
   int manifestFetchCount = 0;
   int fileDownloadCount = 0;
+  bool failDownloads = false;
 
   @override
   Future<GameAssetManifest> fetchManifest(String gameId) async {
@@ -90,6 +135,7 @@ class _MemorySource implements GameAssetSource {
     required File destination,
   }) async {
     fileDownloadCount += 1;
+    if (failDownloads) throw StateError('download unavailable');
     await destination.writeAsBytes(bytes, flush: true);
   }
 }

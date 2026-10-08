@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:game_holdem/game_assets.dart';
 import 'package:game_holdem/game_theme.dart';
@@ -36,7 +35,7 @@ class HoldemGame extends TemplateGame {
   ImageProvider get layoutChairImage => HoldemAssets.layoutChair.provider();
 
   @override
-  int get requiredAssetVersion => kDebugMode ? 0 : HoldemAssets.assetVersion;
+  int get requiredAssetVersion => HoldemAssets.assetVersion;
 
   @override
   Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>
