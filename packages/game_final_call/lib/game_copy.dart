@@ -5,8 +5,76 @@
 //
 // 즉, 단계별 안내와 오류 문구를 한곳에서 일관되게 관리하기 위해 필요한 파일이다.
 
+import 'package:game_final_call/shared/models/game_models.dart';
+
 /// Final Call 화면에서 사용하는 사용자 문구입니다.
 abstract final class FinalCallCopy {
+  static const myTurn = '내 차례!';
+  static const whereToDraw = '어디서 가져올까요?';
+  static const deck = '덱';
+  static const publicCard = '공개 카드';
+  static const holdToCall = '꾹 눌러서 선언';
+  static const pickOrDiscard = '바꿀 카드를 고르거나 버리세요';
+  static const discardNewCard = '새 카드 버리기';
+  static const pickCardToReplace = '바꿀 카드를 고르세요';
+  static const replaceTarget = '바꿀 카드';
+  static const ifReplaced = '바꾸면';
+  static const pickToPreview = '손패에서 카드를 고르면\n바뀐 점수를 보여 줘요';
+  static const myScore = '내 점수';
+  static const turnOrder = '차례 순서';
+  static const now = '지금';
+  static const partner = '짝꿍';
+  static const me = '나';
+  static const lastSwap = '마지막 교체 차례예요';
+  static const presetBest = '가장 높은 조합을 골라뒀어요';
+  static const submitFinal = '최종 조합을 골라 제출하세요';
+  static const submitted = '제출했어요';
+  static const sameColorPartner = '같은 색 = 맞은편 짝꿍';
+  static const swapping = '교체 중';
+  static const turnBadge = '차례';
+
+  static String turnOf(String nickname) => '$nickname 차례예요';
+  static String callBy(String nickname) => '$nickname CALL!';
+  static String callerOf(String nickname) => '$nickname의';
+  static String deckCount(int count) => '덱 $count';
+  static String roundCaption(int round) => '$round라운드 · $sameColorPartner';
+
+  /// 숫자를 한자어로 읽을 때 받침이 있으면 '이랑', 없으면 '랑'을 붙입니다.
+  static String replaceWith(String colorLabel, int value) {
+    const vowelEnding = {2, 4, 5, 9};
+    final particle = vowelEnding.contains(value) ? '랑' : '이랑';
+    return '$colorLabel $value$particle 바꾸기';
+  }
+
+  static String turnsLater(int count) => '$count번째 뒤';
+  static String teamWithPartner(String teamLabel, String partner) =>
+      '$teamLabel · 짝꿍 $partner';
+
+  /// 손패 아래 묶음 꼬리표 문구입니다(예: 7 + 7 = 14점, 7 × 3 = 21점).
+  static String combinationEquation(FinalCallCombination combination) {
+    final cards = combination.cards;
+    final score = combination.score;
+    if (cards.length <= 1) return '$score점';
+    if (combination.isSameNumber && cards.length >= 3) {
+      return '${cards.first.value} × ${cards.length} = $score점';
+    }
+    return '${cards.map((card) => card.value).join(' + ')} = $score점';
+  }
+
+  /// 점수 패널의 조합 설명입니다(예: 같은 숫자 7 × 3).
+  static String combinationName(
+    FinalCallCombination combination,
+    String Function(String color) colorLabel,
+  ) {
+    final cards = combination.cards;
+    if (cards.isEmpty) return '';
+    if (combination.isSameNumber) {
+      return '같은 숫자 ${cards.first.value} × ${cards.length}';
+    }
+    return '같은 색 ${colorLabel(cards.first.color)} '
+        '${cards.map((card) => card.value).join(' + ')}';
+  }
+
   static const selectFinalCombination = '최종 조합을 선택하세요';
   static const submit = '제출';
   static const selectCards = '카드 선택';

@@ -48,3 +48,30 @@ double finalCallSeatRotationForCenter({
   if (direction.distanceSquared == 0) return 0;
   return math.atan2(direction.dy, direction.dx) - math.pi / 2;
 }
+
+// ---------------------------------------------------------------------------
+// Party Pop 테이블 배치
+// ---------------------------------------------------------------------------
+/// 시안(1180×820)의 짧은 변 820px을 1로 둔 태블릿 배율입니다.
+double finalCallTabletScale(Size boardSize) => boardSize.shortestSide / 820;
+
+/// 가운데 둥근 테이블의 반지름입니다. 좌석 이름표 안쪽 가장자리보다 작습니다.
+double finalCallTableRadius(Size boardSize) => boardSize.shortestSide * 0.32;
+
+/// 테이블 가운데 덱·공개 카드 한 장의 폭입니다(시안 92).
+double finalCallCenterCardWidth(Size boardSize) =>
+    (92 * finalCallTabletScale(boardSize)).clamp(64.0, 120.0).toDouble();
+
+/// 덱과 공개 카드 사이 간격입니다(시안 28).
+double finalCallCenterCardGap(Size boardSize) =>
+    28 * finalCallTabletScale(boardSize);
+
+/// 공개 카드의 중심입니다. 버린 카드가 날아가 앉는 자리입니다.
+Offset finalCallPublicCardCenter(Size boardSize) =>
+    boardSize.center(Offset.zero) +
+    Offset(
+      (finalCallCenterCardWidth(boardSize) +
+              finalCallCenterCardGap(boardSize)) /
+          2,
+      0,
+    );

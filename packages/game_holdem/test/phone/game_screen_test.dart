@@ -170,16 +170,17 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('체크'));
     await tester.pump();
-    expect(find.bySemanticsLabel('체크 처리 중'), findsOneWidget);
+    expect(find.bySemanticsLabel('체크 선택됨'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
-    await tester.tap(find.bySemanticsLabel('체크 처리 중'));
+    await tester.tap(find.bySemanticsLabel('체크 선택됨'));
     await tester.pump();
     expect(callCount, 1);
 
     completer.complete(true);
     await tester.pump();
-    expect(find.bySemanticsLabel('체크 처리 중'), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel('체크 처리 중'));
+    expect(find.bySemanticsLabel('체크 선택됨'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('체크 선택됨'));
     expect(callCount, 1);
 
     await pump(
@@ -190,7 +191,7 @@ void main() {
         return Future.value(true);
       },
     );
-    expect(find.bySemanticsLabel('체크 처리 중'), findsNothing);
+    expect(find.bySemanticsLabel('체크 선택됨'), findsNothing);
     expect(find.textContaining('고민 중'), findsOneWidget);
   });
 
@@ -266,6 +267,33 @@ void main() {
     await tester.tap(find.bySemanticsLabel('All-in 4,900'));
     await tester.pump();
     expect(actions.last, ('allIn', null));
+  });
+
+  testWidgets('레이즈를 누르면 시트가 즉시 닫히고 거절되면 금액 선택으로 돌아간다', (tester) async {
+    final completer = Completer<bool>();
+    var sent = 0;
+    await pump(
+      tester,
+      playingState(legalActions: callOrRaise),
+      onAction: (action, {amount}) {
+        sent += 1;
+        expect((action, amount), ('raise', 800));
+        return completer.future;
+      },
+    );
+
+    await tester.tap(find.bySemanticsLabel('Raise 금액 고르기'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.bySemanticsLabel('Raise 800'));
+    await tester.pump();
+
+    expect(sent, 1);
+    expect(find.text('얼마나 올릴까요?'), findsNothing);
+    expect(find.bySemanticsLabel('Raise 금액 고르기 선택됨'), findsOneWidget);
+
+    completer.complete(false);
+    await tester.pump();
+    expect(find.text('얼마나 올릴까요?'), findsOneWidget);
   });
 
   testWidgets('새 손패는 겹친 채 함께 뒤집힌 다음 좌우로 펼쳐진다', (tester) async {

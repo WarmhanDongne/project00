@@ -8,9 +8,10 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_mafia/shared/models/player.dart';
-import 'package:game_mafia/shared/widgets/profile_image.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -30,9 +31,11 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
     required this.selectedUid,
     required this.onSelect,
     this.allySelectedUids = const {},
-    this.selectionColor = MafiaColors.mafiaRed,
-    this.selectionBorderWidth = 4,
-    this.nicknameColor = Colors.white,
+    this.selectionColor = MafiaColors.noirScarlet,
+    this.selectionBorderWidth = 3,
+    this.idleBorderColor = MafiaColors.noirBrass,
+    this.selectedBanner,
+    this.allyCornerColor = MafiaColors.noirScarlet,
     this.dimsUnselected = false,
     this.enabled = true,
     this.selectsDead = false,
@@ -45,25 +48,25 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
 
   /// 동료가 고른 대상입니다(마피아끼리 서로의 선택을 봅니다).
   ///
-  /// 내 선택보다 얇은 테두리로 구분해, 누가 골랐는지 헷갈리지 않게 합니다.
+  /// 시안: 카드 오른쪽 위 **빨간 모서리**로 표시합니다.
   final Set<String> allySelectedUids;
 
-  /// 선택 테두리 색입니다.
-  ///
-  /// 밤에는 행동의 의미색(제거 빨강·치료 초록·조사 하늘), 낮 투표는 시안의
-  /// 금색 `#B18D56`을 씁니다.
+  /// 선택 테두리·빛 색입니다(제거 빨강·치료 청록·조사 회청·투표 놋쇠).
   final Color selectionColor;
 
-  /// 내 선택 테두리 두께입니다. 밤은 4, 낮 투표 시안은 3입니다.
+  /// 내 선택 테두리 두께입니다. 밤은 3, 낮 투표는 4입니다.
   final double selectionBorderWidth;
 
-  /// 닉네임 색입니다. 밤은 흰색, 낮(투표·관전)은 배경이 밝아 검은색입니다.
-  final Color nicknameColor;
+  /// 고르지 않은 카드의 테두리 색입니다. 밤은 놋쇠, 낮(종이 바탕)은 먹색입니다.
+  final Color idleBorderColor;
 
-  /// 고르고 나면 나머지를 흐리게 할지입니다.
-  ///
-  /// 낮 투표 시안은 대상을 고르면 **나머지 8명이 40%로 흐려집니다.** 밤 화면은
-  /// 흐리지 않고 테두리만 씁니다. 아직 아무도 고르지 않았으면 흐리지 않습니다.
+  /// 고른 카드에 비스듬히 두르는 띠입니다(표적·치료·지목).
+  final MafiaNoirBannerSpec? selectedBanner;
+
+  /// 동료가 고른 카드의 모서리 색입니다.
+  final Color allyCornerColor;
+
+  /// 고르고 나면 나머지를 흐리게 할지입니다(낮 투표).
   final bool dimsUnselected;
 
   final ValueChanged<String>? onSelect;
@@ -71,22 +74,17 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
 
   /// 고를 대상이 **사망자**인지입니다(영매의 교신, 도둑의 절도).
   ///
-  /// 기본값에서는 죽은 사람을 누를 수 없습니다 — 밤 지목·낮 투표의 대상은 늘
-  /// 살아 있는 사람이니까요. 영매·도둑은 그 반대라, 이 값이 없어서 **명단이
-  /// 보이는데도 아무도 고를 수 없었습니다**(2026-08).
+  /// 기본값에서는 죽은 사람을 누를 수 없습니다. 영매·도둑은 그 반대라, 이
+  /// 값이 없어서 **명단이 보이는데도 아무도 고를 수 없었습니다**(2026-08).
   final bool selectsDead;
 
   /// 시안의 흐린 상태 불투명도입니다.
   static const double _dimmedOpacity = 0.4;
 
-  /// 사망자 불투명도입니다. 선택 대상이 아님을 보여줍니다.
+  /// 고를 수 없는 사람의 불투명도입니다.
   static const double _deadOpacity = 0.35;
 
-  // ---------------------------------------------------------------------------
-  // 시안 기준 좌표
-  // ---------------------------------------------------------------------------
   static const Size _designSize = Size(402, 874);
-  static const double _firstTop = 226;
 
   /// 이 인원에서 쓰는 열 수입니다.
   static int columnsFor(int playerCount) =>
@@ -97,28 +95,17 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
       MafiaTileGridSpec.of(playerCount).sizeFor(playerCount);
 
   /// 시안에서 그리드가 시작하는 top 값입니다.
-  static double get designTop => _firstTop;
+  static double get designTop => MafiaPhoneDesign.contentBandTop + 12;
 
   /// [playerCount]명일 때 격자가 놓일 top입니다(시안 기준 좌표).
   ///
-  /// 확정(2026-08): 인원이 적으면 격자가 짧아 시안 자리(226)에 두면 화면
-  /// 위쪽으로 치우칩니다. 그래서 내용 띠 **가운데**에 맞춥니다. 인원이 많아
-  /// 격자가 길어지면 띠 위쪽까지만 올라갑니다.
-  static double topFor(int playerCount) {
-    final spec = MafiaTileGridSpec.of(playerCount);
-    final height = spec.cellHeight * spec.rowsFor(playerCount);
-    final centered = MafiaPhoneDesign.contentBandCenter - height / 2;
-    return centered < MafiaPhoneDesign.contentBandTop
-        ? MafiaPhoneDesign.contentBandTop
-        : centered;
-  }
+  /// 시안처럼 타이머 바로 아래(226)에서 시작합니다. 인원이 적어 격자가 짧아도
+  /// 위에 붙여 두어, 아래 안내 문구가 격자 바로 밑에 옵니다.
+  static double topFor(int playerCount) => designTop;
 
-  /// 시안 기준으로 그리드가 끝나는 top 값입니다.
-  ///
-  /// 하단 버튼(top 652)을 덮지 않아야 합니다.
-  /// `test/mafia_player_select_grid_test.dart`가 이 조건을 지킵니다.
+  /// 시안 기준으로 그리드가 끝나는 top 값입니다. 하단 버튼을 덮지 않아야 합니다.
   static double designBottom(int playerCount) =>
-      _firstTop + gridSize(playerCount).height;
+      designTop + gridSize(playerCount).height;
 
   @override
   Widget build(BuildContext context) {
@@ -142,11 +129,7 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
                 _buildTile(
                   spec: spec,
                   player: players[index],
-                  left:
-                      (MafiaTileGridSpec.firstLeft +
-                          spec.step * (index % spec.columns)) *
-                      scale,
-                  top: (spec.cellHeight * (index ~/ spec.columns)) * scale,
+                  offset: spec.offsetOf(index, players.length) * scale,
                   scale: scale,
                 ),
             ],
@@ -159,23 +142,15 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
   Widget _buildTile({
     required MafiaTileGridSpec spec,
     required MafiaPlayer player,
-    required double left,
-    required double top,
+    required Offset offset,
     required double scale,
   }) {
     final isMine = selectedUid == player.uid;
     final isAlly = allySelectedUids.contains(player.uid);
-    // 내 선택은 굵게, 동료 선택은 한 단계 얇게 그려 서로 구분합니다. 타일이
-    // 작아지는 4열에서도 선택 표시가 묻히지 않게 두께는 줄이지 않습니다.
-    final borderWidth = isMine
-        ? selectionBorderWidth
-        : (isAlly ? selectionBorderWidth - 1 : 0.0);
     // 고를 수 있는 상태는 대상 범위와 함께 봅니다. 영매·도둑은 사망자를
     // 고르므로 살아 있는 사람이 눌리지 않습니다.
     final isTargetable = selectsDead ? !player.isAlive : player.isAlive;
     final canTap = enabled && isTargetable && onSelect != null;
-    final tile = spec.tile * scale;
-    final radius = BorderRadius.circular(spec.cornerRadius * scale);
 
     // 고른 뒤에는 시안대로 나머지를 흐립니다. **고를 수 없는 사람**은 그보다
     // 더 어둡습니다(평소에는 사망자, 영매·도둑의 밤에는 살아 있는 사람).
@@ -185,61 +160,41 @@ class MafiaPlayerSelectGrid extends StatelessWidget {
         : (isDimmed ? _dimmedOpacity : 1.0);
 
     return Positioned(
-      left: left,
-      top: top,
-      width: tile,
-      height: spec.cellHeight * scale,
+      left: offset.dx,
+      top: offset.dy,
+      width: spec.tile * scale,
+      height: spec.tileHeight * scale,
       child: Semantics(
         button: canTap,
         selected: isMine,
         label: player.nickname,
+        excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: canTap ? () => onSelect!(player.uid) : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // DecoratedBox가 아니라 Container를 씁니다. DecoratedBox는 테두리를
-              // 자식 **뒤에** 그려서 프로필 사진이 테두리를 덮어 선택 표시가
-              // 보이지 않습니다. Container는 테두리 두께만큼 자식을 안으로
-              // 밀어 넣어 시안(CSS border)과 같은 결과가 됩니다.
-              Container(
-                width: tile,
-                height: tile,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  border: borderWidth > 0
-                      ? Border.all(
-                          color: selectionColor,
-                          width: borderWidth * scale,
-                        )
-                      : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: radius,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: MafiaProfileImage(
-                      url: player.profileImageUrl,
-                      characterId: player.characterId,
-                    ),
-                  ),
-                ),
+          child: AnimatedOpacity(
+            opacity: opacity,
+            duration: const Duration(milliseconds: 220),
+            child: AnimatedScale(
+              scale: isMine ? 1.04 : 1,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutBack,
+              child: MafiaNoirPortraitCard(
+                player: player,
+                width: spec.tile * scale,
+                height: spec.tileHeight * scale,
+                borderColor: isMine ? selectionColor : idleBorderColor,
+                borderWidth: isMine ? selectionBorderWidth : 2,
+                circleColor: isMine
+                    ? Color.lerp(selectionColor, MafiaColors.noirInk, 0.3)!
+                    : MafiaColors.noirTeal,
+                glowColor: isMine ? selectionColor : null,
+                grayscale: !player.isAlive,
+                nameSize: spec.nicknameFontSize * scale,
+                cornerColor: isAlly && !isMine ? allyCornerColor : null,
+                banner: isMine ? selectedBanner : null,
               ),
-              SizedBox(height: 3 * scale),
-              Text(
-                player.nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  // 흐린 칸은 닉네임도 같이 흐립니다.
-                  color: nicknameColor.withValues(alpha: opacity),
-                  fontSize: spec.nicknameFontSize * scale,
-                  height: 1.1,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

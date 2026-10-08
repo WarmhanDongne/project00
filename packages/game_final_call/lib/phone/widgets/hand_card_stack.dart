@@ -11,8 +11,48 @@ import 'dart:math' as math;
 import 'package:game_final_call/phone/animations/card_receive_animation.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
+import 'package:game_final_call/game_copy.dart';
 import 'package:game_final_call/game_theme.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
+
 // ============================================================
+
+/// 휴대폰 가로 화면의 손패·조작 패널 배치입니다(Party Pop 시안).
+///
+/// 손패 받기 연출과 펼친 손패가 같은 위치·크기를 쓰도록 한곳에서 계산합니다.
+abstract final class FinalCallPhoneLayout {
+  /// 상단바 높이(시안 58)입니다.
+  static const topBarHeight = 58.0;
+
+  /// 화면 가장자리 여백입니다.
+  static const edge = 14.0;
+
+  /// 손패와 조작 패널 사이 간격입니다.
+  static const gap = 14.0;
+
+  /// 오른쪽 조작 패널 폭(시안 222)입니다.
+  static const panelWidth = 222.0;
+
+  /// 시안 카드 폭(104)보다 조금 큰 상한입니다.
+  static const maxCardWidth = 112.0;
+
+  static Size handArea(Size screen) => Size(
+    math.max(1.0, screen.width - edge * 2 - gap - panelWidth),
+    math.max(1.0, screen.height - topBarHeight - edge),
+  );
+
+  static double cardWidth(Size screen) => math.min(
+    maxCardWidth,
+    FinalCallPhoneHandCardStack.cardWidthFor(
+      BoxConstraints.loose(handArea(screen)),
+      true,
+    ),
+  );
+
+  /// 화면 중심에서 손패 영역 중심까지의 거리입니다.
+  static Offset handCenterOffset(Size screen) =>
+      Offset(-(gap + panelWidth) / 2, (topBarHeight - edge) / 2);
+}
 
 /// 라운드마다 처음에는 한 덱으로 들어오고, 탭한 뒤 펼쳐진 손패를 유지합니다.
 class FinalCallPhoneHandCardStack extends StatelessWidget {
@@ -32,6 +72,9 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
     this.replacingCardId,
     this.replacementInProgress = false,
     this.cardWidth,
+    this.selectionMode = FinalCallHandSelectionMode.replace,
+    this.combinationCardIds = const {},
+    this.combinationLabel,
   });
 
   final List<FinalCallCard> cards;
@@ -44,6 +87,15 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
   final String? replacingCardId;
   final bool replacementInProgress;
   final double? cardWidth;
+
+  /// 교체할 한 장을 고르는지, 최종 조합 여러 장을 고르는지입니다.
+  final FinalCallHandSelectionMode selectionMode;
+
+  /// 지금 점수를 만든 카드입니다. 비어 있으면 묶음 표시를 그리지 않습니다.
+  final Set<String> combinationCardIds;
+
+  /// 묶음 아래 꼬리표 문구입니다(예: 7 + 7 = 14점).
+  final String? combinationLabel;
   final VoidCallback onRevealStarted;
   final VoidCallback onRevealCompleted;
   final ValueChanged<String> onCardSelected;
@@ -86,10 +138,34 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
         final firstLeft = (constraints.maxWidth - totalWidth) / 2 - cardInset;
         final cardTop = (constraints.maxHeight - cardBoxHeight) / 2 - cardInset;
 
+        final comboIndexes = [
+          for (var index = 0; index < cards.length; index++)
+            if (combinationCardIds.contains(cards[index].id)) index,
+        ];
+        final label = combinationLabel;
         return SizedBox.expand(
           child: Stack(
             clipBehavior: Clip.none,
             children: [
+              // 점수를 만든 카드를 아래에서 노란 괄호로 묶고 계산식을 답니다.
+              if (comboIndexes.isNotEmpty && label != null)
+                Positioned(
+                  key: const ValueKey('final-call-combination-bracket'),
+                  left:
+                      firstLeft +
+                      cardInset +
+                      comboIndexes.first * (cardBoxWidth + cardGap),
+                  width:
+                      (comboIndexes.last - comboIndexes.first) *
+                          (cardBoxWidth + cardGap) +
+                      width,
+                  top:
+                      cardTop +
+                      cardInset +
+                      width * finalCallCardHeightRatio +
+                      12,
+                  child: _CombinationBracket(label: label),
+                ),
               for (var index = 0; index < cards.length; index++)
                 AnimatedPositioned(
                   key: ValueKey('final-call-hand-position-${cards[index].id}'),
@@ -104,6 +180,11 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
                     selected:
                         selectedCardIds.contains(cards[index].id) ||
                         selectedCardId == cards[index].id,
+                    mode: selectionMode,
+                    dimmed:
+                        selectionMode == FinalCallHandSelectionMode.submit &&
+                        selectedCardIds.isNotEmpty &&
+                        !selectedCardIds.contains(cards[index].id),
                     showNew: cards[index].id == newCardId,
                     replacing:
                         replacementInProgress &&
@@ -144,12 +225,56 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
   }
 }
 
-class _SelectableHandCard extends StatefulWidget {
+/// 손패에서 카드를 고르는 방식입니다.
+enum FinalCallHandSelectionMode {
+  /// 새 카드와 바꿀 한 장을 고릅니다(기울어진 노란 테두리 + '바꿀 카드').
+  replace,
+
+  /// 최종 점수에 쓸 여러 장을 고릅니다(초록 체크, 고르지 않은 카드는 흐리게).
+  submit,
+}
+
+class _CombinationBracket extends StatelessWidget {
+  const _CombinationBracket({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 40,
+    child: Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Positioned.fill(
+          bottom: 26,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: const Border(
+                left: BorderSide(color: FinalCallColors.yellow, width: 3),
+                right: BorderSide(color: FinalCallColors.yellow, width: 3),
+                bottom: BorderSide(color: FinalCallColors.yellow, width: 3),
+              ),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        Positioned(top: 8, child: FinalCallPopTag(label: label)),
+      ],
+    ),
+  );
+}
+
+class _SelectableHandCard extends StatelessWidget {
   const _SelectableHandCard({
     super.key,
     required this.card,
     required this.width,
     required this.selected,
+    required this.mode,
+    required this.dimmed,
     required this.showNew,
     required this.replacing,
     required this.onTap,
@@ -159,72 +284,44 @@ class _SelectableHandCard extends StatefulWidget {
   final FinalCallCard card;
   final double width;
   final bool selected;
+  final FinalCallHandSelectionMode mode;
+  final bool dimmed;
   final bool showNew;
   final bool replacing;
   final VoidCallback? onTap;
   final ValueChanged<String>? onReorder;
 
   @override
-  State<_SelectableHandCard> createState() => _SelectableHandCardState();
-}
-
-class _SelectableHandCardState extends State<_SelectableHandCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _bobController;
-
-  @override
-  void initState() {
-    super.initState();
-    _bobController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 760),
-    );
-    _syncBobAnimation();
-  }
-
-  @override
-  void didUpdateWidget(_SelectableHandCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selected != widget.selected ||
-        oldWidget.replacing != widget.replacing) {
-      _syncBobAnimation();
-    }
-  }
-
-  void _syncBobAnimation() {
-    if (widget.selected && !widget.replacing) {
-      _bobController.repeat(reverse: true);
-    } else {
-      _bobController.stop();
-      _bobController.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _bobController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final card = GestureDetector(
-      onTap: widget.onTap,
+    final replaceSelected =
+        selected && mode == FinalCallHandSelectionMode.replace;
+    final submitSelected =
+        selected && mode == FinalCallHandSelectionMode.submit;
+    final unit = width / 104;
+    final face = GestureDetector(
+      onTap: onTap,
       child: AnimatedSlide(
-        offset: widget.replacing ? const Offset(1.8, 0) : Offset.zero,
+        offset: replacing ? const Offset(1.8, 0) : Offset.zero,
         duration: const Duration(milliseconds: 460),
         curve: Curves.easeInOutCubic,
         child: AnimatedOpacity(
-          opacity: widget.replacing ? 0 : 1,
-          duration: const Duration(milliseconds: 460),
-          child: AnimatedBuilder(
-            animation: _bobController,
-            builder: (context, child) {
-              final bob = widget.selected
-                  ? -8 - (5 * _bobController.value)
-                  : 0.0;
-              return Transform.translate(offset: Offset(0, bob), child: child);
-            },
+          opacity: replacing
+              ? 0
+              : dimmed
+              ? 0.55
+              : 1,
+          duration: const Duration(milliseconds: 220),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: selected ? 1 : 0),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            builder: (context, lift, child) => Transform.translate(
+              offset: Offset(0, -16 * unit * lift),
+              child: Transform.rotate(
+                angle: replaceSelected ? 0.052 * lift : 0,
+                child: child,
+              ),
+            ),
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.topCenter,
@@ -234,53 +331,52 @@ class _SelectableHandCardState extends State<_SelectableHandCard>
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: widget.selected
+                      color: replaceSelected
                           ? FinalCallColors.highlight
                           : Colors.transparent,
                       width: 3,
                     ),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(20 * unit),
                   ),
-                  child: FinalCallCardView(
-                    card: widget.card,
-                    width: widget.width,
-                  ),
+                  child: FinalCallCardView(card: card, width: width),
                 ),
-                if (widget.selected)
-                  const Positioned(
-                    bottom: -13,
-                    child: DecoratedBox(
+                if (replaceSelected)
+                  Positioned(
+                    bottom: -30,
+                    child: FinalCallPopTag(label: FinalCallCopy.replaceTarget),
+                  ),
+                if (submitSelected)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      key: ValueKey('final-call-submit-check-${card.id}'),
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: FinalCallColors.green,
                         shape: BoxShape.circle,
-                        border: Border.fromBorderSide(
-                          BorderSide(
-                            color: FinalCallColors.highlight,
-                            width: 2,
-                          ),
+                        border: Border.all(
+                          color: FinalCallColors.ink,
+                          width: 3,
                         ),
                       ),
-                      child: SizedBox.square(
-                        dimension: 27,
-                        child: Icon(
-                          Icons.check_rounded,
-                          color: FinalCallColors.highlight,
-                          size: 20,
-                        ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 18,
                       ),
                     ),
                   ),
-                if (widget.showNew)
+                if (showNew)
                   const Positioned(
-                    top: -20,
-                    child: Text(
-                      'NEW',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        shadows: [Shadow(color: Colors.white, blurRadius: 3)],
-                      ),
+                    top: -14,
+                    right: -10,
+                    child: FinalCallPopTag(
+                      label: 'NEW',
+                      color: FinalCallColors.red,
+                      textColor: Colors.white,
+                      fontSize: 13,
                     ),
                   ),
               ],
@@ -290,33 +386,30 @@ class _SelectableHandCardState extends State<_SelectableHandCard>
       ),
     );
 
-    final onReorder = widget.onReorder;
-    if (onReorder == null) return card;
+    final reorder = onReorder;
+    if (reorder == null) return face;
     return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => details.data != widget.card.id,
-      onAcceptWithDetails: (details) => onReorder(details.data),
+      onWillAcceptWithDetails: (details) => details.data != card.id,
+      onAcceptWithDetails: (details) => reorder(details.data),
       builder: (context, candidateData, rejectedData) {
         return LongPressDraggable<String>(
-          data: widget.card.id,
+          data: card.id,
           dragAnchorStrategy: pointerDragAnchorStrategy,
           feedback: Material(
             color: Colors.transparent,
             child: Transform.translate(
-              offset: Offset(-widget.width / 2, -widget.width * 0.72),
+              offset: Offset(-width / 2, -width * 0.72),
               child: Transform.scale(
                 scale: 1.06,
-                child: FinalCallCardView(
-                  card: widget.card,
-                  width: widget.width,
-                ),
+                child: FinalCallCardView(card: card, width: width),
               ),
             ),
           ),
-          childWhenDragging: Opacity(opacity: 0.24, child: card),
+          childWhenDragging: Opacity(opacity: 0.24, child: face),
           child: AnimatedScale(
             scale: candidateData.isEmpty ? 1 : 1.04,
             duration: const Duration(milliseconds: 140),
-            child: card,
+            child: face,
           ),
         );
       },

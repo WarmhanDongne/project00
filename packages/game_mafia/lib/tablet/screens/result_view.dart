@@ -6,15 +6,14 @@
 // 즉, 모든 플레이어가 함께 보는 진행 상태와 연출을 표시하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
-import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/widgets/result_art.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
-import 'package:game_mafia/shared/widgets/flip_card.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/animations/announcement_reveal.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 
 // ============================================================
 
@@ -34,7 +33,7 @@ import 'package:game_mafia/gen/assets.gen.dart';
 ///
 /// 카드는 자리 순서대로 놓습니다. 진영별로 묶지 않는 이유는, 뒤집기 전에
 /// 자리만 보고 진영을 짐작할 수 있으면 공개하는 재미가 사라지기 때문입니다.
-class MafiaTabletResultView extends StatefulWidget {
+class MafiaTabletResultView extends StatelessWidget {
   const MafiaTabletResultView({
     super.key,
     required this.winner,
@@ -42,466 +41,310 @@ class MafiaTabletResultView extends StatefulWidget {
     this.winnerLabel,
     required this.players,
     required this.revealedRoles,
+    this.winnerUids = const {},
     this.onRestart,
     this.onHome,
   });
 
-  /// 승리 진영입니다. 중립 개별 승리는 배경이 없어 판부터 보여 줍니다.
   final MafiaFaction? winner;
-
-  /// 이긴 사람들의 역할 id입니다. 중립 포스터를 고르는 데 씁니다.
-  ///
-  /// 중립은 진영이 같아도 이긴 역할에 따라 그림이 다릅니다(광대/처형자/
-  /// 연쇄살인마/교단).
   final Set<String> winnerRoleIds;
 
-  /// 승리 문구입니다(예: `광대 승리`).
-  ///
-  /// 승리 **배경 그림이 있는 경우에는 쓰지 않습니다.** 그림에 이미 문구가
-  /// 들어 있어 두 번 겹칩니다. 중립 개별 승리처럼 그림이 없을 때만 판 위에
-  /// 한 줄로 알려 줍니다.
+  /// 결과 제목입니다(예: `마피아 승리`, `광대 승리`).
   final String? winnerLabel;
-
   final Map<String, MafiaPlayer> players;
 
-  /// 전원 신분입니다. 게임이 끝나면 서버가 모두 공개합니다.
+  /// 게임이 끝나 전원 공개된 신분입니다.
   final Map<String, MafiaRole?> revealedRoles;
 
+  /// 이긴 사람입니다. 명단에 `승리` 꼬리표가 붙습니다.
+  final Set<String> winnerUids;
   final VoidCallback? onRestart;
   final VoidCallback? onHome;
 
-  /// 승리 배경만 보여 주는 시간입니다. 화면을 누르면 기다리지 않습니다.
-  static const Duration posterHold = Duration(seconds: 2);
-
-  // ---------------------------------------------------------------------------
-  // 연출 시간
-  // ---------------------------------------------------------------------------
-  /// 인물 그림과 흰 판이 올라오는 시간입니다.
-  static const Duration panelIn = Duration(milliseconds: 420);
-
-  /// 카드 한 장이 놓이는 시간과 장 사이 간격입니다.
-  static const Duration cardIn = Duration(milliseconds: 320);
-  static const Duration cardGap = Duration(milliseconds: 90);
-
-  /// 카드 한 장이 뒤집히는 시간과 장 사이 간격입니다.
-  static const Duration cardFlip = Duration(milliseconds: 520);
-  static const Duration flipGap = Duration(milliseconds: 170);
-
-  /// 카드가 다 놓인 뒤 뒤집기를 시작하기까지 쉬는 시간입니다.
-  static const Duration flipDelay = Duration(milliseconds: 260);
-
-  @override
-  State<MafiaTabletResultView> createState() => _MafiaTabletResultViewState();
-}
-
-class _MafiaTabletResultViewState extends State<MafiaTabletResultView>
-    with SingleTickerProviderStateMixin, GamePresentationState {
-  @override
-  Iterable<AnimationController> get presentationAnimations => [_reveal];
-  // ---------------------------------------------------------------------------
-  // 시안 기준 좌표(1194 × 834)
-  // ---------------------------------------------------------------------------
-  // 시안 `tablet-p9`(node 988:368)입니다. 시안이 −90° 회전 상태로 그려져 있어
-  // 프로젝트 규칙대로 환산했습니다:
-  //   real_left = 1194 − (wrapperTop + wrapperHeight), real_top = wrapperLeft
-  /// 흰 판입니다.
-  static const Rect _panel = Rect.fromLTWH(44, 133, 1105, 662);
-  static const double _panelRadius = 30;
-
-  /// 판 뒤에서 머리만 내미는 인물 그림입니다(아래쪽은 판에 가려집니다).
-  ///
-  /// 시안은 화면 위로 14 넘겨 배치했습니다. 그림 비율(2172 : 724 = 3.0)이
-  /// 이 자리(727 : 242 = 3.004)와 같아 찌그러지지 않습니다.
-  static const Rect _characters = Rect.fromLTWH(236, -14, 727, 242);
-
-  /// 승리 문구 자리입니다. 판(_panel)의 위쪽 여백에 한 줄로 올립니다.
-  static const Rect _winnerLabelRect = Rect.fromLTWH(44, 60, 1105, 60);
-
-  /// 카드 한 장의 크기와 간격입니다(시안 141 × 206.762, 6열 · 간격 170).
-  static const double _cardWidth = 141;
-  static const double _cardAspectRatio = 286 / 419.39;
-  static const double _cardStep = 170;
-  static const int _columns = 6;
-
-  /// 카드가 놓이는 세로 구간입니다(시안 첫 줄 154, 둘째 줄 419).
-  static const double _cardsTop = 154;
-  static const double _cardsBottom = 650.6;
-
-  /// 카드와 닉네임 사이 여백, 닉네임 줄 높이입니다(시안 값).
-  static const double _nicknameGap = 6.4;
-  static const double _nicknameHeight = 18.464;
-
-  /// 두 줄 사이 여백입니다(줄 간격 265 − 한 칸 높이).
-  static const double _rowGap = 33.4;
-
-  static const Rect _restartButton = Rect.fromLTWH(99, 684, 231, 79);
-  static const Rect _homeButton = Rect.fromLTWH(859, 684, 231, 79);
-
-  late final AnimationController _reveal;
-  PresentationTimer? _posterTimer;
-  bool _showsBoard = false;
-
-  /// 카드 놓는 순서입니다. 자리 번호대로 정렬합니다.
-  late final List<MafiaPlayer> _ordered;
-
-  /// 승리 배경입니다. 없는 승리(그림 미제작)면 null이라 판부터 보여 줍니다.
-  GameImage? get _poster => MafiaResultArt.tabletPoster(
-    widget.winner,
-    winnerRoleIds: widget.winnerRoleIds,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _ordered = widget.players.values.toList()
-      ..sort((a, b) => a.seatIndex.compareTo(b.seatIndex));
-    _reveal = AnimationController(vsync: this, duration: _totalDuration);
-    if (_poster == null) {
-      // 배경 그림이 없는 승리(중립 개별 조건)는 곧바로 판을 보여 줍니다.
-      _showsBoard = true;
-      _reveal.forward();
-      return;
+  /// 이긴 쪽의 대표 신분입니다(왼쪽 포스터 카드).
+  MafiaRole? get _posterRole {
+    for (final uid in winnerUids) {
+      final role = revealedRoles[uid];
+      if (role != null) return role;
     }
-    _posterTimer = presentationTimer(
-      MafiaTabletResultView.posterHold,
-      _openBoard,
-    );
+    return null;
   }
 
-  /// 판을 올립니다. 시간이 다 됐거나 화면을 눌렀을 때입니다.
-  void _openBoard() {
-    if (!mounted || _showsBoard) return;
-    _posterTimer?.cancel();
-    setState(() => _showsBoard = true);
-    _reveal.forward(from: 0);
-  }
-
-  /// 드러나는 중에 다시 누르면 끝까지 건너뜁니다.
-  void _handleTap() {
-    if (!_showsBoard) {
-      _openBoard();
-      return;
-    }
-    if (_reveal.isAnimating) _reveal.value = 1;
-  }
-
-  @override
-  void dispose() {
-    _posterTimer?.cancel();
-    _reveal.dispose();
-    super.dispose();
-  }
-
-  // ---------------------------------------------------------------------------
-  // 연출 진행도
-  // ---------------------------------------------------------------------------
-  /// 판 등장 + 카드 놓기 + 뒤집기를 합한 전체 시간입니다.
-  Duration get _totalDuration {
-    final count = _ordered.length;
-    if (count == 0) return MafiaTabletResultView.panelIn;
-    return MafiaTabletResultView.panelIn +
-        MafiaTabletResultView.cardGap * (count - 1) +
-        MafiaTabletResultView.cardIn +
-        MafiaTabletResultView.flipDelay +
-        MafiaTabletResultView.flipGap * (count - 1) +
-        MafiaTabletResultView.cardFlip;
-  }
-
-  double get _elapsedMs => _reveal.value * _totalDuration.inMilliseconds;
-
-  /// 판이 올라온 진행도입니다.
-  double get _panelProgress => Curves.easeOutCubic.transform(
-    (_elapsedMs / MafiaTabletResultView.panelIn.inMilliseconds).clamp(0.0, 1.0),
-  );
-
-  /// [index]번째 카드가 놓인 진행도입니다.
-  double _cardProgress(int index) {
-    final start =
-        MafiaTabletResultView.panelIn.inMilliseconds +
-        MafiaTabletResultView.cardGap.inMilliseconds * index;
-    return Curves.easeOutBack.transform(
-      ((_elapsedMs - start) / MafiaTabletResultView.cardIn.inMilliseconds)
-          .clamp(0.0, 1.0),
-    );
-  }
-
-  /// [index]번째 카드가 뒤집힌 진행도입니다.
-  double _flipProgress(int index) {
-    final count = _ordered.length;
-    final start =
-        MafiaTabletResultView.panelIn.inMilliseconds +
-        MafiaTabletResultView.cardGap.inMilliseconds * (count - 1) +
-        MafiaTabletResultView.cardIn.inMilliseconds +
-        MafiaTabletResultView.flipDelay.inMilliseconds +
-        MafiaTabletResultView.flipGap.inMilliseconds * index;
-    final raw =
-        ((_elapsedMs - start) / MafiaTabletResultView.cardFlip.inMilliseconds)
-            .clamp(0.0, 1.0);
-    // 종이 카드처럼 시작·끝을 눙깁니다(다른 카드 연출과 같은 곡선).
-    return Curves.easeInOutCubic.transform(raw);
-  }
-
-  /// 버튼이 나타난 진행도입니다. 카드가 다 놓이면 바로 누를 수 있습니다.
-  double get _buttonProgress {
-    final count = _ordered.length;
-    final placed =
-        MafiaTabletResultView.panelIn.inMilliseconds +
-        MafiaTabletResultView.cardGap.inMilliseconds *
-            (count == 0 ? 0 : count - 1) +
-        MafiaTabletResultView.cardIn.inMilliseconds;
-    return Curves.easeOut.transform(
-      ((_elapsedMs - placed) / 300).clamp(0.0, 1.0),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 자리 계산
-  // ---------------------------------------------------------------------------
-  double get _cardHeight => _cardWidth / _cardAspectRatio;
-
-  /// 한 칸(카드 + 닉네임)의 높이입니다.
-  double get _cellHeight => _cardHeight + _nicknameGap + _nicknameHeight;
-
-  int get _rowCount => (_ordered.length / _columns).ceil().clamp(1, 2);
-
-  /// 카드 묶음이 시작하는 top입니다. 한 줄이면 구간 가운데에 옵니다.
-  double get _blockTop {
-    final blockHeight = _cellHeight * _rowCount + _rowGap * (_rowCount - 1);
-    final band = _cardsBottom - _cardsTop;
-    return _cardsTop + (band - blockHeight) / 2;
-  }
-
-  /// [index]번째 카드의 사각형입니다. 줄마다 가운데 정렬합니다.
-  Rect _cardRect(int index) {
-    final row = index ~/ _columns;
-    final column = index % _columns;
-    final inRow = row == 0
-        ? (_ordered.length < _columns ? _ordered.length : _columns)
-        : _ordered.length - _columns;
-    final rowWidth = _cardStep * (inRow - 1) + _cardWidth;
-    final left = _panel.center.dx - rowWidth / 2 + _cardStep * column;
-    return Rect.fromLTWH(
-      left,
-      _blockTop + (_cellHeight + _rowGap) * row,
-      _cardWidth,
-      _cardHeight,
-    );
-  }
+  String get _reason => switch (winner) {
+    MafiaFaction.mafia => '마피아 수가 남은 사람 수와 같아졌습니다',
+    MafiaFaction.citizen => '마피아가 모두 사라졌습니다',
+    MafiaFaction.neutral => '홀로 목표를 이뤘습니다',
+    null => '게임이 끝났습니다',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final poster = _poster;
-
+    final ordered = players.values.toList()
+      ..sort((a, b) {
+        // 이긴 사람 → 살아 있는 사람 → 떠난 사람 순입니다(시안).
+        int rank(MafiaPlayer player) => winnerUids.contains(player.uid)
+            ? 0
+            : player.isAlive
+            ? 1
+            : 2;
+        final byRank = rank(a).compareTo(rank(b));
+        return byRank != 0 ? byRank : a.seatIndex.compareTo(b.seatIndex);
+      });
+    final card = _posterRole?.card;
+    final label = winnerLabel ?? MafiaResultArt.label(winner);
+    final rowHeight = (600 / ordered.length.clamp(1, 99)).clamp(40.0, 66.0);
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (poster != null)
-          poster.image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
-        // 배경만 보이는 동안 화면 어디를 눌러도 결과로 넘어갑니다.
-        // 버튼은 이 위에 있어 계속 눌립니다.
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _handleTap,
+        const MafiaNoirRays.blood(origin: Alignment(-0.48, -0.08)),
+        // 승리 포스터
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(110, 150, 400, 400),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: winner == MafiaFaction.citizen
+                  ? MafiaColors.noirTeal
+                  : MafiaColors.noirBlood,
+              shape: BoxShape.circle,
+            ),
           ),
         ),
-        if (_showsBoard)
-          AnimatedBuilder(
-            animation: _reveal,
-            builder: (context, _) =>
-                Stack(fit: StackFit.expand, children: _buildBoard()),
+        if (card != null)
+          MafiaTabletBox(
+            rect: const Rect.fromLTWH(170, 92, 280, 411),
+            child: MafiaAnnouncementReveal(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: MafiaColors.noirBrass, width: 3),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xB3000000),
+                      blurRadius: 50,
+                      offset: Offset(0, 24),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: card.image(fit: BoxFit.cover),
+                ),
+              ),
+            ),
           ),
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(50, 560, 520, 170),
+          child: Column(
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label, style: mafiaNoirDisplay(96, height: 1)),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: 440,
+                height: 12,
+                color: winner == MafiaFaction.citizen
+                    ? MafiaColors.noirTeal
+                    : MafiaColors.noirBlood,
+              ),
+              const SizedBox(height: 10),
+              Text(_reason, style: mafiaNoirBody(17)),
+            ],
+          ),
+        ),
+        // 모든 신분 공개
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(640, 70, 500, 30),
+          child: Text(
+            '모든 신분 공개',
+            style: mafiaNoirBody(
+              14,
+              color: MafiaColors.noirBrass,
+              letterSpacing: 7,
+            ),
+          ),
+        ),
+        for (var index = 0; index < ordered.length; index++)
+          MafiaTabletBox(
+            rect: Rect.fromLTWH(
+              640,
+              106 + index * rowHeight,
+              500,
+              rowHeight - 6,
+            ),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: Duration(milliseconds: 380 + index * 90),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(30 * (1 - value), 0),
+                  child: child,
+                ),
+              ),
+              child: _ResultRow(
+                player: ordered[index],
+                role: revealedRoles[ordered[index].uid],
+                won: winnerUids.contains(ordered[index].uid),
+              ),
+            ),
+          ),
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(640, 730, 500, 60),
+          ignorePointer: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: _ResultButton(
+                  label: '한 판 더',
+                  filled: true,
+                  onTap: onRestart,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _ResultButton(
+                  label: '로비로',
+                  filled: false,
+                  onTap: onHome,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // 판·카드·버튼
-  // ---------------------------------------------------------------------------
-  List<Widget> _buildBoard() {
-    final label = widget.winnerLabel;
-    final showsLabel = label != null && label.isNotEmpty && _poster == null;
+class _ResultRow extends StatelessWidget {
+  const _ResultRow({
+    required this.player,
+    required this.role,
+    required this.won,
+  });
 
-    return [
-      // 인물 그림은 판 뒤에서 머리만 내밉니다.
-      // 승리 그림이 없는 경우(중립 개별 승리)에만 문구로 알려 줍니다.
-      if (showsLabel)
-        _lifted(
-          progress: _panelProgress,
-          child: MafiaTabletBox(
-            rect: _winnerLabelRect,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: MafiaResultArt.color(widget.winner),
-                    fontSize: 44,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+  final MafiaPlayer player;
+  final MafiaRole? role;
+  final bool won;
+
+  @override
+  Widget build(BuildContext context) {
+    final mafia = role?.faction.isMafia ?? false;
+    final death = player.isAlive
+        ? null
+        : player.wasExecuted
+        ? '처형'
+        : player.diedAtNight
+        ? '사망'
+        : '퇴장';
+    final roleText = role?.displayName ?? '알 수 없음';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: won ? const Color(0xFF2A1512) : Colors.transparent,
+        border: won
+            ? Border.all(color: MafiaColors.noirBlood)
+            : const Border(bottom: BorderSide(color: Color(0xFF2A2F2C))),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: MafiaNoirFace(player: player, grayscale: !player.isAlive),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              player.nickname,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: mafiaNoirDisplay(
+                22,
+                color: won || player.isAlive
+                    ? MafiaColors.noirPaper
+                    : MafiaColors.noirDust,
               ),
             ),
           ),
-        ),
-      _lifted(
-        progress: _panelProgress,
-        child: MafiaTabletBox(
-          rect: _characters,
-          child: Assets.games.mafia.images.other.resultCharacters.game.image(
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-          ),
-        ),
-      ),
-      _lifted(
-        progress: _panelProgress,
-        child: MafiaTabletBox(
-          rect: _panel,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(_panelRadius),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x59000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 10),
-                ),
-              ],
+          Text(
+            death == null ? roleText : '$roleText · $death',
+            style: mafiaNoirBody(
+              15,
+              color: won && mafia
+                  ? MafiaColors.noirRose
+                  : won
+                  ? MafiaColors.noirPaper
+                  : MafiaColors.noirDust,
+              weight: won ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
-        ),
-      ),
-      for (var index = 0; index < _ordered.length; index += 1)
-        ..._buildCard(index),
-      _lifted(
-        progress: _buttonProgress,
-        child: _buildButton(_restartButton, '다시하기', widget.onRestart),
-      ),
-      _lifted(
-        progress: _buttonProgress,
-        child: _buildButton(_homeButton, '홈으로', widget.onHome),
-      ),
-    ];
-  }
-
-  /// 아래에서 살짝 올라오며 떠오르는 요소입니다.
-  Widget _lifted({required double progress, required Widget child}) {
-    if (progress <= 0) return const SizedBox.shrink();
-    return Opacity(
-      opacity: progress.clamp(0.0, 1.0),
-      child: Transform.translate(
-        offset: Offset(0, 18 * (1 - progress)),
-        child: child,
-      ),
-    );
-  }
-
-  List<Widget> _buildCard(int index) {
-    final placed = _cardProgress(index);
-    if (placed <= 0) return const [];
-
-    final player = _ordered[index];
-    final role = widget.revealedRoles[player.uid];
-    final rect = _cardRect(index);
-    final flip = _flipProgress(index);
-
-    return [
-      MafiaTabletBox(
-        rect: rect,
-        child: Opacity(
-          // 놓이는 동안만 살짝 흐립니다.
-          opacity: placed.clamp(0.0, 1.0),
-          child: Transform.scale(
-            // 살짝 작게 나타나 제 크기가 됩니다.
-            scale: 0.86 + 0.14 * placed.clamp(0.0, 1.0),
-            child: MafiaFlipCard(
-              progress: flip,
-              front: role?.card,
-              back: Assets.games.mafia.images.cards.roleBack.game,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-      ),
-      // 닉네임은 카드 아래에 늘 그대로 있습니다.
-      MafiaTabletBox(
-        rect: Rect.fromLTWH(
-          rect.left - _cardStep / 2 + _cardWidth / 2,
-          rect.bottom + _nicknameGap,
-          _cardStep,
-          _nicknameHeight,
-        ),
-        child: Opacity(
-          opacity: placed.clamp(0.0, 1.0),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
+          if (won) ...[
+            const SizedBox(width: 10),
+            Container(
+              color: MafiaColors.noirBrass,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
               child: Text(
-                player.nickname,
-                maxLines: 1,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                  // 사망자는 조금 흐리게 해 생사도 함께 알려 줍니다.
-                  height: 1.1,
-                  decoration: player.isAlive
-                      ? TextDecoration.none
-                      : TextDecoration.lineThrough,
+                '승리',
+                style: mafiaNoirBody(
+                  13,
+                  color: MafiaColors.noirInk,
+                  weight: FontWeight.w700,
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildButton(Rect rect, String label, VoidCallback? onTap) {
-    return MafiaTabletBox(
-      rect: rect,
-      ignorePointer: false,
-      child: Semantics(
-        button: true,
-        enabled: onTap != null,
-        label: label,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              // 시안 그림자입니다. 아래로 떨어집니다.
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0xB3000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 40,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
+}
+
+class _ResultButton extends StatelessWidget {
+  const _ResultButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool filled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    enabled: onTap != null,
+    label: label,
+    excludeSemantics: true,
+    onTap: onTap,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedOpacity(
+        opacity: onTap == null ? 0.45 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: filled ? MafiaColors.noirPaper : Colors.transparent,
+            border: filled
+                ? null
+                : Border.all(color: MafiaColors.noirBrass, width: 2),
+          ),
+          child: Text(
+            label,
+            style: mafiaNoirDisplay(
+              22,
+              color: filled ? MafiaColors.noirInk : MafiaColors.noirBrass,
+              letterSpacing: 1.8,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

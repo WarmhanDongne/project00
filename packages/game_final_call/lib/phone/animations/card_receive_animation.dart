@@ -8,11 +8,13 @@
 import 'package:game_final_call/phone/phone_board.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_final_call/phone/widgets/hand_card_stack.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_final_call/game_assets.dart';
+
 // ============================================================
 
 /// Liar's Poker와 같은 진입 → 탭 → 좌우 회전 → 펼침 순서를 사용합니다.
@@ -36,28 +38,15 @@ class FinalCallCardReceiveAnimation extends StatelessWidget {
       builder: (context, constraints) {
         // 펼침 완료 프레임과 실제 게임 손패의 크기·중심·간격을 동일하게
         // 계산해 화면 전환 순간 카드가 다시 이동하는 현상을 막습니다.
-        final contentHeight = isLandscape
-            ? math.max(1.0, constraints.maxHeight - 52)
-            : constraints.maxHeight;
-        final handWidth = isLandscape
-            ? math.max(1.0, constraints.maxWidth * 8 / 11 - 28)
-            : constraints.maxWidth;
-        final maxByWidth = math.max(1.0, (handWidth - 48) / 4);
-        final maxByHeight = math.max(
-          1.0,
-          (contentHeight - 78) / finalCallCardHeightRatio,
-        );
-        final controlSafeWidth = isLandscape
-            ? math.max(1.0, (contentHeight - 112) / finalCallCardHeightRatio)
-            : 92.0;
-        final cardWidth = math.min(
-          isLandscape ? 138.0 : 92.0,
-          math.min(maxByWidth, math.min(maxByHeight, controlSafeWidth)),
-        );
-        final targetOffsetX = isLandscape
-            ? -(constraints.maxWidth * 3 / 22)
-            : 0.0;
-        final targetOffsetY = isLandscape ? 26.0 : 0.0;
+        final screen = constraints.biggest;
+        final cardWidth = isLandscape
+            ? FinalCallPhoneLayout.cardWidth(screen)
+            : math.min(92.0, math.max(1.0, (constraints.maxWidth - 48) / 4));
+        final target = isLandscape
+            ? FinalCallPhoneLayout.handCenterOffset(screen)
+            : Offset.zero;
+        final targetOffsetX = target.dx;
+        final targetOffsetY = target.dy;
         return CardReceiveAnimation(
           frontCardAssets: cards
               .map(finalCallCardAsset)
@@ -72,6 +61,9 @@ class FinalCallCardReceiveAnimation extends StatelessWidget {
           totalDuration: FinalCallPhoneTiming.cardReceive,
           onRevealStarted: onRevealStarted,
           onCompleted: onCompleted,
+          cardBuilder: (context, index, front) => front
+              ? FinalCallCardFace(card: cards[index], width: cardWidth)
+              : FinalCallCardBack(width: cardWidth),
         );
       },
     );

@@ -9,8 +9,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
+
 // ============================================================
 
 /// 중앙 덱에서 한 장이 뒤집히며 오른쪽 공개 카드 자리로 이동합니다.
@@ -23,11 +25,15 @@ class FinalCallCenterCardReveal extends StatefulWidget {
     super.key,
     required this.card,
     this.cardWidth = 92,
+    this.gap = 10,
     this.showRevealedCard = true,
   });
 
   final FinalCallCard? card;
   final double cardWidth;
+
+  /// 덱과 공개 카드 사이 간격입니다.
+  final double gap;
   final bool showRevealedCard;
 
   @override
@@ -38,13 +44,12 @@ class FinalCallCenterCardReveal extends StatefulWidget {
 class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
   static const Duration _startDelay = Duration(milliseconds: 400);
   static const Duration _duration = Duration(milliseconds: 680);
-  static const double _gap = 10;
 
   Timer? startTimer;
   bool started = false;
 
-  double get cardHeight => widget.cardWidth * 1518 / 1036;
-  double get travelDistance => widget.cardWidth + _gap;
+  double get cardHeight => widget.cardWidth * finalCallCardHeightRatio;
+  double get travelDistance => widget.cardWidth + widget.gap;
 
   @override
   void initState() {
@@ -63,16 +68,38 @@ class _FinalCallCenterCardRevealState extends State<FinalCallCenterCardReveal> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: widget.cardWidth * 2 + _gap,
+      width: widget.cardWidth * 2 + widget.gap,
       height: cardHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // 애니메이션이 끝난 뒤에도 왼쪽에 그대로 남는 카드 더미입니다.
+          // 두 겹 그림자로 쌓인 덱처럼 보이게 합니다(시안).
           Positioned(
             left: 0,
             top: 0,
-            child: FinalCallCardView(faceDown: true, width: widget.cardWidth),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.cardWidth * 14 / 92),
+                boxShadow: [
+                  BoxShadow(
+                    color: FinalCallColors.violetDeep,
+                    offset: Offset(
+                      widget.cardWidth * 8 / 92,
+                      widget.cardWidth * 8 / 92,
+                    ),
+                  ),
+                  BoxShadow(
+                    color: FinalCallColors.ink,
+                    offset: Offset(
+                      widget.cardWidth * 4 / 92,
+                      widget.cardWidth * 4 / 92,
+                    ),
+                  ),
+                ],
+              ),
+              child: FinalCallCardView(faceDown: true, width: widget.cardWidth),
+            ),
           ),
           Positioned(
             left: 0,

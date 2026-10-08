@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:game_kit/game_flow/game_presentation_sequence.dart';
 import 'package:game_mafia/shared/models/presentation_timing.dart';
-import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
@@ -18,11 +17,10 @@ import 'package:game_mafia/shared/models/state_models.dart';
 import 'package:game_mafia/game_sounds.dart';
 import 'package:game_mafia/tablet/screens/execution_view.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
-import 'package:game_mafia/shared/animations/role_deal_toss_animation.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
-import 'package:game_mafia/tablet/screens/night_bird.dart';
-import 'package:game_mafia/tablet/screens/tally_view.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_mafia/tablet/screens/noir_table.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 
 // ============================================================
 
@@ -39,34 +37,24 @@ class MafiaTabletRoleDealView extends StatefulWidget {
     super.key,
     required this.players,
     required this.confirmedCount,
+    this.confirmedUids = const {},
     this.showsNightNotice = false,
     this.showsGameStartNotice = false,
   });
 
   final List<MafiaPlayer> players;
-
-  /// 역할 카드를 확인한 인원입니다. 누가 확인했는지는 공개해도 무해합니다.
   final int confirmedCount;
 
-  /// '밤이 됐습니다' 안내를 덮어 보여 줄지입니다(확정: 전원 확인 10초 뒤).
+  /// 신분 확인을 마친 사람입니다. 카드 아래 `확인 완료`가 붙습니다.
+  final Set<String> confirmedUids;
   final bool showsNightNotice;
-
-  /// '게임을 시작하겠습니다' 안내를 덮어 보여 줄지입니다.
-  ///
-  /// 확정(2026-08): 전원이 신분을 확인한 **그 순간** 소리와 함께 띄웁니다.
   final bool showsGameStartNotice;
 
-  // ---------------------------------------------------------------------------
-  // 확인 현황 문구 자리
-  // ---------------------------------------------------------------------------
-  /// 확인 현황('5 / 6')이 놓이는 자리입니다(시안 좌표 기준).
-  ///
-  /// 확정(2026-08): 이 문구는 **가운데 카드 더미 아래쪽에 숨어 있다가**, 카드가
-  /// 모두 날아가면 그 자리에 남습니다. 더미는 화면 가운데(417)에 높이 246으로
-  /// 놓이므로(294~540), 이 값은 그 안쪽 아래입니다.
-  static const double confirmTextTop = 462;
+  /// `확인 완료 N / M` 줄 자리입니다(시안 top 432).
+  static const double confirmTextTop = 432;
 
-  /// 카드가 다 날아간 뒤 문구가 드러나는 시간입니다.
+  /// 참가자 카드 줄 자리입니다(시안 top 540).
+  static const double rowTop = 540;
   static const Duration confirmRevealDuration = Duration(milliseconds: 220);
 
   @override
@@ -75,69 +63,86 @@ class MafiaTabletRoleDealView extends StatefulWidget {
 }
 
 class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
-  /// 카드 더미가 비었는지입니다. 그 전에는 문구가 카드 뒤에 숨습니다.
   bool _deckCleared = false;
-
-  /// 전원이 카드를 확인했는지입니다.
-  bool get _allConfirmed =>
-      widget.players.isNotEmpty &&
-      widget.confirmedCount >= widget.players.length;
 
   @override
   Widget build(BuildContext context) {
     final players = widget.players;
-    final seatIndexes = players
-        .map((player) => player.seatIndex)
-        .toList(growable: false);
-    // 좌석 번호는 방 기준이라 인원수보다 클 수 있습니다(12인 방에 4명이
-    // 흩어져 앉는 경우). 좌석판 크기를 함께 주지 않으면 분배 연출이 좌석을
-    // 찾다가 터집니다. 가장 큰 좌석 번호까지 담기는 크기로 넘깁니다.
-    final boardSeatCount = seatIndexes.isEmpty
-        ? players.length
-        : seatIndexes.reduce((a, b) => a > b ? a : b) + 1;
-
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 확정(2026-08): 마피아는 1장씩 — 중앙 더미에서 각 좌석 방향으로
-        // 날아가 화면 밖(그 사람의 휴대폰)으로 나갑니다. 분배음은 발사 순간.
-        // 첫 공개 상태가 아직 없으면 나눠 줄 사람도 없으므로 그리지 않습니다.
-        // 확인 현황은 카드 더미 **뒤**에 둡니다(그리는 순서가 곧 z순서).
-        // 나눠 주는 동안에는 카드에 가려 보이지 않고, 마지막 장이 떠나면
-        // 그 자리에 남습니다. 인원이 많아 문구가 카드보다 넓어지는 경우까지
-        // 확실히 가리려고, 더미가 빌 때까지 투명도로도 감춥니다.
-        // 확정(2026-08): 전원이 확인하면(4/4) 숫자를 **곧바로** 거둡니다. 더
-        // 기다릴 것이 없는데 남겨 두면 밤 안내까지 10초를 멍하니 보게 됩니다.
-        AnimatedOpacity(
-          opacity: _allConfirmed
-              ? 0
-              : (_deckCleared || players.isEmpty ? 1 : 0),
-          duration: MafiaTabletRoleDealView.confirmRevealDuration,
-          child: MafiaTabletHeadline(
-            // 확정(2026-08): '확인' 글자는 빼고 숫자만 둡니다.
-            text: '${widget.confirmedCount} / ${players.length}',
-            top: MafiaTabletRoleDealView.confirmTextTop,
-            fontSize: 32,
+        const MafiaTabletHeadline(
+          text: '신분 카드를 나눠드립니다',
+          top: 40,
+          fontSize: 52,
+          color: MafiaColors.noirPaper,
+        ),
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(0, 106, 1194, 28),
+          child: Center(
+            child: Text(
+              '휴대폰에서 자신의 신분을 확인하세요 · 아무에게도 보여주지 마세요',
+              style: mafiaNoirBody(18),
+            ),
           ),
         ),
         if (players.isNotEmpty)
-          MafiaRoleDealTossAnimation(
-            playerSeatIndexes: seatIndexes,
-            boardSeatCount: boardSeatCount,
+          MafiaTabletNoirDeal(
+            playerCount: players.length,
+            rowTop: MafiaTabletRoleDealView.rowTop,
             onDeckCleared: () {
               if (mounted) setState(() => _deckCleared = true);
             },
           ),
-        // 전원이 신분을 확인하면 곧바로 게임 시작을 알립니다(소리는 화면이
-        // 냅니다). 밤 안내가 시작되면 이 안내는 이미 물러나 있습니다.
+        AnimatedOpacity(
+          opacity: _deckCleared || players.isEmpty ? 1 : 0,
+          duration: MafiaTabletRoleDealView.confirmRevealDuration,
+          child: MafiaTabletBox(
+            rect: const Rect.fromLTWH(
+              0,
+              MafiaTabletRoleDealView.confirmTextTop,
+              1194,
+              60,
+            ),
+            child: Center(
+              child: MafiaNoirRuledLabel(
+                label: '확인 완료',
+                value: '${widget.confirmedCount} / ${players.length}',
+                lineColor: MafiaColors.noirBrass,
+                labelColor: MafiaColors.noirBrass,
+                valueColor: MafiaColors.noirPaper,
+                valueSize: 36,
+              ),
+            ),
+          ),
+        ),
+        MafiaTabletPlayerRow(
+          players: players,
+          top: MafiaTabletRoleDealView.rowTop,
+          dimmedUids: _deckCleared
+              ? {
+                  for (final player in players)
+                    if (!widget.confirmedUids.contains(player.uid)) player.uid,
+                }
+              : const {},
+          labels: _deckCleared
+              ? {
+                  for (final player in players)
+                    player.uid: widget.confirmedUids.contains(player.uid)
+                        ? const MafiaTabletSeatLabel('확인 완료', strong: true)
+                        : const MafiaTabletSeatLabel('확인 중…'),
+                }
+              : const {},
+        ),
         if (widget.showsGameStartNotice && !widget.showsNightNotice)
           const Positioned.fill(
             child: MafiaAnnouncementReveal(
-              child: MafiaTabletNotice.day(text: MafiaCopy.gameStartNotice),
+              child: MafiaTabletNotice.night(
+                text: MafiaCopy.gameStartNotice,
+                voice: null,
+              ),
             ),
           ),
-        // 전원 확인 뒤 10초가 지나면 어두워지며 밤을 알립니다. 이 안내가 끝나면
-        // 화면(tablet_game.dart)이 서버에 밤 시작을 알립니다.
         if (widget.showsNightNotice)
           const Positioned.fill(
             child: MafiaAnnouncementReveal(
@@ -158,19 +163,56 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
 /// 끝나는 공통 마무리 구간에만 새벽빛과 중립적인 안내를 표시합니다. 누가 행동을
 /// 마쳤는지 보이면 특수직이 드러나므로 역할·완료 인원은 보여 주지 않습니다.
 class MafiaTabletNightView extends StatelessWidget {
-  const MafiaTabletNightView({super.key, this.isWrappingUp = false});
+  const MafiaTabletNightView({
+    super.key,
+    this.isWrappingUp = false,
+    this.round = 0,
+    this.remainingSeconds,
+    this.players = const [],
+    this.revealedRoles = const {},
+  });
 
-  /// 모든 역할 행동이 끝나고 아침 결과를 정리하는 공통 10초 구간입니다.
   final bool isWrappingUp;
+  final int round;
+  final int? remainingSeconds;
+  final List<MafiaPlayer> players;
+  final Map<String, MafiaRole?> revealedRoles;
 
   @override
   Widget build(BuildContext context) {
+    final seconds = remainingSeconds;
     return Stack(
       fit: StackFit.expand,
       children: [
         const MafiaTabletMoon(),
-        // 새가 한 번씩 오른쪽에서 왼쪽으로 지나갑니다.
-        const MafiaTabletNightBird(),
+        const MafiaTabletHeadline(
+          text: '밤이 찾아왔다',
+          top: 356,
+          fontSize: 78,
+          color: MafiaColors.noirPaper,
+        ),
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(0, 444, 1194, 28),
+          child: Center(
+            child: Text(
+              round > 0
+                  ? '$round일째 밤 · 휴대폰을 보고 조용히 행동하세요'
+                  : '휴대폰을 보고 조용히 행동하세요',
+              style: mafiaNoirBody(19, letterSpacing: 1.1),
+            ),
+          ),
+        ),
+        if (seconds != null)
+          MafiaTabletTimerBox(
+            rect: const Rect.fromLTWH(497, 482, 200, 74),
+            seconds: seconds,
+          ),
+        if (players.isNotEmpty)
+          MafiaTabletPlayerRow(
+            players: players,
+            top: 612,
+            revealedRoles: revealedRoles,
+          ),
         Positioned.fill(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
@@ -241,20 +283,18 @@ class _MafiaTabletNightWrapUpState extends State<_MafiaTabletNightWrapUp>
               ),
             ),
             Align(
-              alignment: const Alignment(0, 0.58),
+              alignment: const Alignment(0, 0.42),
               child: Opacity(
                 opacity: textOpacity,
                 child: Transform.translate(
                   offset: Offset(0, 12 * (1 - textOpacity)),
-                  child: const Text(
+                  child: Text(
                     '밤이 지나가고 있습니다',
-                    key: ValueKey('mafia-night-wrap-up-text'),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.4,
-                      shadows: [Shadow(color: Colors.black54, blurRadius: 12)],
+                    key: const ValueKey('mafia-night-wrap-up-text'),
+                    style: mafiaNoirDisplay(
+                      30,
+                      color: MafiaColors.noirBrass,
+                      letterSpacing: 2,
                     ),
                   ),
                 ),
@@ -283,60 +323,75 @@ class MafiaTabletMorningView extends StatelessWidget {
     super.key,
     required this.result,
     required this.players,
+    this.round = 0,
+    this.hold = MafiaPresentationTiming.morningDeaths,
   });
 
   final MafiaMorningResult? result;
   final Map<String, MafiaPlayer> players;
+  final int round;
 
-  // ---------------------------------------------------------------------------
-  // 시안 기준 좌표
-  // ---------------------------------------------------------------------------
-  /// 시체 그림입니다. 시안은 754 × 754 자리에 여백을 포함한 그림을 넣었지만,
-  /// 저장소 파일(`dead_message`)은 그 여백이 없는 판이라 실제 그림이 놓이는
-  /// 자리에 맞춰 넣습니다.
-  static const Rect _corpse = Rect.fromLTWH(257.9, 323.7, 675.2, 262.1);
+  /// 이 발표가 머무는 시간입니다. 아래 진행 막대가 이 시간 동안 찹니다.
+  final Duration hold;
 
-  /// 사망자 문구입니다. 시안은 48px Regular입니다.
-  static const double _deathTextTop = 694;
-
-  /// 사망자가 없을 때의 문구 위치입니다.
-  static const double _noDeathTextTop = 415;
+  static const Rect _poster = Rect.fromLTWH(437, 196, 320, 440);
 
   @override
   Widget build(BuildContext context) {
-    final current = result;
-    final deadNames = current == null
-        ? const <String>[]
-        : current.deadUids
-              .map((uid) => players[uid]?.nickname ?? '플레이어')
-              .toList(growable: false);
-
+    final dead = [
+      for (final uid in result?.deadUids ?? const <String>[]) ?players[uid],
+    ];
+    final names = dead.map((player) => player.nickname).join(' · ');
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 확정(2026-08): 긴 문장은 두 박자로 나눠 내려찍습니다.
-        if (deadNames.isEmpty)
-          const MafiaTabletAnnouncement(
-            beats: MafiaCopy.noDeathBeats,
-            top: _noDeathTextTop,
-            fontSize: 48,
-            fontWeight: FontWeight.w400,
-          )
-        else ...[
+        if (round > 0)
           MafiaTabletBox(
-            rect: _corpse,
-            child: Assets.games.mafia.images.other.deadMessage.game.image(
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
+            rect: const Rect.fromLTWH(0, 40, 1194, 24),
+            child: Center(
+              child: Text(
+                '$round일째 아침',
+                style: mafiaNoirBody(
+                  15,
+                  color: MafiaColors.noirUmber,
+                  letterSpacing: 7.5,
+                ),
+              ),
             ),
           ),
-          MafiaTabletAnnouncement(
-            beats: MafiaCopy.deathBeats(deadNames.join(' · ')),
-            top: _deathTextTop,
-            fontSize: 48,
-            fontWeight: FontWeight.w400,
+        const MafiaTabletHeadline(text: '아침이 밝았다', top: 70, fontSize: 72),
+        if (dead.isNotEmpty)
+          MafiaTabletBox(
+            rect: _poster,
+            child: MafiaAnnouncementReveal(
+              child: MafiaNoirPoster(
+                player: dead.first,
+                width: _poster.width,
+                height: _poster.height,
+                banner: const MafiaNoirBannerSpec(
+                  label: '어젯밤 사망',
+                  top: 0.53,
+                  angle: -14,
+                ),
+              ),
+            ),
+          )
+        else
+          MafiaTabletBox(
+            rect: const Rect.fromLTWH(347, 220, 500, 380),
+            child: MafiaNoirCityscape(width: 500, height: 380),
           ),
-        ],
+        MafiaTabletHeadline(
+          text: dead.isEmpty
+              ? '어젯밤은 아무도 쓰러지지 않았다'
+              : '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+          top: 664,
+          fontSize: 34,
+        ),
+        MafiaTabletBox(
+          rect: const Rect.fromLTWH(447, 728, 300, 40),
+          child: MafiaNoirProgress(duration: hold, label: '잠시 후 토론을 시작합니다'),
+        ),
       ],
     );
   }
@@ -356,10 +411,14 @@ class MafiaTabletMorningSequence extends StatelessWidget {
     required this.result,
     required this.players,
     this.exposedRole,
+    this.round = 0,
   });
 
   final MafiaMorningResult? result;
   final Map<String, MafiaPlayer> players;
+
+  /// 몇째 날 아침인지입니다(`3일째 아침`).
+  final int round;
 
   /// 기자가 취재한 사람의 신분입니다. 취재가 없었으면 null입니다.
   ///
@@ -425,7 +484,7 @@ class MafiaTabletMorningSequence extends StatelessWidget {
           GamePresentationBeat(
             hold: exposureHold,
             child: exposed == null
-                ? const MafiaTabletNotice.day(text: '취재 정보를 확인하고 있습니다.')
+                ? const MafiaTabletNotice.day(text: '취재 결과 발표')
                 : MafiaTabletExecutionView(
                     executed: exposed,
                     executedRole: exposedRole,
@@ -465,7 +524,18 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
     required this.executedRole,
     this.limitedDisclosure = false,
     this.revealedFaction,
+    this.round = 0,
   });
+
+  /// 몇째 날 낮인지입니다(제목 아래 줄).
+  final int round;
+
+  /// 제목 아래 줄입니다. 예: `3일째 낮 · 5명 투표 · 누가 누구를 찍었는지는 비밀`.
+  String get _subtitle {
+    final voters = (result?.tally.values.fold<int>(0, (a, b) => a + b) ?? 0);
+    final day = round > 0 ? '$round일째 낮 · ' : '';
+    return '$day$voters표 · 누가 누구를 찍었는지는 비밀';
+  }
 
   final MafiaVoteResult? result;
   final Map<String, MafiaPlayer> players;
@@ -505,7 +575,12 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
           hold: tallyHold,
           child: result?.hasVerdict == true
               ? MafiaVerdictSummary(result: result!)
-              : MafiaTabletTallyView(result: result, players: players),
+              : MafiaTabletCountingView(
+                  tally: result?.tally ?? const {},
+                  players: players,
+                  abstainCount: result?.abstainCount ?? 0,
+                  subtitle: _subtitle,
+                ),
         ),
         GamePresentationBeat(
           hold: executionHold,
@@ -518,6 +593,10 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
                   executed: executed,
                   executedRole: executedRole,
                   isTie: result?.tie ?? false,
+                  tally: result?.hasVerdict == true ? null : result?.tally,
+                  players: players,
+                  abstainCount: result?.abstainCount ?? 0,
+                  subtitle: _subtitle,
                 ),
         ),
         // 확정(2026-08): 밤으로 가기 전에 안내를 띄우고 그 뒤에 배경이 바뀝니다.

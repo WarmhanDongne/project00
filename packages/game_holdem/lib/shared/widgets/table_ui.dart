@@ -165,7 +165,9 @@ class _HoldemPuckButtonState extends State<HoldemPuckButton> {
     final foreground = widget.dark
         ? HoldemColors.ivory
         : HoldemColors.cardBlack;
-    final pressed = _pressed && enabled;
+    // 서버 응답을 기다리는 동안 선택한 퍽을 누른 상태로 유지합니다.
+    // 회전 로딩 표시보다 이미 선택한 행동을 그대로 보여 주는 편이 자연스럽습니다.
+    final pressed = (_pressed && enabled) || widget.busy;
     final puck = AnimatedContainer(
       duration: const Duration(milliseconds: 90),
       width: size,
@@ -202,44 +204,32 @@ class _HoldemPuckButtonState extends State<HoldemPuckButton> {
           ),
         ],
       ),
-      child: widget.busy
-          ? Center(
-              child: SizedBox.square(
-                dimension: size * .27,
-                child: CircularProgressIndicator(
-                  strokeWidth: size * .025,
-                  color: foreground,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            widget.label,
+            style: HoldemFonts.title(size: size * .26, color: foreground),
+          ),
+          if (widget.amount case final amount?)
+            Padding(
+              padding: EdgeInsets.only(top: size * .02),
+              child: Text(
+                amount,
+                style: HoldemFonts.numbers(
+                  size: size * .2,
+                  color: widget.dark ? HoldemColors.muted : HoldemColors.accent,
                 ),
               ),
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  widget.label,
-                  style: HoldemFonts.title(size: size * .26, color: foreground),
-                ),
-                if (widget.amount case final amount?)
-                  Padding(
-                    padding: EdgeInsets.only(top: size * .02),
-                    child: Text(
-                      amount,
-                      style: HoldemFonts.numbers(
-                        size: size * .2,
-                        color: widget.dark
-                            ? HoldemColors.muted
-                            : HoldemColors.accent,
-                      ),
-                    ),
-                  ),
-              ],
             ),
+        ],
+      ),
     );
     return Semantics(
       button: true,
       enabled: enabled,
       label: widget.busy
-          ? '${widget.semanticLabel ?? widget.label} 처리 중'
+          ? '${widget.semanticLabel ?? widget.label} 선택됨'
           : widget.semanticLabel ?? [widget.label, ?widget.amount].join(' '),
       excludeSemantics: true,
       child: GestureDetector(

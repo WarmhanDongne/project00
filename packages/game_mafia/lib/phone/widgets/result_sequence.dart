@@ -6,7 +6,6 @@
 // 즉, 플레이어 조작과 상태 표시를 화면별로 나눠 관리하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
 import 'package:game_mafia/shared/models/player.dart';
@@ -19,16 +18,15 @@ import 'package:game_mafia/phone/widgets/spectator_roster_view.dart';
 // ---------------------------------------------------------------------------
 // P9 휴대폰 결과 순서
 // ---------------------------------------------------------------------------
-/// 승리 그림을 잠깐 보여 준 뒤 전원 신분 명단으로 넘어갑니다.
+/// 승리 포스터를 보여 주고, '확인'을 누르면 전원 신분 명단으로 넘어갑니다.
 ///
-/// 확정(2026-08): 승리 화면은 **2초만** 두고 곧바로 결과(전원 신분)로
-/// 넘어갑니다. 태블릿도 같은 2초입니다
-/// ([MafiaTabletResultView.posterHold]).
+/// Noir 시안(2026-10-08): 휴대폰 결과는 내 신분 카드에 승리/패배 띠를 두른
+/// 포스터이고, 사용자가 확인을 누를 때 명단으로 넘어갑니다.
 ///
 /// | 박자 | 내용 |
 /// |---|---|
-/// | 1 | 승리 그림 한 장(시민 승리 / 마피아 승리). 문구·버튼 없음 |
-/// | 2 | 전원 신분 명단. 누가 무엇이었는지 확인합니다 |
+/// | 1 | 승리 포스터(Noir 시안 ⑪): 승패 문구, 내 신분 카드, 함께한 동료, 확인 |
+/// | 2 | '확인'을 누르면 전원 신분 명단 |
 ///
 /// 다시하기·홈으로 버튼은 시안대로 **태블릿에만** 있습니다. 휴대폰은 결과를
 /// 확인하는 화면입니다.
@@ -42,7 +40,8 @@ class MafiaPhoneResultSequence extends StatefulWidget {
     this.myRole,
     this.winnerRoleIds = const {},
     this.winnerLabel,
-    this.posterHold = defaultPosterHold,
+    this.didWin,
+    this.allies = const [],
   });
 
   /// 승리 진영입니다. 중립 개별 승리는 전용 그림이 없어 문구로 대신합니다.
@@ -71,35 +70,20 @@ class MafiaPhoneResultSequence extends StatefulWidget {
   /// 포스터가 있는 승리는 그림에 문구가 들어 있어 쓰이지 않습니다.
   final String? winnerLabel;
 
-  /// 승리 그림을 보여 주는 시간입니다.
-  final Duration posterHold;
+  /// 내가 이겼는지입니다.
+  final bool? didWin;
 
-  /// 확정 값입니다(태블릿과 같은 2초).
-  static const Duration defaultPosterHold = Duration(seconds: 2);
+  /// 함께한 동료입니다.
+  final List<MafiaPlayer> allies;
 
   @override
   State<MafiaPhoneResultSequence> createState() =>
       _MafiaPhoneResultSequenceState();
 }
 
-class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence>
-    with GamePresentationState {
+class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence> {
+  /// 결과 포스터에서 '확인'을 누르면 전원 신분 명단으로 넘어갑니다.
   bool _showsRoster = false;
-  PresentationTimer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = presentationTimer(widget.posterHold, () {
-      if (mounted) setState(() => _showsRoster = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +96,10 @@ class _MafiaPhoneResultSequenceState extends State<MafiaPhoneResultSequence>
             winner: widget.winner,
             winnerRoleIds: widget.winnerRoleIds,
             winnerLabel: widget.winnerLabel,
+            myRole: widget.myRole,
+            didWin: widget.didWin,
+            allies: widget.allies,
+            onConfirm: () => setState(() => _showsRoster = true),
           )
         else
           MafiaAnnouncementReveal(

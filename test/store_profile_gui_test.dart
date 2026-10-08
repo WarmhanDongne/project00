@@ -221,7 +221,7 @@ void main() {
       MaterialApp(home: TabletStoreScreen(gameProvider: games)),
     );
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.widgetWithText(MosiButton, '구매 준비 중'), findsOneWidget);
+    expect(find.widgetWithText(MosiButton, '자세히 보기'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('store-book-soon')));
     await tester.pump();
     expect(find.text('공개 준비 중'), findsOneWidget);
@@ -232,6 +232,15 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TabletStoreMafiaDetail), findsNothing);
+    // 선택된 표지를 다시 눌러도 상세를 열지 않습니다.
+    await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TabletStoreMafiaDetail), findsNothing);
+    await tester.tap(find.widgetWithText(MosiButton, '자세히 보기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TabletStoreMafiaDetail), findsOneWidget);
     expect(find.text('배경 음악 · 준비 중'), findsOneWidget);
     expect(find.text('배경 음악 · 재생 중'), findsNothing);
     expect(tester.takeException(), isNull);

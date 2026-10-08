@@ -61,7 +61,13 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
   Future<bool> _submitAction(String action, {int? amount}) async {
     if (_submittingAction != null || widget.game.commandInFlight) return false;
     final submittedRevision = widget.game.revision;
-    setState(() => _submittingAction = action);
+    final wasRaiseOpen = _raiseOpen;
+    // 금액 확인 즉시 시트를 닫고 누른 퍽을 눌린 상태로 남깁니다.
+    // 실제 칩·턴 상태는 서버 공개 상태가 도착할 때만 바뀝니다.
+    setState(() {
+      _submittingAction = action;
+      _raiseOpen = false;
+    });
     final accepted = await widget.onAction(action, amount: amount);
     if (!mounted) return accepted;
     setState(() {
@@ -75,6 +81,12 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
       } else {
         _submittingAction = null;
         _acceptedActionRevision = null;
+        if (!accepted &&
+            wasRaiseOpen &&
+            widget.game.revision == submittedRevision &&
+            _isMyTurn(widget.game)) {
+          _raiseOpen = true;
+        }
       }
     });
     return accepted;
@@ -289,10 +301,8 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
               step: game.bigBlind,
               enabled: !game.commandInFlight && _submittingAction == null,
               onClose: () => setState(() => _raiseOpen = false),
-              onConfirm: (action, amount) async {
-                final sent = await _submitAction(action, amount: amount);
-                if (sent && mounted) setState(() => _raiseOpen = false);
-              },
+              onConfirm: (action, amount) =>
+                  unawaited(_submitAction(action, amount: amount)),
             ),
           ),
         ],
@@ -328,7 +338,7 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
     if (me == null || me.status == 'eliminated' || game.hand.isEmpty) {
       return const HoldemHoleCards(cards: [], faceDown: true, dimmed: true);
     }
-    final folded = me.handStatus == 'folded';
+    final folded = me.handStatus == 'folded' || _submittingAction == 'fold';
     if (!_handRevealed && game.hand.length == 2) {
       return HoldemHandReceiveAnimation(
         key: ValueKey('receive-${game.handNumber}'),

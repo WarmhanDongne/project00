@@ -471,9 +471,8 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
             // ---------------------------------------------------------------------------
             // 공통 배경
             // ---------------------------------------------------------------------------
-            Assets.games.finalCall.images.background.background.game.image(
-              fit: BoxFit.cover,
-            ),
+            // 남보라 점무늬 바탕 위에 둥근 연보라 테이블을 둡니다(시안).
+            const FinalCallTableBackdrop(),
             // 단계별 카드·하트·판정 화면입니다. 화면 표시 여부는 Flow Config에서
             // 확인하고, 실제 Widget 선택은 exhaustive stage switch가 담당합니다.
             if (flowStep.showScreen)
@@ -535,12 +534,6 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
                 ),
               ),
             ),
-            if (game.commandInFlight)
-              const Positioned(
-                right: 22,
-                bottom: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
           ],
         ),
       ),

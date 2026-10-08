@@ -127,6 +127,10 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
       widget.gameProvider.fetchGames();
       return;
     }
+    if (_selected == _StoreItem.mafia) {
+      _openFrame(_selected);
+      return;
+    }
     final game = _game(_selected);
     if (game?.isAccessible == true) {
       Navigator.of(context).pop(game!.id);
@@ -170,6 +174,8 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
         ? context.l10n.checkingProgress
         : widget.gameProvider.errorMessage != null
         ? context.l10n.checkAgain
+        : _selected == _StoreItem.mafia
+        ? context.l10n.details
         : _game(_selected)?.isAccessible == true
         ? context.l10n.playFromShelf
         : _selected == _StoreItem.soon
@@ -262,9 +268,7 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                                 owned: _game(book.item)?.isOwned == true,
                                 entranceIndex: i,
                                 selected: _selected == book.item,
-                                onTap: () => book.item == _StoreItem.soon
-                                    ? _select(book.item)
-                                    : _openFrame(book.item),
+                                onTap: () => _select(book.item),
                               ),
                           ],
                         ),

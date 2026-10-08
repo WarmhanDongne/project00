@@ -12,7 +12,7 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
-import 'package:game_mafia/shared/widgets/profile_image.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/game_theme.dart';
 
 // ============================================================
@@ -160,8 +160,9 @@ class MafiaNightActionView extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // 공용 좌표(버튼·보관 카드)는 [MafiaPhoneDesign]에 있습니다.
   // 안내·타이머는 모든 단계 공통 자리(MafiaPhoneStatusText)를 씁니다.
-  static const double _promptTop = MafiaPhoneStatusText.promptTop;
-  static const double _timerTop = MafiaPhoneStatusText.timerTop;
+  static const double _tagTop = 92;
+  static const double _promptTop = 114;
+  static const double _timerTop = 156;
 
   /// 내가 밤에 실제로 행동을 제출했는지입니다.
   ///
@@ -237,10 +238,12 @@ class MafiaNightActionView extends StatelessWidget {
                     _NightViewMode.selection => [
                       ..._buildSelectionLayer(size, scale),
                       MafiaPhoneActionButton(
-                        label: '선택 완료',
+                        label: _confirmLabel(),
                         onTap: onConfirm,
                         enabled: selectedUid != null && onConfirm != null,
                         colorlessWhenDisabled: true,
+                        backgroundColor: _confirmColor(),
+                        labelColor: _confirmTextColor(),
                       ),
                     ],
                     _NightViewMode.waiting => _buildWaiting(size, scale),
@@ -255,52 +258,111 @@ class MafiaNightActionView extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildSelectionLayer(Size size, double scale) {
-    final current = role!;
+  /// 역할 영문 꼬리표입니다(시안: `MAFIA`·`DOCTOR`·`POLICE`).
+  static String roleTag(MafiaRole role) =>
+      role.id.replaceAll('_', ' ').toUpperCase();
+
+  /// 밤 제목입니다. 제거는 `오늘 밤의 표적`, 치료는 `오늘 밤 살릴 사람`.
+  static String nightTitle(MafiaRole role) => switch (role.nightAction) {
+    MafiaNightAction.eliminate => '오늘 밤의 표적',
+    MafiaNightAction.protect => '오늘 밤 살릴 사람',
+    _ => '오늘 밤 ${role.nightPromptVerb}할 사람',
+  };
+
+  /// 고른 카드에 두르는 띠 문구입니다.
+  static String bannerLabel(MafiaRole role) => switch (role.nightAction) {
+    MafiaNightAction.eliminate => '표적',
+    _ => role.nightPromptVerb,
+  };
+
+  /// 격자 아래 한 줄 안내입니다.
+  String? _caption(MafiaRole role) {
+    if (allySelectedUids.isNotEmpty) return '빨간 모서리는 동료가 고른 사람입니다';
+    return switch (role.nightAction) {
+      MafiaNightAction.protect => '마피아가 고른 사람을 맞히면 그 사람은 살아납니다',
+      MafiaNightAction.investigate ||
+      MafiaNightAction.investigateRole => '조사 결과는 나만 볼 수 있어요',
+      _ => null,
+    };
+  }
+
+  List<Widget> _buildRoleHeading(
+    Size size,
+    double scale,
+    MafiaRole role,
+    Color accent,
+    String title, {
+    int? seconds,
+  }) {
     return [
-      // 안내 문구 — 동사만 역할 색으로 강조합니다.
+      Positioned(
+        left: 0,
+        right: 0,
+        top: MafiaPhoneDesign.top(size, _tagTop),
+        child: IgnorePointer(
+          child: Text(
+            roleTag(role),
+            textAlign: TextAlign.center,
+            style: mafiaNoirBody(
+              13 * scale,
+              color: accent,
+              weight: FontWeight.w700,
+              letterSpacing: 6.5 * scale,
+            ),
+          ),
+        ),
+      ),
       Positioned(
         left: 0,
         right: 0,
         top: MafiaPhoneDesign.top(size, _promptTop),
         child: IgnorePointer(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: current.nightPromptVerb,
-                  // 진영색이 아니라 행동 의미의 색입니다(치료=초록 등).
-                  style: TextStyle(color: current.nightAction.accentColor),
-                ),
-                const TextSpan(text: ' 할 대상을 선택하세요'),
-              ],
-            ),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
-              fontWeight: FontWeight.w700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: mafiaNoirDisplay(
+                MafiaPhoneStatusText.promptFontSize * scale,
+                height: 1,
+              ),
             ),
           ),
         ),
       ),
-      if (remainingSeconds != null)
+      if (seconds != null)
         Positioned(
           left: 0,
           right: 0,
           top: MafiaPhoneDesign.top(size, _timerTop),
           child: IgnorePointer(
             child: Text(
-              '$remainingSeconds초',
+              mafiaNoirClock(seconds),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: MafiaPhoneStatusText.timerFontSize * scale,
-                fontWeight: FontWeight.w700,
+              style: mafiaNoirDisplay(
+                MafiaPhoneStatusText.timerFontSize * scale,
+                color: MafiaColors.noirBrass,
               ),
             ),
           ),
         ),
+    ];
+  }
+
+  List<Widget> _buildSelectionLayer(Size size, double scale) {
+    final current = role!;
+    final accent = current.nightAction.accentColor;
+    final caption = _caption(current);
+    return [
+      ..._buildRoleHeading(
+        size,
+        scale,
+        current,
+        accent,
+        nightTitle(current),
+        seconds: remainingSeconds,
+      ),
       Positioned(
         left: 0,
         right: 0,
@@ -312,14 +374,59 @@ class MafiaNightActionView extends StatelessWidget {
           players: players,
           selectedUid: selectedUid,
           allySelectedUids: allySelectedUids,
-          selectionColor: current.nightAction.accentColor,
+          selectionColor: accent,
+          selectedBanner: MafiaNoirBannerSpec(
+            label: bannerLabel(current),
+            color: current.nightAction == MafiaNightAction.eliminate
+                ? MafiaColors.noirScarlet
+                : accent,
+            textColor: current.nightAction == MafiaNightAction.eliminate
+                ? MafiaColors.noirPaper
+                : MafiaColors.noirInk,
+          ),
           // 영매·도둑은 **사망자**를 고릅니다. 이 값을 넘기지 않으면 명단이
           // 보이는데도 아무도 눌리지 않습니다(2026-08).
           selectsDead: current.targetsDead,
           onSelect: onSelect,
         ),
       ),
+      if (caption != null)
+        Positioned(
+          left: 0,
+          right: 0,
+          top: MafiaPhoneDesign.top(
+            size,
+            MafiaPlayerSelectGrid.designBottom(players.length) + 4,
+          ),
+          child: IgnorePointer(
+            child: Text(
+              caption,
+              textAlign: TextAlign.center,
+              style: mafiaNoirBody(13 * scale, color: const Color(0xFF6E6A5D)),
+            ),
+          ),
+        ),
     ];
+  }
+
+  Color _confirmColor() => switch (role?.nightAction) {
+    MafiaNightAction.eliminate => MafiaColors.noirBlood,
+    null || MafiaNightAction.none => MafiaColors.noirPaper,
+    final action => action.accentColor,
+  };
+
+  Color _confirmTextColor() => role?.nightAction == MafiaNightAction.eliminate
+      ? MafiaColors.noirPaper
+      : MafiaColors.noirInk;
+
+  /// 선택 완료 버튼 문구입니다(예: `서아 제거`).
+  String _confirmLabel() {
+    final current = role;
+    final target = players
+        .where((player) => player.uid == selectedUid)
+        .firstOrNull;
+    if (current == null || target == null) return '선택 완료';
+    return '${target.nickname} ${current.nightPromptVerb}';
   }
 
   /// 조사 결과 화면입니다(P4 두 번째 시안).
@@ -332,37 +439,51 @@ class MafiaNightActionView extends StatelessWidget {
     double scale,
     MafiaNightInvestigationResult result,
   ) {
-    final accent = role?.nightAction.accentColor ?? MafiaColors.exposeBlue;
+    final current = role;
+    final accent = current?.nightAction.accentColor ?? MafiaColors.noirPolice;
     // 확정(2026-08): 조사 결과가 마피아면 테두리를 마피아 진영 색으로 칠합니다.
     // 문구를 읽기 전에 색만으로 결과가 먼저 읽힙니다.
-    final borderColor = result.showsMafia ? MafiaFactionColors.mafia : accent;
-    const profileSize = 188.0;
+    final mafia = result.showsMafia;
+    final borderColor = mafia ? MafiaColors.noirScarlet : accent;
+    final posterWidth = 230 * scale;
+    final posterHeight = 320 * scale;
+    final bannerText = result.asFactionSentence
+        ? (mafia ? '마피아' : '마피아 아님')
+        : result.verdict;
 
     return [
-      // "조사 결과"
+      if (current != null)
+        ..._buildRoleHeading(size, scale, current, accent, result.title),
       Positioned(
-        left: 0,
-        right: 0,
-        top: MafiaPhoneDesign.top(size, _promptTop),
+        left: (size.width - posterWidth) / 2,
+        top: MafiaPhoneDesign.top(size, 196),
+        width: posterWidth,
+        height: posterHeight,
         child: IgnorePointer(
-          child: Text(
-            result.title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: accent,
-              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
-              fontWeight: FontWeight.w700,
+          child: MafiaNoirPoster(
+            player: result.target,
+            width: posterWidth,
+            height: posterHeight,
+            grayscale: false,
+            borderColor: borderColor,
+            circleColor: mafia ? MafiaColors.noirBlood : MafiaColors.noirTeal,
+            glowColor: borderColor,
+            banner: MafiaNoirBannerSpec(
+              label: bannerText,
+              color: mafia ? MafiaColors.noirScarlet : accent,
+              textColor: mafia ? MafiaColors.noirPaper : MafiaColors.noirInk,
+              top: 0.53,
+              angle: -16,
+              letterSpacing: 0.3,
             ),
           ),
         ),
       ),
-      // 결과 값 — 시안 고유 자리(151)라 통일 대상이 아닙니다.
-      // 진영 조사는 문장(`OO님은 마피아입니다`)이라 길어질 수 있어, 시안의
-      // 한 줄을 유지하도록 필요한 만큼만 줄입니다.
+      // 결과 문장 — 진영 조사는 `OO님은 마피아입니다`처럼 문장으로 적습니다.
       Positioned(
-        left: MafiaPhoneDesign.left(size, MafiaPhoneDesign.contentLeft),
-        top: MafiaPhoneDesign.top(size, 151),
-        width: MafiaPhoneDesign.contentWidth * scale,
+        left: MafiaPhoneDesign.left(size, 24),
+        right: MafiaPhoneDesign.left(size, 24),
+        top: MafiaPhoneDesign.top(size, 546),
         child: IgnorePointer(
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -370,32 +491,9 @@ class MafiaNightActionView extends StatelessWidget {
               result.displayText,
               maxLines: 1,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 36 * scale,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-      // 조사한 대상
-      Positioned(
-        left: (size.width - profileSize * scale) / 2,
-        top: MafiaPhoneDesign.top(size, 295),
-        width: profileSize * scale,
-        height: profileSize * scale,
-        child: IgnorePointer(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10 * scale),
-              border: Border.all(color: borderColor, width: 3 * scale),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10 * scale),
-              child: MafiaProfileImage(
-                url: result.target.profileImageUrl,
-                characterId: result.target.characterId,
+              style: mafiaNoirDisplay(
+                30 * scale,
+                color: mafia ? MafiaColors.noirRose : MafiaColors.noirPaper,
               ),
             ),
           ),
@@ -404,14 +502,12 @@ class MafiaNightActionView extends StatelessWidget {
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, 490.02),
+        top: MafiaPhoneDesign.top(size, 592),
         child: IgnorePointer(
           child: Text(
-            result.target.nickname,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            '이 결과는 나만 볼 수 있어요',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 40 * scale),
+            style: mafiaNoirBody(14 * scale),
           ),
         ),
       ),
@@ -428,44 +524,73 @@ class MafiaNightActionView extends StatelessWidget {
   /// 대상을 고르지 않는 역할도 이 화면을 봅니다. 그래야 옆 사람이 훔쳐봐도
   /// 누가 특수직인지 드러나지 않습니다.
   List<Widget> _buildWaiting(Size size, double scale) {
+    final seconds = remainingSeconds;
     return [
-      // 확정(2026-08): **밤에 할 일이 없는 신분**(시민 등)에게는 이 문구를
-      // 띄우지 않습니다. 고른 것이 없는데 '완료했습니다'는 말이 맞지 않고,
-      // 옆에서 보면 아무 것도 안 하는 신분임이 드러납니다.
-      if (_hasSubmittedAction)
-        Positioned(
-          left: 0,
-          right: 0,
-          top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingTop - 62),
-          child: IgnorePointer(
-            child: _MafiaSubmissionConfirmation(
-              scale: scale,
-              label: '선택을 완료했습니다',
-            ),
-          ),
-        ),
+      // 보름달과 도시 — 고르지 않는 신분과 행동을 끝낸 신분이 같은 풍경을 봅니다.
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(size, MafiaPhoneStatusText.waitingSubTop),
+        top: MafiaPhoneDesign.top(size, 116),
         child: IgnorePointer(
-          // 시안은 한 줄(nowrap)입니다. 좁은 기기에서 두 줄로 흐르지 않게
-          // 필요한 만큼만 줄여 한 줄을 유지합니다.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              waitingMessage,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: MafiaPhoneStatusText.waitingSubFontSize * scale,
-                fontWeight: FontWeight.w300,
+          child: Center(
+            child: MafiaNoirCityscape(width: size.width, height: 260 * scale),
+          ),
+        ),
+      ),
+      Positioned(
+        left: MafiaPhoneDesign.left(size, 31),
+        right: MafiaPhoneDesign.left(size, 31),
+        top: MafiaPhoneDesign.top(size, 376),
+        height: 2,
+        child: const ColoredBox(color: MafiaColors.noirBrass),
+      ),
+      // 확정(2026-08): **밤에 할 일이 없는 신분**(시민 등)에게는 '완료' 문구를
+      // 띄우지 않습니다. 고른 것이 없는데 '완료했습니다'는 말이 맞지 않습니다.
+      Positioned(
+        left: 0,
+        right: 0,
+        top: MafiaPhoneDesign.top(size, 412),
+        child: IgnorePointer(
+          child: _hasSubmittedAction
+              ? _MafiaSubmissionConfirmation(scale: scale, label: '선택을 완료했습니다')
+              : Text(
+                  isWrappingUp ? '곧 아침이 옵니다' : '조용히 밤을 보내세요',
+                  textAlign: TextAlign.center,
+                  style: mafiaNoirDisplay(34 * scale),
+                ),
+        ),
+      ),
+      Positioned(
+        left: 0,
+        right: 0,
+        top: MafiaPhoneDesign.top(size, _hasSubmittedAction ? 512 : 466),
+        child: IgnorePointer(
+          child: Text(
+            isWrappingUp || _hasSubmittedAction
+                ? waitingMessage
+                : '화면을 켜 둔 채\n아침을 기다려 주세요.',
+            textAlign: TextAlign.center,
+            style: mafiaNoirBody(15 * scale, height: 1.6),
+          ),
+        ),
+      ),
+      if (seconds != null)
+        Positioned(
+          left: 0,
+          right: 0,
+          top: MafiaPhoneDesign.top(size, 568),
+          child: IgnorePointer(
+            child: Center(
+              child: Transform.scale(
+                scale: scale,
+                child: MafiaNoirRuledLabel(
+                  label: '아침까지',
+                  value: mafiaNoirClock(seconds),
+                ),
               ),
             ),
           ),
         ),
-      ),
     ];
   }
 }
@@ -541,15 +666,17 @@ class _MafiaSubmissionConfirmationState
                   height: 46 * widget.scale,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.12),
+                    color: MafiaColors.noirSlab,
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.55 + glow * 0.25),
+                      color: MafiaColors.noirBrass.withValues(
+                        alpha: 0.65 + glow * 0.35,
+                      ),
                       width: 1.5 * widget.scale,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withValues(
-                          alpha: 0.08 + glow * 0.08,
+                        color: MafiaColors.noirBrass.withValues(
+                          alpha: 0.10 + glow * 0.10,
                         ),
                         blurRadius: (12 + glow * 8) * widget.scale,
                       ),
@@ -557,7 +684,7 @@ class _MafiaSubmissionConfirmationState
                   ),
                   child: Icon(
                     Icons.check_rounded,
-                    color: Colors.white,
+                    color: MafiaColors.noirBrass,
                     size: 30 * widget.scale,
                   ),
                 ),
@@ -566,11 +693,7 @@ class _MafiaSubmissionConfirmationState
               Text(
                 widget.label,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: MafiaPhoneStatusText.waitingFontSize * widget.scale,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: mafiaNoirDisplay(30 * widget.scale),
               ),
             ],
           ),

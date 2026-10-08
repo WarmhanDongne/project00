@@ -104,9 +104,9 @@ class _MafiaDelayedConnectionHintState
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xCC181716),
+                  color: const Color(0xE60B0E0D),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white24),
+                  border: Border.all(color: const Color(0x99B08A4A)),
                   boxShadow: const [
                     BoxShadow(
                       color: Colors.black38,
@@ -120,14 +120,14 @@ class _MafiaDelayedConnectionHintState
                   children: [
                     Icon(
                       Icons.wifi_find_rounded,
-                      color: Colors.white70,
+                      color: Color(0xFFB08A4A),
                       size: 18,
                     ),
                     SizedBox(width: 8),
                     Text(
                       '연결 확인 중…',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFD9C2A2),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),

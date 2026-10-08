@@ -133,7 +133,12 @@ class HoldemHoleCards extends StatelessWidget {
           ),
       ],
     );
-    return dimmed ? Opacity(opacity: .45, child: row) : row;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      opacity: dimmed ? .45 : 1,
+      child: row,
+    );
   }
 }
 

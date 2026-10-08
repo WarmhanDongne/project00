@@ -9,6 +9,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -30,8 +31,8 @@ import 'package:game_mafia/game_theme.dart';
 /// 값은 여기 한곳에만 둡니다. 역할 목록이 `const`라서 [MafiaFaction.color]
 /// getter를 그대로 쓸 수 없어 상수로 분리했습니다.
 abstract final class MafiaFactionColors {
-  static const Color citizen = Color(0xFF0D00FF);
-  static const Color mafia = MafiaColors.mafiaRed;
+  static const Color citizen = MafiaColors.noirCitizen;
+  static const Color mafia = MafiaColors.noirRose;
   static const Color neutral = MafiaColors.neutralAmber;
 }
 
@@ -159,15 +160,15 @@ enum MafiaNightAction {
   ///
   /// **진영 색과 다릅니다.** 행동의 의미를 색으로 알려주는 값이라, 시민팀인
   /// 의사도 초록(치료), 경찰은 하늘색(조사)을 씁니다. 시안에서 확정된 값:
-  /// 제거 `#FF0000` · 치료 `#00FF3C` · 조사 `#44ABFF`.
+  /// Noir 시안(2026-10-08): 제거 `#C23B30` · 치료 `#5E9C8C` · 조사 `#7FA3B8`.
   ///
   /// 아직 시안이 없는 행동은 가장 가까운 의미의 색을 임시로 씁니다.
   Color get accentColor => switch (this) {
-    MafiaNightAction.none => const Color(0xFFFFFFFF),
+    MafiaNightAction.none => MafiaColors.noirPaper,
     // 목숨을 빼앗는 행동
     MafiaNightAction.eliminate => MafiaColors.mafiaRed,
     // 살리는 행동
-    MafiaNightAction.protect => const Color(0xFF00FF3C),
+    MafiaNightAction.protect => MafiaColors.noirDoctor,
     // 정보를 얻는 행동
     MafiaNightAction.investigate ||
     MafiaNightAction.investigateRole ||
@@ -177,7 +178,7 @@ enum MafiaNightAction {
     // 방해하는 행동 (시안 미확정)
     MafiaNightAction.roleblock ||
     MafiaNightAction.frame ||
-    MafiaNightAction.silence => const Color(0xFFB388FF),
+    MafiaNightAction.silence => const Color(0xFF9B86B8),
     // 진영을 바꾸는 행동 (시안 미확정)
     MafiaNightAction.convert ||
     MafiaNightAction.steal ||

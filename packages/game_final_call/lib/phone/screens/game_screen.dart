@@ -6,27 +6,23 @@
 // 즉, 플레이어가 현재 단계와 가능한 행동을 확인하고 입력하기 위해 필요한 파일이다.
 
 import 'package:game_final_call/phone/phone_board.dart';
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:game_kit/game_feedback.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/game_copy.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
-import 'package:game_final_call/shared/widgets/card_view.dart';
-import 'package:game_final_call/phone/widgets/card_change_dialog.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_final_call/phone/widgets/game_actions.dart';
 import 'package:game_final_call/phone/widgets/hand_card_stack.dart';
-import 'package:game_final_call/phone/widgets/top_bar.dart';
-import 'package:game_final_call/phone/widgets/turn_action_switcher.dart';
-import 'package:game_final_call/phone/widgets/turn_timer.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
-import 'package:game_final_call/game_assets.dart';
+
 // ============================================================
 
-/// 휴대폰의 손패와 조작부를 분리된 두 영역으로 표시합니다.
+/// 휴대폰의 손패(왼쪽)와 조작 패널(오른쪽)을 표시합니다(Party Pop 시안).
 class FinalCallPhoneGameScreen extends StatefulWidget {
   const FinalCallPhoneGameScreen({
     super.key,
@@ -76,7 +72,8 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
   // 컨트롤러로 함께 등장합니다.
   late final AnimationController _controlsEntryController;
   int? _revealedRoundForEntry;
-  bool _hasUsedPrimaryAction = false;
+  String? _pendingActionLabel;
+  int? _pendingActionRevision;
 
   FinalCallController get controller => widget.controller;
   bool get handRevealed => widget.handRevealed;
@@ -112,6 +109,32 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant FinalCallPhoneGameScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_pendingActionRevision != null &&
+        (controller.revision != _pendingActionRevision ||
+            !controller.isMyTurn)) {
+      _pendingActionLabel = null;
+      _pendingActionRevision = null;
+    }
+  }
+
+  void _showActionFeedback(String label) {
+    setState(() {
+      _pendingActionLabel = label;
+      _pendingActionRevision = controller.revision;
+    });
+  }
+
+  void _clearActionFeedback() {
+    if (!mounted) return;
+    setState(() {
+      _pendingActionLabel = null;
+      _pendingActionRevision = null;
+    });
+  }
+
   /// 손패 펼치기가 끝나면 상단바를 포함한 UI가 한 번에 등장합니다.
   void _handleRevealCompleted() {
     widget.onRevealCompleted();
@@ -135,34 +158,16 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
     });
   }
 
-  Future<void> _openCardChange(BuildContext context) async {
-    final discard = controller.discardCard;
+  /// 덱 또는 공개 카드에서 새 카드를 가져옵니다.
+  Future<void> _draw(BuildContext context, String source) async {
     final expectedTurnUid = controller.turnUid;
     final expectedDeadline = controller.turnDeadlineAt;
-    if (discard == null ||
-        !controller.canDraw ||
-        _deadlinePassed(expectedDeadline)) {
-      return;
-    }
-    _markPrimaryActionUsed();
-    final source = await FinalCallCardChangeDialog.show(
-      context,
-      discardCard: discard,
-      canSelectDeck: controller.deckRemainingCount > 0,
-      deadlineAt: expectedDeadline,
-    );
-    if (source == null || !context.mounted) return;
-
-    // 모달을 보고 있는 동안 턴이 끝났다면 오래된 명령을 보내지 않습니다.
-    if (!controller.canDraw ||
-        controller.turnUid != expectedTurnUid ||
-        controller.turnDeadlineAt != expectedDeadline ||
-        _deadlinePassed(expectedDeadline)) {
-      controller.clearError();
-      return;
-    }
+    if (!controller.canDraw || _deadlinePassed(expectedDeadline)) return;
+    if (source == 'discard' && controller.discardCard == null) return;
+    _showActionFeedback(FinalCallCopy.newCard);
     final completed = await controller.draw(source);
     if (!completed && context.mounted) {
+      _clearActionFeedback();
       if (!controller.canDraw ||
           controller.turnUid != expectedTurnUid ||
           _deadlinePassed(expectedDeadline)) {
@@ -178,19 +183,15 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
 
   Future<void> _call(BuildContext context) async {
     if (!controller.canCall) return;
-    _markPrimaryActionUsed();
+    _showActionFeedback('CALL');
     // 판을 뒤집는 선언이므로 강한 진동으로 확정감을 줍니다.
     GameFeedback.declare();
     onSelectedCardChanged(null);
     final completed = await controller.call();
     if (!completed && context.mounted) {
+      _clearActionFeedback();
       _showActionError(context, controller.actionErrorMessage);
     }
-  }
-
-  void _markPrimaryActionUsed() {
-    if (_hasUsedPrimaryAction || !mounted) return;
-    setState(() => _hasUsedPrimaryAction = true);
   }
 
   void _showActionError(BuildContext context, String message) {
@@ -212,137 +213,11 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final timerVisible =
-            regions.showTimer &&
-            controller.turnDeadlineAt != null &&
-            controller.isMyTurn &&
-            controller.status == 'playing' &&
-            controller.phase != 'roundResult' &&
-            controller.phase != 'dealing';
-        final controlAreaWidth = constraints.maxWidth * 3 / 11;
-        final board = Stack(
-          children: [
-            Column(
-              children: [
-                // 상단바가 겹쳐 그려져도 카드 위치가 밀리지 않도록 높이를
-                // 항상 확보합니다.
-                // 상단바 자체는 공용 셸(PhoneGameShell)이 이 자리 위에 겹쳐
-                // 그립니다. 셸이 표시 시점과 퇴장 접근을 보장하며, 여기서는
-                // 카드 위치가 달라지지 않도록 같은 높이만 비워 둡니다.
-                const SizedBox(height: finalCallPhoneTopBarHeight),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, contentConstraints) {
-                      final handAreaWidth =
-                          (contentConstraints.maxWidth - 1) * 8 / 11 - 28;
-                      final naturalCardWidth =
-                          FinalCallPhoneHandCardStack.cardWidthFor(
-                            BoxConstraints(
-                              maxWidth: handAreaWidth,
-                              maxHeight: contentConstraints.maxHeight,
-                            ),
-                            true,
-                          );
-                      final controlSafeCardWidth = math.max(
-                        1.0,
-                        (contentConstraints.maxHeight - 112) /
-                            finalCallCardHeightRatio,
-                      );
-                      final cardWidth = math.min(
-                        naturalCardWidth,
-                        controlSafeCardWidth,
-                      );
-                      final cardHeight = cardWidth * finalCallCardHeightRatio;
-                      final dividerHeight = math.min(
-                        contentConstraints.maxHeight * 0.68,
-                        math.max(72.0, cardHeight * 0.86),
-                      );
-                      final cardTop = math.max(
-                        0.0,
-                        (contentConstraints.maxHeight - cardHeight) / 2,
-                      );
-                      final timerTop = math.max(0.0, (cardTop - 34) / 2);
-
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 8,
-                                child: regions.showHand
-                                    ? _buildLandscapeHand(cardWidth)
-                                    : const SizedBox.shrink(),
-                              ),
-                              SizedBox(
-                                width: 1,
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 1,
-                                    height: dividerHeight,
-                                    child: const ColoredBox(
-                                      color: Color(0x26000000),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 3,
-                                // 상단바보다 조금 늦게 조작부와 턴 정보를 등장시킵니다.
-                                // 상단바보다 살짝 늦게, 큰 버튼답게 떨어지는
-                                // Liar's Poker의 heavyDrop 연출을 씁니다.
-                                child: regions.showActions
-                                    ? ControlEntryAnimation(
-                                        animation: _controlsEntryController,
-                                        style: ControlEntryStyle.heavyDrop,
-                                        begin: 0.12,
-                                        end: 1,
-                                        child: _buildControl(
-                                          context,
-                                          cardHeight,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                          // 서버 deadline 타이머를 상단바와 카드 사이에 표시합니다.
-                          if (timerVisible)
-                            Positioned(
-                              top: timerTop,
-                              left: 18,
-                              right: controlAreaWidth + 12,
-                              child: Center(
-                                child: ControlEntryAnimation(
-                                  animation: _controlsEntryController,
-                                  style: ControlEntryStyle.header,
-                                  begin: 0,
-                                  end: 0.76,
-                                  child: FinalCallTimer(
-                                    key: ValueKey(controller.turnDeadlineAt),
-                                    deadline: controller.turnDeadlineAt!,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-
         final waitingForReveal = !handRevealed;
         return Stack(
           fit: StackFit.expand,
           children: [
-            Assets.games.finalCall.images.background.phoneBackground.game.image(
-              fit: BoxFit.cover,
-            ),
+            const FinalCallPopBackground(),
             SafeArea(
               child: waitingForReveal && regions.showHand
                   ? FinalCallPhoneHandCardStack(
@@ -357,7 +232,7 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
                       onCardsReordered: controller.reorderHand,
                     )
                   : regions.showHand
-                  ? board
+                  ? _buildBoard(context)
                   : const SizedBox.shrink(),
             ),
           ],
@@ -366,166 +241,308 @@ class _FinalCallPhoneGameScreenState extends State<FinalCallPhoneGameScreen>
     );
   }
 
-  Widget _buildLandscapeHand(double cardWidth) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: FinalCallPhoneHandCardStack(
-        cards: controller.hand,
-        isLandscape: true,
-        isRevealed: handRevealed,
-        selectedCardId: selectedCardId,
-        selectedCardIds: selectedFinalCardIds,
-        newCardId: controller.pendingDraw?.id,
-        replacingCardId: replacingCardId,
-        replacementInProgress: replacementInProgress,
-        cardWidth: cardWidth,
-        selectionEnabled:
-            controller.canCompleteTurn || controller.isFinalSubmitPhase,
-        onRevealStarted: onRevealStarted,
-        onRevealCompleted: _handleRevealCompleted,
-        onCardSelected: controller.isFinalSubmitPhase
-            ? onFinalCardSelected
-            : (id) {
-                onSelectedCardChanged(selectedCardId == id ? null : id);
-              },
-        onCardsReordered: controller.reorderHand,
-      ),
+  /// 왼쪽 손패와 오른쪽 조작 패널입니다(Party Pop 시안).
+  Widget _buildBoard(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = FinalCallPhoneLayout.cardWidth(constraints.biggest);
+        return Padding(
+          // 상단바 자체는 공용 셸(PhoneGameShell)이 이 자리 위에 겹쳐
+          // 그립니다. 카드 위치가 달라지지 않도록 같은 높이만 비워 둡니다.
+          padding: const EdgeInsets.fromLTRB(
+            FinalCallPhoneLayout.edge,
+            FinalCallPhoneLayout.topBarHeight,
+            FinalCallPhoneLayout.edge,
+            FinalCallPhoneLayout.edge,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildLandscapeHand(cardWidth)),
+              const SizedBox(width: FinalCallPhoneLayout.gap),
+              SizedBox(
+                width: FinalCallPhoneLayout.panelWidth,
+                // 상단바보다 살짝 늦게, 큰 버튼답게 떨어지는 heavyDrop
+                // 연출로 조작 패널을 등장시킵니다.
+                child: regions.showActions
+                    ? ControlEntryAnimation(
+                        animation: _controlsEntryController,
+                        style: ControlEntryStyle.heavyDrop,
+                        begin: 0.12,
+                        end: 1,
+                        child: FinalCallPhonePanel(
+                          child: _buildControl(context),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildControl(BuildContext context, double cardHeight) {
-    final callNoticeReplacesTurnProfile =
-        visibleCallerUid != null && visibleCallerUid != controller.uid;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: FinalCallTurnActionSwitcher(
-            isMyTurn: controller.isMyTurn,
-            turnPlayer: controller.turnPlayer,
-            callMessage: callNoticeReplacesTurnProfile
-                ? Assets.games.finalCall.images.modal.modalMessageCall.game
-                      .image(fit: BoxFit.contain)
-                : null,
-            action: controller.isFinalSubmitPhase
-                ? _FinalSubmitAction(
-                    controller: controller,
-                    selectedCardIds: selectedFinalCardIds,
-                    scoreBlockHeight: cardHeight,
-                  )
-                : FinalCallPhoneActions(
-                    controller: controller,
-                    selectedCardId: selectedCardId,
-                    onOpenCardChange: () => _openCardChange(context),
-                    onCall: () => _call(context),
-                    onCompleteTurn: onCompleteTurn,
-                    replacementInProgress: replacementInProgress,
-                    showInitialActionHint: !_hasUsedPrimaryAction,
-                  ),
-          ),
+  Widget _buildLandscapeHand(double cardWidth) {
+    final submitMode = controller.isFinalSubmitPhase;
+    // 점수를 만든 카드 묶음은 고를 일이 없을 때만 손패 아래에 표시합니다.
+    final showCombination =
+        handRevealed &&
+        !submitMode &&
+        controller.pendingDraw == null &&
+        controller.hand.isNotEmpty;
+    final combination = showCombination
+        ? finalCallBestCombination(controller.hand)
+        : null;
+    return FinalCallPhoneHandCardStack(
+      cards: controller.hand,
+      isLandscape: true,
+      isRevealed: handRevealed,
+      selectedCardId: selectedCardId,
+      selectedCardIds: selectedFinalCardIds,
+      newCardId: controller.pendingDraw?.id,
+      replacingCardId: replacingCardId,
+      replacementInProgress: replacementInProgress,
+      cardWidth: cardWidth,
+      selectionMode: submitMode
+          ? FinalCallHandSelectionMode.submit
+          : FinalCallHandSelectionMode.replace,
+      combinationCardIds: combination?.cardIds ?? const {},
+      combinationLabel: combination == null
+          ? null
+          : FinalCallCopy.combinationEquation(combination),
+      selectionEnabled: controller.canCompleteTurn || submitMode,
+      onRevealStarted: onRevealStarted,
+      onRevealCompleted: _handleRevealCompleted,
+      onCardSelected: submitMode
+          ? onFinalCardSelected
+          : (id) {
+              onSelectedCardChanged(selectedCardId == id ? null : id);
+            },
+      onCardsReordered: controller.reorderHand,
+    );
+  }
+
+  Widget _buildControl(BuildContext context) {
+    final Widget child;
+    final String key;
+    if (controller.isFinalSubmitPhase) {
+      key = 'submit';
+      child = _FinalSubmitAction(
+        controller: controller,
+        selectedCardIds: selectedFinalCardIds,
+      );
+    } else if (_pendingActionLabel != null &&
+        _pendingActionRevision == controller.revision &&
+        controller.isMyTurn) {
+      key = 'seal';
+      child = Center(child: _FinalCallActionSeal(label: _pendingActionLabel!));
+    } else if (controller.isMyTurn) {
+      key = controller.pendingDraw == null ? 'turn-start' : 'pending-draw';
+      child = FinalCallPhoneActions(
+        controller: controller,
+        selectedCardId: selectedCardId,
+        onDraw: (source) => _draw(context, source),
+        onCall: () => _call(context),
+        onCompleteTurn: onCompleteTurn,
+        replacementInProgress: replacementInProgress,
+      );
+    } else {
+      key = 'waiting';
+      child = FinalCallWaitingPanel(controller: controller);
+    }
+    // 패널 안 내용만 살짝 떠오르며 바뀌고, 흰 패널 틀은 제자리에 둡니다.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        children: [...previousChildren, ?currentChild],
+      ),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
         ),
       ),
+      child: KeyedSubtree(key: ValueKey(key), child: child),
     );
   }
 }
 
-class _FinalSubmitAction extends StatelessWidget {
+/// 명령을 보낸 직후 서버 스피너 대신 누른 행동을 짧게 각인합니다.
+class _FinalCallActionSeal extends StatelessWidget {
+  const _FinalCallActionSeal({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    key: ValueKey(label),
+    tween: Tween(begin: .72, end: 1),
+    duration: const Duration(milliseconds: 380),
+    curve: Curves.easeOutBack,
+    builder: (context, scale, child) =>
+        Transform.scale(scale: scale, child: child),
+    child: Semantics(
+      liveRegion: true,
+      label: '$label 선택됨',
+      excludeSemantics: true,
+      child: FinalCallPopBox(
+        color: FinalCallColors.violet,
+        radius: 20,
+        width: 150,
+        height: 86,
+        child: Center(
+          child: Text(
+            label,
+            style: finalCallPopText(
+              24,
+              color: Colors.white,
+              shadows: finalCallPopOutline(),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _FinalSubmitAction extends StatefulWidget {
   const _FinalSubmitAction({
     required this.controller,
     required this.selectedCardIds,
-    required this.scoreBlockHeight,
   });
   final FinalCallController controller;
   final Set<String> selectedCardIds;
-  final double scoreBlockHeight;
+
+  @override
+  State<_FinalSubmitAction> createState() => _FinalSubmitActionState();
+}
+
+class _FinalSubmitActionState extends State<_FinalSubmitAction> {
+  int? _submittedRevision;
+
+  @override
+  void didUpdateWidget(covariant _FinalSubmitAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_submittedRevision != null &&
+        (widget.controller.revision != _submittedRevision ||
+            !widget.controller.isFinalSubmitPhase)) {
+      _submittedRevision = null;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_submittedRevision != null || !widget.controller.canSubmitFinalHand) {
+      return;
+    }
+    final cards = widget.selectedCardIds.toList(growable: false);
+    if (cards.isEmpty) return;
+    setState(() => _submittedRevision = widget.controller.revision);
+    final completed = await widget.controller.submitFinalHand(cards);
+    if (!mounted || completed) return;
+    setState(() => _submittedRevision = null);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(widget.controller.actionErrorMessage)),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final selectedCards = controller.hand
-        .where((card) => selectedCardIds.contains(card.id))
+        .where((card) => widget.selectedCardIds.contains(card.id))
         .toList(growable: false);
-    final scoreResult = calculateFinalCallScoreResult(selectedCards);
-    final score = scoreResult.value;
-    final scoreColor = switch (scoreResult.type) {
-      FinalCallCombinationType.sameNumber => Colors.black,
-      FinalCallCombinationType.color => switch (scoreResult.color) {
-        'red' => const Color(0xFFD11928),
-        'blue' => const Color(0xFF173BA7),
-        'yellow' => const Color(0xFFB88A00),
-        'green' => const Color(0xFF157A3A),
-        _ => Colors.black,
-      },
-    };
+    final combination = finalCallBestCombination(selectedCards);
+    final score = combination.score;
+    final best = finalCallBestCombination(controller.hand);
+    final isPreset =
+        widget.selectedCardIds.isNotEmpty &&
+        widget.selectedCardIds.length == best.cardIds.length &&
+        widget.selectedCardIds.containsAll(best.cardIds);
+    final submitted = _submittedRevision == controller.revision;
+    final hasSelection = widget.selectedCardIds.isNotEmpty;
     final canSubmit =
-        selectedCardIds.isNotEmpty && controller.canSubmitFinalHand;
+        !submitted && hasSelection && controller.canSubmitFinalHand;
+    final label = submitted
+        ? FinalCallCopy.submitted
+        : hasSelection
+        ? FinalCallCopy.submit
+        : FinalCallCopy.selectCards;
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          FinalCallCopy.selectFinalCombination,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        Text(
+          FinalCallCopy.myScore,
+          style: finalCallPopText(16, color: FinalCallColors.muted),
         ),
-        const SizedBox(height: 8),
         // 선택한 최종 조합의 현재 점수를 즉시 다시 계산해 표시합니다.
-        SizedBox(
-          width: scoreBlockHeight * 381 / 512,
-          height: scoreBlockHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            alignment: Alignment.center,
-            children: [
-              Assets.games.finalCall.images.other.blockNumberHolder.game.image(
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ),
-              Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  switchInCurve: Curves.easeOutBack,
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: Tween<double>(begin: 1.5, end: 1).animate(animation),
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  child: Text(
-                    '$score',
-                    key: ValueKey(score),
-                    style: TextStyle(
-                      color: scoreColor,
-                      fontSize: (scoreBlockHeight * 0.34).clamp(34.0, 56.0),
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOutBack,
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: Tween<double>(begin: 1.4, end: 1).animate(animation),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: Text(
+            '$score',
+            key: ValueKey(score),
+            style: finalCallPopText(
+              72,
+              color: FinalCallColors.violet,
+              height: 1,
+              shadows: finalCallPopOutline(3),
+            ),
           ),
         ),
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: canSubmit
-              ? () => controller.submitFinalHand(selectedCardIds.toList())
-              : null,
-          child: Container(
-            width: 112,
-            height: 52,
-            alignment: Alignment.center,
+        const SizedBox(height: 4),
+        Text(
+          hasSelection
+              ? FinalCallCopy.combinationName(
+                  combination,
+                  finalCallCardColorLabel,
+                )
+              : FinalCallCopy.selectFinalCombination,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: finalCallPopText(16),
+        ),
+        if (isPreset && !submitted) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: canSubmit ? Colors.white : const Color(0xFFE0E0E0),
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 8,
-                  offset: Offset(0, 5),
-                ),
-              ],
+              color: FinalCallColors.lilac,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              canSubmit ? FinalCallCopy.submit : FinalCallCopy.selectCards,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              FinalCallCopy.presetBest,
+              style: finalCallPopText(12, color: FinalCallColors.muted),
+            ),
+          ),
+        ],
+        const Spacer(),
+        FinalCallPopButton(
+          semanticLabel: submitted ? '최종 조합 선택됨' : label,
+          onPressed: canSubmit ? () => unawaited(_submit()) : null,
+          color: FinalCallColors.green,
+          height: 52,
+          borderWidth: 4,
+          shadowDepth: 5,
+          child: Text(
+            label,
+            style: finalCallPopText(
+              22,
+              color: Colors.white,
+              shadows: finalCallPopOutline(),
             ),
           ),
         ),

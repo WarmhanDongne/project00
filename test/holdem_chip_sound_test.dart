@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_holdem/game_sounds.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
@@ -57,6 +58,11 @@ class _Preferences implements SharedPreferencesAsync {
 }
 
 void main() {
+  testWidgets('홀덤 전용 배경음악 에셋이 앱에 포함된다', (tester) async {
+    final bytes = await rootBundle.load(HoldemSounds.background);
+    expect(bytes.lengthInBytes, greaterThan(1000000));
+  });
+
   testWidgets('홀덤 배경음악은 진행 중 한 번 켜지고 게임 종료 시 멈춘다', (tester) async {
     tester.view.physicalSize = const Size(1366, 1024);
     tester.view.devicePixelRatio = 1;
@@ -76,6 +82,7 @@ void main() {
 
     await show(initial);
     expect(sound.background, [HoldemSounds.background]);
+    expect(HoldemSounds.background, isNot(HoldemSounds.chipLanding));
 
     await show(initial.copyWith(revision: 10, phase: 'turn'));
     expect(sound.background, hasLength(1));

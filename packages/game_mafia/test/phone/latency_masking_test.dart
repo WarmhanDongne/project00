@@ -20,19 +20,21 @@ void main() {
     final controller = _LatencyController();
     await tester.pumpWidget(_screen(controller, MafiaPhoneStage.day));
 
-    expect(find.text('토론 종료 하기'), findsOneWidget);
-    await tester.tap(find.text('토론 종료 하기'));
+    expect(find.text('토론 끝내기 동의'), findsOneWidget);
+    expect(find.text('0 / 2'), findsOneWidget);
+    await tester.tap(find.text('토론 끝내기 동의'));
     await tester.pump();
 
-    expect(find.text('1/2'), findsOneWidget);
-    expect(find.text('토론 종료 하기'), findsNothing);
+    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('동의했습니다'), findsOneWidget);
+    expect(find.text('토론 끝내기 동의'), findsNothing);
 
     controller.discussionResult.complete(false);
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('토론 종료 하기'), findsOneWidget);
-    expect(find.text('1/2'), findsNothing);
+    expect(find.text('토론 끝내기 동의'), findsOneWidget);
+    expect(find.text('1 / 2'), findsNothing);
   });
 
   testWidgets('찬반 투표는 응답 전에 완료 상태를 유지한다', (tester) async {
@@ -156,6 +158,10 @@ class _LatencyController extends MafiaController {
   };
   @override
   List<MafiaPlayer> get alivePlayers => players.values.toList(growable: false);
+  @override
+  MafiaMorningResult? get morningResult => null;
+  @override
+  bool get isSpectating => false;
 
   @override
   Future<bool> endDiscussion() => discussionResult.future;

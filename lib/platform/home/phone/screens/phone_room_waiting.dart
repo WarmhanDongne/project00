@@ -18,7 +18,6 @@ import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_leave_button.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 import 'package:project00/platform/home/phone/widgets/controller_reconnect_guard.dart';
 import 'package:project00/platform/home/phone/widgets/lobby_reconnect_guard.dart';
@@ -311,11 +310,19 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
               );
             }
 
-            final scaffold = Scaffold(
-              backgroundColor: hasSelectedGame
-                  ? _WaitingGameColors.of(selectedGameId).ground
-                  : MosiColors.violet,
-              body: SafeArea(
+            final scaffold = TweenAnimationBuilder<Color?>(
+              tween: ColorTween(
+                end: hasSelectedGame
+                    ? _WaitingGameColors.of(selectedGameId).ground
+                    : MosiColors.violet,
+              ),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 400),
+              curve: Curves.easeInOutCubic,
+              builder: (context, color, child) =>
+                  Scaffold(backgroundColor: color, body: child),
+              child: SafeArea(
                 // 흰 시트와 참여자 바는 화면 아래 끝까지 이어집니다.
                 bottom: false,
                 child: Column(
@@ -334,23 +341,34 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                             ).popUntil((route) => route.isFirst);
                           },
                         ),
-                    if (hasSelectedGame) ...[
-                      Expanded(
-                        child: _SelectedGameContent(provider: widget.provider),
+                    Expanded(
+                      child: _PhoneWaitingTransition(
+                        child: hasSelectedGame
+                            ? Column(
+                                key: const ValueKey('phone-selected-game'),
+                                children: [
+                                  Expanded(
+                                    child: _SelectedGameContent(
+                                      provider: widget.provider,
+                                    ),
+                                  ),
+                                  _WaitingPlayersBar(
+                                    gameId: selectedGameId,
+                                    players: players
+                                        .where((player) => player.isPlayer)
+                                        .toList(growable: false),
+                                  ),
+                                ],
+                              )
+                            : KeyedSubtree(
+                                key: const ValueKey('phone-group-waiting'),
+                                child: _GroupWaitingContent(
+                                  provider: widget.provider,
+                                  players: players,
+                                ),
+                              ),
                       ),
-                      _WaitingPlayersBar(
-                        gameId: selectedGameId,
-                        players: players
-                            .where((player) => player.isPlayer)
-                            .toList(growable: false),
-                      ),
-                    ] else
-                      Expanded(
-                        child: _GroupWaitingContent(
-                          provider: widget.provider,
-                          players: players,
-                        ),
-                      ),
+                    ),
                   ],
                 ),
               ),
@@ -405,9 +423,7 @@ class _PhoneRoomHeader extends StatelessWidget {
                   ? MosiGameArt.of(provider.selectedGameId!).shelfTheme.btnBg
                   : MosiColors.sun,
             ),
-            const SizedBox(width: 12),
           ],
-          const PhoneProfile(),
         ],
       ),
     );
@@ -426,7 +442,11 @@ class _PhoneRoomCode extends StatelessWidget {
     return Semantics(
       label: '방 코드 ${code.split('').join(' ')}',
       excludeSemantics: true,
-      child: Container(
+      child: AnimatedContainer(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
         width: 94,
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -774,6 +794,48 @@ class _WaitingGameColors {
   Color get buttonFg => theme.btnFg;
 }
 
+/// 헤더를 고정하고 본문만 짧게 섞어 바꿉니다. 퇴장 중인 화면은 조작하지 않습니다.
+class _PhoneWaitingTransition extends StatelessWidget {
+  const _PhoneWaitingTransition({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 360),
+      reverseDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: AnimatedBuilder(
+          animation: animation,
+          child: child,
+          builder: (context, child) => Transform.translate(
+            offset: Offset(0, 12 * (1 - animation.value)),
+            child: child,
+          ),
+        ),
+      ),
+      layoutBuilder: (current, previous) => Stack(
+        fit: StackFit.expand,
+        children: [
+          for (final child in previous)
+            ExcludeFocus(
+              child: ExcludeSemantics(child: IgnorePointer(child: child)),
+            ),
+          ?current,
+        ],
+      ),
+      child: child,
+    ),
+  );
+}
+
 class _SelectedGameContent extends StatelessWidget {
   const _SelectedGameContent({required this.provider});
 
@@ -781,11 +843,26 @@ class _SelectedGameContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final game = provider.selectedGame;
-    if (game != null) return _SelectedGameDetails(gameInfo: game);
+    return _PhoneWaitingTransition(child: _content());
+  }
+
+  Widget _content() {
+    final id = provider.selectedGameId;
+    final game =
+        provider.selectedGame ??
+        (provider.selectedGameLoadStatus != RoomDataLoadStatus.failure
+            ? provider.groupGames.where((game) => game.id == id).firstOrNull
+            : null);
+    if (game != null) {
+      return _SelectedGameDetails(
+        key: ValueKey('phone-game-details-${game.id}'),
+        gameInfo: game,
+      );
+    }
 
     if (provider.selectedGameLoadStatus == RoomDataLoadStatus.failure) {
       return Center(
+        key: ValueKey('phone-game-error-$id'),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: PlatformPanel(
@@ -811,12 +888,15 @@ class _SelectedGameContent extends StatelessWidget {
     }
 
     final colors = _WaitingGameColors.of(provider.selectedGameId);
-    return Center(child: CircularProgressIndicator(color: colors.fg));
+    return Center(
+      key: ValueKey('phone-game-loading-$id'),
+      child: CircularProgressIndicator(color: colors.fg),
+    );
   }
 }
 
 class _SelectedGameDetails extends StatelessWidget {
-  const _SelectedGameDetails({required this.gameInfo});
+  const _SelectedGameDetails({super.key, required this.gameInfo});
 
   final GameInfo gameInfo;
 
@@ -1149,42 +1229,6 @@ class _WaitingPlayersBar extends StatelessWidget {
 }
 
 //=======================자리 정하는 동안 (휴대폰)==============================
-@immutable
-class _SeatTheme {
-  const _SeatTheme({
-    required this.ground,
-    required this.deep,
-    required this.soft,
-    required this.button,
-  });
-
-  final Color ground;
-  final Color deep;
-  final Color soft;
-  final Color button;
-
-  static _SeatTheme of(String? gameId) => switch (gameId) {
-    'final_call' => const _SeatTheme(
-      ground: Color(0xFF141414),
-      deep: Colors.black,
-      soft: Color(0xFFC9C6BC),
-      button: Color(0xFFE5DB00),
-    ),
-    'mafia' => const _SeatTheme(
-      ground: Color(0xFF10131A),
-      deep: Colors.black,
-      soft: Color(0xFFB9BDC9),
-      button: Color(0xFFFF2A2A),
-    ),
-    _ => const _SeatTheme(
-      ground: Color(0xFF4A1A5E),
-      deep: Color(0xFF1B1022),
-      soft: Color(0xFFE2D2E8),
-      button: Color(0xFFF2C14E),
-    ),
-  };
-}
-
 class _PhoneSeatingView extends StatefulWidget {
   const _PhoneSeatingView({required this.provider, required this.header});
 
@@ -1212,7 +1256,10 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
   Widget build(BuildContext context) {
     final provider = widget.provider;
     final gameId = provider.selectedGameId;
-    final theme = _SeatTheme.of(gameId);
+    final theme = MosiSeatTheme.of(gameId);
+    final darkTable = theme.table.computeLuminance() < .4;
+    final foreground = darkTable ? MosiColors.white : MosiColors.navy;
+    final soft = Color.lerp(foreground, theme.table, .25)!;
     final game = provider.selectedGame;
     final art = MosiGameArt.of(gameId ?? '', fallbackName: game?.name);
     final gameName = gameId != null && MosiGameArt.isKnown(gameId)
@@ -1224,11 +1271,11 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
         .firstOrNull;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: darkTable ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: theme.ground,
+        backgroundColor: theme.table,
         body: CustomPaint(
-          painter: _DotGridPainter(),
+          painter: _DotGridPainter(color: foreground.withValues(alpha: .07)),
           child: SafeArea(
             child: Column(
               children: [
@@ -1240,7 +1287,7 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                       children: [
                         Text(
                           '$gameName · 대기실',
-                          style: MosiFonts.sans(size: 14, color: theme.soft),
+                          style: MosiFonts.sans(size: 14, color: soft),
                         ),
                         const SizedBox(height: 18),
                         Text(
@@ -1249,7 +1296,7 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                           style: MosiFonts.sans(
                             size: 24,
                             weight: FontWeight.w700,
-                            color: MosiColors.white,
+                            color: foreground,
                             height: 1.35,
                           ),
                         ),
@@ -1295,33 +1342,12 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                           textAlign: TextAlign.center,
                           style: MosiFonts.sans(
                             size: 14,
-                            color: theme.soft,
+                            color: soft,
                             height: 1.5,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 30, 12),
-                  child: MosiButton(
-                    label: '태블릿에서 내 자리 찾기',
-                    background: theme.button,
-                    shadowColor: theme.deep,
-                    shadowOffset: 6,
-                    height: 60,
-                    fontSize: 17,
-                    radius: 12,
-                    expand: true,
-                    leading: const Icon(Icons.wifi_tethering_rounded),
-                    onPressed: () => ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        const SnackBar(
-                          content: Text('태블릿에서 내 카드 찾기는 준비 중이에요.'),
-                        ),
-                      ),
                   ),
                 ),
                 Padding(
@@ -1338,14 +1364,14 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                               TextSpan(
                                 text: '·',
                                 style: TextStyle(
-                                  color: theme.soft.withValues(
+                                  color: soft.withValues(
                                     alpha: i == active ? 1 : 0.25,
                                   ),
                                 ),
                               ),
                           ],
                         ),
-                        style: MosiFonts.sans(size: 13, color: theme.soft),
+                        style: MosiFonts.sans(size: 13, color: soft),
                       );
                     },
                   ),
@@ -1360,9 +1386,12 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
 }
 
 class _DotGridPainter extends CustomPainter {
+  const _DotGridPainter({required this.color});
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x12FFFFFF);
+    final paint = Paint()..color = color;
     for (var y = 15.0; y < size.height; y += 30) {
       for (var x = 15.0; x < size.width; x += 30) {
         canvas.drawCircle(Offset(x, y), 2, paint);
@@ -1371,7 +1400,8 @@ class _DotGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DotGridPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 /// 보라 바탕 위에서 깜빡이는 점과 함께 기다리는 중임을 알립니다.

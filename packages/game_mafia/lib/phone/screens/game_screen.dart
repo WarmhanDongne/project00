@@ -8,6 +8,8 @@
 import 'package:game_mafia/phone/phone_board.dart';
 import 'dart:async';
 import 'package:game_mafia/shared/widgets/trial_view.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_mafia/game_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
@@ -115,8 +117,8 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         AnimatedSwitcher(
           duration: MafiaPhoneTiming.backgroundTransition,
           child: KeyedSubtree(
-            key: ValueKey(game.isNight),
-            child: MafiaPhoneBackground(isNight: game.isNight),
+            key: ValueKey(game.usesNightScene),
+            child: MafiaPhoneBackground(isNight: game.usesNightScene),
           ),
         ),
         MafiaPhoneShellChrome(
@@ -151,6 +153,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             // 그 사람만의 안내입니다(처형자의 목표, 신분이 바뀌었다는 알림).
             notice: _roleNotice(game),
             onRevealed: game.confirmRole,
+            showPeekHint: !game.usesNightScene && !game.isSpectating,
           ),
         // 개인 기록은 휴대폰에서만 엽니다. 태블릿으로 전달하거나 공개 문구에 섞지 않습니다.
         if (game.privateDataReady &&
@@ -159,10 +162,16 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
           Positioned(
             top: 72,
             right: 12,
-            child: FilledButton.tonalIcon(
-              onPressed: () => _showPrivateRecord(game),
-              icon: const Icon(Icons.info_outline, size: 18),
-              label: Text(game.roleChangedThisRound ? '신분 변경 확인' : '내 조사 기록'),
+            child: SizedBox(
+              height: 40,
+              child: MafiaNoirButton(
+                label: game.roleChangedThisRound ? '신분 변경 확인' : '내 조사 기록',
+                onTap: () => _showPrivateRecord(game),
+                color: MafiaColors.noirSlab,
+                textColor: MafiaColors.noirPaper,
+                fontSize: 15,
+                letterSpacing: 0,
+              ),
             ),
           ),
       ],
@@ -265,10 +274,15 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         onEndDiscussion: widget.regions.showActions
             ? () => unawaited(_submitDiscussionSkip(game))
             : null,
+        alivePlayers: game.alivePlayers,
+        lastNightDead: [
+          for (final uid in game.morningResult?.deadUids ?? const <String>[])
+            ?game.players[uid],
+        ],
       ),
       MafiaPhoneStage.voting => _buildVoting(game, remaining),
       // 그 밖의 단계(연결 중·종료)는 셸이 처리합니다.
-      _ => MafiaDayDiscussionView(role: game.myRole, title: '잠시만 기다려 주세요'),
+      _ => const SizedBox.shrink(),
     };
   }
 
@@ -563,7 +577,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
           hold: MafiaPresentationTiming.voteTally,
           child: game.voteResult?.hasVerdict == true
               ? MafiaVerdictSummary(result: game.voteResult!)
-              : const MafiaPhonePhaseNotice(message: '투표 결과를 집계하고 있습니다.'),
+              : const MafiaPhonePhaseNotice(
+                  message: '개표합니다',
+                  detail: '누가 누구를 찍었는지는 비밀입니다',
+                ),
         ),
         GamePresentationBeat(
           hold: MafiaPresentationTiming.executionName,
@@ -593,7 +610,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         if (!(game.voteResult?.endsGame ?? false))
           const GamePresentationBeat(
             hold: MafiaPresentationTiming.nextPhase,
-            child: MafiaPhonePhaseNotice(message: '밤이 되었습니다.'),
+            child: MafiaPhonePhaseNotice(message: '밤이 찾아왔다'),
           ),
       ],
     );
@@ -607,12 +624,12 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
       key: ValueKey(('morning', game.gameStartedAt, game.round)),
       completed: game.isSpectating ? _spectator(game) : null,
       beats: [
-        const GamePresentationBeat(
-          hold: MafiaPresentationTiming.morningOpening,
-          child: MafiaPhonePhaseNotice(message: '아침이 되었습니다.'),
-        ),
+        // 시안: '아침이 밝았다' 제목과 사망 포스터가 한 화면입니다. 여는 문구와
+        // 발표를 한 박자로 묶어 화면이 한 번만 바뀌게 합니다(전체 시간은 같음).
         GamePresentationBeat(
-          hold: MafiaPresentationTiming.morningDeaths,
+          hold:
+              MafiaPresentationTiming.morningOpening +
+              MafiaPresentationTiming.morningDeaths,
           child: game.isSpectating
               ? const MafiaPhonePhaseNotice(
                   message: '당신은 밤사이 사망했습니다.',
@@ -623,13 +640,16 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
                   role: game.myRole,
                   result: result,
                   players: game.players,
+                  hold:
+                      MafiaPresentationTiming.morningOpening +
+                      MafiaPresentationTiming.morningDeaths,
                 ),
         ),
         if (result?.hasExposure ?? false)
           GamePresentationBeat(
             hold: MafiaPresentationTiming.exposure,
             child: exposed == null
-                ? const MafiaPhonePhaseNotice(message: '취재 결과를 확인하고 있습니다.')
+                ? const MafiaPhonePhaseNotice(message: '취재 결과 발표')
                 : GamePresentationSequence(
                     beats: [
                       GamePresentationBeat(
@@ -654,7 +674,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             hold: MafiaPresentationTiming.nextPhase,
             child: game.isSpectating
                 ? _spectator(game)
-                : const MafiaPhonePhaseNotice(message: '토론을 시작합니다.'),
+                : const MafiaPhonePhaseNotice(message: '토론을 시작합니다'),
           ),
       ],
     );

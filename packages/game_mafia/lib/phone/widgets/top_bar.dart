@@ -7,51 +7,152 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
-import 'package:game_kit/phone/widgets/game_top_bar.dart';
 import 'package:game_kit/phone/widgets/rule_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_mafia/shared/models/player.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/game_theme.dart';
 
 // ============================================================
 
-/// 상단바가 차지하는 높이입니다(위 여백 4 + 바 50).
+/// 상단바가 차지하는 높이입니다(시안: 위 20 + 바 46).
 ///
 /// 상단바는 공용 셸이 화면 위에 겹쳐 그리므로, 게임 화면은 이 높이를 비워 두어야
 /// 시안 좌표가 밀리지 않습니다.
-const double mafiaPhoneTopBarHeight = 54;
+const double mafiaPhoneTopBarHeight = 66;
 
-/// 마피아 휴대폰 상단바입니다.
+/// 마피아 휴대폰 상단바입니다(Noir Poster 시안).
 ///
-/// 시안은 룰(책)과 나가기 두 개만 둡니다. 표시 시점과 등장 연출은 공용 셸이
-/// 제어하고 이 위젯은 내용만 그립니다.
+/// 왼쪽은 내 얼굴·이름과 `3일째 밤` 같은 진행 꼬리표, 오른쪽은 규칙·나가기입니다.
+/// 표시 시점과 등장 연출은 공용 셸이 제어하고 이 위젯은 내용만 그립니다.
 class MafiaPhoneTopBar extends StatelessWidget {
   const MafiaPhoneTopBar({
     super.key,
     required this.onExitRoom,
     required this.onRulesPressed,
+    this.me,
+    this.subtitle,
+    this.isNight = false,
+    this.spectating = false,
   });
 
   final VoidCallback onExitRoom;
   final ValueChanged<Offset?> onRulesPressed;
 
+  /// 내 프로필입니다. 아직 모르면 버튼만 그립니다.
+  final MafiaPlayer? me;
+
+  /// 이름 아래 진행 꼬리표입니다(예: `3일째 밤`).
+  final String? subtitle;
+
+  /// 밤(먹색 바탕)인지입니다. 글자색을 바꿉니다.
+  final bool isNight;
+
+  /// 사망 후 관전 중인지입니다. 얼굴을 흑백으로, 이름 옆에 `관전`을 붙입니다.
+  final bool spectating;
+
+  /// 단계와 라운드로 진행 꼬리표를 만듭니다.
+  static String? subtitleFor({required String phase, required int round}) {
+    if (round <= 0) return null;
+    final part = switch (phase) {
+      'night' => '밤',
+      'morning' => '아침',
+      'day' => '낮',
+      'voting' || 'voteResult' => '낮 · 투표',
+      _ => null,
+    };
+    return part == null ? null : '$round일째 $part';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final icons = Assets.games.mafia.images.icons;
+    final me = this.me;
+    final dark = isNight || spectating;
+    final nameColor = dark ? MafiaColors.noirPaper : MafiaColors.noirInk;
     return Padding(
-      // 시안 기준 tip left 295 / out left 343 → 오른쪽 정렬로 같은 자리에 옵니다.
-      padding: const EdgeInsets.fromLTRB(18, 4, 14, 0),
-      child: SharedPhoneGameTopBar(
-        isLandscape: false,
-        bookIcon: icons.iconTipBook.game.image(fit: BoxFit.contain),
-        outIcon: icons.iconOut.game.image(fit: BoxFit.contain),
-        onOutPressed: onExitRoom,
-        onBookPressed: () => onRulesPressed(null),
-        onBookPressedAt: onRulesPressed,
-        bookSemanticLabel: '게임 규칙 열기',
-        outSemanticLabel: '게임과 그룹 나가기',
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+      child: SizedBox(
+        height: 46,
+        child: Row(
+          children: [
+            if (me != null) ...[
+              MafiaNoirFaceTile(
+                player: me,
+                borderColor: spectating
+                    ? MafiaColors.noirFaded
+                    : dark
+                    ? MafiaColors.noirBrass
+                    : MafiaColors.noirInk,
+                grayscale: spectating,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        text: me.nickname,
+                        children: [
+                          if (spectating)
+                            TextSpan(
+                              text: '  관전',
+                              style: mafiaNoirBody(
+                                12,
+                                color: MafiaColors.noirBlood,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mafiaNoirDisplay(18, color: nameColor),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        spectating ? '$subtitle 진행 중' : subtitle!,
+                        maxLines: 1,
+                        style: mafiaNoirBody(
+                          12,
+                          color: dark
+                              ? MafiaColors.noirDust
+                              : MafiaColors.noirUmber,
+                          height: 1.3,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            const Spacer(),
+            Builder(
+              builder: (buttonContext) => MafiaNoirIconButton(
+                semanticLabel: '게임 규칙 열기',
+                color: dark ? MafiaColors.noirSlab : MafiaColors.noirInk,
+                onTap: () {
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  onRulesPressed(
+                    box?.localToGlobal(box.size.center(Offset.zero)),
+                  );
+                },
+                child: Text(
+                  '?',
+                  style: mafiaNoirDisplay(20, color: MafiaColors.noirBrass),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            MafiaNoirIconButton(
+              semanticLabel: '게임과 그룹 나가기',
+              color: dark ? MafiaColors.noirSlab : MafiaColors.noirInk,
+              onTap: onExitRoom,
+              child: const MafiaNoirExitGlyph(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -68,8 +169,8 @@ void showMafiaRules(BuildContext context, [Offset? origin, String? rules]) {
     builder: (_) => PhoneGameRuleDialog(
       title: '마피아',
       rules: rules ?? MafiaCopy.phoneRules,
-      surfaceColor: MafiaColors.surface,
-      foregroundColor: MafiaColors.ink,
+      surfaceColor: MafiaColors.noirInk,
+      foregroundColor: MafiaColors.noirPaper,
       dismissOnAnyTap: true,
     ),
   );
