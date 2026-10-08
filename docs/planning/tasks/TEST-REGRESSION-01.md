@@ -141,3 +141,14 @@ V00~V23에 S01~S18·메타데이터/준비 실패/온보딩/route/terminal 정�
 현재 checkout의 targeted Flutter 경로 20개 모두 누락과 FULL/CI의 package 명시 실행 누락을 정적으로 재확인했다.
 실제 CLI/제품 테스트/FULL/CI/emulator/실기기를 실행하지 않았다. 계획과 과거 PASS를 현재 실행 결과로 취급하지 않는다.
 manifest 경로만 지우거나 빈 테스트로 통과시키지 않는다. 모든 실제 실행·미실행/차단·전후 tree를 기록한다.
+
+## 2026-10-09 E00 검증 경로 확인
+
+develop `58634d1`에서도 session/auth Flutter manifest 20개 모두 누락, targeted Functions 4파일 존재를 확인했다.
+공식 Windows guard로 session과 auth를 실행했으며 둘 다 manifest INVALID로 제품 테스트 실행 전에 종료했다.
+auth JSON의 CLI exitCode는 2, 호출 도구의 PowerShell process exit는 1이다. 정적 누락 확인과 실제 실행 근거를 구분한다.
+[E00 기록](../NETWORK_SESSION_E00_BASELINE.md#4-e01에-넘길-검증-기준)의 package별 파일 수와 FULL/CI 공백을 E01 입력으로 전달한다.
+현재 새로운 회귀 테스트·실행 배선 수정이나 E01 담당 확정은 수행하지 않았다.
+
+후속 답변으로 사용자 전체 담당을 확인했다. E01의 검증 배선·회귀 복원도 사용자의 구현 채팅에서 수행하며,
+패키지 밖 별도 담당 결정을 기다리는 조건은 제거했다. E01 구현은 아직 시작하지 않았다.

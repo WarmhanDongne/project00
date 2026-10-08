@@ -4,8 +4,9 @@
 
 2026-10-09 사용자 요청으로 작성했다. 합의한 제품 결과와 보충한 기술안을 담당·의존 순서·채팅별 완료 단위·검증에 연결한다.
 이 문서는 실행 계획안이다. 사용자는 후속 답변에서 최신 newgui를 코드 기준으로 지정하고 기술안 A~C의 권장 방식을 채택했다.
-E00에는 착수 시 최신 commit/후속 변경 대조와 패키지 밖 담당 확정이 남아 있다.
-설계 채택과 이번 문서 push/develop merge는 구현 착수·production 접근·배포·migration 승인이나 보류 해제를 뜻하지 않는다.
+2026-10-09 후속 요청으로 develop에서 E00을 시작했다. [착수 기준 기록](NETWORK_SESSION_E00_BASELINE.md)에 최신 commit/후속 변경·기존 계약/실제 소비자·검증 공백을 대조했다.
+후속 답변으로 전체 작업을 사용자가 수행한다고 확인했다. 사람별 담당 분리는 제거하고 채팅별 범위와 의존 순서를 유지한다.
+설계 채택과 문서 merge를 production 접근·배포·migration 승인으로 확대하지 않는다.
 E/V 번호는 기존 태스크의 하위 실행/검증 번호이며 새 작업 ID나 출시 차단 항목을 추가하지 않는다.
 
 ## 1. R16 — 담당 범위와 인수인계
@@ -26,18 +27,19 @@ E/V 번호는 기존 태스크의 하위 실행/검증 번호이며 새 작업 I
 구버전 앱 호환·shim·버전 제한은 제외한다. 게임 규칙·비공개 경계·기존 방 보존 기준은 유지한다.
 실제 파일이 없는 Holdem/newgui 코드를 존재한다고 가정하지 않으며 E00에서 실행 후보에 포함시킨다.
 
-### 1.2 담당안과 허용 파일
+### 1.2 단일 담당과 작업 영역
 
-기존 협업은 개발자 2명이며 사용자 담당은 `packages/`다. 아래 P 담당은 이 경계를 유지한다.
-T는 플랫폼·서버·검증 배선을 맡을 팀원에 대한 **담당안**이며 아직 합의된 인물/수정 권한으로 간주하지 않는다.
-AI를 사용하는 경우에도 해당 개발자의 채팅이 같은 경계를 따른다. 새 채팅 생성/팀원 메시지 전송은 이번 요청에 포함하지 않는다.
+사용자가 패키지·플랫폼·서버·검증 전체를 수행한다. 기존 2인 협업을 전제한 사람별 분담안은 적용하지 않는다.
+아래 P/T는 후속 표를 읽기 위한 **작업 영역**이며 별도 담당자가 아니다. AI는 각 구현 채팅에서 사용자의 작업을 돕는다.
+한 담당이 진행해도 각 채팅의 결과·완료 조건·검증을 정하고 다음 단위에 기록을 전달한다.
+새 채팅 생성이나 다른 채팅으로 메시지 전송은 별도 사용자 요청이 있을 때 수행한다.
 
-| 기호 | 담당 | 허용 구현·테스트 범위 | 인수인계 책임 |
+| 기호 | 작업 영역 | 허용 구현·테스트 범위 | 다음 단위에 남길 결과 |
 | --- | --- | --- | --- |
-| P | 사용자 측 패키지 담당 | `packages/game_kit/`, `packages/game_liars_poker/`, `packages/game_final_call/`, `packages/game_mafia/`, 후보의 `packages/game_holdem/`와 각 package test | 공용 Flutter 계약·게임 adapter·안내/입력 보호·debug 기록. 플랫폼/서버 import 금지 |
-| T | 팀원 측 플랫폼/서버 담당안 | 합의한 `lib/platform/`, `lib/game_assets/`, 필요한 앱 조립; `functions/src/room/`, `functions/src/game-interruption/`, 4게임 서버·`functions/src/index.ts`·관련 `functions/test/`·`database.rules.json` | 방/게임 권위·자격·persistent intent·초기 복원·route·callable/rules/trigger. 패키지 구현은 P에게 전달 |
-| T | 같은 팀원 측 검증 배선 담당안 | `test/`, `test/mosigame_cli/`, `tool/mosigame_cli/`, 관련 경계 검사·`.github/workflows/validate.yml` | 실제 테스트 목록·package working directory·FULL/CI 실행 증거. 패키지 테스트 내용은 P 담당 |
-| 공동 | 사용자 + 담당 팀원 | 설계/계획/작업 기록, 통합 판정, 실제 기기 확인 | 계약·후보·담당 확정, 측정 후 성능 목표, 별도 반영 계획 검토 |
+| P | 패키지 | `packages/game_kit/`, `packages/game_liars_poker/`, `packages/game_final_call/`, `packages/game_mafia/`, `packages/game_holdem/`와 각 package test | 공용 Flutter 계약·게임 adapter·안내/입력 보호·debug 기록. 플랫폼/서버 import 금지 |
+| T | 플랫폼/서버 | 합의한 `lib/platform/`, `lib/game_assets/`, 필요한 앱 조립; `functions/src/room/`, `functions/src/game-interruption/`, 4게임 서버·`functions/src/index.ts`·관련 `functions/test/`·`database.rules.json` | 방/게임 권위·자격·persistent intent·초기 복원·route·callable/rules/trigger와 패키지 소비 계약 |
+| T | 검증 배선 | `test/`, `test/mosigame_cli/`, `tool/mosigame_cli/`, 관련 경계 검사·`.github/workflows/validate.yml` | 실제 테스트 목록·package working directory·FULL/CI 실행 증거와 package 테스트 연결 |
+| 공통 | 기준/통합/기기 | 설계/계획/작업 기록, 통합 판정, 실제 기기 확인 | 계약·후보 확인, 측정 후 성능 목표, 별도 반영 계획 검토 |
 
 이 표는 폴더 전체를 자유롭게 수정하는 승인안이 아니다. 각 채팅은 아래 단위의 관련 파일만 바꾼다.
 새 dependency·새 저장/API 방식·범위 밖 수정은 [Engineering Contract](../engineering/ENGINEERING_CONTRACT.md)의 경계를 따른다.
@@ -50,13 +52,13 @@ AI를 사용하는 경우에도 해당 개발자의 채팅이 같은 경계를 �
 
 | 항목 | 채택한 기준 |
 | --- | --- |
-| 코드 기준 | 개발 착수 시점의 가장 최근 newgui. 이번 원격 확인의 `origin/newgui`는 `a96097b38981edf0ba6b5ad4e4d46f4070d84cdf` |
+| 코드 기준 | 최신 newgui `fcee643d2dad6337e7ae40504cd8804c77ce2215`를 포함한 develop `58634d1aee294a6ab4295bb814ae6c168539a7f5`. E00에서 fetch·포함 관계·내용 일치를 확인 |
 | A | room/game/member/connection 식별·public/본인 private 대응·현재 접속의 준비 보고와 barrier 재개 |
 | B | 서버 전송 전 durable 퇴장 intent 저장·재실행 보존·결과 확인 우선·단일 8초/30초 복구 예산 |
 | C | terminal 최소 방 기록·allocationGeneration·due 정리 index/부분 실패 marker로 지연 writer와 정리 누락 보호 |
 
 과거 정적 분석의 `999c3e9`를 최신 후보로 오인하지 않는다. 착수 때 최신 remote commit을 다시 확인해
-실제 실행 SHA로 고정하고, 그 사이 계약/파일/소비자 변경을 대조한다. 이번 develop 문서 머지로 newgui 제품 코드를 가져오지 않는다.
+실제 실행 SHA로 고정하고, 그 사이 계약/파일/소비자 변경을 대조한다. 계획 문서 머지 뒤 별도 PR #140으로 newgui 제품 코드가 반영됐으며 E00 기록을 현재 기준으로 사용한다.
 E00에서 확정한 계약·담당 범위는 후속 채팅에 그대로 전달하며 변경이 없으면 다시 승인을 요구하지 않는다.
 새 충돌/결정이 생긴 경우에만 근거와 영향 범위를 제시한다.
 
@@ -82,19 +84,19 @@ E00에서 확정한 계약·담당 범위는 후속 채팅에 그대로 전달�
 4. **안내/방 흐름:** E08 → E09. E10-S/E11-S의 서버 결과를 받아 E10-P에서 그룹/생성 앱 소비자를 맞춘다.
 5. **전체 검증:** 필요한 구현 단위 전부 → E13 → E14 → E15 반영 계획 검토.
 
-P/T의 독립 파일 작업은 같은 계약이 확정된 뒤 병행할 수 있다. 같은 파일/DTO를 동시에 수정하는 채팅은 두지 않는다.
+단일 담당이 선행 결과를 받아 순서대로 진행한다. 같은 파일/DTO를 동시에 수정하는 채팅은 두지 않는다.
 T의 RoomProvider 변경은 E06 → E09 → E10-P 순으로, room lifecycle 변경은 E02 → E10-S → E11-S 순으로 합친다.
-이는 두 개발자의 작업 순서안이며 AI 하위 에이전트 실행을 요청하거나 새 채팅을 생성한 것은 아니다.
+이는 한 담당의 작업 순서이며 AI 하위 에이전트 실행을 요청하거나 새 채팅을 생성한 것은 아니다.
 
 ### 2.2 채팅별 범위·결과·완료 조건
 
-아래 E04/E07의 네 게임은 **각각 별도 채팅**이다. 서버와 패키지 작업도 담당이 다르므로 합치지 않는다.
+아래 E04/E07의 네 게임은 각각 범위·완료 조건을 가진 단위다. 서버와 패키지를 구분한 이유는 제공 계약과 소비 결과의 선후 관계이며 담당자 차이가 아니다.
 표의 기능 결과와 V 검증을 모두 만족하고 2.3의 공통 종료 조건을 충족해야 단위 완료로 표시한다.
 게임 이름은 LP=라이어스포커, FC=Final Call, MA=Mafia, HE=Holdem이다.
 
-| 단위·담당·관련 작업 | 선행 입력 | 해당 채팅의 구현/작성 범위 | 기능 결과·필수 검증 |
+| 단위·영역·관련 작업 | 선행 입력 | 해당 채팅의 구현/작성 범위 | 기능 결과·필수 검증 |
 | --- | --- | --- | --- |
-| E00 공동 — 기준/담당 확인, SESSION·NEWGUI | 최신 newgui·A~C 채택 결과 | 착수 최신 SHA/후속 변경·사용자 working tree 대조, 담당/허용 파일, 채택 계약의 DTO/리전·실제 소비자 목록 확인 | 진행 후보에 4게임/newgui 있음. 남은 외부 담당이 확정됨. 채택한 A~C를 다시 묻지 않음. 기준 리뷰만 수행하며 구현 완료/FULL PASS로 표현하지 않음 |
+| E00 공통 — 기준/범위 확인, SESSION·NEWGUI | 최신 newgui·A~C 채택 결과 | 착수 최신 SHA/후속 변경·사용자 working tree 대조, 단일 담당/허용 파일, 채택 계약의 DTO/리전·실제 소비자 목록 확인 | 진행 후보에 4게임/newgui 있음. 사용자 전체 담당 확인. 채택한 A~C를 다시 묻지 않음. 기준 리뷰만 수행하며 구현 완료/FULL PASS로 표현하지 않음 |
 | E01 T — 검증 배선, TEST | E00의 후보/담당 | session/auth 경로 20개를 실제 파일/시나리오에 대응, 기존 핵심 회귀 복원 계획과 루트 테스트, package 실행 manifest/working directory, FULL/CI·실행기 회귀 | 누락 파일 제거로 통과시키지 않음. 각 package가 실제 실행되고 실패가 전체 결과에 반영됨. V00 |
 | E02 T — 방/세션 서버, SESSION·ROOM·CORE | E00, E01의 테스트 경로 | room/member/connection identity, join/resume 동일 operation·CAS, 접속별 presence/rules, self leave/close의 room 결과와 자격 검증, 생성 identity 기반 | 옛 onDisconnect/퇴장이 새 접속/재가입을 건드리지 않음. 미확정 결과 조회 가능. V01·V02·V10·V11·V21 |
 | E03 T — 공용 게임 중단, SESSION·CORE | E02 | 공용 reducer·ready/failed/reportSeq·단일 타이머·원인 집합·60초/연장·선택 권한·operation status/ledger 기반·게임 adapter 계약 | 연결 true만으로 재개 금지. 실패 보고에 최신 데이터 확보 강제 금지. 만료 자동 제외/휴대폰 전체 종료 제거. V03~V08·V09·V11·V21 |
@@ -124,7 +126,7 @@ E04/E07은 게임별 순서를 LP→FC→MA→HE로 권장한다. 다음 게임�
 
 각 단위의 허용 경로는 아래와 같다. 공통으로 해당 작업 문서/기술 문서/월별 기록을 갱신할 수 있다.
 새 파일도 해당 경로 안에서 역할을 따르며, 구현 시작 때 실제 변경 파일 목록을 인수인계 기록에 적는다.
-후보에서 이동/삭제된 파일은 E00에서 대조한다. 관련성이 있다는 이유만으로 다른 담당 경로를 함께 수정하지 않는다.
+후보에서 이동/삭제된 파일은 E00에서 대조한다. 관련성이 있다는 이유만으로 다른 단위의 경로까지 함께 수정하지 않는다.
 
 | 단위 | 허용 변경 경로 |
 | --- | --- |
@@ -135,13 +137,13 @@ E04/E07은 게임별 순서를 LP→FC→MA→HE로 권장한다. 다음 게임�
 | E05 | `packages/game_kit/lib/recovery/`, 관련 공용 session/context 계약과 export, `packages/game_kit/test/recovery/` 및 해당 계약 테스트 |
 | E12 | `packages/game_kit/lib/core/diagnostics/`와 공용 hook/진단 UI·그 테스트. 게임/플랫폼 hook 호출은 E07/E06/E09 담당 |
 | E06 | `lib/platform/home/room/`, phone/tablet 홈의 복원 배선, `lib/platform/auth/widgets/auth_gate.dart`/관련 onboarding service·루트 관련 테스트. 패키지 저장 helper 변경은 P 전달 |
-| E07-[게임] | 해당 `packages/game_liars_poker/`, `game_final_call/`, `game_mafia/`, 후보 `game_holdem/` 중 하나. 공용 kit 변경은 E05/E08 담당과 합의 |
+| E07-[게임] | 해당 `packages/game_liars_poker/`, `game_final_call/`, `game_mafia/`, 후보 `game_holdem/` 중 하나. 공용 kit 변경은 E05/E08 결과에 반영하고 연결된 게임 회귀를 확인 |
 | E08 | 후보의 `packages/game_kit/lib/mosi_ui/`, `lib/recovery/widgets/`, 공용 game route exit helper와 해당 package test |
 | E09 | `lib/platform/home/phone/`, `tablet/`, room의 화면 결과 배선, 후보 `lib/game_assets/`의 진입/복구 연결·관련 루트 테스트 |
 | E10-S | `functions/src/room/realtime-room-lifecycle.ts`의 그룹 조회와 관련 room 계약/테스트/export |
 | E11-S | `functions/src/room/`의 생성/예약/정리, 필요한 game cleanup 연결, 관련 Functions 테스트/export/rules. 게임 규칙 변경은 E04 담당으로 전달 |
 | E10-P | `lib/platform/home/gamelist/service/`, room 생성/그룹 목록 provider/service·저장소·관련 루트 테스트 |
-| E13 | 기존 통합/루트 테스트·local 재현 도구·검증 배선. 제품/패키지 결함은 해당 E 담당에게 전달하고 수정 뒤 후보 재검증 |
+| E13 | 기존 통합/루트 테스트·local 재현 도구·검증 배선. 제품/패키지 결함은 해당 E 단위의 범위로 수정하고 후보 재검증 |
 | E00/E14/E15 | 기준/체크리스트/측정/반영 계획/evidence 문서. E14는 승인된 테스트 환경·기기에서 수행. production 접근 범위 자동 부여 없음 |
 
 ### 2.3 각 채팅의 종료·인수인계
@@ -325,7 +327,7 @@ Firebase MCP가 필요한 경우에도 [read-only pilot](../operations/FIREBASE_
 
 R16 담당안·허용 범위, R17 의존 순서/채팅 단위, R18 테스트/실기기/성능/완료 판정의 초안을 작성했다.
 코드 기준은 최신 newgui, 기술안 A~C는 모두 권장 방식으로 채택됐다.
-현재 다음 행동은 E00에서 **착수 시 최신 SHA/후속 변경 대조·T 담당 범위**를 확정하는 것이다.
-그 뒤 E01의 검증 배선과 E02/E03/E05의 공용 계약 구현으로 진행한다. TASKS.md의 상태는 아직 바꾸지 않았다.
-사용자는 개발 시작 전에 계획 문서를 push하고 develop에 merge하도록 요청했다. 제품 개발은 시작하지 않는다.
-제품 코드·테스트 코드·검증 배선·새 채팅·production은 이 문서 작성으로 변경하거나 실행하지 않았다.
+E00의 최신 SHA/후속 변경·소비자·검증 공백 확인은 [착수 기록](NETWORK_SESSION_E00_BASELINE.md)에 남겼다.
+사용자가 전체를 수행한다고 확인해 담당 분담 결정을 닫았다. E00의 기준 확인과 인수인계는 정리됐다.
+현재 다음 단위는 E01 검증 배선이며 이후 E02/E03/E05 공용 계약 구현으로 진행한다. TASKS.md에도 반영했다.
+E00은 제품 코드·테스트 코드·검증 배선·새 채팅·production을 변경하지 않았다.

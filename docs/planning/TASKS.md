@@ -5,9 +5,10 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 2026-10-08 네트워크·세션 조사와 `origin/newgui`의 `999c3e9` 비교를 반영했다.
 기존 오류 해결은 SESSION-RECONNECT-02, 테스트 실행 경로는 TEST-REGRESSION-01에서
 관리한다. 사용자 요청으로 새 UI 연결 작업과 홀덤 구현 후보도 출시 전 필수에 포함했다. newgui 코드는
-현재 checkout에 병합하지 않았으며, 작업 등록은 구현·계약 변경·배포 승인이나 완료 판정이 아니다.
+당시 checkout에 병합하지 않았으며, 작업 등록은 구현·계약 변경·배포 승인이나 완료 판정이 아니다.
 2026-10-09 사용자는 최신 newgui와 기술안 A~C의 권장 방식을 채택했다. SESSION의 보류 사유는
-담당 범위·착수 대기로 갱신하며 [실행 계획](NETWORK_SESSION_IMPLEMENTATION_PLAN.md)에 연결한다. 개발은 아직 시작하지 않는다.
+담당 범위·착수 대기로 갱신했다. 후속 요청으로 develop에서 E00을 시작하고 [착수 기준](NETWORK_SESSION_E00_BASELINE.md)을 기록했다.
+현재 develop에는 최신 newgui가 반영돼 있다. 후속 답변으로 사용자 전체 담당을 확인했고 E00 기준/인수인계를 정리했다. 다음 구현 단위는 E01이다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -33,7 +34,7 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | newgui에서 연결·세션 준비·화면 복귀 시간을 구분해 측정, 기존 착수 조건과 목표 합의 유지 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 보류 — 담당 범위·착수 대기 | 최신 newgui·기술안 A~C 채택, 플랫폼/서버 담당 확정과 착수 SHA/후속 변경 대조. 구현은 아직 시작하지 않음 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — E00 기준 확인 | 사용자 전체 담당, develop 58634d1의 최신 newgui/계약/소비자 대조·인수인계 정리. 다음 E01 검증 배선. 기능 구현은 아직 시작하지 않음 |
 | [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 요구사항 확인 | 누락된 suite 파일 20개 대조, 4게임·새 UI 회귀 작성과 package/FULL/CI 실행 경로 확정 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |
