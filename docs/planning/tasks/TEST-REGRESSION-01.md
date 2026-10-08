@@ -131,3 +131,13 @@
 - 새 dependency, public API·persistent data·중요한 state machine 변경, production 접근과
   deploy/migration은 Engineering Contract의 별도 승인 경계를 따른다. 테스트 추가와 문서
   등록이 그 변경을 승인하거나 플랫폼·서버 담당 범위를 자동으로 확대하지 않는다.
+
+## 2026-10-09 R18 테스트 실행 계획안
+
+[네트워크·세션 실행 계획안](../NETWORK_SESSION_IMPLEMENTATION_PLAN.md)의 E01은 T 담당안의 실행 배선,
+각 구현 E는 해당 기능의 회귀 작성, E13은 전체 자동/통합, E14는 필요한 실제 기기/측정 확인이다.
+P는 package 테스트, T는 root/Functions/CLI 배선을 담당하는 안이며 기존 packages 경계를 유지한다.
+V00~V23에 S01~S18·메타데이터/준비 실패/온보딩/route/terminal 정리/측정 경계를 연결했다.
+현재 checkout의 targeted Flutter 경로 20개 모두 누락과 FULL/CI의 package 명시 실행 누락을 정적으로 재확인했다.
+실제 CLI/제품 테스트/FULL/CI/emulator/실기기를 실행하지 않았다. 계획과 과거 PASS를 현재 실행 결과로 취급하지 않는다.
+manifest 경로만 지우거나 빈 테스트로 통과시키지 않는다. 모든 실제 실행·미실행/차단·전후 tree를 기록한다.
