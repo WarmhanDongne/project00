@@ -10,6 +10,7 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 담당·채팅 단위·검증은 [R16~R18 실행 계획안](NETWORK_SESSION_IMPLEMENTATION_PLAN.md)에서 확인한다.
 계획 초안 작성으로 아래 원본 상태나 보류/승인 조건을 변경하지 않는다.
 2026-10-09 후속 사용자 합의로 최신 newgui·기술안 A~C를 채택하고 SESSION의 보류 사유/다음 행동만 TASKS.md와 동기화했다.
+그 뒤 develop에서 E00을 시작했다. 최신 newgui 반영 기준·계약/소비자·검증 공백은 [착수 기록](NETWORK_SESSION_E00_BASELINE.md)에 남겼다. 후속 답변으로 사용자 전체 담당을 확인했고 다음 단위는 E01이다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -21,7 +22,7 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 보류 — 담당 범위·착수 대기 | 최신 newgui·기술안 A~C 채택, 플랫폼/서버 담당 확정과 착수 SHA/후속 변경 대조. 구현은 아직 시작하지 않음 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — E00 기준 확인 | 사용자 전체 담당, develop 58634d1의 최신 newgui/계약/소비자 대조·인수인계 정리. 다음 E01 검증 배선. 기능 구현은 아직 시작하지 않음 |
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
 | [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인 |
 | [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지, 응답 유실·고아 예약·삭제 트리거 부분 실패 검증과 처리 검토 |
@@ -32,7 +33,7 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 
 ## 이번 묶음에서 확인할 범위
 
-대상 후보는 검토한 `newgui 999c3e9`이며 착수 시 후속 변경을 재확인한다.
+현재 착수 후보는 최신 newgui `fcee643`를 포함한 develop `58634d1`이다. 과거 분석 `999c3e9` 이후의 변경은 E00에서 대조했다.
 게임은 라이어스포커·Final Call·Mafia·Holdem 4종의 휴대폰·태블릿 흐름이다.
 아래는 이번 묶음의 범위다. 위 표의 상태·다음 행동과 각 태스크 전체의 완료 조건은 원본을 따른다.
 
