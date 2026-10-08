@@ -12,7 +12,8 @@ import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
-import 'package:game_kit/core/theme/game_shadow_colors.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -37,15 +38,23 @@ abstract final class MafiaPhoneDesign {
   static const Size size = Size(402, 874);
 
   /// 시안에서 좌우 여백을 뺀 본문 폭입니다. 버튼·보관 카드가 이 폭을 씁니다.
-  static const double contentLeft = 58;
-  static const double contentWidth = 286;
+  // Noir Poster 시안(2026-10-08): 버튼 300 × 62(top 704), 보관 카드는 폭 150으로
+  // 화면 아래 86px 띠에 위쪽만 보입니다.
+  static const double contentLeft = 51;
+  static const double contentWidth = 300;
 
-  static const double buttonTop = 652;
-  static const double buttonHeight = 79.613;
-  static const double buttonRadius = 20;
+  static const double buttonTop = 704;
+  static const double buttonHeight = 62;
+  static const double buttonRadius = 8;
 
-  static const double storedCardTop = 776;
-  static const double storedCardAspectRatio = 286 / 419.39;
+  /// 보관 카드 왼쪽·폭·top입니다(시안: 86px 띠 안 top 8).
+  static const double storedCardLeft = 126;
+  static const double storedCardWidth = 150;
+  static const double storedCardTop = 796;
+  static const double storedCardAspectRatio = 252 / 370;
+
+  /// 가운데로 올라와 열린 카드의 폭입니다(시안 신분 확인 252).
+  static const double openCardWidth = 252;
 
   // ---------------------------------------------------------------------------
   // 내용 띠
@@ -53,8 +62,8 @@ abstract final class MafiaPhoneDesign {
   // 상단 안내·타이머 아래부터 하단 버튼 위까지가 화면별 내용(그림·문구·격자)이
   // 놓이는 자리입니다. 확정(2026-08): 화면마다 내용이 이 띠 **가운데**에
   // 오도록 맞춥니다. 그러지 않으면 단계가 바뀔 때 내용이 위아래로 튑니다.
-  static const double contentBandTop = 190;
-  static const double contentBandBottom = 640;
+  static const double contentBandTop = 214;
+  static const double contentBandBottom = 690;
 
   /// 내용 띠의 가운데입니다(시안 기준 좌표).
   static const double contentBandCenter =
@@ -91,11 +100,11 @@ abstract final class MafiaPhoneDesign {
 abstract final class MafiaPhoneStatusText {
   /// 안내 문구 자리(시안 P2~P7의 top 102)와 크기입니다.
   static const double promptTop = 102;
-  static const double promptFontSize = 24;
+  static const double promptFontSize = 32;
 
   /// 남은 시간 자리(시안 top 142)와 크기입니다.
   static const double timerTop = 142;
-  static const double timerFontSize = 36;
+  static const double timerFontSize = 34;
 
   /// 제출 뒤 대기 문구 자리와 크기입니다.
   ///
@@ -126,7 +135,7 @@ class MafiaPhoneAnnouncement extends StatelessWidget {
     required this.beats,
     required this.top,
     this.fontSize = MafiaPhoneStatusText.promptFontSize,
-    this.color = Colors.black,
+    this.color = MafiaColors.noirInk,
     this.fontWeight = FontWeight.w700,
     this.sideMargin = defaultSideMargin,
     this.beatHold = MafiaEjectionText.defaultBeatHold,
@@ -168,11 +177,7 @@ class MafiaPhoneAnnouncement extends StatelessWidget {
                 child: MafiaEjectionText(
                   beats: beats,
                   beatHold: beatHold,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: fontSize * scale,
-                    fontWeight: fontWeight,
-                  ),
+                  style: mafiaNoirDisplay(fontSize * scale, color: color),
                 ),
               ),
             ),
@@ -201,6 +206,7 @@ class MafiaTileGridSpec {
   const MafiaTileGridSpec({
     required this.columns,
     required this.tile,
+    required this.tileHeight,
     required this.step,
     required this.cellHeight,
     required this.nicknameFontSize,
@@ -209,54 +215,65 @@ class MafiaTileGridSpec {
 
   final int columns;
 
-  /// 프로필·카드 한 변의 길이입니다.
+  /// 인물 카드의 폭입니다.
   final double tile;
 
-  /// 열 간격입니다(타일 왼쪽 기준).
+  /// 인물 카드의 높이입니다.
+  final double tileHeight;
+
+  /// 열 간격입니다(카드 왼쪽 기준).
   final double step;
 
-  /// 타일 + 닉네임까지 포함한 한 칸의 높이이자 행 간격입니다.
+  /// 한 칸의 높이이자 행 간격입니다.
   final double cellHeight;
 
   final double nicknameFontSize;
   final double cornerRadius;
 
-  /// 좌우 여백입니다. 두 규격이 같은 값을 씁니다.
-  static const double firstLeft = 52;
-
-  /// 타일과 닉네임 사이 간격입니다.
-  static const double labelGap = 3;
+  /// 좌우 여백입니다(시안: 격자 폭 336을 가운데 정렬). 모든 규격이 같습니다.
+  static const double firstLeft = 33;
 
   /// 4열로 바꾸는 인원입니다.
   static const int fourColumnFrom = 10;
 
-  /// 시안 그대로의 3열 규격입니다(9인까지).
-  ///
-  /// 열 위치 52 · 158 · 264, 오른쪽 끝 350 → 좌우 여백 52.
+  /// 시안 그대로의 3열 규격입니다(6명까지, 카드 102 × 150).
+  static const MafiaTileGridSpec threeColumnTall = MafiaTileGridSpec(
+    columns: 3,
+    tile: 102.67,
+    tileHeight: 150,
+    step: 116.67,
+    cellHeight: 164,
+    nicknameFontSize: 19,
+    cornerRadius: 6,
+  );
+
+  /// 7~9명용 3열 규격입니다. 세 줄이 버튼을 덮지 않게 카드만 낮춥니다.
   static const MafiaTileGridSpec threeColumn = MafiaTileGridSpec(
     columns: 3,
-    tile: 86,
-    step: 106,
-    cellHeight: 116,
-    nicknameFontSize: 20,
-    cornerRadius: 10,
+    tile: 102.67,
+    tileHeight: 134,
+    step: 116.67,
+    cellHeight: 146,
+    nicknameFontSize: 18,
+    cornerRadius: 6,
   );
 
-  /// 10~12인용 4열 규격입니다.
-  ///
-  /// 열 위치 52 · 130 · 208 · 286, 오른쪽 끝 350 → 3열과 같은 여백 52.
-  /// 타일 86 → 64, 닉네임 20 → 15로 같은 비율로 줄였습니다.
+  /// 10~12명용 4열 규격입니다(같은 여백 33).
   static const MafiaTileGridSpec fourColumn = MafiaTileGridSpec(
     columns: 4,
-    tile: 64,
-    step: 78,
-    cellHeight: 88,
+    tile: 76.5,
+    tileHeight: 112,
+    step: 86.5,
+    cellHeight: 122,
     nicknameFontSize: 15,
-    cornerRadius: 7,
+    cornerRadius: 5,
   );
 
-  static MafiaTileGridSpec of(int playerCount) =>
-      playerCount >= fourColumnFrom ? fourColumn : threeColumn;
+  static MafiaTileGridSpec of(int playerCount) => playerCount >= fourColumnFrom
+      ? fourColumn
+      : playerCount > 6
+      ? threeColumn
+      : threeColumnTall;
 
   int rowsFor(int playerCount) => (playerCount / columns).ceil();
 
@@ -266,11 +283,21 @@ class MafiaTileGridSpec {
     cellHeight * rowsFor(playerCount),
   );
 
-  /// 한 칸에서 타일 왼쪽 위 좌표입니다(격자 왼쪽 위 기준).
-  Offset offsetOf(int index) => Offset(
-    firstLeft + step * (index % columns),
-    cellHeight * (index ~/ columns),
-  );
+  /// 한 칸에서 카드 왼쪽 위 좌표입니다(격자 왼쪽 위 기준).
+  ///
+  /// 마지막 줄이 덜 찼으면 가운데로 모읍니다(시안: 5명이면 3 + 2).
+  Offset offsetOf(int index, [int? playerCount]) {
+    final row = index ~/ columns;
+    var left = firstLeft + step * (index % columns);
+    if (playerCount != null) {
+      final lastRow = rowsFor(playerCount) - 1;
+      final inLastRow = playerCount - lastRow * columns;
+      if (row == lastRow && inLastRow < columns) {
+        left += step * (columns - inLastRow) / 2;
+      }
+    }
+    return Offset(left, cellHeight * row);
+  }
 }
 
 /// 시안 하단의 넓은 버튼입니다.
@@ -288,32 +315,36 @@ class MafiaPhoneActionButton extends StatelessWidget {
     this.hiddenWhenDisabled = false,
     this.labelColor,
     this.backgroundColor,
+    this.outlineColor,
+    this.trailing,
   });
 
   final String label;
   final VoidCallback? onTap;
   final bool enabled;
 
-  /// 비활성일 때 배경을 **무색**으로 그립니다(확정: 밤 행동 화면).
+  /// 비활성일 때 버튼을 아주 옅게 그립니다(확정: 밤 행동 화면).
   ///
   /// 대상을 고르기 전에는 버튼이 없는 것처럼 보이고, 고르면 색이 생기며
-  /// 활성됩니다. 기본값(false)은 기존처럼 40% 불투명입니다.
+  /// 활성됩니다. 기본값(false)은 반투명입니다.
   final bool colorlessWhenDisabled;
 
   /// 비활성일 때 버튼을 **아예 감춥니다**(확정 2026-08: 낮 투표 화면).
   ///
-  /// 아무도 고르지 않았으면 누를 것이 없으니 보이지 않는 편이 낫습니다. 자리를
-  /// 그대로 두고 투명하게만 만들어, 고른 순간 같은 자리에 떠오릅니다.
+  /// 자리를 그대로 두고 투명하게만 만들어, 고른 순간 같은 자리에 떠오릅니다.
   final bool hiddenWhenDisabled;
 
-  /// 글자 색을 덮어씁니다(예: 토론 조기 종료의 흰 `n/m`).
+  /// 글자 색을 덮어씁니다.
   final Color? labelColor;
 
-  /// 배경색을 덮어씁니다(예: 토론 종료에 동의한 뒤의 검은 버튼).
-  ///
-  /// 비활성이어도 이 색을 그대로 씁니다. 눌러서 상태가 바뀐 버튼과, 아직
-  /// 누를 수 없는 버튼은 다르게 보여야 합니다.
+  /// 면 색을 덮어씁니다(제거=핏빛, 치료=청록, 투표=놋쇠 등).
   final Color? backgroundColor;
+
+  /// 바깥 테두리 선 색입니다. 낮(종이 바탕)에는 먹색, 밤에는 놋쇠색입니다.
+  final Color? outlineColor;
+
+  /// 글자 뒤에 놋쇠색으로 붙는 보조 글자입니다(예: `2 / 5`).
+  final String? trailing;
 
   /// 시안 기준 top입니다. 기본값은 공용 버튼 위치입니다.
   final double top;
@@ -328,6 +359,7 @@ class MafiaPhoneActionButton extends StatelessWidget {
         // 감출 버튼은 자리만 남기고 투명하게 둡니다. 눌리지도 않고 읽히지도
         // 않아야 하므로 IgnorePointer와 Semantics 제외를 함께 씁니다.
         final hidden = hiddenWhenDisabled && !enabled;
+        final faint = colorlessWhenDisabled && !enabled;
 
         return Stack(
           children: [
@@ -338,57 +370,16 @@ class MafiaPhoneActionButton extends StatelessWidget {
               height: MafiaPhoneDesign.buttonHeight * scale,
               child: _MafiaButtonVisibility(
                 hidden: hidden,
-                child: Semantics(
-                  button: true,
-                  enabled: enabled,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                child: AnimatedOpacity(
+                  opacity: faint ? 0.5 : 1,
+                  duration: const Duration(milliseconds: 220),
+                  child: MafiaNoirButton(
+                    label: label,
+                    trailing: trailing,
                     onTap: enabled ? onTap : null,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color:
-                            backgroundColor ??
-                            (enabled
-                                ? MafiaColors.surface
-                                : colorlessWhenDisabled
-                                ? Colors.transparent
-                                : const Color(0x66ECEBEB)),
-                        borderRadius: BorderRadius.circular(
-                          MafiaPhoneDesign.buttonRadius * scale,
-                        ),
-                        // 배경과 버튼이 구분되게 그림자를 깔습니다(확정 2026-08).
-                        // 무색 상태(대상을 고르기 전)에는 버튼이 없는 것처럼
-                        // 보여야 하므로 그림자도 두지 않습니다.
-                        boxShadow:
-                            enabled ||
-                                backgroundColor != null ||
-                                !colorlessWhenDisabled
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0x73000000),
-                                  blurRadius: 10 * scale,
-                                  offset: Offset(0, 5 * scale),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            color:
-                                labelColor ??
-                                (enabled
-                                    ? MafiaColors.ink
-                                    : colorlessWhenDisabled
-                                    ? const Color(0x33ECEBEB)
-                                    : const Color(0x66212730)),
-                            fontSize: 32 * scale,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
+                    color: backgroundColor ?? MafiaColors.noirPaper,
+                    textColor: labelColor ?? MafiaColors.noirInk,
+                    outlineColor: outlineColor ?? MafiaColors.noirBrass,
                   ),
                 ),
               ),
@@ -473,27 +464,20 @@ class MafiaStoredRoleCard extends StatelessWidget {
         return Stack(
           children: [
             Positioned(
-              left: MafiaPhoneDesign.left(size, MafiaPhoneDesign.contentLeft),
+              left: MafiaPhoneDesign.left(
+                size,
+                MafiaPhoneDesign.storedCardLeft,
+              ),
               top: MafiaPhoneDesign.top(size, MafiaPhoneDesign.storedCardTop),
-              width: MafiaPhoneDesign.contentWidth * scale,
+              width: MafiaPhoneDesign.storedCardWidth * scale,
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(
-                      MafiaPhoneDesign.buttonRadius * scale,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: GameShadowColors.medium,
-                        blurRadius: 4,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(8 * scale),
+                    border: Border.all(color: MafiaColors.noirBrass, width: 2),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      MafiaPhoneDesign.buttonRadius * scale,
-                    ),
+                    borderRadius: BorderRadius.circular(6 * scale),
                     child: AspectRatio(
                       aspectRatio: MafiaPhoneDesign.storedCardAspectRatio,
                       child: card.image(
@@ -512,7 +496,7 @@ class MafiaStoredRoleCard extends StatelessWidget {
   }
 }
 
-/// 휴대폰 배경입니다. 밤/낮 두 가지를 씁니다. P1·P6이 낮, P2~P5가 밤입니다.
+/// 휴대폰 배경입니다. 밤/낮 두 가지를 씁니다(Noir Poster 시안).
 ///
 /// 시안은 배경을 화면보다 크게 잡고 왼쪽·위로 밀어 두었지만, 그 값을 그대로
 /// 쓰면 기기 비율이 달라질 때 빈 곳이 생깁니다. [BoxFit.cover]로 채워 어떤
@@ -531,30 +515,9 @@ class MafiaPhoneBackground extends StatelessWidget {
     // 셸이 배경을 계속 그리고 있으면 단계 화면은 그리지 않습니다. 그리면
     // 전환 도중 배경이 두 겹이 되어 한 번 어두워집니다.
     if (MafiaPhoneShellChrome.of(context)) return const SizedBox.shrink();
-    final background = Assets.games.mafia.images.background;
-
-    return ColoredBox(
-      // 이미지가 뜨기 전 한 프레임 흰 화면이 번쩍이지 않게 깔아 둡니다.
-      color: isNight ? MafiaColors.nightSurface : MafiaColors.daySurface,
-      child: isNight
-          // 밤은 세로 에셋이 236 × 512로 해상도가 낮아 확대하면 뭉개집니다.
-          // 태블릿용 고해상도 밤 배경을 90° 돌려 씁니다. 회전한 위젯은 스스로
-          // 크기를 갖지 못하므로 FittedBox로 감싸 화면을 채웁니다.
-          ? FittedBox(
-              fit: BoxFit.cover,
-              clipBehavior: Clip.hardEdge,
-              child: RotatedBox(
-                quarterTurns: 1,
-                child: background.backgroundNight.game.image(
-                  filterQuality: FilterQuality.high,
-                ),
-              ),
-            )
-          // 낮은 세로 전용 에셋(941 × 1672)이 있어 그대로 채웁니다.
-          : background.backgroundMorningPhone.game.image(
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-    );
+    // Noir Poster 시안: 밤은 먹색 바탕, 낮은 바랜 종이에 빛줄기가 퍼집니다.
+    return isNight
+        ? const MafiaNoirRays.night(origin: Alignment(0, -0.3))
+        : const MafiaNoirRays.day(origin: Alignment(0, -0.55));
   }
 }

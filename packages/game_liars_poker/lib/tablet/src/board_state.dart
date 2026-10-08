@@ -18,7 +18,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   ProviderSubscription<LiarsPokerGameState>? _sessionSubscription;
   String? _initializationError;
   late final AnimationController _exitMatController;
-  bool _hasScheduledInsufficientPlayersExit = false;
+  Timer? _nonResultExitTimer;
   bool _isExitingToLobby = false;
   final _dealingCommand = GameProgressCommand();
   int? _previousGameStartedAt;
@@ -161,12 +161,17 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   void _handleState() {
     final game = _controller;
     if (game == null || !mounted) return;
+    // 설정에서 종료를 요청한 순간부터 서버의 finished 스냅샷이 도착해도
+    // 현재 연출을 유지합니다. 라우트가 닫히기 전에 결과 화면이 비치지 않게 합니다.
+    if (_isExitingToLobby) return;
     // 첫 공개 상태가 오기 전의 명령 상태 변화(메뉴 잠금 등)에는 연출 상태를
     // 만들지 않습니다.
     if (game.isInitialLoading) return;
     if (_previousGameStartedAt != game.gameStartedAt) {
       _previousGameStartedAt = game.gameStartedAt;
       _dealingCommand.cancel();
+      _nonResultExitTimer?.cancel();
+      _nonResultExitTimer = null;
       _hasReceivedFirstState = false;
     }
 
@@ -247,10 +252,10 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
         : nextActiveAnimationPlayId ?? _activeAnimationPlayId;
 
     // 서버 상태보다 한 번만 실행해야 하는 애니메이션 상태를 우선합니다.
-    if (game.isInsufficientPlayersEnding) {
-      // 태블릿에서 1초간 인원 부족 안내와 카드 더미 암전 상태를 보여준 뒤
-      // 게임 화면만 닫습니다. 현재 표시 상태는 유지해 테이블이 사라지지 않습니다.
-    } else if (game.isFinished) {
+    if (game.isFinished && !game.isNaturalResult) {
+      // 인원 부족 종료는 안내 후, 수동 종료는 곧바로 방으로 돌아갑니다.
+      // 어느 경우에도 닫히기 직전 결과 화면으로 교체하지 않습니다.
+    } else if (game.isNaturalResult) {
       _stage = LiarsPokerTabletStage.result;
     } else if (game.phase == 'dealing') {
       // 더미 초기화를 먼저 반영하고 새 라운드 카드 배분만 표시합니다.
@@ -455,7 +460,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   }
 
   void _changeStage(LiarsPokerTabletStage nextStage) {
-    if (_stage == nextStage || !mounted) return;
+    if (_stage == nextStage || !mounted || _isExitingToLobby) return;
     setState(() => _stage = nextStage);
   }
 
@@ -472,12 +477,17 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
 
   Future<void> _endGameAndReturnToLobby() async {
     if (_isExitingToLobby) return;
-    _isExitingToLobby = true;
+    _nonResultExitTimer?.cancel();
+    _nonResultExitTimer = null;
+    setState(() => _isExitingToLobby = true);
 
     final ended = await _controller?.endGame() ?? false;
     if (!mounted) return;
     if (!ended) {
-      _isExitingToLobby = false;
+      setState(() => _isExitingToLobby = false);
+      // 종료 요청 중 수신한 상태는 연출을 멈춘 채 보류했으므로,
+      // 실패했을 때는 가장 최근 서버 상태로 화면을 다시 맞춥니다.
+      _handleState();
       return;
     }
 
@@ -494,12 +504,15 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     Navigator.of(context).maybePop();
   }
 
-  void _scheduleInsufficientPlayersExit() {
-    if (_hasScheduledInsufficientPlayersExit) return;
-    _hasScheduledInsufficientPlayersExit = true;
-
-    Future<void>.delayed(LiarsPokerTabletTiming.closingRouteDelay, () {
-      if (!mounted) return;
+  void _scheduleNonResultExit() {
+    if (_nonResultExitTimer != null) return;
+    _nonResultExitTimer = Timer(LiarsPokerTabletTiming.closingRouteDelay, () {
+      _nonResultExitTimer = null;
+      if (!mounted ||
+          _controller?.isFinished != true ||
+          _controller?.isNaturalResult == true) {
+        return;
+      }
       _returnToLobby();
     });
   }
@@ -573,8 +586,8 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       backgroundColor: Colors.black,
       body: Builder(
         builder: (context) {
-          if (game.isInsufficientPlayersEnding) {
-            _scheduleInsufficientPlayersExit();
+          if (game.isFinished && !game.isNaturalResult && !_isExitingToLobby) {
+            _scheduleNonResultExit();
           }
           // 다른 게임 화면과 동일하게 expand로 둡니다. 느슨한 Stack은 크기가
           // 0인 non-positioned 자식 하나만 있어도 통째로 0×0이 됩니다.
@@ -794,6 +807,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     _backgroundMusic.stop();
     _penaltyTransitionTimer?.cancel();
+    _nonResultExitTimer?.cancel();
     _turnTimeoutBackstop?.cancel();
     _sessionSubscription?.close();
     _exitMatController.dispose();

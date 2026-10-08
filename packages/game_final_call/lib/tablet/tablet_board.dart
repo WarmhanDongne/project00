@@ -11,9 +11,9 @@ import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:game_final_call/game_assets.dart';
+import 'package:game_final_call/game_copy.dart';
 import 'package:game_final_call/game_sounds.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/models/game_state.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
@@ -21,6 +21,7 @@ import 'package:game_final_call/shared/providers/session_provider.dart';
 import 'package:game_final_call/shared/services/asset_preloader.dart';
 import 'package:game_final_call/shared/services/game_service.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_final_call/tablet/animations/center_card_reveal.dart';
 import 'package:game_final_call/tablet/animations/call_and_discard_animation.dart';
 import 'package:game_final_call/tablet/providers/game_stage.dart';
@@ -44,6 +45,7 @@ import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_kit/sound/game_background_music.dart';
 import 'package:game_kit/tablet/animations/board_element_entrance.dart';
 import 'package:game_kit/tablet/animations/card_deal_animation.dart';
+import 'package:game_kit/shared/widgets/game_turn_countdown.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 import 'package:game_kit/shared/widgets/game_route_exit.dart';
@@ -279,8 +281,11 @@ class FinalCallTabletGameLayer extends StatelessWidget {
       boardSeatCount: controller.players.length,
       playerSeatIndexes: activeSeatIndexes,
       cardsPerPlayer: 4,
-      cardAsset: Assets.games.finalCall.images.cards.cardBack.game,
-      cardWidth: 146,
+      // 테이블 가운데 덱과 같은 Party Pop 뒷면을 날립니다. 공용 연출의
+      // 바탕 상자 모서리(7)에 맞춰 둥글기를 줄입니다.
+      cardBuilder: (context, playerIndex, cardIndex) =>
+          const FinalCallCardBack(width: 120, radius: 7),
+      cardWidth: 120,
       duration: flowStep.animation.duration,
       beforeDelay: flowStep.beforeDelay,
       afterDelay: flowStep.afterDelay,
@@ -302,30 +307,120 @@ class FinalCallTabletGameLayer extends StatelessWidget {
         controller.pendingDrawSource == 'discard';
     final hideDiscardDuringThrow =
         controller.discardEvent?.drawSource == 'discard';
-    // 카드 분배가 끝난 뒤 보드 요소를 같은 곡선으로 등장시킵니다.
-    // 카드 분배가 끝난 뒤 중앙 카드와 생명(하트)이 Liar's Poker의 잔여 카드
+    // 카드 분배가 끝난 뒤 중앙 카드와 좌석 이름표가 Liar's Poker의 잔여 카드
     // 등장 연출과 같은 곡선으로 바닥에서 솟아오릅니다. 라운드가 바뀔 때만
     // 다시 재생되도록 라운드를 key로 씁니다.
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Center(
-          child: BoardElementEntrance(
-            key: ValueKey('center-card-entrance-${controller.round}'),
-            child: FinalCallCenterCardReveal(
-              key: ValueKey('center-card-${controller.round}'),
-              card: visibleDiscard,
-              cardWidth: 148,
-              showRevealedCard:
-                  !hideDiscardWhileTaken && !hideDiscardDuringThrow,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boardSize = constraints.biggest;
+        final scale = finalCallTabletScale(boardSize);
+        final cardWidth = finalCallCenterCardWidth(boardSize);
+        final cardHeight = cardWidth * finalCallCardHeightRatio;
+        final gap = finalCallCenterCardGap(boardSize);
+        final center = boardSize.center(Offset.zero);
+        final callInProgress =
+            controller.callerUid != null &&
+            (controller.phase == 'callerSubmit' ||
+                controller.phase == 'finalTurns' ||
+                controller.phase == 'finalSubmit');
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            BoardElementEntrance(
+              key: ValueKey('center-card-entrance-${controller.round}'),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Center(
+                    child: FinalCallCenterCardReveal(
+                      key: ValueKey('center-card-${controller.round}'),
+                      card: visibleDiscard,
+                      cardWidth: cardWidth,
+                      gap: gap,
+                      showRevealedCard:
+                          !hideDiscardWhileTaken && !hideDiscardDuringThrow,
+                    ),
+                  ),
+                  // 덱 장수와 공개 카드 이름표입니다.
+                  Positioned(
+                    left: center.dx - cardWidth - gap / 2,
+                    top: center.dy + cardHeight / 2 + 12 * scale,
+                    width: cardWidth * 2 + gap,
+                    child: Row(
+                      children: [
+                        for (final label in [
+                          FinalCallCopy.deckCount(
+                            controller.deckRemainingCount,
+                          ),
+                          FinalCallCopy.publicCard,
+                        ]) ...[
+                          if (label == FinalCallCopy.publicCard)
+                            SizedBox(width: gap),
+                          SizedBox(
+                            width: cardWidth,
+                            child: Text(
+                              label,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              style: finalCallPopText(
+                                16 * scale,
+                                color: FinalCallColors.muted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: center.dy + cardHeight / 2 + 40 * scale,
+                    child: Text(
+                      FinalCallCopy.roundCaption(controller.round),
+                      textAlign: TextAlign.center,
+                      style: finalCallPopText(
+                        15 * scale,
+                        color: FinalCallColors.muted,
+                      ),
+                    ),
+                  ),
+                  // CALL 이후에는 가운데에 CALL 폭발이 뜨므로 차례 알약을 숨깁니다.
+                  if (!callInProgress && controller.turnPlayer != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom:
+                          boardSize.height -
+                          center.dy +
+                          cardHeight / 2 +
+                          18 * scale,
+                      child: Center(
+                        child: Transform.scale(
+                          scale: scale,
+                          alignment: Alignment.bottomCenter,
+                          child: _FinalCallTurnPill(
+                            player: controller.turnPlayer!,
+                            deadline: controller.turnDeadlineAt,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ),
-        BoardElementEntrance(
-          key: ValueKey('lives-entrance-${controller.round}'),
-          child: _FinalCallLivesLayer(players: players),
-        ),
-      ],
+            BoardElementEntrance(
+              key: ValueKey('lives-entrance-${controller.round}'),
+              child: _FinalCallSeatPlates(
+                players: players,
+                turnUid: controller.turnUid,
+                callerUid: callInProgress ? controller.callerUid : null,
+                pendingDrawUid: controller.pendingDrawUid,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

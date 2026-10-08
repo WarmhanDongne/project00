@@ -116,9 +116,11 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     if (args != null) ref.watch(mafiaSessionProvider(args));
     final game = controller;
     if (game == null) {
+      // 스피너 대신 게임 바탕을 먼저 깝니다. 상태가 오면 그 위로 장면이
+      // 겹쳐 들어와 '로딩 중' 화면을 거치지 않습니다.
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: MafiaColors.noirInk,
+        body: MafiaNoirRays.night(),
       );
     }
 
@@ -178,12 +180,20 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           introTextColor: Colors.black,
           // 연결·종료 단계에서 보이는 바탕입니다. 진행 화면은 각 시안 위젯이
           // 자기 배경을 그립니다.
-          background: MafiaPhoneBackground(isNight: game.isNight),
+          background: MafiaPhoneBackground(isNight: game.usesNightScene),
           onIntroCompleted: () {},
           onRoundIntroCompleted: () {},
           // 아래 복구 안내가 담당합니다. 셸의 20초 탈출 버튼과 중복하지 않습니다.
           onConnectingExit: null,
           topBar: MafiaPhoneTopBar(
+            me: game.me,
+            subtitle: MafiaPhoneTopBar.subtitleFor(
+              phase: game.phase,
+              round: game.round,
+            ),
+            // 결과 화면도 먹색 바탕이라 밤과 같은 밝은 글자를 씁니다.
+            isNight: game.usesNightScene || game.isFinished,
+            spectating: game.isSpectating,
             onExitRoom: () => unawaited(_leaveRoom()),
             onRulesPressed: (origin) => showMafiaRules(
               context,
@@ -208,6 +218,8 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
                   },
                   myRole: game.myRole,
                   myUid: game.uid,
+                  didWin: game.didWin,
+                  allies: game.allyPlayers,
                 )
               : const SizedBox.shrink(),
           content: Stack(

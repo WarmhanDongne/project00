@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_kit/core/assets/game_asset_cache.dart';
 import 'package:game_kit/core/assets/game_asset_source.dart';
@@ -41,6 +42,9 @@ Future<void> initializeGameAssets({
 }
 
 Future<int> _readPatchNumber() async {
+  // Shorebird 엔진은 release 빌드에만 들어갑니다. 개발·프로필 실행에서는
+  // 생성자 자체를 건너뛰어 미지원 환경 경고를 출력하지 않습니다.
+  if (!kReleaseMode) return 0;
   final updater = ShorebirdUpdater();
   if (!updater.isAvailable) return 0;
   final patch = await updater.readCurrentPatch();

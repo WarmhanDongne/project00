@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
 //================================================================
@@ -10,6 +12,7 @@ enum PlatformButtonStyle { primary, secondary, neutral, danger, dangerSoft }
 enum PlatformNoticeStyle { success, warning, danger }
 
 //=======================공용 패널==============================
+/// 시안의 흰 카드입니다. [border]가 켜지면 굵은 검은 테두리와 오프셋 그림자를 씁니다.
 class PlatformPanel extends StatelessWidget {
   const PlatformPanel({
     super.key,
@@ -26,14 +29,11 @@ class PlatformPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Container(
+    return MosiBox(
       padding: padding,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(radius),
-        border: border ? Border.all(color: colors.border) : null,
-      ),
+      radius: radius,
+      borderWidth: border ? 3 : 0,
+      shadowOffset: border ? 6 : 0,
       child: child,
     );
   }
@@ -68,77 +68,46 @@ class PlatformButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.platformColors;
-    final background = switch (style) {
-      PlatformButtonStyle.primary => colors.primary,
-      PlatformButtonStyle.secondary => colors.surface,
-      PlatformButtonStyle.neutral => colors.surfaceMuted,
-      PlatformButtonStyle.danger => colors.danger,
-      PlatformButtonStyle.dangerSoft => colors.dangerSoft,
-    };
-    final foreground = switch (style) {
-      PlatformButtonStyle.secondary => colors.text,
-      PlatformButtonStyle.neutral => colors.textMuted,
-      PlatformButtonStyle.dangerSoft => colors.danger,
-      _ => Colors.white,
-    };
-    final button = SizedBox(
-      height: height,
-      child: FilledButton(
-        onPressed: loading ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: background,
-          foregroundColor: foreground,
-          disabledBackgroundColor: colors.surfaceMuted,
-          disabledForegroundColor: colors.textMuted,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            // dangerSoft는 옅은 배경만으로는 면이 흐려 보여
-            // danger를 옅게 깐 테두리로 윤곽을 잡습니다.
-            side: switch (style) {
-              PlatformButtonStyle.secondary => BorderSide(color: colors.border),
-              PlatformButtonStyle.dangerSoft => BorderSide(
-                color: colors.danger.withValues(alpha: 0.3),
-              ),
-              _ => BorderSide.none,
-            },
-          ),
-          elevation: 0,
-        ),
-        child: loading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: foreground,
-                ),
-              )
-            : leading == null
-            ? Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  leading!,
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+    final (variant, background, foreground) = switch (style) {
+      PlatformButtonStyle.primary => (
+        MosiButtonVariant.filled,
+        MosiColors.lime,
+        MosiColors.navy,
       ),
+      PlatformButtonStyle.secondary => (
+        MosiButtonVariant.filled,
+        MosiColors.white,
+        MosiColors.navy,
+      ),
+      PlatformButtonStyle.neutral => (
+        MosiButtonVariant.outline,
+        Colors.transparent,
+        colors.textMuted,
+      ),
+      PlatformButtonStyle.danger => (
+        MosiButtonVariant.filled,
+        MosiColors.red,
+        MosiColors.white,
+      ),
+      PlatformButtonStyle.dangerSoft => (
+        MosiButtonVariant.outline,
+        Colors.transparent,
+        colors.danger,
+      ),
+    };
+    return MosiButton(
+      label: label,
+      onPressed: onPressed,
+      variant: variant,
+      background: background,
+      foreground: foreground,
+      height: height,
+      fontSize: height < 44 ? 14 : 16,
+      expand: expand,
+      loading: loading,
+      leading: leading,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
     );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
@@ -151,21 +120,12 @@ class PlatformTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: highlighted ? colors.primarySoft : colors.surfaceMuted,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: highlighted ? colors.primary : colors.textMuted,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return MosiPill(
+      label: label,
+      fontSize: 13,
+      color: MosiColors.navy,
+      background: highlighted ? MosiColors.lime : null,
+      borderColor: highlighted ? MosiColors.ink : MosiColors.navy,
     );
   }
 }
@@ -188,12 +148,12 @@ class PlatformNotice extends StatelessWidget {
     final colors = context.platformColors;
     final foreground = switch (style) {
       PlatformNoticeStyle.success => colors.success,
-      PlatformNoticeStyle.warning => colors.warning,
+      PlatformNoticeStyle.warning => MosiColors.navy,
       PlatformNoticeStyle.danger => colors.danger,
     };
     final background = switch (style) {
       PlatformNoticeStyle.success => colors.successSoft,
-      PlatformNoticeStyle.warning => colors.warningSoft,
+      PlatformNoticeStyle.warning => MosiColors.sun,
       PlatformNoticeStyle.danger => colors.dangerSoft,
     };
     return Container(
@@ -201,7 +161,13 @@ class PlatformNotice extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: style == PlatformNoticeStyle.warning
+              ? MosiColors.ink
+              : foreground,
+          width: 2,
+        ),
       ),
       child: Row(
         children: [
@@ -212,14 +178,18 @@ class PlatformNotice extends StatelessWidget {
                   PlatformNoticeStyle.danger => Icons.error_rounded,
                   PlatformNoticeStyle.warning => Icons.warning_rounded,
                 },
-                size: 16,
+                size: 18,
                 color: foreground,
               ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: foreground, fontSize: 13),
+              style: MosiFonts.sans(
+                color: foreground,
+                size: 13,
+                weight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -229,6 +199,7 @@ class PlatformNotice extends StatelessWidget {
 }
 
 //=======================공용 인증 화면 배경==============================
+/// 인증 흐름의 바탕입니다. 시안 배치는 [MosiAuthScaffold]가 그립니다.
 class PlatformAuthShell extends StatelessWidget {
   const PlatformAuthShell({
     super.key,
@@ -236,64 +207,39 @@ class PlatformAuthShell extends StatelessWidget {
     this.showBack = false,
     this.onBackPressed,
     this.maxWidth = 420,
+    this.showTagline = true,
   });
 
   final Widget child;
   final bool showBack;
   final VoidCallback? onBackPressed;
+
+  /// 예전 배치에서 쓰던 최대 폭입니다. 시안 카드는 폭이 고정이라 쓰지 않습니다.
   final double maxWidth;
+  final bool showTagline;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.platformColors.surface,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // 남는 세로 공간이 있으면 가운데에 두고, 내용이 화면보다 길거나
-            // 키보드가 올라오면 위에서부터 스크롤합니다.
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // showBack이면 위아래를 같이 띄워 뒤로가기 버튼을 피하면서도
-                // 정확히 가운데에 놓입니다.
-                final vertical = showBack ? 72.0 : 24.0;
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: vertical,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: maxWidth),
-                          child: child,
-                        ),
-                      ),
-                    ),
+    return MosiAuthScaffold(
+      showTagline: showTagline,
+      child: showBack
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: MosiIconButton(
+                    icon: Icons.chevron_left_rounded,
+                    tooltip: '뒤로',
+                    onPressed:
+                        onBackPressed ?? () => Navigator.of(context).maybePop(),
                   ),
-                );
-              },
-            ),
-            // Stack에서 나중에 그려야 스크롤 영역의 투명한 RenderBox가 버튼의
-            // hit test를 가로채지 않습니다.
-            if (showBack)
-              Positioned(
-                left: 8,
-                top: 8,
-                child: IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed:
-                      onBackPressed ?? () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back, size: 18),
                 ),
-              ),
-          ],
-        ),
-      ),
+                const SizedBox(height: 12),
+                child,
+              ],
+            )
+          : child,
     );
   }
 }
@@ -336,9 +282,9 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
         titleSpacing: showBack ? 0 : 20,
         title: Text(title),
         actions: actions,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Divider(height: 1, color: colors.border),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(2),
+          child: MosiDashedDivider(),
         ),
       ),
       body: SafeArea(
@@ -354,8 +300,10 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
             if (bottom != null)
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colors.surface,
-                  border: Border(top: BorderSide(color: colors.border)),
+                  color: colors.canvas,
+                  border: const Border(
+                    top: BorderSide(color: MosiColors.navy, width: 2),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
@@ -383,7 +331,11 @@ class PlatformSectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            style: MosiFonts.sans(
+              size: 17,
+              weight: FontWeight.w700,
+              color: MosiColors.navy,
+            ),
           ),
         ),
         ?trailing,

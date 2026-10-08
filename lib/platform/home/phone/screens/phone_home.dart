@@ -1,19 +1,18 @@
+import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
-import 'package:project00/platform/home/phone/widgets/phone_owned_games_header.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
 import 'package:game_kit/template_game.dart';
 
 class PhoneHome extends StatefulWidget {
@@ -163,17 +162,14 @@ class _PhoneHomeState extends State<PhoneHome> {
         onDecline: () => unawaited(_declineReturn()),
       );
     }
-    final colors = context.platformColors;
     return Scaffold(
-      backgroundColor: colors.canvas,
+      backgroundColor: MosiColors.violet,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           children: [
             const PhoneHeader(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: const PhoneOwnedGamesHeader(),
-            ),
             PhoneOwnGameList(games: _games),
             _buildJoinBar(),
           ],
@@ -184,16 +180,36 @@ class _PhoneHomeState extends State<PhoneHome> {
 
   //================하단 고정 그룹 참여 버튼=================
   Widget _buildJoinBar() {
-    final colors = context.platformColors;
     final busy = _restoreInFlight || _waitingRoomOpen;
     return Container(
       width: double.infinity,
-      color: colors.canvas,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-      child: PlatformButton(
-        label: busy ? '재접속 중' : '그룹 참여',
-        height: 56,
-        onPressed: busy ? null : () => unawaited(_openRoomJoin()),
+      decoration: const BoxDecoration(
+        color: MosiColors.white,
+        border: Border(top: BorderSide(color: MosiColors.ink, width: 3)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.phonePlayHint,
+              textAlign: TextAlign.center,
+              style: MosiFonts.sans(size: 12, color: MosiColors.muted),
+            ),
+            const SizedBox(height: 10),
+            MosiButton(
+              label: busy ? context.l10n.reconnecting : context.l10n.joinGroup,
+              height: 56,
+              fontSize: 18,
+              shadowOffset: 5,
+              expand: true,
+              leading: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: busy ? null : () => unawaited(_openRoomJoin()),
+            ),
+          ],
+        ),
       ),
     );
   }

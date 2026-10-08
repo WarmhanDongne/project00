@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/painting.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -18,30 +19,78 @@ import 'package:flutter/painting.dart';
 /// 쓰는 자리에서 멀어지기만 하고 고칠 일은 그 화면 하나뿐이라, 오히려 읽기가
 /// 나빠집니다.
 abstract final class MafiaColors {
-  /// 마피아 진영·제거 행동의 빨강입니다.
-  static const Color mafiaRed = Color(0xFFFF0000);
+  // -------------------------------------------------------------------------
+  // Noir Poster 시안(2026-10-08) 팔레트
+  // -------------------------------------------------------------------------
+  /// 밤 바탕·테두리·글자의 먹색입니다.
+  static const Color noirInk = Color(0xFF0B0E0D);
 
-  /// 어두운 남회색. 나가기 버튼, 투표 완료 버튼, 상단바 글자에 씁니다.
-  static const Color ink = Color(0xFF212730);
+  /// 카드·상자 안쪽의 짙은 석판색입니다.
+  static const Color noirSlab = Color(0xFF141816);
+
+  /// 낮 바탕과 밤 글자의 바랜 종이색입니다.
+  static const Color noirPaper = Color(0xFFD9C2A2);
+
+  /// 테두리·타이머·강조 글자의 놋쇠색입니다.
+  static const Color noirBrass = Color(0xFFB08A4A);
+
+  /// 사망·처형 띠의 핏빛 빨강입니다.
+  static const Color noirBlood = Color(0xFF8E2A22);
+
+  /// 표적 선택의 선명한 빨강입니다.
+  static const Color noirScarlet = Color(0xFFC23B30);
+
+  /// 마피아 글자의 밝은 빨강입니다.
+  static const Color noirRose = Color(0xFFE0675D);
+
+  /// 얼굴 뒤 원·시민 팀의 청록입니다.
+  static const Color noirTeal = Color(0xFF2F4A47);
+
+  /// 밤 보조 글자의 흐린 모래색입니다.
+  static const Color noirDust = Color(0xFF8F8A76);
+
+  /// 낮 보조 글자의 짙은 흙색입니다.
+  static const Color noirUmber = Color(0xFF4A473E);
+
+  /// 사망자·비활성 테두리의 바랜 갈색입니다.
+  static const Color noirFaded = Color(0xFF5A5040);
+
+  /// 의사(치료)의 청록입니다.
+  static const Color noirDoctor = Color(0xFF5E9C8C);
+
+  /// 경찰(조사)의 회청색입니다.
+  static const Color noirPolice = Color(0xFF7FA3B8);
+
+  /// 시민 팀 글자의 연한 청록입니다.
+  static const Color noirCitizen = Color(0xFF7FA59E);
+
+  // -------------------------------------------------------------------------
+  // 기존 이름(여러 화면이 쓰는 값). Noir 팔레트에 맞춰 다시 칠했습니다.
+  // -------------------------------------------------------------------------
+  /// 마피아 진영·제거 행동의 빨강입니다.
+  static const Color mafiaRed = noirScarlet;
+
+  /// 어두운 글자·버튼색입니다.
+  static const Color ink = noirInk;
 
   /// 중립 진영·표식 행동의 노랑입니다.
-  static const Color neutralAmber = Color(0xFFFFC400);
+  static const Color neutralAmber = noirBrass;
 
   /// 정보 공개 행동의 파랑입니다.
-  static const Color exposeBlue = Color(0xFF44ABFF);
+  static const Color exposeBlue = noirPolice;
 
-  /// 낮 화면 바닥색입니다(테이블 색과 같습니다).
-  static const Color daySurface = Color(0xFFF2F2F2);
+  /// 낮 화면 바닥색입니다.
+  static const Color daySurface = noirPaper;
 
   /// 밤 화면 바닥색입니다.
-  static const Color nightSurface = Color(0xFF10131A);
+  static const Color nightSurface = noirInk;
 
-  /// 상단바 등 밝은 표면입니다.
-  static const Color surface = Color(0xFFECEBEB);
+  /// 밝은 표면입니다.
+  static const Color surface = noirPaper;
 
   /// 비활성 버튼·선택되지 않은 글자입니다.
-  static const Color disabled = Color(0xFFBDBDBD);
+  static const Color disabled = noirFaded;
 
   /// 개표판 테두리의 금갈색입니다.
-  static const Color boardBorder = Color(0xFFAF7F3F);
+  static const Color boardBorder = noirBrass;
 }

@@ -9,6 +9,8 @@ import {excludeLiarsPokerPlayer} from "../liars-poker/exclude-player.js";
 import {LiarsPokerGameState} from "../liars-poker/common/types.js";
 import {excludeMafiaPlayer} from "../mafia/exclude-player.js";
 import {MafiaGameState} from "../mafia/types.js";
+import {excludeHoldemPlayer} from "../holdem/game.js";
+import {HoldemGameState} from "../holdem/types.js";
 import {findGhostPlayers} from "../room/ghost-player-policy.js";
 import {resolveExpiredInterruption} from "./expire-resolution.js";
 import {FinishNowRoom} from "./finish-now-resolution.js";
@@ -166,5 +168,9 @@ function excludePlayer(room: FinishNowRoom, uid: string, now: number): void {
   }
   if (room.selectedGame === "mafia") {
     excludeMafiaPlayer(room.game as unknown as MafiaGameState, uid, now);
+    return;
+  }
+  if (room.selectedGame === "holdem") {
+    excludeHoldemPlayer(room.game as unknown as HoldemGameState, uid, now);
   }
 }

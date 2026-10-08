@@ -43,7 +43,7 @@ void main() {
     expect(_hintOpacity(tester), 0);
   });
 
-  testWidgets('게임 인물 이미지는 프로필 URL 대신 동물 캐릭터만 사용한다', (tester) async {
+  testWidgets('게임 인물 이미지는 프로필 URL 대신 방 캐릭터만 사용한다', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
@@ -64,7 +64,8 @@ void main() {
       images.any(
         (image) =>
             image.image is AssetImage &&
-            (image.image as AssetImage).assetName.endsWith('/frog.webp'),
+            // 예전 동물 id(frog)는 같은 자리의 포커페이스(burger)로 그립니다.
+            (image.image as AssetImage).assetName.endsWith('/burger.webp'),
       ),
       isTrue,
     );

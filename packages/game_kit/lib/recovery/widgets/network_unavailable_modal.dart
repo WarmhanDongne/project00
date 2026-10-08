@@ -6,14 +6,16 @@
 // 즉, 통신이 끊겨도 연결 문제를 안내하고 안전하게 복구하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:game_kit/core/layout/device_layout.dart';
-import 'package:game_kit/gen/assets.gen.dart';
+import 'package:game_kit/mosi_ui/mosi_connection.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 
 // ============================================================
 
-/// 인터넷 연결이 끊겼을 때 앱 전체에서 공통으로 사용하는 반응형 모달입니다.
+/// 인터넷 연결이 끊겼을 때 앱 전체에서 공통으로 사용하는 연결 끊김 화면입니다.
+///
+/// 시안 '내 인터넷 연결 끊김': 휴대폰은 위 장면·아래 시트, 태블릿은 왼쪽 장면·
+/// 오른쪽 패널입니다. 아래 게임 화면은 그대로 두고 그 위를 덮습니다.
 class NetworkUnavailableModal extends StatelessWidget {
   const NetworkUnavailableModal({
     super.key,
@@ -22,8 +24,9 @@ class NetworkUnavailableModal extends StatelessWidget {
     this.retryEnabled = true,
     this.onExit,
     this.exitLabel = '홈으로',
-    this.title = '네트워크에 접속할 수 없습니다.',
-    this.description = '네트워크 연결 상태를 확인해주세요.',
+    this.title = '인터넷 연결이 끊겼어요',
+    this.description = '와이파이나 모바일 데이터를 확인해 주세요.',
+    this.characterId,
   });
 
   static const cardKey = Key('network-unavailable-card');
@@ -32,220 +35,49 @@ class NetworkUnavailableModal extends StatelessWidget {
   final VoidCallback onRetry;
   final bool isRetrying;
 
-  /// 오프라인에는 SDK 재연결을 기다리며 실행할 수 없는 재시도 버튼을 비활성화합니다.
+  /// 오프라인에는 SDK 재연결을 기다리며 실행할 수 없는 재시도 버튼을 숨깁니다.
   final bool retryEnabled;
   final VoidCallback? onExit;
   final String exitLabel;
   final String title;
   final String description;
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ModalBarrier(color: Color(0x99000000), dismissible: false),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final shortestSide = math.min(
-                  constraints.maxWidth,
-                  constraints.maxHeight,
-                );
-                final isTablet = shortestSide >= DeviceLayout.tabletBreakpoint;
-                final isCompact = constraints.maxHeight < 560;
-                final horizontalMargin = isTablet ? 64.0 : 20.0;
-                final maxCardWidth = isTablet
-                    ? 720.0
-                    : isCompact
-                    ? 500.0
-                    : 430.0;
-                final cardWidth = math.min(
-                  constraints.maxWidth - horizontalMargin * 2,
-                  maxCardWidth,
-                );
-                final iconSize = isTablet
-                    ? (isCompact ? 120.0 : 180.0)
-                    : (isCompact ? 90.0 : 126.0);
-                final titleSize = isTablet
-                    ? (isCompact ? 28.0 : 36.0)
-                    : (isCompact ? 21.0 : 25.0);
-                final descriptionSize = isTablet
-                    ? (isCompact ? 18.0 : 23.0)
-                    : (isCompact ? 14.0 : 16.0);
-
-                return Center(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalMargin,
-                      vertical: isCompact ? 12 : 24,
-                    ),
-                    child: Container(
-                      key: cardKey,
-                      width: cardWidth,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isTablet ? 64 : 28,
-                        vertical: isTablet
-                            ? (isCompact ? 30 : 54)
-                            : (isCompact ? 22 : 36),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(isTablet ? 42 : 30),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 32,
-                            offset: Offset(0, 14),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Assets.images.others.networkUnavailable.image(
-                            width: iconSize,
-                            height: iconSize,
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
-                          ),
-                          SizedBox(height: isCompact ? 12 : 24),
-                          Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFF404150),
-                              fontSize: titleSize,
-                              fontWeight: FontWeight.w800,
-                              height: 1.25,
-                              letterSpacing: -0.6,
-                            ),
-                          ),
-                          SizedBox(height: isCompact ? 6 : 12),
-                          Text(
-                            description,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFF9697A7),
-                              fontSize: descriptionSize,
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
-                              letterSpacing: -0.25,
-                            ),
-                          ),
-                          SizedBox(height: isCompact ? 18 : 32),
-                          _RetryButton(
-                            key: retryButtonKey,
-                            isTablet: isTablet,
-                            isCompact: isCompact,
-                            isRetrying: isRetrying,
-                            enabled: retryEnabled,
-                            onPressed: onRetry,
-                          ),
-                          if (onExit != null) ...[
-                            SizedBox(height: isCompact ? 8 : 12),
-                            TextButton(
-                              onPressed: isRetrying ? null : onExit,
-                              child: Text(
-                                exitLabel,
-                                style: TextStyle(
-                                  color: const Color(0xFF6F7080),
-                                  fontSize: isTablet ? 20 : 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RetryButton extends StatelessWidget {
-  const _RetryButton({
-    super.key,
-    required this.isTablet,
-    required this.isCompact,
-    required this.isRetrying,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final bool isTablet;
-  final bool isCompact;
-  final bool isRetrying;
-  final bool enabled;
-  final VoidCallback onPressed;
+  /// 장면에 그릴 내 캐릭터입니다. 모르면 기본 캐릭터를 그립니다.
+  final String? characterId;
 
   @override
   Widget build(BuildContext context) {
-    final width = isTablet ? 360.0 : 270.0;
-    final height = isTablet
-        ? (isCompact ? 58.0 : 70.0)
-        : (isCompact ? 48.0 : 56.0);
-
-    return Semantics(
-      button: true,
-      enabled: enabled && !isRetrying,
-      label: '네트워크 연결 재시도',
-      child: Opacity(
-        opacity: isRetrying || !enabled ? 0.76 : 1,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          child: Ink(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF5937F2), Color(0xFF7147E8)],
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x4D6940EC),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: isRetrying || !enabled ? null : onPressed,
-              child: Center(
-                child: isRetrying
-                    ? SizedBox(
-                        width: isTablet ? 28 : 22,
-                        height: isTablet ? 28 : 22,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        enabled ? '재시도' : '연결 대기 중',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isTablet ? 28 : 21,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-              ),
-            ),
+    final status = isRetrying
+        ? '다시 연결하는 중'
+        : retryEnabled
+        ? '자동으로 다시 연결하는 중'
+        : '인터넷 연결을 기다리는 중';
+    return MosiConnectionLayout(
+      key: cardKey,
+      semanticLabel: '인터넷 연결 끊김',
+      background: MosiColors.navy,
+      scene: MosiWifiLostScene(characterId: characterId),
+      tag: '내 기기',
+      title: title,
+      body: description,
+      status: MosiConnectionStatus(text: status),
+      actions: [
+        // 인터넷은 돌아왔는데 서버 복구가 늦을 때만 직접 재시도를 내줍니다.
+        if (retryEnabled)
+          MosiConnectionButton(
+            key: retryButtonKey,
+            label: '다시 시도',
+            primary: true,
+            loading: isRetrying,
+            semanticLabel: '네트워크 연결 재시도',
+            onPressed: isRetrying ? null : onRetry,
           ),
-        ),
-      ),
+        if (onExit != null)
+          MosiConnectionButton(
+            label: exitLabel,
+            onPressed: isRetrying ? null : onExit,
+          ),
+      ],
     );
   }
 }

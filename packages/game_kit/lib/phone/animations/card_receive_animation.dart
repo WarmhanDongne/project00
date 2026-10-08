@@ -35,6 +35,7 @@ class CardReceiveAnimation extends StatefulWidget {
     this.totalDuration = const Duration(milliseconds: 2200),
     this.onRevealStarted,
     this.onCompleted,
+    this.cardBuilder,
   }) : assert(frontCardAssets.length > 0),
        assert(cardWidth > 0),
        assert(totalDuration > Duration.zero);
@@ -61,6 +62,13 @@ class CardReceiveAnimation extends StatefulWidget {
 
   final VoidCallback? onRevealStarted;
   final VoidCallback? onCompleted;
+
+  /// 카드 그림 대신 위젯으로 카드를 그리는 게임이 씁니다.
+  ///
+  /// 지정하면 [frontCardAssets]는 장 수로만 쓰이고 [backCardAsset]은 그리지
+  /// 않습니다. `front`가 true면 앞면입니다.
+  final Widget Function(BuildContext context, int cardIndex, bool front)?
+  cardBuilder;
 
   @override
   State<CardReceiveAnimation> createState() => _CardReceiveAnimationState();
@@ -270,18 +278,24 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.0015)
                 ..rotateY(frame.yRotation),
-              child: GameCardFace(
-                asset: frame.isFrontVisible
-                    ? widget.frontCardAssets[cardIndex]
-                    : widget.backCardAsset,
-                radius: 8,
-                // 뒤집는 동안 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
-                shadow: BoxShadow(
-                  color: const Color(0x66000000),
-                  blurRadius: 7 + frame.flipLift * 8,
-                  offset: Offset(0, 5 + frame.flipLift * 5),
-                ),
-              ),
+              child: widget.cardBuilder != null
+                  ? widget.cardBuilder!(
+                      context,
+                      cardIndex,
+                      frame.isFrontVisible,
+                    )
+                  : GameCardFace(
+                      asset: frame.isFrontVisible
+                          ? widget.frontCardAssets[cardIndex]
+                          : widget.backCardAsset,
+                      radius: 8,
+                      // 뒤집는 동안 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
+                      shadow: BoxShadow(
+                        color: const Color(0x66000000),
+                        blurRadius: 7 + frame.flipLift * 8,
+                        offset: Offset(0, 5 + frame.flipLift * 5),
+                      ),
+                    ),
             ),
           ),
         ),

@@ -7,7 +7,10 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_mafia/game_copy.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/animations/announcement_reveal.dart';
+import 'package:game_mafia/shared/models/presentation_timing.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
@@ -32,40 +35,106 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
     required this.role,
     required this.result,
     required this.players,
+    this.hold = MafiaPresentationTiming.morningDeaths,
   });
 
-  /// 내 역할입니다. 아래 보관 카드에만 씁니다.
   final MafiaRole? role;
-
   final MafiaMorningResult? result;
   final Map<String, MafiaPlayer> players;
 
+  /// 이 발표가 머무는 시간입니다. 아래 진행 막대가 이 시간 동안 찹니다.
+  final Duration hold;
+
   @override
   Widget build(BuildContext context) {
-    final current = result;
-    final deadNames = current == null
-        ? const <String>[]
-        : current.deadUids
-              .map((uid) => players[uid]?.nickname ?? '플레이어')
-              .toList(growable: false);
-    // 확정(2026-08): 태블릿과 같은 말투로 내려찍고, 두 박자로 나눠 띄웁니다.
-    final beats = <String>[
-      ...deadNames.isEmpty
-          ? MafiaCopy.noDeathBeats
-          : MafiaCopy.deathBeats(deadNames.join(' · ')),
-      // 취재 공개는 공통 시간표의 다음 박자에서 별도로 표시합니다.
+    final dead = [
+      for (final uid in result?.deadUids ?? const <String>[]) ?players[uid],
     ];
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const Positioned.fill(child: MafiaPhoneBackground.day()),
-        MafiaPhoneAnnouncement(
-          beats: beats,
-          top: MafiaPhoneStatusText.announcementTop,
-        ),
-        MafiaStoredRoleCard(role: role),
-      ],
+    final names = dead.map((player) => player.nickname).join(' · ');
+    final headline = dead.isEmpty
+        ? '어젯밤은 아무도 쓰러지지 않았다'
+        : '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = MafiaPhoneDesign.resolve(constraints);
+        final scale = MafiaPhoneDesign.scaleOf(size);
+        final posterWidth = 250 * scale;
+        final posterHeight = 340 * scale;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const Positioned.fill(child: MafiaPhoneBackground.day()),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: MafiaPhoneDesign.top(size, 106),
+              child: Text(
+                '아침이 밝았다',
+                textAlign: TextAlign.center,
+                style: mafiaNoirDisplay(
+                  50 * scale,
+                  color: MafiaColors.noirInk,
+                  height: 1,
+                ),
+              ),
+            ),
+            if (dead.isNotEmpty)
+              Positioned(
+                left: (size.width - posterWidth) / 2,
+                top: MafiaPhoneDesign.top(size, 190),
+                width: posterWidth,
+                height: posterHeight,
+                child: MafiaAnnouncementReveal(
+                  child: MafiaNoirPoster(
+                    player: dead.first,
+                    width: posterWidth,
+                    height: posterHeight,
+                    banner: const MafiaNoirBannerSpec(
+                      label: '어젯밤 사망',
+                      top: 0.53,
+                      angle: -14,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Positioned(
+                left: 0,
+                right: 0,
+                top: MafiaPhoneDesign.top(size, 210),
+                child: Center(
+                  child: MafiaNoirCityscape(
+                    width: 300 * scale,
+                    height: 220 * scale,
+                  ),
+                ),
+              ),
+            Positioned(
+              left: MafiaPhoneDesign.left(size, 20),
+              right: MafiaPhoneDesign.left(size, 20),
+              top: MafiaPhoneDesign.top(size, 556),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  headline,
+                  maxLines: 1,
+                  style: mafiaNoirDisplay(
+                    26 * scale,
+                    color: MafiaColors.noirInk,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: MafiaPhoneDesign.left(size, 51),
+              width: 300 * scale,
+              top: MafiaPhoneDesign.top(size, 676),
+              child: MafiaNoirProgress(duration: hold, label: '잠시 후 토론을 시작합니다'),
+            ),
+            MafiaStoredRoleCard(role: role),
+          ],
+        );
+      },
     );
   }
 }

@@ -7,12 +7,13 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_copy.dart';
+import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -33,79 +34,50 @@ class MafiaDayDiscussionView extends StatelessWidget {
   const MafiaDayDiscussionView({
     super.key,
     required this.role,
-    this.title = '자유 토론',
+    this.title = '토론',
     this.remainingSeconds,
     this.onEndDiscussion,
     this.canEndDiscussion = false,
     this.skipVoteCount = 0,
     this.aliveCount = 0,
     this.hasVotedToSkip = false,
-    this.endLabel = '토론 종료 하기',
+    this.endLabel = '토론 끝내기 동의',
     this.endedByVote = false,
+    this.alivePlayers = const [],
+    this.lastNightDead = const [],
   });
 
-  /// 내 역할입니다. 아래 보관 카드에만 씁니다. null이면 뒷면을 그립니다.
   final MafiaRole? role;
 
-  /// 단계 이름입니다. 아침 발표 등 다른 낮 단계에서도 이 화면을 재사용합니다.
+  /// 타이머 위 작은 꼬리표입니다(시안: `토론`).
   final String title;
-
-  /// 남은 시간(초)입니다. null이면 타이머를 그리지 않습니다.
   final int? remainingSeconds;
-
-  /// 토론을 미리 끝낼 때입니다. null이면 버튼이 비활성입니다.
   final VoidCallback? onEndDiscussion;
-
-  /// 지금 토론 종료에 동의를 보탤 수 있는지입니다.
   final bool canEndDiscussion;
-
-  /// 조기 종료에 동의한 인원수입니다(확정 규칙: 과반수 투표).
   final int skipVoteCount;
-
-  /// 살아 있는 인원수입니다. 버튼의 분모가 됩니다.
   final int aliveCount;
-
-  /// 내가 이미 동의를 눌렀는지입니다. 한 번 누르면 취소할 수 없습니다.
   final bool hasVotedToSkip;
-
   final String endLabel;
 
-  /// 과반수 투표로 토론이 끝났는지입니다(확정 2026-08).
-  ///
-  /// 이때는 타이머·버튼을 지우고 안내만 남깁니다. 곧 투표로 넘어가는데 남은
-  /// 초가 3, 2, 1로 줄어드는 것을 보여 주면 아직 토론할 수 있는 것처럼 보입니다.
+  /// 과반수가 동의해 토론이 끝났는지입니다. 안내만 남기고 곧 투표로 넘어갑니다.
   final bool endedByVote;
 
-  // ---------------------------------------------------------------------------
-  // 시안 기준 좌표
-  // ---------------------------------------------------------------------------
-  // 제목·타이머는 다른 단계와 같은 크기를 씁니다(2026-08 통일 지시.
-  // 시안은 제목 48px@142, 타이머 209였습니다).
-  //
-  // 확정(2026-08): 이 화면만 문구 묶음을 [_textDrop]만큼 **아래로** 내립니다.
-  // 토론 화면은 가운데 삽화가 커서, 다른 단계와 같은 높이(102·142)에 두면
-  // 문구가 위쪽에 붕 떠 보였습니다. 삽화(244) 바로 위까지 내려 붙입니다.
-  static const double _textDrop = 36;
-  static const double _titleTop = MafiaPhoneStatusText.promptTop + _textDrop;
-  static const double _timerTop = MafiaPhoneStatusText.timerTop + _textDrop;
-  static const double _illustrationTop = 244;
-  static const double _illustrationSize = 349;
+  /// 살아 있는 사람입니다(시안: `생존 5` 얼굴 줄).
+  final List<MafiaPlayer> alivePlayers;
 
-  /// 토론 종료에 동의한 뒤의 버튼 색입니다(마피아 화면의 검정).
-  static const Color _votedButtonColor = MafiaColors.ink;
+  /// 어젯밤 쓰러진 사람입니다(시안: 위쪽 소식 포스터).
+  final List<MafiaPlayer> lastNightDead;
 
-  /// 이 시간 미만이면 타이머를 빨간색으로 바꿉니다.
-  ///
-  /// 시안('시간 없을때')이 29초를 빨간색으로 보여 주므로 30초로 잡았습니다.
+  static const double _newsTop = 92;
+  static const double _timerTop = 264;
+  static const double _aliveLabelTop = 476;
+  static const double _aliveTop = 498;
+
+  /// 남은 시간이 이보다 적으면 타이머를 빨갛게 칠합니다.
   static const int urgentThreshold = 30;
 
-  /// 시안의 표기법입니다. 1분 이상은 `2m 30s`, 1분 미만은 `29s`입니다.
-  static String formatRemaining(int seconds) {
-    final safe = seconds < 0 ? 0 : seconds;
-    final minutes = safe ~/ 60;
-    final rest = safe % 60;
-    return minutes > 0 ? '${minutes}m ${rest}s' : '${rest}s';
-  }
+  /// 남은 시간을 `2:30`처럼 적습니다.
+  static String formatRemaining(int seconds) => mafiaNoirClock(seconds);
 
   @override
   Widget build(BuildContext context) {
@@ -113,92 +85,111 @@ class MafiaDayDiscussionView extends StatelessWidget {
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
-        // 투표로 끝난 낮은 남은 초를 보여 주지 않습니다(아래 endedByVote 주석).
         final seconds = endedByVote ? null : remainingSeconds;
-        final illustration = _illustrationSize * scale;
+        final frameWidth = 340 * scale;
+        final faceSize = alivePlayers.length > 6 ? 40.0 : 52.0;
 
         return Stack(
           fit: StackFit.expand,
           children: [
             const Positioned.fill(child: MafiaPhoneBackground.day()),
-            // ---------------------------------------------------------------------------
-            // 단계 이름
-            // ---------------------------------------------------------------------------
+            // 어젯밤 소식 — 쓰러진 사람의 얼굴과 비스듬한 검은 띠입니다.
             Positioned(
-              left: 0,
-              right: 0,
-              top: MafiaPhoneDesign.top(size, _titleTop),
+              left: (size.width - frameWidth) / 2,
+              top: MafiaPhoneDesign.top(size, _newsTop),
+              width: frameWidth,
+              height: 150 * scale,
               child: IgnorePointer(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    endedByVote ? MafiaCopy.discussionSkippedNotice : title,
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: MafiaPhoneStatusText.promptFontSize * scale,
-                      fontWeight: FontWeight.w700,
-                    ),
+                child: _LastNightNews(dead: lastNightDead, scale: scale),
+              ),
+            ),
+            // 토론 타이머 액자
+            Positioned(
+              left: (size.width - frameWidth) / 2,
+              top: MafiaPhoneDesign.top(size, _timerTop),
+              width: frameWidth,
+              height: 190 * scale,
+              child: IgnorePointer(
+                child: MafiaNoirFrame(
+                  inset: 6 * scale + 3,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        endedByVote ? '토론 종료' : title,
+                        style: mafiaNoirBody(
+                          14 * scale,
+                          color: MafiaColors.noirBrass,
+                          letterSpacing: 5.6 * scale,
+                        ),
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          seconds == null
+                              ? MafiaCopy.discussionSkippedNotice
+                              : formatRemaining(seconds),
+                          maxLines: 1,
+                          style: mafiaNoirDisplay(
+                            (seconds == null ? 26 : 100) * scale,
+                            height: 1,
+                            color: seconds != null && seconds < urgentThreshold
+                                ? MafiaColors.noirRose
+                                : MafiaColors.noirPaper,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            // ---------------------------------------------------------------------------
-            // 남은 시간
-            // ---------------------------------------------------------------------------
-            if (seconds != null)
+            if (alivePlayers.isNotEmpty) ...[
               Positioned(
                 left: 0,
                 right: 0,
-                top: MafiaPhoneDesign.top(size, _timerTop),
-                child: IgnorePointer(
-                  child: Text(
-                    formatRemaining(seconds),
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      // 시간이 임박하면 시안대로 빨간색으로 경고합니다.
-                      color: seconds < urgentThreshold
-                          ? MafiaColors.mafiaRed
-                          : Colors.black,
-                      fontSize: MafiaPhoneStatusText.timerFontSize * scale,
-                      fontWeight: FontWeight.w700,
-                    ),
+                top: MafiaPhoneDesign.top(size, _aliveLabelTop),
+                child: Text(
+                  '생존 ${alivePlayers.length}',
+                  textAlign: TextAlign.center,
+                  style: mafiaNoirBody(
+                    13 * scale,
+                    color: MafiaColors.noirUmber,
+                    letterSpacing: 4 * scale,
                   ),
                 ),
               ),
-            // ---------------------------------------------------------------------------
-            // 토론 삽화
-            // ---------------------------------------------------------------------------
-            Positioned(
-              left: (size.width - illustration) / 2,
-              top: MafiaPhoneDesign.top(size, _illustrationTop),
-              width: illustration,
-              height: illustration,
-              child: IgnorePointer(
-                child: Assets.games.mafia.images.other.talkPhone.game.image(
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
+              Positioned(
+                left: MafiaPhoneDesign.left(size, 20),
+                right: MafiaPhoneDesign.left(size, 20),
+                top: MafiaPhoneDesign.top(size, _aliveTop),
+                child: IgnorePointer(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8 * scale,
+                    runSpacing: 8 * scale,
+                    children: [
+                      for (final player in alivePlayers)
+                        MafiaNoirFaceTile(
+                          player: player,
+                          size: faceSize * scale,
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // 확정(2026-08): **내가 누르기 전까지는** 원래 문구를 그대로 두고,
-            // 누른 뒤에는 빨간 `동의한 사람/살아 있는 사람` 집계로 바뀌며
-            // 버튼이 비활성됩니다. 남이 누른 것 때문에 내 버튼 문구가 먼저
-            // 바뀌면, 아직 눌러야 하는지 헷갈립니다.
-            //
-            // 집계는 비활성된 뒤에도 계속 올라갑니다. 과반수가 되는 순간
-            // 서버가 투표로 넘깁니다.
-            // 이미 끝난 토론에는 버튼을 두지 않습니다.
+            ],
             if (!endedByVote)
               MafiaPhoneActionButton(
-                label: hasVotedToSkip ? '$skipVoteCount/$aliveCount' : endLabel,
-                // 확정(2026-08): 누른 뒤에는 옅은 회색으로 빠지지 않고 **검은
-                // 버튼 + 흰 글자**로 남습니다. 집계가 계속 올라가는 자리라
-                // 흐려지면 잘 읽히지 않습니다.
-                backgroundColor: hasVotedToSkip ? _votedButtonColor : null,
-                labelColor: hasVotedToSkip ? Colors.white : null,
+                label: hasVotedToSkip ? '동의했습니다' : endLabel,
+                trailing: '$skipVoteCount / $aliveCount',
+                backgroundColor: hasVotedToSkip
+                    ? MafiaColors.noirBrass
+                    : MafiaColors.noirInk,
+                labelColor: hasVotedToSkip
+                    ? MafiaColors.noirInk
+                    : MafiaColors.noirPaper,
+                outlineColor: MafiaColors.noirInk,
                 onTap: onEndDiscussion,
                 enabled:
                     canEndDiscussion &&
@@ -211,4 +202,91 @@ class MafiaDayDiscussionView extends StatelessWidget {
       },
     );
   }
+}
+
+/// 낮 화면 위쪽의 어젯밤 소식입니다.
+class _LastNightNews extends StatelessWidget {
+  const _LastNightNews({required this.dead, required this.scale});
+
+  final List<MafiaPlayer> dead;
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = dead.firstOrNull;
+    final headline = first == null
+        ? '어젯밤은 조용히 지나갔다'
+        : '어젯밤, ${mafiaJosa(dead.map((player) => player.nickname).join(' · '), '이', '가')} 쓰러졌다';
+    return Stack(
+      children: [
+        Positioned(
+          left: 20 * scale,
+          top: 0,
+          width: 120 * scale,
+          height: 120 * scale,
+          child: const DecoratedBox(
+            decoration: BoxDecoration(
+              color: MafiaColors.noirTeal,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        if (first != null)
+          Positioned(
+            left: 24 * scale,
+            top: 4 * scale,
+            width: 112 * scale,
+            height: 112 * scale,
+            child: MafiaNoirFace(player: first, grayscale: true),
+          ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 70 * scale,
+          child: ClipPath(
+            clipper: const _NewsSlant(),
+            child: ColoredBox(
+              color: MafiaColors.noirInk,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16 * scale,
+                    0,
+                    16 * scale,
+                    12 * scale,
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      headline,
+                      maxLines: 1,
+                      style: mafiaNoirDisplay(24 * scale),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NewsSlant extends CustomClipper<Path> {
+  const _NewsSlant();
+
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(0, size.height * 0.36)
+    ..lineTo(size.width, 0)
+    ..lineTo(size.width, size.height)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_NewsSlant oldClipper) => false;
 }

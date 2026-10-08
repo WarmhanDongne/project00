@@ -94,6 +94,11 @@ class MafiaController extends GameSessionController<MafiaGameState> {
   bool get isFinished => status == 'finished';
   bool get isRoleReveal => phase == 'roleReveal';
   bool get isNight => phase == 'night';
+
+  /// 먹색 장면으로 그릴 단계인지입니다(Noir 시안: 신분 배분도 밤 무대).
+  ///
+  /// 규칙상 밤은 [isNight]만입니다. 이 값은 **배경·글자색**에만 씁니다.
+  bool get usesNightScene => isNight || phase == 'roleReveal';
   bool get isMorning => phase == 'morning';
   bool get isDay => phase == 'day';
   bool get isVoting => phase == 'voting';
@@ -145,6 +150,14 @@ class MafiaController extends GameSessionController<MafiaGameState> {
 
   bool get hasConfirmedRole => state.roleRevealedUids.contains(uid);
   int get roleConfirmedCount => state.roleRevealedUids.length;
+
+  /// 신분 확인을 마친 사람입니다(태블릿 참가자 줄의 `확인 완료`).
+  Set<String> get roleConfirmedUids => state.roleRevealedUids.toSet();
+
+  /// 모두에게 공개된 신분표입니다(태블릿 참가자 줄의 처형자 카드).
+  Map<String, MafiaRole?> get publicRevealedRoles => {
+    for (final uid in state.revealedRoles.keys) uid: revealedRoleOf(uid),
+  };
 
   // ---------------------------------------------------------------------------
   // 진행 현황 (인원수만)
@@ -333,6 +346,12 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       if (state.revealedRoles[winnerUid] != null)
         state.revealedRoles[winnerUid]!,
   };
+
+  /// 이긴 사람입니다(태블릿 결과 명단의 `승리` 꼬리표).
+  Set<String> get winnerUids => state.winnerUids.toSet();
+
+  /// 내가 이긴 사람 중 하나인지입니다(결과 화면의 승리/패배 띠).
+  bool get didWin => state.winnerUids.contains(uid);
 
   /// 결과 화면 문구입니다. 예: `시민 승리` · `광대 승리`.
   ///

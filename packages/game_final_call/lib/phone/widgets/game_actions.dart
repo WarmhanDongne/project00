@@ -9,33 +9,50 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_final_call/game_copy.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
-import 'package:game_final_call/game_assets.dart';
-import 'package:game_final_call/game_theme.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
+
 // ============================================================
 
+/// 휴대폰 오른쪽 조작 패널의 폭입니다(시안 222).
+const double finalCallPhonePanelWidth = 222;
+
+/// 오른쪽 흰 패널 틀입니다.
+class FinalCallPhonePanel extends StatelessWidget {
+  const FinalCallPhonePanel({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => FinalCallPopBox(
+    width: finalCallPhonePanelWidth,
+    padding: const EdgeInsets.all(14),
+    child: child,
+  );
+}
+
+/// 내 차례 조작부입니다. 새 카드를 받기 전에는 가져올 곳과 CALL을,
+/// 받은 뒤에는 교체·버리기를 보여 줍니다.
 class FinalCallPhoneActions extends StatelessWidget {
   const FinalCallPhoneActions({
     super.key,
     required this.controller,
     required this.selectedCardId,
-    required this.onOpenCardChange,
+    required this.onDraw,
     required this.onCall,
     required this.onCompleteTurn,
     required this.replacementInProgress,
-    required this.showInitialActionHint,
   });
 
   final FinalCallController controller;
   final String? selectedCardId;
-  final VoidCallback onOpenCardChange;
+  final ValueChanged<String> onDraw;
   final VoidCallback onCall;
   final Future<void> Function(String? replaceCardId) onCompleteTurn;
   final bool replacementInProgress;
-  final bool showInitialActionHint;
 
   @override
   Widget build(BuildContext context) {
@@ -47,122 +64,250 @@ class FinalCallPhoneActions extends StatelessWidget {
         replacementInProgress: replacementInProgress,
       );
     }
-    if (controller.phase == 'finalTurns') {
-      // CALL 이후 자동 카드 선택창을 바깥 탭으로 닫아도 다시 열 수 있어야
-      // 하므로 마지막 교체 턴에서는 새 카드 버튼을 계속 유지합니다.
-      return _PressableImageButton(
-        enabled: controller.canDraw,
-        asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
-        labelOverride: FinalCallCopy.newCard,
-        onTap: onOpenCardChange,
-      );
-    }
-    final actions = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _PressableImageButton(
-          enabled: controller.canCall,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
-          labelOverride: 'CALL',
-          onTap: onCall,
-        ),
-        const SizedBox(height: 12),
-        _PressableImageButton(
-          enabled: controller.canDraw,
-          asset: Assets.games.finalCall.images.button.buttonBasicWide.game,
-          labelOverride: FinalCallCopy.newCard,
-          onTap: onOpenCardChange,
-        ),
-      ],
+    return _TurnStartAction(
+      controller: controller,
+      onDraw: onDraw,
+      onCall: onCall,
     );
-    return showInitialActionHint && (controller.canCall || controller.canDraw)
-        ? FinalCallPrimaryActionHint(child: actions)
-        : actions;
   }
 }
 
-/// 처음 게임에 들어온 사용자가 CALL·새 카드 조작부를 찾도록 돕는 안내 연출입니다.
-///
-/// 손패가 있는 왼쪽에서 오른쪽 버튼 방향으로 두 화살표가 움직입니다.
-/// 실제 버튼을 한 번 누르면 부모가 이 위젯을 제거합니다.
-class FinalCallPrimaryActionHint extends StatefulWidget {
-  const FinalCallPrimaryActionHint({super.key, required this.child});
+// ---------------------------------------------------------------------------
+// ① 턴 시작: 덱 / 공개 카드 / CALL
+// ---------------------------------------------------------------------------
+class _TurnStartAction extends StatelessWidget {
+  const _TurnStartAction({
+    required this.controller,
+    required this.onDraw,
+    required this.onCall,
+  });
 
-  final Widget child;
+  final FinalCallController controller;
+  final ValueChanged<String> onDraw;
+  final VoidCallback onCall;
 
   @override
-  State<FinalCallPrimaryActionHint> createState() =>
-      _FinalCallPrimaryActionHintState();
+  Widget build(BuildContext context) {
+    final discard = controller.discardCard;
+    final canDraw = controller.canDraw;
+    final lastSwap = controller.phase == 'finalTurns';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          FinalCallCopy.whereToDraw,
+          textAlign: TextAlign.center,
+          style: finalCallPopText(15, color: FinalCallColors.muted),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _SourceButton(
+                label: FinalCallCopy.deck,
+                semanticLabel: '덱에서 새 카드 가져오기',
+                onPressed: canDraw && controller.deckRemainingCount > 0
+                    ? () => onDraw('deck')
+                    : null,
+                card: const FinalCallCardBack(width: 44),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SourceButton(
+                label: FinalCallCopy.publicCard,
+                semanticLabel: '공개 카드 가져오기',
+                onPressed: canDraw && discard != null
+                    ? () => onDraw('discard')
+                    : null,
+                card: discard == null
+                    ? const SizedBox(width: 44, height: 62)
+                    : FinalCallCardFace(card: discard, width: 44),
+              ),
+            ),
+          ],
+        ),
+        const Spacer(),
+        if (lastSwap)
+          FinalCallPopBox(
+            color: FinalCallColors.lilac,
+            radius: 16,
+            borderWidth: 3,
+            shadowDepth: 0,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              FinalCallCopy.lastSwap,
+              textAlign: TextAlign.center,
+              style: finalCallPopText(15),
+            ),
+          )
+        else
+          FinalCallHoldToCallButton(
+            enabled: controller.canCall,
+            onCall: onCall,
+          ),
+      ],
+    );
+  }
 }
 
-class _FinalCallPrimaryActionHintState extends State<FinalCallPrimaryActionHint>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _bounce;
+class _SourceButton extends StatelessWidget {
+  const _SourceButton({
+    required this.label,
+    required this.semanticLabel,
+    required this.onPressed,
+    required this.card,
+  });
+
+  final String label;
+  final String semanticLabel;
+  final VoidCallback? onPressed;
+  final Widget card;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 680),
-    )..repeat(reverse: true);
-    _bounce = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOutCubic,
-    ).drive(Tween(begin: 0.0, end: 9.0));
+  Widget build(BuildContext context) => FinalCallPopButton(
+    semanticLabel: semanticLabel,
+    onPressed: onPressed,
+    color: FinalCallColors.lilac,
+    height: 108,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        card,
+        const SizedBox(height: 6),
+        Text(label, style: finalCallPopText(16)),
+      ],
+    ),
+  );
+}
+
+/// 꾹 누르고 있어야 선언되는 CALL 버튼입니다.
+///
+/// 실수로 스치기만 해도 판이 뒤집히지 않도록 [holdDuration] 동안 누르고
+/// 있어야 합니다. 누르는 동안 버튼 안이 왼쪽부터 차오릅니다.
+/// 화면 읽기 사용자는 접근성 탭 한 번으로 선언합니다.
+class FinalCallHoldToCallButton extends StatefulWidget {
+  const FinalCallHoldToCallButton({
+    super.key,
+    required this.enabled,
+    required this.onCall,
+  });
+
+  final bool enabled;
+  final VoidCallback onCall;
+
+  static const holdDuration = Duration(milliseconds: 650);
+
+  @override
+  State<FinalCallHoldToCallButton> createState() =>
+      _FinalCallHoldToCallButtonState();
+}
+
+class _FinalCallHoldToCallButtonState extends State<FinalCallHoldToCallButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _hold = AnimationController(
+    vsync: this,
+    duration: FinalCallHoldToCallButton.holdDuration,
+  )..addStatusListener(_handleStatus);
+
+  void _handleStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    if (widget.enabled) widget.onCall();
+    _hold.value = 0;
+  }
+
+  @override
+  void didUpdateWidget(covariant FinalCallHoldToCallButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled && _hold.value > 0) _hold.value = 0;
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _hold.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _bounce,
-      builder: (context, child) => Padding(
-        padding: const EdgeInsets.only(left: 34),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            widget.child,
-            Positioned(
-              left: -34,
-              top: 33,
-              child: Transform.translate(
-                key: const Key('final-call-action-hint-top'),
-                offset: Offset(_bounce.value, 0),
-                child: const Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: FinalCallColors.ink,
-                  size: 44,
+    final enabled = widget.enabled;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: 'CALL 선언',
+      excludeSemantics: true,
+      onTap: enabled ? widget.onCall : null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => _hold.forward() : null,
+        onTapUp: enabled ? (_) => _hold.reverse() : null,
+        onTapCancel: enabled ? () => _hold.reverse() : null,
+        child: AnimatedOpacity(
+          opacity: enabled ? 1 : 0.45,
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedBuilder(
+            animation: _hold,
+            builder: (context, _) {
+              final depth = 5 - 4 * _hold.value;
+              return SizedBox(
+                height: 67,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 5 - depth, bottom: depth),
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: FinalCallColors.red,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: FinalCallColors.ink, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: FinalCallColors.ink,
+                          offset: Offset(0, depth),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: _hold.value,
+                          child: const ColoredBox(color: Color(0x2E1B1530)),
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'CALL!',
+                              style: finalCallPopText(
+                                26,
+                                color: Colors.white,
+                                height: 1.1,
+                                shadows: finalCallPopOutline(),
+                              ),
+                            ),
+                            Text(
+                              FinalCallCopy.holdToCall,
+                              style: finalCallPopText(12, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Positioned(
-              left: -34,
-              bottom: 33,
-              child: Transform.translate(
-                key: const Key('final-call-action-hint-bottom'),
-                offset: Offset(_bounce.value, 0),
-                child: const Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: FinalCallColors.ink,
-                  size: 44,
-                ),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// ② 새 카드 받음: 교체 / 버리기
+// ---------------------------------------------------------------------------
 class _PendingCardAction extends StatelessWidget {
   const _PendingCardAction({
     required this.controller,
@@ -179,210 +324,142 @@ class _PendingCardAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = controller.pendingDraw!;
+    final hand = controller.hand;
+    final selected = hand
+        .where((handCard) => handCard.id == selectedCardId)
+        .firstOrNull;
+    final current = finalCallBestCombination(hand);
+    final after = selected == null
+        ? null
+        : finalCallBestCombination([
+            for (final handCard in hand)
+              handCard.id == selected.id ? card : handCard,
+          ]);
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _PendingCardEntry(
-          key: ValueKey('pending-${card.id}-${controller.pendingDrawSource}'),
-          card: card,
-          revealFromBack: controller.pendingDrawSource == 'deck',
-          leavingForReplacement:
-              replacementInProgress && selectedCardId != null,
+        Row(
+          children: [
+            _PendingCardEntry(
+              key: ValueKey(
+                'pending-${card.id}-${controller.pendingDrawSource}',
+              ),
+              card: card,
+              revealFromBack: controller.pendingDrawSource == 'deck',
+              leavingForReplacement: replacementInProgress,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: after == null
+                  ? Text(
+                      FinalCallCopy.pickToPreview,
+                      style: finalCallPopText(13, color: FinalCallColors.muted),
+                    )
+                  : _ScorePreview(before: current.score, after: after),
+            ),
+          ],
         ),
-        const SizedBox(height: 9),
-        _WhiteActionButton(
-          // 마지막 교체를 최종 제출로 오해하지 않도록 두 동작의 버튼
-          // 문구를 분리합니다. 이 버튼이 끝난 뒤 별도 최종 제출 UI가 열립니다.
-          label: selectedCardId == null
-              ? FinalCallCopy.discard
-              : FinalCallCopy.replace,
-          enabled: !replacementInProgress,
-          onTap: () => onCompleteTurn(selectedCardId),
+        const Spacer(),
+        // 마지막 교체를 최종 제출로 오해하지 않도록 두 동작을 분리합니다.
+        // 이 버튼이 끝난 뒤 별도 최종 제출 화면이 열립니다.
+        FinalCallPopButton(
+          semanticLabel: selected == null
+              ? FinalCallCopy.pickCardToReplace
+              : FinalCallCopy.replaceWith(
+                  finalCallCardColorLabel(selected.color),
+                  selected.value,
+                ),
+          onPressed: selected == null || replacementInProgress
+              ? null
+              : () => onCompleteTurn(selected.id),
+          color: FinalCallColors.violet,
+          height: 54,
+          radius: 18,
+          borderWidth: 4,
+          shadowDepth: 5,
+          child: Text(
+            selected == null
+                ? FinalCallCopy.pickCardToReplace
+                : FinalCallCopy.replaceWith(
+                    finalCallCardColorLabel(selected.color),
+                    selected.value,
+                  ),
+            style: finalCallPopText(
+              18,
+              color: Colors.white,
+              shadows: finalCallPopOutline(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FinalCallPopButton(
+          semanticLabel: FinalCallCopy.discardNewCard,
+          onPressed: replacementInProgress ? null : () => onCompleteTurn(null),
+          height: 44,
+          child: Text(
+            FinalCallCopy.discardNewCard,
+            style: finalCallPopText(16),
+          ),
         ),
       ],
     );
   }
 }
 
-class _PressableImageButton extends StatefulWidget {
-  const _PressableImageButton({
-    required this.enabled,
-    required this.asset,
-    required this.onTap,
-    this.labelOverride,
-  });
-  final bool enabled;
-  final GameImage asset;
-  final VoidCallback onTap;
-  final String? labelOverride;
+class _ScorePreview extends StatelessWidget {
+  const _ScorePreview({required this.before, required this.after});
+
+  final int before;
+  final FinalCallCombination after;
 
   @override
-  State<_PressableImageButton> createState() => _PressableImageButtonState();
-}
-
-class _PressableImageButtonState extends State<_PressableImageButton> {
-  bool pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: widget.enabled,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.enabled ? widget.onTap : null,
-        onTapDown: widget.enabled ? (_) => _setPressed(true) : null,
-        onTapCancel: widget.enabled ? () => _setPressed(false) : null,
-        onTapUp: widget.enabled ? (_) => _setPressed(false) : null,
-        child: AnimatedOpacity(
-          opacity: widget.enabled ? 1 : 0.32,
-          duration: const Duration(milliseconds: 150),
-          child: SizedBox(
-            // ---------------------------------------------------------------------------
-            // 그림자 안전 여백
-            // ---------------------------------------------------------------------------
-            // 버튼 면보다 넓은 페인트 영역을 확보해 하단 베이스와 그림자가
-            // FittedBox 또는 전환 위젯 경계에서 잘리지 않게 합니다.
-            width: 154,
-            height: 122,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                // ---------------------------------------------------------------------------
-                // 버튼 하단 베이스
-                // ---------------------------------------------------------------------------
-                Positioned(
-                  top: 9,
-                  child: Container(
-                    width: 132,
-                    height: 99,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B8B8B),
-                      borderRadius: BorderRadius.circular(17),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x52000000),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // ---------------------------------------------------------------------------
-                // 눌리는 버튼 면
-                // ---------------------------------------------------------------------------
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 90),
-                  curve: Curves.easeOutCubic,
-                  top: pressed ? 6 : 0,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 90),
-                    curve: Curves.easeOutCubic,
-                    width: 132,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(17),
-                      boxShadow: [
-                        BoxShadow(
-                          color: pressed
-                              ? const Color(0x28000000)
-                              : const Color(0x42000000),
-                          blurRadius: pressed ? 2 : 7,
-                          offset: Offset(0, pressed ? 1 : 4),
-                        ),
-                        if (!pressed)
-                          const BoxShadow(
-                            color: Color(0x99FFFFFF),
-                            blurRadius: 3,
-                            offset: Offset(0, -2),
-                          ),
-                      ],
-                    ),
-                    child: Stack(
-                      fit: StackFit.passthrough,
-                      alignment: Alignment.center,
-                      children: [
-                        widget.asset.image(
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                        ),
-                        if (widget.labelOverride != null)
-                          Center(
-                            child: Text(
-                              widget.labelOverride!,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 21,
-                                fontWeight: FontWeight.w900,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0x22000000),
-                                    offset: Offset(2, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        FinalCallCopy.ifReplaced,
+        style: finalCallPopText(13, color: FinalCallColors.muted),
+      ),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              '$before',
+              style: finalCallPopText(22, color: const Color(0xFF9C95B8)),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _setPressed(bool value) {
-    if (!mounted || pressed == value) return;
-    setState(() => pressed = value);
-  }
-}
-
-class _WhiteActionButton extends StatelessWidget {
-  const _WhiteActionButton({
-    required this.label,
-    required this.onTap,
-    this.enabled = true,
-  });
-  final String label;
-  final VoidCallback onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedOpacity(
-        opacity: enabled ? 1 : 0.45,
-        duration: const Duration(milliseconds: 150),
-        child: Container(
-          width: 102,
-          height: 47,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(7),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black38,
-                blurRadius: 7,
-                offset: Offset(0, 4),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: FinalCallColors.ink,
               ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-          ),
+            ),
+            Text(
+              '${after.score}',
+              style: finalCallPopText(
+                40,
+                color: after.score >= before
+                    ? FinalCallColors.violet
+                    : FinalCallColors.red,
+                height: 1,
+                shadows: finalCallPopOutline(),
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+      Text(
+        FinalCallCopy.combinationName(after, finalCallCardColorLabel),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: finalCallPopText(13),
+      ),
+    ],
+  );
 }
 
 /// 덱에서 가져온 카드는 뒷면으로 들어온 뒤 회전해 공개하고, 공개 카드에서
@@ -422,7 +499,7 @@ class _PendingCardEntry extends StatelessWidget {
                       : progress * math.pi
                 : 0.0;
             return Transform.translate(
-              offset: Offset(58 * (1 - progress), 0),
+              offset: Offset(40 * (1 - progress), 0),
               child: Opacity(
                 opacity: progress,
                 child: Transform(
@@ -432,21 +509,22 @@ class _PendingCardEntry extends StatelessWidget {
                     ..rotateY(rotationY),
                   child: Stack(
                     clipBehavior: Clip.none,
-                    alignment: Alignment.topCenter,
                     children: [
                       FinalCallCardView(
                         card: card,
                         faceDown: !showFront,
-                        width: 98,
+                        width: 72,
                       ),
-                      const Positioned(
-                        top: -20,
-                        child: Text(
-                          'NEW',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
+                      Positioned(
+                        right: -10,
+                        top: -10,
+                        child: Transform.rotate(
+                          angle: 0.17,
+                          child: const FinalCallPopTag(
+                            label: 'NEW',
+                            color: FinalCallColors.red,
+                            textColor: Colors.white,
+                            fontSize: 13,
                           ),
                         ),
                       ),
@@ -457,6 +535,175 @@ class _PendingCardEntry extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ③ 다른 사람 차례: 내 점수와 차례 순서
+// ---------------------------------------------------------------------------
+class FinalCallWaitingPanel extends StatelessWidget {
+  const FinalCallWaitingPanel({super.key, required this.controller});
+
+  final FinalCallController controller;
+
+  /// 서버와 같은 규칙(생존자 좌석 오름차순, 순환)으로 지금 차례부터 나열합니다.
+  /// CALL 이후 마지막 교체에서는 아직 교체하지 않은 사람만 남깁니다.
+  List<FinalCallPlayer> _turnOrder() {
+    final alive =
+        controller.players.values
+            .where((player) => player.status == 'alive')
+            .toList()
+          ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
+    final start = alive.indexWhere(
+      (player) => player.uid == controller.turnUid,
+    );
+    final rotated = start < 0
+        ? alive
+        : [...alive.sublist(start), ...alive.sublist(0, start)];
+    if (controller.phase != 'finalTurns') return rotated;
+    final pending = controller.finalTurnPendingUids.toSet();
+    return [
+      for (final player in rotated)
+        if (player.uid == controller.turnUid || pending.contains(player.uid))
+          player,
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final score = finalCallBestCombination(controller.hand).score;
+    final myTeam = controller.myTeam;
+    final order = _turnOrder();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              FinalCallCopy.myScore,
+              style: finalCallPopText(15, color: FinalCallColors.muted),
+            ),
+            const Spacer(),
+            Text(
+              '$score',
+              style: finalCallPopText(
+                44,
+                color: FinalCallColors.violet,
+                height: 1,
+                shadows: finalCallPopOutline(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 3,
+          decoration: BoxDecoration(
+            color: FinalCallColors.lilac,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          FinalCallCopy.turnOrder,
+          style: finalCallPopText(14, color: FinalCallColors.muted),
+        ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: finalCallPhonePanelWidth - 28,
+              child: Column(
+                children: [
+                  for (var index = 0; index < order.length; index++)
+                    _TurnOrderRow(
+                      player: order[index],
+                      isCurrent:
+                          index == 0 && order[index].uid == controller.turnUid,
+                      note: order[index].uid == controller.turnUid
+                          ? FinalCallCopy.now
+                          : order[index].uid == controller.uid
+                          ? FinalCallCopy.turnsLater(index)
+                          : order[index].team == myTeam
+                          ? FinalCallCopy.partner
+                          : null,
+                      isMe: order[index].uid == controller.uid,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TurnOrderRow extends StatelessWidget {
+  const _TurnOrderRow({
+    required this.player,
+    required this.isCurrent,
+    required this.note,
+    required this.isMe,
+  });
+
+  final FinalCallPlayer player;
+  final bool isCurrent;
+  final String? note;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final teamColor = finalCallTeamColor(player.team);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isCurrent
+            ? Color.lerp(Colors.white, teamColor, 0.16)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isCurrent ? FinalCallColors.ink : Colors.transparent,
+          width: 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          FinalCallPopAvatar(
+            characterId: player.characterId,
+            color: teamColor,
+            size: 26,
+            borderWidth: 2,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isMe ? FinalCallCopy.me : player.nickname,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: finalCallPopText(16),
+            ),
+          ),
+          if (note != null)
+            Text(
+              note!,
+              style: finalCallPopText(
+                13,
+                color: isCurrent
+                    ? teamColor
+                    : isMe
+                    ? FinalCallColors.violet
+                    : FinalCallColors.muted,
+              ),
+            ),
+        ],
       ),
     );
   }

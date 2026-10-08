@@ -1,12 +1,13 @@
+import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 
 enum _LoginAction { password, google, apple }
 
@@ -28,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
   bool _isCustomDomain = false;
   String _emailDomain = 'gmail.com';
+  bool _isRegistering = false;
 
   @override
   void dispose() {
@@ -46,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
     if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email) ||
         password.isEmpty) {
-      setState(() => _errorMessage = '이메일과 비밀번호를 확인해주세요.');
+      setState(() => _errorMessage = context.l10n.checkCredentials);
       return;
     }
     setState(() {
@@ -70,9 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(
         () => _errorMessage = switch (error.code) {
-          'invalid-credential' => '이메일 또는 비밀번호가 올바르지 않습니다.',
-          'invalid-email' => '이메일 형식이 올바르지 않습니다.',
-          'network-request-failed' => '네트워크 연결을 확인해주세요.',
+          'invalid-credential' => context.l10n.invalidCredentials,
+          'invalid-email' => context.l10n.invalidEmail,
+          'network-request-failed' => context.l10n.checkNetwork,
           _ => error.message,
         },
       );
@@ -147,156 +149,124 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
+    return MosiAuthScaffold(
+      child: MosiAuthTransition(
+        child: _isRegistering
+            ? RegisterScreen(
+                key: const ValueKey('register'),
+                onCancel: () => setState(() => _isRegistering = false),
+              )
+            : KeyedSubtree(
+                key: const ValueKey('login'),
+                child: _buildLogin(context),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLogin(BuildContext context) {
     final isBusy = _action != null;
-    return PlatformAuthShell(
-      maxWidth: 360,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '모시겜',
-            style: TextStyle(
-              color: colors.primary,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-            ),
+    final titleSize = isTabletLayout(context) ? 30.0 : 26.0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          context.l10n.login,
+          style: MosiFonts.sans(
+            locale: Localizations.maybeLocaleOf(context),
+            size: titleSize,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
+            letterSpacing: -1,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '모이면 시작하는 게임',
-            style: TextStyle(color: colors.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 14),
+        MosiLabeledField(
+          label: context.l10n.email,
+          child: MosiEmailField(
+            emailController: _emailController,
+            customDomainController: _customDomainController,
+            customDomainFocusNode: _customDomainFocusNode,
+            emailDomain: _emailDomain,
+            isCustomDomain: _isCustomDomain,
+            enabled: !isBusy,
+            onDomainChanged: _changeDomain,
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _emailController,
-                  enabled: !isBusy,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: '이메일'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 112,
-                child: _isCustomDomain
-                    ? TextField(
-                        controller: _customDomainController,
-                        focusNode: _customDomainFocusNode,
-                        enabled: !isBusy,
-                        decoration: InputDecoration(
-                          hintText: '직접 입력',
-                          suffixIcon: IconButton(
-                            onPressed: () => _changeDomain('gmail.com'),
-                            icon: const Icon(Icons.arrow_drop_down, size: 20),
-                          ),
-                        ),
-                      )
-                    : DropdownButtonFormField<String>(
-                        initialValue: _emailDomain,
-                        isExpanded: true,
-                        decoration: const InputDecoration(),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'gmail.com',
-                            child: Text('gmail.com'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'naver.com',
-                            child: Text('naver.com'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'daum.net',
-                            child: Text('daum.net'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'custom',
-                            child: Text('직접 입력'),
-                          ),
-                        ],
-                        onChanged: isBusy ? null : _changeDomain,
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
+        ),
+        const SizedBox(height: 14),
+        MosiLabeledField(
+          label: context.l10n.password,
+          child: TextField(
             controller: _passwordController,
             enabled: !isBusy,
             obscureText: true,
             onSubmitted: (_) => _signIn(),
-            decoration: const InputDecoration(hintText: '비밀번호'),
+            style: mosiFieldTextStyle(),
+            decoration: mosiInputDecoration(hintText: context.l10n.password),
           ),
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 10),
-            PlatformNotice(
-              message: _errorMessage!,
-              style: PlatformNoticeStyle.danger,
-            ),
-          ],
+        ),
+        if (_errorMessage != null) ...[
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: PlatformButton(
-                  label: '회원가입',
-                  style: PlatformButtonStyle.secondary,
-                  onPressed: isBusy
-                      ? null
-                      : () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        ),
-                ),
+          MosiNotice(message: _errorMessage!),
+        ],
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              flex: 10,
+              child: MosiButton(
+                label: context.l10n.signUp,
+                background: MosiColors.white,
+                height: 54,
+                expand: true,
+                onPressed: isBusy
+                    ? null
+                    : () {
+                        FocusScope.of(context).unfocus();
+                        setState(() => _isRegistering = true);
+                      },
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: PlatformButton(
-                  label: '로그인',
-                  loading: _action == _LoginAction.password,
-                  onPressed: isBusy ? null : _signIn,
-                ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 14,
+              child: MosiButton(
+                label: context.l10n.login,
+                height: 54,
+                expand: true,
+                loading: _action == _LoginAction.password,
+                onPressed: isBusy ? null : _signIn,
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: Divider(color: colors.border)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('또는', style: TextStyle(color: colors.textMuted)),
-              ),
-              Expanded(child: Divider(color: colors.border)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SocialLoginButton(
-            key: const Key('login-google-button'),
-            label: 'Google 로그인',
-            icon: Assets.images.logo.googleG.svg(width: 24, height: 24),
-            enabled: !isBusy,
-            onPressed: _signInWithGoogle,
-          ),
-          if (_isAppleSignInAvailable) ...[
-            const SizedBox(height: 12),
-            SocialLoginButton(
-              key: const Key('login-apple-button'),
-              label: 'Apple로 로그인',
-              // Apple 로고는 시각 중심이 살짝 위라 아래로 조금 내려 글자와 맞춥니다.
-              icon: Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Icon(Icons.apple, size: 27, color: colors.text),
-              ),
-              enabled: !isBusy,
-              onPressed: _signInWithApple,
             ),
           ],
+        ),
+        const SizedBox(height: 18),
+        const MosiOrDivider(),
+        const SizedBox(height: 14),
+        SocialLoginButton(
+          key: const Key('login-google-button'),
+          label: context.l10n.googleLogin,
+          icon: Assets.images.logo.googleG.svg(width: 22, height: 22),
+          enabled: !isBusy,
+          onPressed: _signInWithGoogle,
+        ),
+        if (_isAppleSignInAvailable) ...[
+          const SizedBox(height: 10),
+          SocialLoginButton(
+            key: const Key('login-apple-button'),
+            label: context.l10n.appleLogin,
+            dark: true,
+            // Apple 로고는 시각 중심이 살짝 위라 아래로 조금 내려 글자와 맞춥니다.
+            icon: const Padding(
+              padding: EdgeInsets.only(bottom: 2),
+              child: Icon(Icons.apple, size: 24, color: MosiColors.white),
+            ),
+            enabled: !isBusy,
+            onPressed: _signInWithApple,
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -309,6 +279,7 @@ class SocialLoginButton extends StatelessWidget {
     required this.icon,
     required this.enabled,
     required this.onPressed,
+    this.dark = false,
   });
 
   final String label;
@@ -316,39 +287,49 @@ class SocialLoginButton extends StatelessWidget {
   final bool enabled;
   final VoidCallback onPressed;
 
+  /// Apple 버튼처럼 검은 바탕에 흰 글자로 그립니다.
+  final bool dark;
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
+    final background = dark ? MosiColors.ink : MosiColors.white;
+    final foreground = dark ? MosiColors.white : MosiColors.navy;
     return Semantics(
       button: true,
       enabled: enabled,
       label: label,
+      excludeSemantics: true,
+      onTap: enabled ? onPressed : null,
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
         child: Material(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
+          color: background,
+          borderRadius: BorderRadius.circular(8),
           child: InkWell(
             onTap: enabled ? onPressed : null,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             child: Container(
-              height: 64,
+              height: 52,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                border: Border.all(color: colors.border),
-                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: dark ? MosiColors.ink : MosiColors.navy,
+                  width: 2,
+                ),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   icon,
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
                   Text(
                     label,
-                    style: TextStyle(
-                      color: colors.text,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: foreground,
                     ),
                   ),
                 ],

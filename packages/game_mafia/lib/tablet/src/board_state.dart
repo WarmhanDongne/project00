@@ -452,9 +452,11 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     if (args != null) ref.watch(mafiaSessionProvider(args));
     final game = _controller;
     if (game == null) {
+      // 스피너 대신 게임 바탕을 먼저 깝니다. 상태가 오면 그 위로 장면이
+      // 겹쳐 들어와 '로딩 중' 화면을 거치지 않습니다.
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: MafiaColors.noirInk,
+        body: MafiaNoirRays.night(),
       );
     }
 
@@ -468,7 +470,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
           fit: StackFit.expand,
           children: [
             // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
-            MafiaTabletBackground(isNight: game.isNight),
+            MafiaTabletBackground(isNight: game.usesNightScene),
             // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
             // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
             GameTurnCountdown(

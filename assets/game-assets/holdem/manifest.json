@@ -1,0 +1,37 @@
+{
+  "gameId": "holdem",
+  "assetVersion": 2,
+  "requiredPatchNumber": 0,
+  "files": [
+    {
+      "path": "images/background/phone.webp",
+      "sha256": "34f0a08f13d1bbf12fefbe655714eab9be6a553dc29f6668f1fb7c98d58c5c06",
+      "bytes": 308422,
+      "device": "phone"
+    },
+    {
+      "path": "images/background/tablet.webp",
+      "sha256": "2254ba232d8a12091009331d2d17d7c72ea5891588addf17e171f8d175953845",
+      "bytes": 239268,
+      "device": "tablet"
+    },
+    {
+      "path": "images/cards/back.webp",
+      "sha256": "e38f736d62a30e9851f66db6a9f07ace8a37d1ffe0bdeb0ad327018d97dc9204",
+      "bytes": 8654,
+      "device": "both"
+    },
+    {
+      "path": "images/layout/chair.webp",
+      "sha256": "336a6cb1a978b2b55c7d393ebc409dd58fed0ca8a9060799809bdab4b169a352",
+      "bytes": 285330,
+      "device": "tablet"
+    },
+    {
+      "path": "images/layout/table.webp",
+      "sha256": "6ca6872b09e02f054ad5f63739ca5b63aea372e513637781f11caa10a5c5f805",
+      "bytes": 299636,
+      "device": "tablet"
+    }
+  ]
+}

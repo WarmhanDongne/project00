@@ -12,6 +12,10 @@
     "catalog:rules:update": "node scripts/update-game-rules.mjs",
     "catalog:preview:dry-run": "node scripts/update-game-preview.mjs --dry-run",
     "catalog:preview:update": "node scripts/update-game-preview.mjs",
+    "catalog:holdem:dry-run": "node scripts/register-holdem.mjs --dry-run",
+    "catalog:holdem:register": "node scripts/register-holdem.mjs",
+    "assets:holdem:dry-run": "node scripts/upload-holdem-assets.mjs --dry-run",
+    "assets:holdem:upload": "node scripts/upload-holdem-assets.mjs",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },

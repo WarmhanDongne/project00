@@ -31,6 +31,18 @@ class _BoardGame extends Fake implements FinalCallController {
   String? get pendingDrawUid => null;
   @override
   String? get pendingDrawSource => null;
+  @override
+  String? get turnUid => 'p1';
+  @override
+  FinalCallPlayer? get turnPlayer => players[turnUid];
+  @override
+  int? get turnDeadlineAt => null;
+  @override
+  String? get callerUid => null;
+  @override
+  String get phase => 'playing';
+  @override
+  int get deckRemainingCount => 17;
 }
 
 void main() {
@@ -84,6 +96,10 @@ void main() {
       find.byKey(const ValueKey('final-call-blue-heart-0')),
       findsNWidgets(2),
     );
+    // Party Pop 테이블: 차례 알약과 덱 장수, 라운드 안내를 표시합니다.
+    expect(find.text('참가자 1 차례예요'), findsOneWidget);
+    expect(find.text('덱 17'), findsOneWidget);
+    expect(find.text('2라운드 · 같은 색 = 맞은편 짝꿍'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

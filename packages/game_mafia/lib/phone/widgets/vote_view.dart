@@ -13,6 +13,8 @@ import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 
 // ============================================================
 
@@ -89,7 +91,10 @@ class MafiaVoteView extends StatefulWidget {
   ///
   /// 밤 행동과 달리 역할별로 색이 갈리지 않습니다. 투표는 모두가 같은 행동을
   /// 하기 때문입니다.
-  static const Color selectionColor = Color(0xFFB18D56);
+  static const Color selectionColor = MafiaColors.noirBrass;
+
+  /// 투표 화면 제목입니다(시안).
+  static const String prompt = '처형할 사람을 지목하라';
 
   // ---------------------------------------------------------------------------
   // 제출 연출
@@ -203,20 +208,29 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
   }
 
   List<Widget> _buildSelectionLayer(Size size, double scale) {
+    final selected = widget.players
+        .where((player) => player.uid == widget.selectedUid)
+        .firstOrNull;
+    final gridTop = MafiaPlayerSelectGrid.topFor(widget.players.length);
+    final gridBottom = MafiaPlayerSelectGrid.designBottom(
+      widget.players.length,
+    );
     return [
       Positioned(
         left: 0,
         right: 0,
         top: MafiaPhoneDesign.top(size, MafiaVoteView._promptTop),
         child: IgnorePointer(
-          child: Text(
-            '투표 할 대상을 선택하세요',
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: MafiaPhoneStatusText.promptFontSize * scale,
-              fontWeight: FontWeight.w700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              MafiaVoteView.prompt,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: mafiaNoirDisplay(
+                MafiaPhoneStatusText.promptFontSize * scale,
+                color: MafiaColors.noirInk,
+              ),
             ),
           ),
         ),
@@ -228,13 +242,12 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
           top: MafiaPhoneDesign.top(size, MafiaVoteView._timerTop),
           child: IgnorePointer(
             child: Text(
-              '${widget.remainingSeconds}초',
+              mafiaNoirClock(widget.remainingSeconds!),
               maxLines: 1,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: MafiaPhoneStatusText.timerFontSize * scale,
-                fontWeight: FontWeight.w700,
+              style: mafiaNoirDisplay(
+                MafiaPhoneStatusText.timerFontSize * scale,
+                color: MafiaColors.noirBlood,
               ),
             ),
           ),
@@ -242,39 +255,45 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
       Positioned(
         left: 0,
         right: 0,
-        top: MafiaPhoneDesign.top(
-          size,
-          MafiaPlayerSelectGrid.topFor(widget.players.length),
-        ),
+        top: MafiaPhoneDesign.top(size, gridTop),
         child: MafiaPlayerSelectGrid(
           players: widget.players,
           selectedUid: widget.selectedUid,
           selectionColor: MafiaVoteView.selectionColor,
-          // 시안의 낮 투표는 테두리 3px, 나머지는 40%로 흐립니다.
-          selectionBorderWidth: 3,
-          nicknameColor: Colors.black,
+          selectionBorderWidth: 4,
+          idleBorderColor: MafiaColors.noirInk,
+          selectedBanner: const MafiaNoirBannerSpec(
+            label: '지목',
+            color: MafiaColors.noirBrass,
+            textColor: MafiaColors.noirInk,
+          ),
           dimsUnselected: true,
           onSelect: widget.onSelect,
         ),
       ),
+      Positioned(
+        left: 0,
+        right: 0,
+        top: MafiaPhoneDesign.top(size, gridBottom + 4),
+        child: IgnorePointer(
+          child: Text(
+            '누구를 지목했는지는 공개되지 않습니다',
+            textAlign: TextAlign.center,
+            style: mafiaNoirBody(13 * scale, color: MafiaColors.noirUmber),
+          ),
+        ),
+      ),
       MafiaPhoneActionButton(
-        label: '선택 완료',
+        label: selected == null ? '선택 완료' : '${selected.nickname}에게 투표',
         onTap: _handleConfirm,
         enabled: widget.selectedUid != null && widget.onConfirm != null,
-        // 확정(2026-08): 아무도 고르지 않았으면 버튼을 **보이지 않게** 둡니다.
         hiddenWhenDisabled: true,
+        backgroundColor: MafiaColors.noirBrass,
+        outlineColor: MafiaColors.noirInk,
       ),
     ];
   }
 
-  // ---------------------------------------------------------------------------
-  // 제출 연출
-  // ---------------------------------------------------------------------------
-  /// 가운데 요소가 뭉쳐 사라지고, 투표지 한 장이 되어 위로 날아갑니다.
-  ///
-  /// 확정(2026-08): 태블릿에서 쓰는 그 투표지([MafiaBallotPaper])로 바뀌어
-  /// 화면 위로 빠져나갑니다. 내 표가 태블릿의 투표함으로 간다는 것을 두 화면이
-  /// 같은 종이로 이어 보여 줍니다.
   List<Widget> _buildSubmitAnimation(Size size, double scale) {
     return [
       // 1. 안내·타이머·격자가 가운데로 뭉쳐 사라집니다.
@@ -353,11 +372,10 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
           child: Text(
             '이번 낮에는\n투표할 수 없습니다',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
+            style: mafiaNoirDisplay(
+              MafiaPhoneStatusText.waitingFontSize * scale,
+              color: MafiaColors.noirInk,
+              height: 1.3,
             ),
           ),
         ),
@@ -378,17 +396,16 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            widget.requestInFlight && !widget.isSubmitted
-                ? '투표를 전송하고 있습니다…'
-                : widget.timeExpired && !widget.isSubmitted
-                ? '투표 시간이 종료되었습니다.\n결과를 기다려 주세요.'
-                : '다른 플레이어의 투표를\n기다리는 중입니다…',
+            // 보내는 중에도 이미 넣은 것처럼 보여 줍니다. 서버가 거절할 때만
+            // 화면이 선택으로 돌아갑니다(로딩 문구를 띄우지 않습니다).
+            widget.timeExpired && !widget.isSubmitted && !widget.requestInFlight
+                ? '투표 시간이 끝났습니다\n곧 개표합니다'
+                : '투표함에 넣었습니다\n개표를 기다려 주세요',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: MafiaPhoneStatusText.waitingFontSize * scale,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
+            style: mafiaNoirDisplay(
+              MafiaPhoneStatusText.waitingFontSize * scale,
+              color: MafiaColors.noirInk,
+              height: 1.3,
             ),
           ),
         ),

@@ -17,6 +17,10 @@ import 'package:vector_graphics/vector_graphics.dart' as _vg;
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
+  /// Directory path: assets/images/backgrounds
+  $AssetsImagesBackgroundsGen get backgrounds =>
+      const $AssetsImagesBackgroundsGen();
+
   /// Directory path: assets/images/button
   $AssetsImagesButtonGen get button => const $AssetsImagesButtonGen();
 
@@ -38,6 +42,20 @@ class $AssetsL10nGen {
 
   /// List of all assets
   List<String> get values => [appKo];
+}
+
+class $AssetsImagesBackgroundsGen {
+  const $AssetsImagesBackgroundsGen();
+
+  /// File path: assets/images/backgrounds/.gitkeep
+  String get aGitkeep => 'assets/images/backgrounds/.gitkeep';
+
+  /// File path: assets/images/backgrounds/store_mafia_trailer.webp
+  AssetGenImage get storeMafiaTrailer =>
+      const AssetGenImage('assets/images/backgrounds/store_mafia_trailer.webp');
+
+  /// List of all assets
+  List<dynamic> get values => [aGitkeep, storeMafiaTrailer];
 }
 
 class $AssetsImagesButtonGen {

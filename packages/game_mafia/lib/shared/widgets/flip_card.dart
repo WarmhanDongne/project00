@@ -9,7 +9,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_assets.dart';
-import 'package:game_kit/core/theme/game_shadow_colors.dart';
+
 // ============================================================
 
 /// 마피아 역할 카드가 뒷면에서 앞면으로 뒤집히는 공통 연출입니다.
@@ -25,6 +25,7 @@ class MafiaFlipCard extends StatelessWidget {
     required this.back,
     required this.borderRadius,
     this.backOverlay,
+    this.borderColor,
   });
 
   /// 곡선이 적용된 뒤집기 진행도입니다.
@@ -38,6 +39,9 @@ class MafiaFlipCard extends StatelessWidget {
   /// 뒷면 위에만 얹는 위젯입니다(처형 대상의 원형 사진 등). 절반을 지나
   /// 앞면으로 바뀌면 표시하지 않습니다.
   final Widget? backOverlay;
+
+  /// 카드 둘레 테두리 색입니다(Noir 시안: 놋쇠).
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -58,24 +62,33 @@ class MafiaFlipCard extends StatelessWidget {
         ..setEntry(3, 2, 0.0012)
         ..rotateY(angle),
       child: DecoratedBox(
+        position: DecorationPosition.foreground,
         decoration: BoxDecoration(
           borderRadius: borderRadius,
-          boxShadow: const [
-            BoxShadow(
-              color: GameShadowColors.medium,
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
+          border: borderColor == null
+              ? null
+              : Border.all(color: borderColor!, width: 3),
         ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: overlay == null
-              ? face
-              : Stack(
-                  fit: StackFit.expand,
-                  children: [face, if (!showsFront) overlay],
-                ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0xB3000000),
+                blurRadius: 50,
+                offset: Offset(0, 24),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: overlay == null
+                ? face
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [face, if (!showsFront) overlay],
+                  ),
+          ),
         ),
       ),
     );

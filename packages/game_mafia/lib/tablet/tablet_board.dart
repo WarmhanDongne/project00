@@ -9,6 +9,8 @@ library;
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:flutter/material.dart';
 import 'package:game_mafia/shared/widgets/trial_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -248,7 +250,6 @@ class MafiaTabletStageView extends StatelessWidget {
         // 따로 그리면 단계가 바뀔 때 해가 사라졌다 다시 떠 산만해집니다.
         // 개표는 흰 개표판이 해를 덮는 시안이라 제외합니다(처형 발표 화면은
         // 개표 뒤에 오므로 자기 해를 직접 그립니다).
-        if (_showsPersistentSun) const MafiaTabletSun(),
         // 단계가 바뀔 때 있던 요소가 빠지고 새 요소가 들어옵니다(확정 2026-08).
         // key가 단계 이름이라 같은 단계 안의 상태 변화로는 다시 시작하지 않습니다.
         MafiaPhaseTransition(
@@ -279,10 +280,6 @@ class MafiaTabletStageView extends StatelessWidget {
       buildMafiaTabletFlowConfig(controller).widgetOwnerOf(stage).stage.name;
 
   /// 해를 상위에서 계속 그리는 단계인지입니다.
-  bool get _showsPersistentSun =>
-      stage == MafiaTabletStage.morning ||
-      stage == MafiaTabletStage.day ||
-      stage == MafiaTabletStage.voting;
 
   Widget _buildStage() {
     final trial = controller.ruleState;
@@ -303,16 +300,22 @@ class MafiaTabletStageView extends StatelessWidget {
       MafiaTabletStage.roleDeal => MafiaTabletRoleDealView(
         players: controller.orderedPlayers,
         confirmedCount: controller.roleConfirmedCount,
+        confirmedUids: controller.roleConfirmedUids,
         showsNightNotice: showsNightNotice,
         showsGameStartNotice: showsGameStartNotice,
       ),
       // 역할·완료 인원은 숨기고, 공통 마무리 구간에만 새벽 전환을 보여 줍니다.
       MafiaTabletStage.night => MafiaTabletNightView(
         isWrappingUp: controller.nightStage == 'wrapUp',
+        round: controller.round,
+        remainingSeconds: remainingSeconds,
+        players: controller.orderedPlayers,
+        revealedRoles: controller.publicRevealedRoles,
       ),
       MafiaTabletStage.morning => MafiaTabletMorningSequence(
         result: controller.morningResult,
         players: controller.players,
+        round: controller.round,
         // 기자가 취재에 성공한 아침이면 그 사람의 신분이 공개됩니다.
         exposedRole: exposedUid == null
             ? null
@@ -325,17 +328,8 @@ class MafiaTabletStageView extends StatelessWidget {
         const MafiaAnnouncementReveal(
           child: MafiaTabletNotice.day(text: MafiaCopy.discussionSkippedNotice),
         ),
-      MafiaTabletStage.day => MafiaTabletDayView(
-        showBallotBox: false,
-        remainingSeconds: remainingSeconds,
-      ),
-      MafiaTabletStage.voting => MafiaTabletDayView(
-        showBallotBox: true,
-        // 투표지가 그 사람 좌석에서 출발하도록 좌석 정보를 함께 넘깁니다.
-        voteSubmittedUids: controller.voteSubmittedUids,
-        seatIndexes: _seatIndexes,
-        boardSeatCount: _boardSeatCount,
-      ),
+      MafiaTabletStage.day => _buildDay(showBallotBox: false),
+      MafiaTabletStage.voting => _buildDay(showBallotBox: true),
       MafiaTabletStage.voteResult => _buildVoteResult(),
       MafiaTabletStage.finished => MafiaTabletResultView(
         winner: controller.winnerFaction,
@@ -348,6 +342,7 @@ class MafiaTabletStageView extends StatelessWidget {
           for (final entry in controller.players.keys)
             entry: controller.revealedRoleOf(entry),
         },
+        winnerUids: controller.winnerUids,
         onRestart: onRestart,
         onHome: onHome,
       ),
@@ -359,22 +354,23 @@ class MafiaTabletStageView extends StatelessWidget {
   ///
   /// 서버가 `voteResult` 하나로만 알려 주므로 개표판을 먼저 보여 준 뒤 발표로
   /// `uid → 좌석 번호`입니다.
-  Map<String, int> get _seatIndexes => {
-    for (final player in controller.players.values)
-      player.uid: player.seatIndex,
-  };
+  /// 낮 토론과 투표는 같은 위젯이라 투표가 시작되면 타이머가 투표함으로
+  /// 겹쳐 바뀝니다.
+  Widget _buildDay({required bool showBallotBox}) => MafiaTabletDayView(
+    showBallotBox: showBallotBox,
+    remainingSeconds: remainingSeconds,
+    voteSubmittedUids: controller.voteSubmittedUids,
+    voteEligibleCount: controller.voteEligibleCount,
+    players: controller.orderedPlayers,
+    lastNightDead: [
+      for (final uid in controller.morningResult?.deadUids ?? const <String>[])
+        ?controller.players[uid],
+    ],
+    revealedRoles: controller.publicRevealedRoles,
+    round: controller.round,
+    discussionSkipCount: controller.discussionSkipCount,
+  );
 
-  /// 방의 전체 좌석 수입니다. 좌석 번호는 방 기준이라 인원수보다 클 수
-  /// 있어(12인 방에 4명), 가장 큰 번호까지 담기는 크기를 씁니다.
-  int get _boardSeatCount {
-    var maxSeat = 0;
-    for (final player in controller.players.values) {
-      if (player.seatIndex > maxSeat) maxSeat = player.seatIndex;
-    }
-    return maxSeat + 1;
-  }
-
-  /// 넘어갑니다. 그 전환은 [MafiaTabletVoteResultSequence]가 셉니다.
   Widget _buildVoteResult() {
     final result = controller.voteResult;
     return MafiaTabletVoteResultSequence(
@@ -385,6 +381,7 @@ class MafiaTabletStageView extends StatelessWidget {
                 ?.executedUid]
           : null,
       key: ValueKey('voteResult_${controller.round}'),
+      round: controller.round,
       result: result,
       players: controller.players,
       executed: controller.executedPlayer,

@@ -6,15 +6,13 @@
 // 즉, 모든 플레이어가 함께 보는 진행 상태와 연출을 표시하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:game_mafia/game_assets.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_mafia/shared/animations/ejection_text.dart';
 import 'package:game_mafia/game_sounds.dart';
-import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 
 // ============================================================
 
@@ -173,14 +171,10 @@ class _MafiaTabletBackgroundState extends State<MafiaTabletBackground>
 
   /// 낮 또는 밤 배경 한 겹입니다.
   Widget _buildLayer(bool isNight) {
-    final background = Assets.games.mafia.images.background;
-    final image = isNight
-        ? background.backgroundNight.game
-        : background.backgroundMorning.game;
-    return ColoredBox(
-      color: isNight ? MafiaColors.nightSurface : const Color(0xFFE9E9E9),
-      child: image.image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
-    );
+    // Noir Poster 시안: 밤은 먹색, 낮은 바랜 종이에 위에서 퍼지는 빛줄기입니다.
+    return isNight
+        ? const MafiaNoirRays.night(origin: Alignment(0, -0.56))
+        : const MafiaNoirRays.day(origin: Alignment(0, -1));
   }
 
   @override
@@ -247,188 +241,51 @@ class _RadialWipeClipper extends CustomClipper<Path> {
 class MafiaTabletSun extends StatelessWidget {
   const MafiaTabletSun({super.key});
 
+  /// Noir Poster 시안(2026-10-08)에는 해가 없습니다. 낮은 종이 바탕의 빛줄기가
+  /// 대신합니다. 기존 호출부를 깨지 않도록 빈 위젯으로 남깁니다.
   @override
-  Widget build(BuildContext context) {
-    return MafiaTabletBox(
-      rect: MafiaTabletDesign.sun,
-      child: Assets.games.mafia.images.other.sun.game.image(
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
-/// 밤 화면 가운데의 달입니다. 시안의 밤 화면에는 이것 말고 아무 것도 없습니다.
-class MafiaTabletMoon extends StatefulWidget {
+class MafiaTabletMoon extends StatelessWidget {
   const MafiaTabletMoon({super.key});
 
-  /// 시안 좌표입니다. 가운데(597, 419)에 옵니다.
-  static const Rect rect = Rect.fromLTWH(352, 174, 490, 490);
-
-  // ---------------------------------------------------------------------------
-  // 달빛 반짝임
-  // ---------------------------------------------------------------------------
-  // 확정(2026-08): 달 위에서 작은 빛이 10초에 한 번쯤 무작위로 반짝입니다.
-  // 밤 화면은 달만 떠 있어 완전히 멈춘 그림처럼 보이는데, 이 작은 빛이
-  // 화면이 살아 있다는 느낌을 줍니다.
-
-  /// 반짝임 사이의 간격입니다(평균 10초).
-  static const Duration minSparkleGap = Duration(seconds: 7);
-  static const Duration maxSparkleGap = Duration(seconds: 13);
-
-  /// 빛 하나가 떠올라 사라지는 데 걸리는 시간입니다.
-  static const Duration sparkleDuration = Duration(milliseconds: 1400);
-
-  /// 빛의 크기 범위입니다(시안 좌표 기준).
-  static const double minSparkleSize = 26;
-  static const double maxSparkleSize = 52;
-
-  @override
-  State<MafiaTabletMoon> createState() => _MafiaTabletMoonState();
-}
-
-class _MafiaTabletMoonState extends State<MafiaTabletMoon>
-    with SingleTickerProviderStateMixin {
-  final math.Random _random = math.Random();
-  late final AnimationController _sparkle;
-  Timer? _nextTimer;
-
-  /// 이번 빛의 자리(달 안쪽 비율 좌표)와 크기입니다.
-  Offset _spot = Offset.zero;
-  double _size = MafiaTabletMoon.minSparkleSize;
-  bool _isSparkling = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _sparkle = AnimationController(
-      vsync: this,
-      duration: MafiaTabletMoon.sparkleDuration,
-    )..addStatusListener(_handleSparkleStatus);
-    _scheduleNext();
-  }
-
-  void _handleSparkleStatus(AnimationStatus status) {
-    if (status != AnimationStatus.completed || !mounted) return;
-    setState(() => _isSparkling = false);
-    _scheduleNext();
-  }
-
-  void _scheduleNext() {
-    _nextTimer?.cancel();
-    final span =
-        MafiaTabletMoon.maxSparkleGap.inMilliseconds -
-        MafiaTabletMoon.minSparkleGap.inMilliseconds;
-    _nextTimer = Timer(
-      Duration(
-        milliseconds:
-            MafiaTabletMoon.minSparkleGap.inMilliseconds +
-            _random.nextInt(span),
-      ),
-      () {
-        if (!mounted) return;
-        setState(() {
-          // 달은 둥글기 때문에 각도와 반지름으로 자리를 뽑아야 원 안에
-          // 들어갑니다. 사각형 안에서 뽑으면 네 귀퉁이(달 밖)가 나옵니다.
-          final angle = _random.nextDouble() * math.pi * 2;
-          // 가장자리에 너무 붙지 않게 안쪽까지만 씁니다.
-          final radius = math.sqrt(_random.nextDouble()) * 0.38;
-          _spot = Offset(
-            0.5 + math.cos(angle) * radius,
-            0.5 + math.sin(angle) * radius,
-          );
-          _size =
-              MafiaTabletMoon.minSparkleSize +
-              _random.nextDouble() *
-                  (MafiaTabletMoon.maxSparkleSize -
-                      MafiaTabletMoon.minSparkleSize);
-          _isSparkling = true;
-        });
-        _sparkle.forward(from: 0);
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _nextTimer?.cancel();
-    _sparkle
-      ..removeStatusListener(_handleSparkleStatus)
-      ..dispose();
-    super.dispose();
-  }
+  /// 달과 도시가 놓이는 자리입니다(시안 태블릿 ③: 달 280, 도시 바닥 330).
+  static const Rect rect = Rect.fromLTWH(0, 36, 1194, 297);
 
   @override
   Widget build(BuildContext context) {
     return MafiaTabletBox(
-      rect: MafiaTabletMoon.rect,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Assets.games.mafia.images.other.moon.game.image(
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-          ),
-          if (_isSparkling) _buildSparkle(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSparkle() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 달 그림은 BoxFit.contain이라 실제로 그려진 정사각형 안쪽만 씁니다.
-        final side = constraints.biggest.shortestSide;
-        final size = side * _size / MafiaTabletMoon.rect.width;
-
-        return AnimatedBuilder(
-          animation: _sparkle,
-          builder: (context, _) {
-            // 떠올랐다가 사라집니다. 커지면서 밝아지고, 사그라들며 조금 더
-            // 퍼집니다.
-            final progress = _sparkle.value;
-            final glow = math.sin(progress * math.pi);
-            final scale = 0.6 + progress * 0.6;
-
-            // Positioned는 Stack 안에만 놓일 수 있습니다. LayoutBuilder가
-            // 사이에 있으므로 여기서 Stack을 한 겹 둡니다.
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  left: constraints.maxWidth * _spot.dx - size / 2,
-                  top: constraints.maxHeight * _spot.dy - size / 2,
-                  width: size,
-                  height: size,
-                  child: IgnorePointer(
-                    child: Opacity(
-                      opacity: (glow * 0.85).clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: scale,
-                        child: const DecoratedBox(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Color(0xFFFFFDF0),
-                                Color(0x66FFF6D6),
-                                Color(0x00FFF6D6),
-                              ],
-                              stops: [0, 0.35, 1],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+      rect: rect,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final unit = width / 1194;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 3 * unit,
+                child: MafiaNoirCityscape(
+                  width: width,
+                  height: constraints.maxHeight - 3 * unit,
+                  moonSize: 280 * unit,
                 ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 3 * unit,
+                child: const ColoredBox(color: MafiaColors.noirBrass),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -503,16 +360,28 @@ class _MafiaTabletNoticeState extends State<MafiaTabletNotice> {
         final scale = MafiaTabletDesign.scaleOf(size);
 
         return ColoredBox(
-          color: isNight ? const Color(0xCC10131A) : const Color(0xCCF2F2F2),
+          color: isNight ? const Color(0xE60B0E0D) : const Color(0xE6D9C2A2),
           child: Center(
-            child: MafiaEjectionText(
-              // 단계 안내는 짧아서 한 박자로 찍습니다.
-              beats: [text],
-              style: TextStyle(
-                color: isNight ? Colors.white : Colors.black,
-                fontSize: 64 * scale,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 단계 안내는 짧아서 한 박자로 찍습니다.
+                MafiaEjectionText(
+                  beats: [text],
+                  style: mafiaNoirDisplay(
+                    72 * scale,
+                    color: isNight
+                        ? MafiaColors.noirPaper
+                        : MafiaColors.noirInk,
+                  ),
+                ),
+                SizedBox(height: 18 * scale),
+                Container(
+                  width: 300 * scale,
+                  height: 4 * scale,
+                  color: MafiaColors.noirBrass,
+                ),
+              ],
             ),
           ),
         );
@@ -541,25 +410,30 @@ class MafiaTabletChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 다른 게임 태블릿 사이드바와 같은 이름을 씁니다(icon_role · icon_setting).
-    // 마피아 테마 아이콘은 낮·밤 공용이라 시간대로 갈라 쓰지 않습니다.
-    final icons = Assets.games.mafia.images.icons;
+    // Noir 시안: 왼쪽 위 '?'(룰북), 오른쪽 위 설정. 52px 네모 버튼입니다.
     return Stack(
       children: [
         MafiaTabletBox(
-          rect: MafiaTabletDesign.rulebookIcon,
+          rect: const Rect.fromLTWH(28, 28, 52, 52),
           ignorePointer: false,
           child: _button(
-            icons.iconRole.game.image(fit: BoxFit.contain),
+            Text(
+              '?',
+              style: mafiaNoirDisplay(24, color: MafiaColors.noirBrass),
+            ),
             onRulebookPressed,
             '룰북 열기',
           ),
         ),
         MafiaTabletBox(
-          rect: MafiaTabletDesign.settingIcon,
+          rect: const Rect.fromLTWH(1114, 28, 52, 52),
           ignorePointer: false,
           child: _button(
-            icons.iconSetting.game.image(fit: BoxFit.contain),
+            const Icon(
+              Icons.settings_outlined,
+              color: MafiaColors.noirBrass,
+              size: 26,
+            ),
             onSettingsPressed,
             '설정 열기',
           ),
@@ -575,7 +449,14 @@ class MafiaTabletChrome extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
-        child: icon,
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: MafiaColors.noirSlab,
+            border: Border.all(color: MafiaColors.noirBrass, width: 2),
+          ),
+          child: FittedBox(child: icon),
+        ),
       ),
     );
   }
@@ -588,7 +469,7 @@ class MafiaTabletHeadline extends StatelessWidget {
     required this.text,
     required this.top,
     this.fontSize = 64,
-    this.color = Colors.black,
+    this.color = MafiaColors.noirInk,
     this.fontWeight = FontWeight.w700,
   });
 
@@ -619,11 +500,7 @@ class MafiaTabletHeadline extends StatelessWidget {
                     text,
                     maxLines: 1,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: fontSize * scale,
-                      fontWeight: fontWeight,
-                    ),
+                    style: mafiaNoirDisplay(fontSize * scale, color: color),
                   ),
                 ),
               ),
@@ -647,7 +524,7 @@ class MafiaTabletAnnouncement extends StatelessWidget {
     required this.beats,
     required this.top,
     this.fontSize = 64,
-    this.color = Colors.black,
+    this.color = MafiaColors.noirInk,
     this.fontWeight = FontWeight.w700,
     this.beatHold = MafiaEjectionText.defaultBeatHold,
   });
@@ -680,11 +557,7 @@ class MafiaTabletAnnouncement extends StatelessWidget {
                 child: MafiaEjectionText(
                   beats: beats,
                   beatHold: beatHold,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: fontSize * scale,
-                    fontWeight: fontWeight,
-                  ),
+                  style: mafiaNoirDisplay(fontSize * scale, color: color),
                 ),
               ),
             ),

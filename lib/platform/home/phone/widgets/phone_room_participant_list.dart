@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
 
 //=======================휴대폰 참가자 목록==============================
 class PhoneRoomParticipantList extends StatelessWidget {
@@ -16,83 +15,96 @@ class PhoneRoomParticipantList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               '참여자',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              style: MosiFonts.sans(
+                size: 18,
+                weight: FontWeight.w700,
+                color: MosiColors.navy,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
               '${players.length}명',
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
+              style: MosiFonts.grotesk(
+                size: 14,
+                weight: FontWeight.w700,
+                color: MosiColors.violet,
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
         if (players.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surfaceMuted,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '아직 참가자가 없습니다.',
-              style: TextStyle(color: colors.textMuted, fontSize: 13),
+          MosiDashedBorder(
+            color: MosiColors.navyFaint,
+            radius: 10,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '아직 참가자가 없습니다.',
+                style: MosiFonts.sans(size: 13, color: MosiColors.muted),
+              ),
             ),
           )
         else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: players.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 7),
-            itemBuilder: (context, index) {
-              final player = players[index];
-              return Container(
-                height: compact ? 46 : 68,
-                padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(compact ? 9 : 14),
-                  border: Border.all(color: colors.border),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: compact ? 30 : 48,
-                      height: compact ? 30 : 48,
-                      child: Image.asset(
-                        roomCharacterAssetPath(player.characterId),
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    SizedBox(width: compact ? 10 : 14),
-                    Expanded(
-                      child: Text(
-                        player.nickname,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: compact ? 14 : 16,
-                          fontWeight: FontWeight.w800,
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 14,
+              vertical: compact ? 6 : 10,
+            ),
+            decoration: BoxDecoration(
+              color: MosiColors.paper,
+              border: Border.all(color: MosiColors.ink, width: 2),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                for (final (index, player) in players.indexed) ...[
+                  if (index > 0) const SizedBox(height: 8),
+                  SizedBox(
+                    height: compact ? 36 : 46,
+                    child: Row(
+                      children: [
+                        MosiFace(
+                          characterId: player.characterId,
+                          size: compact ? 30 : 38,
+                          ring: true,
                         ),
-                      ),
+                        SizedBox(width: compact ? 10 : 12),
+                        Expanded(
+                          child: Text(
+                            player.nickname,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MosiFonts.sans(
+                              size: compact ? 14 : 16,
+                              weight: FontWeight.w700,
+                              color: MosiColors.navy,
+                            ),
+                          ),
+                        ),
+                        if (!player.isConnected)
+                          const MosiPill(
+                            label: '연결 끊김',
+                            color: MosiColors.red,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                ],
+              ],
+            ),
           ),
       ],
     );

@@ -74,6 +74,14 @@ export {
 export {game_liars_poker_end_game} from "./liars-poker/end-game.js";
 export {game_liars_poker_leave_game} from "./liars-poker/leave-game.js";
 
+export {game_holdem_start_game} from "./holdem/start-game.js";
+export {game_holdem_complete_dealing} from "./holdem/complete-dealing.js";
+export {game_holdem_act} from "./holdem/act.js";
+export {game_holdem_timeout_turn} from "./holdem/timeout-turn.js";
+export {game_holdem_complete_result} from "./holdem/complete-result.js";
+export {game_holdem_end_game} from "./holdem/end-game.js";
+export {game_holdem_leave_game} from "./holdem/leave-game.js";
+
 // ---------------------------------------------- 게임: Final Call
 export {game_final_call_start_game} from "./final-call/start-game.js";
 export {

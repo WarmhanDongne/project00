@@ -361,35 +361,34 @@ class _AnimatedScoreCounter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 멀리서도 읽히도록 숫자와 상자를 크게 잡습니다.
-    return Container(
-      constraints: const BoxConstraints(minWidth: 86, minHeight: 58),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x59000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 320),
-        transitionBuilder: (child, animation) => ScaleTransition(
-          scale: Tween<double>(begin: 1.5, end: 1).animate(animation),
-          child: FadeTransition(opacity: animation, child: child),
-        ),
-        child: Text(
-          '$score',
-          key: ValueKey(score),
-          style: TextStyle(
-            color: score <= 10 ? Colors.red : const Color(0xFF244EB8),
-            fontSize: 40,
-            height: 1,
-            fontWeight: FontWeight.w900,
+    return FinalCallPopBox(
+      radius: 18,
+      borderWidth: 4,
+      shadowDepth: 5,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 46, minHeight: 46),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            transitionBuilder: (child, animation) => ScaleTransition(
+              scale: Tween<double>(begin: 1.5, end: 1).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+            child: Text(
+              '$score',
+              key: ValueKey(score),
+              style: finalCallPopText(
+                40,
+                color: score <= 10
+                    ? FinalCallColors.red
+                    : FinalCallColors.violet,
+                height: 1,
+                shadows: finalCallPopOutline(),
+              ),
+            ),
           ),
         ),
       ),
@@ -397,11 +396,96 @@ class _AnimatedScoreCounter extends StatelessWidget {
   }
 }
 
-/// Liar's Poker 잔여 카드와 같은 원형 궤도에 잔여 생명을 표시합니다.
-class _FinalCallLivesLayer extends StatelessWidget {
-  const _FinalCallLivesLayer({required this.players});
+/// 테이블 가운데 위의 '○○ 차례예요' 알약입니다(팀 색).
+class _FinalCallTurnPill extends StatelessWidget {
+  const _FinalCallTurnPill({required this.player, required this.deadline});
+
+  final FinalCallPlayer player;
+  final int? deadline;
+
+  @override
+  Widget build(BuildContext context) {
+    final deadline = this.deadline;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: finalCallTeamColor(player.team),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: FinalCallColors.ink, width: 4),
+        boxShadow: const [
+          BoxShadow(color: FinalCallColors.ink, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              FinalCallCopy.turnOf(player.nickname),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: finalCallPopText(
+                20,
+                color: Colors.white,
+                shadows: finalCallPopOutline(),
+              ),
+            ),
+          ),
+          if (deadline != null) ...[
+            const SizedBox(width: 8),
+            // 태블릿은 소리 없이 남은 시간만 보여 줍니다.
+            GameTurnCountdown(
+              key: ValueKey(deadline),
+              expiresAt: deadline,
+              builder: (context, remaining) {
+                final seconds =
+                    ((remaining ?? Duration.zero).inMilliseconds / 1000)
+                        .ceil()
+                        .clamp(0, 99);
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: FinalCallColors.ink,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '0:${seconds.toString().padLeft(2, '0')}',
+                    style: finalCallPopText(
+                      18,
+                      color: FinalCallColors.yellow,
+                      height: 1.3,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 테이블 둘레의 좌석 이름표입니다. 각 이름표는 앉은 사람 쪽을 향합니다.
+///
+/// 얼굴·이름·하트를 보여 주고, 차례인 사람은 팀 색 테두리, CALL한 사람은
+/// 노란 이름표로 강조합니다.
+class _FinalCallSeatPlates extends StatelessWidget {
+  const _FinalCallSeatPlates({
+    required this.players,
+    required this.turnUid,
+    required this.callerUid,
+    required this.pendingDrawUid,
+  });
 
   final List<FinalCallPlayer> players;
+  final String? turnUid;
+  final String? callerUid;
+  final String? pendingDrawUid;
 
   @override
   Widget build(BuildContext context) {
@@ -409,42 +493,153 @@ class _FinalCallLivesLayer extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final boardSize = constraints.biggest;
+        final scale = finalCallTabletScale(boardSize);
         final centers = playerCentersForBoard(
           playerCount: players.length,
           boardSize: boardSize,
         );
+        final sixSeats = players.length > 4;
+        final plateSize = sixSeats ? const Size(240, 80) : const Size(320, 88);
         return Stack(
           children: [
             for (final player in players)
-              _buildPlayerLives(
-                player: player,
-                center: centers[player.seatIndex],
-                boardCenter: boardSize.center(Offset.zero),
+              Positioned(
+                left: centers[player.seatIndex].dx - plateSize.width / 2,
+                top: centers[player.seatIndex].dy - plateSize.height / 2,
+                width: plateSize.width,
+                height: plateSize.height,
+                child: Transform.rotate(
+                  angle: finalCallSeatRotationForCenter(
+                    center: centers[player.seatIndex],
+                    boardSize: boardSize,
+                  ),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: _SeatPlate(
+                      player: player,
+                      partner: sixSeats
+                          ? null
+                          : players
+                                .where(
+                                  (other) =>
+                                      other.team == player.team &&
+                                      other.uid != player.uid,
+                                )
+                                .firstOrNull,
+                      isTurn: player.uid == turnUid,
+                      isCaller: player.uid == callerUid,
+                      isSwapping:
+                          player.uid == turnUid && player.uid == pendingDrawUid,
+                      compact: sixSeats,
+                    ),
+                  ),
+                ),
               ),
           ],
         );
       },
     );
   }
+}
 
-  Widget _buildPlayerLives({
-    required FinalCallPlayer player,
-    required Offset center,
-    required Offset boardCenter,
-  }) {
-    final direction = center - boardCenter;
-    final angle = direction.distanceSquared == 0
-        ? 0.0
-        : math.atan2(direction.dy, direction.dx) + math.pi / 2 + math.pi;
+class _SeatPlate extends StatelessWidget {
+  const _SeatPlate({
+    required this.player,
+    required this.partner,
+    required this.isTurn,
+    required this.isCaller,
+    required this.isSwapping,
+    required this.compact,
+  });
 
-    return Positioned(
-      left: center.dx - 62,
-      top: center.dy - 30,
-      width: 124,
-      height: 60,
-      child: Transform.rotate(
-        angle: angle,
-        child: _FinalCallLifeRow(player: player, loss: 0, lossProgress: 0),
+  final FinalCallPlayer player;
+  final FinalCallPlayer? partner;
+  final bool isTurn;
+  final bool isCaller;
+  final bool isSwapping;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final teamColor = finalCallTeamColor(player.team);
+    final eliminated = player.status == 'eliminated';
+    final tag = isCaller
+        ? const FinalCallPopTag(
+            label: 'CALL',
+            color: FinalCallColors.ink,
+            textColor: FinalCallColors.yellow,
+            fontSize: 14,
+            borderWidth: 0,
+          )
+        : isTurn
+        ? FinalCallPopTag(
+            label: isSwapping
+                ? FinalCallCopy.swapping
+                : FinalCallCopy.turnBadge,
+            color: teamColor,
+            textColor: Colors.white,
+            fontSize: 13,
+            borderWidth: 0,
+          )
+        : null;
+    final partner = this.partner;
+    return Opacity(
+      opacity: eliminated ? 0.6 : 1,
+      child: FinalCallPopBox(
+        color: isCaller ? FinalCallColors.yellow : Colors.white,
+        radius: compact ? 20 : 22,
+        borderWidth: isTurn && !isCaller ? 5 : 4,
+        shadowDepth: isTurn && !isCaller ? 9 : 5,
+        ringColor: isTurn && !isCaller ? teamColor : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            FinalCallPopAvatar(
+              characterId: player.characterId,
+              color: teamColor,
+              size: compact ? 46 : 56,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          player.nickname,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: finalCallPopText(compact ? 20 : 22),
+                        ),
+                      ),
+                      if (tag != null) ...[const SizedBox(width: 6), tag],
+                    ],
+                  ),
+                  if (partner != null)
+                    Text(
+                      FinalCallCopy.teamWithPartner(
+                        player.team.label,
+                        partner.nickname,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: finalCallPopText(13, color: FinalCallColors.muted),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            _FinalCallLifeRow(
+              player: player,
+              loss: 0,
+              lossProgress: 0,
+              onPlate: true,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -456,35 +651,37 @@ class _FinalCallLifeRow extends StatelessWidget {
     required this.player,
     required this.loss,
     required this.lossProgress,
+    this.onPlate = false,
   });
 
   final FinalCallPlayer player;
   final int loss;
   final double lossProgress;
 
+  /// 좌석 이름표 안의 작은 하트 줄입니다. 잃은 하트 자리를 점선으로 남깁니다.
+  final bool onPlate;
+
   @override
   Widget build(BuildContext context) {
+    final rowWidth = onPlate ? 72.0 : 124.0;
+    final rowHeight = onPlate ? 24.0 : 48.0;
+    final heartSize = onPlate ? 20.0 : 22.0;
     if (player.status == 'eliminated' && (loss == 0 || lossProgress >= 1)) {
       return SizedBox(
-        width: 124,
-        height: 48,
-        child: Center(
+        width: rowWidth,
+        height: rowHeight,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
           child: Text(
             '${player.team.label} 탈락',
             key: ValueKey('final-call-eliminated-${player.uid}'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
+            style: finalCallPopText(16, color: FinalCallColors.muted),
           ),
         ),
       );
     }
     final previousLives = (player.lives + loss).clamp(0, 3);
-    final heart = player.team == FinalCallTeam.blue
-        ? Assets.games.finalCall.images.icons.iconHeartBlue.game
-        : Assets.games.finalCall.images.icons.iconHeartRed.game;
+    final teamColor = finalCallTeamColor(player.team);
     var rowScale = 1.0;
     if (loss > 0 && lossProgress < 0.45) {
       rowScale = 1 + 0.42 * Curves.easeOutBack.transform(lossProgress / 0.45);
@@ -498,8 +695,8 @@ class _FinalCallLifeRow extends StatelessWidget {
     }
 
     return SizedBox(
-      width: 124,
-      height: 48,
+      width: rowWidth,
+      height: rowHeight,
       child: Center(
         child: Transform.scale(
           scale: rowScale,
@@ -508,25 +705,30 @@ class _FinalCallLifeRow extends StatelessWidget {
             children: [
               for (var index = 0; index < previousLives; index++)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
                   child: index < player.lives
-                      ? heart.image(
-                          color: player.team == FinalCallTeam.green
-                              ? const Color(0xFF269B60)
-                              : null,
+                      ? FinalCallPopHeart(
                           key: ValueKey(
                             'final-call-${player.team.name}-heart-$index',
                           ),
-                          width: 31,
-                          height: 31,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                          color: teamColor,
+                          size: heartSize,
                         )
                       : _BreakingHeart(
                           progress: lossProgress,
                           team: player.team,
                         ),
                 ),
+              if (onPlate)
+                for (var index = previousLives; index < 3; index++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1),
+                    child: FinalCallPopHeart(
+                      color: teamColor,
+                      filled: false,
+                      size: heartSize,
+                    ),
+                  ),
             ],
           ),
         ),
@@ -555,11 +757,9 @@ class _BreakingHeart extends StatelessWidget {
       Offset(0.85, 1.1),
     ];
     const rotations = <double>[-0.48, 0.42, -0.7, 0.62];
-    final heart = team == FinalCallTeam.blue
-        ? Assets.games.finalCall.images.icons.iconHeartBlue.game
-        : Assets.games.finalCall.images.icons.iconHeartRed.game;
-    return SizedBox.square(
-      dimension: 31,
+    return SizedBox(
+      width: 22,
+      height: 20,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -574,12 +774,9 @@ class _BreakingHeart extends StatelessWidget {
                   angle: rotations[index] * breakProgress,
                   child: ClipPath(
                     clipper: _HeartShardClipper(index),
-                    child: heart.image(
-                      color: team == FinalCallTeam.green
-                          ? const Color(0xFF269B60)
-                          : null,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
+                    child: FinalCallPopHeart(
+                      color: finalCallTeamColor(team),
+                      size: 22,
                     ),
                   ),
                 ),
@@ -635,4 +832,47 @@ class _HeartShardClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(_HeartShardClipper oldClipper) => oldClipper.index != index;
+}
+
+/// 태블릿 공통 배경입니다. 점무늬 바탕 가운데에 둥근 테이블을 놓습니다.
+class FinalCallTableBackdrop extends StatelessWidget {
+  const FinalCallTableBackdrop({super.key});
+
+  @override
+  Widget build(BuildContext context) => FinalCallPopBackground(
+    spacing: 28,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final boardSize = constraints.biggest;
+        final radius = finalCallTableRadius(boardSize);
+        final scale = finalCallTabletScale(boardSize);
+        return Stack(
+          children: [
+            Positioned(
+              left: boardSize.width / 2 - radius,
+              top: boardSize.height / 2 - radius,
+              width: radius * 2,
+              height: radius * 2,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: FinalCallColors.lilac,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: FinalCallColors.ink,
+                    width: 6 * scale,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: FinalCallColors.ink,
+                      offset: Offset(0, 12 * scale),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }

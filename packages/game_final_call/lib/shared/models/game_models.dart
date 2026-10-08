@@ -128,6 +128,51 @@ FinalCallScoreResult calculateFinalCallScoreResult(
   );
 }
 
+/// 점수를 만든 카드 묶음입니다. 화면은 이 카드들을 묶어 표시합니다.
+class FinalCallCombination {
+  const FinalCallCombination({required this.result, required this.cards});
+
+  final FinalCallScoreResult result;
+
+  /// 점수 계산에 들어간 카드입니다(손패 순서 유지).
+  final List<FinalCallCard> cards;
+
+  int get score => result.value;
+  bool get isSameNumber => result.type == FinalCallCombinationType.sameNumber;
+  Set<String> get cardIds => {for (final card in cards) card.id};
+}
+
+/// [calculateFinalCallScoreResult]와 같은 규칙으로 최고 점수를 만든 카드를
+/// 함께 돌려줍니다.
+FinalCallCombination finalCallBestCombination(Iterable<FinalCallCard> cards) {
+  final hand = cards.toList(growable: false);
+  final result = calculateFinalCallScoreResult(hand);
+  if (result.type == FinalCallCombinationType.sameNumber) {
+    final counts = <int, int>{};
+    for (final card in hand) {
+      counts.update(card.value, (count) => count + 1, ifAbsent: () => 1);
+    }
+    final value = counts.entries
+        .where((entry) => entry.value >= 2)
+        .firstWhere((entry) => entry.key * entry.value == result.value)
+        .key;
+    return FinalCallCombination(
+      result: result,
+      cards: [
+        for (final card in hand)
+          if (card.value == value) card,
+      ],
+    );
+  }
+  return FinalCallCombination(
+    result: result,
+    cards: [
+      for (final card in hand)
+        if (card.color == result.color) card,
+    ],
+  );
+}
+
 /// 기존 점수 계산 호출부에서 사용하는 숫자 전용 편의 함수입니다.
 int calculateFinalCallScore(Iterable<FinalCallCard> cards) =>
     calculateFinalCallScoreResult(cards).value;

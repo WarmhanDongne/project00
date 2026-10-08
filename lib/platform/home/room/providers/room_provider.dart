@@ -19,6 +19,7 @@ import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/room/providers/room_command_executor.dart';
+
 //==============================================================================
 //
 //==============================================================================
@@ -88,6 +89,15 @@ class RoomProvider extends GameRoomContext {
   /// 사용자에게 보여야 합니다. 휴대폰 자체가 오프라인이면 캐시된 lastSeen도
   /// 함께 늙으므로, 그 값을 태블릿 장애로 표시하면 원인을 거꾸로 안내합니다.
   bool get isServerConnected => _isServerConnected;
+
+  /// 이 기기 참가자의 캐릭터 ID입니다. 연결 끊김 장면에 내 얼굴을 그릴 때 씁니다.
+  String? get currentCharacterId {
+    final uid = _currentUid();
+    for (final player in players) {
+      if (player.uid == uid) return player.characterId;
+    }
+    return _joinedCharacterId;
+  }
 
   /// 퇴장 요청이 진행 중입니다. 나가기 버튼 비활성화와 중복 탭 판정에 씁니다.
   @override

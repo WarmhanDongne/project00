@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
@@ -36,8 +38,9 @@ class MafiaRoleSetupScreen extends StatefulWidget {
 }
 
 class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
-  static const _page = Color(0xFFF6F3E9);
-  static const _ink = Color(0xFF18353B);
+  // Noir Poster 시안 ①: 먹색 무대 위 종이색 글자입니다.
+  static const _page = MafiaColors.noirInk;
+  static const _ink = MafiaColors.noirPaper;
   static const _motion = Duration(milliseconds: 280);
 
   // 기존 설정 화면에서 선택 가능했던 19종만 제공합니다.
@@ -477,6 +480,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
         backgroundColor: _page,
         body: Stack(
           children: [
+            const Positioned.fill(
+              child: MafiaNoirRays.night(origin: Alignment(0, -1)),
+            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
@@ -490,25 +496,31 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                             isBusy: _busy,
                             onPressed: () => unawaited(_cancel()),
                           ),
-                          const Expanded(
-                            child: Text(
-                              '신분 선택',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: _ink,
-                              ),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'CASTING',
+                                  style: mafiaNoirBody(
+                                    13,
+                                    color: MafiaColors.noirBrass,
+                                    letterSpacing: 6.5,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                Text(
+                                  '직업 구성',
+                                  textAlign: TextAlign.center,
+                                  style: mafiaNoirDisplay(40, color: _ink),
+                                ),
+                              ],
                             ),
                           ),
                           Text(
                             '${widget.playerCount}명',
                             semanticsLabel: '참여 인원 ${widget.playerCount}명',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
-                            ),
+                            style: mafiaNoirDisplay(24, color: _ink),
                           ),
                         ],
                       ),
@@ -528,31 +540,47 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                                     child: Text(
                                       preset,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 18),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: _preset == preset
+                                            ? MafiaColors.noirInk
+                                            : MafiaColors.noirPaper,
+                                      ),
                                     ),
                                   ),
                                   selected: _preset == preset,
+                                  showCheckmark: false,
+                                  backgroundColor: MafiaColors.noirSlab,
+                                  selectedColor: MafiaColors.noirBrass,
+                                  side: const BorderSide(
+                                    color: MafiaColors.noirBrass,
+                                  ),
+                                  shape: const RoundedRectangleBorder(),
                                   onSelected: _busy
                                       ? null
                                       : (_) => _choosePreset(preset),
                                 ),
                               ),
                             const SizedBox(width: 16),
-                            Text(
-                              '시민 진영 ${_factionCount(MafiaFaction.citizen)}  ·  마피아 진영 ${_factionCount(MafiaFaction.mafia)}  ·  중립 ${_factionCount(MafiaFaction.neutral)}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            _FactionBar(
+                              citizen: _factionCount(MafiaFaction.citizen),
+                              mafia: _factionCount(MafiaFaction.mafia),
+                              neutral: _factionCount(MafiaFaction.neutral),
                             ),
                             const SizedBox(width: 16),
                             TextButton.icon(
                               key: const ValueKey('setup-rules'),
                               onPressed: _busy ? null : _showRules,
-                              icon: const Icon(Icons.tune),
+                              icon: const Icon(
+                                Icons.tune,
+                                color: MafiaColors.noirBrass,
+                              ),
                               label: const Text(
                                 '이번 판 규칙',
-                                style: TextStyle(fontSize: 18),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: MafiaColors.noirBrass,
+                                ),
                               ),
                             ),
                           ],
@@ -571,7 +599,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                                   error,
                                   style: const TextStyle(
                                     fontSize: 18,
-                                    color: Color(0xFF9B3E30),
+                                    color: MafiaColors.noirRose,
                                   ),
                                 ),
                         ),
@@ -584,25 +612,25 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                           style: FilledButton.styleFrom(
                             backgroundColor: _ink,
                             foregroundColor: _page,
-                            textStyle: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            minimumSize: const Size(152, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
+                            disabledBackgroundColor: MafiaColors.noirFaded,
+                            textStyle: mafiaNoirDisplay(22, color: _page),
+                            minimumSize: const Size(220, 60),
+                            shape: const RoundedRectangleBorder(
+                              side: BorderSide(
+                                color: MafiaColors.noirBrass,
+                                width: 2,
+                              ),
                             ),
                           ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: _page,
-                                  ),
-                                )
-                              : const Text('설정 완료'),
+                          // 스피너 대신 문구만 바꿉니다. 서버가 판을 열면 곧바로
+                          // 분배 장면으로 넘어갑니다.
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(
+                              _isSubmitting ? '카드를 섞는 중' : '게임 시작',
+                              key: ValueKey(_isSubmitting),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -661,7 +689,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
               top: 0,
               width: gridWidth,
               height: height,
-              child: const Center(child: Text('오른쪽 +에서 신분을 추가해 주세요.')),
+              child: Center(
+                child: Text('오른쪽 +에서 신분을 추가해 주세요.', style: mafiaNoirBody(18)),
+              ),
             ),
           for (var index = 0; index < ids.length; index++)
             AnimatedPositioned(
@@ -707,10 +737,11 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   );
 
   Widget _buildAddButton() => Material(
-    color: const Color(0xFFEFECE2),
+    // 시안 ①의 '+ 다른 직업' 칸입니다.
+    color: Colors.transparent,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(5),
-      side: const BorderSide(color: Color(0xFFD4CFC0)),
+      borderRadius: BorderRadius.circular(10),
+      side: const BorderSide(color: MafiaColors.noirFaded, width: 2),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -725,7 +756,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
         child: Icon(
           Icons.add,
           size: 56,
-          color: _busy || !_canAddAnyRole ? const Color(0xFFB9B6AE) : _ink,
+          color: _busy || !_canAddAnyRole
+              ? MafiaColors.noirFaded
+              : MafiaColors.noirDust,
           semanticLabel: '신분 추가',
         ),
       ),
@@ -738,9 +771,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
         .toList();
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFEFECE2),
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFD4CFC0)),
+        color: MafiaColors.noirSlab,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: MafiaColors.noirBrass, width: 2),
       ),
       child: Column(
         children: [
@@ -751,7 +784,11 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                 const Expanded(
                   child: Text(
                     '신분 추가',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: MafiaColors.noirPaper,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -760,7 +797,11 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                   onPressed: _busy
                       ? null
                       : () => setState(() => _pickerOpen = false),
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: MafiaColors.noirBrass,
+                  ),
                 ),
               ],
             ),
@@ -771,7 +812,10 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                     child: Text(
                       '모든 신분을 추가했어요.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: MafiaColors.noirPaper,
+                      ),
                     ),
                   )
                 : GridView.builder(
@@ -826,4 +870,66 @@ List<double> mafiaRoleIconTint(double t) {
     toColor(red, 0), toColor(green, 0), toColor(blue, 1), 0, 0, //
     0, 0, 0, alpha, 0, //
   ];
+}
+
+/// 진영 비율 막대입니다(시안 ①: 마피아 팀 빨강 · 시민 팀 청록).
+class _FactionBar extends StatelessWidget {
+  const _FactionBar({
+    required this.citizen,
+    required this.mafia,
+    required this.neutral,
+  });
+
+  final int citizen;
+  final int mafia;
+  final int neutral;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = (citizen + mafia + neutral).clamp(1, 99);
+    Widget segment(int count, Color color) => count == 0
+        ? const SizedBox.shrink()
+        : Expanded(
+            flex: count,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              height: 10,
+              color: color,
+            ),
+          );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '마피아 팀 $mafia',
+          style: mafiaNoirBody(
+            16,
+            color: MafiaColors.noirScarlet,
+            weight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 240,
+          child: Row(
+            children: [
+              segment(mafia, MafiaColors.noirBlood),
+              segment(neutral, MafiaColors.noirBrass),
+              segment(citizen, MafiaColors.noirTeal),
+              if (total == 0) const Spacer(),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '시민 팀 $citizen${neutral > 0 ? ' · 중립 $neutral' : ''}',
+          style: mafiaNoirBody(
+            16,
+            color: MafiaColors.noirCitizen,
+            weight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
 }

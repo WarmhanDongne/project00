@@ -2,12 +2,14 @@ import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:project00/platform/auth/models/nickname_policy.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:flutter/services.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
 //=======================닉네임과 방 캐릭터 설정==============================
@@ -40,9 +42,9 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     final accountNickname = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ?? '사용자';
-    final initialNickname = accountNickname.length <= 12
+    final initialNickname = accountNickname.length <= nicknameMaxLength
         ? accountNickname
-        : accountNickname.substring(0, 12);
+        : accountNickname.substring(0, nicknameMaxLength);
     _nicknameController = TextEditingController(text: initialNickname);
     _roomProvider.addListener(_handleRoomUpdate);
     _roomProvider.listenRoomPreview(widget.roomCode);
@@ -53,7 +55,8 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     return _roomProvider.players
         .where((player) => player.uid != currentUid)
-        .map((player) => player.characterId)
+        // 예전 동물 id도 같은 포커페이스로 그려지므로 그 얼굴로 맞춰 비교합니다.
+        .map((player) => roomCharacterById(player.characterId).id)
         .toSet();
   }
 
@@ -99,8 +102,8 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       setState(() {});
       return;
     }
-    if (nickname.length > 12) {
-      _roomProvider.errorMessage = '닉네임은 12자 이하로 입력해주세요.';
+    if (nickname.length > nicknameMaxLength) {
+      _roomProvider.errorMessage = '닉네임은 $nicknameMaxLength자 이하로 입력해주세요.';
       setState(() {});
       return;
     }
@@ -171,12 +174,36 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       builder: (context, _) => PlatformPhoneFlowScaffold(
         title: '그룹 참여하기',
         onBack: _cancelSetup,
-        bottom: PlatformButton(
-          label: '입장하기',
-          onPressed: _selectedCharacterId == null || _isOpeningWaitingRoom
-              ? null
-              : _saveProfileAndContinue,
-          loading: _isOpeningWaitingRoom,
+        bottom: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_isOpeningWaitingRoom) ...[
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  '입장하는 중…',
+                  textAlign: TextAlign.center,
+                  style: MosiFonts.sans(size: 14, color: MosiColors.navy),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (_roomProvider.errorMessage != null) ...[
+              Semantics(
+                liveRegion: true,
+                child: _SetupAlert(message: _roomProvider.errorMessage!),
+              ),
+              const SizedBox(height: 10),
+            ],
+            PlatformButton(
+              label: '입장하기',
+              onPressed: _selectedCharacterId == null || _isOpeningWaitingRoom
+                  ? null
+                  : _saveProfileAndContinue,
+              loading: _isOpeningWaitingRoom,
+            ),
+          ],
         ),
         child: Align(
           alignment: Alignment.topCenter,
@@ -188,11 +215,11 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                 _ParticipantPreview(players: _roomProvider.players),
                 const SizedBox(height: 22),
                 Text(
-                  '해당 그룹에서 사용할 닉네임과 캐릭터를 설정해 주세요.\n'
-                  '(다른 구성원과 중복이 불가합니다.)',
-                  style: TextStyle(
-                    color: context.platformColors.textMuted,
-                    fontSize: 13,
+                  '이 그룹에서 쓸 닉네임과 캐릭터를 정해 주세요.\n'
+                  '다른 사람과 겹치지 않아야 해요.',
+                  style: MosiFonts.sans(
+                    color: MosiColors.muted,
+                    size: 13,
                     height: 1.5,
                   ),
                 ),
@@ -202,12 +229,14 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                     Expanded(
                       child: TextField(
                         controller: _nicknameController,
-                        maxLength: 12,
-                        inputFormatters: [LengthLimitingTextInputFormatter(12)],
-                        decoration: const InputDecoration(
-                          hintText: '닉네임',
-                          counterText: '',
-                        ),
+                        maxLength: nicknameMaxLength,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(nicknameMaxLength),
+                        ],
+                        style: mosiFieldTextStyle(),
+                        decoration: mosiInputDecoration(
+                          hintText: '닉네임 · 최대 $nicknameMaxLength자',
+                        ).copyWith(counterText: ''),
                         onChanged: (_) {
                           if (_roomProvider.errorMessage != null) {
                             _roomProvider.errorMessage = null;
@@ -228,12 +257,13 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         '캐릭터 선택',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                        style: MosiFonts.sans(
+                          size: 16,
+                          weight: FontWeight.w700,
+                          color: MosiColors.navy,
                         ),
                       ),
                     ),
@@ -255,9 +285,9 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                   itemCount: roomCharacters.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
-                    mainAxisSpacing: 12,
+                    mainAxisSpacing: 14,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 0.86,
+                    childAspectRatio: 0.78,
                   ),
                   itemBuilder: (context, index) {
                     final character = roomCharacters[index];
@@ -269,10 +299,6 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                     );
                   },
                 ),
-                if (_roomProvider.errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  _SetupAlert(message: _roomProvider.errorMessage!),
-                ],
               ],
             ),
           ),
@@ -289,24 +315,23 @@ class _ParticipantPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               '참여자',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              style: MosiFonts.sans(
+                size: 16,
+                weight: FontWeight.w700,
+                color: MosiColors.navy,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
               '${players.length}명',
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
+              style: MosiFonts.grotesk(size: 15, color: MosiColors.violet),
             ),
           ],
         ),
@@ -314,11 +339,11 @@ class _ParticipantPreview extends StatelessWidget {
         if (players.isEmpty)
           Text(
             '아직 참여자가 없습니다.',
-            style: TextStyle(color: colors.textMuted, fontSize: 13),
+            style: MosiFonts.sans(size: 13, color: MosiColors.muted),
           )
         else
           SizedBox(
-            height: 76,
+            height: 74,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: players.length,
@@ -329,26 +354,21 @@ class _ParticipantPreview extends StatelessWidget {
                   width: 54,
                   child: Column(
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: colors.surfaceMuted,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Image.asset(
-                          roomCharacterAssetPath(player.characterId),
-                          fit: BoxFit.contain,
-                        ),
+                      MosiFace(
+                        characterId: player.characterId,
+                        size: 46,
+                        ring: true,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         player.nickname,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
+                        style: MosiFonts.sans(
+                          size: 11,
+                          weight: FontWeight.w600,
+                          color: MosiColors.navy,
+                        ),
                       ),
                     ],
                   ),
@@ -376,91 +396,110 @@ class _CharacterChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    final image = Image.asset(character.assetPath, fit: BoxFit.contain);
-    return InkWell(
-      onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Opacity(
-        opacity: disabled ? 0.34 : 1,
-        child: Column(
-          children: [
-            Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                width: double.infinity,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: colors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected ? colors.primary : Colors.transparent,
-                    width: selected ? 2.5 : 1,
+    final face = MosiFace(characterId: character.id, size: 64);
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: !disabled,
+      label: disabled ? '${character.label}, 다른 사람이 사용 중' : character.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Opacity(
+          opacity: disabled ? 0.34 : 1,
+          child: Column(
+            children: [
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: selected ? MosiColors.lime : MosiColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected ? MosiColors.ink : MosiColors.navyFaint,
+                      width: selected ? 3 : 2,
+                    ),
+                    boxShadow: selected
+                        ? const [
+                            BoxShadow(
+                              color: MosiColors.navy,
+                              offset: Offset(3, 3),
+                            ),
+                          ]
+                        : null,
                   ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    disabled
-                        ? ColorFiltered(
-                            colorFilter: const ColorFilter.matrix(<double>[
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              1,
-                              0,
-                            ]),
-                            child: image,
-                          )
-                        : image,
-                    if (selected)
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: Colors.white,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FittedBox(
+                        child: disabled
+                            ? ColorFiltered(
+                                colorFilter: const ColorFilter.matrix(<double>[
+                                  0.2126,
+                                  0.7152,
+                                  0.0722,
+                                  0,
+                                  0,
+                                  0.2126,
+                                  0.7152,
+                                  0.0722,
+                                  0,
+                                  0,
+                                  0.2126,
+                                  0.7152,
+                                  0.0722,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  1,
+                                  0,
+                                ]),
+                                child: face,
+                              )
+                            : face,
+                      ),
+                      if (selected)
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: MosiColors.navy,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: MosiColors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              character.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? colors.primary : colors.textMuted,
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+              const SizedBox(height: 5),
+              Text(
+                character.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: MosiFonts.sans(
+                  size: 11,
+                  weight: selected ? FontWeight.w700 : FontWeight.w400,
+                  color: selected ? MosiColors.navy : MosiColors.muted,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -473,34 +512,5 @@ class _SetupAlert extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: colors.dangerSoft,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_rounded, size: 20, color: colors.danger),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: colors.danger,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MosiNotice(message: message);
 }

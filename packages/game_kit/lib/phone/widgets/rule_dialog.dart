@@ -7,10 +7,15 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/mosi_ui/mosi_game_modal.dart';
 
 // ============================================================
 
-/// 휴대폰 상단 룰북 아이콘에서 여는 간단한 공용 규칙 화면입니다.
+/// 휴대폰 상단 룰북 아이콘에서 여는 공용 규칙 화면입니다.
+///
+/// 시안: 흰 판 + '게임 규칙' 제목과 게임 이름 꼬리표, 문단마다 번호 칸,
+/// 아래 '알겠어요'. 색 인자는 예전 호출과의 호환을 위해 받기만 합니다.
 class PhoneGameRuleDialog extends StatelessWidget {
   const PhoneGameRuleDialog({
     super.key,
@@ -32,56 +37,139 @@ class PhoneGameRuleDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final theme = MosiGameModalTheme.fromName(title);
+    final paragraphs = rules
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList(growable: false);
+
     final dialog = Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(20),
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(12),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: size.width > size.height ? 620 : 380,
-          maxHeight: size.height * 0.78,
+          maxWidth: size.width > size.height ? 640 : 420,
+          maxHeight: size.height * 0.86,
         ),
-        child: _wrapSurface(
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: foregroundColor,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+          decoration: BoxDecoration(
+            color: MosiColors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: MosiColors.ink, width: 3),
+            boxShadow: [
+              BoxShadow(color: theme.accent, offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '게임 규칙',
+                    style: MosiFonts.sans(
+                      size: 24,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
+                      letterSpacing: -1,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Text(
-                      rules,
-                      style: TextStyle(
-                        color: foregroundColor.withValues(alpha: 0.86),
-                        fontSize: 15,
-                        height: 1.55,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.deep,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MosiFonts.sans(
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: MosiColors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton(
+                  const Spacer(),
+                  MosiSquareCloseButton(
+                    size: 44,
                     onPressed: () => Navigator.of(context).pop(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: foregroundColor,
-                      foregroundColor: surfaceColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: paragraphs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) => Container(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                    decoration: BoxDecoration(
+                      color: index.isEven ? MosiColors.cream : MosiColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: MosiColors.ink, width: 2),
                     ),
-                    child: const Text('닫기'),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: theme.deep,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: MosiFonts.grotesk(
+                              size: 13,
+                              color: MosiColors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            paragraphs[index],
+                            style: MosiFonts.sans(
+                              size: 14,
+                              color: const Color(0xFF3B3866),
+                              height: 1.65,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              MosiButton(
+                label: '알겠어요',
+                background: theme.accent,
+                foreground: theme.accentFg,
+                shadowOffset: 0,
+                height: 52,
+                radius: 12,
+                expand: true,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
           ),
         ),
       ),
@@ -94,24 +182,6 @@ class PhoneGameRuleDialog extends StatelessWidget {
         onTap: () => Navigator.of(context).pop(),
         child: Center(child: dialog),
       ),
-    );
-  }
-
-  Widget _wrapSurface(Widget child) {
-    if (!showSurface) return child;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x99000000),
-            blurRadius: 30,
-            offset: Offset(0, 14),
-          ),
-        ],
-      ),
-      child: child,
     );
   }
 }

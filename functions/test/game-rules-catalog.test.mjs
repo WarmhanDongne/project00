@@ -3,9 +3,10 @@ import test from "node:test";
 
 import {gameRules} from "../scripts/update-game-rules.mjs";
 
-test("game rules catalog contains the three Firestore game ids", () => {
+test("game rules catalog contains the four Firestore game ids", () => {
   assert.deepEqual(Object.keys(gameRules).sort(), [
     "final_call",
+    "holdem",
     "liars_poker",
     "mafia",
   ]);

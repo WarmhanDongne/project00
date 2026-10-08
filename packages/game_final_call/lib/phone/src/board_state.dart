@@ -21,7 +21,11 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   String? previousStatus;
   bool replacementInProgress = false;
   String? replacingCardId;
-  String? _automaticCardChangeKey;
+  int? _turnSubmissionRevision;
+
+  /// 최종 조합을 미리 골라 둔 라운드입니다. 사용자가 모두 해제해도 같은
+  /// 라운드에서 다시 채우지 않습니다.
+  int? _presetFinalSelectionRound;
   bool _isLeavingRoom = false;
   bool _isExitModalOpen = false;
   bool _wasMyTurn = false;
@@ -69,6 +73,15 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
   void _handleState() {
     final game = controller;
     if (game == null || !mounted) return;
+    if (_turnSubmissionRevision case final revision?) {
+      if (game.revision != revision ||
+          game.pendingDrawUid != game.uid ||
+          !game.isMyTurn) {
+        _turnSubmissionRevision = null;
+        replacementInProgress = false;
+        replacingCardId = null;
+      }
+    }
     // 첫 스냅샷이 오면 이미지·캐릭터를 미리 디코딩합니다(LP와 같은 규약).
     if (!_hasPreloadedAssets && game.players.isNotEmpty) {
       _hasPreloadedAssets = true;
@@ -119,7 +132,17 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     if (!game.isFinalSubmitPhase && selectedFinalCardIds.isNotEmpty) {
       selectedFinalCardIds.clear();
     }
-    _scheduleAutomaticFinalTurnCardChange(game);
+    // 최종 제출이 열리면 가장 높은 조합을 미리 골라 둡니다.
+    if (game.isFinalSubmitPhase &&
+        _presetFinalSelectionRound != game.round &&
+        game.hand.isNotEmpty) {
+      _presetFinalSelectionRound = game.round;
+      if (selectedFinalCardIds.isEmpty) {
+        selectedFinalCardIds.addAll(
+          finalCallBestCombination(game.hand).cardIds,
+        );
+      }
+    }
     if (game.callerUid == null) {
       observedCallerUid = null;
       visibleCallerUid = null;
@@ -137,58 +160,6 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       });
     }
     setState(() {});
-  }
-
-  // ============================================================================
-  // CALL 이후 자동 카드 교체 진입
-  // ============================================================================
-  // CALL하지 않은 플레이어의 마지막 턴에는 별도의 카드 교체 버튼을 누르지
-  // 않아도 공개 카드·덱 선택창을 즉시 엽니다.
-  void _scheduleAutomaticFinalTurnCardChange(FinalCallController game) {
-    if (game.phase != 'finalTurns' ||
-        !game.isMyTurn ||
-        game.pendingDrawUid != null ||
-        game.commandInFlight) {
-      return;
-    }
-    final promptKey = '${game.round}:${game.turnUid}:${game.turnDeadlineAt}';
-    if (_automaticCardChangeKey == promptKey) return;
-    _automaticCardChangeKey = promptKey;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || controller?.phase != 'finalTurns') return;
-      final discard = game.discardCard;
-      if (discard == null) {
-        _automaticCardChangeKey = null;
-        return;
-      }
-      final source = await FinalCallCardChangeDialog.show(
-        context,
-        // CALL 이후 자동으로 열린 창도 바깥을 눌러 잠시 닫을 수 있습니다.
-        // 닫은 뒤에는 조작부의 '새 카드' 버튼으로 같은 창을 다시 엽니다.
-        discardCard: discard,
-        canSelectDeck: game.deckRemainingCount > 0,
-        deadlineAt: game.turnDeadlineAt,
-      );
-      if (!mounted) return;
-      if (source == null) {
-        // 같은 턴에서는 자동으로 다시 띄우지 않습니다. 키를 유지해야 다음
-        // 상태 갱신에서도 모달이 즉시 재등장하지 않습니다.
-        return;
-      }
-      if (!game.canDraw) return;
-      final completed = await game.draw(source);
-      if (!mounted || completed) return;
-      if (_turnHasEnded(game)) {
-        game.clearError();
-        return;
-      }
-      _automaticCardChangeKey = null;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(game.actionErrorMessage)));
-      _scheduleAutomaticFinalTurnCardChange(game);
-    });
   }
 
   Future<void> _leaveRoom() async {
@@ -224,27 +195,21 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     showLeaveFailureNotice(context, widget.provider);
   }
 
-  bool _turnHasEnded(FinalCallController game) {
-    final deadline = game.turnDeadlineAt;
-    return !game.isMyTurn ||
-        !game.canDraw ||
-        (deadline != null && ServerClock.hasPassed(deadline));
-  }
-
   Future<void> _completeTurn(String? replaceCardId) async {
     final game = controller;
-    if (game == null || replacementInProgress) return;
+    if (game == null || replacementInProgress || !game.canCompleteTurn) return;
     final expectedTurnUid = game.turnUid;
     final expectedDeadline = game.turnDeadlineAt;
+    final submittedRevision = game.revision;
 
-    if (replaceCardId != null) {
-      setState(() {
-        replacementInProgress = true;
-        replacingCardId = replaceCardId;
-      });
-      await Future<void>.delayed(FinalCallPhoneTiming.phoneCardReplace);
-      if (!mounted) return;
-    }
+    // 버리기와 교체 모두 카드를 먼저 떠나보냅니다. 서버 응답 시점에
+    // 애니메이션을 되돌리지 않고 공개 상태가 바뀔 때까지 유지합니다.
+    setState(() {
+      replacementInProgress = true;
+      replacingCardId = replaceCardId;
+    });
+    await Future<void>.delayed(FinalCallPhoneTiming.phoneCardReplace);
+    if (!mounted) return;
 
     if (game.turnUid != expectedTurnUid ||
         (expectedDeadline != null && ServerClock.hasPassed(expectedDeadline)) ||
@@ -253,6 +218,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       setState(() {
         replacementInProgress = false;
         replacingCardId = null;
+        _turnSubmissionRevision = null;
       });
       return;
     }
@@ -260,9 +226,21 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     final completed = await game.completeTurn(replaceCardId);
     if (!mounted) return;
     setState(() {
-      replacementInProgress = false;
-      replacingCardId = null;
-      if (completed) selectedCardId = null;
+      if (completed) {
+        selectedCardId = null;
+        if (game.revision == submittedRevision &&
+            game.pendingDrawUid == game.uid &&
+            game.isMyTurn) {
+          _turnSubmissionRevision = submittedRevision;
+        } else {
+          replacementInProgress = false;
+          replacingCardId = null;
+        }
+      } else {
+        replacementInProgress = false;
+        replacingCardId = null;
+        _turnSubmissionRevision = null;
+      }
     });
     if (!completed) {
       if (game.turnUid != expectedTurnUid ||
@@ -360,15 +338,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         stageRole: stage.shellRole,
         roundNumber: game.round,
         closingMessage: closingMessage,
-        introTextColor: Colors.black,
-        background: Assets
-            .games
-            .finalCall
-            .images
-            .background
-            .phoneBackground
-            .game
-            .image(fit: BoxFit.cover),
+        introTextColor: Colors.white,
+        background: const FinalCallPopBackground(),
         // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
         contentReady: game.isEliminated || game.hand.isNotEmpty,
         contentRevealed: game.isEliminated || revealedRound == game.round,
@@ -382,6 +353,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         onConnectingExit: () => unawaited(_leaveRoom()),
         topBar: FinalCallPhoneTopBar(
           controller: game,
+          visibleCallerUid: visibleCallerUid,
           onExitRoom: () => unawaited(_leaveRoom()),
           onRulesPressed: (origin) => showFinalCallRules(context, origin),
         ),
@@ -395,49 +367,34 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
                 resultLabel: resultLabel,
               )
             : const SizedBox.shrink(),
-        content: Stack(
-          fit: StackFit.expand,
-          children: [
-            RepaintBoundary(
-              child: game.isEliminated
-                  ? FinalCallSpectatorView(
-                      remainingTeamCount: game.remainingTeamCount,
-                      waitingForResult: game.isFinished,
-                    )
-                  : FinalCallPhoneScreens.playing(
-                      controller: game,
-                      handRevealed: revealedRound == game.round,
-                      selectedCardId: selectedCardId,
-                      selectedFinalCardIds: selectedFinalCardIds,
-                      visibleCallerUid: visibleCallerUid,
-                      onRevealStarted: () {},
-                      onRevealCompleted: () =>
-                          setState(() => revealedRound = game.round),
-                      onSelectedCardChanged: (id) =>
-                          setState(() => selectedCardId = id),
-                      onFinalCardSelected: (id) => setState(() {
-                        if (!selectedFinalCardIds.remove(id)) {
-                          selectedFinalCardIds.add(id);
-                        }
-                      }),
-                      onCompleteTurn: _completeTurn,
-                      replacingCardId: replacingCardId,
-                      replacementInProgress: replacementInProgress,
-                      onExitRoom: () => unawaited(_leaveRoom()),
-                      regions: flowConfig.stepFor(stage).phoneRegions!,
-                    ),
-            ),
-            if (game.commandInFlight)
-              const Positioned(
-                right: 14,
-                bottom: 14,
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+        content: RepaintBoundary(
+          child: game.isEliminated
+              ? FinalCallSpectatorView(
+                  remainingTeamCount: game.remainingTeamCount,
+                  waitingForResult: game.isFinished,
+                )
+              : FinalCallPhoneScreens.playing(
+                  controller: game,
+                  handRevealed: revealedRound == game.round,
+                  selectedCardId: selectedCardId,
+                  selectedFinalCardIds: selectedFinalCardIds,
+                  visibleCallerUid: visibleCallerUid,
+                  onRevealStarted: () {},
+                  onRevealCompleted: () =>
+                      setState(() => revealedRound = game.round),
+                  onSelectedCardChanged: (id) =>
+                      setState(() => selectedCardId = id),
+                  onFinalCardSelected: (id) => setState(() {
+                    if (!selectedFinalCardIds.remove(id)) {
+                      selectedFinalCardIds.add(id);
+                    }
+                  }),
+                  onCompleteTurn: _completeTurn,
+                  replacingCardId: replacingCardId,
+                  replacementInProgress: replacementInProgress,
+                  onExitRoom: () => unawaited(_leaveRoom()),
+                  regions: flowConfig.stepFor(stage).phoneRegions!,
                 ),
-              ),
-          ],
         ),
       ),
     );

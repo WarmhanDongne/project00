@@ -15,6 +15,8 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/flip_card.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_mafia/game_theme.dart';
+import 'package:game_mafia/shared/widgets/noir.dart';
 
 // ============================================================
 
@@ -44,6 +46,7 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
     this.entranceDelay = Duration.zero,
     this.notice,
     this.onRevealed,
+    this.showPeekHint = false,
   });
 
   /// 내 신분입니다. 아직 못 받았으면(null) 눌러도 열리지 않습니다.
@@ -80,6 +83,9 @@ class MafiaPhoneRoleCardLayer extends StatefulWidget {
 
   /// 처음 확인이 끝난 시점에 한 번 호출됩니다. 서버에 확인을 알립니다.
   final Future<bool> Function()? onRevealed;
+
+  /// 보관 카드 위에 '눌러서 내 신분 보기'를 얹을지입니다(시안: 낮 화면).
+  final bool showPeekHint;
 
   /// 처음 확인한 신분을 열어 두는 시간입니다.
   static const Duration firstRevealHold = Duration(seconds: 60);
@@ -142,25 +148,31 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
   // 시안 기준 좌표
   // ---------------------------------------------------------------------------
   /// 열렸을 때 카드 자리입니다(시안 P1).
-  static const double _centerTop = 208;
+  static const double _centerTop = 128;
 
   /// 평소 카드 자리입니다.
   static const double _storedTop = MafiaPhoneDesign.storedCardTop;
 
   /// 신분 문구 자리입니다(시안 P1).
-  static const double _roleTextTop = 659;
-  static const double _descriptionTop = 739;
+  static const double _roleTextTop = 512;
+  static const double _descriptionTop = 578;
 
   /// 개인 안내([MafiaPhoneRoleCardLayer.notice]) 자리입니다.
   ///
   /// 설명(최대 3줄)이 끝나는 아래이자 화면 바닥(874) 위입니다. 한 줄만
   /// 들어가므로 여기서 더 내려가지 않습니다.
-  static const double _noticeTop = 812;
+  static const double _noticeTop = 642;
 
   /// 누르라는 화살표 자리입니다(시안 P1 — 카드 위·아래에서 카드를 가리킵니다).
-  static const double _hintAboveTop = 144;
-  static const double _hintBelowTop = 651;
+  static const double _hintAboveTop = 80;
+  static const double _hintBelowTop = 508;
   static const List<double> _hintCenterX = [187, 215];
+
+  /// '당신의 신분' 꼬리표 자리입니다(시안).
+  static const double _labelTop = 96;
+
+  /// 첫 확인 아래 안내 줄 자리입니다.
+  static const double _footerTop = 784;
 
   /// 가운데에서 떠 있을 때 위아래로 흔들리는 폭입니다.
   static const double _bobAmplitude = 5;
@@ -402,18 +414,28 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
         final scale = MafiaPhoneDesign.scaleOf(size);
-        final cardWidth = MafiaPhoneDesign.contentWidth * scale;
-        final cardHeight = cardWidth / MafiaPhoneDesign.storedCardAspectRatio;
-
         return AnimatedBuilder(
           animation: Listenable.merge([_travel, _flip, _bob]),
           builder: (context, _) {
             final travel = Curves.easeInOut.transform(_travel.value);
             final designTop = _originTop + (_targetTop - _originTop) * travel;
-            // 기다리는 동안만 아주 조금 떠 있습니다.
             final bob = _stage == _CardStage.waiting
                 ? math.sin(_bob.value * math.pi * 2) * _bobAmplitude * scale
                 : 0.0;
+            // 아래에 보관된 작은 카드(150)가 가운데로 올라오며 커집니다(252).
+            final openness =
+                ((_storedTop - designTop) / (_storedTop - _centerTop)).clamp(
+                  0.0,
+                  1.0,
+                );
+            final cardWidth =
+                (MafiaPhoneDesign.storedCardWidth +
+                    (MafiaPhoneDesign.openCardWidth -
+                            MafiaPhoneDesign.storedCardWidth) *
+                        openness) *
+                scale;
+            final cardHeight =
+                cardWidth / MafiaPhoneDesign.storedCardAspectRatio;
 
             return Stack(
               fit: StackFit.expand,
@@ -421,11 +443,10 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
                 if (_usesScrim) _buildScrim(),
                 if (widget.isFirstReveal && _stage == _CardStage.waiting)
                   ..._buildHints(size, scale),
+                if (_isOpen || _stage == _CardStage.returning)
+                  _buildFadingLabel(size, scale),
                 Positioned(
-                  left: MafiaPhoneDesign.left(
-                    size,
-                    MafiaPhoneDesign.contentLeft,
-                  ),
+                  left: (size.width - cardWidth) / 2,
                   top: MafiaPhoneDesign.top(size, designTop) + bob,
                   width: cardWidth,
                   height: cardHeight,
@@ -440,12 +461,38 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
                         front: widget.role?.card,
                         back: Assets.games.mafia.images.cards.roleBack.game,
                         borderRadius: BorderRadius.circular(
-                          MafiaPhoneDesign.buttonRadius * scale,
+                          (8 + 2 * openness) * scale,
                         ),
+                        borderColor: MafiaColors.noirBrass,
                       ),
                     ),
                   ),
                 ),
+                if (_stage == _CardStage.stored && widget.showPeekHint)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: MafiaPhoneDesign.top(
+                      size,
+                      MafiaPhoneDesign.storedCardTop + 26,
+                    ),
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Container(
+                          color: MafiaColors.noirPaper,
+                          padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                          child: Text(
+                            '눌러서 내 신분 보기',
+                            style: mafiaNoirBody(
+                              13 * scale,
+                              color: MafiaColors.noirInk,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ..._buildTexts(size, scale),
               ],
             );
@@ -455,7 +502,28 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
     );
   }
 
-  /// 카드 뒤를 덮는 막입니다. 눌러도 카드가 닫힙니다.
+  /// 카드 위 '당신의 신분' 꼬리표입니다.
+  Widget _buildFadingLabel(Size size, double scale) => Positioned(
+    left: 0,
+    right: 0,
+    top: MafiaPhoneDesign.top(size, _labelTop),
+    child: IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: _stage == _CardStage.returning ? 0 : 1,
+        duration: const Duration(milliseconds: 260),
+        child: Text(
+          '당신의 신분',
+          textAlign: TextAlign.center,
+          style: mafiaNoirBody(
+            14 * scale,
+            color: MafiaColors.noirBrass,
+            letterSpacing: 7 * scale,
+          ),
+        ),
+      ),
+    ),
+  );
+
   Widget _buildScrim() {
     // 되돌아가는 중에는 막이 함께 걷힙니다.
     final showsScrim =
@@ -469,7 +537,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: _close,
-            child: const ColoredBox(color: Color(0x8C000000)),
+            child: const ColoredBox(color: Color(0xF00B0E0D)),
           ),
         ),
       ),
@@ -516,69 +584,95 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
   List<Widget> _buildTexts(Size size, double scale) {
     final role = widget.role;
     if (role == null) return const [];
-    // 열려 있는 동안(그리고 닫히며 사라지는 동안)만 트리에 둡니다. 카드가
-    // 아래에 있을 때 투명한 문구가 남아 있으면 화면 낭독기에도 읽힙니다.
     if (_stage != _CardStage.revealed && _stage != _CardStage.returning) {
       return const [];
     }
-    // 막을 깐 경우에는 흰 글씨가 읽힙니다.
-    final baseColor = _usesScrim ? Colors.white : Colors.black;
+    final notice = (widget.notice ?? '').trim();
 
     return [
       _buildFadingText(
         size: size,
         designTop: _roleTextTop,
-        child: Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(text: '당신은 ', style: _bodyStyle(scale, baseColor)),
-              TextSpan(
-                text: role.displayName,
-                style: _bodyStyle(
-                  scale,
-                  baseColor,
-                ).copyWith(fontSize: 32 * scale, color: role.accentColor),
-              ),
-              TextSpan(text: '입니다', style: _bodyStyle(scale, baseColor)),
-            ],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            role.displayName,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: mafiaNoirDisplay(54 * scale, height: 1),
           ),
-          textAlign: TextAlign.center,
         ),
       ),
       if (role.description.trim().isNotEmpty)
         _buildFadingText(
           size: size,
           designTop: _descriptionTop,
+          horizontalMargin: 51,
           child: Text(
             role.description,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: baseColor,
-              fontSize: 20 * scale,
-              fontWeight: FontWeight.w300,
-              height: 1.35,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: mafiaNoirBody(
+              15 * scale,
+              color: const Color(0xFFA39A86),
+              height: 1.6,
             ),
           ),
         ),
-      // 그 사람만의 안내(처형자의 목표, 신분이 바뀌었다는 알림)입니다.
-      if ((widget.notice ?? '').trim().isNotEmpty)
+      if (notice.isNotEmpty)
         _buildFadingText(
           size: size,
           designTop: _noticeTop,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              widget.notice!,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: role.accentColor,
-                fontSize: 20 * scale,
-                fontWeight: FontWeight.w700,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 18 * scale,
+                  vertical: 8 * scale,
+                ),
+                decoration: const BoxDecoration(
+                  border: Border.symmetric(
+                    horizontal: BorderSide(color: Color(0xFF3A3F3C)),
+                  ),
+                ),
+                child: Text(
+                  notice,
+                  maxLines: 1,
+                  style: mafiaNoirDisplay(18 * scale, color: role.accentColor),
+                ),
               ),
             ),
           ),
         ),
+      // 시안: '확인했습니다'로 카드를 내려놓습니다. 카드를 눌러도 같습니다.
+      Positioned(
+        left: MafiaPhoneDesign.left(size, MafiaPhoneDesign.contentLeft),
+        top: MafiaPhoneDesign.top(size, MafiaPhoneDesign.buttonTop),
+        width: MafiaPhoneDesign.contentWidth * scale,
+        height: MafiaPhoneDesign.buttonHeight * scale,
+        child: AnimatedBuilder(
+          animation: _text,
+          builder: (context, child) => Opacity(
+            opacity: Curves.easeOut.transform(_text.value),
+            child: IgnorePointer(
+              ignoring: _stage != _CardStage.revealed,
+              child: child,
+            ),
+          ),
+          child: MafiaNoirButton(label: '확인했습니다', onTap: _close),
+        ),
+      ),
+      _buildFadingText(
+        size: size,
+        designTop: _footerTop,
+        child: Text(
+          '다른 사람에게 보여주지 마세요',
+          textAlign: TextAlign.center,
+          style: mafiaNoirBody(13 * scale, color: const Color(0xFF6E6A5D)),
+        ),
+      ),
     ];
   }
 
@@ -586,10 +680,11 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
     required Size size,
     required double designTop,
     required Widget child,
+    double horizontalMargin = 0,
   }) {
     return Positioned(
-      left: 0,
-      right: 0,
+      left: MafiaPhoneDesign.left(size, horizontalMargin),
+      right: MafiaPhoneDesign.left(size, horizontalMargin),
       top: MafiaPhoneDesign.top(size, designTop),
       child: IgnorePointer(
         child: AnimatedBuilder(
@@ -610,11 +705,4 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
       ),
     );
   }
-
-  TextStyle _bodyStyle(double scale, Color color) => TextStyle(
-    color: color,
-    fontSize: 24 * scale,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-  );
 }

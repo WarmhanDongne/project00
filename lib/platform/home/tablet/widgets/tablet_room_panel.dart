@@ -1,37 +1,46 @@
+import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-// 방 코드를 클립보드에 복사
 import 'package:flutter/services.dart';
-// 참가자 캐릭터 id를 이미지 경로로 변환
-import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
-import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/platform_components.dart';
-// 방 코드로 QR 이미지 생성
 import 'package:qr_flutter/qr_flutter.dart';
 
-// ============================================================
-// TABLET ROOM PANEL
-// ============================================================
-//
-// [Responsibility] RoomProvider의 방·참가자 상태를 태블릿용 방 패널로 표시하고,
-// 방 생성·초기화·참가자 제거 입력을 Provider에 전달합니다.
-// [State] 방이 없으면 생성 화면, 참가자가 없으면 초대 코드 화면, 참가자가 있으면
-// 활성 참가자 목록을 표시합니다.
-// [Presentation] 참가자 입·퇴장 애니메이션과 QR 확대·방 코드 복사 등 패널 내부의
-// 화면 표현을 담당합니다.
-// [Boundary] 방과 참가자 상태를 실제로 변경하는 로직은 RoomProvider와 하위
-// RoomService·Cloud Functions가 담당합니다.
-
+//=======================태블릿 방 카드==============================
+// 선반과 게임 상세 오른쪽에 같은 카드가 놓입니다: 위에 QR·방 코드, 가운데
+// 플레이어 명단, 아래 시작 버튼.
 const _playerMotionDuration = Duration(milliseconds: 260);
 
 class TabletRoomPanel extends StatefulWidget {
-  const TabletRoomPanel({super.key, required this.provider});
+  const TabletRoomPanel({
+    super.key,
+    required this.provider,
+    this.deep = MosiColors.navy,
+    this.startBackground = MosiColors.lime,
+    this.startForeground = MosiColors.navy,
+    this.maxSlots,
+    this.onStart,
+    this.startLoading = false,
+    this.qrSize = 132,
+  });
 
   final RoomProvider provider;
+
+  /// 카드 그림자 색입니다(선반 테마의 deep).
+  final Color deep;
+  final Color startBackground;
+  final Color startForeground;
+
+  /// 빈 자리를 몇 칸까지 그릴지 정합니다. null이면 빈 자리를 그리지 않습니다.
+  final int? maxSlots;
+
+  /// 시작 버튼을 눌렀을 때입니다. null이면 시작 버튼을 숨깁니다.
+  final VoidCallback? onStart;
+  final bool startLoading;
+  final double qrSize;
 
   @override
   State<TabletRoomPanel> createState() => _TabletRoomPanelState();
@@ -41,15 +50,17 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
   Timer? _lastPlayerExitTimer;
   late bool _hadPlayers;
   late bool _showActiveRoom;
+  late final Set<String> _staticUids;
 
   RoomProvider get provider => widget.provider;
 
   @override
   void initState() {
     super.initState();
+    _staticUids = provider.players.map((player) => player.uid).toSet();
     _hadPlayers = provider.players.isNotEmpty;
     _showActiveRoom = _hadPlayers;
-    provider.addListener(_handleRoomChange); // RoomProvider의 상태 감지
+    provider.addListener(_handleRoomChange);
   }
 
   @override
@@ -63,12 +74,9 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     provider.addListener(_handleRoomChange);
   }
 
-  //[Render] state(방 또는 참가자 상태)변화 시 보일 state 값 변경 후 재 build() 요청
   void _handleRoomChange() {
-    // state 값
     final hasRoom = provider.roomCode != null;
     final hasPlayers = provider.players.isNotEmpty;
-    // 방이 없을 때 _EmptyRoom 요청
     if (!hasRoom) {
       _lastPlayerExitTimer?.cancel();
       _hadPlayers = false;
@@ -76,7 +84,6 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
       if (mounted) setState(() {});
       return;
     }
-    // 참가자가 있는 경우(방 있음) _ActiveRoom build() 요청
     if (hasPlayers) {
       _lastPlayerExitTimer?.cancel();
       _hadPlayers = true;
@@ -84,14 +91,9 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
       if (mounted) setState(() {});
       return;
     }
-    // 참가자가 방에 없는 경우
     if (_hadPlayers) {
-      /*
-      마지막 참가자 퇴장
-      → 260ms 동안 _ActiveRoom 유지
-      → 퇴장 애니메이션 완료
-      → _InvitationRoom으로 변경
-       */
+      // 마지막 사람도 오른쪽으로 빠져나간 뒤 초대 화면으로
+      // 돌아가야 합니다. 즉시 교체하면 퇴장 애니메이션이 사라집니다.
       _hadPlayers = false;
       _showActiveRoom = true;
       _lastPlayerExitTimer?.cancel();
@@ -118,24 +120,60 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // 현재 상태에 따라 보여줄 화면 결정. 방 없음, 참가자 없음, 참가자 있음
     final code = provider.roomCode;
-    if (code == null) return _EmptyRoom(provider: provider);
-    if (!_showActiveRoom) {
-      return _InvitationRoom(provider: provider, roomCode: code);
+    final Widget body;
+    if (code == null) {
+      body = _EmptyRoom(provider: provider);
+    } else {
+      final players = _showActiveRoom
+          ? List<RoomPlayer>.unmodifiable(provider.players)
+          : const <RoomPlayer>[];
+      final activeCount = provider.players
+          .where((player) => player.isActive && player.isPlayer)
+          .length;
+      body = _RoomBody(
+        provider: provider,
+        roomCode: code,
+        players: players,
+        showActiveRoom: _showActiveRoom,
+        maxSlots: widget.maxSlots,
+        qrSize: widget.qrSize,
+        staticUids: _staticUids,
+        start: widget.onStart == null
+            ? null
+            : MosiButton(
+                key: const Key('room-start-button'),
+                label: activeCount == 0
+                    ? context.l10n.waitingPlayers
+                    : context.l10n.startWithPlayers(activeCount),
+                onPressed: activeCount == 0 ? null : widget.onStart,
+                loading: widget.startLoading,
+                background: widget.startBackground,
+                foreground: widget.startForeground,
+                borderColor: MosiColors.ink,
+                shadowColor: widget.deep,
+                shadowOffset: 5,
+                height: 56,
+                fontSize: 18,
+                expand: true,
+              ),
+      );
     }
-    return _ActiveRoom(
-      provider: provider,
-      roomCode: code,
-      players: List<RoomPlayer>.unmodifiable(provider.players),
+    return MosiBox(
+      padding: const EdgeInsets.all(20),
+      shadowColor: widget.deep,
+      child: DefaultTextStyle(
+        style: MosiFonts.sans(
+          locale: Localizations.maybeLocaleOf(context),
+          color: MosiColors.navy,
+        ),
+        child: body,
+      ),
     );
   }
 }
 
-//====================[ 메인 메서드 ]==================
-
-//====================[ 기능: 방 생성 ]=====================
-//[state] 방 생성 이전
+//=======================방이 없을 때==============================
 class _EmptyRoom extends StatelessWidget {
   const _EmptyRoom({required this.provider});
 
@@ -143,293 +181,300 @@ class _EmptyRoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    const double radius = 38.0;
-
-    return Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        children: [
-          const _PanelHeader(title: '구성원 목록'),
-          const Spacer(),
-          CustomPaint(
-            painter: _DashedBorderPainter(color: colors.border, radius: radius),
-            child: Container(
-              width: 150, // 이런 형태로 사이즈가 비율 처리 되지 않은 요소 검색 후
-              // 비율 처리 필요
-              height: 150,
-              decoration: BoxDecoration(
-                color: colors.surfaceMuted,
-                borderRadius: BorderRadius.circular(radius),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'empty art',
-                style: TextStyle(
-                  color: colors.textMuted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '아직 아무도 없습니다',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '초대 코드를 띄우면 친구들이\n휴대폰으로 참여할 수 있습니다.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: colors.textMuted,
-              fontSize: 14,
-              height: 1.45,
-            ),
-          ),
-          const Spacer(),
-
-          // 방 생성 버튼
-          PlatformButton(
-            label: provider.isLoading ? '생성 중...' : '초대하기',
-            onPressed: provider.isLoading ? null : provider.createRoom,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvitationRoom extends StatelessWidget {
-  const _InvitationRoom({required this.provider, required this.roomCode});
-
-  final RoomProvider provider;
-  final String roomCode;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
-    return Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        children: [
-          const _PanelHeader(title: '초대하기'),
-          const Spacer(flex: 2),
-          Flexible(flex: 8, child: RoomQrCard(roomCode: roomCode, size: 240)),
-          const Spacer(flex: 1),
-          Text(
-            '참여 코드',
-            style: TextStyle(color: colors.textMuted, fontSize: 14),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            flex: 2,
-            child: _CopyableRoomCode(roomCode: roomCode, fontSize: 32),
-          ),
-          const Spacer(flex: 1),
-          Text(
-            '모바일 앱에서 이 코드를 입력하면\n바로 참여합니다.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: colors.textMuted,
-              fontSize: 13,
-              height: 1.45,
-            ),
-          ),
-          const Spacer(),
-          if (provider.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                provider.errorMessage!,
-                style: const TextStyle(color: Colors.red, fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          PlatformButton(
-            label: provider.isLoading ? '초기화 중...' : '초기화',
-            style: PlatformButtonStyle.secondary,
-            onPressed: provider.isLoading ? null : provider.closeRoom,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveRoom extends StatelessWidget {
-  const _ActiveRoom({
-    required this.provider,
-    required this.roomCode,
-    required this.players,
-  });
-
-  final RoomProvider provider;
-  final String roomCode;
-  final List<RoomPlayer> players;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
-          child: _PanelHeader(
-            title: '현 인원  ${players.length}명',
-            trailing: SizedBox(
-              width: 84,
-              child: PlatformButton(
-                label: '초기화',
-                height: 40,
-                style: PlatformButtonStyle.secondary,
-                onPressed: provider.isLoading
-                    ? null
-                    : () {
-                        if (!provider.isRemovingAnyPlayer) {
-                          unawaited(provider.closeRoom());
-                        }
-                      },
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: _AnimatedPlayerList(provider: provider, players: players),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Text(
-            '최대 ${RoomLimits.defaultMaxPlayers}명 · 아래로 스크롤',
-            style: TextStyle(color: colors.textMuted, fontSize: 13),
-          ),
-        ),
-        Divider(height: 1, color: colors.border),
-        Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Tooltip(
-                message: 'QR 코드 확대',
-                child: Semantics(
-                  button: true,
-                  label: 'QR 코드 확대',
-                  child: InkWell(
-                    key: const Key('active-room-qr-expand'),
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => _showExpandedQr(context, roomCode),
-                    child: RoomQrCard(roomCode: roomCode, size: 92),
+        Row(
+          children: [
+            MosiDashedBorder(
+              radius: 8,
+              child: SizedBox(
+                width: 132,
+                height: 132,
+                child: Center(
+                  child: Icon(
+                    Icons.qr_code_2_rounded,
+                    size: 56,
+                    color: MosiColors.navy.withValues(alpha: 0.35),
                   ),
                 ),
               ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '참여 코드',
-                      style: TextStyle(color: colors.textMuted, fontSize: 14),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'JOIN ROOM',
+                    style: MosiFonts.grotesk(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 12,
+                      color: MosiColors.navy,
+                      letterSpacing: 2.5,
                     ),
-                    _CopyableRoomCode(roomCode: roomCode, fontSize: 34),
-                    Text(
-                      '늦게 온 친구도 바로 참여',
-                      style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.l10n.members,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 17,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const MosiDashedDivider(),
+        const Spacer(),
+        Text(
+          context.l10n.noPlayers,
+          textAlign: TextAlign.center,
+          style: MosiFonts.sans(
+            locale: Localizations.maybeLocaleOf(context),
+            size: 18,
+            weight: FontWeight.w700,
+            color: MosiColors.navy,
           ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          context.l10n.roomInviteHint,
+          textAlign: TextAlign.center,
+          style: MosiFonts.sans(
+            locale: Localizations.maybeLocaleOf(context),
+            size: 14,
+            color: MosiColors.muted,
+            height: 1.45,
+          ),
+        ),
+        const Spacer(),
+        MosiButton(
+          label: provider.isLoading
+              ? context.l10n.creating
+              : context.l10n.invite,
+          onPressed: provider.isLoading ? null : provider.createRoom,
+          height: 56,
+          fontSize: 18,
+          shadowOffset: 5,
+          expand: true,
         ),
       ],
     );
   }
 }
 
-// ===================[ 서브 메서드 ]===================
-class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.title, this.trailing});
+//=======================방이 열려 있을 때==============================
+class _RoomBody extends StatelessWidget {
+  const _RoomBody({
+    required this.provider,
+    required this.roomCode,
+    required this.players,
+    required this.showActiveRoom,
+    required this.maxSlots,
+    required this.qrSize,
+    required this.start,
+    required this.staticUids,
+  });
 
-  final String title;
-  final Widget? trailing;
+  final Set<String> staticUids;
+  final RoomProvider provider;
+  final String roomCode;
+  final List<RoomPlayer> players;
+  final bool showActiveRoom;
+  final int? maxSlots;
+  final double qrSize;
+  final Widget? start;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final capacity = maxSlots ?? RoomLimits.defaultMaxPlayers;
+    final emptySlots = maxSlots == null
+        ? 0
+        : math.max(0, maxSlots! - players.length);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
+        Row(
+          children: [
+            Tooltip(
+              message: 'QR 코드 확대',
+              child: Semantics(
+                button: true,
+                label: 'QR 코드 확대',
+                child: GestureDetector(
+                  key: showActiveRoom
+                      ? const Key('active-room-qr-expand')
+                      : const Key('invite-room-qr-expand'),
+                  onTap: () => _showExpandedQr(context, roomCode),
+                  child: RoomQrCard(roomCode: roomCode, size: qrSize),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'JOIN ROOM',
+                    style: MosiFonts.grotesk(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 12,
+                      color: MosiColors.navy,
+                      letterSpacing: 2.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '휴대폰 카메라로 찍으면 바로 들어와요',
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: MosiColors.navy,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '방 코드',
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 12,
+                      weight: FontWeight.w600,
+                      color: MosiColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  _CopyableRoomCode(roomCode: roomCode, fontSize: 28),
+                ],
+              ),
+            ),
+          ],
         ),
-        ?trailing,
+        const SizedBox(height: 14),
+        const MosiDashedDivider(),
+        const SizedBox(height: 14),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '플레이어',
+                  style: MosiFonts.sans(
+                    locale: Localizations.maybeLocaleOf(context),
+                    size: 17,
+                    weight: FontWeight.w700,
+                    color: MosiColors.navy,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${players.length} / $capacity',
+                  style: MosiFonts.grotesk(
+                    locale: Localizations.maybeLocaleOf(context),
+                    size: 15,
+                    color: MosiColors.navy,
+                  ),
+                ),
+              ],
+            ),
+            MosiButton(
+              label: provider.isLoading
+                  ? context.l10n.resetting
+                  : context.l10n.reset,
+              variant: MosiButtonVariant.outline,
+              foreground: MosiColors.navy,
+              height: 34,
+              fontSize: 13,
+              radius: 999,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              onPressed: provider.isLoading
+                  ? null
+                  : () {
+                      if (!provider.isRemovingAnyPlayer) {
+                        unawaited(provider.closeRoom());
+                      }
+                    },
+            ),
+          ],
+        ),
+        if (provider.errorMessage != null && players.isEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            provider.errorMessage!,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 13,
+              weight: FontWeight.w600,
+              color: MosiColors.red,
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Expanded(
+          child: !showActiveRoom && emptySlots == 0
+              ? Center(
+                  key: const Key('room-waiting-for-players'),
+                  child: Text(
+                    '친구들이 QR을 찍으면\n여기에 이름이 떠요',
+                    textAlign: TextAlign.center,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: MosiColors.muted,
+                      height: 1.45,
+                    ),
+                  ),
+                )
+              : _AnimatedPlayerList(
+                  provider: provider,
+                  players: players,
+                  emptySlots: emptySlots,
+                  staticUids: staticUids,
+                ),
+        ),
+        if (start != null) ...[const SizedBox(height: 12), start!],
       ],
     );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final RRect rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final dashedPath = _createDashedPath(path);
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  Path _createDashedPath(Path source) {
-    const dashLength = 8.0;
-    const dashSpace = 6.0;
-    final pathMetrics = source.computeMetrics();
-    final dest = Path();
-    for (final metric in pathMetrics) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        dest.addPath(
-          metric.extractPath(distance, distance + dashLength),
-          Offset.zero,
-        );
-        distance += dashLength + dashSpace;
-      }
-    }
-    return dest;
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
 class _AnimatedPlayerList extends StatefulWidget {
-  const _AnimatedPlayerList({required this.provider, required this.players});
+  const _AnimatedPlayerList({
+    required this.provider,
+    required this.players,
+    required this.emptySlots,
+    required this.staticUids,
+  });
 
   final RoomProvider provider;
   final List<RoomPlayer> players;
+  final int emptySlots;
+
+  /// 카드가 처음 그려질 때 이미 있던 참가자입니다. 이들은 미끄러져 들어오지
+  /// 않고 제자리에 바로 보입니다(화면 전환으로 다시 그려질 때 포함).
+  final Set<String> staticUids;
 
   @override
   State<_AnimatedPlayerList> createState() => _AnimatedPlayerListState();
 }
 
 class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  final GlobalKey<SliverAnimatedListState> _listKey =
+      GlobalKey<SliverAnimatedListState>();
   late List<RoomPlayer> _players;
 
   @override
@@ -447,7 +492,7 @@ class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
   void _syncPlayers(List<RoomPlayer> nextPlayers) {
     final nextUids = nextPlayers.map((player) => player.uid).toSet();
 
-    // 퇴장은 인덱스가 바뀌지 않도록 뒤에서부터 뺀니다.
+    // 퇴장은 인덱스가 바뀌지 않도록 뒤에서부터 뺍니다.
     for (var index = _players.length - 1; index >= 0; index -= 1) {
       final player = _players[index];
       if (nextUids.contains(player.uid)) continue;
@@ -483,7 +528,7 @@ class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
 
   Widget _buildPlayerTile(RoomPlayer player) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.only(bottom: 8),
       child: _PlayerTile(
         key: ValueKey('room-player-${player.uid}'),
         player: player,
@@ -495,25 +540,61 @@ class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedList(
-      key: _listKey,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      initialItemCount: _players.length,
-      itemBuilder: (context, index, animation) {
-        final player = _players[index];
-        return SizeTransition(
-          sizeFactor: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
+    return CustomScrollView(
+      slivers: [
+        SliverAnimatedList(
+          key: _listKey,
+          initialItemCount: _players.length,
+          itemBuilder: (context, index, animation) {
+            final player = _players[index];
+            return SizeTransition(
+              sizeFactor: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+              alignment: Alignment.topCenter,
+              child: _PlayerEntranceTransition(
+                key: ValueKey('room-player-entrance-${player.uid}'),
+                playerUid: player.uid,
+                animate: !widget.staticUids.contains(player.uid),
+                child: _buildPlayerTile(player),
+              ),
+            );
+          },
+        ),
+        SliverList.builder(
+          itemCount: widget.emptySlots,
+          itemBuilder: (context, index) => const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _EmptySeatRow(),
           ),
-          alignment: Alignment.topCenter,
-          child: _PlayerEntranceTransition(
-            key: ValueKey('room-player-entrance-${player.uid}'),
-            playerUid: player.uid,
-            child: _buildPlayerTile(player),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptySeatRow extends StatelessWidget {
+  const _EmptySeatRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return MosiDashedBorder(
+      color: MosiColors.navyFaint,
+      child: Container(
+        height: 46,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Text(
+          '빈 자리',
+          style: MosiFonts.sans(
+            locale: Localizations.maybeLocaleOf(context),
+            size: 14,
+            weight: FontWeight.w600,
+            color: MosiColors.navyDim,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -523,15 +604,17 @@ class _PlayerEntranceTransition extends StatelessWidget {
     super.key,
     required this.playerUid,
     required this.child,
+    this.animate = true,
   });
 
   final String playerUid;
   final Widget child;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
+      tween: Tween<double>(begin: animate ? 0 : 1, end: 1),
       duration: _playerMotionDuration,
       curve: Curves.easeOutCubic,
       child: child,
@@ -585,9 +668,8 @@ class _PlayerExitTransition extends StatelessWidget {
 }
 
 Future<void> _showExpandedQr(BuildContext context, String roomCode) {
-  return showDialog<void>(
+  return showMosiDialog<void>(
     context: context,
-    barrierDismissible: true,
     builder: (_) => _ExpandedRoomQrDialog(roomCode: roomCode),
   );
 }
@@ -599,68 +681,74 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
     final qrSize = (shortestSide * 0.52).clamp(240.0, 360.0);
-    return Dialog(
+    return ConstrainedBox(
       key: const Key('expanded-room-qr-dialog'),
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 420,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
-        ),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x55000000),
-                blurRadius: 30,
-                offset: Offset(0, 14),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton.filledTonal(
+      constraints: BoxConstraints(
+        maxWidth: 460,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
+      child: MosiDialogFrame(
+        width: null,
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+        semanticLabel: '방 QR',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'JOIN ROOM',
+                    style: MosiFonts.grotesk(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 13,
+                      color: MosiColors.navy,
+                      letterSpacing: 2.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  MosiIconButton(
+                    icon: Icons.close_rounded,
                     tooltip: 'QR 확대 닫기',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              RoomQrCard(
+                key: const Key('expanded-room-qr'),
+                roomCode: roomCode,
+                size: qrSize,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '방 코드',
+                style: MosiFonts.sans(
+                  locale: Localizations.maybeLocaleOf(context),
+                  size: 14,
+                  weight: FontWeight.w600,
+                  color: MosiColors.navy,
                 ),
-                const SizedBox(height: 8),
-                RoomQrCard(
-                  key: const Key('expanded-room-qr'),
-                  roomCode: roomCode,
-                  size: qrSize,
+              ),
+              const SizedBox(height: 4),
+              _CopyableRoomCode(
+                roomCode: roomCode,
+                fontSize: 64,
+                alignment: Alignment.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'QR을 스캔하거나 방 코드를 눌러 복사하세요.',
+                textAlign: TextAlign.center,
+                style: MosiFonts.sans(
+                  locale: Localizations.maybeLocaleOf(context),
+                  size: 13,
+                  color: MosiColors.muted,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  '참여 코드',
-                  style: TextStyle(color: colors.textMuted, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                _CopyableRoomCode(
-                  roomCode: roomCode,
-                  fontSize: 64,
-                  alignment: Alignment.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'QR을 스캔하거나 참여 코드를 눌러 복사하세요.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: colors.textMuted, fontSize: 13),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -720,86 +808,89 @@ class _PlayerTileState extends State<_PlayerTile> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     final player = widget.player;
-    return Container(
-      height: 78,
-      padding: const EdgeInsets.only(left: 12, right: 8),
-      decoration: BoxDecoration(
-        color: _isNew ? colors.dangerSoft : colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isNew ? colors.danger : colors.border,
-          width: _isNew ? 1.6 : 1,
-        ),
-      ),
+    return SizedBox(
+      height: 46,
       child: Row(
         children: [
-          SizedBox(
-            width: 50,
-            height: 50,
-            child: Image.asset(
-              roomCharacterAssetPath(player.characterId),
-              fit: BoxFit.contain,
-            ),
-          ),
+          MosiFace(characterId: player.characterId, size: 38, ring: true),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  player.nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                  ),
-                ),
-                if (!player.isConnected)
-                  Text(
-                    '연결 끊김',
-                    key: ValueKey('disconnected-player-${player.uid}'),
-                    style: TextStyle(
-                      color: colors.danger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                Flexible(
+                  child: Text(
+                    player.nickname,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 16,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
                     ),
                   ),
+                ),
+                if (_isNew) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    'NEW',
+                    style: MosiFonts.grotesk(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: 11,
+                      color: MosiColors.red,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (_isNew)
-            Text(
-              'NEW',
-              style: TextStyle(
-                color: colors.danger,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          const SizedBox(width: 8),
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.border),
-            ),
-            child: IconButton(
-              tooltip: '내보내기',
-              onPressed: widget.isRemoving ? null : widget.onRemove,
-              icon: widget.isRemoving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+          const SizedBox(width: 6),
+          // 좁은 카드에서는 상태 알약을 줄여 내보내기 단추가 밀려나지 않게 합니다.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: player.isConnected
+                  ? MosiPill(
+                      label: context.l10n.ready,
+                      background: MosiColors.lime,
+                      borderColor: MosiColors.ink,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                     )
-                  : Icon(Icons.close, size: 25, color: colors.textMuted),
+                  : MosiPill(
+                      key: ValueKey('disconnected-player-${player.uid}'),
+                      label: context.l10n.connectionLost,
+                      color: MosiColors.red,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                    ),
             ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: widget.isRemoving
+                ? const Padding(
+                    padding: EdgeInsets.all(9),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    tooltip: '내보내기',
+                    padding: EdgeInsets.zero,
+                    onPressed: widget.onRemove,
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: MosiColors.muted,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -815,8 +906,6 @@ class _PlayerTileState extends State<_PlayerTile> {
 /// 예전에는 `AspectRatio`를 썼는데, 활성 방 화면에서 이 카드가 Column 안의
 /// Row 직속 자식이라 가로·세로가 모두 무한이었고 그때마다
 /// `RenderAspectRatio has unbounded constraints`로 화면이 통째로 죽었습니다.
-/// 방을 만든 직후에는 초대 화면(Flexible 안이라 높이가 유한)이라 멀쩡하다가,
-/// 누군가 입장해 활성 방 화면으로 바뀌는 순간 터졌습니다.
 class RoomQrCard extends StatelessWidget {
   const RoomQrCard({super.key, required this.roomCode, required this.size});
 
@@ -825,24 +914,51 @@ class RoomQrCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return LayoutBuilder(
       builder: (context, constraints) {
         // 부모가 준 여유와 요청 크기 중 작은 쪽으로 한 변을 정합니다.
         // 무한 제약은 여유가 없다는 뜻이 아니므로 요청 크기를 그대로 씁니다.
         final available = math.min(constraints.maxWidth, constraints.maxHeight);
         final side = available.isFinite ? math.min(size, available) : size;
+        final badge = side * 0.2;
         return SizedBox(
           width: side,
           height: side,
           child: Container(
-            padding: EdgeInsets.all(side * 0.08),
+            padding: EdgeInsets.all(side * 0.07),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: colors.border),
+              border: Border.all(color: MosiColors.ink, width: 3),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: QrImageView(data: roomCode, padding: EdgeInsets.zero),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                QrImageView(
+                  data: roomCode,
+                  padding: EdgeInsets.zero,
+                  errorCorrectionLevel: QrErrorCorrectLevel.H,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: MosiColors.navy,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: MosiColors.navy,
+                  ),
+                ),
+                // 오류 정정 H 단계라 가운데를 가려도 읽힙니다.
+                Container(
+                  width: badge,
+                  height: badge,
+                  decoration: BoxDecoration(
+                    color: MosiColors.lime,
+                    borderRadius: BorderRadius.circular(badge * 0.2),
+                    border: Border.all(color: MosiColors.ink, width: 2.5),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -863,23 +979,29 @@ class _CopyableRoomCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        await Clipboard.setData(ClipboardData(text: roomCode));
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('방 코드가 복사되었습니다.')));
-      },
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: alignment,
-        child: Text(
-          roomCode,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
+    return Semantics(
+      button: true,
+      label: '방 코드 $roomCode 복사',
+      child: GestureDetector(
+        onTap: () async {
+          await Clipboard.setData(ClipboardData(text: roomCode));
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(content: Text('방 코드가 복사되었습니다.')));
+        },
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignment,
+          child: Text(
+            roomCode,
+            style: MosiFonts.grotesk(
+              locale: Localizations.maybeLocaleOf(context),
+              size: fontSize,
+              color: MosiColors.navy,
+              letterSpacing: fontSize * 0.18,
+              height: 1,
+            ),
           ),
         ),
       ),

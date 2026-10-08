@@ -2,34 +2,19 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/profile_setup_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:project00/platform/home/home.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
-//==============================================================================
-// Screen determine
-//==============================================================================
-/*
-- 문제점: 파일 내 프라이빗 메서드로 인해 코드가 길다. 
-- 리팩토링 요소: 다른 파이어베이스 구독 메서드와 통합해 외부로 뺄 것, 빌드 코드 부분 줄일 것
-- 인증 상태 관찰: 파베 userChanges()를 구독해 로그인, 로그아웃을 화면에 반영한다.
-- 온보딩 상태 관찰: 현재 UID의 온보딩 상태를 구독하고, 로그아웃하거나 UID가 바뀌면 기존 구독
-을 정리한다.
-- 이메일 링크 수신과 전달: 앱 최초 실행 및 실행 중 받은 링크를 처리 화면에 넘긴다. 가입 화면
-이 별도 경로로 열려 있으면 루트로 돌아와 링크 처리 상태를 보여준다.
-- 기존 계정 복구 연결: 온보딩 문서가 없으면 OnboardingService.recoverLegacy()를 호출한다.
-- 대기, 오류 처리: 로그인 복원, 온보딩 조회, 계정 복구가 지연될 대 타임아웃과 복구 경로를
-제공한다. 로그인 복원 타임아웃의 기본 동작은 로그아웃이다. 
-*/
-
 class AuthGate extends StatefulWidget {
-  //==============================[ 외부에서 받을 설정 정의 ]======================
   const AuthGate({
     super.key,
     this.userChanges,
@@ -56,11 +41,14 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  //=================================[ 정보 보관 및 관리 ]========================
   late final OnboardingService _onboardingService;
 
-  // 리빌드마다 인증 스트림 구독이 교체되지 않도록
-  // initState에서 한 번 초기화해 보관
+  /// 로그인 상태 스트림입니다. **반드시 한 번만 만들어 보관합니다.**
+  ///
+  /// 빌드마다 `userChanges()`를 새로 만들면 회전 같은 평범한 리빌드에도
+  /// StreamBuilder가 구독을 갈아 끼우며 `waiting`으로 돌아가, 화면 전체가
+  /// 스피너로 접혔다 펴집니다. 그 과정에서 아래 온보딩 구독이 다시 마운트되어
+  /// `Bad state: Stream has already been listened to.`로 터졌습니다(회전 크래시).
   late final Stream<User?> _userChanges;
 
   StreamSubscription<Uri>? _emailLinkSubscription;
@@ -68,14 +56,17 @@ class _AuthGateState extends State<AuthGate> {
   String? _emailLinkError;
   String? _reauthenticationEmail;
 
-  //=======================[ onboarding subscribe ]=======================================
-  // 단일 구독 스트림을 중복 구독하지 않도록 State에서 구독을 관리합니다.
-  // 수신한 최신 온보딩 상태를 보관해 화면 분기에 사용합니다.
+  //=======================온보딩 구독==============================
+  // 온보딩 스트림(`async*`)은 **한 번만 들을 수 있습니다.** StreamBuilder에
+  // 캐시된 스트림을 넘기면 위젯이 다시 마운트되는 순간 두 번째 listen이 되어
+  // 터집니다. 그래서 StreamBuilder 대신 여기서 직접 한 번 구독하고, 최근 값을
+  // 상태로 들고 있다가 그립니다. 다시 마운트돼도 구독은 그대로입니다.
   String? _watchedOnboardingUid;
   StreamSubscription<UserOnboarding?>? _onboardingSubscription;
   UserOnboarding? _onboarding;
   bool _onboardingLoaded = false;
   bool _onboardingFailed = false;
+  bool _isRestoringAuth = true;
 
   @override
   void initState() {
@@ -90,7 +81,6 @@ class _AuthGateState extends State<AuthGate> {
     _subscribeToEmailLinks();
   }
 
-  //[스트림 구독 관리] emailLinks 스트림 변경 시 새 스트림 구독
   @override
   void didUpdateWidget(covariant AuthGate oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -111,94 +101,100 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _userChanges,
       builder: (context, authSnapshot) {
-        // 로딩 화면
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
-          return _AppInitializingView(
-            step: '로그인 상태 확인',
-            onTimeout: _handleAuthRestoreTimeout,
-          );
-        }
-        final user = authSnapshot.data;
-        //[로그인 화면 진입: 로그인된 사용자가 없는 경우]
-        if (user == null) {
-          _clearOnboardingWatch();
-          final link = _emailLink;
-          // 이메일 인증 화면 리턴
-          if (link != null) {
-            return RegisterScreen(
-              initialEmailLink: link,
-              onEmailLinkHandled: _handleEmailLink,
-              onboardingService: _onboardingService,
-            );
-          }
-          // 이메일 인증 실패 시 오류 내용 표시
-          if (_emailLinkError != null) {
-            //
-            return RegisterScreen(
-              initialStep: RegisterStep.emailLinkFailed,
-              initialError: _emailLinkError,
-              onCancel: () => setState(() => _emailLinkError = null),
-              onboardingService: _onboardingService,
-            );
-          }
-          // 이메일 재인증 링크 대기 화면
-          if (_reauthenticationEmail != null) {
-            return RegisterScreen(
-              initialStep: RegisterStep.awaitingEmailLink,
-              initialEmail: _reauthenticationEmail,
-              onCancel: () => setState(() => _reauthenticationEmail = null),
-              onboardingService: _onboardingService,
-            );
-          }
-          // 처리할 인증 흐름 없을 시 로그인 화면 리턴
-          return const LoginScreen();
-        }
-        // 이메일 링크 처리 대기
-        if (_emailLink != null) {
-          return const _AppInitializingView(step: '이메일 링크 처리');
-        }
-
-        // 현재 사용자의 온보딩 상태 구독
-        _ensureOnboardingWatch(user.uid);
-        if (_onboardingFailed) {
-          return _GateErrorView(
-            message: '회원가입 상태를 불러오지 못했습니다.',
-            onRetry: _retryOnboardingWatch,
-          );
-        }
-        // 오류 화면과 재시도 버튼 표시
-        if (!_onboardingLoaded) {
-          return _AppInitializingView(
-            step: '회원가입 상태 확인',
-            onTimeout: () {
-              if (mounted) setState(() => _onboardingFailed = true);
-            },
-          );
-        }
-        final onboarding = _onboarding;
-        // 계정 상태 복구 시도
-        if (onboarding == null) {
-          return _LegacyRecoveryView(service: _onboardingService);
-        }
-        // 온보딩 상태에 맞는 최종 화면 반환
-        return switch (onboarding.status) {
-          OnboardingStatus.settingPassword => RegisterScreen(
-            initialStep: RegisterStep.settingPassword,
-            initialEmail: user.email,
-            onReauthenticationStarted: (email) {
-              setState(() => _reauthenticationEmail = email);
-            },
-            onboardingService: _onboardingService,
-          ),
-          OnboardingStatus.settingProfile => const ProfileSetupScreen(),
-          OnboardingStatus.complete => Home(gameCatalog: widget.gameCatalog),
-        };
+        final view = _buildView(context, authSnapshot);
+        if (view is Home) return view;
+        return MosiAuthScaffold(child: MosiAuthTransition(child: view));
       },
     );
   }
 
-  //===============================[ user sign state subscribe ]================
-  // 해당 사용자의 가입 상태를 구독, 이미 구독 중이면 유지.
+  Widget _buildView(BuildContext context, AsyncSnapshot<User?> authSnapshot) {
+    _isRestoringAuth = authSnapshot.connectionState == ConnectionState.waiting;
+    if (_isRestoringAuth) {
+      // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
+      // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
+      return _AppInitializingView(
+        step: '로그인 상태 확인',
+        onTimeout: _handleAuthRestoreTimeout,
+      );
+    }
+    final user = authSnapshot.data;
+    if (user == null) {
+      _clearOnboardingWatch();
+      final link = _emailLink;
+      if (link != null) {
+        return RegisterScreen(
+          initialEmailLink: link,
+          onEmailLinkHandled: _handleEmailLink,
+          onboardingService: _onboardingService,
+        );
+      }
+      if (_emailLinkError != null) {
+        return RegisterScreen(
+          initialStep: RegisterStep.emailLinkFailed,
+          initialError: _emailLinkError,
+          onCancel: () => setState(() => _emailLinkError = null),
+          onboardingService: _onboardingService,
+        );
+      }
+      if (_reauthenticationEmail != null) {
+        return RegisterScreen(
+          initialStep: RegisterStep.awaitingEmailLink,
+          initialEmail: _reauthenticationEmail,
+          onCancel: () => setState(() => _reauthenticationEmail = null),
+          onboardingService: _onboardingService,
+        );
+      }
+      return const LoginScreen();
+    }
+    if (_emailLink != null) {
+      return const _AppInitializingView(step: '이메일 링크 처리');
+    }
+
+    _ensureOnboardingWatch(user.uid);
+    if (_onboardingFailed) {
+      return _GateErrorView(
+        message: '회원가입 상태를 불러오지 못했습니다.',
+        onRetry: _retryOnboardingWatch,
+      );
+    }
+    if (!_onboardingLoaded) {
+      // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
+      // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
+      // 대신 다시 시도할 화면을 보여 줍니다.
+      return _AppInitializingView(
+        step: '회원가입 상태 확인',
+        onTimeout: () {
+          // 퇴장 애니메이션 중 남아 있는 이전 대기 화면의 타이머는 무시합니다.
+          if (mounted &&
+              !_onboardingLoaded &&
+              _watchedOnboardingUid == user.uid) {
+            setState(() => _onboardingFailed = true);
+          }
+        },
+      );
+    }
+    final onboarding = _onboarding;
+    if (onboarding == null) {
+      return _LegacyRecoveryView(service: _onboardingService);
+    }
+    return switch (onboarding.status) {
+      OnboardingStatus.settingPassword => RegisterScreen(
+        initialStep: RegisterStep.settingPassword,
+        initialEmail: user.email,
+        onReauthenticationStarted: (email) {
+          setState(() => _reauthenticationEmail = email);
+        },
+        onboardingService: _onboardingService,
+      ),
+      OnboardingStatus.settingProfile => const ProfileSetupScreen(),
+      OnboardingStatus.complete => Home(gameCatalog: widget.gameCatalog),
+    };
+  }
+
+  /// 이 uid의 온보딩 상태를 구독합니다. 이미 같은 uid를 듣고 있으면
+  /// 아무것도 하지 않습니다. 빌드 중에 불러도 안전합니다 — listen 자체는
+  /// 콜백을 즉시 부르지 않고, 값은 다음 이벤트 루프에서 setState로 반영됩니다.
   void _ensureOnboardingWatch(String uid) {
     if (_watchedOnboardingUid == uid && _onboardingSubscription != null) {
       return;
@@ -227,9 +223,13 @@ class _AuthGateState extends State<AuthGate> {
         );
   }
 
-  // =============================[ call back or log out ]======================
-  // 로그인 복원이 지연되면 지정된 콜백을 실행하거나 로그아웃한다.
+  /// 저장된 로그인 정보를 복원하지 못하고 멈춘 경우입니다.
+  ///
+  /// 기기 키체인에 남은 세션을 읽을 수 없을 때(앱 번들 id·서명 팀이 바뀐 뒤에
+  /// 일어납니다) 스트림이 아무 값도 주지 않고 멈춥니다. 그대로 두면 영원히
+  /// 스피너라, 세션을 비워 로그인 화면으로 되돌립니다.
   void _handleAuthRestoreTimeout() {
+    if (!_isRestoringAuth) return;
     debugPrint('[auth_gate] 로그인 상태 복원이 지연됩니다. 저장된 세션을 비웁니다.');
     final onTimeout = widget.onAuthRestoreTimeout;
     if (onTimeout != null) {
@@ -239,8 +239,6 @@ class _AuthGateState extends State<AuthGate> {
     unawaited(FirebaseAuth.instance.signOut());
   }
 
-  //=============================[ re-subscribe ]===============================
-  // 기존 가입 상태 구독 정리 후 재구독.
   void _retryOnboardingWatch() {
     final uid = _watchedOnboardingUid;
     // 구독 자체를 새로 만들어야 다시 시도가 됩니다. uid를 지워 두면
@@ -252,8 +250,6 @@ class _AuthGateState extends State<AuthGate> {
     if (uid != null) _ensureOnboardingWatch(uid);
   }
 
-  //===========================[ subscribe cancel ]=============================
-  // 가입 상태 구독을 취소하고 관련 정보를 초기화한다.
   void _clearOnboardingWatch() {
     unawaited(_onboardingSubscription?.cancel());
     _onboardingSubscription = null;
@@ -263,8 +259,6 @@ class _AuthGateState extends State<AuthGate> {
     _onboardingFailed = false;
   }
 
-  //============================[ email link subscribe ]========================
-  // 앱 실행 중 이메일 인증 링크 구독.
   void _subscribeToEmailLinks() {
     _emailLinkSubscription = widget.emailLinks?.listen(
       _handleIncomingEmailLink,
@@ -274,8 +268,6 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  //============================[ back to gate ]================================
-  // 유효한 이메일 인증 링크를 저장하고 인증 게이트로 돌아옵니다.
   void _handleIncomingEmailLink(Uri link) {
     if (!mounted) return;
     final value = link.toString();
@@ -288,9 +280,7 @@ class _AuthGateState extends State<AuthGate> {
     }
     if (_emailLink?.toString() == value) return;
 
-    // LoginScreen에서 push한 RegisterScreen이 루트 AuthGate를 가리고
-    // 있을 수 있습니다. 인증 링크의 단일 소유자인 AuthGate로 복귀해
-    // 새 상태가 즉시 보이게 합니다.
+    // 가입 중단 확인 등 열린 모달을 닫고, 같은 인증 shell의 내용만 갱신합니다.
     Navigator.of(context).popUntil((route) => route.isFirst);
     setState(() {
       _emailLink = link;
@@ -298,8 +288,6 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
-  //============================[ result ]======================================
-  // 이메일 링크 처리가 끝나면 링크를 비우고 처리 결과를 반영한다.
   void _handleEmailLink(String? error) {
     if (!mounted) return;
     setState(() {
@@ -310,8 +298,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-//==========================[ recovery screen ]=================================
-// 가입 상태 정보가 없는 기존 계정의 복구 화면
 class _LegacyRecoveryView extends StatefulWidget {
   const _LegacyRecoveryView({required this.service});
 
@@ -321,8 +307,6 @@ class _LegacyRecoveryView extends StatefulWidget {
   State<_LegacyRecoveryView> createState() => _LegacyRecoveryViewState();
 }
 
-//==========================[ manage recovery request ]=========================
-// 기존 계정의 복구 요청과 실패, 시간 초과, 재시도를 관리한다.
 class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
   Object? _error;
 
@@ -372,9 +356,6 @@ class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
   }
 }
 
-//=========================[ show error message ]===============================
-// 오류 메세지와 다시 시도, 로그아웃 버튼을 보여준다.
-// 로그인 실패 시 빈 화면에 로그아웃 버튼 하나만 딱 보일 때 코드
 class _GateErrorView extends StatelessWidget {
   const _GateErrorView({required this.message, required this.onRetry});
 
@@ -383,29 +364,29 @@ class _GateErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformAuthShell(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PlatformNotice(message: message, style: PlatformNoticeStyle.danger),
-          const SizedBox(height: 12),
-          PlatformButton(label: '다시 시도', onPressed: onRetry),
-          const SizedBox(height: 8),
-          TextButton(
-            // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
-            // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
-            onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
-            child: const Text('로그아웃'),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformNotice(message: message, style: PlatformNoticeStyle.danger),
+        const SizedBox(height: 12),
+        PlatformButton(label: '다시 시도', onPressed: onRetry),
+        const SizedBox(height: 8),
+        TextButton(
+          // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
+          // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
+          onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
+          child: const Text('로그아웃'),
+        ),
+      ],
     );
   }
 }
 
-//========================[ loading view ]======================================
-// 앱 진입에 필요한 처리를 기다리는 동안 보여주는 로딩 화면
-// 추후 수정 요소: 파일 분리. 로딩 뷰에 대한 코드가 한 파일에 작성되어야 하나?
+/// 앱을 준비하는 동안 보여 주는 화면입니다.
+///
+/// [onTimeout]을 주면 [timeout] 뒤에 한 번 알려 줍니다. **스피너가 영원히 도는
+/// 상태를 남기지 않기 위한 장치입니다** — 무엇을 기다리다 멈췄는지는 [step]으로
+/// 화면에 적어, 기기에서 바로 원인을 알 수 있게 합니다.
 class _AppInitializingView extends StatefulWidget {
   const _AppInitializingView({required this.step, this.onTimeout});
 
@@ -421,8 +402,6 @@ class _AppInitializingView extends StatefulWidget {
   State<_AppInitializingView> createState() => _AppInitializingViewState();
 }
 
-//========================[ call back ]=========================================
-// 대기 시간을 관리하고 지연 안내와 시간 초과 콜백을 처리합니다.
 class _AppInitializingViewState extends State<_AppInitializingView> {
   Timer? _timer;
   Timer? _slowTimer;
@@ -478,21 +457,20 @@ class _AppInitializingViewState extends State<_AppInitializingView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            if (_isSlow) ...[
-              const SizedBox(height: 16),
-              Text(
-                '${widget.step} 중…',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: MosiColors.violet),
+          if (_isSlow) ...[
+            const SizedBox(height: 16),
+            Text(
+              '${widget.step} 중…',
+              style: MosiFonts.sans(size: 15, color: MosiColors.navy),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
