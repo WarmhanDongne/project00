@@ -1,5 +1,4 @@
-# 네트워크 복구와 세션 관리 동작 명세 — 현재 구현 기준
-
+# 네트워크 복구와 세션 관리 동작 명세 — 26.10.08
 이 문서는 **연결이 끊기거나 앱을 다시 켰을 때, 무엇이 복구됐고 무엇이 아직 준비되지
 않았는지 구분하기 위한 설명**이다. 현재 앱과 서버가 문제를 어떻게 알아차리고, 무엇을
 확인한 뒤 어떤 처리를 하는지 살펴본다.
@@ -15,8 +14,8 @@
 PASS를 뜻하지 않는다. 이전 제목은 ‘사건으로 읽는 현재 세션 흐름’이다.
 
 각 사건을 **감지 → 판단 → 변경 → 성공 확인 → 실패가 남는 곳** 순서로 읽는다.
-복구 계약 보완은 [SESSION-RECONNECT-02](../planning/TASKS.md#session-reconnect-02),
-누락된 회귀 검사와 실행 배선은 [TEST-REGRESSION-01](../planning/TASKS.md#test-regression-01)에서
+복구 계약 보완은 [SESSION-RECONNECT-02](../planning/tasks/SESSION-RECONNECT-02.md#session-reconnect-02),
+누락된 회귀 검사와 실행 배선은 [TEST-REGRESSION-01](../planning/tasks/TEST-REGRESSION-01.md#test-regression-01)에서
 관리한다. 이 문서는 그 개선을 구현하거나 새 계약으로 확정하지 않는다.
 
 ## 읽는 순서와 용어
@@ -448,7 +447,7 @@ finished에서 retainUntil(없으면 유효한 lastSeen +15분), closed에서 cl
 | 조작 가능해질 때 필요한 데이터가 준비됨 | 게임별 화면 준비 판정 존재 | guard 완료와 public/private 준비를 묶은 공통 판정 없음 |
 
 이 표는 새 정책이나 보장 선언이 아니라 구현을 평가하는 기준이다. 공백 수정은
-[SESSION-RECONNECT-02](../planning/TASKS.md#session-reconnect-02)의 담당 범위·계약 합의가
+[SESSION-RECONNECT-02](../planning/tasks/SESSION-RECONNECT-02.md#session-reconnect-02)의 담당 범위·계약 합의가
 필요하며, 이 문서 작성으로 해당 작업을 완료하거나 보류를 해제하지 않는다.
 
 ## 시나리오 조합과 확인 범위

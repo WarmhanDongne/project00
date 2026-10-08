@@ -9,7 +9,7 @@
 [공식 작업 목록](../planning/TASKS.md)에 정리한다.
 
 - 과거에 통과한 기능도 다시 테스트한다. [8월 기록](REAL_DEVICE_AUTH_NETWORK_SESSION_CHECKLIST.md)은 그대로 둔다.
-- [회귀 검토 요약](../planning/TASKS.md#회귀-검토-요약과-작업-순서)의 가설은 직접 확인한 실패와 구분한다.
+- [회귀 검토 요약](../planning/logs/2026-10.md#회귀-검토-요약과-작업-순서)의 가설은 직접 확인한 실패와 구분한다.
 - **검증 목표**는 앞으로 확인할 동작이다. 이 문서로 새 복구 정책을 확정하지 않는다.
 - 비용·전체 보안 감사·배포·다운로드/패치 검증·일반 디자인·튜토리얼 설계는 별도 작업이다.
 
@@ -1499,5 +1499,5 @@ production RTDB 관찰이 필요하면 [Firebase MCP 절차](FIREBASE_MCP.md)의
 - [Auth/Network/Session 기술 참조](AUTH_NETWORK_SESSION_TECHNICAL_REFERENCE.md)
 - [8월 실기기 체크리스트와 당시 결과](REAL_DEVICE_AUTH_NETWORK_SESSION_CHECKLIST.md)
 - [8월 완료 기능·검증 범위](../planning/COMPLETED_TASKS.md)
-- [작업 목록의 회귀 검토](../planning/TASKS.md#회귀-검토-요약과-작업-순서)
+- [작업 목록의 회귀 검토](../planning/logs/2026-10.md#회귀-검토-요약과-작업-순서)
 - [게임 안정성 후속 TODO](../../packages/GAME_STABILITY_TODO.md)
