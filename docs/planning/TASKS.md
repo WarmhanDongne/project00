@@ -2,13 +2,36 @@
 
 ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK_MANAGEMENT.md) · [완료 작업](COMPLETED_TASKS.md) · [월별 기록](logs/)
 
+2026-10-08 네트워크·세션 조사와 `origin/newgui`의 `999c3e9` 비교를 반영했다.
+기존 오류 해결은 SESSION-RECONNECT-02, 테스트 실행 경로는 TEST-REGRESSION-01에서
+관리한다. 새 UI 연결 작업과 홀덤 구현 후보는 아래에서 따로 추적한다. newgui 코드는
+현재 checkout에 병합하지 않았으며, 작업 등록은 구현·계약 변경·배포 승인이나 완료 판정이 아니다.
+
 | 분류 | 개수 |
 | --- | ---: |
+| 신규 게임 — newgui 구현 후보 | 1 |
+| newgui 연동 — 출시 분류 확정 대기 | 1 |
 | 구현 검증 대기 | 3 |
 | 출시 전 필수 | 9 |
 | 출시 전 권장 | 11 |
 | 출시 후 작업 | 7 |
-| 합계 | 30 |
+| 합계 | 32 |
+
+## 신규 게임 — newgui 구현 후보
+
+| ID | 작업 | 상태 | 다음 행동 |
+| --- | --- | --- | --- |
+| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인 |
+
+## newgui 연동 — 출시 분류 확정 대기
+
+| ID | 작업 | 상태 | 다음 행동 |
+| --- | --- | --- | --- |
+| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
+
+새 UI의 일반 디자인 범위를 출시 필수로 올리지 않는다. 이 항목의 출시 분류는 담당
+범위와 함께 확정하되, 기존 필수 SESSION-RECONNECT-02의 준비 완료·입력 차단·오류 대응
+조건은 새 UI에서도 충족해야 한다. 공용 로직, 홀덤 고유 흐름, UI 연결과 검증의 담당 경계는 상세에서 관리한다.
 
 ## 구현 검증 대기
 
@@ -22,23 +45,23 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | 기존 측정·착수 조건 유지 |
+| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | newgui에서 연결·세션 준비·화면 복귀 시간을 구분해 측정, 기존 착수 조건과 목표 합의 유지 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 게임 재접속 보완·단절 신고 재시도·네트워크 가드·기기별 검증 | 보류 — 담당 범위·복구 계약 합의 대기 | 최신 코드 재확인, 플랫폼·서버·패키지 담당 범위와 계약 합의 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 요구사항 확인 | 삭제·이동 테스트 대조, 핵심 장애 시나리오와 suite/FULL/CI 실행 경로 확정 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 보류 — 담당 범위·복구 계약 합의 대기 | 999c3e9의 복구·구독·중단·옛 요청·퇴장 문제와 홀덤 범위 확인, 플랫폼·서버·패키지 담당 및 계약 합의 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 요구사항 확인 | 누락된 suite 파일 20개 대조, 4게임·새 UI 회귀 작성과 package/FULL/CI 실행 경로 확정 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |
 | [TEST-ACCOUNT-01](tasks/TEST-ACCOUNT-01.md#test-account-01) | 배포용 테스트 계정 준비 | 요구사항 확인 | 용도·환경·권한 확정 |
-| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 요구사항 확인 | 일반 참가자 조회 계약·역할별 재현, 나머지 핵심 점검 범위 확정 |
-| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지와 잔류 처리 검토 |
+| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 요구사항 확인 | newgui의 일반 참가자 조회 계약·역할별 재현, 홀덤 인원 판정과 정리 정합성 대조 |
+| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지, 응답 유실·고아 예약·삭제 트리거 부분 실패 검증과 처리 검토 |
 
 ## 출시 전 권장
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
 | [RELEASE-EVIDENCE-01](tasks/RELEASE-EVIDENCE-01.md#release-evidence-01) | 출시 증빙 보완 | 요구사항 확인 | 기존 성공 보고의 기기·빌드·날짜 보완 |
-| [COST-01](tasks/COST-01.md#cost-01) | Functions 과금 점검·최적화 | 조사 전 | 청구 항목·기간과 실행 원인 확인 |
-| [SECURITY-01](tasks/SECURITY-01.md#security-01) | 보안 위험 점검·중대한 문제 수정 | 조사 전 | 점검 범위와 위협 목록 작성 |
+| [COST-01](tasks/COST-01.md#cost-01) | Functions 과금 점검·최적화 | 조사 전 | 청구 원인, 정리 후보 제한·부분 실패, 4게임 명령 기록 수명과 transaction 비용 확인 |
+| [SECURITY-01](tasks/SECURITY-01.md#security-01) | 보안 위험 점검·중대한 문제 수정 | 조사 전 | newgui·홀덤 포함 RTDB 읽기/presence 세션 경계와 기존 캐릭터 ID 호환 대조 |
 | [DOCS-CORE-01](tasks/DOCS-CORE-01.md#docs-core-01) | 핵심 구조·개발·운영 문서 정비 | 조사 전 | 기존 설명과 코드·테스트 대조 |
 | [NOTIFICATION-UI-01](tasks/NOTIFICATION-UI-01.md#notification-ui-01) | 사용자 알림 디자인 통일 | 조사 전 | 알림 종류·표시 방식 목록화 |
 | [PHONE-SELF-01](tasks/PHONE-SELF-01.md#phone-self-01) | 모바일 그룹에서 본인 표시 | 조사 전 | 현재 식별 방식과 표시 위치 확인 |
@@ -52,7 +75,7 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 요구사항 확인 | 개선 목표·화면 범위 결정 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 요구사항 확인 | newgui 구현 후보와 기존 요구 대조, 세션 연동 회귀는 NEWGUI-RECOVERY-01과 연결 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
 | [GAME-TUTORIAL-01](tasks/GAME-TUTORIAL-01.md#game-tutorial-01) | 게임 첫 플레이 튜토리얼 | 요구사항 확인 | 게임별 안내 범위 결정 |

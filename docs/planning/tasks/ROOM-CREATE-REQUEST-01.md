@@ -31,3 +31,21 @@
 
 - 완료 조건: 중복 방 생성 방지와 잔류 기록 처리 방안을 확정하고 부분 실패·재시도·정리
   경로를 검증한다. 이전 ROOM-CLEANUP-01 통과를 이 문제의 해결 근거로 사용하지 않는다.
+
+## 2026-10-08 newgui 999c3e9 기준 추가 조사
+
+- 조사 기준: `origin/newgui`의 `999c3e99086b9f917ea941cd8f283b8ac40f3f85`를
+  checkout 변경 없이 비교했다. 정적 확인만 수행했고 운영 데이터 조회·정리·배포나
+  새 테스트·실기기 재현은 하지 않았다.
+- UI 개편 뒤에도 [생성 요청 예약과 방 생성](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/room/realtime-room-functions.ts#L161),
+  [방 삭제 후 예약 정리 트리거](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/room/realtime-room-lifecycle.ts#L610)는
+  남아 있다. 트리거 존재와 실제 운영 잔류 해결 여부를 계속 구분한다.
+- 확인할 실패 구간은 방 생성 전 예약만 저장된 경우, 방 생성 후 응답 유실·재시도,
+  방 삭제와 매핑·예약 정리 사이의 부분 실패, 기존 고아 예약, reservation 정보가
+  없는 방, 삭제 트리거 실패다. 중복 방 생성 방지와 기존 요청 기록 유지 정책을 보존한다.
+- [방 정리 스케줄](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/room/realtime-room-lifecycle.ts#L647)의
+  후보 제한·처리량은 [COST-01](COST-01.md), 방·controller 매핑·예약 정합성은
+  [CORE-REVIEW-01](CORE-REVIEW-01.md)과 연결한다. 완료된 ROOM-CLEANUP-01의 당시
+  범위를 이 신규 실패 구간이나 처리량 검증으로 확대하지 않는다.
+- 요청 기록 삭제·대체 방식, persistent data 변경과 운영 조회·정리·배포는 기존
+  승인 경계를 유지한다. 이 조사만으로 처리 정책이나 운영 해결을 확정하지 않는다.

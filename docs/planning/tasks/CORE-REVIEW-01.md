@@ -51,3 +51,24 @@
 단, 휴대폰 **홈**의 개인 목록은 `fetchGames`로 본인 소유·무료 게임만 조회한다.
 태블릿 소유 게임이 다른 계정의 개인 홈 목록에 없는 것과, 같은 그룹 대기실의 목록 조회
 실패는 구분해야 한다. 이번 원인 확인은 후자에 해당한다.
+
+## 2026-10-08 newgui 999c3e9 기준 추가 조사
+
+- 조사 기준: `origin/newgui`의 `999c3e99086b9f917ea941cd8f283b8ac40f3f85`를
+  `git show`와 `git diff`로 확인했다. 해당 코드는 현재 checkout에 반영하지 않았다.
+  아래 내용은 정적 코드 확인이며 새 테스트·실기기 재현·운영 조회 결과가 아니다.
+- 일반 참가자 그룹 목록: UI 개편 뒤에도 서버는 요청 UID의 controller 방 매핑으로
+  그룹을 찾는다. [newgui 조회 함수](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/room/realtime-room-lifecycle.ts#L182)가
+  기존과 같으므로, 해당 방 멤버십에 따른 조회 계약·외부 계정 차단·다른 controller 방
+  보유 계정의 재현 범위를 유지한다. UI 변경을 권한 회귀 해결로 판정하지 않는다.
+- Holdem 인원 정합성: 공용 중단은 [공개 플레이어의 `alive` 상태](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/game-interruption/state.ts#L108)로
+  계속 가능 여부를 계산하지만, [Holdem 제외 처리](https://github.com/WarmhanDongne/project00/blob/999c3e99086b9f917ea941cd8f283b8ac40f3f85/functions/src/holdem/game.ts#L241)는
+  `stack > 0`인 생존자 수로 인원 부족 종료를 판정한다. 올인으로 stack이 0인 참가자가
+  살아 있는 경우 안내와 최종 종료 판정이 달라질 가능성을 확인했다. 실제 영향은
+  미재현이며, 올인·폴드·탈락·퇴장의 게임 정책을 임의로 확정하지 않는다.
+- 범위 연결: 다중 단절과 중단 중 진행 요청은 [SESSION-RECONNECT-02](SESSION-RECONNECT-02.md),
+  회귀 검증은 [TEST-REGRESSION-01](TEST-REGRESSION-01.md)에서 Holdem까지 포함해 관리한다.
+  방·controller 매핑·예약의 부분 실패 정합성은 [ROOM-CREATE-REQUEST-01](ROOM-CREATE-REQUEST-01.md),
+  정리 후보 제한·처리량과 비용은 [COST-01](COST-01.md)과 연결한다.
+- 승인 경계: 방 멤버십 조회 API와 구버전 호환성, 중요한 게임 상태 판정 변경은 기존
+  승인 조건을 유지한다. 이 추가 조사만으로 구현 착수·완료·출시 분류 변경을 판단하지 않는다.
