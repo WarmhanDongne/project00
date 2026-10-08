@@ -6,6 +6,10 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [전체 작업 목�
 2026-10-08 기준으로 TASKS.md의 상태·다음 행동을 옮겼으며, 현재 분류·상태의 원본은
 TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에도 반영한다.
 기존 ID를 모은 목록으로, 전체 작업 개수에 새 작업을 추가하지 않는다.
+제품 정책은 [설계](NETWORK_SESSION_DESIGN.md), 구현 계약 제안은 [기술안](NETWORK_SESSION_TECHNICAL_DESIGN.md),
+담당·채팅 단위·검증은 [R16~R18 실행 계획안](NETWORK_SESSION_IMPLEMENTATION_PLAN.md)에서 확인한다.
+계획 초안 작성으로 아래 원본 상태나 보류/승인 조건을 변경하지 않는다.
+2026-10-09 후속 사용자 합의로 최신 newgui·기술안 A~C를 채택하고 SESSION의 보류 사유/다음 행동만 TASKS.md와 동기화했다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -17,7 +21,7 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 보류 — 담당 범위·복구 계약 합의 대기 | 999c3e9의 복구·구독·중단·옛 요청·퇴장 문제와 홀덤 범위 확인, 플랫폼·서버·패키지 담당 및 계약 합의 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 보류 — 담당 범위·착수 대기 | 최신 newgui·기술안 A~C 채택, 플랫폼/서버 담당 확정과 착수 SHA/후속 변경 대조. 구현은 아직 시작하지 않음 |
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
 | [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인 |
 | [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지, 응답 유실·고아 예약·삭제 트리거 부분 실패 검증과 처리 검토 |
