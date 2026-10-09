@@ -175,3 +175,8 @@ game_kit·4게임의 package별 working directory/실패 전파를 FULL에 추�
 12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
 E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
 실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.
+
+## 2026-10-09 E13 백엔드 emulator/CI 후보
+
+[E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 cold-cache 생성/terminal 정리와 첫
+cursor query의 수정 전 실패·수정 후 회귀, 테스트 브랜치 callable/rules/SDK와 현재 FULL/CI 범위를 남긴다.
