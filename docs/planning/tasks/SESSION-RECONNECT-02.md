@@ -362,3 +362,12 @@ E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·�
 12단계·root 334·package 167·Functions 371·mutation 모두 PASS/exit 0이다.
 성공 SHA/링크와 문서만 동기화한 최종 tree 확인은 E13 기록에 남겼다.
 FlutterFire/앱 통합·기기/성능·출시 판정은 별도로 유지한다.
+
+## 2026-10-09 실기기 조작 목록 준비
+
+태블릿 1대·휴대폰 2대 기본, 추가 기기 모이는 날만 파이널콜·마피아 4대와 진행 가능한 제외
+3대 묶음으로 [기기 조작 목록](../../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md)을 작성했다.
+검토 ID·서버·로그 작업 없이 행동과 화면 결과만 확인한다.
+[환경·설치·배포 준비](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)와
+[담당자 진단 후속](../../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)은 별도다.
+대상 환경·OS 조합은 미확정, 원격 접근/배포·앱 빌드/설치·실기기 실행은 미실행이다.

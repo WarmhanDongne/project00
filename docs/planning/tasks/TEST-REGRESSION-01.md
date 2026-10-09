@@ -190,3 +190,11 @@ cursor query의 수정 전 실패·수정 후 회귀, 테스트 브랜치 callab
 12단계·root 334·package 167·Functions 371·mutation 모두 PASS/exit 0이다.
 성공 SHA/링크와 문서만 동기화한 최종 tree 확인은 E13 기록에 남겼다.
 FlutterFire/앱 통합·기기/성능 회귀와 원래 CI SDK 정렬 검토는 남겨 둔다.
+
+## 2026-10-09 실기기와 담당자 진단 분리
+
+[사용자 조작 목록](../../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md)에서는 검토 ID·로그·
+서버 조회를 제외했다. [서버·진단 후속](../../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)에
+실제 Scheduler delivery, native stream/parse·순서·응답 유실·저장 실패 주입, 계측과 원래 CI SDK
+정렬을 미실행으로 기록했다. [준비 문서](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)에
+현재 앱 연결·pub get/설치와 matching Functions/rules 준비를 연결했다. 문서 작업이며 구현 변경은 없다.
