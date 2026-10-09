@@ -17,6 +17,9 @@ class $AssetsImagesGen {
   /// Directory path: assets/images/character
   $AssetsImagesCharacterGen get character => const $AssetsImagesCharacterGen();
 
+  /// Directory path: assets/images/covers
+  $AssetsImagesCoversGen get covers => const $AssetsImagesCoversGen();
+
   /// Directory path: assets/images/others
   $AssetsImagesOthersGen get others => const $AssetsImagesOthersGen();
 
@@ -40,11 +43,31 @@ class $AssetsSoundsGen {
   /// File path: assets/sounds/background.m4a
   String get background => 'packages/game_kit/assets/sounds/background.m4a';
 
+  /// File path: assets/sounds/card_table.mp3
+  String get cardTable => 'packages/game_kit/assets/sounds/card_table.mp3';
+
   /// File path: assets/sounds/dealing.mp3
   String get dealing => 'packages/game_kit/assets/sounds/dealing.mp3';
 
+  /// File path: assets/sounds/holdem_all_in.mp3
+  String get holdemAllIn => 'packages/game_kit/assets/sounds/holdem_all_in.mp3';
+
+  /// File path: assets/sounds/holdem_background.mp3
+  String get holdemBackground =>
+      'packages/game_kit/assets/sounds/holdem_background.mp3';
+
+  /// File path: assets/sounds/holdem_check.wav
+  String get holdemCheck => 'packages/game_kit/assets/sounds/holdem_check.wav';
+
+  /// File path: assets/sounds/holdem_pot_award.mp3
+  String get holdemPotAward =>
+      'packages/game_kit/assets/sounds/holdem_pot_award.mp3';
+
   /// File path: assets/sounds/lever.mp3
   String get lever => 'packages/game_kit/assets/sounds/lever.mp3';
+
+  /// File path: assets/sounds/poker_chips.mp3
+  String get pokerChips => 'packages/game_kit/assets/sounds/poker_chips.mp3';
 
   /// File path: assets/sounds/roulette.mp3
   String get roulette => 'packages/game_kit/assets/sounds/roulette.mp3';
@@ -58,8 +81,14 @@ class $AssetsSoundsGen {
   /// List of all assets
   List<String> get values => [
     background,
+    cardTable,
     dealing,
+    holdemAllIn,
+    holdemBackground,
+    holdemCheck,
+    holdemPotAward,
     lever,
+    pokerChips,
     roulette,
     stamp,
     timer,
@@ -172,6 +201,21 @@ class $AssetsImagesCharacterGen {
     watermelon,
     welder,
   ];
+}
+
+class $AssetsImagesCoversGen {
+  const $AssetsImagesCoversGen();
+
+  /// File path: assets/images/covers/holdem_cardbox.webp
+  AssetGenImage get holdemCardbox =>
+      const AssetGenImage('assets/images/covers/holdem_cardbox.webp');
+
+  /// File path: assets/images/covers/poker_cardbox.png
+  AssetGenImage get pokerCardbox =>
+      const AssetGenImage('assets/images/covers/poker_cardbox.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [holdemCardbox, pokerCardbox];
 }
 
 class $AssetsImagesOthersGen {

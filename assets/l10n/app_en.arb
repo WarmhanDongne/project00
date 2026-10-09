@@ -142,5 +142,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "connectionBandLost": "Connection lost · We'll reconnect automatically",
+  "connectionBandReconnecting": "Reconnecting… keep this screen open",
+  "connectionBandRestored": "Reconnected"
 }

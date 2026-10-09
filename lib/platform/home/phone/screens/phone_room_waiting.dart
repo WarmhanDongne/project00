@@ -1,3 +1,4 @@
+import 'package:project00/platform/localization/lobby_connection_band.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
@@ -249,9 +250,16 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             ),
           );
       },
-      child: _buildBody(context),
+      child: LobbyConnectionBand(
+        connectionChanges: _serverConnection,
+        child: _buildBody(context),
+      ),
     );
   }
+
+  /// 아래 연결 띠가 듣는 서버 연결 상태입니다. 다시 그려도 같은 스트림을 씁니다.
+  late final Stream<bool> _serverConnection = widget.provider
+      .watchServerConnection();
 
   Widget _buildBody(BuildContext context) {
     return CriticalNetworkGuard(

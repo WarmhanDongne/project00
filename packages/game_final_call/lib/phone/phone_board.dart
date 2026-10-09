@@ -8,7 +8,9 @@ library;
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:flutter/material.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_final_call/game_assets.dart';
 import 'package:game_final_call/gen/assets.gen.dart';
@@ -44,6 +46,17 @@ part 'src/board_state.dart';
 // ============================================================================
 // 화면 흐름·연출 설정
 // ============================================================================
+
+/// 화면 맨 아래 LED 연결 띠입니다(시안: 게임 남색 잉크 바탕, 숫자는 카드의
+/// 빨강·노랑·초록).
+const finalCallConnectionLed = GameConnectionLedStyle(
+  background: FinalCallColors.ink,
+  topLineColor: Color(0x33FFFFFF),
+  offColor: FinalCallColors.red,
+  retryColor: FinalCallColors.yellow,
+  onColor: FinalCallColors.green,
+  textColor: Colors.white,
+);
 
 abstract final class FinalCallPhoneTiming {
   /// 손패를 처음 받아 펼치는 총 재생시간입니다.

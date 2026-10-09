@@ -30,7 +30,7 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인 |
+| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인. 10/10 사운드·진동 후보 관련 38개 테스트 통과, FULL 승인 대기 |
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | newgui에서 연결·세션 준비·화면 복귀 시간을 구분해 측정, 기존 착수 조건과 목표 합의 유지 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |

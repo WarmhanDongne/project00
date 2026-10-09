@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:game_holdem/game_copy.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/phone/widgets/board_summary.dart';
@@ -10,6 +11,7 @@ import 'package:game_holdem/phone/widgets/raise_sheet.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
+import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/shared/widgets/game_turn_countdown_face.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
 
@@ -33,6 +35,7 @@ class HoldemPhoneGameScreen extends StatefulWidget {
 
 class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
     with SingleTickerProviderStateMixin {
+  (int, String, int?)? _lastVibratedTurn;
   bool _raiseOpen = false;
   bool _handRevealed = false;
   bool _turnExpired = false;
@@ -47,6 +50,7 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
   void initState() {
     super.initState();
     _controlsEntry.forward();
+    _notifyMyTurn();
   }
 
   @override
@@ -57,6 +61,27 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
 
   bool _isMyTurn(HoldemGameState game) =>
       game.turnUid == widget.uid && game.legalActions != null;
+
+  void _notifyMyTurn() {
+    final game = widget.game;
+    if (game.loading ||
+        game.status != 'playing' ||
+        !const {'preflop', 'flop', 'turn', 'river'}.contains(game.phase) ||
+        !_isMyTurn(game) ||
+        game.interruption != null ||
+        ServerClock.hasPassed(game.turnDeadlineAt)) {
+      return;
+    }
+    final key = (game.handNumber, game.phase, game.turnDeadlineAt);
+    if (_lastVibratedTurn == key) return;
+    _lastVibratedTurn = key;
+    // 공개/개인 snapshot의 도착 순서와 무관하게 준비된 내 턴에 한 번만.
+    unawaited(
+      HapticFeedback.mediumImpact().catchError((Object error) {
+        debugPrint('홀덤 턴 진동을 재생하지 못했습니다: $error');
+      }),
+    );
+  }
 
   Future<bool> _submitAction(String action, {int? amount}) async {
     if (_submittingAction != null || widget.game.commandInFlight) return false;
@@ -131,6 +156,7 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
   void didUpdateWidget(covariant HoldemPhoneGameScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncTurnState(oldWidget.game, widget.game);
+    _notifyMyTurn();
     if (oldWidget.game.handNumber != widget.game.handNumber) {
       _handRevealed = false;
       _controlsEntry.forward(from: 0);
