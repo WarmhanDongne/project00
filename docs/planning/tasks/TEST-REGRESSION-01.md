@@ -180,3 +180,8 @@ E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·�
 
 [E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 cold-cache 생성/terminal 정리와 첫
 cursor query의 수정 전 실패·수정 후 회귀, 테스트 브랜치 callable/rules/SDK와 현재 FULL/CI 범위를 남긴다.
+
+후속 사용자 명시 승인으로 제품 수정 후보 a3fe7fc의 guarded FULL 1회가 PASS/exit 0,
+12단계·root 334·package 167·Functions 371·전후 mutation PASS다. 실제 backend CI도
+10/10 PASS/exit 0이다. canonical FULL CI의 SDK 차이 실패와 테스트 브랜치 17ca1f5 보정,
+새 후보 재실행 승인 요청은 위 E13 기록에 남겼다. 미실행 앱·기기/성능 범위는 유지한다.

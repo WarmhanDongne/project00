@@ -352,3 +352,8 @@ E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·�
 
 [E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 기존 후보의 커밋·푸시와 같은 SHA의
 테스트 브랜치 분리, 실제 RTDB 생성/정리 결함과 별도 회귀 커밋, 현재 FULL·CI·기기 범위를 남긴다.
+
+후속 사용자 명시 승인으로 제품 수정 후보 a3fe7fc의 guarded FULL 1회가 PASS/exit 0,
+12단계·root 334·package 167·Functions 371·전후 mutation PASS다. 실제 backend CI도
+10/10 PASS/exit 0이다. canonical FULL CI의 SDK 차이 실패와 테스트 브랜치 17ca1f5 보정,
+새 후보 재실행 승인 요청은 위 E13 기록에 남겼다. 앱·기기/성능·출시 전체 완료로 확대하지 않는다.
