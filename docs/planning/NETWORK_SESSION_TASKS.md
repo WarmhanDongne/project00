@@ -22,13 +22,13 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — E13 백엔드·FULL/CI PASS | 별도 제품 수정/회귀·backend 10/10·로컬 및 canonical CI FULL PASS. 남은 FlutterFire/앱·기기 확인 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — E13 백엔드·FULL/CI PASS | [환경·설치·배포 준비](../operations/NETWORK_SESSION_TEST_PREPARATION.md) 후 [2대 기본·4대 필수 실기기 확인](../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md). 배포/기기 미실행 |
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
 | [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀와 현재 FULL PASS. E13 통합·E14 실기기 확인 |
 | [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 검증 대기 — E11 로컬 검증 PASS | generation CAS·보상·지속 정리 회귀와 현재 FULL PASS. E13 부분 실패 확인 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — E13 백엔드·FULL/CI PASS | cold-cache/query 회귀·backend·로컬 FULL·17ca1f5 canonical CI PASS. 남은 앱/기기 회귀와 원래 CI SDK 정렬 검토 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — E13 백엔드·FULL/CI PASS | [서버·FlutterFire 진단 후속](../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md), 앱/기기 회귀·원래 CI SDK 정렬. 배포 환경 확정 대기 |
 | [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 검증 대기 — 연관 E10/E11 로컬 검증 PASS | 그룹 권한·Holdem 제외·generation 회귀와 현재 FULL PASS. E13 경합·기존 핵심 검토 |
 
 2026-10-09 E02~E12 순차 구현 요청에 따른 [현재 후보와 검증](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 연결한다. 관련 검사와 사용자 승인 후 FULL은 PASS다. 후속 E13/E14는 남아 있다.

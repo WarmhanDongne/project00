@@ -137,3 +137,16 @@ FlutterFire·실제 앱 통합과 기기 확인은 미실행 범위로 남긴다
 E14 OS/물리 네트워크/성능, E15 반영 계획, production 접근·deploy·migration은 미실행이다.
 
 동작/범위의 상세 절차는 테스트 브랜치의 `tool/emulator/README.md`를 따른다.
+
+## 2026-10-09 실기기 테스트 준비
+
+사용자 요청과 태블릿 1대·휴대폰 기본 2대/최대 4대 제약에 맞춰
+[기기 조작과 화면 확인](../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md)을 작성했다.
+라이어스포커·홀덤은 기본 2대, 파이널콜·마피아는 추가 기기가 모이는 날에 필수 묶음만 확인한다.
+진행 가능한 제외는 그날 3대로 함께 확인한다. 검토 ID·서버 조회·로그 확인은 사용자 항목에서 제외했다.
+
+[설치·배포 준비](../operations/NETWORK_SESSION_TEST_PREPARATION.md)에 pub get·동일 앱 설치,
+현재 기존 프로젝트 연결·미배포 상태, 69 Functions/RTDB rules 반영 범위와 제거된 3개 함수의
+호환 계획을 정리했다. [서버·진단 후속](../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)은
+실제 Scheduler delivery·배포 rules/trigger·native 오류 주입·응답 유실·파일 저장 실패·계측을
+분리한다. 환경 확정과 별도 승인이 선행되며 이 문서 작업에서 접근·배포하거나 기기 PASS를 주장하지 않는다.
