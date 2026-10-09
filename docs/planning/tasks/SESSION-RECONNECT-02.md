@@ -357,3 +357,8 @@ E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·�
 12단계·root 334·package 167·Functions 371·전후 mutation PASS다. 실제 backend CI도
 10/10 PASS/exit 0이다. canonical FULL CI의 SDK 차이 실패와 테스트 브랜치 17ca1f5 보정,
 새 후보 재실행 승인 요청은 위 E13 기록에 남겼다. 앱·기기/성능·출시 전체 완료로 확대하지 않는다.
+
+후속 승인으로 17ca1f5의 실제 CI 재실행도 성공했다. backend 10/10, canonical FULL
+12단계·root 334·package 167·Functions 371·mutation 모두 PASS/exit 0이다.
+성공 SHA/링크와 문서만 동기화한 최종 tree 확인은 E13 기록에 남겼다.
+FlutterFire/앱 통합·기기/성능·출시 판정은 별도로 유지한다.

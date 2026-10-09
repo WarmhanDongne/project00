@@ -79,7 +79,9 @@ CI는 같은 Node runner와 canonical FULL workflow를 호출하며 sanitized �
 | GitHub Actions backend (9a3ddf2) | PASS | 0 | Ubuntu/Node 22/Java 21, 10/10, fail/skipped/cancelled 0, 52906ms, source/포트 PASS |
 | GitHub Actions canonical FULL (9a3ddf2) | FAIL | 1 | Flutter 3.44.8의 dart-format 단계에서 중단, 후속 검사 NOT_RUN |
 | CI SDK·lockfile·canonical 배선/실패 파일 포맷 검사 (17ca1f5) | PASS | 0 | 로컬 Flutter 3.47.5/Dart 3.13.4와 일치, enforce-lockfile 준비 후 source/lockfile 동일 |
-| 보정된 CI 후보 push/FULL 재실행 (17ca1f5) | NOT_RUN | — | Skill의 실패 보정 후 새 후보 명시 승인 대기 |
+| 보정된 CI 후보 `git push origin codex/e13-emulator-ci` (17ca1f5) | PASS | 0 | 후속 사용자 명시 승인 후 푸시, 로컬/원격 SHA 일치 |
+| GitHub Actions backend 재실행 (17ca1f5) | PASS | 0 | 10/10, fail/skipped/cancelled 0, 41710ms, source/포트 PASS |
+| GitHub Actions canonical FULL 재실행 (17ca1f5) | PASS | 0 | 12단계·root 334·5 package 65/2/14/55/31·Functions 371, mutation PASS |
 
 승인된 로컬 FULL은 2026-10-09 14:24:57~14:30:28 KST에 원래 브랜치의
 `a3fe7fc3b4084e894fcbb3640a3467cc5437d517`에서 실행했다. 모든 step의 timedOut=false,
@@ -97,6 +99,23 @@ dependency 준비에서 lockfile 7항목을 바꾸고 `test/mosigame_cli/invocat
 `flutter pub get --enforce-lockfile`로 보정했다. 관련 YAML·배선 검사와 dependency 준비,
 해당 파일 포맷·전후 tree/diff check는 PASS/exit 0이다. 새 후보의 CI FULL은 별도 승인을 요청했다.
 
+후속 사용자 명시 승인으로 `17ca1f59921d689c83c54b9173070ecdc30b3e3c`를 푸시하고
+[CI #37890040738](https://github.com/WarmhanDongne/project00/actions/runs/37890040738)을 1회 실행했다.
+2026-10-09 14:44:45~14:49:51 KST, workflow와 두 job 모두 success다. 실제 backend command
+`node tool/emulator/run.mjs`는 10/10 PASS/exit 0, tests 41710ms, 관련 포트 해제와 내용 snapshot PASS다.
+artifact는 `e13-backend-17ca1f59921d689c83c54b9173070ecdc30b3e3c`, ID 11598081275,
+digest `sha256:59d3b50a9b03c8eea4e4066c33130888cc16b4143ebb388cf68f9ee93a9ee4f2`다.
+`flutter pub get --enforce-lockfile`와 경계 검사 이후 실제 `dart run :mosigame validate --full`은
+12 PASS·fail/blocked/invalid 0·exit 0이다. root 334·5 package 167·Functions 371개,
+포맷 148파일 변경 0·분석/lint·working-tree mutation PASS를 확인했다.
+run/job/step·artifact와 결과 요약은 ignored `build/e13-baseline/ci-approved-summary.json`에 남겼다.
+
+성공한 코드 후보 이후에는 검증 문서만 동기화한다. 최종 기록 커밋에는 `[skip ci]`를 사용해
+같은 구현 후보의 FULL을 추가 실행하지 않는다([GitHub 공식 절차](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs)).
+최종 tree가 검증된 17ca1f5와 문서 이외에는 같은지 Git diff로 확인한다.
+원래 브랜치와 테스트 브랜치의 제품/CLI 소스도 같다. emulator 설정·runner·CI 구성 8경로만
+테스트 브랜치에 남기고, 두 tree의 staged/unstaged/untracked 0과 원격 SHA를 확인한다.
+
 초기 emulator 실행들은 FAIL/exit 1이었다. 제품 결함 외에 harness의 초기 준비 보고 누락,
 Admin·client·rules namespace 불일치, SDK get/write 권한 오류 표현 차이를 진단·보정했다.
 기대 허용/거절·회귀 assertion을 제거하거나 약화하지 않았다. 초기 실패를 PASS evidence로 사용하지 않는다.
@@ -112,8 +131,9 @@ Raw SDK 로그는 ignored 로컬 폴더에 두고 CI artifact는 합성 시나�
 경계를 확인한다. 전체 V00~V22와 FlutterFire/UI 검증을 모두 통과했다는 뜻은 아니다.
 V01 앱 초기 복원, V05 Flutter 구독/파싱 오류, V12/V13 예산/lifecycle, V14 auth UI,
 V15 assets, V16 안내/route, V17 모든 게임별 역할 조합, V22 계측의 기존 단위/widget evidence는
-E02~E12 기록에 있으며 현재 수정 후보의 로컬 FULL은 통과했다. 실제 앱·기기 확인과
-보정된 CI FULL 결과는 별도로 남긴다.
+E02~E12 기록에 있으며 현재 수정 후보의 로컬 FULL과 테스트 브랜치의 canonical FULL CI는 통과했다.
+FlutterFire·실제 앱 통합과 기기 확인은 미실행 범위로 남긴다. 요청에 따라 SDK 보정도 테스트
+브랜치에만 적용했으므로, 원래 workflow의 Flutter 3.44.8 정렬은 후속 반영 계획에서 검토한다.
 E14 OS/물리 네트워크/성능, E15 반영 계획, production 접근·deploy·migration은 미실행이다.
 
 동작/범위의 상세 절차는 테스트 브랜치의 `tool/emulator/README.md`를 따른다.
