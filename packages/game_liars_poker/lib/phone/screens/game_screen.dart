@@ -221,7 +221,12 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   Widget build(BuildContext context) {
     // Firebase 상태는 상위 PhoneGame에서 한 번만 구독합니다. 이 화면은 전달된
     // 최신 상태만 그려 카드·컨트롤 애니메이션이 중복 rebuild되지 않게 합니다.
-    return _buildGameScreen(widget.controller);
+    final controller = widget.controller;
+    if (controller == null) return _buildGameScreen(null);
+    return AnimatedBuilder(
+      animation: controller.recoverySession,
+      builder: (context, _) => _buildGameScreen(controller),
+    );
   }
 
   Widget _buildGameScreen(LiarsPokerController? controller) {
@@ -272,7 +277,13 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
     final flowStep = widget.flowConfig.stepFor(stage);
     final regions = flowStep.phoneRegions ?? const PhoneGameRegions();
-    final showHeader = regions.showTopBar;
+    final hasRecoveryFailure =
+        controller != null &&
+        (!controller.recoverySession.transportConnected ||
+            controller.interruption?.causes.isNotEmpty == true ||
+            (controller.errorMessage != null &&
+                !controller.recoverySession.canSend));
+    final showHeader = regions.showTopBar || hasRecoveryFailure;
     final showControls =
         regions.showActions &&
         !widget.showSpectatorTopBar &&
@@ -488,35 +499,8 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   }
 
   // ---------------------------------------------------------------------------
-  // 재시도 후에도 실패한 명령 오류
+  // 손패 없음 안내
   // ---------------------------------------------------------------------------
-  Widget _buildErrorMessage(
-    String message, {
-    required VoidCallback onTap,
-    required double verticalPadding,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xE62B1717),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: verticalPadding,
-          ),
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ),
-    );
-  }
-
   // 손패가 없을 때 가로·세로에서 공통으로 사용하는 문구입니다.
   Widget _emptyHandMessage() {
     return const Center(

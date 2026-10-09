@@ -52,7 +52,6 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
   StreamSubscription<bool>? _subscription;
   Timer? _showTimer;
   Timer? _noticeTimer;
-  Timer? _retryTimer;
   bool _isConnected = true;
   bool _needsRecovery = false;
   bool _isNoticeVisible = false;
@@ -61,19 +60,11 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
   bool _isForeground = true;
   int _subscriptionGeneration = 0;
   int _connectionGeneration = 0;
-  int _retryAttempt = 0;
   bool _hasParentGuard = false;
   bool _didSubscribe = false;
 
   // RTDB 연결은 SDK가 복구합니다. 이 간격은 연결 후 세션 복구 실패에만 적용하며
   // 카드 제출/CALL 등 게임 행동을 새 명령으로 재전송하지 않습니다.
-  static const _retryDelays = [
-    Duration(seconds: 1),
-    Duration(seconds: 2),
-    Duration(seconds: 4),
-    Duration(seconds: 8),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -122,13 +113,10 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     _showTimer = null;
     _noticeTimer?.cancel();
     _noticeTimer = null;
-    _retryTimer?.cancel();
-    _retryTimer = null;
     _isConnected = true;
     _needsRecovery = false;
     _isNoticeVisible = false;
     _isModalVisible = false;
-    _retryAttempt = 0;
     final stream = widget.connectionChanges;
     // 앱 루트 가드가 비활성이면 자식이 담당하고, 활성 부모가 있으면 중복하지 않습니다.
     if (stream == null || _hasParentGuard) return;
@@ -157,12 +145,10 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     if (_isConnected != isConnected) _connectionGeneration++;
     _isConnected = isConnected;
     if (isConnected) {
-      if (_needsRecovery && _retryTimer == null) unawaited(_retry());
+      if (_needsRecovery && !_isRetrying) unawaited(_retry());
       return;
     }
 
-    _retryTimer?.cancel();
-    _retryTimer = null;
     setState(() => _needsRecovery = true);
     _scheduleNotices();
   }
@@ -193,8 +179,6 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     if (!_isForeground || !_needsRecovery || _isRetrying || !_isConnected) {
       return;
     }
-    _retryTimer?.cancel();
-    _retryTimer = null;
     final subscriptionGeneration = _subscriptionGeneration;
     final connectionGeneration = _connectionGeneration;
     _log('recovery_started');
@@ -218,25 +202,12 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
             connectionGeneration == _connectionGeneration) {
           _completeRecovery();
         } else {
-          _scheduleRetry();
+          if (_isConnected && connectionGeneration != _connectionGeneration) {
+            unawaited(_retry());
+          }
         }
       }
     }
-  }
-
-  void _scheduleRetry() {
-    if (!_isForeground ||
-        !_isConnected ||
-        !_needsRecovery ||
-        _retryTimer != null) {
-      return;
-    }
-    final index = _retryAttempt.clamp(0, _retryDelays.length - 1);
-    _retryAttempt++;
-    _retryTimer = Timer(_retryDelays[index], () {
-      _retryTimer = null;
-      unawaited(_retry());
-    });
   }
 
   void _completeRecovery() {
@@ -245,9 +216,6 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     _showTimer = null;
     _noticeTimer?.cancel();
     _noticeTimer = null;
-    _retryTimer?.cancel();
-    _retryTimer = null;
-    _retryAttempt = 0;
     setState(() {
       _needsRecovery = false;
       _isNoticeVisible = false;
@@ -273,8 +241,6 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
       _showTimer = null;
       _noticeTimer?.cancel();
       _noticeTimer = null;
-      _retryTimer?.cancel();
-      _retryTimer = null;
       return;
     }
     // 백그라운드 시간만으로 새 모달을 띄우지 않고 복귀 시 다시 복구를 시도합니다.
@@ -289,7 +255,6 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     _subscriptionGeneration += 1;
     _showTimer?.cancel();
     _noticeTimer?.cancel();
-    _retryTimer?.cancel();
     unawaited(_subscription?.cancel());
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

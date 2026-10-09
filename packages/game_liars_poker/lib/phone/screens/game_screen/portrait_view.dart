@@ -38,7 +38,9 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
                   right: layout.horizontalPadding,
                   child: PhoneGameTopBar(
                     isLandscape: false,
-                    entryAnimation: _controlsEntryController,
+                    entryAnimation: controller?.recoverySession.canSend == false
+                        ? null
+                        : _controlsEntryController,
                     leadingWidget: _tableAsset(controller?.table ?? 'K').image(
                       height: layout.tableHeight,
                       filterQuality: FilterQuality.high,
@@ -180,19 +182,6 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
                   },
                 ),
               ),
-              // 명령을 3회 재시도한 뒤에도 실패한 경우에만 오류를 표시합니다.
-              if (controller?.errorMessage != null)
-                Positioned(
-                  key: const ValueKey('portrait-error-slot'),
-                  top: layout.statusTop - 5,
-                  left: layout.messagePadding,
-                  right: layout.messagePadding,
-                  child: _buildErrorMessage(
-                    controller!.errorMessage!,
-                    onTap: controller.clearError,
-                    verticalPadding: 10,
-                  ),
-                ),
             ],
           );
         },

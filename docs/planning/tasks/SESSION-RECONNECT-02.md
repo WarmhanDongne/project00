@@ -330,3 +330,96 @@ P 사용자 packages 담당과 T 플랫폼/서버/검증 담당안, 허용 경�
 P/T는 실행 계획의 패키지/플랫폼·서버·검증 영역 표기이며 별도 사람이 아니다.
 최신 코드 기준·소비자·검증 공백·단일 담당을 E00 인수인계로 정리했고 다음 단위는 E01 검증 배선이다.
 채팅별 범위·완료 조건·의존 순서는 유지하며 기능 구현과 전체 검증 완료를 뜻하지 않는다.
+
+## 2026-10-09 E01 검증 기반 구현 후보
+
+develop `151eff8`에서 첫 구현 단위 E01의 누락 session/auth 회귀와 package/FULL 실행 배선을 복원했다.
+[E01 기록](../NETWORK_SESSION_E01_VALIDATION.md)은 기존 동작의 검증과 새 복구 정책의 후속 구현을 구분한다.
+이번 변경은 제품 세션 계약 구현이 아니며 해당 단위 완료 후 E02로 넘긴다. 공통 실행 근거는 TEST-REGRESSION-01에 연결한다.
+
+## 2026-10-09 E02~E12 순차 구현 후보
+
+사용자 요청으로 A~C 공용 계약부터 네 게임·플랫폼·UI·계측을 연결했다.
+[현재 계약](../../engineering/NETWORK_SESSION_CONTRACT.md)과 [후보/검증/기존 변경](../NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 따른다.
+관련 검사와 승인 후 FULL을 구분한다. E13 emulator/CI·E14 기기·production은 미실행이며 일부 PASS로 태스크 전체 완료를 선언하지 않는다.
+
+같은 날 사용자 명시 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
+E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
+실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.
+
+## 2026-10-09 E13 백엔드 emulator/CI 후보
+
+[E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 기존 후보의 커밋·푸시와 같은 SHA의
+테스트 브랜치 분리, 실제 RTDB 생성/정리 결함과 별도 회귀 커밋, 현재 FULL·CI·기기 범위를 남긴다.
+
+후속 사용자 명시 승인으로 제품 수정 후보 a3fe7fc의 guarded FULL 1회가 PASS/exit 0,
+12단계·root 334·package 167·Functions 371·전후 mutation PASS다. 실제 backend CI도
+10/10 PASS/exit 0이다. canonical FULL CI의 SDK 차이 실패와 테스트 브랜치 17ca1f5 보정,
+새 후보 재실행 승인 요청은 위 E13 기록에 남겼다. 앱·기기/성능·출시 전체 완료로 확대하지 않는다.
+
+후속 승인으로 17ca1f5의 실제 CI 재실행도 성공했다. backend 10/10, canonical FULL
+12단계·root 334·package 167·Functions 371·mutation 모두 PASS/exit 0이다.
+성공 SHA/링크와 문서만 동기화한 최종 tree 확인은 E13 기록에 남겼다.
+FlutterFire/앱 통합·기기/성능·출시 판정은 별도로 유지한다.
+
+## 2026-10-09 실기기 조작 목록 준비
+
+태블릿 1대·휴대폰 2대 기본, 추가 기기 모이는 날만 파이널콜·마피아 4대와 진행 가능한 제외
+3대 묶음으로 [기기 조작 목록](../../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md)을 작성했다.
+검토 ID·서버·로그 작업 없이 행동과 화면 결과만 확인한다.
+[환경·설치·배포 준비](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)와
+[담당자 진단 후속](../../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)은 별도다.
+대상 환경·OS 조합은 미확정, 원격 접근/배포·앱 빌드/설치·실기기 실행은 미실행이다.
+
+후속 사용자 결정으로 기존 Firebase·Android APK 실기기·변경 사항 전체 배포·구버전 호환
+불필요를 확정했다. [준비/실행 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을 따른다.
+APK 빌드는 PASS이며 설치·기기 결과는 아직 미실행이다. 배포 결과와 기기 결과를 분리한다.
+
+## 2026-10-09 실기기 정상 시작 실패 수정 후보
+
+사용자 요청으로 heartbeat 수명, 최초/후속 준비 제한, 라이어스포커 dealing 에셋 대기,
+진단 창 Overlay를 수정하고 session 회귀에 등록했다.
+[수정/검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)을 따른다.
+Guarded session 5단계, 관련 37개, 마지막 연결/수명 21개, 변경 파일 분석/포맷은
+PASS/exit 0이다. controller token 무효화 뒤 player heartbeat로 바뀌지 않는 것도 확인했다.
+기존 사용자 변경은 보존했고 branch/HEAD 유지, staged 없음이다.
+사용자 승인 FULL·수정 APK 설치·실기기 확인은 미실행이다. 기존 실기기 정상 시작 FAIL은
+새 후보에서 통과로 바꾸지 않으며, 시작 callable/퇴장 route의 미확정 근거는 남겨 둔다.
+
+후속 사용자 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12/12 단계 PASS/exit 0, 앱 337개·5 package 174개·Functions 371개/skip 0,
+실행 전후 mutation PASS다. 기존 사용자 변경 4개도 전후 SHA-256 동일이다.
+수정/로컬 전체 검증 후보가 통과한 것이며 수정 APK/실기기 정상 시작과 미확정 시작 요청/
+퇴장 route의 확인은 남아 있다. branch/HEAD 유지, stage/commit/push/deploy 없음.
+
+## 2026-10-09 정상 준비 UI 분리 후보
+
+후속 사용자 UI 요청으로 준비/원인 없는 barrier는 기존 배경·연출을 유지하고,
+실제 실패/이탈만 기존 오류 안내를 사용하도록 수정했다. 별도 준비/퇴장 버튼을 제거하고
+기존 상단 메뉴·퇴장 모달을 유지했다. 서버 준비 조건과 canSend 보호는 유지한다.
+[변경 파일·검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 UI 후보 절을 따른다.
+최종 guarded session 5/5 PASS/exit 0, 관련 분석/19개 파일 포맷 PASS/exit 0이다.
+이전 후보 FULL 승인을 재사용하지 않으며 이번 후보 FULL의 새 승인을 요청한다.
+수정 APK/실기기 결과·미확정 시작 요청/퇴장 route 및 SESSION 출시 판정은 별도다.
+
+후속 사용자 “검증해” 승인으로 같은 UI 후보의 guarded FULL을 1회 실행했다.
+2026-10-09 21:37 KST 시작, 336776ms, 12/12 PASS/exit 0이다.
+앱 337·5 package 182·Functions 371/skip 0 및 mutation PASS다.
+[승인 FULL 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 절을 따른다.
+수정 APK/실기기 UI·연결 확인과 SESSION 출시 판정은 남아 있다.
+
+## 2026-10-09 진입 성공 후 룰렛·재시작 조사
+
+사용자가 정상 진입/준비 UI 해소와 로비 A 단절 대응 성공을 보고했다.
+[후속 조사](../NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation)에
+태블릿/휴대폰 로그와 실제 callable 오프라인 재현을 기록했다. 룰렛 추첨/확정 ID 충돌과
+시작 시간초과 뒤 새 서비스가 미확정 요청을 이어받지 못하는 결함을 확인했다.
+수동 종료 성공은 양 기기 로그로 확인했다. 최초 시작 지연/commit 경로는 서버 로그 요청 중이다.
+이번 요청은 원인 조사이며 제품 수정·production 조회/배포·새 FULL은 실행하지 않았다.
+
+후속 사용자의 기존 일반 로그 권한 확인/직접 조회 요청으로 gcloud 조회용 configuration에서
+시작 함수의 승인 시간대 로그를 읽었다. 60초 HTTP 504, 좌석 검증의 finished-function 비동기
+예외, 후속 HTTP 409를 확인했다. 정상 heartbeat까지 비교하는 fingerprint와 SDK callback
+예외의 미종료 경로를 추가 재현했다. 기존 Logs Viewer로 가능했으며 IAM 추가 변경은 없었다.
+production 데이터 commit 여부/실제 변경 필드는 로그만으로 확정하지 않았다. 제품 수정은 후속이다.

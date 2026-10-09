@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 // ============================================================
 
@@ -29,9 +30,52 @@ class GameInterruption {
     required this.remainingPlayerCount,
     required this.minimumPlayerCount,
     required this.canContinue,
+    this.causes = const [],
+    this.pauseId,
+    this.extended = false,
+    this.awaitingDecision = false,
   });
 
   factory GameInterruption.fromMap(Map<Object?, Object?> map) {
+    if (map['paused'] == true) {
+      final raw = map['causes'];
+      final causes = raw is Map
+          ? raw.entries
+                .map(
+                  (entry) => <String, dynamic>{
+                    'key': entry.key.toString(),
+                    if (entry.value is Map)
+                      ...Map<String, dynamic>.from(entry.value as Map),
+                  },
+                )
+                .toList()
+          : <Map<String, dynamic>>[];
+      final cause = causes
+          .where((entry) => entry['key'].toString().startsWith('player:'))
+          .firstOrNull;
+      return GameInterruption(
+        id:
+            cause?['incidentId']?.toString() ??
+            map['pauseId']?.toString() ??
+            '',
+        pauseId: map['pauseId']?.toString(),
+        causes: causes,
+        playerUid: cause?['key'].toString().substring(7) ?? '',
+        playerNickname: '플레이어',
+        playerCharacterId: 'frog',
+        reason: GameInterruptionReason.disconnected,
+        startedAt: (cause?['startedAt'] as num?)?.toInt() ?? 0,
+        deadlineAt: (cause?['deadlineAt'] as num?)?.toInt() ?? 0,
+        extended: cause?['extended'] == true,
+        awaitingDecision: cause?['awaitingDecision'] == true,
+        eligibleVoterUids: const [],
+        requiredVotes: 0,
+        voterUids: const {},
+        remainingPlayerCount: 0,
+        minimumPlayerCount: 2,
+        canContinue: cause?['canContinue'] == true,
+      );
+    }
     return GameInterruption(
       id: map['id']?.toString() ?? '',
       playerUid: map['playerUid']?.toString() ?? '',
@@ -64,6 +108,9 @@ class GameInterruption {
   final int remainingPlayerCount;
   final int minimumPlayerCount;
   final bool canContinue;
+  final List<Map<String, dynamic>> causes;
+  final String? pauseId;
+  final bool extended, awaitingDecision;
 
   int get voteCount => voterUids.length;
   bool canVote(String uid) => canContinue && eligibleVoterUids.contains(uid);
@@ -89,7 +136,11 @@ class GameInterruption {
         setEquals(voterUids, other.voterUids) &&
         remainingPlayerCount == other.remainingPlayerCount &&
         minimumPlayerCount == other.minimumPlayerCount &&
-        canContinue == other.canContinue;
+        canContinue == other.canContinue &&
+        pauseId == other.pauseId &&
+        extended == other.extended &&
+        awaitingDecision == other.awaitingDecision &&
+        jsonEncode(causes) == jsonEncode(other.causes);
   }
 
   @override

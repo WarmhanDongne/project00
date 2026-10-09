@@ -1,7 +1,9 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {runPrimedTransaction} from "../room/room-transaction.js";
 import {resolveForcedTimeout} from "./forced-timeout-resolution.js";
 import {RealtimeRoom} from "./common/types.js";
 import {
@@ -37,15 +39,18 @@ export const game_liars_poker_force_timeout = onCall<ForceTimeoutData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
-      assertRoomExists(rawRoom);
-      const room = rawRoom as RealtimeRoom;
-      assertController(room, uid, request.data?.controllerSessionId);
-      const game = requireGame(room);
+    const transaction = await runGameCommandTransaction(
+      roomRef, request, "game_liars_poker_force_timeout",
+      (rawRoom, transactionNow) => {
+        assertRoomExists(rawRoom);
+        const room = rawRoom as RealtimeRoom;
+        assertController(room, uid, request.data?.controllerSessionId);
+        const game = requireGame(room);
 
-      response = resolveForcedTimeout(game, Date.now());
-      return room;
-    });
+        response = resolveForcedTimeout(game, transactionNow);
+        return room;
+      }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "턴 타임아웃을 처리하지 못했습니다.");

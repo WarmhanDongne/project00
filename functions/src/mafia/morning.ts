@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -28,7 +31,7 @@ export const game_mafia_complete_morning = onCall<Data>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_complete_morning", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       assertMafiaController(room, uid, request.data?.controllerSessionId);
@@ -38,10 +41,11 @@ export const game_mafia_complete_morning = onCall<Data>(
         response = {success: true, phase: game.public.phase};
         return room;
       }
-      const winner = advanceMafiaAfterDeaths(game, "day", Date.now());
+      const winner = advanceMafiaAfterDeaths(game, "day", transactionNow);
       response = {success: true, phase: game.public.phase, winner};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "아침 발표를 마치지 못했습니다.");

@@ -1,11 +1,13 @@
+import {decorateRecoveryCauses} from "../game-interruption/game-adapters.js";
+import {assertRoomGroupMember, RoomAllocation} from "./room-allocation.js";
 /* eslint-disable max-len, valid-jsdoc, require-jsdoc */
 
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
-import {logger} from "firebase-functions";
-import {onValueDeleted, onValueWritten} from "firebase-functions/v2/database";
+import {leaveSessionRequest} from "../game-interruption/leave-request.js";
+import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {onSchedule} from "firebase-functions/v2/scheduler";
+
 
 import {
   assertControllerSession,
@@ -16,6 +18,12 @@ import {
   decideRoomSeating,
 } from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
+import {RecoveryRoom, registerRecoveryFailure} from "../game-interruption/recovery-state.js";
+import {randomUUID} from "node:crypto";
+import {
+  allocateRoomConnection, assertRoomTarget,
+  parseSessionId, recordRoomOperation, roomOperationResult, SessionRoom,
+} from "./session-contract.js";
 
 const REGION = "asia-northeast3";
 const DATABASE_REGION = "asia-southeast1";
@@ -67,14 +75,21 @@ const FINISHED_ROOM_RETENTION_MS = 15 * 60 * 1000;
 const CLOSED_ROOM_RETENTION_MS = 60 * 1000;
 
 type RoomData = {
+  gameInstanceId?: unknown;
   roomCode?: unknown;
   controllerSessionId?: unknown;
+  roomInstanceId?: unknown;
+  membershipId?: unknown;
+  expectedConnectionSeq?: unknown;
+  operationId?: unknown;
 };
 
 type SelectGameData = RoomData & {gameId?: unknown};
 type RemovePlayerData = RoomData & {playerUid?: unknown};
 
 interface RealtimeRoom extends ControllerSessionRoom {
+  roomInstanceId?: string;
+  membershipRevision?: number;
   creationOperationId?: string;
   status?: string;
   selectedGame?: string;
@@ -180,35 +195,22 @@ export function deletedRoomReservationPath(
  * 항상 포함하므로 응답에는 그룹이 실제 보유한 ID만 넣습니다.
  */
 export const fetchRealtimeRoomGroupEntitlements = onCall(
-  {region: REGION},
-  async (request) => {
-    const controllerUid = requireUid(request.auth?.uid);
-    const database = getDatabase();
-    const roomCodeValue = await database
-      .ref(`controllerRooms/${controllerUid}`)
-      .get();
-    const roomCode = roomCodeValue.val();
-    if (typeof roomCode !== "string" || !ROOM_CODE.test(roomCode)) {
-      throw new HttpsError("failed-precondition", "현재 생성한 방이 없습니다.");
-    }
-
-    const room = await requireRoom(roomCode);
-    if (room.controllerUid !== controllerUid) {
-      throw new HttpsError("permission-denied", "현재 방의 컨트롤러가 아닙니다.");
-    }
-    const groupUids = activeGroupUids(room, controllerUid);
-    const users = await Promise.all(
-      groupUids.map((uid) =>
-        getFirestore().collection("users").doc(uid).get()),
-    );
-    return {
-      ownedGameIds: collectGroupOwnedGameIds(
-        users.map((user) => user.data()?.ownedGames),
-      ),
-    };
+  {region: REGION}, async (request) => {
+    const uid = requireUid(request.auth?.uid);
+    const roomCode = parseRoomCode(request.data?.roomCode);
+    const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
+    const room = await requireRoom(roomCode) as RealtimeRoom & RoomAllocation;
+    assertRoomGroupMember(room, uid, roomInstanceId);
+    const revision = room.membershipRevision ?? 0;
+    const users = await Promise.all(activeGroupUids(room, room.controllerUid!).map(
+      (groupUid) => getFirestore().collection("users").doc(groupUid).get()));
+    const latest = await requireRoom(roomCode) as RealtimeRoom & RoomAllocation;
+    assertRoomGroupMember(latest, uid, roomInstanceId);
+    if (latest.membershipRevision !== revision) return {status: "stale", membershipRevision: latest.membershipRevision};
+    return {status: "current", membershipRevision: revision,
+      ownedGameIds: collectGroupOwnedGameIds(users.map((user) => user.data()?.ownedGames))};
   },
 );
-
 async function assertGameAccessible(
   room: RealtimeRoom,
   controllerUid: string,
@@ -262,6 +264,9 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
     const roomCode = parseRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const now = Date.now();
+    const operationId = parseSessionId(request.data?.operationId, "작업 ID");
+    const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
+    const connectionId = randomUUID();
     let response: Record<string, unknown> | null = null;
     const roomSnapshot = await roomRef.get();
     if (!roomSnapshot.exists()) {
@@ -272,22 +277,28 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
       if (raw === null) return;
       const room = raw as RealtimeRoom;
       assertControllerSession(room, uid, request.data?.controllerSessionId);
-      if (room.status === "closed") {
+      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+      if ((room.status === "closed" || room.status === "terminal")) {
         throw new HttpsError("failed-precondition", "이미 종료된 방입니다.");
       }
       // 자리 배치 초안은 태블릿 메모리에만 있으므로 프로세스가 완전히 재시작된
       // 경우에는 선택 게임을 유지한 채 다시 시작할 수 있는 대기 상태로 돌립니다.
-      if (room.status === "seating") room.status = "waiting";
-      room.controllerConnected = true;
-      room.controllerPresence = {
-        connected: true,
-        lastSeen: now,
-      };
-      room.cleanupAt = now + CONTROLLER_RECONNECT_GRACE_MS;
+
+      const connection = allocateRoomConnection(room as SessionRoom, {
+        uid, role: "controller", operationId, roomInstanceId,
+        expectedConnectionSeq: request.data?.expectedConnectionSeq as number,
+        connectionId, now,
+      });
+      if (connection.connectionId === connectionId) {
+        if (room.status === "seating") room.status = "waiting";
+        registerRecoveryFailure(room as unknown as RecoveryRoom, uid, "controller", now, "preparationFailed");
+      }
+      decorateRecoveryCauses(room as RecoveryRoom, now);
       response = {
         roomCode,
         selectedGame: room.selectedGame ?? null,
-        status: room.status ?? "waiting",
+        roomStatus: room.status ?? "waiting",
+        ...connection,
       };
       return room;
     });
@@ -314,24 +325,25 @@ export const closeRoom = onCall<RoomData>(
 
     const room = roomSnapshot.val() as RealtimeRoom;
     assertControllerSession(room, uid, request.data?.controllerSessionId);
+    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
 
-    await roomRef.update({
-      status: "closed",
-      controllerConnected: false,
-      controllerPresence: {
-        connected: false,
-        lastSeen: now,
-      },
-      cleanupAt: now + CLOSED_ROOM_RETENTION_MS,
+    const operationId = parseSessionId(request.data?.operationId, "작업 ID");
+    const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
+    await runPrimedTransaction(roomRef, (raw) => {
+      if (!raw) return;
+      const current = raw as RealtimeRoom & SessionRoom;
+      assertControllerSession(current, uid, request.data?.controllerSessionId);
+      assertRoomTarget(current, roomInstanceId);
+      const payload = {roomInstanceId};
+      if (roomOperationResult(current, uid, operationId, "close", payload)) return current;
+      current.status = "closed";
+      current.membershipRevision = (current.membershipRevision ?? 0) + 1;
+      current.controllerConnected = false;
+      current.controllerPresence = {connected: false, lastSeen: now};
+      current.cleanupAt = now + CLOSED_ROOM_RETENTION_MS;
+      recordRoomOperation(current, uid, operationId, "close", payload, {status: "applied"}, now);
+      return current;
     });
-    const controllerRoomRef = getDatabase().ref(`controllerRooms/${uid}`);
-    const mappedRoom = await controllerRoomRef.get();
-    if (mappedRoom.val() === roomCode) await controllerRoomRef.remove();
-    if (room.creationOperationId) {
-      await getDatabase()
-        .ref(`roomCreateRequests/${uid}/${room.creationOperationId}`)
-        .remove();
-    }
     return {success: true, roomCode};
   },
 );
@@ -362,9 +374,10 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
 
       const room = roomSnapshot.val() as RealtimeRoom;
       assertControllerSession(room, uid, request.data?.controllerSessionId);
+      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
       if (
         room.status === "playing" ||
-        room.status === "closed" ||
+        (room.status === "closed" || room.status === "terminal") ||
         room.game?.public?.status === "playing"
       ) {
         throw new HttpsError(
@@ -372,12 +385,19 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
           "현재 게임을 선택할 수 없습니다.",
         );
       }
+      const membershipRevision = room.membershipRevision ?? 0;
       if (gameId !== null) await assertGameAccessible(room, uid, gameId);
       // 접근 권한 확인 뒤에도 게임 시작과 경합할 수 있으므로, 최종 선택 변경은
       // controller session과 진행 상태를 다시 확인하는 트랜잭션으로 처리합니다.
       const result = await roomRef.transaction((raw) => {
         if (raw === null) return;
         const currentRoom = raw as RealtimeRoom;
+        assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId);
+        if ((currentRoom.membershipRevision ?? 0) !== membershipRevision) throw new HttpsError("aborted", "그룹 구성이 변경되었습니다.");
+        if (gameId === null && currentRoom.game?.public?.status === "finished" &&
+            (currentRoom.game.public as Record<string, unknown>).gameInstanceId !== request.data?.gameInstanceId) {
+          throw new HttpsError("failed-precondition", "이전 게임의 정리 요청입니다.");
+        }
         assertControllerSession(
           currentRoom,
           uid,
@@ -420,6 +440,7 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
     }
     const room = roomSnapshot.val() as RealtimeRoom;
     assertControllerSession(room, uid, request.data?.controllerSessionId);
+    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
     const selectedGame = room.selectedGame;
     if (!selectedGame) {
       throw new HttpsError("failed-precondition", "선택된 게임이 없습니다.");
@@ -449,6 +470,7 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
         uid,
         request.data?.controllerSessionId,
       );
+      assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId);
       const count = activePlayerCount(currentRoom);
       const decision = decideRoomSeating({
         roomStatus: currentRoom.status,
@@ -530,10 +552,14 @@ export const removeRealtimeRoomPlayer = onCall<RemovePlayerData>(
         if (raw === null) return;
         const room = raw as RealtimeRoom;
         assertControllerSession(room, uid, request.data?.controllerSessionId);
+        assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
         if (room.status === "playing" || room.game?.public?.status === "playing") {
           throw new HttpsError("failed-precondition", "게임 중에는 게임 퇴장 절차를 사용해주세요.");
         }
-        if (room.players) delete room.players[playerUid];
+        if (room.players?.[playerUid]) {
+          delete room.players[playerUid];
+          room.membershipRevision = (room.membershipRevision ?? 0) + 1;
+        }
         return room;
       });
       if (!result.committed) {
@@ -547,19 +573,7 @@ export const removeRealtimeRoomPlayer = onCall<RemovePlayerData>(
 );
 
 /** 휴대폰의 대기실 퇴장을 서버에서 본인 UID만 제거하도록 처리합니다. */
-export const leaveRealtimeRoom = onCall<RoomData>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request.auth?.uid);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    const room = await requireRoom(roomCode);
-    if (room.status === "playing" || room.game?.public?.status === "playing") {
-      throw new HttpsError("failed-precondition", "게임 중에는 게임별 퇴장 기능을 사용해주세요.");
-    }
-    await getDatabase().ref(`rooms/${roomCode}/players/${uid}`).remove();
-    return {success: true};
-  },
-);
+export const leaveRealtimeRoom = onCall({region: REGION}, leaveSessionRequest);
 
 /** 늦은 게임 이벤트가 대기실·닫힌 방을 되살리지 않도록 최신 게임과 대조합니다. */
 export function synchronizeRoomGameStatus(
@@ -567,7 +581,7 @@ export function synchronizeRoomGameStatus(
   status: unknown,
   now: number,
 ): RealtimeRoom | undefined {
-  if (!room || room.status === "closed" ||
+  if (!room || (room.status === "closed" || room.status === "terminal") ||
       (status !== "playing" && status !== "finished") ||
       room.game?.public?.status !== status) return;
   if (status === "finished") {
@@ -595,8 +609,9 @@ export const syncRealtimeRoomGameStatus = onValueWritten(
     const status = event.data.after.val();
     if (status !== "playing" && status !== "finished") return;
     const roomRef = getDatabase().ref(`rooms/${event.params.roomCode}`);
+    const now = Date.now();
     await runPrimedTransaction(roomRef, (raw) =>
-      synchronizeRoomGameStatus(raw as RealtimeRoom | null, status, Date.now()),
+      synchronizeRoomGameStatus(raw as RealtimeRoom | null, status, now),
     );
   },
 );
@@ -607,21 +622,10 @@ export const syncRealtimeRoomGameStatus = onValueWritten(
  * close/스케줄 정리 경로의 즉시 삭제는 빠른 정상 경로로 유지하고, 이 트리거는
  * 방이 먼저 사라진 뒤 남은 `roomCreateRequests`를 멱등하게 지우는 backstop입니다.
  */
-export const cleanupDeletedRoomCreationRequest = onValueDeleted(
-  {
-    ref: "/rooms/{roomCode}",
-    region: DATABASE_REGION,
-    retry: true,
-  },
-  async (event) => {
-    const reservationPath = deletedRoomReservationPath(event.data.val());
-    if (!reservationPath) return;
-    await getDatabase().ref(reservationPath).remove();
-  },
-);
+export {syncRoomCleanupQueue, cleanupStaleRealtimeRooms} from "./room-cleanup.js";
 
 export function shouldDeleteRoom(room: RealtimeRoom, now: number): boolean {
-  if (room.status === "closed") return (room.cleanupAt ?? 0) <= now;
+  if ((room.status === "closed" || room.status === "terminal")) return (room.cleanupAt ?? 0) <= now;
   const lastSeen = room.controllerPresence?.lastSeen ?? 0;
   if (room.status === "finished") {
     if (typeof room.retainUntil === "number") return room.retainUntil <= now;
@@ -645,94 +649,3 @@ export function mergeCleanupCandidateRoomCodes(
 }
 
 /** heartbeat가 사라진 오래된 방을 서버가 최종적으로 정리합니다. */
-export const cleanupStaleRealtimeRooms = onSchedule(
-  {
-    region: REGION,
-    schedule: "every 5 minutes",
-    timeZone: "Asia/Seoul",
-  },
-  async () => {
-    const database = getDatabase();
-    const now = Date.now();
-    const staleBefore = now - CONTROLLER_RECONNECT_GRACE_MS;
-    const roomsRef = database.ref("rooms");
-    const [expiredCleanupSnapshot, stalePresenceSnapshot] = await Promise.all([
-      roomsRef
-        .orderByChild("cleanupAt")
-        .startAt(0)
-        .endAt(now)
-        .limitToFirst(500)
-        .get(),
-      roomsRef
-        .orderByChild("controllerPresence/lastSeen")
-        .endAt(staleBefore)
-        .limitToFirst(500)
-        .get(),
-    ]);
-
-    const keys = (snapshot: DataSnapshot): string[] => {
-      const result: string[] = [];
-      snapshot.forEach((child) => {
-        if (child.key) result.push(child.key);
-      });
-      return result;
-    };
-    const candidateCodes = mergeCleanupCandidateRoomCodes(
-      keys(expiredCleanupSnapshot),
-      keys(stalePresenceSnapshot),
-    );
-
-    let deletedCount = 0;
-    let preservedCount = 0;
-    const jobs = candidateCodes.map(async (roomCode) => {
-      let deletedRoom: RealtimeRoom | null = null;
-      const roomRef = database.ref(`rooms/${roomCode}`);
-      // Admin SDK transaction은 서버 스냅샷이 캐시에 오기 전에 update를 null로
-      // 먼저 호출할 수 있습니다. 여기서 undefined를 반환하면 실제 방을 읽지 않고
-      // committed=false가 되어 모든 후보가 보존된 것처럼 보입니다.
-      const result = await runPrimedTransaction(
-        roomRef,
-        (raw) => {
-          if (raw === null) return;
-          const room = raw as RealtimeRoom;
-          if (!shouldDeleteRoom(room, now)) return;
-          deletedRoom = room;
-          return null;
-        },
-      );
-      if (!result.committed || result.snapshot.exists()) {
-        preservedCount += 1;
-        return;
-      }
-      deletedCount += 1;
-      const deleted = deletedRoom as RealtimeRoom | null;
-      const controllerUid = deleted?.controllerUid;
-      if (!controllerUid) return;
-      const mappingRef = database.ref(`controllerRooms/${controllerUid}`);
-      const mapping = await mappingRef.get();
-      if (mapping.val() === roomCode) await mappingRef.remove();
-      if (deleted?.creationOperationId) {
-        await database
-          .ref(
-            `roomCreateRequests/${controllerUid}/${deleted.creationOperationId}`,
-          )
-          .remove();
-      }
-    });
-    const results = await Promise.allSettled(jobs);
-    const failedCount = results.filter(
-      (result) => result.status === "rejected",
-    ).length;
-    logger.info("Realtime room cleanup summary", {
-      expiredCleanupCandidateCount: keys(expiredCleanupSnapshot).length,
-      stalePresenceCandidateCount: keys(stalePresenceSnapshot).length,
-      uniqueCandidateCount: candidateCodes.length,
-      deletedCount,
-      preservedCount,
-      failedCount,
-    });
-    if (failedCount > 0) {
-      throw new Error("Realtime room cleanup had failed candidates");
-    }
-  },
-);

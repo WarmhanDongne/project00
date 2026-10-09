@@ -1,331 +1,139 @@
-/* eslint-disable max-len, valid-jsdoc, require-jsdoc */
-
+/* eslint-disable require-jsdoc, valid-jsdoc, max-len */
 import {getDatabase} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-
-import {excludeFinalCallPlayer} from "../final-call/exclude-player.js";
-import {FinalCallGameState} from "../final-call/types.js";
-import {excludeLiarsPokerPlayer} from "../liars-poker/exclude-player.js";
-import {excludeMafiaPlayer} from "../mafia/exclude-player.js";
-import {MafiaGameState} from "../mafia/types.js";
-import {LiarsPokerGameState} from "../liars-poker/common/types.js";
-import {excludeHoldemPlayer} from "../holdem/game.js";
-import {HoldemGameState} from "../holdem/types.js";
-import {resolveExpiredInterruption} from "./expire-resolution.js";
-import {
-  completeGameInterruption,
-  disconnectStaleGamePlayer,
-  InterruptibleRoom,
-  reconcileGamePlayerConnection,
-} from "./state.js";
-import {InterruptibleGameState} from "./types.js";
 import {assertControllerSession} from "../room/controller-session.js";
+import {
+  assertRoomTarget,
+  parseSessionId,
+  recordRoomOperation,
+  roomOperationResult,
+} from "../room/session-contract.js";
+import {runPrimedTransaction} from "../room/room-transaction.js";
+import {
+  transactionRandomSeed,
+  withTransactionRandom,
+} from "../common/transaction-random.js";
+import {applyRecoveryReport, assertRecoveryConnection, expireRecoveryCauses, extendRecoveryCause,
+  RecoveryReportInput, RecoveryRoom, registerRecoveryFailure} from "./recovery-state.js";
+import {
+  decorateRecoveryCauses,
+  previewRecoveryExclusion,
+  excludeRecoveryPlayer,
+} from "./game-adapters.js";
+import {finalizeGameMutation} from "./game-mutation.js";
 
 const REGION = "asia-northeast3";
-
-// Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수 있습니다.
-// 이 프로젝트의 기본 인스턴스는 asia-southeast1에 있습니다
-// (project0000-ec01e-default-rtdb.asia-southeast1.firebasedatabase.app).
-// asia-northeast3로 배포하면 트리거 생성 단계에서 다음 오류로 실패합니다.
-//   cannot create a trigger in region asia-northeast3 (not yet revealed)
-// callable 함수는 HTTPS라 이 제약이 없으므로 REGION을 그대로 씁니다.
-const DATABASE_TRIGGER_REGION = "asia-southeast1";
-const ROOM_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
-
-type Data = {
-  roomCode?: unknown;
-  interruptionId?: unknown;
-  controllerSessionId?: unknown;
-  playerUid?: unknown;
-  observedLastSeen?: unknown;
-};
-
-/** 태블릿이 발견한 20초 초과 heartbeat 후보를 최신 값으로 재검증합니다. */
-export const game_common_interruption_report_stale_player = onCall<Data>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request.auth?.uid);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    const playerUid = parsePlayerUid(request.data?.playerUid);
-    const observedLastSeen = parseTimestamp(request.data?.observedLastSeen);
-    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    let response: Record<string, unknown> | null = null;
-
-    const transaction = await roomRef.transaction((raw) => {
-      if (raw === null) return raw;
-      const room = raw as GameRoom;
-      assertControllerSession(room, uid, request.data?.controllerSessionId);
-      const outcome = disconnectStaleGamePlayer(
-        room,
-        playerUid,
-        observedLastSeen,
-        Date.now(),
-        {minimumPlayerCount: minimumPlayerCount(room)},
-      );
-      response = {success: true, outcome};
-      return room;
-    });
-
-    if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "참가자 연결 상태를 확인하지 못했습니다.");
-    }
-    return response;
-  },
-);
-
-const MINIMUM_PLAYER_COUNTS: Record<string, number> = {
-  final_call: 4,
-  liars_poker: 2,
-  mafia: 4,
-  holdem: 2,
-};
-
-interface GameRoom extends InterruptibleRoom {
-  controllerUid?: string;
-  controllerSessionId?: string;
-  hostUid?: string;
-  selectedGame?: string;
-  game?: InterruptibleGameState;
+type Data = Record<string, unknown>;
+function roomCodeOf(value: unknown): string {
+  const code = typeof value === "string" ? value.trim().toUpperCase() : "";
+  if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/.test(code)) throw new HttpsError("invalid-argument", "올바른 방 코드가 아닙니다.");
+  return code;
 }
 
-/** 남은 플레이어가 연결이 끊긴 플레이어를 제외하고 계속 진행하는 데 투표합니다. */
-export const game_common_interruption_vote_to_continue = onCall<Data>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request.auth?.uid);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    const interruptionId = parseInterruptionId(request.data?.interruptionId);
-    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    let response: Record<string, unknown> | null = null;
-
-    const transaction = await roomRef.transaction((raw) => {
-      if (raw === null) return raw;
-      const room = raw as GameRoom;
-      const game = room.game;
-      const interruption = game?.public.interruption;
-      if (!game || !interruption || interruption.id !== interruptionId) {
-        response = {success: true, alreadyResolved: true};
-        return room;
-      }
-      if (!interruption.eligibleVoterUids.includes(uid)) {
-        throw new HttpsError("permission-denied", "이 투표에 참여할 수 없습니다.");
-      }
-      if (Date.now() >= interruption.deadlineAt) {
-        throw new HttpsError("deadline-exceeded", "투표 시간이 종료되었습니다.");
-      }
-
-      interruption.votes = {...interruption.votes, [uid]: true};
-      const voteCount = Object.keys(interruption.votes).length;
-      const approved = interruption.canContinue && voteCount >= interruption.requiredVotes;
-      const now = Date.now();
-      if (approved) {
-        completeGameInterruption(game, interruption.id, now);
-        delete room.players?.[interruption.playerUid];
-        excludePlayer(room, interruption.playerUid, now);
-      } else {
-        game.public.revision += 1;
-        game.public.updatedAt = now;
-      }
-      response = {success: true, approved, voteCount, requiredVotes: interruption.requiredVotes};
-      return room;
-    });
-
-    if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "투표를 반영하지 못했습니다.");
-    }
-    return response;
-  },
-);
-
-/** 태블릿 진행자가 중단된 플레이어를 제외하고 즉시 게임을 계속합니다. */
-export const game_common_interruption_exclude_player = onCall<Data>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request.auth?.uid);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    const interruptionId = parseInterruptionId(request.data?.interruptionId);
-    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    let response: Record<string, unknown> | null = null;
-
-    const transaction = await roomRef.transaction((raw) => {
-      if (raw === null) return raw;
-      const room = raw as GameRoom;
-      assertControllerSession(room, uid, request.data?.controllerSessionId);
-      const game = room.game;
-      const interruption = game?.public.interruption;
-      if (!game || !interruption || interruption.id !== interruptionId) {
-        response = {success: true, alreadyResolved: true};
-        return room;
-      }
-      if (!interruption.canContinue) {
-        throw new HttpsError("failed-precondition", "남은 인원이 최소 인원보다 적습니다.");
-      }
-
-      const now = Date.now();
-      completeGameInterruption(game, interruption.id, now);
-      delete room.players?.[interruption.playerUid];
-      excludePlayer(room, interruption.playerUid, now);
-      response = {success: true, continued: true};
-      return room;
-    });
-
-    if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "플레이어를 제외하고 게임을 계속하지 못했습니다.");
-    }
-    return response;
-  },
-);
-
-/** 60초 동안 재접속하지 않으면 제외 후 계속하거나 인원 부족으로 종료합니다. */
-export const game_common_interruption_expire = onCall<Data>(
-  {region: REGION},
-  async (request) => {
-    const uid = requireUid(request.auth?.uid);
-    const roomCode = parseRoomCode(request.data?.roomCode);
-    const interruptionId = parseInterruptionId(request.data?.interruptionId);
-    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    let response: Record<string, unknown> | null = null;
-
-    const transaction = await roomRef.transaction((raw) => {
-      if (raw === null) return raw;
-      const room = raw as GameRoom;
-      const game = room.game;
-      const interruption = game?.public.interruption;
-      if (!game || !interruption || interruption.id !== interruptionId) {
-        response = {success: true, alreadyResolved: true};
-        return room;
-      }
-      const isParticipant = uid === room.controllerUid || uid === room.hostUid ||
-        interruption.eligibleVoterUids.includes(uid);
-      if (!isParticipant) {
-        throw new HttpsError("permission-denied", "게임 중단을 종료할 권한이 없습니다.");
-      }
-      if (uid === room.controllerUid || uid === room.hostUid) {
-        assertControllerSession(room, uid, request.data?.controllerSessionId);
-      }
-      // 만료 처리 자체는 순수 함수가 소유합니다. 서버 스케줄
-      // (cleanupExpiredGameInterruptions)이 같은 함수를 쓰므로, 화면이 끝낸
-      // 게임과 서버가 끝낸 게임의 최종 상태가 갈리지 않습니다.
-      const result = resolveExpiredInterruption(
-        room,
-        Date.now(),
-        excludePlayer,
-      );
-      if (result.outcome === "not-expired") {
-        throw new HttpsError("failed-precondition", "아직 투표 시간이 남아 있습니다.");
-      }
-      if (result.outcome === "unsupported-game") {
-        throw new HttpsError(
-          "failed-precondition",
-          "이 게임은 인원 부족 종료를 지원하지 않습니다.",
-        );
-      }
-      response = {
-        success: true,
-        expired: true,
-        continued: result.outcome === "continued",
-      };
-      return room;
-    });
-
-    if (!transaction.committed || !response) {
-      throw new HttpsError("aborted", "게임 중단 상태를 종료하지 못했습니다.");
-    }
-    return response;
-  },
-);
-
-/** RTDB onDisconnect가 바꾼 플레이어 접속 상태를 공용 게임 중단 상태로 승격합니다. */
-export const game_common_interruption_on_connection_changed = onValueWritten(
-  {
-    ref: "/rooms/{roomCode}/players/{uid}/isConnected",
-    region: DATABASE_TRIGGER_REGION,
-  },
-  async (event) => {
-    const roomCode = event.params.roomCode;
-    const uid = event.params.uid;
-    const wasConnected = event.data.before.val() === true;
-    const isConnected = event.data.after.val() === true;
-    if (wasConnected === isConnected) return;
-
-    const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    await roomRef.transaction((raw) => {
-      if (raw === null) return raw;
-      const room = raw as GameRoom;
-      reconcileGamePlayerConnection(
-        room,
-        uid,
-        wasConnected,
-        isConnected,
-        Date.now(),
-        {minimumPlayerCount: minimumPlayerCount(room)},
-      );
-      return room;
-    });
-  },
-);
-
-function excludePlayer(room: GameRoom, uid: string, now: number): void {
-  if (room.selectedGame === "final_call") {
-    excludeFinalCallPlayer(room.game as unknown as FinalCallGameState, uid, now);
-    return;
-  }
-  if (room.selectedGame === "liars_poker") {
-    excludeLiarsPokerPlayer(room.game as unknown as LiarsPokerGameState, uid, now);
-    return;
-  }
-  if (room.selectedGame === "mafia") {
-    excludeMafiaPlayer(room.game as unknown as MafiaGameState, uid, now);
-    return;
-  }
-  if (room.selectedGame === "holdem") {
-    excludeHoldemPlayer(room.game as unknown as HoldemGameState, uid, now);
-  }
-}
-
-function minimumPlayerCount(room: GameRoom): number {
-  // 팀 게임은 실제 참가자 제외로 2인 팀이 깨지면 계속할 수 없습니다.
-  if (room.selectedGame === "final_call") {
-    return Object.values(room.game?.public.players ?? {})
-      .filter((player) => player.status === "alive").length;
-  }
-  const selectedGame = room.selectedGame;
-  return selectedGame ? MINIMUM_PLAYER_COUNTS[selectedGame] ?? 2 : 2;
-}
-
-function requireUid(uid: string | undefined): string {
+async function execute(uid: string | undefined, data: Data, kind: string, controllerOnly: boolean,
+  reduce: (room: RecoveryRoom, uid: string, now: number) => Record<string, unknown>): Promise<Record<string, unknown>> {
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-  return uid;
+  const code = roomCodeOf(data.roomCode);
+  const operationId = parseSessionId(data.commandId ?? data.operationId, "작업 ID");
+  const payload = Object.fromEntries(Object.entries(data).filter(([key]) =>
+    !["controllerSessionId", "connectionId", "connectionSeq"].includes(key)));
+  const seed = transactionRandomSeed();
+  const now = Date.now();
+  let response: Record<string, unknown> | null = null;
+  const result = await runPrimedTransaction(getDatabase().ref(`rooms/${code}`), (raw) => {
+    response = null;
+    if (!raw) return;
+    const room = raw as RecoveryRoom;
+    assertRoomTarget(room, data.roomInstanceId);
+    const saved = roomOperationResult(room, uid, operationId, kind, payload);
+    if (saved) {
+      response = saved; return room;
+    }
+    const role = controllerOnly || data.role === "controller" ? "controller" : "player";
+    if (role === "controller") assertControllerSession(room, uid, data.controllerSessionId);
+    assertRecoveryConnection(room, {uid, role, membershipId: data.membershipId as string,
+      connectionId: data.connectionId as string, connectionSeq: data.connectionSeq as number});
+    if (!room.game || data.gameInstanceId !== room.game.public.gameInstanceId) {
+      response = {status: "staleContext"};
+    } else response = withTransactionRandom(seed, () => reduce(room, uid, now));
+    decorateRecoveryCauses(room, now);
+    recordRoomOperation(room, uid, operationId, kind, payload, response, now);
+    return room;
+  });
+  if (!result.committed || !response) throw new HttpsError("not-found", "현재 게임을 찾을 수 없습니다.");
+  return response;
 }
 
-function parseRoomCode(value: unknown): string {
-  const roomCode = typeof value === "string" ? value.trim().toUpperCase() : "";
-  if (!ROOM_CODE.test(roomCode)) {
-    throw new HttpsError("invalid-argument", "올바른 방 코드가 아닙니다.");
-  }
-  return roomCode;
-}
+export const game_common_recovery_report = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "report", false, (room, uid, now) => {
+    if (request.data.state !== "ready" && request.data.state !== "failed") {
+      throw new HttpsError("invalid-argument", "준비 결과가 필요합니다.");
+    }
+    return applyRecoveryReport(room, {...request.data, uid,
+      role: request.data.role === "controller" ? "controller" : "player"} as RecoveryReportInput, now);
+  }));
 
-function parseInterruptionId(value: unknown): string {
-  const id = typeof value === "string" ? value.trim() : "";
-  if (!/^[A-Za-z0-9_-]{3,160}$/.test(id)) {
-    throw new HttpsError("invalid-argument", "올바른 게임 중단 ID가 아닙니다.");
-  }
-  return id;
-}
+export const game_common_interruption_expire = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "expire", false, (room, _uid, now) => {
+    const cause = Object.values(room.game?.public.recovery?.causes ?? {})
+      .find((entry) => entry.incidentId === request.data.incidentId);
+    if (!cause) return {status: "alreadyResolved"};
+    expireRecoveryCauses(room, now);
+    return {status: cause.awaitingDecision ? "awaitingDecision" : "notExpired"};
+  }));
 
-function parsePlayerUid(value: unknown): string {
-  const uid = typeof value === "string" ? value.trim() : "";
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
-    throw new HttpsError("invalid-argument", "올바른 참가자 정보가 아닙니다.");
-  }
-  return uid;
-}
+export const game_common_interruption_wait_more = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "waitMore", true, (room, _uid, now) =>
+    extendRecoveryCause(room, request.data.playerUid as string, request.data.incidentId as string, now)));
 
-function parseTimestamp(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    throw new HttpsError("invalid-argument", "올바른 heartbeat 시각이 아닙니다.");
-  }
-  return Math.trunc(value);
-}
+export const game_common_interruption_exclude_player = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "exclude", true, (room, _uid, now) => {
+    const uid = request.data.playerUid as string;
+    const cause = room.game?.public.recovery?.causes?.[`player:${uid}`];
+    if (!cause || cause.incidentId !== request.data.incidentId ||
+        room.game?.public.recovery?.pauseId !== request.data.pauseId) return {status: "alreadyResolved"};
+    const preview = previewRecoveryExclusion(room, uid, now);
+    if (!preview.canContinue) return {status: "cannotContinue", reason: preview.reason};
+    const before = structuredClone(room.game!);
+    excludeRecoveryPlayer(room, uid, now);
+    delete room.players?.[uid];
+    room.membershipRevision = (room.membershipRevision ?? 0) + 1;
+    delete room.game?.public.recovery?.causes?.[`player:${uid}`];
+    finalizeGameMutation(room, before, now, before.public.gameInstanceId!);
+    return {status: "excluded", finished: room.game?.public.status === "finished"};
+  }));
+
+export const game_common_interruption_report_stale_player = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "stalePlayer", true, (room, _uid, now) => {
+    const uid = request.data.playerUid as string;
+    const player = room.players?.[uid];
+    const connection = player?.currentConnectionId ? room.connections?.[uid]?.[player.currentConnectionId] : undefined;
+    if (!player || !connection || player.currentConnectionId !== request.data.playerConnectionId ||
+        player.connectionSeq !== request.data.playerConnectionSeq || connection.lastSeen !== request.data.observedLastSeen) {
+      return {status: "staleContext"};
+    }
+    if (connection.connected !== true) return {status: "alreadyDisconnected"};
+    if (now - connection.lastSeen <= 20000) return {status: "notStale"};
+    connection.connected = false;
+    player.isConnected = false;
+    registerRecoveryFailure(room, uid, "player", now);
+    return {status: "disconnected"};
+  }));
+
+/** Presence is a loss signal; connected=true never supplies readiness. */
+export const game_common_interruption_on_connection_changed = onValueWritten({
+  ref: "/rooms/{roomCode}/players/{uid}/isConnected", region: "asia-southeast1",
+}, async (event) => {
+  if (event.data.after.val() !== false) return;
+  const now = Date.now();
+  await runPrimedTransaction(getDatabase().ref(`rooms/${event.params.roomCode}`), (raw) => {
+    if (!raw) return;
+    const room = raw as RecoveryRoom;
+    const player = room.players?.[event.params.uid];
+    if (player?.isConnected !== false) return;
+    registerRecoveryFailure(room, event.params.uid, "player", now);
+    decorateRecoveryCauses(room, now);
+    return room;
+  });
+});

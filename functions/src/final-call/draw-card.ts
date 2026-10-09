@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len, brace-style, block-spacing */
 
 import {getDatabase} from "firebase-admin/database";
@@ -37,7 +40,7 @@ export const game_final_call_draw_card = onCall<Data>(
     }
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_draw_card", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       const game = requireFinalCallGame(room);
@@ -54,9 +57,9 @@ export const game_final_call_draw_card = onCall<Data>(
       const privatePlayer = game.private[uid];
       if (!privatePlayer) throw new HttpsError("data-loss", "손패가 없습니다.");
       if (source === "deck" && game.server.deck.length === 0) {
-        resolveFinalCallRound(game, Date.now(), true);
+        resolveFinalCallRound(game, transactionNow, true);
         response = {success: true, type: "automaticCall"};
-        recordFinalCallCommand(game, commandId, uid, "automaticCall", Date.now(), response);
+        recordFinalCallCommand(game, commandId, uid, "automaticCall", transactionNow, response);
         return room;
       }
       const card = source === "deck" ? game.server.deck.pop() : game.public.discardCard;
@@ -65,13 +68,14 @@ export const game_final_call_draw_card = onCall<Data>(
       game.public.pendingDrawUid = uid;
       game.public.pendingDrawSource = source;
       game.public.deckRemainingCount = game.server.deck.length;
-      game.public.turnDeadlineAt = Date.now() + 30000;
+      game.public.turnDeadlineAt = transactionNow + 30000;
       game.public.revision += 1;
-      game.public.updatedAt = Date.now();
+      game.public.updatedAt = transactionNow;
       response = {success: true, type: "cardDrawn", source, card};
-      recordFinalCallCommand(game, commandId, uid, "cardDrawn", Date.now(), response);
+      recordFinalCallCommand(game, commandId, uid, "cardDrawn", transactionNow, response);
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "카드를 가져오지 못했습니다.");
     }

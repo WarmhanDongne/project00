@@ -1,6 +1,6 @@
 /* eslint-disable valid-jsdoc */
 
-import {randomInt} from "node:crypto";
+import {gameRandomInt as randomInt} from "../common/transaction-random.js";
 
 import {
   HOLDEM_RANKS,

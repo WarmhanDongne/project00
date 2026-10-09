@@ -50,7 +50,13 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     // 첫 화면(P1) 이미지와 효과음을 미리 준비합니다. context가 필요한
     // 작업이라 첫 프레임 뒤로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(preloadMafiaAssets(context, isPhone: true));
+      if (mounted) {
+        unawaited(
+          controller!.prepareScreen(
+            () => preloadMafiaAssets(context, isPhone: true),
+          ),
+        );
+      }
     });
   }
 
@@ -139,6 +145,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
       connectionChanges: _connectionChanges,
       interrupted: game.interruption != null,
       child: GameRecoveryLayer(
+        session: game.recoverySession,
         request: GameRequestRecovery(
           visible: !game.isFinished,
           // 플레이 입력은 각 화면이 즉시 완료 상태로 전환합니다. 여기서 전역
@@ -165,10 +172,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,
-          onVote: () async {
-            await game.voteToContinueInterruption();
-          },
-          onFinishNow: game.finishInterruptedGameNow,
+
           onExpired: game.expireInterruption,
         ),
         child: PhoneGameShell<MafiaPhoneStage>(
@@ -183,8 +187,6 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           background: MafiaPhoneBackground(isNight: game.usesNightScene),
           onIntroCompleted: () {},
           onRoundIntroCompleted: () {},
-          // 아래 복구 안내가 담당합니다. 셸의 20초 탈출 버튼과 중복하지 않습니다.
-          onConnectingExit: null,
           topBar: MafiaPhoneTopBar(
             me: game.me,
             subtitle: MafiaPhoneTopBar.subtitleFor(
@@ -247,6 +249,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
   Future<void> _retryConnection() async {
     try {
       await widget.provider.retryConnectionRecovery();
+      await controller?.retryRecovery();
     } catch (_) {
       // 복구를 확정하거나 퇴장시키지 않습니다. 기존 연결 가드와 재시도 버튼을 유지합니다.
     }

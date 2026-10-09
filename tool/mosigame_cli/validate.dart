@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package_test_manifest.dart';
 import 'process_runner.dart';
 import 'repository_snapshot.dart';
 import 'result.dart';
@@ -273,12 +274,20 @@ final class FullValidator {
     Duration effectiveTimeout,
   ) async {
     final stopwatch = Stopwatch()..start();
-    progressWriter('Running ${specification.id}...');
+    progressWriter(
+      'Running ${specification.id} in '
+      '${specification.relativeWorkingDirectory ?? '.'}...',
+    );
     try {
       final execution = await processRunner.run(
         specification.executable,
         specification.arguments,
-        workingDirectory: repositoryRoot,
+        workingDirectory: specification.relativeWorkingDirectory == null
+            ? repositoryRoot
+            : <String>[
+                repositoryRoot,
+                ...specification.relativeWorkingDirectory!.split('/'),
+              ].join(Platform.pathSeparator),
         timeout: effectiveTimeout,
         terminationGrace: defaultTerminationGrace,
         maxCapturedCharacters: defaultProcessCaptureLimitCharacters,
@@ -368,15 +377,17 @@ final class _ValidationStepSpecification {
     required this.executable,
     required this.arguments,
     required this.timeout,
+    this.relativeWorkingDirectory,
   });
 
   final String id;
   final String executable;
   final List<String> arguments;
   final Duration timeout;
+  final String? relativeWorkingDirectory;
 }
 
-const _pipeline = <_ValidationStepSpecification>[
+final _pipeline = <_ValidationStepSpecification>[
   _ValidationStepSpecification(
     id: 'dart-format',
     executable: 'dart',
@@ -408,6 +419,14 @@ const _pipeline = <_ValidationStepSpecification>[
     ],
     timeout: flutterTestTimeout,
   ),
+  for (final target in packageTestTargets)
+    _ValidationStepSpecification(
+      id: target.stepId,
+      executable: 'flutter',
+      arguments: const <String>['test', '--no-pub'],
+      relativeWorkingDirectory: target.directory,
+      timeout: flutterTestTimeout,
+    ),
   _ValidationStepSpecification(
     id: 'functions-lint',
     executable: 'npm',

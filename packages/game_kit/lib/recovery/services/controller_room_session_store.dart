@@ -23,6 +23,12 @@ class ControllerRoomSessionStore {
   String? _roomCode;
   String? _sessionId;
   bool _loaded = false;
+  Future<void> _writes = Future.value();
+  Future<void> _change(Future<void> Function() action) {
+    final next = _writes.catchError((Object _) {}).then((_) => action());
+    _writes = next;
+    return next;
+  }
 
   String? get roomCode => _roomCode;
 
@@ -39,35 +45,35 @@ class ControllerRoomSessionStore {
     _loaded = true;
   }
 
-  Future<void> save({
-    required String roomCode,
-    required String sessionId,
-  }) async {
-    final code = roomCode.trim().toUpperCase();
-    final preferences = await SharedPreferences.getInstance();
-    await Future.wait([
-      preferences.setString(_roomCodeKey, code),
-      preferences.setString(_sessionIdKey, sessionId),
-    ]);
-    _roomCode = code;
-    _sessionId = sessionId;
-    _loaded = true;
-  }
+  Future<void> save({required String roomCode, required String sessionId}) =>
+      _change(() async {
+        final code = roomCode.trim().toUpperCase();
+        final preferences = await SharedPreferences.getInstance();
+        await Future.wait([
+          preferences.setString(_roomCodeKey, code),
+          preferences.setString(_sessionIdKey, sessionId),
+        ]);
+        _roomCode = code;
+        _sessionId = sessionId;
+        _loaded = true;
+      });
 
-  Future<void> clear({String? onlyRoomCode}) async {
-    if (onlyRoomCode != null &&
-        _roomCode != onlyRoomCode.trim().toUpperCase()) {
-      return;
-    }
-    final preferences = await SharedPreferences.getInstance();
-    await Future.wait([
-      preferences.remove(_roomCodeKey),
-      preferences.remove(_sessionIdKey),
-    ]);
-    _roomCode = null;
-    _sessionId = null;
-    _loaded = true;
-  }
+  Future<void> clear({String? onlyRoomCode, String? onlySessionId}) =>
+      _change(() async {
+        if (onlyRoomCode != null &&
+            _roomCode != onlyRoomCode.trim().toUpperCase()) {
+          return;
+        }
+        if (onlySessionId != null && _sessionId != onlySessionId) return;
+        final preferences = await SharedPreferences.getInstance();
+        await Future.wait([
+          preferences.remove(_roomCodeKey),
+          preferences.remove(_sessionIdKey),
+        ]);
+        _roomCode = null;
+        _sessionId = null;
+        _loaded = true;
+      });
 }
 
 /// controller 전용 callable에 동일한 활성 세션을 자동으로 첨부합니다.

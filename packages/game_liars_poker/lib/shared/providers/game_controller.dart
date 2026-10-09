@@ -81,7 +81,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   /// 해석도 그 모양에 맞춰져 있습니다. 둘은 짝입니다.
   @override
   Stream<DatabaseEvent> watchPrivateStream() =>
-      service.query.watchPrivateHand(roomCode: roomCode, uid: uid);
+      service.query.watchPrivatePlayer(roomCode: roomCode, uid: uid);
 
   /// 휴대폰은 true(내 손패 구독), 태블릿(진행 기기)은 false입니다.
   final bool watchPrivateHand;
@@ -199,10 +199,15 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
         isFinished;
   }
 
-  /// 첫 스냅샷이 도착할 때까지 기다립니다. 휴대폰은 공개 상태와 내 손패,
-  /// 태블릿은 공개 상태만 기다립니다.
+  // Dealing starts behind the ready barrier, before the server publishes hands.
+  // Asset preparation can start from public data while the hand entry gate stays shut.
+  bool get _isInitialDataReady =>
+      _hasPublicSnapshot && (phase == 'dealing' || isEntryDataReady);
+
+  /// 에셋 준비에 필요한 첫 데이터를 기다립니다. 분배 중에는 공개 상태만,
+  /// 진행 중인 게임에 진입하는 휴대폰은 대응하는 손패까지 기다립니다.
   Future<void> waitForInitialData() {
-    if (isEntryDataReady) return Future<void>.value();
+    if (_isInitialDataReady) return Future<void>.value();
     return _initialDataCompleter.future;
   }
 
@@ -265,6 +270,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canSelectCards =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       phase == 'playing' &&
       !isEliminated &&
@@ -275,6 +281,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canCallLiar =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       (phase == 'playing' || phase == 'lastCardChallenge') &&
       isMyTurn &&
@@ -284,6 +291,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canFoldLastCardChallenge =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       phase == 'lastCardChallenge' &&
       isMyTurn &&
@@ -374,7 +382,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     final nextPenaltyResult = parseLiarsPokerPenaltyResult(
       data['penaltyResult'],
     );
-    final rawInterruption = data['interruption'];
+    final rawInterruption = data['recovery'];
     final nextInterruption = rawInterruption is Map
         ? GameInterruption.fromMap(Map<Object?, Object?>.from(rawInterruption))
         : null;
@@ -542,7 +550,11 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   void handlePrivateEvent(DatabaseEvent event) {
     final hadHandSnapshot = _hasHandSnapshot;
     _hasHandSnapshot = true;
-    final parsedCards = parseLiarsPokerHand(event.snapshot.value);
+    final parsedCards = parseLiarsPokerHand(
+      event.snapshot.value is Map
+          ? (event.snapshot.value as Map)['hand']
+          : null,
+    );
 
     // 카드 배분 단계와 개인 손패 이벤트의 도착 순서는 기기마다 달라질 수
     // 있습니다. 따라서 공개 상태는 phase가 아니라 실제 새 5장 카드 ID를
@@ -585,7 +597,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   }
 
   void _completeInitialDataIfReady() {
-    if (!isEntryDataReady || _initialDataCompleter.isCompleted) return;
+    if (!_isInitialDataReady || _initialDataCompleter.isCompleted) return;
     _initialDataCompleter.complete();
   }
 
@@ -741,23 +753,6 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
         interruptionId: current.id,
       ),
       failureMessage: '플레이어를 제외하고 게임을 계속하지 못했습니다.',
-    );
-  }
-
-  /// 태블릿에서 인원 부족 중단을 즉시 종료합니다.
-  ///
-  /// 휴대폰용 [finishInterruptedGameNow]와 같은 명령이지만 잠금이 다릅니다.
-  /// 태블릿 화면이 `isMenuCommandInFlight`를 보고 버튼을 잠그므로 여기서도
-  /// 메뉴 잠금을 써야 합니다. 다른 잠금을 쓰면 표시 없이 조용히 드롭됩니다.
-  Future<bool> finishInterruptedGameNowFromController() {
-    final current = interruption;
-    if (current == null || current.canContinue) return Future.value(false);
-    return _runMenuCommand(
-      () => service.interruption.finishNow(
-        roomCode: roomCode,
-        interruptionId: current.id,
-      ),
-      failureMessage: GameFlowCopy.interruptionFinishNowFailed,
     );
   }
 

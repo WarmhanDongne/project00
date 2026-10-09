@@ -1,11 +1,13 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable valid-jsdoc */
 
-import {randomInt} from "node:crypto";
+import {gameRandomInt as randomInt} from "../common/transaction-random.js";
 
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {runPrimedTransaction} from "../room/room-transaction.js";
 import {processedResult, recordCommand} from "./common/commands.js";
 import {findNextAlivePlayer} from "./common/next-turn.js";
 import {RealtimeRoom} from "./common/types.js";
@@ -47,46 +49,49 @@ export const game_liars_poker_prepare_penalty = onCall<PreparePenaltyData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
-      assertRoomExists(rawRoom);
-      const room = rawRoom as RealtimeRoom;
-      assertController(room, uid, request.data?.controllerSessionId);
-      const game = requireGame(room);
-      assertGameStatus(game.public.status, "playing");
-      if (game.public.phase !== "penalty") {
-        throw new HttpsError(
-          "failed-precondition",
-          "현재 벌칙을 추첨할 수 있는 단계가 아닙니다.",
-        );
-      }
-      const targetUid = game.public.penaltyTargetUid;
-      if (!targetUid) throw new HttpsError("data-loss", "벌칙 대상이 없습니다.");
-      const target = game.public.players[targetUid];
-      assertPlayerExists(target);
-      assertPlayerAlive(target.status);
+    const transaction = await runGameCommandTransaction(
+      roomRef, request, "game_liars_poker_prepare_penalty",
+      (rawRoom, transactionNow) => {
+        assertRoomExists(rawRoom);
+        const room = rawRoom as RealtimeRoom;
+        assertController(room, uid, request.data?.controllerSessionId);
+        const game = requireGame(room);
+        assertGameStatus(game.public.status, "playing");
+        if (game.public.phase !== "penalty") {
+          throw new HttpsError(
+            "failed-precondition",
+            "현재 벌칙을 추첨할 수 있는 단계가 아닙니다.",
+          );
+        }
+        const targetUid = game.public.penaltyTargetUid;
+        if (!targetUid) throw new HttpsError("data-loss", "벌칙 대상이 없습니다.");
+        const target = game.public.players[targetUid];
+        assertPlayerExists(target);
+        assertPlayerAlive(target.status);
 
-      // 네트워크 응답을 잃고 새 commandId로 다시 요청해도 이미 뽑은 값을
-      // 재사용합니다. 같은 벌칙에서 원하는 결과가 나올 때까지 재추첨할 수 없습니다.
-      const pending = game.server.pendingPenaltyResolution;
-      if (pending && pending.targetUid === targetUid) {
-        response = {
-          success: true,
-          resolutionId: pending.resolutionId,
-          result: pending.result,
+        // 네트워크 응답을 잃고 새 commandId로 다시 요청해도 이미 뽑은 값을
+        // 재사용합니다. 같은 벌칙에서 원하는 결과가 나올 때까지 재추첨할 수 없습니다.
+        const pending = game.server.pendingPenaltyResolution;
+        if (pending && pending.targetUid === targetUid) {
+          response = {
+            success: true,
+            resolutionId: pending.resolutionId,
+            result: pending.result,
+          };
+          return room;
+        }
+
+        const result = drawPenaltyResult(target.penaltyCount);
+        game.server.pendingPenaltyResolution = {
+          resolutionId: commandId,
+          targetUid,
+          result,
+          createdAt: transactionNow,
         };
+        response = {success: true, resolutionId: commandId, result};
         return room;
-      }
-
-      const result = drawPenaltyResult(target.penaltyCount);
-      game.server.pendingPenaltyResolution = {
-        resolutionId: commandId,
-        targetUid,
-        result,
-        createdAt: Date.now(),
-      };
-      response = {success: true, resolutionId: commandId, result};
-      return room;
-    });
+      }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "벌칙 결과를 추첨하지 못했습니다.");
@@ -109,96 +114,99 @@ export const game_liars_poker_resolve_penalty = onCall<ResolvePenaltyData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await runPrimedTransaction(roomRef, (rawRoom) => {
-      assertRoomExists(rawRoom);
-      const room = rawRoom as RealtimeRoom;
-      assertController(room, uid, request.data?.controllerSessionId);
-      const game = requireGame(room);
-      const previousResult = processedResult(game, commandId);
-      if (previousResult) {
-        response = previousResult;
-        return room;
-      }
+    const transaction = await runGameCommandTransaction(
+      roomRef, request, "game_liars_poker_resolve_penalty",
+      (rawRoom, transactionNow) => {
+        assertRoomExists(rawRoom);
+        const room = rawRoom as RealtimeRoom;
+        assertController(room, uid, request.data?.controllerSessionId);
+        const game = requireGame(room);
+        const previousResult = processedResult(game, commandId);
+        if (previousResult) {
+          response = previousResult;
+          return room;
+        }
 
-      assertGameStatus(game.public.status, "playing");
-      if (game.public.phase !== "penalty") {
-        throw new HttpsError(
-          "failed-precondition",
-          "현재 벌칙을 처리할 수 있는 단계가 아닙니다.",
-        );
-      }
-      const targetUid = game.public.penaltyTargetUid;
-      if (!targetUid) {
-        throw new HttpsError("data-loss", "벌칙 대상이 없습니다.");
-      }
-      const target = game.public.players[targetUid];
-      assertPlayerExists(target);
-      assertPlayerAlive(target.status);
-      const pending = game.server.pendingPenaltyResolution;
-      if (
-        !pending ||
+        assertGameStatus(game.public.status, "playing");
+        if (game.public.phase !== "penalty") {
+          throw new HttpsError(
+            "failed-precondition",
+            "현재 벌칙을 처리할 수 있는 단계가 아닙니다.",
+          );
+        }
+        const targetUid = game.public.penaltyTargetUid;
+        if (!targetUid) {
+          throw new HttpsError("data-loss", "벌칙 대상이 없습니다.");
+        }
+        const target = game.public.players[targetUid];
+        assertPlayerExists(target);
+        assertPlayerAlive(target.status);
+        const pending = game.server.pendingPenaltyResolution;
+        if (
+          !pending ||
         pending.resolutionId !== resolutionId ||
         pending.targetUid !== targetUid
-      ) {
-        throw new HttpsError(
-          "failed-precondition",
-          "서버에서 추첨한 벌칙 결과가 없습니다. 다시 추첨해주세요.",
-        );
-      }
-      const result = pending.result;
-
-      const now = Date.now();
-      if (result === "safe") {
-        if (game.server.penaltyCountIncrementedBeforeRoulette !== true) {
-          target.penaltyCount += 1;
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "서버에서 추첨한 벌칙 결과가 없습니다. 다시 추첨해주세요.",
+          );
         }
-      } else {
-        target.status = "eliminated";
-        target.remainingCardCount = 0;
-        delete game.private[targetUid];
-      }
+        const result = pending.result;
 
-      const alivePlayers = Object.values(game.public.players).filter(
-        (player) => player.status === "alive",
-      );
-      if (alivePlayers.length === 1) {
-        finishGame(game, alivePlayers[0].uid, now);
-      } else {
-        const starterUid = result === "safe" ? targetUid :
-          findNextAlivePlayer(game.public.players, targetUid);
-        restartRound(game, starterUid, now);
-      }
-      // 새 라운드나 승리 상태로 전환된 뒤에도 모든 휴대폰이 룰렛 결과를
-      // 동일하게 표시할 수 있도록 공개 결과를 잠시 보존합니다.
-      game.public.penaltyResult = {
-        targetUid,
-        result,
-        resolvedAt: now,
-      };
-      delete game.server.penaltyCountIncrementedBeforeRoulette;
-      delete game.server.pendingPenaltyResolution;
+        const now = transactionNow;
+        if (result === "safe") {
+          if (game.server.penaltyCountIncrementedBeforeRoulette !== true) {
+            target.penaltyCount += 1;
+          }
+        } else {
+          target.status = "eliminated";
+          target.remainingCardCount = 0;
+          delete game.private[targetUid];
+        }
 
-      response = {
-        success: true,
-        type: "penaltyResolved",
-        commandId,
-        result,
-        penaltyTargetUid: targetUid,
-        status: game.public.status,
-        // RTDB에서는 null 필드가 읽을 때 생략되므로 undefined일 수도 있습니다.
-        winnerUid: game.public.winnerUid ?? null,
-        round: game.public.round,
-        turnUid: game.public.turnUid ?? null,
-        revision: game.public.revision,
-      };
-      recordCommand(game, commandId, {
-        uid,
-        type: "penaltyResolved",
-        createdAt: now,
-        result: response,
-      });
-      return room;
-    });
+        const alivePlayers = Object.values(game.public.players).filter(
+          (player) => player.status === "alive",
+        );
+        if (alivePlayers.length === 1) {
+          finishGame(game, alivePlayers[0].uid, now);
+        } else {
+          const starterUid = result === "safe" ? targetUid :
+            findNextAlivePlayer(game.public.players, targetUid);
+          restartRound(game, starterUid, now);
+        }
+        // 새 라운드나 승리 상태로 전환된 뒤에도 모든 휴대폰이 룰렛 결과를
+        // 동일하게 표시할 수 있도록 공개 결과를 잠시 보존합니다.
+        game.public.penaltyResult = {
+          targetUid,
+          result,
+          resolvedAt: now,
+        };
+        delete game.server.penaltyCountIncrementedBeforeRoulette;
+        delete game.server.pendingPenaltyResolution;
+
+        response = {
+          success: true,
+          type: "penaltyResolved",
+          commandId,
+          result,
+          penaltyTargetUid: targetUid,
+          status: game.public.status,
+          // RTDB에서는 null 필드가 읽을 때 생략되므로 undefined일 수도 있습니다.
+          winnerUid: game.public.winnerUid ?? null,
+          round: game.public.round,
+          turnUid: game.public.turnUid ?? null,
+          revision: game.public.revision,
+        };
+        recordCommand(game, commandId, {
+          uid,
+          type: "penaltyResolved",
+          createdAt: now,
+          result: response,
+        });
+        return room;
+      }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "벌칙 결과를 반영하지 못했습니다.");

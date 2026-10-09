@@ -1,12 +1,25 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len, brace-style, block-spacing */
 
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
-import {nextFinalCallPlayer, resolveFinalCallRound, startTurn} from "./game.js";
+import {
+  nextFinalCallPlayer,
+  resolveFinalCallRound,
+  startTurn,
+} from "./game.js";
 import {FinalCallRoom} from "./types.js";
-import {FINAL_CALL_REGION, finalCallCommandId, finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
+import {
+  FINAL_CALL_REGION,
+  finalCallCommandId,
+  finalCallRoomCode,
+  finalCallUid,
+  requireFinalCallGame,
+} from "./validation.js";
 
 type Data = {roomCode?: unknown; commandId?: unknown; cardIds?: unknown};
 
@@ -21,7 +34,7 @@ export const game_final_call_submit_hand = onCall<Data>(
       request.data.cardIds.filter((value): value is string => typeof value === "string") : [];
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_submit_hand", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       const game = requireFinalCallGame(room);
@@ -44,7 +57,7 @@ export const game_final_call_submit_hand = onCall<Data>(
           sortedSubmittedIds.some((cardId) => !handIdSet.has(cardId))) {
         throw new HttpsError("invalid-argument", "현재 손패에서 점수 조합을 선택해주세요.");
       }
-      const now = Date.now();
+      const now = transactionNow;
       const privateHand = game.private[uid]?.hand ?? {};
       game.server.finalSubmissions ??= {};
       game.server.finalSubmissions[uid] = submittedIds
@@ -66,7 +79,8 @@ export const game_final_call_submit_hand = onCall<Data>(
       response = {success: true, type: "finalHandSubmitted", turnUid: game.public.turnUid};
       recordFinalCallCommand(game, commandId, uid, "finalHandSubmitted", now, response);
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "최종 손패를 제출하지 못했습니다.");
     }

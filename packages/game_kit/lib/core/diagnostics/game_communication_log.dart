@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/frame_safe_notifier.dart';
+
 // ============================================================
 
 /// 게임 명령과 Realtime Database 수신을 같은 시간축에 남기는 개발용 기록입니다.
@@ -25,6 +26,8 @@ class GameCommunicationLog extends ChangeNotifier with FrameSafeNotifier {
   bool? _isRealtimeConnected;
   DateTime? _lastRealtimeEventAt;
   int _unseenProblemCount = 0;
+  int _droppedEntries = 0;
+  int get droppedEntries => _droppedEntries;
 
   List<GameCommunicationEntry> get entries => List.unmodifiable(_entries);
   bool? get isRealtimeConnected => _isRealtimeConnected;
@@ -49,7 +52,10 @@ class GameCommunicationLog extends ChangeNotifier with FrameSafeNotifier {
       time: time ?? DateTime.now(),
     );
     _entries.insert(0, entry);
-    if (_entries.length > maxEntries) _entries.removeLast();
+    if (_entries.length > maxEntries) {
+      _entries.removeLast();
+      _droppedEntries++;
+    }
     if (level == GameCommunicationLevel.warning ||
         level == GameCommunicationLevel.failure) {
       _unseenProblemCount += 1;
@@ -118,6 +124,7 @@ class GameCommunicationLog extends ChangeNotifier with FrameSafeNotifier {
   void clearEntries() {
     if (_entries.isEmpty && _unseenProblemCount == 0) return;
     _entries.clear();
+    _droppedEntries = 0;
     _unseenProblemCount = 0;
     notifySafely();
   }
@@ -131,6 +138,7 @@ class GameCommunicationLog extends ChangeNotifier with FrameSafeNotifier {
       return;
     }
     _entries.clear();
+    _droppedEntries = 0;
     _unseenProblemCount = 0;
     _isRealtimeConnected = null;
     _lastRealtimeEventAt = null;

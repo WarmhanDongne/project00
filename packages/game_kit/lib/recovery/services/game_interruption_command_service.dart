@@ -1,12 +1,18 @@
 // [game_interruption_command_service.dart] 는 여러 게임이 함께 사용하는 서버의 게임 상태를 변경하는 명령을 모아둔 파일이다.
 //
 // - [Package] : 게임 공통 기반
-// - [RecoveryService] : 중단 투표·제외·종료 명령을 서버에 전달함
+// - [RecoveryService] : 준비 보고·진행자 선택 명령을 서버에 전달함
 //
 // 즉, 화면에서 발생한 행동을 정해진 서버 쓰기 경계로 전달하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
 import 'package:game_kit/services/game_command_service.dart';
+import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:async';
+import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 
 // ============================================================
 
@@ -17,49 +23,78 @@ import 'package:game_kit/services/game_command_service.dart';
 /// 재전송해도 두 번 처리되지 않고, 서로 경합해도 먼저 도착한 쪽만 반영됩니다.
 class GameInterruptionCommandService extends GameCommandService {
   GameInterruptionCommandService({super.functions, super.retryPolicy});
+  Future<Map<String, dynamic>> report({
+    required String roomCode,
+    required Map<String, dynamic> context,
+    required int reportSeq,
+    required bool ready,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final session = GameRecoverySession.forRoom(roomCode, uid ?? '');
+    final data = {
+      'roomCode': roomCode,
+      ...context,
+      'commandId': commandId('report'),
+      'reportSeq': reportSeq,
+      'state': ready ? 'ready' : 'failed',
+      'screenUsable': ready,
+      'assetsReady': ready,
+    };
+    final batch =
+        RoomRecoveryBatch.current ??
+        (session.preparationBatch ??= RoomRecoveryBatch());
+    return batch.run(
+      () => invoke('game_common_recovery_report', data, capturedUid: uid),
+      isCurrent: () =>
+          FirebaseAuth.instance.currentUser?.uid == uid &&
+          !session.leaving &&
+          session.transportConnected,
+      retryable: (error) =>
+          error is TimeoutException ||
+          (error is FirebaseFunctionsException &&
+              const {
+                'aborted',
+                'deadline-exceeded',
+                'unavailable',
+              }.contains(error.code)),
+    );
+  }
 
-  /// 중단된 플레이어를 기다리며 게임을 계속하는 쪽에 투표합니다.
-  Future<void> voteToContinue({
+  Map<String, dynamic> _causeData(String roomCode, String incidentId) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final pub = GameRecoverySession.forRoom(roomCode, uid).publicValue;
+    final raw = pub?['recovery'];
+    final recovery = raw is Map ? GameInterruption.fromMap(raw) : null;
+    return {
+      'roomCode': roomCode,
+      'incidentId': incidentId,
+      'pauseId': recovery?.pauseId,
+      'playerUid': recovery?.playerUid,
+    };
+  }
+
+  Future<Map<String, dynamic>> waitMore({
     required String roomCode,
     required String interruptionId,
-  }) => _send(
-    'game_common_interruption_vote_to_continue',
-    roomCode,
-    interruptionId,
+  }) => invoke(
+    'game_common_interruption_wait_more',
+    _causeData(roomCode, interruptionId),
+    retryTransientFailure: true,
   );
-
-  /// 마감이 지난 중단을 정리합니다.
-  Future<void> expire({
+  Future<Map<String, dynamic>> expire({
     required String roomCode,
     required String interruptionId,
-  }) => _send('game_common_interruption_expire', roomCode, interruptionId);
-
-  /// 남은 인원이 부족해 계속할 수 없을 때 60초 마감을 기다리지 않고 게임을
-  /// 정상 종료합니다.
-  ///
-  /// [expire]와 같은 최종 상태를 만들되 마감 전에도 성공합니다. 0초 자동
-  /// 만료와 경합해도 먼저 도착한 쪽만 처리됩니다.
-  Future<void> finishNow({
+  }) => invoke(
+    'game_common_interruption_expire',
+    _causeData(roomCode, interruptionId),
+    retryTransientFailure: true,
+  );
+  Future<Map<String, dynamic>> excludeAndContinue({
     required String roomCode,
     required String interruptionId,
-  }) => _send('game_common_interruption_finish_now', roomCode, interruptionId);
-
-  /// 방을 만든 태블릿 진행자가 중단된 플레이어를 제외하고 즉시 계속합니다.
-  Future<void> excludeAndContinue({
-    required String roomCode,
-    required String interruptionId,
-  }) => _send(
+  }) => invoke(
     'game_common_interruption_exclude_player',
-    roomCode,
-    interruptionId,
+    _causeData(roomCode, interruptionId),
+    retryTransientFailure: true,
   );
-
-  Future<void> _send(
-    String functionName,
-    String roomCode,
-    String interruptionId,
-  ) => invoke(functionName, {
-    'roomCode': roomCode,
-    'interruptionId': interruptionId,
-  }, retryTransientFailure: true);
 }

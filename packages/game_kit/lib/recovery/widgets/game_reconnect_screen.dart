@@ -61,7 +61,7 @@ class GameReconnectScreen extends StatefulWidget {
   /// 바뀝니다(확정 2026-08).
   ///
   /// 계속 기다리게만 두면 나갈 방법이 없어 앱을 강제 종료하게 됩니다.
-  /// 공용 연결 화면([GameConnectingOverlay])의 나가기 버튼과 같은 20초입니다.
+  /// 공용 연결 화면([GameConnectingOverlay])의 나가기 버튼과 같은 10초입니다.
   final Duration homeButtonDelay;
 
   /// 시간이 지난 뒤 나타나는 버튼 문구입니다.
@@ -78,7 +78,7 @@ class GameReconnectScreen extends StatefulWidget {
   /// 되기 때문입니다.
   final List<Widget> actions;
 
-  static const Duration defaultHomeButtonDelay = Duration(seconds: 20);
+  static const Duration defaultHomeButtonDelay = Duration(seconds: 10);
 
   //=======================색==============================
   /// 배경 크림색입니다.

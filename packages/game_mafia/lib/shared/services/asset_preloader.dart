@@ -1,3 +1,4 @@
+import 'package:game_kit/recovery/services/required_image.dart';
 // [game_loading.dart] 는 마피아에서 사용하는 게임 진입 중 필요한 준비 상태와 로딩 화면을 관리하는 파일이다.
 //
 // - [Package] : 마피아
@@ -96,7 +97,7 @@ Future<void> preloadMafiaAssets(
     await Future.wait(
       localAssets
           .sublist(index, end)
-          .map((asset) => precacheImage(asset.provider(), context)),
+          .map((asset) => precacheRequiredImage(asset.provider(), context)),
     );
   }
 }

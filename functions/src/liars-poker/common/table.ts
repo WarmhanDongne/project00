@@ -1,6 +1,6 @@
 /* eslint-disable valid-jsdoc */
 
-import {randomInt} from "crypto";
+import {gameRandomInt as randomInt} from "../../common/transaction-random.js";
 
 export type Table = "A" | "K" | "Q";
 

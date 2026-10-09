@@ -1,10 +1,16 @@
+import {
+  replayGameCommand,
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len, require-jsdoc */
 
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {assertStartGameSnapshot, startGameFingerprint} from "../common/start-game-transaction.js";
-import {runPrimedTransaction} from "../room/room-transaction.js";
+import {
+  assertStartGameSnapshot,
+  startGameFingerprint,
+} from "../common/start-game-transaction.js";
 import {createHoldemGame, HoldemStartPlayer} from "./game.js";
 import {HoldemRoom} from "./types.js";
 import {
@@ -27,6 +33,8 @@ export const game_holdem_start_game = onCall<Data>({region: HOLDEM_REGION}, asyn
   const roomCode = parseHoldemRoomCode(request.data?.roomCode);
   const restart = request.data?.restart === true;
   const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+  const replay = await replayGameCommand(roomRef, request, "game_holdem_start_game");
+  if (replay) return replay;
   const snapshot = await roomRef.get();
   const rawRoom = snapshot.val();
   assertHoldemRoom(rawRoom);
@@ -38,7 +46,7 @@ export const game_holdem_start_game = onCall<Data>({region: HOLDEM_REGION}, asyn
   const players = createPlayers(room.players);
   const initialGame = createHoldemGame(players, Date.now());
   try {
-    const transaction = await runPrimedTransaction(roomRef, (value) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_holdem_start_game", (value) => {
       assertHoldemRoom(value);
       const current = value as HoldemRoom;
       assertHoldemController(current, uid, request.data?.controllerSessionId);
@@ -47,12 +55,12 @@ export const game_holdem_start_game = onCall<Data>({region: HOLDEM_REGION}, asyn
       current.game = initialGame;
       current.status = "playing";
       return current;
-    });
+    }, () => ({success: true, roomCode, handNumber: 1, revision: initialGame.public.revision, restarted: restart}));
     if (!transaction.committed) throw new HttpsError("already-exists", "이미 게임이 진행 중입니다.");
+    return transaction.operationResult ?? {success: true};
   } catch (error) {
     throw holdemHttpsError(error);
   }
-  return {success: true, roomCode, handNumber: 1, revision: initialGame.public.revision, restarted: restart};
 });
 
 function createPlayers(values: HoldemRoom["players"]): HoldemStartPlayer[] {

@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
-import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/recovery/widgets/game_interruption_layer.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 export 'package:game_kit/recovery/widgets/game_interruption_layer.dart'
     show GameInterruptionPresentation;
 
-/// 정상 게임 화면 위에 요청·재연결·플레이어 이탈 UI를 같은 순서로 쌓습니다.
+/// 정상 준비는 게임 화면을 유지하고, 실제 실패·이탈만 기존 안내로 표시합니다.
 ///
-/// 이 위젯은 서버 상태를 판단하지 않습니다. 각 게임의 board가 이미 계산한 상태와
-/// 콜백을 전달하면 화면만 구성합니다. 따라서 게임 규칙과 복구 UI가 섞이지 않습니다.
+/// 각 게임이 전달한 준비·중단 원인과 콜백으로 화면만 구성합니다.
+/// 서버 상태와 게임 규칙은 변경하지 않습니다.
 class GameRecoveryLayer extends StatelessWidget {
   const GameRecoveryLayer({
     super.key,
     this.request,
     this.connection,
     this.interruption,
+    this.session,
+    this.onExit,
     required this.child,
   });
 
@@ -24,43 +26,70 @@ class GameRecoveryLayer extends StatelessWidget {
   final GameRequestRecovery? request;
   final GameConnectionRecovery? connection;
   final GameInterruptionRecovery? interruption;
+  final GameRecoverySession? session;
+  final VoidCallback? onExit;
 
   @override
   Widget build(BuildContext context) {
+    final live = session;
+    if (live != null) {
+      return AnimatedBuilder(
+        animation: live,
+        builder: (context, _) => _build(context),
+      );
+    }
+    return _build(context);
+  }
+
+  Widget _build(BuildContext context) {
     final interruption = this.interruption;
+    final waiting =
+        connection?.isWaiting == true || (session != null && !session!.canSend);
+    final state = interruption?.state;
+    final interrupted =
+        state != null &&
+        (state.causes.isNotEmpty || state.playerUid.isNotEmpty);
+    final playerInterruption =
+        interrupted &&
+        interruption?.presentation == GameInterruptionPresentation.player;
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 메뉴·나가기는 계속 사용할 수 있어야 합니다. 플레이 입력은 게임
+        // content와 명령 서비스의 canSend 검사에서 차단합니다.
         child,
-        // 이탈 모달이 열리면 그 안에서 실패를 표시합니다. 아래 요청 안내를 함께
-        // 그리면 scrim 뒤에 가려지고 같은 오류가 두 군데에서 관리됩니다.
+        // 실제 중단의 오류는 중단 안내 한 곳에서만 표시합니다.
         if (request case final request?)
-          if (request.visible && interruption?.state == null)
+          if (request.visible && !interrupted)
             GameRequestNotice(
-              busy: request.busy,
+              busy: request.busy && !waiting,
               message: request.message,
-              onRetry: request.onRetry,
+              onRetry: waiting
+                  ? connection?.onRetry ?? session?.retry
+                  : request.onRetry,
               busyMessage: request.busyMessage,
             ),
-        if (connection case final connection?)
-          GameConnectingOverlay(
-            isWaiting: connection.isWaiting,
-            exitDelay: connection.exitDelay,
-            message: connection.message,
-            onExit: connection.onExit,
-            onRetry: connection.onRetry,
+        if (playerInterruption)
+          GameRequestNotice(
+            message:
+                interruption?.failureMessage ??
+                request?.message ??
+                '게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.',
+            onRetry: session?.localUsable == false && request?.message != null
+                ? connection?.onRetry ?? session?.retry
+                : null,
           ),
-        if (interruption != null)
+        if (interrupted && !playerInterruption && interruption != null)
           GameInterruptionLayer(
             interruption: interruption.state,
             currentUid: interruption.currentUid,
             presentation: interruption.presentation,
             isSubmitting: interruption.isSubmitting,
             failureMessage: interruption.failureMessage,
-            onVote: interruption.onVote,
             onContinue: interruption.onContinue,
             onFinishNow: interruption.onFinishNow,
             onExpired: interruption.onExpired,
+            onWaitMore: interruption.onWaitMore,
           ),
       ],
     );
@@ -85,18 +114,19 @@ class GameRequestRecovery {
   final String busyMessage;
 }
 
-/// 게임 데이터를 다시 받는 동안의 대기·재시도·나가기 설정입니다.
+/// 데이터 준비 대기와 실제 실패의 재시도 설정입니다. 정상 대기는 UI를 띄우지 않습니다.
 @immutable
 class GameConnectionRecovery {
   const GameConnectionRecovery({
     required this.isWaiting,
-    this.exitDelay = const Duration(seconds: 20),
+    this.exitDelay = const Duration(seconds: 10),
     this.message,
     this.onExit,
     this.onRetry,
   });
 
   final bool isWaiting;
+  // 기존 호출부 호환용입니다. 대기 시간·문구·나가기 버튼을 별도로 표시하지 않습니다.
   final Duration exitDelay;
   final String? message;
   final VoidCallback? onExit;
@@ -116,6 +146,7 @@ class GameInterruptionRecovery {
     this.onContinue,
     this.onFinishNow,
     this.onExpired,
+    this.onWaitMore,
   });
 
   final GameInterruption? state;
@@ -127,4 +158,5 @@ class GameInterruptionRecovery {
   final Future<bool> Function()? onContinue;
   final Future<bool> Function()? onFinishNow;
   final Future<bool> Function()? onExpired;
+  final Future<bool> Function()? onWaitMore;
 }

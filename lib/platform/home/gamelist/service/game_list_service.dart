@@ -51,7 +51,11 @@ class GameService {
   }
 
   // 현재 그룹이 보유 중인 게임 목록을 반환
-  Future<List<GameInfo>> fetchGroupGames(List<String> uids) async {
+  Future<List<GameInfo>> fetchGroupGames(
+    List<String> uids, {
+    required String roomCode,
+    required String roomInstanceId,
+  }) async {
     if (uids.isEmpty) return const [];
 
     // 전달된 UID는 화면 갱신 중복 방지에만 사용합니다. 권한 판정 대상은 서버가
@@ -59,7 +63,13 @@ class GameService {
     // 클라이언트가 다른 사용자의 프로필 문서를 읽지 않게 하는 보안 경계입니다.
     final entitlementResult = await _functions
         .httpsCallable('fetchRealtimeRoomGroupEntitlements')
-        .call<Map<String, dynamic>>();
+        .call<Map<String, dynamic>>({
+          'roomCode': roomCode,
+          'roomInstanceId': roomInstanceId,
+        });
+    if (entitlementResult.data['status'] == 'stale') {
+      throw StateError('그룹 구성이 변경되었습니다.');
+    }
     final groupOwnedGameIds = _ownedGameIds(
       entitlementResult.data['ownedGameIds'],
     );

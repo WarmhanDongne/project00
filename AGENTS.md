@@ -32,8 +32,8 @@ Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_M
 수동 테스트 관찰 절차에만 사용한다.
 
 - 실행 전에 사람이 로컬 terminal에서 MCP 전용 계정이 활성 상태이고 그 계정에
-  `roles/firebasedatabase.viewer` 이외의 더 넓은 권한이 없는지 확인한다. 계정 식별자나
-  CLI 인증 출력은 채팅에 포함하지 않는다.
+  `roles/firebasedatabase.viewer`와 사용자가 승인한 `roles/logging.viewer` 이외의
+  권한이 없는지 확인한다. 계정 식별자나 CLI 인증 출력은 채팅에 포함하지 않는다.
 - 노출 도구는 `firebase_get_project`와 `realtimedatabase_get_data` 두 개여야 한다.
   다르거나 `realtimedatabase_set_data`가 보이면 아무 도구도 호출하지 않는다.
 - 먼저 `firebase_get_project`로 project ID `project0000-ec01e`, 이름 `mosigame`, 상태
@@ -44,6 +44,22 @@ Firebase MCP는 [`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_M
 - 개인정보, credential, token과 불필요한 사용자 데이터를 요청하거나 출력하지 않는다.
 - 쓰기, Auth 접근, project 변경, rules 변경, deploy와 migration은 금지한다.
 - MCP 결과는 Project CLI의 targeted suite나 `validate --full`을 대체하지 않는다.
+
+## Firebase server logs read-only
+
+같은 조회용 계정의 Cloud Functions 실행 로그는
+[`Firebase Server Logs`](docs/operations/FIREBASE_SERVER_LOGS.md)의 Google Cloud CLI
+경로로 읽는다. 기존 Firebase MCP의 노출 도구 두 개는 유지한다.
+
+- 대상 project는 `project0000-ec01e`로 고정한다.
+- 사람이 기존 조회용 계정으로 별도 gcloud configuration에 로그인하고 두 조회
+  역할 외의 권한이 없는지 확인한다. AI가 credential을 읽거나 로그인을 대행하지 않는다.
+- 계정 역할 추가와 실제 운영 로그 조회 범위는 구분한다. 사용자와 합의한 오류 조사
+  또는 테스트의 관련 함수, 시작·종료 시간, 최대 건수 안에서만 조회한다.
+- 계정 식별자, token, 개인 정보와 게임 private payload는 출력·저장하지 않는다.
+  처음 연결 확인에는 payload를 제외한 실행 metadata만 사용한다.
+- 정제한 기록만 ignored `build/` 아래에 저장한다. 쓰기, Auth 사용자 데이터 접근,
+  IAM·rules 변경, deploy와 migration은 이 로그 조회 절차에 포함하지 않는다.
 
 ## Validation routing
 

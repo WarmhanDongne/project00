@@ -1,4 +1,7 @@
+import 'package:game_holdem/game_assets.dart';
 import 'dart:async';
+import 'package:game_kit/recovery/services/game_progress_command.dart';
+import 'package:game_kit/recovery/services/required_image.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +20,7 @@ import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
+import 'package:game_kit/shared/widgets/game_route_exit.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
 import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
@@ -42,10 +46,14 @@ class HoldemTabletGame extends ConsumerStatefulWidget {
 class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
   HoldemSessionArgs? _args;
   Timer? _phaseTimer;
+  final _phaseCommand = GameProgressCommand();
+  final _turnCommand = GameProgressCommand();
   Timer? _turnTimer;
-  (String, int)? _scheduledPhase;
+  (String, int, int?)? _scheduledPhase;
   int? _scheduledDeadline;
   bool _soundPreloaded = false;
+  bool _preparingScreen = false;
+  bool _closingExitScheduled = false;
 
   @override
   void initState() {
@@ -78,7 +86,7 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
   }
 
   void _syncAutomation(HoldemGameState game, HoldemController controller) {
-    final phaseKey = (game.phase, game.handNumber);
+    final phaseKey = (game.phase, game.handNumber, controller.gameStartedAt);
     if (_scheduledPhase != phaseKey) {
       _scheduledPhase = phaseKey;
       _phaseTimer?.cancel();
@@ -88,7 +96,14 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
           if (mounted &&
               args != null &&
               ref.read(holdemSessionProvider(args)).phase == 'dealing') {
-            unawaited(controller.completeDealing());
+            _phaseCommand.run(
+              key: phaseKey,
+              isCurrent: () =>
+                  mounted &&
+                  ref.read(holdemSessionProvider(args)).phase == 'dealing' &&
+                  controller.gameStartedAt == phaseKey.$3,
+              send: controller.completeDealing,
+            );
           }
         });
       } else if (game.phase == 'handResult') {
@@ -97,7 +112,14 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
           if (mounted &&
               args != null &&
               ref.read(holdemSessionProvider(args)).phase == 'handResult') {
-            unawaited(controller.completeResult());
+            _phaseCommand.run(
+              key: phaseKey,
+              isCurrent: () =>
+                  mounted &&
+                  ref.read(holdemSessionProvider(args)).phase == 'handResult' &&
+                  controller.gameStartedAt == phaseKey.$3,
+              send: controller.completeResult,
+            );
           }
         });
       }
@@ -114,7 +136,15 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
               args != null &&
               ref.read(holdemSessionProvider(args)).turnDeadlineAt ==
                   deadline) {
-            unawaited(controller.timeoutTurn());
+            _turnCommand.run(
+              key: (phaseKey, deadline),
+              isCurrent: () =>
+                  mounted &&
+                  ref.read(holdemSessionProvider(args)).turnDeadlineAt ==
+                      deadline &&
+                  controller.gameStartedAt == phaseKey.$3,
+              send: controller.timeoutTurn,
+            );
           }
         });
       }
@@ -125,6 +155,8 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
   void dispose() {
     _phaseTimer?.cancel();
     _turnTimer?.cancel();
+    _phaseCommand.dispose();
+    _turnCommand.dispose();
     super.dispose();
   }
 
@@ -136,6 +168,30 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
     }
     final game = ref.watch(holdemSessionProvider(args));
     final controller = ref.read(holdemSessionProvider(args).notifier);
+    if (game.isFinished && !game.isNaturalResult && !_closingExitScheduled) {
+      _closingExitScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) exitGameRoute(context);
+      });
+    } else if (!game.isFinished) {
+      _closingExitScheduled = false;
+    }
+    if (!_preparingScreen) {
+      _preparingScreen = true;
+      unawaited(
+        controller.prepareScreen(() async {
+          for (final image in [
+            HoldemAssets.tabletBackground,
+            HoldemAssets.layoutTable,
+            HoldemAssets.layoutChair,
+            HoldemAssets.cardBack,
+          ]) {
+            if (!mounted) return;
+            await precacheRequiredImage(image.provider(), context);
+          }
+        }),
+      );
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _syncAutomation(game, controller);
@@ -144,9 +200,18 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
     return Scaffold(
       backgroundColor: HoldemColors.felt,
       body: GameRecoveryLayer(
+        session: controller.recoverySession,
         request: GameRequestRecovery(
           message: game.errorMessage,
-          onRetry: controller.clearError,
+          onRetry: () {
+            if (_phaseCommand.needsRetry) {
+              _phaseCommand.retry();
+            } else if (_turnCommand.needsRetry) {
+              _turnCommand.retry();
+            } else {
+              unawaited(controller.retryLastCommand());
+            }
+          },
         ),
         interruption: GameInterruptionRecovery(
           state: game.interruption,
@@ -155,7 +220,8 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,
           onContinue: controller.excludeInterruptedPlayerAndContinue,
-          onFinishNow: controller.finishInterruptedGameNow,
+          onWaitMore: controller.waitMoreForInterruptedPlayer,
+          onFinishNow: controller.endGame,
           onExpired: controller.expireInterruption,
         ),
         child: Stack(

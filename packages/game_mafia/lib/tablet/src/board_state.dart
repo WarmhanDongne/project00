@@ -96,7 +96,13 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     // 배경·달·새 등 첫 연출 이미지를 미리 디코딩합니다. context가 필요한
     // 작업이라 첫 프레임 뒤로 미룹니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(preloadMafiaAssets(context, isPhone: false));
+      if (mounted) {
+        unawaited(
+          _controller!.prepareScreen(
+            () => preloadMafiaAssets(context, isPhone: false),
+          ),
+        );
+      }
     });
 
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -466,87 +472,95 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       interrupted: game.interruption != null,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
-            MafiaTabletBackground(isNight: game.usesNightScene),
-            // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
-            // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
-            GameTurnCountdown(
-              expiresAt: game.turnDeadlineAt,
-              builder: (context, remaining) => MafiaTabletStageView(
-                key: ValueKey(game.gameStartedAt),
-                stage: _stage,
-                controller: game,
-                playerLayout: widget.playerLayout,
-                // 마감 뒤 서버 응답이 늦어져도 0초가 화면에 붙어 있지 않게
-                // 타이머만 감추고 마지막 정상 장면을 그대로 유지합니다.
-                remainingSeconds: game.actionDeadlinePassed
-                    ? null
-                    : remaining?.inSeconds,
-                showsNightNotice: _showsNightNotice,
-                showsGameStartNotice: _showsGameStartNotice,
-                onRulebookPressed: _openRulebook,
-                onSettingsPressed: () => _openSettings(game),
-                onRestart: game.commandInFlight
-                    ? null
-                    : () => unawaited(game.restartGame()),
-                onHome: game.commandInFlight
-                    ? null
-                    : () => unawaited(_endGameAndLeave(game)),
+        body: GameRecoveryLayer(
+          session: game.recoverySession,
+          request: GameRequestRecovery(
+            message: game.errorMessage,
+            onRetry: () {
+              if (_advanceCommand.needsRetry) {
+                _advanceCommand.retry();
+              } else {
+                unawaited(game.retryLastCommand());
+              }
+            },
+          ),
+          connection: GameConnectionRecovery(
+            isWaiting: _stage == MafiaTabletStage.connecting,
+            onExit: () => exitGameRoute(context),
+            onRetry: () => unawaited(_retryConnection()),
+          ),
+          interruption: GameInterruptionRecovery(
+            state: game.interruption,
+            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            presentation: GameInterruptionPresentation.tabletController,
+            isSubmitting: game.commandInFlight,
+            failureMessage: game.errorMessage,
+            onContinue: game.excludeInterruptedPlayerAndContinue,
+            onWaitMore: game.waitMoreForInterruptedPlayer,
+            onFinishNow: game.endGame,
+            onExpired: game.expireInterruption,
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 낮·밤 배경입니다. 태블릿용 가로 고해상도 파일을 씁니다.
+              MafiaTabletBackground(isNight: game.usesNightScene),
+              // 태블릿 토론 타이머도 1초마다 움직여야 합니다. 서버 상태만 보고
+              // 그리면 상태가 안 바뀌는 동안 숫자가 굳습니다(2026-08 수정).
+              GameTurnCountdown(
+                expiresAt: game.turnDeadlineAt,
+                builder: (context, remaining) => MafiaTabletStageView(
+                  key: ValueKey(game.gameStartedAt),
+                  stage: _stage,
+                  controller: game,
+                  playerLayout: widget.playerLayout,
+                  // 마감 뒤 서버 응답이 늦어져도 0초가 화면에 붙어 있지 않게
+                  // 타이머만 감추고 마지막 정상 장면을 그대로 유지합니다.
+                  remainingSeconds: game.actionDeadlinePassed
+                      ? null
+                      : remaining?.inSeconds,
+                  showsNightNotice: _showsNightNotice,
+                  showsGameStartNotice: _showsGameStartNotice,
+                  onRulebookPressed: _openRulebook,
+                  onSettingsPressed: () => _openSettings(game),
+                  onRestart: game.commandInFlight
+                      ? null
+                      : () => unawaited(game.restartGame()),
+                  onHome: game.commandInFlight
+                      ? null
+                      : () => unawaited(_endGameAndLeave(game)),
+                ),
               ),
-            ),
-            if (game.interruption == null)
-              GameRequestNotice(
-                // 자동 단계 진행은 현재 장면을 유지한 채 뒤에서 재시도합니다.
-                // 공용 태블릿에 서버 대기 스피너를 띄우지 않아 지연을 연출처럼
-                // 보이게 하고, 실제 실패 문구만 표시합니다.
-                busy: false,
-                message: game.errorMessage,
+              MafiaDelayedConnectionHint(
+                connectionChanges: _connectionChanges,
+                enabled: _stage != MafiaTabletStage.connecting,
+                alignment: Alignment.topRight,
+                margin: const EdgeInsets.only(top: 28, right: 104),
               ),
-            MafiaDelayedConnectionHint(
-              connectionChanges: _connectionChanges,
-              enabled: _stage != MafiaTabletStage.connecting,
-              alignment: Alignment.topRight,
-              margin: const EdgeInsets.only(top: 28, right: 104),
-            ),
-            GameConnectingOverlay(
-              isWaiting: _stage == MafiaTabletStage.connecting,
-              exitDelay: const Duration(seconds: 10),
-              message: '게임 정보를 불러오고 있습니다.\n잠시 후에도 그대로라면 다시 연결해 주세요.',
-              onExit: () => exitGameRoute(context),
-              onRetry: () => unawaited(_retryConnection()),
-            ),
-            if (game.isFinished && !game.isNaturalResult)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: Colors.black87,
-                  child: Center(
-                    child: Text(
-                      game.finishReason == 'insufficientPlayers'
-                          ? '계속 진행할 인원이 부족해 게임이 종료되었습니다.\n대기실로 이동합니다.'
-                          : '게임이 종료되었습니다.\n대기실로 이동합니다.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 24),
+              if (game.isFinished && !game.isNaturalResult)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black87,
+                    child: Center(
+                      child: Text(
+                        game.finishReason == 'insufficientPlayers'
+                            ? '계속 진행할 인원이 부족해 게임이 종료되었습니다.\n대기실로 이동합니다.'
+                            : '게임이 종료되었습니다.\n대기실로 이동합니다.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
-            // 그래서 진행자 화면에는 투표 UI를 띄우지 않고, presentation으로
-            // 진행자용 분기를 고릅니다(라이어스 포커·파이널 콜과 동일).
-            GameInterruptionLayer(
-              interruption: game.interruption,
-              currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-              presentation: GameInterruptionPresentation.tabletController,
-              isSubmitting: game.commandInFlight,
-              failureMessage: game.errorMessage,
-              onContinue: game.excludeInterruptedPlayerAndContinue,
-              onFinishNow: game.finishInterruptedGameNow,
-              onExpired: game.expireInterruption,
-            ),
-          ],
+
+              // 태블릿은 좌석을 받지 않아 서버 `eligibleVoterUids`에 들지 않습니다.
+              // 그래서 진행자 화면에는 투표 UI를 띄우지 않고, presentation으로
+              // 진행자용 분기를 고릅니다(라이어스 포커·파이널 콜과 동일).
+            ],
+          ),
         ),
       ),
     );
@@ -555,6 +569,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
   Future<void> _retryConnection() async {
     try {
       await widget.provider.retryConnectionRecovery();
+      await _controller?.retryRecovery();
     } catch (_) {
       // 현재 화면을 보존합니다. 서버 상태가 확인되기 전 임의로 종료하지 않습니다.
     }

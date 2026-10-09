@@ -93,6 +93,32 @@ non-PASS result. It still captures working-tree snapshot B so mutation evidence 
 not lost. Fix the evidenced failure, rerun only its relevant check while iterating,
 then run FULL once for the next final candidate.
 
+The ordered process steps are root Dart formatting, root Flutter analysis, root
+Flutter tests (excluding `invocation-guard`), the five package test targets, then
+Functions lint and tests. Package targets are explicitly listed in
+[`package_test_manifest.dart`](../../tool/mosigame_cli/package_test_manifest.dart):
+
+| Target | Working directory | Result step ID |
+| --- | --- | --- |
+| game_kit | `packages/game_kit` | `flutter-test-game-kit` |
+| game_liars_poker | `packages/game_liars_poker` | `flutter-test-game-liars-poker` |
+| game_final_call | `packages/game_final_call` | `flutter-test-game-final-call` |
+| game_mafia | `packages/game_mafia` | `flutter-test-game-mafia` |
+| game_holdem | `packages/game_holdem` | `flutter-test-game-holdem` |
+
+Each package runs `flutter test --no-pub` in its own directory. A package failure,
+timeout, or missing capability stops FULL and is included in its overall result;
+later package/Functions steps are not reported as passed. The existing FULL budget,
+cleanup checks, and final snapshot also apply to these steps. `game_template` has
+no executable tests and is not counted as a test pass. When adding a game package,
+add its real regression suite and enroll it in this manifest. The root manifest
+regression checks workspace enrollment and the presence of executable tests.
+
+[`validate.yml`](../../.github/workflows/validate.yml) uses the same FULL command,
+so package tests share the canonical execution path in CI. Root formatting still
+checks `bin`, `lib`, `test`, and `tool/mosigame_cli`; package tests are additional
+execution steps, not an expansion of that formatting scope.
+
 The CLI gives FULL validation a 13-minute total budget. Before starting each
 process step it separately reserves the final two-minute working-tree snapshot,
 ten seconds for worst-case validation-process cleanup, and ten seconds for

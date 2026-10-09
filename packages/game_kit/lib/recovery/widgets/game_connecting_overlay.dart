@@ -12,24 +12,14 @@ import 'package:game_kit/game_flow/game_flow_copy.dart';
 
 // ============================================================
 
-/// 첫 서버 상태가 병적으로 오래 오지 않을 때의 탈출구 레이어입니다.
-///
-/// 예전에는 6초 뒤 로딩 문구와 스피너를 보여 줬지만, 정상 진입에서도 잠깐
-/// 비치며 연출을 해쳐 **아무것도 표시하지 않는 것으로 바꿨습니다.** 연결
-/// 단계는 배경만 보입니다.
-///
-/// 단 하나 남긴 것: [exitDelay]가 지나도록 서버 상태가 오지 않으면 나가기
-/// 버튼을 보여 줍니다. 이것마저 없으면 네트워크가 죽었을 때 사용자가 화면에
-/// 갇혀 앱을 강제 종료하는 수밖에 없습니다.
-///
-/// 전체 화면 `Stack`에 놓이는 레이어이므로 빈 상태에서도 항상
-/// [Positioned]를 반환합니다(느슨한 Stack에서 화면이 0×0이 되는 회귀 방지).
+/// 복구 중 내 나가기를 즉시 제공하고 10초 뒤 설명과 재연결을 표시합니다.
+/// 같은 대기 중 버튼 재시도는 안내 시각을 초기화하지 않습니다.
 class GameConnectingOverlay extends StatefulWidget {
   const GameConnectingOverlay({
     super.key,
     required this.isWaiting,
     this.onExit,
-    this.exitDelay = const Duration(seconds: 20),
+    this.exitDelay = const Duration(seconds: 10),
     this.message,
     this.onRetry,
   });
@@ -41,7 +31,7 @@ class GameConnectingOverlay extends StatefulWidget {
   /// 않습니다.
   final VoidCallback? onExit;
 
-  /// 대기가 이 시간을 넘기면 나가기 버튼을 표시합니다.
+  /// 대기가 이 시간을 넘기면 설명과 재연결 버튼을 표시합니다.
   final Duration exitDelay;
 
   /// 필요한 게임만 긴 대기의 이유를 표시합니다. 기존 게임의 무문구 정책은 유지합니다.
@@ -95,8 +85,8 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = widget.isWaiting && _showExit && widget.onExit != null;
-    final hasDetails = widget.message != null || widget.onRetry != null;
+    final visible = widget.isWaiting && (widget.onExit != null || _showExit);
+    final hasDetails = _showExit;
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: !visible,
@@ -124,31 +114,32 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (widget.message != null) ...[
+                        if (_showExit) ...[
                           Text(
-                            widget.message!,
+                            widget.message ?? '게임 데이터를 다시 준비하고 있습니다.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white),
                           ),
                           const SizedBox(height: 12),
                         ],
-                        if (widget.onRetry != null)
+                        if (_showExit && widget.onRetry != null)
                           TextButton(
                             onPressed: widget.onRetry,
                             child: const Text('다시 연결하기'),
                           ),
-                        OutlinedButton(
-                          onPressed: widget.onExit,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white54),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 10,
+                        if (widget.onExit != null)
+                          OutlinedButton(
+                            onPressed: widget.onExit,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white54),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 10,
+                              ),
                             ),
+                            child: const Text(GameFlowCopy.leaveGame),
                           ),
-                          child: const Text(GameFlowCopy.leaveGame),
-                        ),
                       ],
                     ),
                   ),

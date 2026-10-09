@@ -33,7 +33,10 @@ class OnboardingService {
 
     for (var attempt = 0; ; attempt++) {
       try {
-        await for (final snapshot in reference.snapshots()) {
+        await for (final snapshot in reference.snapshots(
+          includeMetadataChanges: true,
+        )) {
+          if (!snapshot.exists && snapshot.metadata.isFromCache) continue;
           yield UserOnboarding.fromSnapshot(snapshot);
         }
         return;

@@ -1,168 +1,80 @@
 # Cloud Functions 정리
 
-배포된 함수 **69개** 전부. 게임 규칙·승패·턴 마감·방 수명주기는 전부 여기서 결정한다.
+2026-10-09 로컬 후보 index.ts export 79개: onCall 69, RTDB trigger 5, onSchedule 4, HTTP 1.
+production 배포 상태를 조회한 수치가 아니다. 게임 규칙·승패·턴·방 수명은 서버가 결정한다.
+[현재 네트워크·세션 계약](NETWORK_SESSION_CONTRACT.md)을 함께 따른다.
 
-| 종류 | 개수 |
+## 1. 이름과 리전
+
+게임은 game_<id>_<동작>, 공용은 game_common_<영역>_<동작>, 방·인증은 기존 camelCase다.
+callable/schedule/HTTP는 asia-northeast3, RTDB 트리거는 asia-southeast1이다.
+현재 후보의 기존 네트워크 투표/finish_now 제거와 소비자 변경은 채택한 기술안에 따른다.
+실제 반영·기존 데이터·함수 삭제/혼합 상태는 별도 승인된 배포 계획에서 확인한다.
+
+## 2. 방과 인증
+
+room/ callable 12개: createRealtimeRoom, validateRealtimeRoom, joinRealtimeRoom,
+beginRealtimeRoomSeating, saveRealtimePlayerSeatIndexes, selectRealtimeRoomGame,
+fetchRealtimeRoomGroupEntitlements, resumeRealtimeControllerRoom, removeRealtimeRoomPlayer,
+leaveRealtimeRoom, closeRoom, fetchRealtimeRoomSession.
+같은 operation 재생, room/member/current connection와 sequence CAS, 요청 방의 구매 자격을 검증한다.
+
+auth/ callable 8개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
+recoverLegacyOnboarding, checkEmailDuplicate, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount.
+registerProfile은 별도 HTTP다.
+
+## 3. 네 게임
+
+| 게임 | callable 목록 |
 | --- | --- |
-| `onCall` 호출형 | 60 |
-| `onSchedule` 주기 | 4 |
-| RTDB 트리거 | 4 |
-| `onRequest` HTTP | 1 |
+| Liar's Poker (11) | start_game, complete_dealing, ready_turn, submit_cards, call_liar, pass_challenge, prepare_penalty, resolve_penalty, force_timeout, end_game, leave_game |
+| Final Call (12) | start_game, complete_dealing, draw_card, complete_turn, timeout_turn, declare, submit_hand, complete_result_reveal, start_next_round, end_game, clear_game, leave_game |
+| Mafia (13) | start_game, confirm_role, complete_role_reveal, submit_night_action, timeout_night, complete_morning, end_discussion, timeout_day, submit_vote, timeout_vote, complete_vote_result, end_game, leave_game |
+| Holdem (7) | start_game, complete_dealing, act, timeout_turn, complete_result, end_game, leave_game |
 
-## 1. 이름 규칙과 리전
+각 이름 앞에 game_liars_poker_, game_final_call_, game_mafia_, game_holdem_을 붙인다.
+complete_*는 연출 완료, timeout_*는 서버 deadline 확인을 요청한다.
+모든 현재 명령은 공용 transaction/context/ledger 검증을 사용한다.
+Mafia 고유 투표는 유지하지만 네트워크 제외 투표는 없다. 자기 퇴장은 원래 membership만 제거한다.
 
-```text
-game_<게임 id>_<동작>      예: game_liars_poker_submit_cards
-game_common_<영역>_<동작>   예: game_common_interruption_expire
-방·인증                    기존 camelCase 유지: createRealtimeRoom, beginOnboarding
-```
+## 4. 게임 공용 — 중단·준비·결과 확인
 
-**리전이 두 개다. 모르면 배포가 조용히 안 붙는다.**
-
-| 대상 | 리전 |
+| callable | 역할 |
 | --- | --- |
-| `onCall` · `onSchedule` · `onRequest` | `asia-northeast3` (서울) |
-| RTDB 트리거 4개 | `asia-southeast1` (싱가포르 — RTDB 인스턴스가 있는 곳) |
+| game_common_recovery_report | 현재 접속 ready/failed·reportSeq 및 필수 barrier |
+| game_common_operation_status | 미확정 작업의 applied/stale/notApplied 최소 상태 |
+| game_common_interruption_report_stale_player | 관찰한 현재 접속 heartbeat 실패 신고 |
+| game_common_interruption_exclude_player | controller 실제 reducer preview/제외 |
+| game_common_interruption_wait_more | 만료된 현재 incident를 한 번 30초 연장 |
+| game_common_interruption_expire | 결정 대기 표시, 자동 제외/종료 없음 |
 
-**배포된 callable 이름은 구버전 앱의 public contract다.** 바꾸면 스토어에 이미 나간
-앱이 함수를 찾지 못한다. 바꿔야 하면 클라이언트 호출부를 같은 커밋에서 함께 고쳐
-함께 배포하거나, 옛 이름을 얇은 shim으로 남긴다.
+connected=true만으로 타이머를 재개하지 않는다.
+vote_to_continue/finish_now는 현재 index export와 소비자에서 제거했다.
 
-## 2. 방 — 게임 이전의 모든 것
+## 5. RTDB 트리거와 주기 작업
 
-`functions/src/room/` · onCall 11개
-
-| 함수 | 하는 일 |
+| RTDB 함수 (싱가포르) | 경로·역할 |
 | --- | --- |
-| `createRealtimeRoom` | 태블릿이 방을 만들고 방 코드·컨트롤러 세션 발급. Admin SDK라 RTDB 보안 규칙을 우회 |
-| `validateRealtimeRoom` | 입력한 방 코드가 유효한지 확인 (참가 전 사전 검사) |
-| `joinRealtimeRoom` | 휴대폰 참가·재접속. 기존 uid는 좌석과 게임 데이터를 유지하고 연결 상태만 복구 |
-| `beginRealtimeRoomSeating` | 좌석 배치 단계 시작 |
-| `saveRealtimePlayerSeatIndexes` | 태블릿이 정한 좌석 번호 저장 |
-| `selectRealtimeRoomGame` | 이 방에서 플레이할 게임 선택 |
-| `fetchRealtimeRoomGroupEntitlements` | 방 참가자들이 합쳐서 보유한 유료 게임 ID를 서버가 계산. 클라이언트가 남의 `/users` 문서를 읽지 않게 하는 경계 |
-| `resumeRealtimeControllerRoom` | 태블릿이 앱을 다시 켰을 때 자기 방으로 복귀 |
-| `removeRealtimeRoomPlayer` | 태블릿이 특정 참가자를 내보냄 |
-| `leaveRealtimeRoom` | 참가자가 스스로 방을 나감 |
-| `closeRoom` | 방을 닫음 (전원 퇴장) |
+| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약에 반영 |
+| game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause |
+| game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause |
+| syncRealtimeRoomGameStatus | game/public/status, 현재 game 상태를 방에 반영 |
+| syncRoomCleanupQueue | rooms/{room}, 현재 allocation 재조회 후 due queue 갱신 |
 
-## 3. 인증 · 온보딩
-
-`functions/src/auth/` · onCall 8개
-
-| 함수 | 하는 일 |
+| schedule 함수 (서울·Asia/Seoul) | 주기·역할 |
 | --- | --- |
-| `beginOnboarding` | 가입 절차 시작 (상태 문서 생성) |
-| `advanceOnboarding` | 다음 단계로 진행 |
-| `completeOnboardingProfile` | 닉네임·프로필 확정하고 온보딩 완료 |
-| `recoverLegacyOnboarding` | 온보딩 문서가 없는 구버전 계정을 현재 스키마로 복구 |
-| `checkEmailDuplicate` | 가입 전 이메일 중복 확인 |
-| `syncGoogleUserProfile` | 구글 로그인 사용자의 닉네임·사진을 Firestore에 병합 |
-| `syncAppleUserProfile` | 애플용. 애플은 이름을 최초 승인 때 한 번만 주고 사진은 아예 안 줘서, 비어 있는 값이 기존 값을 덮지 않도록 병합 |
-| `deleteAccount` | 계정 삭제 |
+| cleanupExpiredGameInterruptions | 1분, 만료를 결정 대기로 표시 |
+| cleanupGhostRoomPlayers | 5분, 대기/종료 방의 오래 끊긴 참가자 정리 |
+| cleanupStaleRealtimeRooms | 5분, due index + 지속 cursor, generation 조건부 방/예약/매핑 정리 |
+| cleanupIncompleteAccounts | 매일 03:30, 현재 삭제 비활성·보고만 수행 |
 
-## 4. 게임
-
-세 게임 모두 같은 뼈대다 — **시작 → 연출 완료 알림 → 조작 → 타임아웃 → 종료/퇴장.**
-`complete_*` 는 태블릿 연출이 끝났다는 신호, `timeout_*` 는 제한시간이 지났다는 신호다.
-
-### 마피아 (13)
-
-`functions/src/mafia/`
-
-| 함수 | 하는 일 |
-| --- | --- |
-| `game_mafia_start_game` | 역할 배분하고 게임 시작. 태블릿이 역할 구성·변론·처형 공개 규칙을 선택 |
-| `game_mafia_confirm_role` | 내 역할 카드를 확인했다고 알림. 전원 확인하면 곧바로 밤으로 |
-| `game_mafia_complete_role_reveal` | 태블릿 배분 연출 종료. **미확인자가 있어도 넘어감** — 한 명 때문에 판이 멈추지 않게 |
-| `game_mafia_submit_night_action` | 밤 행동 대상 1회 확정. 동일 commandId 재시도만 기존 응답 반환 |
-| `game_mafia_timeout_night` | 밤 마감. 안 고른 사람은 아무 일도 안 한 것으로 처리 |
-| `game_mafia_complete_morning` | 아침 발표 연출 종료. **여기서 첫 번째 승패 판정** |
-| `game_mafia_end_discussion` | 토론 조기 종료에 한 표. 생존자 과반수가 누르면 투표로 |
-| `game_mafia_timeout_day` | 토론 시간 종료 → 투표 |
-| `game_mafia_submit_vote` | 비밀 지목 투표. 재판 옵션에서는 `execute`로 찬반 투표. 선택 내용은 서버와 본인만 읽음 |
-| `game_mafia_timeout_vote` | 지목·변론·찬반 단계의 마감 처리. 미제출은 기권 |
-| `game_mafia_complete_vote_result` | 개표·처형 연출 종료. **여기서 두 번째 승패 판정** |
-| `game_mafia_end_game` | 게임 종료 |
-| `game_mafia_leave_game` | 방에서는 즉시 나가되, 사망자는 바로 / 생존자는 남은 사람 투표 뒤 제외 |
-
-### 파이널콜 (12)
-
-`functions/src/final-call/`
-
-| 함수 | 하는 일 |
-| --- | --- |
-| `game_final_call_start_game` | 게임 시작 · 다시하기 (`restart` 플래그) |
-| `game_final_call_complete_dealing` | 태블릿 카드 분배 연출 종료 |
-| `game_final_call_draw_card` | 카드 뽑기 |
-| `game_final_call_complete_turn` | 턴 종료 |
-| `game_final_call_timeout_turn` | 턴 마감. 단계별로 다르게 해결 (callerSubmit / finalSubmit / playing / finalTurns) |
-| `game_final_call_declare` | CALL 선언 |
-| `game_final_call_submit_hand` | 최종 핸드 제출 |
-| `game_final_call_complete_result_reveal` | 태블릿 최종 공개 연출 종료 → 휴대폰 결과 화면 |
-| `game_final_call_start_next_round` | 다음 라운드 |
-| `game_final_call_end_game` | 게임 종료. finished 상태를 먼저 전달해 전 기기가 인식 |
-| `game_final_call_clear_game` | 방·참가자는 유지하고 `rooms/{code}/game` 만 삭제 |
-| `game_final_call_leave_game` | 게임 도중 퇴장 |
-
-### 라이어스포커 (11)
-
-`functions/src/liars-poker/`
-
-| 함수 | 하는 일 |
-| --- | --- |
-| `game_liars_poker_start_game` | 태블릿이 새 판 시작 · 다시하기 |
-| `game_liars_poker_complete_dealing` | 카드 분배 연출 종료 |
-| `game_liars_poker_ready_turn` | 카드를 펼쳐 첫 턴 타이머 시작 |
-| `game_liars_poker_submit_cards` | 카드 제출 |
-| `game_liars_poker_call_liar` | LIAR 선언 |
-| `game_liars_poker_pass_challenge` | 마지막 카드 도전 포기 (FOLD) |
-| `game_liars_poker_prepare_penalty` | 벌칙 룰렛 준비 |
-| `game_liars_poker_resolve_penalty` | 룰렛 결과 전달 |
-| `game_liars_poker_force_timeout` | **백스톱.** 턴 플레이어 휴대폰이 잠기면 아무도 턴을 못 넘기므로 태블릿이 강제 해결. 마감 전 호출은 `notExpired` 로 거절 |
-| `game_liars_poker_end_game` | 게임 종료 |
-| `game_liars_poker_leave_game` | 게임 도중 퇴장 |
-
-## 5. 게임 공용 — 끊김 처리
-
-`functions/src/game-interruption/` · onCall 5개
-
-이 저장소에서 **게임 횡단 관심사를 서버에서 공용화한 유일한 사례**다. 새 게임은
-끊김 처리를 다시 구현하지 않고 이 모듈을 그대로 쓴다.
-
-| 함수 | 하는 일 |
-| --- | --- |
-| `game_common_interruption_report_stale_player` | heartbeat 가 끊긴 참가자를 신고 |
-| `game_common_interruption_vote_to_continue` | 기다리고 계속하는 쪽에 투표 |
-| `game_common_interruption_exclude_player` | 태블릿 진행자가 끊긴 사람을 제외하고 즉시 계속 |
-| `game_common_interruption_expire` | 마감(60초)이 지난 중단을 정리 — 즉시 반응 경로 |
-| `game_common_interruption_finish_now` | 인원 부족이 확정되면 60초를 기다리지 않고 즉시 정상 종료 |
-
-## 6. 화면이 죽어도 도는 것
-
-### RTDB 트리거 (4) — `asia-southeast1`
-
-| 함수 | 감시 경로 | 하는 일 |
-| --- | --- | --- |
-| `game_common_interruption_on_connection_changed` | `/rooms/{room}/players/{uid}/isConnected` | 참가자 접속이 끊기면 공용 게임 중단 상태로 승격 |
-| `game_common_controller_presence_changed` | `/rooms/{room}/controllerPresence/connected` | **태블릿이 끊긴 동안 서버 턴 마감을 멈춤** |
-| `syncRealtimeRoomGameStatus` | `/rooms/{room}/game/public/status` | 게임 상태를 방 상태에 반영 (대기실 복귀 판정) |
-| `cleanupDeletedRoomCreationRequest` | `/rooms/{room}` (삭제 시) | 방이 먼저 사라졌을 때 남은 생성 요청 기록을 재시도 가능하게 정리 |
-
-### 주기 실행 (4) — 전부 `Asia/Seoul`
-
-| 함수 | 주기 | 하는 일 |
-| --- | --- | --- |
-| `cleanupExpiredGameInterruptions` | 1분 | 중단 만료를 부르는 곳이 화면 타이머뿐이던 구멍의 백스톱. 모두가 앱을 닫아도 서버가 정리 |
-| `cleanupGhostRoomPlayers` | 5분 | 게임이 끝났거나 대기실로 돌아온 방의 오래 끊긴 참가자 제거. 유예는 재접속 유예(60초)보다 충분히 길게 |
-| `cleanupStaleRealtimeRooms` | 5분 | 버려진 방 정리 (`cleanupAt` 인덱스 사용) |
-| `cleanupIncompleteAccounts` | 매일 03:30 | 온보딩 미완료 계정 — **지금은 보고만 하고 실제 삭제는 꺼져 있다** |
+아래 기존 정리 제안은 현재 작업의 구현·승인이 아니다.
 
 ## 7. 정리할 것
 
 ### C1. `registerProfile` — 쓰지 않는 HTTP 엔드포인트
 
-69개 중 유일한 `onRequest` 다. Firebase ID 토큰을 제대로 검증하므로 보안 구멍은
+79개 중 유일한 `onRequest` 다. Firebase ID 토큰을 제대로 검증하므로 보안 구멍은
 아니지만, **Dart 쪽에서 부르는 곳이 0곳**이고 하는 일이 `syncGoogleUserProfile` 과
 겹친다. `index.ts` 주석에도 "삭제 여부는 따로 결정한 뒤 정리하세요"로 남아 있다.
 
@@ -183,7 +95,7 @@ game_common_<영역>_<동작>   예: game_common_interruption_expire
 
 → 신규 게임부터 단일 엔드포인트로. `game_command({game, room, command, commandId, payload})`
 하나면 게임이 늘어도 함수 수가 그대로이고, Spring 이행 때
-`POST /rooms/{code}/commands` 와 1:1로 맞는다. 기존 3게임은 배포된 이름이 contract 라
+`POST /rooms/{code}/commands` 와 1:1로 맞는다. 기존 게임은 배포된 이름이 contract 라
 그대로 둔다.
 
 ### C4. 이름 규칙이 두 가지

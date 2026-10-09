@@ -152,3 +152,98 @@ auth JSON의 CLI exitCode는 2, 호출 도구의 PowerShell process exit는 1이
 
 후속 답변으로 사용자 전체 담당을 확인했다. E01의 검증 배선·회귀 복원도 사용자의 구현 채팅에서 수행하며,
 패키지 밖 별도 담당 결정을 기다리는 조건은 제거했다. E01 구현은 아직 시작하지 않았다.
+
+## 2026-10-09 E01 회귀 복원·검증 배선 후보
+
+E00 문서를 PR #142로 develop에 병합한 `151eff8`에서 `codex/e01-validation-wiring`을 만들었다.
+session/auth manifest 20경로의 실제 기존 회귀와 CLI 회귀를 선택 복원하고 현재 newgui UI에 대응했다.
+game_kit·4게임의 package별 working directory/실패 전파를 FULL에 추가했으며 CI도 같은 명령을 사용한다.
+[E01 기록](../NETWORK_SESSION_E01_VALIDATION.md)에 파일별 시나리오·기존 정책과 후속 정책의 구분을 남겼다.
+실제 실행 command/status/exit code는 [월별 기록](../logs/2026-10.md#2026-10-09--e01-회귀-복원검증-배선)에 연결한다.
+
+이번 후보의 대상은 V00이다. 영속 퇴장 의도·준비 barrier·다중 중단 등 신규 제품 회귀는
+해당 기능 구현 단위 및 E13/E14에서 작성·검증한다. 현재 상태는 TASKS.md를 따르며,
+관련 검사만으로 E01·TEST-REGRESSION-01 전체 완료 또는 현재 후보 FULL/CI PASS를 선언하지 않는다.
+
+## 2026-10-09 E02~E12 순차 구현 후보
+
+사용자 요청으로 A~C 공용 계약부터 네 게임·플랫폼·UI·계측을 연결했다.
+[현재 계약](../../engineering/NETWORK_SESSION_CONTRACT.md)과 [후보/검증/기존 변경](../NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 따른다.
+관련 검사와 승인 후 FULL을 구분한다. E13 emulator/CI·E14 기기·production은 미실행이며 일부 PASS로 태스크 전체 완료를 선언하지 않는다.
+
+같은 날 사용자 명시 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
+E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
+실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.
+
+## 2026-10-09 E13 백엔드 emulator/CI 후보
+
+[E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 cold-cache 생성/terminal 정리와 첫
+cursor query의 수정 전 실패·수정 후 회귀, 테스트 브랜치 callable/rules/SDK와 현재 FULL/CI 범위를 남긴다.
+
+후속 사용자 명시 승인으로 제품 수정 후보 a3fe7fc의 guarded FULL 1회가 PASS/exit 0,
+12단계·root 334·package 167·Functions 371·전후 mutation PASS다. 실제 backend CI도
+10/10 PASS/exit 0이다. canonical FULL CI의 SDK 차이 실패와 테스트 브랜치 17ca1f5 보정,
+새 후보 재실행 승인 요청은 위 E13 기록에 남겼다. 미실행 앱·기기/성능 범위는 유지한다.
+
+후속 승인으로 17ca1f5의 실제 CI 재실행도 성공했다. backend 10/10, canonical FULL
+12단계·root 334·package 167·Functions 371·mutation 모두 PASS/exit 0이다.
+성공 SHA/링크와 문서만 동기화한 최종 tree 확인은 E13 기록에 남겼다.
+FlutterFire/앱 통합·기기/성능 회귀와 원래 CI SDK 정렬 검토는 남겨 둔다.
+
+## 2026-10-09 실기기와 담당자 진단 분리
+
+[사용자 조작 목록](../../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md)에서는 검토 ID·로그·
+서버 조회를 제외했다. [서버·진단 후속](../../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)에
+실제 Scheduler delivery, native stream/parse·순서·응답 유실·저장 실패 주입, 계측과 원래 CI SDK
+정렬을 미실행으로 기록했다. [준비 문서](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)에
+현재 앱 연결·pub get/설치와 matching Functions/rules 준비를 연결했다. 문서 작업이며 구현 변경은 없다.
+
+후속 사용자 결정으로 기존 Firebase에 변경 전체 배포·Android 실기기 APK 테스트를 확정했다.
+구버전 호환은 완료 조건에서 요구하지 않는다. 후보 제품 코드 변경 없이 Functions lint/build와
+APK 빌드를 확인했다. [배포 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을
+따르며, 실제 Scheduler delivery·native 오류 주입·실기기 회귀 결과는 별도로 유지한다.
+
+## 2026-10-09 실기기 시작 실패 회귀 보완
+
+[수정/검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)에 32초 실제 RoomService
+heartbeat, 만료 대기실 owner/active owner 공유/후속 pause/동일 barrier 예산/늦은 데이터,
+LP dealing/대응 손패, 진단 창 열기·복사·지우기·닫기 회귀를 남겼다.
+기존 session suite에 관련 검사를 추가했고 별도 suite/guard 실행 구조는 바꾸지 않았다.
+Guarded session 5단계·관련 37개·후속 연결 21개·변경 파일 분석/포맷 PASS/exit 0.
+초기 후보/harness FAIL과 수집 wrapper 경고도 같은 기록에 구분했다.
+FULL은 새 후보에 대한 사용자 승인 대기, 수정 APK/실기기 재확인은 미실행이다.
+
+후속 사용자 명시 승인으로 현재 후보의 Windows guarded `validate --full --json` 1회가
+12/12 PASS/exit 0이다. 앱 337·game_kit 70·LP 4·FC 14·Mafia 55·Holdem 31·
+Functions 371/skip 0 및 mutation PASS를 확인했다. JSON/한계는 위 수정 기록에 남겼다.
+로컬 회귀 검증 결과이며 실제 CI 재실행·수정 APK·실기기 결과는 별도로 남겨 둔다.
+
+## 2026-10-09 정상 준비/실제 오류 UI 회귀
+
+원인 없는 준비 barrier/오래 걸리는 정상 로딩의 무안내, 실제 실패의 단일 기존 안내,
+기존 메뉴 접근, 입력 차단/화면 State 유지, 늦은 데이터 뒤 실패 문구 유지와 명시 재시도를 보완했다.
+session suite에 공용 recovery UI/결정 회귀 두 파일을 추가하고 frozen manifest를 갱신했다.
+누락된 LP canSend 조건을 회귀에서 잡아 수정한 뒤 최종 guarded session 5/5 PASS/exit 0,
+Functions 73 PASS, mutation PASS와 관련 분석/포맷 PASS/exit 0을 확인했다.
+[실행 명령·파일·한계](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 UI 후보 절을 따른다.
+이번 후보의 FULL은 새 승인 대기다. 실제 APK/실기기 결과와 CI 재실행은 별도다.
+
+후속 사용자 “검증해” 승인으로 UI 후보 FULL 1회가 12/12 PASS/exit 0이다.
+앱 337·5 package 182·Functions 371/skip 0, 분석/포맷/lint/mutation 모두 PASS다.
+[승인 FULL 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 절에 명령·전후 상태를 남겼다.
+실제 APK/실기기 결과와 CI 재실행은 별도다.
+
+## 2026-10-09 룰렛·미확정 시작 요청의 회귀 공백
+
+[실기기 후속 조사](../NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation)에서
+실제 callable을 메모리 RTDB로 실행해 prepare→resolve ID 충돌과 미확정 시작 후 새 ID의
+already-exists를 재현했다. tsc/probe는 exit 0이며 후자는 알려진 결함 재현 성공을 뜻한다.
+기존 공통 검증·소스 패턴 테스트는 LP 두 단계 실제 명령 연결과 설정 완료 재시도의 서비스
+수명/요청 ID 보존을 다루지 않는다. 두 통합 회귀와 결과 적용 횟수 확인을 수정 시 추가해야 한다.
+정식 테스트나 제품 코드는 이번 조사에서 변경하지 않았고 FULL을 새로 실행하지 않았다.
+
+승인된 서버 로그 확인 후 heartbeat만 바뀌어도 시작 fingerprint가 aborted로 거부하는 것과
+설치 SDK rerun 함수가 callback 예외 시 완료/rollback에 도달하지 않는 경우를 추가 재현했다.
+ignored probe 7개 판정/exit 0이며 정상 heartbeat 경합·실제 roster 변경·비동기 abort 완료의
+회귀도 후속 수정 범위다. 기존 FULL PASS를 이 누락된 통합 경로 검증으로 확대하지 않는다.

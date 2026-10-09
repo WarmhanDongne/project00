@@ -86,10 +86,14 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     if (!_hasPreloadedAssets && game.players.isNotEmpty) {
       _hasPreloadedAssets = true;
       unawaited(
-        preloadFinalCallAssets(
-          context,
-          isPhone: true,
-          characterIds: game.players.values.map((player) => player.characterId),
+        game.prepareScreen(
+          () => preloadFinalCallAssets(
+            context,
+            isPhone: true,
+            characterIds: game.players.values.map(
+              (player) => player.characterId,
+            ),
+          ),
         ),
       );
     }
@@ -321,15 +325,18 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         : '${game.winningTeam?.name.toUpperCase() ?? ''} TEAM WINNER'.trim();
 
     return GameRecoveryLayer(
+      session: game.recoverySession,
+      request: GameRequestRecovery(
+        message: game.errorMessage,
+        onRetry: () => unawaited(game.retryLastCommand()),
+      ),
+      onExit: () => unawaited(_leaveRoom()),
       interruption: GameInterruptionRecovery(
         state: game.interruption,
         currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
         isSubmitting: game.commandInFlight,
         failureMessage: game.errorMessage,
-        onVote: () async {
-          await game.voteToContinueInterruption();
-        },
-        onFinishNow: game.finishInterruptedGameNow,
+
         onExpired: game.expireInterruption,
       ),
       child: PhoneGameShell<FinalCallPhoneStage>(
@@ -349,8 +356,6 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         onRoundIntroCompleted: () {
           if (mounted) setState(() => announcedRound = game.round);
         },
-        // 연결 단계가 오래 지속되면 셸이 대기 안내와 나가기 버튼을 표시합니다.
-        onConnectingExit: () => unawaited(_leaveRoom()),
         topBar: FinalCallPhoneTopBar(
           controller: game,
           visibleCallerUid: visibleCallerUid,
