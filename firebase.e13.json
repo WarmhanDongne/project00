@@ -1,0 +1,15 @@
+{
+  "functions": [{"source": "build/e13-runtime", "codebase": "e13"}],
+  "database": {"rules": "database.rules.json"},
+  "firestore": {"rules": "firestore.rules"},
+  "emulators": {
+    "auth": {"host": "127.0.0.1", "port": 9099},
+    "database": {"host": "127.0.0.1", "port": 9000},
+    "firestore": {"host": "127.0.0.1", "port": 8080},
+    "functions": {"host": "127.0.0.1", "port": 5001},
+    "hub": {"host": "127.0.0.1", "port": 4400},
+    "logging": {"host": "127.0.0.1", "port": 4500},
+    "ui": {"enabled": false},
+    "singleProjectMode": true
+  }
+}

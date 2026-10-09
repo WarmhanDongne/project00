@@ -1,0 +1,53 @@
+name: E13 Backend Emulator
+
+on:
+  push:
+    branches: [codex/e13-emulator-ci]
+  pull_request:
+    branches: [codex/e01-validation-wiring]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e13-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Install locked Functions dependencies
+        run: npm --prefix functions ci --no-audit --no-fund
+      - name: Capture tree before backend integration
+        run: git status --porcelain=v1 --untracked-files=all > /tmp/e13-tree-before.txt
+      - name: Run local demo backend integration
+        run: node tool/emulator/run.mjs
+      - name: Verify source preservation
+        if: always()
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/e13-tree-after.txt
+          diff -u /tmp/e13-tree-before.txt /tmp/e13-tree-after.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e13-backend-${{ github.sha }}
+          path: |
+            build/e13/backend-result.json
+            build/e13/run-result.json
+          if-no-files-found: warn
+
+  validate:
+    uses: ./.github/workflows/validate.yml
