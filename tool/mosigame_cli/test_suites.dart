@@ -42,6 +42,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'functions/test/controller-presence-timer.test.mjs',
     'functions/test/room-lifecycle.test.mjs',
     'functions/test/room-session-contract.test.mjs',
+    'functions/test/room-allocation-sdk-cache.test.mjs',
     'functions/test/game-recovery-state.test.mjs',
     'functions/test/game-command-contract.test.mjs',
     'functions/test/network-session-boundaries.test.mjs',
