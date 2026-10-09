@@ -8,7 +8,10 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 당시 checkout에 병합하지 않았으며, 작업 등록은 구현·계약 변경·배포 승인이나 완료 판정이 아니다.
 2026-10-09 사용자는 최신 newgui와 기술안 A~C의 권장 방식을 채택했다. SESSION의 보류 사유는
 담당 범위·착수 대기로 갱신했다. 후속 요청으로 develop에서 E00을 시작하고 [착수 기준](NETWORK_SESSION_E00_BASELINE.md)을 기록했다.
-현재 develop에는 최신 newgui가 반영돼 있다. 후속 답변으로 사용자 전체 담당을 확인했고 E00 기준/인수인계를 정리했다. 다음 구현 단위는 E01이다.
+현재 develop에는 최신 newgui와 E00 문서가 반영돼 있다. E01 검증 배선·회귀 복원 후보는 관련 검사와 사용자 승인 FULL을 통과했고 [검증 기록](NETWORK_SESSION_E01_VALIDATION.md)을 남겼다.
+E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md) 및 승인 FULL PASS 후보는 56cd535로 커밋·푸시했다. [E13 기록](NETWORK_SESSION_E13_BACKEND_CI.md)의 별도 제품 수정 76319f5도 원래 브랜치에 반영했고 현재 로컬 FULL과 실제 backend CI는 PASS다. canonical FULL CI의 SDK 차이는 테스트 브랜치에서 보정해 후속 승인 재실행도 PASS다. 남은 FlutterFire/앱 통합·E14 기기/성능·원래 CI SDK 정렬/출시 판정은 후속이다.
+후속 사용자 결정으로 기존 Firebase에 변경 전체 배포·구버전 호환 불필요·Android 실기기 APK
+설치를 확정했다. [준비/배포 기록](../operations/NETWORK_SESSION_TEST_PREPARATION.md)을 따른다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -30,17 +33,17 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인. 10/10 사운드·진동 후보 관련 38개 테스트 통과, FULL 승인 대기 |
-| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
-| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | newgui에서 연결·세션 준비·화면 복귀 시간을 구분해 측정, 기존 착수 조건과 목표 합의 유지 |
-| [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — E00 기준 확인 | 사용자 전체 담당, develop 58634d1의 최신 newgui/계약/소비자 대조·인수인계 정리. 다음 E01 검증 배선. 기능 구현은 아직 시작하지 않음 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 요구사항 확인 | 누락된 suite 파일 20개 대조, 4게임·새 UI 회귀 작성과 package/FULL/CI 실행 경로 확정 |
+| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀의 기존 FULL PASS 유지. 10/10 로컬 사운드·진동·연결 띠 통합 후보 검증 중. E13 통합·E14 실기기 확인 |
+| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
+| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
+| [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — 실기기 진입 성공, 룰렛·재시작 결함 확인 | [조사 기록](NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation): 룰렛 ID 충돌·heartbeat 포함 시작 비교·트랜잭션 예외·미확정 요청 유실. 승인 로그의 504/409 확인, 수정·회귀는 후속 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — 기존 UI FULL PASS, 룰렛·시작 응답 유실 회귀 누락 확인 | [조사 기록](NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation): 실제 callable의 오프라인 재현 exit 0. 추첨→확정·시작 응답 유실→재시도 통합 회귀 추가 필요 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |
 | [TEST-ACCOUNT-01](tasks/TEST-ACCOUNT-01.md#test-account-01) | 배포용 테스트 계정 준비 | 요구사항 확인 | 용도·환경·권한 확정 |
-| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 요구사항 확인 | newgui의 일반 참가자 조회 계약·역할별 재현, 홀덤 인원 판정과 정리 정합성 대조 |
-| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지, 응답 유실·고아 예약·삭제 트리거 부분 실패 검증과 처리 검토 |
+| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 검증 대기 — 연관 E10/E11 로컬 검증 PASS | 그룹 권한·Holdem 제외·generation 회귀와 현재 FULL PASS. E13 경합·기존 핵심 검토 |
+| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 검증 대기 — E11 로컬 검증 PASS | generation CAS·보상·지속 정리 회귀와 현재 FULL PASS. E13 부분 실패 확인 |
 
 ## 출시 전 권장
 

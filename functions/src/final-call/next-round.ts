@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -17,7 +20,7 @@ export const game_final_call_start_next_round = onCall<Data>(
     const roomCode = finalCallRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_start_next_round", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       assertFinalCallController(room, uid, request.data?.controllerSessionId);
@@ -29,10 +32,11 @@ export const game_final_call_start_next_round = onCall<Data>(
       // 플레이어가 새 라운드를 시작합니다. roundResult는 prepareFinalCallRound가
       // 지우므로 시작자 결정을 먼저 합니다.
       const starter = nextFinalCallRoundStarter(game);
-      prepareFinalCallRound(game, starter, game.public.round + 1, Date.now());
+      prepareFinalCallRound(game, starter, game.public.round + 1, transactionNow);
       response = {success: true, round: game.public.round, turnUid: starter};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "다음 라운드를 시작하지 못했습니다.");
     }

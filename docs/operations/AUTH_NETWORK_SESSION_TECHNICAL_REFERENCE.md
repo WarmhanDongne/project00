@@ -19,6 +19,10 @@ Galaxy A32·A35, `1.0.0-sessionfix.20260831+1` debug APK의 세 시나리오 전
 확정했다. 물리 태블릿·iOS·다른 게임의 새 수동 검증을 뜻하지 않는다. 아래 과거 실패
 관찰과 에이전트의 당시 실행 한계는 이력으로 보존하며 최신 판정은 출시 차단 문서를 따른다.
 
+2026-10-09 E02~E12 로컬 후보의 [현재 계약](../engineering/NETWORK_SESSION_CONTRACT.md)은
+접속 identity·다중 pause·준비 barrier·durable intent·generation 정리를 정의한다.
+아래 이전 단일 interruption/투표·메모리 intent는 당시 근거다. [현재 후보 검증](../planning/NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)과 구분한다.
+
 ## 책임 경계
 
 | 구성요소 | 책임 | 기준 데이터가 아닌 것 |

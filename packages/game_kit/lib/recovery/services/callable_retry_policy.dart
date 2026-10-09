@@ -41,26 +41,29 @@ class CallableRetryPolicy {
 
   static const retryableCodes = <String>{
     'aborted',
-    'cancelled',
     'deadline-exceeded',
-    'internal',
     'unavailable',
-    'unknown',
   };
 
   Future<T> run<T>(
     Future<T> Function() request, {
     required bool enabled,
+    Duration? remainingBudget,
+    bool Function()? isCurrent,
   }) async {
     final elapsed = Stopwatch()..start();
+    final budget = remainingBudget == null || remainingBudget > totalBudget
+        ? totalBudget
+        : remainingBudget;
     Object lastError = TimeoutException(
-      '서버 응답이 오지 않아 요청을 취소했습니다.',
-      totalBudget,
+      '서버 응답을 확인하지 못했습니다. 처리 여부를 다시 확인해주세요.',
+      budget,
     );
     StackTrace lastStackTrace = StackTrace.current;
 
     for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
-      final remaining = totalBudget - elapsed.elapsed;
+      if (isCurrent != null && !isCurrent()) break;
+      final remaining = budget - elapsed.elapsed;
       if (remaining <= Duration.zero) break;
 
       try {
@@ -83,7 +86,9 @@ class CallableRetryPolicy {
       if (!enabled) break;
       final delay = _delayForRetry(attempt);
       // 남은 예산으로 다음 시도를 의미 있게 할 수 없으면 여기서 멈춥니다.
-      if (elapsed.elapsed + delay >= totalBudget) break;
+      if (attempt == maxAttempts - 1 || elapsed.elapsed + delay >= budget) {
+        break;
+      }
       await Future<void>.delayed(delay);
     }
 

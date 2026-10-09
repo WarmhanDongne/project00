@@ -169,19 +169,6 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
                   },
                 ),
               ),
-              // 명령을 3회 재시도한 뒤에도 실패한 경우에만 오류를 표시합니다.
-              if (controller.errorMessage != null)
-                Positioned(
-                  key: const ValueKey('landscape-error-slot'),
-                  top: 76,
-                  left: sidePadding,
-                  right: sidePadding,
-                  child: _buildErrorMessage(
-                    controller.errorMessage!,
-                    onTap: controller.clearError,
-                    verticalPadding: 9,
-                  ),
-                ),
             ],
           );
         },

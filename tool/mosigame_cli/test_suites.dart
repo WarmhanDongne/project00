@@ -30,6 +30,13 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/controller_presence_test.dart',
     'test/controller_reconnect_guard_test.dart',
     'test/controller_room_lifecycle_test.dart',
+    'test/room_recovery_heartbeat_test.dart',
+    'test/dev_error_overlay_refresh_test.dart',
+    'packages/game_kit/test/recovery/providers/game_readiness_contract_test.dart',
+    'packages/game_kit/test/recovery/retry_budget_and_notice_test.dart',
+    'packages/game_kit/test/recovery/widgets/game_recovery_layer_test.dart',
+    'packages/game_kit/test/recovery/widgets/interruption_decision_contract_test.dart',
+    'packages/game_liars_poker/test/shared/providers/startup_readiness_test.dart',
     'test/game_reconnect_screen_test.dart',
     'test/restorable_player_session_test.dart',
     'test/room_join_feedback_test.dart',
@@ -41,6 +48,12 @@ const sessionTestSuite = TestSuiteDefinition(
   functionsTests: <String>[
     'functions/test/controller-presence-timer.test.mjs',
     'functions/test/room-lifecycle.test.mjs',
+    'functions/test/room-session-contract.test.mjs',
+    'functions/test/room-allocation-sdk-cache.test.mjs',
+    'functions/test/game-recovery-state.test.mjs',
+    'functions/test/game-command-contract.test.mjs',
+    'functions/test/network-session-boundaries.test.mjs',
+    'functions/test/room-presence-rules.test.mjs',
   ],
 );
 

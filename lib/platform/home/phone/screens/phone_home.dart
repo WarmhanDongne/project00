@@ -99,7 +99,12 @@ class _PhoneHomeState extends State<PhoneHome> {
     // 부르지 않아야 합니다.
     if (ModalRoute.of(context)?.isCurrent != true) return;
     setState(() => _restoreInFlight = true);
-    final restored = await _restoredRoomProvider.restorePlayerRoom();
+    var restored = false;
+    try {
+      restored = await _restoredRoomProvider.restorePlayerRoom();
+    } catch (_) {
+      /* retain the saved membership */
+    }
     if (!mounted) return;
     setState(() {
       _restoreInFlight = false;
@@ -116,7 +121,15 @@ class _PhoneHomeState extends State<PhoneHome> {
     });
     // 서버에는 아직 아무것도 쓰지 않았으므로 저장 세션만 지웁니다. 방에 남아
     // 있는 참가자 노드는 서버 정리가 담당합니다(C-10).
-    await _restoredRoomProvider.declineRestorableSession();
+    try {
+      await _restoredRoomProvider.declineRestorableSession();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _declined = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('퇴장 결과를 확인하지 못했습니다. 연결 복구 후 다시 확인합니다.')),
+      );
+    }
   }
 
   Future<void> _openWaitingRoom() async {

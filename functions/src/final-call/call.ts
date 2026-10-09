@@ -1,10 +1,17 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len, brace-style, block-spacing */
 
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
-import {orderedAlivePlayers, resolveFinalCallRound, startTurn} from "./game.js";
+import {
+  orderedAlivePlayers,
+  resolveFinalCallRound,
+  startTurn,
+} from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {assertFinalCallTurn, FINAL_CALL_REGION, finalCallCommandId,
   finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
@@ -27,7 +34,7 @@ export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION},
   const commandId = finalCallCommandId(request.data?.commandId);
   const roomRef = getDatabase().ref(`rooms/${roomCode}`);
   let response: Record<string, unknown> | null = null;
-  const transaction = await roomRef.transaction((raw) => {
+  const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_declare", (raw, transactionNow) => {
     if (raw === null) return raw;
     const room = raw as FinalCallRoom;
     const game = requireFinalCallGame(room);
@@ -40,7 +47,7 @@ export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION},
     }
     const pending = orderedAlivePlayers(game.public.players)
       .map((player) => player.uid).filter((playerUid) => playerUid !== uid);
-    const now = Date.now();
+    const now = transactionNow;
     game.public.callerUid = uid;
     game.public.finalTurnPendingUids = pending;
     if (pending.length === 0) {
@@ -54,7 +61,8 @@ export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION},
       turnUid: game.public.turnUid};
     recordFinalCallCommand(game, commandId, uid, "called", now, response);
     return room;
-  });
+  }, () => response);
+  response = transaction.operationResult ?? response;
   if (!transaction.committed || !response) {
     throw new HttpsError("aborted", "CALL을 처리하지 못했습니다.");
   }

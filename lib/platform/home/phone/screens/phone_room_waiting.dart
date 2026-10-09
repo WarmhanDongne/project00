@@ -158,7 +158,11 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     _isOpeningGame = true;
 
     try {
-      await prepareGameAssetsForPlay(game);
+      if (!await prepareGameAssetsForRecovery(game, context)) {
+        _isOpeningGame = false;
+        await widget.provider.leaveGame(game.id);
+        return;
+      }
     } catch (error, stack) {
       CrashReporting.recordError(error, stack, reason: '휴대폰 게임 에셋 확인');
       _isOpeningGame = false;

@@ -41,5 +41,7 @@ class PlayerStaleReportTracker {
     );
   }
 
+  void forget(String uid) => _reportedLastSeen.remove(uid);
+
   void clear() => _reportedLastSeen.clear();
 }

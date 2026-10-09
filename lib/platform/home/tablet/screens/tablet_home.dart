@@ -179,7 +179,11 @@ class _TabletHomeState extends State<TabletHome>
 
     _isOpeningRestoredGame = true;
     try {
-      await prepareGameAssetsForPlay(game);
+      if (!await prepareGameAssetsForRecovery(game, context)) {
+        _isOpeningRestoredGame = false;
+        await roomProvider.closeControllerRoom();
+        return;
+      }
     } catch (error, stack) {
       CrashReporting.recordError(error, stack, reason: '태블릿 복구 게임 에셋 확인');
       _isOpeningRestoredGame = false;
@@ -218,6 +222,8 @@ class _TabletHomeState extends State<TabletHome>
     //================상태바 표시=================
     unawaited(AppSystemUi.enterGameFullscreen());
     unawaited(AppOrientation.lockTabletGameLandscape());
+    final cleanupTarget = await roomProvider.captureGameTarget();
+    if (!mounted) return;
     final gameRoute = GameExitMaterialPageRoute<void>(
       builder: (_) => game.buildTabletScreen(
         playerLayout: layout,
@@ -229,7 +235,13 @@ class _TabletHomeState extends State<TabletHome>
     gameRoute.completed.then((_) {
       _isOpeningRestoredGame = false;
       // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
-      unawaited(restoreRoomToWaiting(roomProvider));
+      unawaited(
+        restoreRoomToWaiting(
+          roomProvider,
+          expectedTarget: cleanupTarget,
+          captured: true,
+        ),
+      );
     });
   }
 

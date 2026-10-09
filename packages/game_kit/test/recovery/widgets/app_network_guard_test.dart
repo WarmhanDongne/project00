@@ -107,7 +107,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('복구 실패는 1, 2, 4, 8초 간격으로 재시도하고 성공 후 멈춘다', (tester) async {
+  testWidgets('상위 화면은 한 복구 배치만 실행하고 실패 뒤 수동 재시도를 기다린다', (tester) async {
     final connection = StreamController<bool>.broadcast();
     addTearDown(connection.close);
     var attempts = 0;
@@ -117,7 +117,7 @@ void main() {
         connectionChanges: connection.stream,
         onRetry: () async {
           attempts++;
-          if (attempts < 6) throw StateError('일시적 복구 실패');
+          throw StateError('unknown');
         },
         child: const Text('게임 화면'),
       ),
@@ -127,16 +127,9 @@ void main() {
     connection.add(true);
     await tester.pump();
     expect(attempts, 1);
-    var expected = 1;
-    for (final seconds in [1, 2, 4, 8, 8]) {
-      await tester.pump(Duration(milliseconds: seconds * 1000 - 1));
-      expect(attempts, expected);
-      await tester.pump(const Duration(milliseconds: 1));
-      expect(attempts, ++expected);
-    }
-    await tester.pump(const Duration(seconds: 30));
-    expect(attempts, 6);
-    expect(find.byType(NetworkUnavailableModal), findsNothing);
+    await tester.pump(const Duration(seconds: 60));
+    expect(attempts, 1);
+    expect(_gameInputIsBlocked(tester), isTrue);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

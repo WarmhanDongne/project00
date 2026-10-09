@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 
+import {runGameCommandTransaction} from "../game-interruption/game-command-transaction.js";
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -28,12 +29,16 @@ export const game_final_call_clear_game = onCall<Data>(
     const room = roomSnapshot.val() as FinalCallRoom;
     assertFinalCallController(room, uid, request.data?.controllerSessionId);
 
-    const gameRef = roomRef.child("game");
+
     let alreadyCleared = false;
-    const transaction = await gameRef.transaction((rawGame) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_clear_game", (raw) => {
+      if (!raw) return;
+      const current = raw as FinalCallRoom;
+      assertFinalCallController(current, uid, request.data?.controllerSessionId);
+      const rawGame = current.game ?? null;
       if (rawGame === null) {
         alreadyCleared = true;
-        return rawGame;
+        return current;
       }
 
       const game = rawGame as NonNullable<FinalCallRoom["game"]>;

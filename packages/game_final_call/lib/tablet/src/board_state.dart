@@ -16,10 +16,11 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   int? previousGameStartedAt;
   final _dealingCommand = GameProgressCommand();
   final _resultRevealCommand = GameProgressCommand();
+  final _timeoutCommand = GameProgressCommand();
+  final _nextRoundCommand = GameProgressCommand();
   Timer? closingExitTimer;
 
   /// 진행 명령이 실패했을 때 다시 시도하기까지의 간격입니다.
-  static const Duration _advanceRetryDelay = Duration(seconds: 3);
 
   /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
   static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
@@ -103,10 +104,14 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     if (!_hasPreloadedAssets && game.players.isNotEmpty) {
       _hasPreloadedAssets = true;
       unawaited(
-        preloadFinalCallAssets(
-          context,
-          isPhone: false,
-          characterIds: game.players.values.map((player) => player.characterId),
+        game.prepareScreen(
+          () => preloadFinalCallAssets(
+            context,
+            isPhone: false,
+            characterIds: game.players.values.map(
+              (player) => player.characterId,
+            ),
+          ),
         ),
       );
     }
@@ -221,27 +226,33 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     }
     turnTimer = Timer(ServerClock.remainingUntil(deadline), () async {
       if (!mounted || controller?.turnDeadlineAt != deadline) return;
-      final success = await controller?.timeoutTurn() ?? false;
-      // 아직 같은 턴이면 다시 시도합니다.
-      if (success || !mounted || controller?.turnDeadlineAt != deadline) return;
-      _scheduleRetry(() => _scheduleTurnTimeout(deadline));
+      final game = controller!;
+      final key = (game.gameStartedAt, deadline);
+      _timeoutCommand.run(
+        key: key,
+        isCurrent: () =>
+            mounted &&
+            !game.isFinished &&
+            game.gameStartedAt == key.$1 &&
+            game.turnDeadlineAt == deadline,
+        send: game.timeoutTurn,
+      );
     });
   }
 
-  /// 라운드 결과 공개가 끝난 뒤 다음 라운드를 시작합니다.
-  void _advanceRound() async {
-    if (!mounted || controller?.phase != 'roundResult') return;
-    final success = await controller?.nextRound() ?? false;
-    if (success || !mounted || controller?.phase != 'roundResult') return;
-    _scheduleRetry(_advanceRound);
-  }
-
-  /// 진행 명령 재시도를 예약합니다(phaseTimer를 공유해 중복 예약을 막습니다).
-  void _scheduleRetry(void Function() action) {
-    phaseTimer?.cancel();
-    phaseTimer = Timer(_advanceRetryDelay, () {
-      if (mounted) action();
-    });
+  void _advanceRound() {
+    final game = controller;
+    if (!mounted || game == null || game.phase != 'roundResult') return;
+    final key = (game.gameStartedAt, game.round);
+    _nextRoundCommand.run(
+      key: key,
+      isCurrent: () =>
+          mounted &&
+          !game.isFinished &&
+          game.phase == 'roundResult' &&
+          (game.gameStartedAt, game.round) == key,
+      send: game.nextRound,
+    );
   }
 
   void _handleRoundRevealCompleted() {
@@ -416,6 +427,8 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   void dispose() {
     _dealingCommand.dispose();
     _resultRevealCommand.dispose();
+    _timeoutCommand.dispose();
+    _nextRoundCommand.dispose();
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     backgroundMusic.stop();
     phaseTimer?.cancel();
@@ -455,6 +468,23 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     final flowStep = flowConfig.stepFor(stage);
     return Scaffold(
       body: GameRecoveryLayer(
+        session: game.recoverySession,
+        request: GameRequestRecovery(
+          message: game.errorMessage,
+          onRetry: () {
+            final exhausted = [
+              _dealingCommand,
+              _resultRevealCommand,
+              _timeoutCommand,
+              _nextRoundCommand,
+            ].where((command) => command.needsRetry);
+            if (exhausted.isNotEmpty) {
+              exhausted.first.retry();
+            } else {
+              unawaited(game.retryLastCommand());
+            }
+          },
+        ),
         interruption: GameInterruptionRecovery(
           state: game.interruption,
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -462,7 +492,8 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,
           onContinue: game.excludeInterruptedPlayerAndContinue,
-          onFinishNow: game.finishInterruptedGameNow,
+          onWaitMore: game.waitMoreForInterruptedPlayer,
+          onFinishNow: game.endGame,
           onExpired: game.expireInterruption,
         ),
         child: Stack(

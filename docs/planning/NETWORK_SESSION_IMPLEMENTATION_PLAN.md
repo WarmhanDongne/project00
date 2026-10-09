@@ -329,5 +329,9 @@ R16 담당안·허용 범위, R17 의존 순서/채팅 단위, R18 테스트/실
 코드 기준은 최신 newgui, 기술안 A~C는 모두 권장 방식으로 채택됐다.
 E00의 최신 SHA/후속 변경·소비자·검증 공백 확인은 [착수 기록](NETWORK_SESSION_E00_BASELINE.md)에 남겼다.
 사용자가 전체를 수행한다고 확인해 담당 분담 결정을 닫았다. E00의 기준 확인과 인수인계는 정리됐다.
-현재 다음 단위는 E01 검증 배선이며 이후 E02/E03/E05 공용 계약 구현으로 진행한다. TASKS.md에도 반영했다.
+E01 배선·회귀는 [E01 기록](NETWORK_SESSION_E01_VALIDATION.md)에 남겼다.
+후속 사용자 요청으로 E02~E12를 순차 구현했으며 [현재 계약](../engineering/NETWORK_SESSION_CONTRACT.md)과
+[후보 검증](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)에 연결한다. 관련 검사와 사용자 명시 승인 후 현재 후보 FULL이 PASS/exit 0이다.
+E13 emulator/CI·E14 실기기·E15 반영은 미실행이다.
+현재 상태와 다음 행동은 TASKS.md를 따른다.
 E00은 제품 코드·테스트 코드·검증 배선·새 채팅·production을 변경하지 않았다.

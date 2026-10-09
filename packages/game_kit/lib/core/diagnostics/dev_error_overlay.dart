@@ -8,10 +8,12 @@
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
+
 // ============================================================
 
 /// 휴대폰과 태블릿 모두에서 게임 통신 기록을 여는 개발용 경계입니다.
@@ -191,8 +193,12 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
           Positioned.fill(
             child: SafeArea(
               top: false,
-              child: _GameCommunicationSheet(
-                onClose: () => setState(() => _isDiagnosticsOpen = false),
+              // MaterialApp.builder puts this widget above Navigator's Overlay.
+              // Header tooltips need an Overlay within the diagnostics subtree.
+              child: Overlay.wrap(
+                child: _GameCommunicationSheet(
+                  onClose: () => setState(() => _isDiagnosticsOpen = false),
+                ),
               ),
             ),
           ),
@@ -223,7 +229,7 @@ class _GameCommunicationSheet extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
             clipBehavior: Clip.antiAlias,
             child: AnimatedBuilder(
-              animation: log,
+              animation: Listenable.merge([log, RecoveryMetrics.instance]),
               builder: (context, _) {
                 final entries = log.entries;
                 return Column(
@@ -238,6 +244,33 @@ class _GameCommunicationSheet extends StatelessWidget {
                       ),
                     ),
                     _DiagnosticsHeader(log: log, onClose: onClose),
+                    if (log.droppedEntries > 0)
+                      Text(
+                        "이전 이벤트 ${log.droppedEntries}개 생략 · 복구 요약은 별도 보존",
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    if (RecoveryMetrics.instance.summaries.isNotEmpty)
+                      SizedBox(
+                        height: 112,
+                        child: ListView(
+                          children: [
+                            for (final summary
+                                in RecoveryMetrics.instance.summaries.reversed
+                                    .take(5))
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  '복구 ${summary.episode} · 시도 ${summary.batch} · ${summary.success ? "완료" : "미완료"} · ${summary.elapsed.inMilliseconds}ms\n'
+                                  '${RecoveryStage.values.map((stage) => "${stage.name}: ${summary.stageText(stage)}").join(" · ")}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     const Divider(height: 1),
                     Expanded(
                       child: entries.isEmpty

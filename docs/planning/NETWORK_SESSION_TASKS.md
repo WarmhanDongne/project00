@@ -10,7 +10,7 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 담당·채팅 단위·검증은 [R16~R18 실행 계획안](NETWORK_SESSION_IMPLEMENTATION_PLAN.md)에서 확인한다.
 계획 초안 작성으로 아래 원본 상태나 보류/승인 조건을 변경하지 않는다.
 2026-10-09 후속 사용자 합의로 최신 newgui·기술안 A~C를 채택하고 SESSION의 보류 사유/다음 행동만 TASKS.md와 동기화했다.
-그 뒤 develop에서 E00을 시작했다. 최신 newgui 반영 기준·계약/소비자·검증 공백은 [착수 기록](NETWORK_SESSION_E00_BASELINE.md)에 남겼다. 후속 답변으로 사용자 전체 담당을 확인했고 다음 단위는 E01이다.
+그 뒤 develop에서 E00을 정리하고 사용자 전체 담당으로 E01을 시작했다. 최신 기준은 [착수 기록](NETWORK_SESSION_E00_BASELINE.md), 검증 배선·회귀 복원 후보는 [E01 기록](NETWORK_SESSION_E01_VALIDATION.md)에 남겼다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -22,18 +22,21 @@ TASKS.md다. 작업이 변경되면 원본을 먼저 갱신하고 이 보기에�
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — E00 기준 확인 | 사용자 전체 담당, develop 58634d1의 최신 newgui/계약/소비자 대조·인수인계 정리. 다음 E01 검증 배선. 기능 구현은 아직 시작하지 않음 |
-| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 요구사항 확인 | 6종 연결 화면의 상태·콜백 대조, 상세·스토어 중 복원과 퇴장 경합 재현, 담당 범위 합의 |
-| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — newgui 구현 후보 | 재시도·자동 진행·비정상 종료 복귀 누락 보완 범위 합의, 현재 후보 FULL·실기기 확인 |
-| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 요구사항 확인 | 중복 방지 유지, 응답 유실·고아 예약·삭제 트리거 부분 실패 검증과 처리 검토 |
-| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 관찰 중 | newgui에서 연결·세션 준비·화면 복귀 시간을 구분해 측정, 기존 착수 조건과 목표 합의 유지 |
-| [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 실기기 확인 대기 | 휴대폰·아이패드 룰렛 재테스트 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 요구사항 확인 | 누락된 suite 파일 20개 대조, 4게임·새 UI 회귀 작성과 package/FULL/CI 실행 경로 확정 |
-| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 요구사항 확인 | newgui의 일반 참가자 조회 계약·역할별 재현, 홀덤 인원 판정과 정리 정합성 대조 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — E13 백엔드·FULL/CI PASS | [기존 Firebase 배포·APK 준비 기록](../operations/NETWORK_SESSION_TEST_PREPARATION.md) 확인 후 [2대 기본·4대 필수 실기기 확인](../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md). 기기 미실행 |
+| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
+| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀와 현재 FULL PASS. E13 통합·E14 실기기 확인 |
+| [ROOM-CREATE-REQUEST-01](tasks/ROOM-CREATE-REQUEST-01.md#room-create-request-01) | 방 생성 요청 기록 잔류 | 검증 대기 — E11 로컬 검증 PASS | generation CAS·보상·지속 정리 회귀와 현재 FULL PASS. E13 부분 실패 확인 |
+| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
+| [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — E13 백엔드·FULL/CI PASS | 기존 Firebase·APK 기준 [서버·FlutterFire 진단 후속](../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md), 앱/기기 회귀·원래 CI SDK 정렬 |
+| [CORE-REVIEW-01](tasks/CORE-REVIEW-01.md#core-review-01) | 핵심 구현 점검·그룹 목록 권한 회귀 | 검증 대기 — 연관 E10/E11 로컬 검증 PASS | 그룹 권한·Holdem 제외·generation 회귀와 현재 FULL PASS. E13 경합·기존 핵심 검토 |
+
+2026-10-09 E02~E12 순차 구현 요청에 따른 [현재 후보와 검증](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 연결한다. 관련 검사와 사용자 승인 후 FULL은 PASS다. 후속 E13/E14는 남아 있다.
 
 ## 이번 묶음에서 확인할 범위
 
-현재 착수 후보는 최신 newgui `fcee643`를 포함한 develop `58634d1`이다. 과거 분석 `999c3e9` 이후의 변경은 E00에서 대조했다.
+현재 E01 착수 후보는 최신 newgui `fcee643`와 E00 문서를 포함한 develop `151eff8`이다.
+과거 분석 `999c3e9` 이후의 제품 변경은 E00에서 대조했고, E01은 `codex/e01-validation-wiring`에서 진행한다.
 게임은 라이어스포커·Final Call·Mafia·Holdem 4종의 휴대폰·태블릿 흐름이다.
 아래는 이번 묶음의 범위다. 위 표의 상태·다음 행동과 각 태스크 전체의 완료 조건은 원본을 따른다.
 

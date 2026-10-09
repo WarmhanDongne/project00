@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -33,7 +36,7 @@ export const game_mafia_confirm_role = onCall<ConfirmData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_confirm_role", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       const game = requireMafiaGame(room);
@@ -47,7 +50,7 @@ export const game_mafia_confirm_role = onCall<ConfirmData>(
       }
       assertMafiaPhase(game, "roleReveal");
 
-      const now = Date.now();
+      const now = transactionNow;
       // Realtime Database는 빈 배열을 저장하지 않아 읽을 때 undefined가 됩니다.
       const confirmed = new Set(game.public.roleRevealedUids ?? []);
       confirmed.add(uid);
@@ -67,7 +70,8 @@ export const game_mafia_confirm_role = onCall<ConfirmData>(
       };
       recordMafiaCommand(game, commandId, uid, "confirmRole", now, response);
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "역할 확인을 저장하지 못했습니다.");
@@ -92,7 +96,7 @@ export const game_mafia_complete_role_reveal = onCall<CompleteData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_complete_role_reveal", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       assertMafiaController(room, uid, request.data?.controllerSessionId);
@@ -102,10 +106,11 @@ export const game_mafia_complete_role_reveal = onCall<CompleteData>(
         response = {success: true, phase: game.public.phase};
         return room;
       }
-      beginMafiaNight(game, Date.now());
+      beginMafiaNight(game, transactionNow);
       response = {success: true, phase: game.public.phase};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "역할 배분을 마치지 못했습니다.");

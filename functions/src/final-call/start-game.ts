@@ -1,3 +1,7 @@
+import {
+  replayGameCommand,
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -29,6 +33,8 @@ export const game_final_call_start_game = onCall<StartData>(
     const roomCode = finalCallRoomCode(request.data?.roomCode);
     const restart = request.data?.restart === true;
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
+    const replay = await replayGameCommand(roomRef, request, "game_final_call_start_game");
+    if (replay) return replay;
     const room = (await roomRef.get()).val() as FinalCallRoom | null;
     if (!room) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
     const startFingerprint = startGameFingerprint(room);
@@ -44,7 +50,7 @@ export const game_final_call_start_game = onCall<StartData>(
     }
     const players = await createFinalCallPlayers(room.players);
     const game = createInitialFinalCallGame(players, Date.now());
-    const transaction = await roomRef.transaction((current) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_start_game", (current) => {
       if (current === null) return current;
       const currentRoom = current as FinalCallRoom;
       assertFinalCallController(
@@ -56,10 +62,10 @@ export const game_final_call_start_game = onCall<StartData>(
       if (currentRoom.game?.public?.status === "playing" && !restart) return;
       currentRoom.game = game;
       return currentRoom;
-    });
+    }, () => ({success: true, roomCode, turnUid: game.public.turnUid}));
     if (!transaction.committed) {
       throw new HttpsError("already-exists", "이미 게임이 진행 중입니다.");
     }
-    return {success: true, roomCode, turnUid: game.public.turnUid};
+    return transaction.operationResult ?? {success: true, roomCode, turnUid: game.public.turnUid};
   },
 );

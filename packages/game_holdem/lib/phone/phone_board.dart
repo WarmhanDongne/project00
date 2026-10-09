@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'package:game_kit/recovery/widgets/game_connection_led.dart';
+import 'package:game_kit/recovery/services/required_image.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_holdem/game_assets.dart';
@@ -58,6 +59,7 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
   bool _introCompleted = false;
   int _announcedHand = 0;
   bool _isExitModalOpen = false;
+  bool _preparingScreen = false;
   bool _isLeavingRoom = false;
 
   @override
@@ -84,6 +86,22 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
     }
     final game = ref.watch(holdemSessionProvider(args));
     final controller = ref.read(holdemSessionProvider(args).notifier);
+    if (!_preparingScreen) {
+      _preparingScreen = true;
+      unawaited(
+        controller.prepareScreen(() async {
+          for (final image in [
+            HoldemAssets.phoneBackground,
+            HoldemAssets.layoutTable,
+            HoldemAssets.layoutChair,
+            HoldemAssets.cardBack,
+          ]) {
+            if (!mounted) return;
+            await precacheRequiredImage(image.provider(), context);
+          }
+        }),
+      );
+    }
     final stage = _stage(game);
     final closingMessage = switch (game.finishReason) {
       'interruptionVoteExpired' => GameFlowCopy.interruptionVoteExpired,
@@ -119,7 +137,6 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
         onExit: () => unawaited(_requestExit()),
       ),
       result: _TournamentResult(game: game, uid: args.uid),
-      onConnectingExit: () => unawaited(_requestExit()),
       onIntroCompleted: () {
         if (!mounted) return;
         setState(() {
@@ -137,18 +154,17 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
       connectionChanges: _serverConnection,
       style: holdemConnectionLed,
       child: GameRecoveryLayer(
+        session: controller.recoverySession,
+        onExit: () => unawaited(_requestExit()),
         request: GameRequestRecovery(
           message: game.errorMessage,
-          onRetry: controller.clearError,
+          onRetry: () => unawaited(controller.retryLastCommand()),
         ),
         interruption: GameInterruptionRecovery(
           state: game.interruption,
           currentUid: args.uid,
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,
-          onVote: () async {
-            await controller.voteToContinueInterruption();
-          },
           onExpired: controller.expireInterruption,
         ),
         child: shell,

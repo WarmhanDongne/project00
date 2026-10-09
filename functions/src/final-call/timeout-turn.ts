@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len, brace-style, block-spacing */
 
 import {getDatabase} from "firebase-admin/database";
@@ -7,7 +10,12 @@ import {assertControllerSession} from "../room/controller-session.js";
 import {nextFinalCallPlayer, resolveFinalCallRound,
   selectBestFinalCallCombination, startTurn} from "./game.js";
 import {FinalCallCard, FinalCallRoom} from "./types.js";
-import {FINAL_CALL_REGION, finalCallRoomCode, finalCallUid, requireFinalCallGame} from "./validation.js";
+import {
+  FINAL_CALL_REGION,
+  finalCallRoomCode,
+  finalCallUid,
+  requireFinalCallGame,
+} from "./validation.js";
 
 type Data = {roomCode?: unknown; controllerSessionId?: unknown};
 
@@ -19,7 +27,7 @@ export const game_final_call_timeout_turn = onCall<Data>(
     const roomCode = finalCallRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_timeout_turn", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       const game = requireFinalCallGame(room);
@@ -32,7 +40,7 @@ export const game_final_call_timeout_turn = onCall<Data>(
         assertControllerSession(room, requesterUid, request.data?.controllerSessionId);
       }
       const deadline = game.public.turnDeadlineAt;
-      const now = Date.now();
+      const now = transactionNow;
       if (!turnUid || deadline === null || now < deadline) {
         response = {success: true, ignored: true};
         return room;
@@ -113,7 +121,8 @@ export const game_final_call_timeout_turn = onCall<Data>(
       game.public.updatedAt = now;
       response = {success: true, type: "turnTimedOut", turnUid: game.public.turnUid};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "제한 시간 종료를 처리하지 못했습니다.");
     }

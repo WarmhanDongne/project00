@@ -66,6 +66,7 @@ class _AuthGateState extends State<AuthGate> {
   UserOnboarding? _onboarding;
   bool _onboardingLoaded = false;
   bool _onboardingFailed = false;
+  int _onboardingGeneration = 0;
   bool _isRestoringAuth = true;
 
   @override
@@ -91,6 +92,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   void dispose() {
+    _onboardingGeneration++;
     _emailLinkSubscription?.cancel();
     _onboardingSubscription?.cancel();
     super.dispose();
@@ -113,7 +115,9 @@ class _AuthGateState extends State<AuthGate> {
     if (_isRestoringAuth) {
       // 기기에 저장된 로그인 정보를 복원하는 중입니다. 여기서 멈추면
       // 저장된 세션을 읽지 못하는 상태이므로, 다시 로그인할 길을 엽니다.
+      final generation = _onboardingGeneration;
       return _AppInitializingView(
+        key: ValueKey(generation),
         step: '로그인 상태 확인',
         onTimeout: _handleAuthRestoreTimeout,
       );
@@ -162,11 +166,14 @@ class _AuthGateState extends State<AuthGate> {
       // 확정(2026-08): **끝나지 않는 스피너를 만들지 않습니다.** 회원가입
       // 상태가 제때 오지 않으면(규칙 거부·오프라인·문서 없음) 그대로 굳는
       // 대신 다시 시도할 화면을 보여 줍니다.
+      final generation = _onboardingGeneration;
       return _AppInitializingView(
+        key: ValueKey(generation),
         step: '회원가입 상태 확인',
         onTimeout: () {
           // 퇴장 애니메이션 중 남아 있는 이전 대기 화면의 타이머는 무시합니다.
           if (mounted &&
+              generation == _onboardingGeneration &&
               !_onboardingLoaded &&
               _watchedOnboardingUid == user.uid) {
             setState(() => _onboardingFailed = true);
@@ -200,6 +207,7 @@ class _AuthGateState extends State<AuthGate> {
       return;
     }
     unawaited(_onboardingSubscription?.cancel());
+    final generation = ++_onboardingGeneration;
     _watchedOnboardingUid = uid;
     _onboarding = null;
     _onboardingLoaded = false;
@@ -209,15 +217,24 @@ class _AuthGateState extends State<AuthGate> {
         .watch(uid)
         .listen(
           (onboarding) {
-            if (!mounted) return;
+            if (!mounted ||
+                generation != _onboardingGeneration ||
+                _watchedOnboardingUid != uid) {
+              return;
+            }
             setState(() {
               _onboarding = onboarding;
               _onboardingLoaded = true;
+              _onboardingFailed = false;
             });
           },
           onError: (Object error) {
-            debugPrint('온보딩 상태 수신 오류: $error');
-            if (!mounted) return;
+            debugPrint('온보딩 상태 수신 오류');
+            if (!mounted ||
+                generation != _onboardingGeneration ||
+                _watchedOnboardingUid != uid) {
+              return;
+            }
             setState(() => _onboardingFailed = true);
           },
         );
@@ -240,6 +257,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   void _retryOnboardingWatch() {
+    _onboardingGeneration++;
     final uid = _watchedOnboardingUid;
     // 구독 자체를 새로 만들어야 다시 시도가 됩니다. uid를 지워 두면
     // 다음 빌드의 _ensureOnboardingWatch가 처음부터 다시 구독합니다.
@@ -251,6 +269,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   void _clearOnboardingWatch() {
+    _onboardingGeneration++;
     unawaited(_onboardingSubscription?.cancel());
     _onboardingSubscription = null;
     _watchedOnboardingUid = null;
@@ -388,7 +407,7 @@ class _GateErrorView extends StatelessWidget {
 /// 상태를 남기지 않기 위한 장치입니다** — 무엇을 기다리다 멈췄는지는 [step]으로
 /// 화면에 적어, 기기에서 바로 원인을 알 수 있게 합니다.
 class _AppInitializingView extends StatefulWidget {
-  const _AppInitializingView({required this.step, this.onTimeout});
+  const _AppInitializingView({super.key, required this.step, this.onTimeout});
 
   /// 지금 기다리는 일입니다(예: `회원가입 상태 확인`).
   final String step;

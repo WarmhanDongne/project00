@@ -15,9 +15,9 @@ void main() {
     start();
     await tester.pump();
     expect(calls, 1);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 250));
     expect(calls, 2);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(calls, 3);
     start();
     await tester.pump(const Duration(seconds: 30));
@@ -98,7 +98,7 @@ void main() {
     await tester.pump();
     oldRequest.complete(false);
     await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 250));
     expect(calls, 2);
   });
 

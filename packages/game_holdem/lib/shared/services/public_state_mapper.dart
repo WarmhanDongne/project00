@@ -66,7 +66,7 @@ class HoldemPublicSnapshot {
           : null,
       winnerUid: map['winnerUid']?.toString(),
       finishReason: map['finishReason']?.toString(),
-      interruption: interruptionFrom(map['interruption']),
+      interruption: interruptionFrom(map['recovery']),
     );
   }
 

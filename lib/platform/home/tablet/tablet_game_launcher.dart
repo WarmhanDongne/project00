@@ -249,7 +249,8 @@ class _TabletGameLauncher {
       exitGameRoute(layoutContext);
     }
 
-    void complete(PlayerLayoutModel completedLayout) {
+    void complete(PlayerLayoutModel completedLayout) async {
+      final cleanupTarget = await provider.captureGameTarget();
       if (!layoutContext.mounted) return;
       //=======================태블릿 게임 방향 불변 조건==============================
       // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
@@ -269,7 +270,13 @@ class _TabletGameLauncher {
       // 게임 화면의 퇴장 연출까지 끝난 뒤에 게임 데이터를 정리합니다.
       // 먼저 지우면 덮이는 동안 결과 화면이 사라질 수 있습니다.
       gameRoute.completed.then(
-        (_) => unawaited(restoreRoomToWaiting(provider)),
+        (_) => unawaited(
+          restoreRoomToWaiting(
+            provider,
+            expectedTarget: cleanupTarget,
+            captured: true,
+          ),
+        ),
       );
     }
 
