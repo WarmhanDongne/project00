@@ -8,8 +8,8 @@ ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK
 당시 checkout에 병합하지 않았으며, 작업 등록은 구현·계약 변경·배포 승인이나 완료 판정이 아니다.
 2026-10-09 사용자는 최신 newgui와 기술안 A~C의 권장 방식을 채택했다. SESSION의 보류 사유는
 담당 범위·착수 대기로 갱신했다. 후속 요청으로 develop에서 E00을 시작하고 [착수 기준](NETWORK_SESSION_E00_BASELINE.md)을 기록했다.
-현재 develop에는 최신 newgui와 E00 문서가 반영돼 있다. E01 검증 배선·회귀 복원 후보는 관련 검사와 사용자 승인 FULL을 통과했고 [검증 기록](NETWORK_SESSION_E01_VALIDATION.md)을 남겼다. Git 반영과 현재 후보 CI는 아직 수행하지 않았다.
-E02~E12는 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)를 준비했고 session/auth·5 package·Functions 회귀가 PASS다. 사용자 명시 승인 후 현재 후보 FULL도 PASS/exit 0이다. E13 emulator/CI·E14 기기/성능은 후속이다.
+현재 develop에는 최신 newgui와 E00 문서가 반영돼 있다. E01 검증 배선·회귀 복원 후보는 관련 검사와 사용자 승인 FULL을 통과했고 [검증 기록](NETWORK_SESSION_E01_VALIDATION.md)을 남겼다.
+E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATION.md) 및 승인 FULL PASS 후보는 56cd535로 커밋·푸시했다. [E13 기록](NETWORK_SESSION_E13_BACKEND_CI.md)의 별도 제품 수정 76319f5도 원래 브랜치에 반영했고 현재 로컬 FULL과 실제 backend CI는 PASS다. canonical FULL CI의 SDK 차이는 테스트 브랜치에서 보정했으며 재실행 승인을 기다린다. 남은 앱 통합·E14 기기/성능·출시 판정은 후속이다.
 
 | 분류 | 개수 |
 | --- | ---: |
@@ -35,8 +35,8 @@ E02~E12는 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — E13 백엔드 PASS | 별도 제품 수정의 session PASS·backend 10/10. 현재 수정 후보 FULL 승인·CI 실행·남은 앱/기기 확인 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — E13 백엔드 PASS·CI 후보 | cold-cache/정리 query 회귀 3개와 session/CLI/backend PASS. 현재 FULL 승인·테스트 브랜치 CI 실행 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — E13 백엔드 CI·로컬 FULL PASS | 별도 제품 수정/회귀·backend 10/10·현재 FULL PASS. SDK 보정 CI 재실행 승인·남은 앱/기기 확인 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — E13 백엔드 CI·로컬 FULL PASS | cold-cache/query 회귀와 backend/FULL PASS. canonical CI의 SDK 보정 17ca1f5 재실행 승인 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |
 | [TEST-ACCOUNT-01](tasks/TEST-ACCOUNT-01.md#test-account-01) | 배포용 테스트 계정 준비 | 요구사항 확인 | 용도·환경·권한 확정 |
