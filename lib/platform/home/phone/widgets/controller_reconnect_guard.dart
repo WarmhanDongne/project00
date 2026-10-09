@@ -14,7 +14,7 @@ class ControllerReconnectGuard extends StatefulWidget {
     required this.provider,
     required this.child,
     required this.onExit,
-    this.exitDelay = const Duration(seconds: 20),
+    this.exitDelay = const Duration(seconds: 10),
   });
 
   final RoomProvider provider;
@@ -135,8 +135,7 @@ class _TabletLostSheetState extends State<_TabletLostSheet> {
       body: '태블릿 연결이 잠깐 끊겼어요.\n기다리면 이 화면에서 자동으로 이어져요.',
       status: const MosiConnectionStatus(text: '내 자리와 손패는 그대로예요'),
       actions: [
-        if (_showsExit)
-          MosiConnectionButton(label: '게임과 그룹 나가기', onPressed: widget.onExit),
+        MosiConnectionButton(label: '게임과 그룹 나가기', onPressed: widget.onExit),
       ],
       footnote: _showsExit ? '나가면 이번 게임에서 빠지게 돼요' : null,
     );

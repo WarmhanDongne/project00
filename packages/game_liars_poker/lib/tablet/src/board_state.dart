@@ -21,6 +21,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   Timer? _nonResultExitTimer;
   bool _isExitingToLobby = false;
   final _dealingCommand = GameProgressCommand();
+  final _timeoutCommand = GameProgressCommand();
   int? _previousGameStartedAt;
 
   // ---------------------------------------------------------------------------
@@ -50,7 +51,6 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   static const Duration _backstopGrace = Duration(seconds: 2);
 
   /// 강제 해결이 실패했을 때 다시 시도하기까지의 간격입니다.
-  static const Duration _backstopRetryDelay = Duration(seconds: 3);
 
   /// 서버 시각 보정을 아직 못 받았을 때 다시 확인하기까지의 간격입니다.
   static const Duration _clockSyncRecheck = Duration(milliseconds: 500);
@@ -123,10 +123,12 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
     }
     if (!mounted) return;
-    await preloadLiarsPokerAssets(
-      context,
-      isPhone: false,
-      characterIds: _characterIds,
+    await controller.prepareScreen(
+      () => preloadLiarsPokerAssets(
+        context,
+        isPhone: false,
+        characterIds: _characterIds,
+      ),
     );
   }
 
@@ -137,7 +139,6 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-    _controller?.clearError();
   }
 
   // ---------------------------------------------------------------------------
@@ -592,6 +593,19 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
           // 다른 게임 화면과 동일하게 expand로 둡니다. 느슨한 Stack은 크기가
           // 0인 non-positioned 자식 하나만 있어도 통째로 0×0이 됩니다.
           return GameRecoveryLayer(
+            session: game.recoverySession,
+            request: GameRequestRecovery(
+              message: game.errorMessage,
+              onRetry: () {
+                if (_dealingCommand.needsRetry) {
+                  _dealingCommand.retry();
+                } else if (_timeoutCommand.needsRetry) {
+                  _timeoutCommand.retry();
+                } else {
+                  unawaited(game.retryLastCommand());
+                }
+              },
+            ),
             interruption: GameInterruptionRecovery(
               state: game.interruption,
               currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -600,7 +614,8 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
               // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
               // onError 콜백으로 이미 SnackBar를 띄웁니다(_showGameError).
               onContinue: game.excludeInterruptedPlayerAndContinue,
-              onFinishNow: game.finishInterruptedGameNowFromController,
+              onWaitMore: game.waitMoreForInterruptedPlayer,
+              onFinishNow: game.endGame,
               onExpired: game.expireInterruptionFromController,
             ),
             child: Stack(
@@ -789,21 +804,23 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     _turnTimeoutBackstop = Timer(delay, () async {
       final game = _controller;
       if (!mounted || game == null || game.turnDeadlineAt != deadline) return;
-      final success = await game.forceTurnTimeout();
-      // 아직 같은 턴이면(휴대폰도 서버도 못 넘긴 상태) 계속 다시 시도합니다.
-      if (success || !mounted || _controller?.turnDeadlineAt != deadline) {
-        return;
-      }
-      _turnTimeoutBackstop = Timer(_backstopRetryDelay, () {
-        if (!mounted || _controller?.turnDeadlineAt != deadline) return;
-        _armTurnTimeoutBackstop(deadline);
-      });
+      final key = (game.gameStartedAt, deadline);
+      _timeoutCommand.run(
+        key: key,
+        isCurrent: () =>
+            mounted &&
+            game.gameStartedAt == key.$1 &&
+            game.turnDeadlineAt == deadline &&
+            !game.isFinished,
+        send: game.forceTurnTimeout,
+      );
     });
   }
 
   @override
   void dispose() {
     _dealingCommand.dispose();
+    _timeoutCommand.dispose();
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.
     _backgroundMusic.stop();
     _penaltyTransitionTimer?.cancel();

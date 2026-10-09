@@ -14,7 +14,16 @@ void main() {
   late _Query query;
   late ProviderContainer container;
   late NotifierProvider<_Controller, _State> provider;
+  var disposed = false;
+  void stop() {
+    if (!disposed) {
+      container.dispose();
+      disposed = true;
+    }
+  }
+
   void start() {
+    disposed = false;
     query = _Query();
     container = ProviderContainer();
     provider = NotifierProvider(() => _Controller(query));
@@ -22,7 +31,7 @@ void main() {
   }
 
   tearDown(() async {
-    container.dispose();
+    stop();
     await query.events.close();
   });
   Map<String, Object> snapshot(int startedAt, int revision) => {
@@ -42,6 +51,7 @@ void main() {
     await tester.pump();
     expect(container.read(provider).removed, isFalse);
     expect(container.read(provider).value, snapshot(100, 3));
+    stop();
   });
 
   testWidgets('정상 스트림 복구 뒤 늦은 이전 조회는 최신 상태를 덮지 않는다', (tester) async {
@@ -54,6 +64,7 @@ void main() {
     query.read.complete(_Snapshot(snapshot(100, 1)));
     await tester.pump();
     expect(container.read(provider).value, snapshot(100, 5));
+    stop();
   });
 
   testWidgets('읽기 권한 오류가 반복되어도 방 삭제로 처리하지 않는다', (tester) async {
@@ -71,6 +82,7 @@ void main() {
     await tester.pump();
     expect(container.read(provider).removed, isFalse);
     expect(container.read(provider).value, snapshot(100, 1));
+    stop();
   });
 
   testWidgets('정상 상태가 돌아오지 않고 빈 조회가 확인되면 기존 종료 동작 유지', (tester) async {
@@ -81,6 +93,7 @@ void main() {
     query.read.complete(_Snapshot(null));
     await tester.pump();
     expect(container.read(provider).removed, isTrue);
+    stop();
   });
 
   testWidgets('같은 판의 낡은 revision은 무시하고 새 판의 revision 1은 허용', (tester) async {
@@ -96,6 +109,7 @@ void main() {
     await tester.pump();
     expect(container.read(provider).value, snapshot(200, 1));
     expect(container.read(provider.notifier).gameStartedAt, 200);
+    stop();
   });
 
   testWidgets('다시하기에서 DTO가 같아도 새 판 시작을 화면에 알린다', (tester) async {
@@ -107,6 +121,7 @@ void main() {
       await tester.pump();
     }
     expect(notifications, 2);
+    stop();
   });
 }
 

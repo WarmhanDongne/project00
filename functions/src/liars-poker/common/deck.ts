@@ -1,6 +1,9 @@
 /* eslint-disable valid-jsdoc */
 
-import {randomInt, randomUUID} from "node:crypto";
+import {
+  gameRandomInt as randomInt,
+  gameRandomUUID as randomUUID,
+} from "../../common/transaction-random.js";
 
 import {CardRank, GameCard} from "./types.js";
 

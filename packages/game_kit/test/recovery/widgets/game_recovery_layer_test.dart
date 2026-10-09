@@ -24,7 +24,7 @@ void main() {
     );
 
     expect(find.text('게임 화면'), findsOneWidget);
-    expect(find.byType(GameRequestNotice), findsOneWidget);
+    expect(find.byType(GameRequestNotice), findsNothing);
     final connecting = tester.widget<GameConnectingOverlay>(
       find.byType(GameConnectingOverlay),
     );

@@ -1,3 +1,4 @@
+import 'package:game_kit/recovery/services/required_image.dart';
 // [game_loading.dart] 는 파이널콜에서 사용하는 게임 진입 전 로딩과 준비 흐름을 관리하는 파일이다.
 //
 // - [Package] : 파이널콜
@@ -88,7 +89,7 @@ Future<void> preloadFinalCallAssets(
     await Future.wait(
       localAssets
           .sublist(index, end)
-          .map((asset) => precacheImage(asset.provider(), context)),
+          .map((asset) => precacheRequiredImage(asset.provider(), context)),
     );
   }
 
@@ -96,7 +97,10 @@ Future<void> preloadFinalCallAssets(
   if (!context.mounted) return;
   await Future.wait(
     uniqueCharacterIds.map(
-      (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),
+      (id) => precacheRequiredImage(
+        AssetImage(roomCharacterAssetPath(id)),
+        context,
+      ),
     ),
   );
 }

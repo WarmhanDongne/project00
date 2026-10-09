@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 
 /// 같은 앱 안의 여러 [RoomProvider]가 서로의 퇴장을 존중하게 하는 프로세스 전역
 /// 마커입니다.
@@ -13,8 +14,26 @@ import 'package:flutter/foundation.dart';
 /// 않습니다. 사용자가 직접 나간 방으로 네트워크 복구가 되돌려 보내는 일을 막는
 /// 것이 이 클래스의 목적입니다.
 abstract final class RoomLeaveIntent {
+  static String? _uid;
   static final Set<String> _leaving = <String>{};
   static final Set<String> _left = <String>{};
+  static Future<void> load(String uid) async {
+    if (_uid != null && _uid != uid) {
+      _leaving.clear();
+      _left.clear();
+    }
+    _uid = uid;
+    final store = DurableRoomOperationStore.instance;
+    await store.load();
+    for (final record in store.pendingFor(uid)) {
+      final payload = record['payload'];
+      if (record['kind'] == 'leave' &&
+          payload is Map &&
+          payload['roomCode'] is String) {
+        begin(payload['roomCode'] as String);
+      }
+    }
+  }
 
   static String _normalize(String roomCode) => roomCode.trim().toUpperCase();
 
@@ -42,9 +61,9 @@ abstract final class RoomLeaveIntent {
     _left.add(code);
   }
 
-  /// 퇴장이 실패했습니다. 사용자는 아직 이 방을 쓰므로 복원을 다시 허용합니다.
+  /// 응답 유실·일시 실패는 결과 미확정입니다. 퇴장 의도를 보존합니다.
   static void fail(String roomCode) {
-    _leaving.remove(_normalize(roomCode));
+    _leaving.add(_normalize(roomCode));
   }
 
   /// 같은 방 코드로 다시 입장했습니다. 이전 퇴장 기록을 지웁니다.
@@ -56,6 +75,7 @@ abstract final class RoomLeaveIntent {
 
   @visibleForTesting
   static void resetForTesting() {
+    _uid = null;
     _leaving.clear();
     _left.clear();
   }

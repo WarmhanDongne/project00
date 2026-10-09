@@ -152,3 +152,26 @@ auth JSON의 CLI exitCode는 2, 호출 도구의 PowerShell process exit는 1이
 
 후속 답변으로 사용자 전체 담당을 확인했다. E01의 검증 배선·회귀 복원도 사용자의 구현 채팅에서 수행하며,
 패키지 밖 별도 담당 결정을 기다리는 조건은 제거했다. E01 구현은 아직 시작하지 않았다.
+
+## 2026-10-09 E01 회귀 복원·검증 배선 후보
+
+E00 문서를 PR #142로 develop에 병합한 `151eff8`에서 `codex/e01-validation-wiring`을 만들었다.
+session/auth manifest 20경로의 실제 기존 회귀와 CLI 회귀를 선택 복원하고 현재 newgui UI에 대응했다.
+game_kit·4게임의 package별 working directory/실패 전파를 FULL에 추가했으며 CI도 같은 명령을 사용한다.
+[E01 기록](../NETWORK_SESSION_E01_VALIDATION.md)에 파일별 시나리오·기존 정책과 후속 정책의 구분을 남겼다.
+실제 실행 command/status/exit code는 [월별 기록](../logs/2026-10.md#2026-10-09--e01-회귀-복원검증-배선)에 연결한다.
+
+이번 후보의 대상은 V00이다. 영속 퇴장 의도·준비 barrier·다중 중단 등 신규 제품 회귀는
+해당 기능 구현 단위 및 E13/E14에서 작성·검증한다. 현재 상태는 TASKS.md를 따르며,
+관련 검사만으로 E01·TEST-REGRESSION-01 전체 완료 또는 현재 후보 FULL/CI PASS를 선언하지 않는다.
+
+## 2026-10-09 E02~E12 순차 구현 후보
+
+사용자 요청으로 A~C 공용 계약부터 네 게임·플랫폼·UI·계측을 연결했다.
+[현재 계약](../../engineering/NETWORK_SESSION_CONTRACT.md)과 [후보/검증/기존 변경](../NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 따른다.
+관련 검사와 승인 후 FULL을 구분한다. E13 emulator/CI·E14 기기·production은 미실행이며 일부 PASS로 태스크 전체 완료를 선언하지 않는다.
+
+같은 날 사용자 명시 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
+E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
+실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.

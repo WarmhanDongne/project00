@@ -1,24 +1,25 @@
+import {decorateRecoveryCauses} from "../game-interruption/game-adapters.js";
 /* eslint-disable valid-jsdoc */
 
-import {randomInt} from "node:crypto";
+import {randomUUID} from "node:crypto";
 
 import {
   getDatabase,
-  ServerValue,
+
 } from "firebase-admin/database";
 import {assertOnboardingComplete} from
   "../auth/require-complete-onboarding.js";
 import {
-  InterruptibleRoom,
-  reconcileGamePlayerConnection,
-} from "../game-interruption/state.js";
+  RecoveryRoom,
+  registerRecoveryFailure,
+} from "../game-interruption/recovery-state.js";
 import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https";
 import {
   assertControllerSession,
-  createControllerSessionId,
+
 } from "./controller-session.js";
 import {
   decideRoomJoin,
@@ -27,13 +28,13 @@ import {
 } from "./room-join-policy.js";
 import {decideSeatSave} from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
+import {
+  allocateRoomConnection, assertRoomTarget, parseSessionId,
+  roomOperationResult, SessionRoom,
+} from "./session-contract.js";
 
 const REGION = "asia-northeast3";
 
-const ROOM_CODE_CHARS =
-  "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-const ROOM_CODE_LENGTH = 5;
 
 const ROOM_CODE_PATTERN =
   /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
@@ -41,7 +42,7 @@ const ROOM_CODE_PATTERN =
 // 마피아가 최대 12명이라 방 상한을 12로 올렸습니다. 게임별 인원 제한은 각
 // 게임의 start_game이 따로 확인합니다(예: 파이널콜은 4인 또는 6인).
 const DEFAULT_MAX_PLAYERS = 12;
-const MAX_ROOM_CODE_ATTEMPTS = 20;
+
 // 포커페이스 캐릭터 20종입니다. 예전 동물 id는 이미 배포된 앱이 보낼 수 있어
 // 함께 허용하고, 클라이언트가 포커페이스 얼굴로 바꿔 그립니다.
 const ROOM_CHARACTER_IDS = new Set([
@@ -54,19 +55,10 @@ const ROOM_CHARACTER_IDS = new Set([
 ]);
 
 type SaveSeatIndexesData = {
+  roomInstanceId?: unknown;
   roomCode?: unknown;
   seatIndexesByUid?: unknown;
   controllerSessionId?: unknown;
-};
-
-type CreateRealtimeRoomData = {
-  operationId?: unknown;
-};
-
-type RoomCreateReservation = {
-  roomCode: string;
-  controllerSessionId: string;
-  createdAt: number;
 };
 
 type JoinRealtimeRoomData = {
@@ -74,6 +66,10 @@ type JoinRealtimeRoomData = {
   nickname?: unknown;
   characterId?: unknown;
   preserveProfile?: unknown;
+  roomInstanceId?: unknown;
+  membershipId?: unknown;
+  expectedConnectionSeq?: unknown;
+  operationId?: unknown;
 };
 
 type ValidateRealtimeRoomData = {
@@ -99,139 +95,7 @@ function joinDecisionError(decision: RoomJoinDecision): HttpsError | null {
   }
 }
 
-/**
-*==============================[Room code]===========================
-*방 코드 생성
-**/
-function generateRoomCode(): string {
-  return Array.from(
-    {length: ROOM_CODE_LENGTH},
-    () => {
-      const index = randomInt(ROOM_CODE_CHARS.length);
-      return ROOM_CODE_CHARS[index];
-    },
-  ).join("");
-}
-
-/** ============================[ Room code check ]===================
- * 방 생성 요청 id가 문자열이고 허용된 형식인지 검사 후 정리된 문자열 반환.
-*/
-function parseCreateOperationId(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  const operationId = typeof value === "string" ? value.trim() : "";
-  if (!/^[A-Za-z0-9_-]{8,128}$/.test(operationId)) {
-    throw new HttpsError("invalid-argument", "올바른 작업 ID가 필요합니다.");
-  }
-  return operationId;
-}
-
-/**
- * 아이패드 컨트롤러용 RTDB 방 생성 함수입니다.
- *
- * Firebase Admin SDK를 사용하기 때문에 클라이언트의
- * Realtime Database 보안 규칙을 적용받지 않습니다.
- */
-export const createRealtimeRoom = onCall<CreateRealtimeRoomData>(
-  {region: REGION},
-  async (request) => {
-    const controllerUid = request.auth?.uid;
-
-    if (!controllerUid) {
-      throw new HttpsError(
-        "unauthenticated",
-        "방을 만들려면 로그인이 필요합니다.",
-      );
-    }
-    await assertOnboardingComplete(controllerUid);
-
-    const database = getDatabase();
-    const operationId = parseCreateOperationId(request.data?.operationId);
-    const now = Date.now();
-
-    for (
-      let attempt = 0;
-      attempt < MAX_ROOM_CODE_ATTEMPTS;
-      attempt += 1
-    ) {
-      let roomCode = generateRoomCode();
-      let controllerSessionId = createControllerSessionId();
-      let reservationRef: ReturnType<typeof database.ref> | null = null;
-      if (operationId) {
-        reservationRef = database.ref(
-          `roomCreateRequests/${controllerUid}/${operationId}`,
-        );
-        const reserved = await reservationRef.transaction((current) => {
-          if (current !== null) return current;
-          return {roomCode, controllerSessionId, createdAt: now};
-        });
-        const reservation = reserved.snapshot.val() as
-          RoomCreateReservation | null;
-        if (!reservation?.roomCode || !reservation.controllerSessionId) {
-          throw new HttpsError("internal", "방 생성 요청을 준비하지 못했습니다.");
-        }
-        roomCode = reservation.roomCode;
-        controllerSessionId = reservation.controllerSessionId;
-      }
-      const roomRef = database.ref(
-        `rooms/${roomCode}`,
-      );
-
-      const result = await roomRef.transaction(
-        (currentRoom) => {
-          if (currentRoom !== null) {
-            if (
-              operationId &&
-              currentRoom.controllerUid === controllerUid &&
-              currentRoom.creationOperationId === operationId
-            ) {
-              return currentRoom;
-            }
-            // 같은 코드의 다른 방이 이미 존재하면 새 코드를 예약합니다.
-            return;
-          }
-
-          return {
-            roomCode,
-            controllerUid,
-            // controllerSessionId는 보안 규칙에서 읽기를 막고 태블릿이
-            // 로컬에 보관합니다. 모든 controller 명령은 UID와 세션을 함께
-            // 검사하여 오래된 앱 인스턴스의 요청을 차단합니다.
-            controllerSessionId,
-            ...(operationId ? {creationOperationId: operationId} : {}),
-            controllerConnected: true,
-            controllerPresence: {
-              connected: true,
-              lastSeen: now,
-            },
-            status: "waiting",
-            cleanupAt: now + 3 * 60 * 1000,
-            maxPlayers: DEFAULT_MAX_PLAYERS,
-            selectedGame: null,
-            createdAt: ServerValue.TIMESTAMP,
-          };
-        },
-      );
-
-      if (result.committed) {
-        await database.ref(`controllerRooms/${controllerUid}`).set(roomCode);
-        return {
-          success: true,
-          roomCode,
-          controllerSessionId,
-        };
-      }
-      if (reservationRef) {
-        // 극히 드문 방 코드 충돌일 때만 같은 요청의 예약 코드를 다시 뽑습니다.
-        await reservationRef.remove();
-      }
-    }
-
-    throw new HttpsError(
-      "resource-exhausted",
-      "사용 가능한 방 코드를 생성하지 못했습니다.",
-    );
-  },
-);
+export {createRealtimeRoom} from "./create-room.js";
 
 /** 플레이어를 생성하지 않고 방 코드와 현재 입장 가능 상태만 검증합니다. */
 export const validateRealtimeRoom = onCall<ValidateRealtimeRoomData>(
@@ -274,7 +138,7 @@ export const validateRealtimeRoom = onCall<ValidateRealtimeRoomData>(
     if (!(uid in players) && Object.keys(players).length >= maxPlayers) {
       throw new HttpsError("resource-exhausted", "방 인원이 초과되었습니다.");
     }
-    return {success: true, roomCode};
+    return {success: true, roomCode, roomInstanceId: room.roomInstanceId};
   },
 );
 
@@ -321,6 +185,16 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       throw new HttpsError("invalid-argument", "올바른 캐릭터를 선택해주세요.");
     }
     const preserveProfile = request.data?.preserveProfile === true;
+    const operationId = parseSessionId(request.data?.operationId, "작업 ID");
+    const expectedRoomId = parseSessionId(request.data?.roomInstanceId, "방 세션");
+    const connectionId = randomUUID();
+    const newMembershipId = randomUUID();
+    const now = Date.now();
+    const operationPayload = {
+      roomInstanceId: expectedRoomId, nickname, characterId, preserveProfile,
+      membershipId: request.data?.membershipId,
+      expectedConnectionSeq: request.data?.expectedConnectionSeq,
+    };
 
     const database = getDatabase();
     const roomRef = database.ref(`rooms/${roomCode}`);
@@ -335,6 +209,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
     let rejection: HttpsError | null = null;
     let reconnected = false;
     let savedNickname = nickname;
+    let connectionResult: Record<string, unknown> | null = null;
 
     const transaction = await runPrimedTransaction(
       roomRef,
@@ -346,6 +221,17 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           players?: Record<string, Record<string, unknown>>;
           game?: {public?: {status?: unknown}};
         };
+        const sessionRoom = currentRoom as SessionRoom;
+        assertRoomTarget(sessionRoom, expectedRoomId);
+        const saved = roomOperationResult(
+          sessionRoom, uid, operationId, "connect", operationPayload,
+        );
+        if (saved) {
+          connectionResult = saved;
+          savedNickname = saved.nickname as string;
+          reconnected = saved.reconnected === true;
+          return currentRoom;
+        }
         const players = currentRoom.players ?? {};
 
         const existingPlayer = players[uid];
@@ -402,20 +288,28 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
             ...existingPlayer,
             nickname: effectiveNickname,
             characterId: effectiveCharacterId,
-            isConnected: true,
-            lastSeen: Date.now(),
           };
           delete updatedPlayer.profileImageUrl;
           delete updatedPlayer.accentColor;
           players[uid] = updatedPlayer;
           currentRoom.players = players;
-          reconcileGamePlayerConnection(
-            currentRoom as unknown as InterruptibleRoom,
-            uid,
-            false,
-            true,
-            Date.now(),
+          connectionResult = allocateRoomConnection(sessionRoom, {
+            uid, role: "player", operationId, roomInstanceId: expectedRoomId,
+            membershipId: parseSessionId(
+              request.data?.membershipId, "참가 세션",
+            ),
+            expectedConnectionSeq:
+              request.data?.expectedConnectionSeq as number,
+            connectionId, now, operationPayload,
+          });
+          registerRecoveryFailure(
+            currentRoom as RecoveryRoom, uid, "player", now,
+            "preparationFailed",
           );
+          decorateRecoveryCauses(currentRoom as RecoveryRoom, now);
+          Object.assign(connectionResult!, {
+            nickname: savedNickname, reconnected,
+          });
           return currentRoom;
         }
 
@@ -434,14 +328,23 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           nickname,
           characterId,
           isConnected: true,
-          lastSeen: Date.now(),
+          lastSeen: now,
+          membershipId: newMembershipId,
           seatIndex: -1,
           role: "player",
           status: "active",
           penaltyAttemptCount: 0,
-          joinedAt: Date.now(),
+          joinedAt: now,
         };
         currentRoom.players = players;
+        sessionRoom.membershipRevision =
+          (sessionRoom.membershipRevision ?? 0) + 1;
+        connectionResult = allocateRoomConnection(sessionRoom, {
+          uid, role: "player", operationId, roomInstanceId: expectedRoomId,
+          membershipId: newMembershipId, expectedConnectionSeq: 0,
+          connectionId, now, operationPayload,
+        });
+        Object.assign(connectionResult, {nickname, reconnected: false});
         return currentRoom;
       },
     );
@@ -459,6 +362,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
       roomCode,
       reconnected,
       nickname: savedNickname,
+      ...(connectionResult as Record<string, unknown> | null),
     };
   },
 );
@@ -540,6 +444,9 @@ export const saveRealtimePlayerSeatIndexes =
           room,
           requesterUid,
           request.data?.controllerSessionId,
+        );
+        assertRoomTarget(
+          room as unknown as SessionRoom, request.data?.roomInstanceId,
         );
         const players = room.players;
         const playerIds = players ? Object.keys(players) : [];

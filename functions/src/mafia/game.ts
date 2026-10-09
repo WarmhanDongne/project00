@@ -1,6 +1,6 @@
 /* eslint-disable valid-jsdoc, max-len, require-jsdoc */
 
-import {randomInt} from "node:crypto";
+import {gameRandomInt as randomInt} from "../common/transaction-random.js";
 
 import {getFirestore} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";

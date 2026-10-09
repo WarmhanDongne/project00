@@ -78,11 +78,13 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       // 프로필 이미지 없이도 나머지 에셋은 준비할 수 있습니다.
     }
     if (!mounted) return;
-    await preloadLiarsPokerAssets(
-      context,
-      isPhone: true,
-      characterIds: controller.players.values.map(
-        (player) => player.characterId,
+    await controller.prepareScreen(
+      () => preloadLiarsPokerAssets(
+        context,
+        isPhone: true,
+        characterIds: controller.players.values.map(
+          (player) => player.characterId,
+        ),
       ),
     );
   }
@@ -303,15 +305,17 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
 
     return GameEntryUnroll(
       child: GameRecoveryLayer(
+        session: controller.recoverySession,
+        request: GameRequestRecovery(
+          message: controller.errorMessage,
+          onRetry: () => unawaited(controller.retryLastCommand()),
+        ),
         interruption: GameInterruptionRecovery(
           state: controller.interruption,
           currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isSubmitting: controller.commandInFlight,
           failureMessage: controller.errorMessage,
-          onVote: () async {
-            await controller.voteToContinueInterruption();
-          },
-          onFinishNow: controller.finishInterruptedGameNow,
+
           onExpired: controller.expireInterruption,
         ),
         // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와

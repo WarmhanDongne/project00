@@ -12,12 +12,14 @@ const sources = readdirSync(sourceDirectory)
 
 test("Liar's Poker 방 루트 트랜잭션은 서버 값을 먼저 읽는다", () => {
   const transactionalSources = sources.filter(({source}) =>
-    source.includes("runPrimedTransaction(roomRef"));
+    /runGameCommandTransaction\(\s*roomRef/.test(source));
 
   assert.ok(
     transactionalSources.length > 0,
     "안전 트랜잭션을 사용하는 게임 명령이 하나 이상이어야 합니다.",
   );
+  const boundary = readFileSync(new URL("../src/game-interruption/game-command-transaction.ts", import.meta.url), "utf8");
+  assert.match(boundary, /runPrimedTransaction\(ref/);
   for (const {name, source} of sources) {
     assert.doesNotMatch(
       source,

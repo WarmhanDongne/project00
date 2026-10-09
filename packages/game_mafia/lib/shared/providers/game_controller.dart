@@ -479,7 +479,7 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       revealedRoles: parseMafiaStringMap(map['revealedRoles']),
       winner: map['winner']?.toString(),
       winnerUids: mafiaStringList(map['winnerUids']),
-      interruption: parseMafiaInterruption(map['interruption']),
+      interruption: parseMafiaInterruption(map['recovery']),
     );
   }
 

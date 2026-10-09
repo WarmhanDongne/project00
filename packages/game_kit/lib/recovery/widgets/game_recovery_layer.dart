@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
 import 'package:game_kit/recovery/widgets/game_interruption_layer.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
@@ -17,6 +18,8 @@ class GameRecoveryLayer extends StatelessWidget {
     this.request,
     this.connection,
     this.interruption,
+    this.session,
+    this.onExit,
     required this.child,
   });
 
@@ -24,31 +27,53 @@ class GameRecoveryLayer extends StatelessWidget {
   final GameRequestRecovery? request;
   final GameConnectionRecovery? connection;
   final GameInterruptionRecovery? interruption;
+  final GameRecoverySession? session;
+  final VoidCallback? onExit;
 
   @override
   Widget build(BuildContext context) {
+    final live = session;
+    if (live != null) {
+      return AnimatedBuilder(
+        animation: live,
+        builder: (context, _) => _build(context),
+      );
+    }
+    return _build(context);
+  }
+
+  Widget _build(BuildContext context) {
     final interruption = this.interruption;
+    final waiting =
+        connection?.isWaiting == true || (session != null && !session!.canSend);
     return Stack(
       fit: StackFit.expand,
       children: [
-        child,
+        IgnorePointer(
+          ignoring:
+              (session != null && !session!.canSend) ||
+              connection?.isWaiting == true ||
+              interruption?.state != null,
+          child: child,
+        ),
         // 이탈 모달이 열리면 그 안에서 실패를 표시합니다. 아래 요청 안내를 함께
         // 그리면 scrim 뒤에 가려지고 같은 오류가 두 군데에서 관리됩니다.
         if (request case final request?)
-          if (request.visible && interruption?.state == null)
+          if (request.visible && interruption?.state == null && !waiting)
             GameRequestNotice(
               busy: request.busy,
               message: request.message,
               onRetry: request.onRetry,
               busyMessage: request.busyMessage,
             ),
-        if (connection case final connection?)
+        if (interruption?.state == null &&
+            (connection != null || session != null))
           GameConnectingOverlay(
-            isWaiting: connection.isWaiting,
-            exitDelay: connection.exitDelay,
-            message: connection.message,
-            onExit: connection.onExit,
-            onRetry: connection.onRetry,
+            isWaiting: waiting,
+            exitDelay: connection?.exitDelay ?? const Duration(seconds: 10),
+            message: connection?.message,
+            onExit: onExit ?? connection?.onExit,
+            onRetry: connection?.onRetry ?? session?.retry,
           ),
         if (interruption != null)
           GameInterruptionLayer(
@@ -57,10 +82,11 @@ class GameRecoveryLayer extends StatelessWidget {
             presentation: interruption.presentation,
             isSubmitting: interruption.isSubmitting,
             failureMessage: interruption.failureMessage,
-            onVote: interruption.onVote,
             onContinue: interruption.onContinue,
             onFinishNow: interruption.onFinishNow,
             onExpired: interruption.onExpired,
+            onWaitMore: interruption.onWaitMore,
+            onExit: onExit ?? connection?.onExit,
           ),
       ],
     );
@@ -90,7 +116,7 @@ class GameRequestRecovery {
 class GameConnectionRecovery {
   const GameConnectionRecovery({
     required this.isWaiting,
-    this.exitDelay = const Duration(seconds: 20),
+    this.exitDelay = const Duration(seconds: 10),
     this.message,
     this.onExit,
     this.onRetry,
@@ -116,6 +142,7 @@ class GameInterruptionRecovery {
     this.onContinue,
     this.onFinishNow,
     this.onExpired,
+    this.onWaitMore,
   });
 
   final GameInterruption? state;
@@ -127,4 +154,5 @@ class GameInterruptionRecovery {
   final Future<bool> Function()? onContinue;
   final Future<bool> Function()? onFinishNow;
   final Future<bool> Function()? onExpired;
+  final Future<bool> Function()? onWaitMore;
 }

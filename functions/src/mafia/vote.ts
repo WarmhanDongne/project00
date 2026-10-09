@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -49,7 +52,7 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_submit_vote", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       const game = requireMafiaGame(room);
@@ -62,7 +65,7 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
       assertMafiaAlive(game, uid);
       if (game.public.trial) {
         if (typeof execute !== "boolean") throw new HttpsError("invalid-argument", "찬반을 선택해 주세요.");
-        const now = Date.now();
+        const now = transactionNow;
         submitMafiaTrialVote(game, uid, execute, now);
         response = {success: true, phase: game.public.phase};
         recordMafiaCommand(game, commandId, uid, "trialVote", now, response);
@@ -83,7 +86,7 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
         throw new HttpsError("failed-precondition", "살아 있는 대상만 고를 수 있습니다.");
       }
 
-      const now = Date.now();
+      const now = transactionNow;
       game.server.votes ??= {};
       game.server.votes[uid] = targetUid;
       game.private[uid] ??= {roleId: game.server.roles[uid]};
@@ -109,7 +112,8 @@ export const game_mafia_submit_vote = onCall<SubmitData>(
       };
       recordMafiaCommand(game, commandId, uid, "vote", now, response);
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "투표를 저장하지 못했습니다.");
@@ -133,7 +137,7 @@ export const game_mafia_timeout_vote = onCall<TimeoutData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_timeout_vote", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       assertMafiaController(room, uid, request.data?.controllerSessionId);
@@ -142,7 +146,7 @@ export const game_mafia_timeout_vote = onCall<TimeoutData>(
         response = {success: true, phase: game.public.phase};
         return room;
       }
-      const now = Date.now();
+      const now = transactionNow;
       const deadline = game.public.turnDeadlineAt;
       if (deadline !== null && now < deadline) {
         response = {success: false, reason: "notExpired", phase: "voting"};
@@ -151,7 +155,8 @@ export const game_mafia_timeout_vote = onCall<TimeoutData>(
       resolveMafiaVoting(game, now);
       response = {success: true, phase: game.public.phase};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "개표하지 못했습니다.");
@@ -175,7 +180,7 @@ export const game_mafia_complete_vote_result = onCall<CompleteData>(
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_mafia_complete_vote_result", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as MafiaRoom;
       assertMafiaController(room, uid, request.data?.controllerSessionId);
@@ -184,10 +189,11 @@ export const game_mafia_complete_vote_result = onCall<CompleteData>(
         response = {success: true, phase: game.public.phase};
         return room;
       }
-      const winner = advanceMafiaAfterDeaths(game, "night", Date.now());
+      const winner = advanceMafiaAfterDeaths(game, "night", transactionNow);
       response = {success: true, phase: game.public.phase, winner};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
 
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "개표 발표를 마치지 못했습니다.");

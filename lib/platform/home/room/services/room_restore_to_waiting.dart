@@ -23,7 +23,11 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 /// (결과 HOME, 설정 종료, 인원 부족 자동 종료). 화면마다 넣으면 새 게임을
 /// 추가할 때 빠뜨리고, 경로 하나만 빠져도 증상이 그대로 남습니다. 게임 라우트를
 /// **push한 쪽**에서 `whenComplete`로 한 번 거는 편이 빠짐없이 적용됩니다.
-Future<void> restoreRoomToWaiting(RoomProvider provider) async {
+Future<void> restoreRoomToWaiting(
+  RoomProvider provider, {
+  Map<String, dynamic>? expectedTarget,
+  bool captured = false,
+}) async {
   // 방을 이미 떠났으면 되돌릴 것이 없습니다.
   if (provider.roomCode == null) return;
   // 아직 진행 중이면 건드리지 않습니다. 게임 화면을 닫았지만 서버는 아직
@@ -32,6 +36,12 @@ Future<void> restoreRoomToWaiting(RoomProvider provider) async {
   if (!provider.isRoomFinished) return;
   // 실패해도 조용히 넘깁니다. 사용자는 이미 대기실을 보고 있고, 서버 정리
   // 스케줄과 다음 게임 선택이 같은 일을 다시 합니다.
+  if (captured) {
+    if (expectedTarget != null) {
+      await provider.clearCapturedGame(expectedTarget);
+    }
+    return;
+  }
   await provider.clearSelectedGame();
 }
 

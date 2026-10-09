@@ -6,6 +6,9 @@ reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGI
 
 구조 확인 기준: 2026-09-09, `origin/develop`의 `d1c40aa`.
 
+2026-10-09 로컬 후보의 identity·준비 barrier·명령/퇴장·정리·계측은
+[네트워크·세션 구현 계약](NETWORK_SESSION_CONTRACT.md)을 따른다. 기존 설명과 세부 차이는 현재 코드/계약에 대조한다.
+
 ## Runtime responsibilities
 
 - 사용자에게 배포되는 실행 단위는 루트의 **Mosigame Flutter 앱 하나**다.

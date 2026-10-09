@@ -7,11 +7,17 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/recovery/services/callable_retry_policy.dart';
 import 'package:game_kit/recovery/services/controller_room_session_store.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/recovery/services/game_command_batch.dart';
+import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 
 // ============================================================
 
@@ -45,6 +51,8 @@ abstract class GameCommandService {
   final FirebaseFunctions functions;
 
   final CallableRetryPolicy retryPolicy;
+  final Map<String, Map<String, dynamic>> _unresolved = {};
+  static int _traceSequence = 0;
 
   /// callable 한 번을 호출하고 응답을 `Map`으로 돌려줍니다.
   ///
@@ -63,14 +71,144 @@ abstract class GameCommandService {
     String functionName,
     Map<String, dynamic> data, {
     bool retryTransientFailure = false,
+    Map<String, dynamic>? capturedPayload,
+    String? capturedUid,
   }) async {
+    if (GameCommandBatch.current == null &&
+        RoomRecoveryBatch.current == null &&
+        data['roomCode'] is String &&
+        data['warmup'] != true) {
+      return GameCommandBatch(ownsAttempts: false).run(
+        () => invoke(
+          functionName,
+          data,
+          retryTransientFailure: retryTransientFailure,
+          capturedPayload: capturedPayload,
+          capturedUid: capturedUid,
+        ),
+      );
+    }
+    final roomOwner = RoomRecoveryBatch.current,
+        gameOwner = GameCommandBatch.current;
+    Duration? remainingBudget() {
+      final game = gameOwner?.remaining, room = roomOwner?.remaining;
+      if (game == null) return room;
+      if (room == null) return game;
+      return game < room ? game : room;
+    }
+
     final roomCode = data['roomCode'];
-    final payload = roomCode is String
+    final owner = GameCommandBatch.current?.commands ?? _unresolved;
+    var payload = roomCode is String
         ? controllerCommandData(roomCode, data)
-        : data;
-    final traceId =
-        payload['commandId']?.toString() ??
-        'request_${DateTime.now().microsecondsSinceEpoch}';
+        : Map<String, dynamic>.from(data);
+    GameRecoverySession? session;
+    String? boundUid;
+    String? logicalKey;
+    if (roomCode is String && data['warmup'] != true) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null || (capturedUid != null && capturedUid != uid)) {
+        throw StateError('로그인 상태를 확인해주세요.');
+      }
+      boundUid = uid;
+      final store = RoomSessionIdentityStore.instance;
+      await store.load();
+      if (FirebaseAuth.instance.currentUser?.uid != uid) {
+        throw StateError('로그인 상태가 변경되었습니다.');
+      }
+      final identity =
+          store.current(uid, 'controller', roomCode) ??
+          store.current(uid, 'player', roomCode);
+      if (identity?.role == 'player') payload.remove('controllerSessionId');
+      if (identity == null) throw StateError('방 연결을 복원해주세요.');
+      if (functionName == 'game_common_recovery_report' &&
+          data['connectionId'] != null &&
+          (data['connectionId'] != identity.connectionId ||
+              data['connectionSeq'] != identity.connectionSeq)) {
+        throw StateError('이전 접속의 준비 보고입니다.');
+      }
+      session = GameRecoverySession.forRoom(roomCode, uid);
+      final isRecovery = functionName.startsWith('game_common_');
+      final allowedPaused =
+          isRecovery ||
+          functionName.endsWith('_start_game') ||
+          functionName.endsWith('_end_game') ||
+          functionName.endsWith('_leave_game') ||
+          functionName.endsWith('_clear_game');
+
+      payload =
+          capturedPayload ??
+          {
+            if (session.context != null) ...session.context!.envelope,
+            ...payload,
+            ...identity.envelope,
+          };
+      if (payload['roomInstanceId'] != identity.roomInstanceId ||
+          payload['membershipId'] != identity.membershipId) {
+        throw StateError('이전 참가 세션의 요청입니다.');
+      }
+      final domain = Map<String, dynamic>.from(payload)
+        ..remove('commandId')
+        ..remove('operationId')
+        ..remove('connectionId')
+        ..remove('connectionSeq')
+        ..remove('controllerSessionId');
+      logicalKey = '$functionName/${jsonEncode(domain)}';
+
+      payload = owner.putIfAbsent(
+        logicalKey,
+        () =>
+            _unresolved[logicalKey!] ??
+            {
+              ...payload,
+              'commandId':
+                  payload['commandId'] ??
+                  payload['operationId'] ??
+                  newRecoveryOperationId('command'),
+            },
+      );
+      final retained = Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(payload)) as Map,
+      );
+      if (capturedPayload != null || _unresolved.containsKey(logicalKey)) {
+        final status = await retryPolicy.run(
+          () => functions.httpsCallable('game_common_operation_status').call({
+            ...retained,
+            'operationId': retained['commandId'],
+          }),
+          enabled: false,
+          remainingBudget: remainingBudget(),
+        );
+        final outcome = status.data is Map
+            ? (status.data as Map)['status']
+            : null;
+        if (outcome == 'applied') {
+          _unresolved.remove(logicalKey);
+          session.retryCommand = null;
+          return {'success': true, 'reconciled': true};
+        }
+        if (outcome == 'stale') throw StateError('이전 게임의 요청입니다.');
+        if (session.context?.gameInstanceId != retained['gameInstanceId'] &&
+            !functionName.endsWith('_start_game')) {
+          throw StateError('이전 게임의 요청입니다.');
+        }
+      }
+      if (!allowedPaused && !session.canSend) {
+        throw StateError('게임 준비를 기다리고 있습니다.');
+      }
+      payload = {...retained, ...identity.envelope};
+      session.retryCommand = () => GameCommandBatch(ownsAttempts: false).run(
+        () => invoke(
+          functionName,
+          data,
+          retryTransientFailure: true,
+          capturedPayload: retained,
+          capturedUid: uid,
+        ),
+      );
+      _unresolved[logicalKey] = retained;
+    }
+    final traceId = 'local_${++_traceSequence}';
     final operation = _commandLabel(functionName);
     final totalElapsed = Stopwatch()..start();
     var attempt = 0;
@@ -84,35 +222,48 @@ abstract class GameCommandService {
     );
 
     try {
-      final result = await retryPolicy.run(() async {
-        attempt += 1;
-        GameCommunicationLog.instance.add(
-          level: attempt == 1
-              ? GameCommunicationLevel.info
-              : GameCommunicationLevel.warning,
-          title: attempt == 1 ? '서버로 전송' : '서버로 재전송',
-          detail: '$attempt회차 시도',
-          operation: functionName,
-          traceId: traceId,
-        );
-        try {
-          final response = await functions
-              .httpsCallable(functionName)
-              .call(payload);
-          return response.data is Map
-              ? Map<String, dynamic>.from(response.data as Map)
-              : const <String, dynamic>{};
-        } catch (error) {
+      final result = await retryPolicy.run(
+        () async {
+          attempt += 1;
           GameCommunicationLog.instance.add(
-            level: GameCommunicationLevel.warning,
-            title: '서버 시도 실패',
-            detail: '$attempt회차 · ${_communicationErrorDescription(error)}',
+            level: attempt == 1
+                ? GameCommunicationLevel.info
+                : GameCommunicationLevel.warning,
+            title: attempt == 1 ? '서버로 전송' : '서버로 재전송',
+            detail: '$attempt회차 시도',
             operation: functionName,
             traceId: traceId,
           );
-          rethrow;
-        }
-      }, enabled: retryTransientFailure);
+          try {
+            final response = await functions
+                .httpsCallable(functionName)
+                .call(payload);
+            return response.data is Map
+                ? Map<String, dynamic>.from(response.data as Map)
+                : const <String, dynamic>{};
+          } catch (error) {
+            GameCommunicationLog.instance.add(
+              level: GameCommunicationLevel.warning,
+              title: '서버 시도 실패',
+              detail: '$attempt회차 · ${_communicationErrorDescription(error)}',
+              operation: functionName,
+              traceId: traceId,
+            );
+            rethrow;
+          }
+        },
+        enabled:
+            retryTransientFailure &&
+            GameCommandBatch.current?.ownsAttempts != true &&
+            RoomRecoveryBatch.current == null,
+        remainingBudget: remainingBudget(),
+        isCurrent: () =>
+            (boundUid == null ||
+                FirebaseAuth.instance.currentUser?.uid == boundUid) &&
+            (session == null ||
+                !session.leaving ||
+                functionName.endsWith('_leave_game')),
+      );
 
       totalElapsed.stop();
       final success = result['success'];
@@ -137,8 +288,17 @@ abstract class GameCommandService {
         operation: functionName,
         traceId: traceId,
       );
+      if (logicalKey != null) _unresolved.remove(logicalKey);
+      session?.retryCommand = null;
       return result;
     } catch (error, stackTrace) {
+      if (error is FirebaseFunctionsException &&
+          !CallableRetryPolicy.retryableCodes.contains(error.code) &&
+          error.code != 'internal' &&
+          error.code != 'unknown') {
+        if (logicalKey != null) _unresolved.remove(logicalKey);
+        session?.retryCommand = null;
+      }
       totalElapsed.stop();
       GameCommunicationLog.instance.add(
         level: GameCommunicationLevel.failure,
@@ -158,8 +318,7 @@ abstract class GameCommandService {
   /// 재전송 전체에서 **같은 값을 유지해야** 하므로, 호출 시점에 한 번만 만들어
   /// payload에 담습니다. 재시도 루프 안에서 다시 만들면 안 됩니다.
   @protected
-  String commandId(String prefix) =>
-      '${prefix}_${DateTime.now().microsecondsSinceEpoch}';
+  String commandId(String prefix) => newRecoveryOperationId(prefix);
 
   /// 첫 조작이 콜드스타트를 그대로 맞지 않도록 함수를 미리 깨웁니다.
   ///
@@ -191,7 +350,6 @@ String _commandLabel(String functionName) => switch (functionName) {
 };
 
 final RegExp _safeReasonPattern = RegExp(r'^[A-Za-z][A-Za-z0-9_-]{0,63}$');
-final RegExp _safeKoreanMessagePattern = RegExp(r'^[ㄱ-ㆎ가-힣\s.,!?()\-]+$');
 
 String _communicationErrorDescription(Object error) {
   if (error is TimeoutException) return '서버 응답 시간초과';
@@ -208,15 +366,7 @@ String _communicationErrorDescription(Object error) {
       'internal' => '서버 내부 오류',
       _ => '서버 오류',
     };
-    final message = error.message?.trim();
-    final safeKoreanMessage =
-        message != null &&
-        message.isNotEmpty &&
-        message.length <= 120 &&
-        _safeKoreanMessagePattern.hasMatch(message);
-    return safeKoreanMessage
-        ? '$base (${error.code}) · $message'
-        : '$base (${error.code})';
+    return '$base (${error.code})';
   }
   return '클라이언트 ${error.runtimeType}';
 }

@@ -1,3 +1,7 @@
+import 'package:game_kit/recovery/services/room_recovery_batch.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -32,7 +36,7 @@ enum ControllerPresenceState { unknown, connected, reconnecting }
 
 enum RoomTerminationReason { closed, deleted }
 
-class RoomProvider extends GameRoomContext {
+class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   RoomProvider({
     RoomService? service,
     GameService? gameService,
@@ -43,7 +47,16 @@ class RoomProvider extends GameRoomContext {
        _service = service ?? RoomService(),
        _gameService = gameService ?? GameService(),
        _commandExecutor = commandExecutor ?? const RoomCommandExecutor(),
-       _currentUid = currentUidReader ?? _firebaseUid;
+       _currentUid = currentUidReader ?? _firebaseUid {
+    try {
+      _lifecycleBinding = WidgetsBinding.instance;
+      _lifecycleBinding!.addObserver(this);
+    } catch (_) {
+      /* pure Dart callers have no binding */
+    }
+  }
+
+  WidgetsBinding? _lifecycleBinding;
 
   /// Firebase를 초기화하지 않는 순수 위젯·단위 테스트에서도 참가자 판정 코드가
   /// 그대로 실행되도록, 현재 UID 조회를 한곳으로 모읍니다.
@@ -120,6 +133,8 @@ class RoomProvider extends GameRoomContext {
   RoomTerminationReason? roomTerminationReason;
   bool _hasJoined = false;
   bool _isLeaving = false;
+  bool _leaveRequestInFlight = false;
+  bool _pendingControllerRestore = false, _controllerRestoreInFlight = false;
 
   /// 방 세션 세대입니다. 저장 세션 복원처럼 여러 await를 거치는 작업이 그동안
   /// 방이 바뀌었는지 판정하는 데 씁니다.
@@ -238,6 +253,9 @@ class RoomProvider extends GameRoomContext {
     final currentCode = roomCode;
     if (currentCode == null || isLoading) return;
 
+    _isLeaving = true;
+    _controllerHeartbeatTimer?.cancel();
+    _playerHeartbeatTimer?.cancel();
     // 방 종료 요청
     final success = await _runCommand<bool>(() async {
       await _service.closeControllerRoom(currentCode);
@@ -259,6 +277,21 @@ class RoomProvider extends GameRoomContext {
     });
 
     return result ?? false;
+  }
+
+  Future<Map<String, dynamic>?> captureGameTarget() async {
+    final code = roomCode;
+    if (code == null) return null;
+    try {
+      return await _service.gameTarget(code);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearCapturedGame(Map<String, dynamic> target) async {
+    if (roomCode != target['roomCode'] || !isRoomFinished) return;
+    await _runCommand<void>(() => _service.clearCapturedGame(target));
   }
 
   Future<bool> clearSelectedGame() async {
@@ -320,11 +353,38 @@ class RoomProvider extends GameRoomContext {
   }
 
   Future<void> restoreControllerRoom() async {
-    if (roomCode != null) return;
+    if (roomCode != null || _controllerRestoreInFlight) return;
+    _controllerRestoreInFlight = true;
+    _pendingControllerRestore = true;
+    connectionSubscription ??= _service.watchServerConnection().listen(
+      _handleServerConnection,
+    );
+    final uid = _currentUid();
+    if (uid != null) await RoomLeaveIntent.load(uid);
     try {
-      final restoredCode = await _service.restoreControllerRoom();
-      if (restoredCode == null || _isDisposed) return;
+      final owner = RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+      final restoredCode = RoomRecoveryBatch.current != null
+          ? await _service.restoreControllerRoom()
+          : await owner.run(
+              _service.restoreControllerRoom,
+              isCurrent: () =>
+                  !_isDisposed && _currentUid() == uid && roomCode == null,
+              retryable: (error) =>
+                  error is TimeoutException ||
+                  (error is FirebaseFunctionsException &&
+                      const {
+                        'aborted',
+                        'unavailable',
+                        'deadline-exceeded',
+                      }.contains(error.code)),
+            );
+      if (_isDisposed || _currentUid() != uid) return;
+      _pendingControllerRestore = false;
+      if (restoredCode == null) return;
       roomCode = restoredCode;
+      if (uid != null) {
+        GameRecoverySession.forRoom(restoredCode, uid).preparationBatch = owner;
+      }
       _ownsControllerSession = true;
       listenRoom();
       _startControllerHeartbeat(restoredCode);
@@ -332,6 +392,11 @@ class RoomProvider extends GameRoomContext {
     } on RoomCommandException catch (error) {
       errorMessage = error.message;
       notifyListeners();
+    } catch (_) {
+      errorMessage = "기존 방 연결을 확인하고 있습니다.";
+      notifyListeners();
+    } finally {
+      _controllerRestoreInFlight = false;
     }
   }
 
@@ -404,13 +469,41 @@ class RoomProvider extends GameRoomContext {
     notifyListeners();
   }
 
-  Future<void> resumeControllerPresence() => markControllerConnected();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final code = roomCode;
+    if (_isDisposed || code == null) return;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(retryConnectionRecovery().catchError((Object _) {}));
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _playerHeartbeatTimer?.cancel();
+      _controllerHeartbeatTimer?.cancel();
+      final uid = _currentUid();
+      if (uid != null) GameRecoverySession.forRoom(code, uid).invalidate();
+      if (ControllerRoomSessionStore.instance.sessionIdForRoom(code) != null) {
+        unawaited(
+          _service.markControllerDisconnected(code).catchError((Object _) {}),
+        );
+      } else {
+        unawaited(
+          _service.markPlayerDisconnected(code).catchError((Object _) {}),
+        );
+      }
+    }
+  }
+
+  Future<void> resumeControllerPresence() async {
+    if (roomCode != null) await retryConnectionRecovery();
+  }
 
   Future<void> pauseControllerPresence() async {
     _controllerHeartbeatTimer?.cancel();
     _controllerHeartbeatTimer = null;
     final code = roomCode;
     if (code == null) return;
+    final uid = _currentUid();
+    if (uid != null) GameRecoverySession.forRoom(code, uid).invalidate();
     try {
       await _service.markControllerDisconnected(code);
     } catch (_) {}
@@ -495,6 +588,11 @@ class RoomProvider extends GameRoomContext {
   void listenRoom() {
     final listenedRoomCode = roomCode;
     if (listenedRoomCode == null) return;
+    final uid = _currentUid();
+    if (uid != null) {
+      GameRecoverySession.forRoom(listenedRoomCode, uid).transportConnected =
+          _isServerConnected;
+    }
 
     // 기존 구독과 타이머 정리
     roomSubscription?.cancel();
@@ -666,9 +764,13 @@ class RoomProvider extends GameRoomContext {
     bool force = false,
   }) async {
     if (roomCode != expectedRoomCode) return;
-    final sortedUids = [...activeUids]..sort();
+    final sortedUids = [
+      for (final memberUid in activeUids)
+        '$memberUid/${players.where((player) => player.uid == memberUid).firstOrNull?.membershipId ?? ""}',
+    ]..sort();
     if (!force && listEquals(_lastGroupGameUids, sortedUids)) return;
     _lastGroupGameUids = sortedUids;
+    final uid = _currentUid();
     final requestId = ++_groupGamesRequestId;
     groupGames = [];
     groupGamesLoadStatus = RoomDataLoadStatus.loading;
@@ -682,8 +784,14 @@ class RoomProvider extends GameRoomContext {
     }
 
     try {
-      final games = await _gameService.fetchGroupGames(activeUids);
+      final identity = await _service.roomIdentity(expectedRoomCode);
+      final games = await _gameService.fetchGroupGames(
+        activeUids,
+        roomCode: expectedRoomCode,
+        roomInstanceId: identity.roomInstanceId,
+      );
       if (_isDisposed ||
+          _currentUid() != uid ||
           roomCode != expectedRoomCode ||
           requestId != _groupGamesRequestId) {
         return;
@@ -699,7 +807,7 @@ class RoomProvider extends GameRoomContext {
           requestId != _groupGamesRequestId) {
         return;
       }
-      _lastGroupGameUids = null;
+      // A bounded failure waits for explicit retry or a changed membership.
       groupGames = [];
       groupGamesLoadStatus = RoomDataLoadStatus.failure;
       groupGamesError = '게임 목록을 불러오지 못했습니다.';
@@ -807,6 +915,7 @@ class RoomProvider extends GameRoomContext {
         observedLastSeen: observedLastSeen,
       );
     } catch (error) {
+      // The service owns the bounded retry; a new heartbeat opens a new report.
       if (kDebugMode) {
         debugPrint(
           '[room_connection] event=stale_player_report_failed '
@@ -828,12 +937,25 @@ class RoomProvider extends GameRoomContext {
     // 현재 연결 상태 저장과 화면 알림
     if (_isServerConnected != isConnected) _connectionEpoch += 1;
     _isServerConnected = isConnected;
+    final sessionUid = _currentUid(), sessionCode = roomCode;
+    if (sessionUid != null && sessionCode != null) {
+      GameRecoverySession.forRoom(sessionCode, sessionUid).transportConnected =
+          isConnected;
+    }
     _syncPlayerPresenceTimer();
     notifyListeners();
     // 연결이 끊겼다면 기록하고 종료
     if (!isConnected) {
       _wasServerDisconnected = true;
+      final uid = _currentUid();
+      final code = roomCode;
+      if (uid != null && code != null) {
+        GameRecoverySession.forRoom(code, uid).invalidate();
+      }
       return;
+    }
+    if (_pendingControllerRestore && roomCode == null) {
+      unawaited(restoreControllerRoom());
     }
     if (_roomMissingCandidate) {
       final code = roomCode;
@@ -841,7 +963,6 @@ class RoomProvider extends GameRoomContext {
     }
     if (!_wasServerDisconnected) return;
     _wasServerDisconnected = false;
-    if (_isLeaving) return;
     unawaited(retryConnectionRecovery().catchError((Object _) {}));
   }
 
@@ -1010,6 +1131,8 @@ class RoomProvider extends GameRoomContext {
       return;
     }
 
+    final code = roomCode, uid = _currentUid();
+    final connectionEpoch = _connectionEpoch;
     final recovery = _recoverCurrentConnection();
     _connectionRecoveryFuture = recovery;
     try {
@@ -1017,26 +1140,58 @@ class RoomProvider extends GameRoomContext {
     } finally {
       if (identical(_connectionRecoveryFuture, recovery)) {
         _connectionRecoveryFuture = null;
+        if (!_isDisposed &&
+            _isServerConnected &&
+            _connectionEpoch != connectionEpoch &&
+            roomCode == code &&
+            code != null &&
+            _currentUid() == uid &&
+            !_isLeaving) {
+          await retryConnectionRecovery();
+        }
       }
     }
   }
 
   Future<void> _recoverCurrentConnection() async {
+    final uid = _currentUid();
     final code = roomCode;
-    final sessionEpoch = _sessionEpoch;
-    do {
-      final connectionEpoch = _connectionEpoch;
-      try {
-        await _performConnectionRecovery();
-      } catch (_) {
-        if (_connectionEpoch == connectionEpoch || !_isServerConnected) rethrow;
+    final epoch = _sessionEpoch;
+    final batch = RoomRecoveryBatch();
+    if (code != null && uid != null) {
+      GameRecoverySession.forRoom(code, uid).preparationBatch = batch;
+    }
+    RecoveryMetrics.instance.begin(newEpisode: false);
+    RecoveryMetrics.instance.mark(RecoveryStage.connection);
+    if (uid != null) RecoveryMetrics.instance.mark(RecoveryStage.auth);
+    try {
+      await batch.run(
+        _performConnectionRecovery,
+        isCurrent: () =>
+            !_isDisposed &&
+            _currentUid() == uid &&
+            roomCode == code &&
+            _sessionEpoch == epoch,
+        retryable: (error) =>
+            error is TimeoutException ||
+            (error is FirebaseFunctionsException &&
+                const {
+                  'unavailable',
+                  'deadline-exceeded',
+                  'aborted',
+                }.contains(error.code)),
+      );
+      RecoveryMetrics.instance.mark(RecoveryStage.identity);
+      if (_currentUid() == uid &&
+          code != null &&
+          roomStatus != 'playing' &&
+          GameRecoverySession.forRoom(code, uid ?? '').context == null) {
+        RecoveryMetrics.instance.finish(success: true);
       }
-      // 진행 중 재단절·재연결이 있었다면 새 연결의 presence 예약도 복원합니다.
-      if (_connectionEpoch == connectionEpoch || !_isServerConnected) return;
-    } while (!_isDisposed &&
-        roomCode == code &&
-        _sessionEpoch == sessionEpoch &&
-        !_isLeaving);
+    } catch (_) {
+      RecoveryMetrics.instance.finish(success: false);
+      rethrow;
+    }
   }
 
   Future<void> _performConnectionRecovery() async {
@@ -1049,14 +1204,21 @@ class RoomProvider extends GameRoomContext {
     // 나가는 중이거나 이미 나간 방은 복구하지 않습니다. 이 확인이 없으면
     // 네트워크가 돌아오는 순간 참가자를 다시 join시켜, 사용자의 첫 재시도가
     // "다시 들어간 방에서 나가기"가 됩니다.
-    if (_isLeaving || RoomLeaveIntent.blocksRestore(code)) return;
+    if (_isLeaving || RoomLeaveIntent.blocksRestore(code)) {
+      await _runLeave(
+        code,
+        () => _service.leaveRoom(code),
+        errorContext: UserErrorContext.leaveRoom,
+      );
+      return;
+    }
 
     final controllerSessionId = ControllerRoomSessionStore.instance
         .sessionIdForRoom(code);
     if (controllerSessionId != null) {
-      await _service
-          .markControllerConnected(code)
-          .timeout(const Duration(seconds: 8));
+      await _service.restoreControllerRoom().timeout(
+        const Duration(seconds: 8),
+      );
       if (_isDisposed ||
           roomCode != code ||
           _isLeaving ||
@@ -1287,6 +1449,7 @@ class RoomProvider extends GameRoomContext {
     if (roomCode != null || _isLeaving) return RestorableSession.none;
     final uid = _currentUid();
     if (uid == null || uid.isEmpty) return RestorableSession.none;
+    await RoomLeaveIntent.load(uid);
     final store = PlayerRoomSessionStore.instance;
     final session = await store.load();
     if (session == null) return RestorableSession.none;
@@ -1296,7 +1459,11 @@ class RoomProvider extends GameRoomContext {
     }
     // 사용자가 이미 나갔거나 나가는 중인 방은 되살리지 않습니다.
     if (RoomLeaveIntent.blocksRestore(session.roomCode)) {
-      await store.clear(onlyRoomCode: session.roomCode);
+      try {
+        await _service.leaveRoom(session.roomCode);
+        RoomLeaveIntent.complete(session.roomCode);
+        await store.clear(onlyRoomCode: session.roomCode);
+      } catch (_) {}
       return RestorableSession.none;
     }
     try {
@@ -1305,8 +1472,8 @@ class RoomProvider extends GameRoomContext {
         await store.clear(onlyRoomCode: session.roomCode);
       }
       return restorable;
-    } on RoomCommandException {
-      // 네트워크 오류라면 저장값을 유지해 연결이 돌아온 뒤 다시 확인합니다.
+    } catch (_) {
+      // Unknown lookup results retain the saved membership.
       return RestorableSession.none;
     }
   }
@@ -1317,7 +1484,9 @@ class RoomProvider extends GameRoomContext {
   /// 없습니다. 방에 남아 있는 노드는 서버 정리가 담당합니다(C-10).
   Future<void> declineRestorableSession() async {
     final session = await PlayerRoomSessionStore.instance.load();
-    if (session == null) return;
+    if (session == null || session.uid != _currentUid()) return;
+    RoomLeaveIntent.begin(session.roomCode);
+    await _service.leaveRoom(session.roomCode);
     RoomLeaveIntent.complete(session.roomCode);
     await PlayerRoomSessionStore.instance.clear(onlyRoomCode: session.roomCode);
     notifyListeners();
@@ -1329,6 +1498,7 @@ class RoomProvider extends GameRoomContext {
     if (roomCode != null || _isLeaving) return false;
     final uid = _currentUid();
     if (uid == null || uid.isEmpty) return false;
+    await RoomLeaveIntent.load(uid);
     final store = PlayerRoomSessionStore.instance;
     final session = await store.load();
     if (session == null) return false;
@@ -1340,13 +1510,13 @@ class RoomProvider extends GameRoomContext {
     // 참여 화면이 서로 다른 RoomProvider를 쓰므로 이 판단은 인스턴스 필드가
     // 아니라 프로세스 전역 마커로만 가능합니다.
     if (RoomLeaveIntent.blocksRestore(session.roomCode)) {
-      await store.clear(onlyRoomCode: session.roomCode);
       return false;
     }
 
     final epoch = _sessionEpoch;
     bool stillRestoring() =>
         !_isDisposed &&
+        _currentUid() == uid &&
         _sessionEpoch == epoch &&
         roomCode == null &&
         !_isLeaving &&
@@ -1367,9 +1537,7 @@ class RoomProvider extends GameRoomContext {
       if (!stillRestoring()) {
         // 복원 요청 도중에 퇴장이 확정됐습니다. 방금 서버에 되살린 참가자
         // 노드를 그대로 두면 유령이 되므로 최선 노력으로 다시 내보냅니다.
-        unawaited(
-          _service.leaveRoom(session.roomCode).catchError((Object _) {}),
-        );
+        // The leave coordinator owns the exact old membership; a late restore never chooses a new target.
         return false;
       }
       wasKicked = false;
@@ -1384,6 +1552,16 @@ class RoomProvider extends GameRoomContext {
       errorMessage = null;
       notifyListeners();
       return true;
+    } on FirebaseFunctionsException catch (error) {
+      if (error.code == 'not-found' ||
+          (error.details is Map &&
+              (error.details as Map)['reason'] == 'staleContext')) {
+        await store.clear(onlyRoomCode: session.roomCode);
+      }
+      if (!stillRestoring()) return false;
+      errorMessage = '연결 복구 결과를 확인하지 못했습니다. 다시 시도해주세요.';
+      notifyListeners();
+      return false;
     } on RoomCommandException catch (error) {
       // 네트워크 오류라면 저장값을 유지해 연결이 돌아온 뒤 다시 시도합니다.
       if (error.message.contains('종료된 방') ||
@@ -1438,11 +1616,18 @@ class RoomProvider extends GameRoomContext {
     Future<void> Function() request, {
     required UserErrorContext errorContext,
   }) async {
-    if (_isLeaving) return false;
+    if (_leaveRequestInFlight) return false;
 
+    _leaveRequestInFlight = true;
     _isLeaving = true;
     _sessionEpoch += 1;
     RoomLeaveIntent.begin(code);
+    final uid = _currentUid();
+    if (uid != null) {
+      final session = GameRecoverySession.forRoom(code, uid);
+      session.leaving = true;
+      session.invalidate();
+    }
     // RTDB update는 방금 지워진 경로를 되살립니다. 이미 진행 중인 heartbeat가
     // 퇴장 직후 유령 참가자 노드를 만들지 못하게 타이머를 먼저 끊습니다.
     _playerHeartbeatTimer?.cancel();
@@ -1461,16 +1646,12 @@ class RoomProvider extends GameRoomContext {
         // 사용자는 실제로 퇴장한 상태입니다. 게임별 leave callable은 방이
         // 삭제된 뒤에는 언제나 aborted로 답하므로 이 판정 없이는 확실히 나간
         // 사용자에게 실패 문구가 뜹니다.
-        left = await _hasLeftDespiteFailure(code);
+        left = false;
         if (!left) {
           errorMessage =
               userErrorMessage(error, context: errorContext) ??
               UserErrorCopy.requestFailed;
           RoomLeaveIntent.fail(code);
-          // 방을 계속 사용하므로 presence를 즉시 되살립니다.
-          if (roomCode == code && _joinedNickname != null) {
-            _startPlayerHeartbeat(code);
-          }
         }
       }
 
@@ -1487,33 +1668,12 @@ class RoomProvider extends GameRoomContext {
       // 성공·실패·예외 어느 경로에서도 여기서 복원됩니다. 예전에는 성공했을
       // 때만 clearRoom이 복원해, 실패한 퇴장이 heartbeat와 강퇴 감지를
       // 영구히 끈 상태로 남겼습니다.
-      _isLeaving = false;
+      _isLeaving = !left;
+      _leaveRequestInFlight = false;
       isLoading = false;
       notifyListeners();
     }
     return left;
-  }
-
-  /// 실패로 답한 퇴장이 실제로는 이미 완료됐는지 서버에 한 번 확인합니다.
-  ///
-  /// 확인 자체가 실패하면 "아직 방에 있다"로 봅니다. 사용자가 다시 시도할 수
-  /// 있는 상태를 남기는 편이, 남아 있는 방에서 나간 것처럼 보이게 하는 것보다
-  /// 안전합니다.
-  Future<bool> _hasLeftDespiteFailure(String code) async {
-    try {
-      return await Future(() async {
-        if (!await _service.roomExists(code)) return true;
-        return !await _service.hasActivePlayerNode(code);
-      }).timeout(const Duration(seconds: 4));
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          '[room_connection] event=leave_completion_check_failed '
-          'errorType=${error.runtimeType}',
-        );
-      }
-      return false;
-    }
   }
 
   // 메모리 초기화 leaveRoom에서 사용
@@ -1580,6 +1740,7 @@ class RoomProvider extends GameRoomContext {
   @override
   void dispose() {
     _isDisposed = true;
+    _lifecycleBinding?.removeObserver(this);
     roomSubscription?.cancel();
     playerSubscription?.cancel();
     connectionSubscription?.cancel();

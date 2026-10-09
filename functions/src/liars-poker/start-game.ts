@@ -1,11 +1,14 @@
+import {
+  replayGameCommand,
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable valid-jsdoc */
 
-import {randomInt} from "node:crypto";
+import {gameRandomInt as randomInt} from "../common/transaction-random.js";
 
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {runPrimedTransaction} from "../room/room-transaction.js";
 import {createDeck} from "./common/deck.js";
 import {dealCards} from "./common/deal-card.js";
 import {createTable} from "./common/table.js";
@@ -50,6 +53,10 @@ export const game_liars_poker_start_game =
       const roomRef = getDatabase().ref(
         `rooms/${roomCode}`,
       );
+      const replay = await replayGameCommand(
+        roomRef, request, "game_liars_poker_start_game",
+      );
+      if (replay) return replay;
 
       /*
        * 방 전체에 바로 트랜잭션을 걸면 첫 콜백에서
@@ -156,20 +163,22 @@ export const game_liars_poker_start_game =
 
       // 검증과 기록을 방 루트의 한 트랜잭션에서 다시 수행합니다. game 하위
       // 노드만 잠그면 사전 조회 뒤 좌석이 바뀌어도 오래된 게임이 시작됩니다.
-      const transaction = await runPrimedTransaction(
-        roomRef,
+      const transaction = await runGameCommandTransaction(
+        roomRef, request, "game_liars_poker_start_game",
         (currentRawRoom) => {
           assertRoomExists(currentRawRoom);
           const currentRoom = currentRawRoom as RealtimeRoom;
-          assertController(currentRoom, uid, request.data?.controllerSessionId);
+          assertController(
+            currentRoom, uid, request.data?.controllerSessionId,
+          );
           assertStartGameSnapshot(startFingerprint, currentRoom);
           if (currentRoom.game?.public?.status === "playing" && !restart) {
             return;
           }
           currentRoom.game = initialGame;
           return currentRoom;
-        },
-      );
+        }, () => ({success: true, roomCode,
+          turnUid: firstPlayer.uid, revision: 1, restarted: restart}));
 
       if (!transaction.committed) {
         throw new HttpsError(
@@ -178,7 +187,7 @@ export const game_liars_poker_start_game =
         );
       }
 
-      return {
+      return transaction.operationResult ?? {
         success: true,
         roomCode,
         turnUid: firstPlayer.uid,

@@ -1,3 +1,4 @@
+import 'package:game_kit/recovery/services/required_image.dart';
 // [asset_preloader.dart] 게임 진입 전에 필요한
 // 라이어스 포커 이미지·룰렛·효과음·음성 자산을 미리 준비하는 파일이다.
 
@@ -104,7 +105,7 @@ Future<void> preloadLiarsPokerAssets(
     await Future.wait(
       localAssets
           .sublist(index, end)
-          .map((asset) => precacheImage(asset.provider(), context)),
+          .map((asset) => precacheRequiredImage(asset.provider(), context)),
     );
   }
 
@@ -112,7 +113,10 @@ Future<void> preloadLiarsPokerAssets(
   if (!context.mounted) return;
   await Future.wait(
     uniqueCharacterIds.map(
-      (id) => precacheImage(AssetImage(roomCharacterAssetPath(id)), context),
+      (id) => precacheRequiredImage(
+        AssetImage(roomCharacterAssetPath(id)),
+        context,
+      ),
     ),
   );
 }

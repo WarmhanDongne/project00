@@ -23,7 +23,9 @@ type RoomJoinState = {
  * @return {RoomJoinDecision} 서버가 적용할 참가 처리 종류입니다.
  */
 export function decideRoomJoin(state: RoomJoinState): RoomJoinDecision {
-  if (state.roomStatus === "closed") return "room-closed";
+  if (state.roomStatus === "closed" || state.roomStatus === "terminal") {
+    return "room-closed";
+  }
   const roomStatus = state.roomStatus ?? "waiting";
   const roomIsWaitingOrSeating =
     roomStatus === "waiting" || roomStatus === "seating";

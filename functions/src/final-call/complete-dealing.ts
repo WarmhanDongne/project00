@@ -1,3 +1,6 @@
+import {
+  runGameCommandTransaction,
+} from "../game-interruption/game-command-transaction.js";
 /* eslint-disable max-len */
 
 import {getDatabase} from "firebase-admin/database";
@@ -22,7 +25,7 @@ export const game_final_call_complete_dealing = onCall<Data>(
     const roomCode = finalCallRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
-    const transaction = await roomRef.transaction((raw) => {
+    const transaction = await runGameCommandTransaction(roomRef, request, "game_final_call_complete_dealing", (raw, transactionNow) => {
       if (raw === null) return raw;
       const room = raw as FinalCallRoom;
       assertFinalCallController(room, uid, request.data?.controllerSessionId);
@@ -35,10 +38,11 @@ export const game_final_call_complete_dealing = onCall<Data>(
       delete game.server.pendingHands;
       game.public.phase = "playing";
       game.public.revision += 1;
-      startTurn(game, game.public.turnUid ?? game.server.roundStarterUid, Date.now());
+      startTurn(game, game.public.turnUid ?? game.server.roundStarterUid, transactionNow);
       response = {success: true, phase: "playing", turnUid: game.public.turnUid};
       return room;
-    });
+    }, () => response);
+    response = transaction.operationResult ?? response;
     if (!transaction.committed || !response) {
       throw new HttpsError("aborted", "카드 배분을 완료하지 못했습니다.");
     }

@@ -5,6 +5,7 @@ import {onValueWritten} from "firebase-functions/v2/database";
 
 import {InterruptibleGameState} from "./types.js";
 import {runPrimedTransaction} from "../room/room-transaction.js";
+import {RecoveryRoom, registerRecoveryFailure} from "./recovery-state.js";
 
 // Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수
 // 있습니다. 자세한 배경은 functions.ts 상단 주석을 보세요.
@@ -111,22 +112,16 @@ export const game_common_controller_presence_changed = onValueWritten(
     region: DATABASE_TRIGGER_REGION,
   },
   async (event) => {
-    const wasConnected = event.data.before.val() === true;
     const isConnected = event.data.after.val() === true;
-    if (wasConnected === isConnected) return;
+    if (isConnected) return;
 
     const roomCode = event.params.roomCode;
+    const now = Date.now();
     await runPrimedTransaction(getDatabase().ref(`rooms/${roomCode}`), (raw) => {
       if (raw === null) return;
-      const room = raw as ControllerPauseRoom;
-      const outcome = reconcileControllerConnection(
-        room,
-        isConnected,
-        Date.now(),
-      );
-      // 바꾼 것이 없으면 쓰지 않습니다. 불필요한 쓰기는 클라이언트 구독을
-      // 깨우고 revision을 흔듭니다.
-      if (outcome === "ignored") return;
+      const room = raw as RecoveryRoom;
+      if (room.controllerPresence?.connected !== false || !room.controllerUid) return;
+      registerRecoveryFailure(room, room.controllerUid, "controller", now);
       return room;
     });
   },

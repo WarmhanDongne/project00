@@ -249,7 +249,7 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
       pendingDraw: enteredNewDealing ? null : current.pendingDraw,
       roundResult: parseFinalCallRoundResult(map['roundResult']),
       discardEvent: nextDiscardEvent,
-      interruption: parseFinalCallInterruption(map['interruption']),
+      interruption: parseFinalCallInterruption(map['recovery']),
     );
   }
 

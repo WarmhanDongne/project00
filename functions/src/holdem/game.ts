@@ -238,7 +238,7 @@ export function excludeHoldemPlayer(
     betPlayer.status = "eliminated";
     betPlayer.stack = 0;
   }
-  const survivors = Object.values(game.public.players).filter((entry) => entry.stack > 0 && entry.status !== "eliminated");
+  const survivors = Object.values(game.public.players).filter((entry) => entry.status !== "eliminated");
   if (survivors.length < 2) {
     finishTournament(game, null, now, "insufficientPlayers");
     return;

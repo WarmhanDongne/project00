@@ -7,8 +7,9 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/errors/services/user_error_message.dart';
@@ -16,6 +17,9 @@ import 'package:game_kit/recovery/models/game_interruption.dart';
 import 'package:game_kit/recovery/models/game_session_state.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
+import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 
 // ============================================================
 
@@ -74,10 +78,430 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   StreamSubscription<DatabaseEvent>? _publicSubscription;
   StreamSubscription<DatabaseEvent>? _privateSubscription;
   Timer? _missingPublicTimer;
+  Timer? _preparationDeadline, _preparationRefresh;
+  RoomRecoveryBatch? _preparationOwner;
+  int _preparationGeneration = 0, _preparationRefreshAttempt = 0;
+  bool _preparationFailed = false, _hadUsable = false;
   int _publicGeneration = 0;
   int? _gameStartedAt;
   int? _publicRevision;
   bool _acceptingNewGame = false;
+  bool _watchPrivate = false, _screenReady = false, _assetsReady = false;
+  int _subscriptionGeneration = 0, _reportSeq = 0;
+  DatabaseEvent? _privateEvent;
+  DatabaseEvent? _decodedPrivateEvent;
+  int _frameGeneration = 0;
+  final Set<String> _priorGameIds = {};
+  String? _reportedKey;
+  String? _readyAckKey;
+  int _connectionSeq = 0;
+  Future<Object?> Function()? _lastCommand;
+  Future<void> Function()? _prepareAssets;
+  GameRecoverySession get recoverySession =>
+      GameRecoverySession.forRoom(roomCode, uid);
+  bool get localUsable => recoverySession.localUsable;
+
+  Future<void> prepareScreen(Future<void> Function() prepareAssets) async {
+    _prepareAssets = prepareAssets;
+    try {
+      await prepareAssets();
+      RecoveryMetrics.instance.mark(RecoveryStage.assets);
+      await WidgetsBinding.instance.endOfFrame;
+      if (ref.mounted) reportScreenReady(assetsReady: true);
+    } catch (_) {
+      if (ref.mounted) {
+        _assetsReady = false;
+        _screenReady = false;
+        reportPreparationFailure();
+      }
+    }
+  }
+
+  Future<bool> retryLastCommand() async {
+    final captured = recoverySession.retryCommand;
+    if (captured != null) return run(captured);
+    final command = _lastCommand;
+    if (command == null) {
+      retrySession();
+      return false;
+    }
+    return run(command);
+  }
+
+  Future<void> retryRecovery() async {
+    RecoveryMetrics.instance.begin(newEpisode: false);
+    recoverySession.preparationBatch =
+        RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+    retrySession();
+    if (!_assetsReady && _prepareAssets != null) {
+      await prepareScreen(_prepareAssets!);
+    }
+  }
+
+  /// Called after the game adapter has decoded required assets and rendered a frame.
+  void reportScreenReady({required bool assetsReady}) {
+    _assetsReady = assetsReady;
+    _screenReady = assetsReady;
+    RecoveryMetrics.instance.mark(RecoveryStage.assets);
+    RecoveryMetrics.instance.mark(RecoveryStage.screen);
+    _updateReadiness();
+  }
+
+  void reportPreparationFailure() {
+    if (_preparationFailed) {
+      return;
+    }
+    final owner = _preparationOwner;
+    _cancelPreparationWait();
+    if (owner != null) {
+      recoverySession.preparationBatch = owner;
+    } else if (_hadUsable &&
+        (recoverySession.preparationBatch?.remaining ?? Duration.zero) <=
+            Duration.zero) {
+      recoverySession.preparationBatch =
+          RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+    }
+    RecoveryMetrics.instance.finish(success: false);
+    _preparationFailed = true;
+    recoverySession.invalidate();
+    _reportedKey = null;
+    unawaited(_report(false));
+  }
+
+  void retrySession() {
+    if (!ref.mounted) return;
+    _cancelPreparationWait();
+    _preparationFailed = false;
+    _hadUsable = false;
+    recoverySession.invalidate();
+    _privateEvent = null;
+    _decodedPrivateEvent = null;
+    _reportedKey = null;
+    _readyAckKey = null;
+    _bindSubscriptions();
+  }
+
+  void _identityChanged() {
+    final role = _watchPrivate ? 'player' : 'controller';
+    final identity = RoomSessionIdentityStore.instance.current(
+      uid,
+      role,
+      roomCode,
+    );
+    if (identity != null && identity.connectionSeq != _connectionSeq) {
+      _connectionSeq = identity.connectionSeq;
+      _reportSeq = 0;
+      retrySession();
+    }
+  }
+
+  void _bindSubscriptions() {
+    final generation = ++_subscriptionGeneration;
+    RecoveryMetrics.instance.mark(RecoveryStage.subscriptions);
+    unawaited(_publicSubscription?.cancel());
+    unawaited(_privateSubscription?.cancel());
+    _publicSubscription = query
+        .watchPublicGame(roomCode)
+        .listen(
+          (event) {
+            if (generation == _subscriptionGeneration) _handlePublic(event);
+          },
+          onError: (Object error) {
+            if (generation == _subscriptionGeneration) {
+              reportPreparationFailure();
+              _handlePublicError(error);
+            }
+          },
+          onDone: () {
+            if (ref.mounted && generation == _subscriptionGeneration) {
+              reportPreparationFailure();
+            }
+          },
+        );
+    if (_watchPrivate) {
+      _privateSubscription = watchPrivateStream().listen(
+        (event) {
+          if (generation != _subscriptionGeneration || !ref.mounted) return;
+          final incoming = event.snapshot.value;
+          if (incoming is Map && incoming['_context'] is Map) {
+            final next = GameRecoveryContext.fromMap(
+              incoming['_context'] as Map,
+            );
+            final previous = _privateEvent?.snapshot.value;
+            final current = previous is Map && previous['_context'] is Map
+                ? GameRecoveryContext.fromMap(previous['_context'] as Map)
+                : null;
+            if (_priorGameIds.contains(next.gameInstanceId) ||
+                (current != null &&
+                    current.gameInstanceId == next.gameInstanceId &&
+                    next.dataSeq < current.dataSeq)) {
+              return;
+            }
+          }
+          _privateEvent = event;
+          _updateReadiness();
+        },
+        onError: (Object error) {
+          if (generation == _subscriptionGeneration) {
+            reportPreparationFailure();
+            handleSubscriptionError(error);
+          }
+        },
+        onDone: () {
+          if (ref.mounted && generation == _subscriptionGeneration) {
+            reportPreparationFailure();
+          }
+        },
+      );
+    }
+  }
+
+  void _scheduleReadyFrame(GameRecoveryContext context) {
+    _screenReady = false;
+    final subscription = _subscriptionGeneration, frame = ++_frameGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.mounted &&
+          subscription == _subscriptionGeneration &&
+          frame == _frameGeneration &&
+          recoverySession.context?.key == context.key) {
+        _screenReady = true;
+        RecoveryMetrics.instance.mark(RecoveryStage.screen);
+        _updateReadiness();
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _cancelPreparationWait() {
+    _preparationGeneration++;
+    _preparationDeadline?.cancel();
+    _preparationDeadline = null;
+    _preparationRefresh?.cancel();
+    _preparationRefresh = null;
+    _preparationOwner = null;
+  }
+
+  void _watchPreparation() {
+    if (_preparationOwner != null ||
+        _preparationFailed ||
+        recoverySession.leaving) {
+      return;
+    }
+    final session = recoverySession;
+    if (!_hadUsable && !RecoveryMetrics.instance.active) {
+      RecoveryMetrics.instance.begin();
+    }
+    RecoveryMetrics.instance.mark(RecoveryStage.auth);
+    RecoveryMetrics.instance.mark(RecoveryStage.publicData);
+    if (_assetsReady) {
+      RecoveryMetrics.instance.mark(RecoveryStage.assets);
+    }
+    final owner =
+        (!_hadUsable ? session.preparationBatch : null) ??
+        RoomRecoveryBatch.current ??
+        RoomRecoveryBatch();
+    session.preparationBatch = owner;
+    _preparationOwner = owner;
+    _preparationRefreshAttempt = 0;
+    final generation = ++_preparationGeneration;
+    bool current() =>
+        ref.mounted &&
+        generation == _preparationGeneration &&
+        !session.leaving &&
+        !session.localUsable;
+    final budget = owner.remaining > Duration.zero
+        ? owner.remaining
+        : Duration.zero;
+    _preparationDeadline = Timer(budget, () {
+      if (!current()) {
+        return;
+      }
+      state = state.withError("화면 준비를 확인하지 못했어요. 다시 연결해주세요.");
+      reportPreparationFailure();
+    });
+    void scheduleRefresh() {
+      const delays = [1, 2, 4, 8, 8];
+      if (!current() || _preparationRefreshAttempt >= delays.length) {
+        return;
+      }
+      final delay = Duration(seconds: delays[_preparationRefreshAttempt++]);
+      if (owner.remaining <= delay) {
+        return;
+      }
+      _preparationRefresh = Timer(delay, () async {
+        _preparationRefresh = null;
+        if (!current() || !session.transportConnected) {
+          return;
+        }
+        if (!RecoveryMetrics.instance.active) {
+          RecoveryMetrics.instance.begin();
+          RecoveryMetrics.instance.mark(RecoveryStage.auth);
+          RecoveryMetrics.instance.mark(RecoveryStage.publicData);
+          if (_assetsReady) {
+            RecoveryMetrics.instance.mark(RecoveryStage.assets);
+          }
+        }
+        try {
+          final snapshot = await owner.request(
+            () => query.readPublicGame(roomCode),
+          );
+          if (!current()) {
+            return;
+          }
+          if (snapshot.exists && snapshot.value != null) {
+            _applyPublicSnapshot(snapshot.value);
+          }
+          if (!current()) {
+            return;
+          }
+          // Rebind without invalidating a previously confirmed ordinary game state.
+          _bindSubscriptions();
+        } catch (error) {
+          if (!current()) {
+            return;
+          }
+          if (isPermissionDenied(error)) {
+            reportPreparationFailure();
+            return;
+          }
+        }
+        scheduleRefresh();
+      });
+    }
+
+    scheduleRefresh();
+  }
+
+  void _updateReadiness() {
+    if (!ref.mounted) return;
+    final session = recoverySession;
+    final value = session.publicValue;
+    final context = session.context;
+    if (value == null || context == null) return;
+    if (value["status"] == "finished") {
+      _cancelPreparationWait();
+      _preparationFailed = false;
+    }
+    if (_preparationFailed) {
+      session.localUsable = false;
+      session.changed();
+      return;
+    }
+    if (!context.valid) {
+      _watchPreparation();
+      return;
+    }
+    final localPlayer = value['players'] is Map
+        ? (value['players'] as Map)[uid]
+        : null;
+    final localAlive = localPlayer is! Map || localPlayer['status'] == 'alive';
+    final needsPrivate =
+        localAlive &&
+        _watchPrivate &&
+        value['status'] == 'playing' &&
+        !(value['phase'] == 'dealing' &&
+            const {'liars_poker', 'final_call'}.contains(value['gameType']));
+    if (!needsPrivate) {
+      RecoveryMetrics.instance.notApplicable(RecoveryStage.privateData);
+    }
+    final privateMatches = context.matchesPrivate(
+      _privateEvent?.snapshot.value,
+    );
+    if (privateMatches &&
+        _privateEvent != null &&
+        !identical(_privateEvent, _decodedPrivateEvent)) {
+      try {
+        handlePrivateEvent(_privateEvent!);
+      } catch (_) {
+        reportPreparationFailure();
+        return;
+      }
+      _decodedPrivateEvent = _privateEvent;
+      if (_assetsReady) _scheduleReadyFrame(context);
+    }
+    final usable =
+        (!needsPrivate || privateMatches) &&
+        _screenReady &&
+        _assetsReady &&
+        !session.leaving;
+    session.localUsable = usable;
+    session.changed();
+    if (usable) {
+      _cancelPreparationWait();
+      _hadUsable = true;
+    } else {
+      _watchPreparation();
+    }
+    if (usable) {
+      if (needsPrivate) {
+        RecoveryMetrics.instance.mark(RecoveryStage.privateData);
+      }
+      if (value['status'] == 'finished') {
+        session.serverConfirmed = true;
+        session.changed();
+      }
+      if (session.canSend) {
+        RecoveryMetrics.instance.mark(RecoveryStage.barrier);
+        RecoveryMetrics.instance.mark(RecoveryStage.input);
+        if (_readyAckKey == context.key || value['status'] != 'playing') {
+          RecoveryMetrics.instance.finish(success: true);
+        }
+      }
+      if (value['status'] == 'playing' &&
+          (!session.serverConfirmed || session.paused) &&
+          _reportedKey != context.key) {
+        _reportedKey = context.key;
+        unawaited(_report(true));
+      }
+    }
+  }
+
+  Future<void> _report(bool ready) async {
+    final context = recoverySession.context;
+    if (context == null ||
+        context.gameInstanceId.isEmpty ||
+        (ready && !context.valid) ||
+        recoverySession.leaving) {
+      return;
+    }
+    final generation = _subscriptionGeneration;
+    final identity = RoomSessionIdentityStore.instance.current(
+      uid,
+      _watchPrivate ? 'player' : 'controller',
+      roomCode,
+    );
+    try {
+      final response = await interruptionCommands.report(
+        roomCode: roomCode,
+        context: {
+          ...context.envelope,
+          if (identity != null) 'connectionId': identity.connectionId,
+          if (identity != null) 'connectionSeq': identity.connectionSeq,
+        },
+        reportSeq: ++_reportSeq,
+        ready: ready,
+      );
+      if (ref.mounted &&
+          generation == _subscriptionGeneration &&
+          ready &&
+          recoverySession.context?.key == context.key) {
+        if (response['status'] == 'accepted' ||
+            response['status'] == 'ignored' ||
+            response['reconciled'] == true) {
+          _readyAckKey = context.key;
+          recoverySession.serverConfirmed = true;
+          RecoveryMetrics.instance.mark(RecoveryStage.ready);
+          _updateReadiness();
+        } else {
+          _reportedKey = null;
+        }
+      }
+    } catch (_) {
+      if (ref.mounted && generation == _subscriptionGeneration) {
+        _reportedKey = null;
+      }
+    }
+  }
 
   /// 서버가 이미 내려주는 새 판 식별자입니다. 다시하기는 round를 1로 되돌리므로
   /// 연출 완료/재시도 키에는 round만 쓰지 말고 이 값도 함께 사용합니다.
@@ -93,18 +517,22 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   /// 정보(마피아의 역할 등)가 흘러들면 옆에서 보는 사람에게 다 드러납니다.
   @protected
   void startSession({required bool watchPrivate}) {
-    _publicSubscription = query
-        .watchPublicGame(roomCode)
-        .listen(_handlePublic, onError: _handlePublicError);
-    if (watchPrivate) {
-      _privateSubscription = watchPrivateStream().listen(
-        handlePrivateEvent,
-        onError: handleSubscriptionError,
-      );
-    }
+    if (!RecoveryMetrics.instance.active) RecoveryMetrics.instance.begin();
+    RecoveryMetrics.instance.mark(RecoveryStage.auth);
+    _watchPrivate = watchPrivate;
+    recoverySession.retry = () => unawaited(retryRecovery());
+    recoverySession.leaving = false;
+    _bindSubscriptions();
+    RoomSessionIdentityStore.instance.addListener(_identityChanged);
     ref.onDispose(() {
       _publicGeneration += 1;
+      _subscriptionGeneration += 1;
+      RoomSessionIdentityStore.instance.removeListener(_identityChanged);
+      recoverySession.retry = null;
+      recoverySession.retryCommand = null;
+      recoverySession.invalidate();
       _missingPublicTimer?.cancel();
+      _cancelPreparationWait();
       unawaited(_publicSubscription?.cancel());
       unawaited(_privateSubscription?.cancel());
     });
@@ -137,6 +565,14 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
 
   void _applyPublicSnapshot(Object? value) {
     if (value is! Map) return;
+    final context = GameRecoveryContext.fromMap(value);
+    final session = recoverySession;
+    final previous = session.context;
+    if (previous != null &&
+        previous.gameInstanceId == context.gameInstanceId &&
+        context.dataSeq < previous.dataSeq) {
+      return;
+    }
     final startedAt = (value['startedAt'] as num?)?.toInt();
     final revision = (value['revision'] as num?)?.toInt();
     if (startedAt != null && _gameStartedAt != null) {
@@ -148,6 +584,32 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
         return;
       }
     }
+    if (_priorGameIds.contains(context.gameInstanceId)) return;
+    if (previous != null && previous.gameInstanceId != context.gameInstanceId) {
+      _priorGameIds.add(previous.gameInstanceId);
+      if (_priorGameIds.length > 8) _priorGameIds.remove(_priorGameIds.first);
+    }
+    if (previous != null && previous.gameInstanceId != context.gameInstanceId) {
+      _cancelPreparationWait();
+      _preparationFailed = false;
+      _hadUsable = false;
+      session.preparationBatch =
+          RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+    }
+    session.context = context;
+    session.publicValue = value;
+    session.paused =
+        value['recovery'] is Map &&
+        (value['recovery'] as Map)['paused'] == true;
+    if (previous?.key != context.key) {
+      session.localUsable = false;
+      if (session.paused) session.serverConfirmed = false;
+      _readyAckKey = null;
+      if (_assetsReady && context.valid) {
+        _scheduleReadyFrame(context);
+      }
+    }
+    RecoveryMetrics.instance.mark(RecoveryStage.publicData);
     final newGame = startedAt != _gameStartedAt;
     if (newGame) _publicRevision = null;
     _gameStartedAt = startedAt;
@@ -156,10 +618,36 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     // startedAt을 직접 저장하지 않아도 Board에는 새 판 시작을 반드시 알립니다.
     _acceptingNewGame = newGame;
     try {
-      applyPublicValue(value);
+      final recovery = value['recovery'];
+      final players = value['players'];
+      final causes = recovery is Map ? recovery['causes'] : null;
+      applyPublicValue({
+        ...value,
+        if (value.containsKey('recovery'))
+          'recovery': recovery is Map && recovery['paused'] == true
+              ? {
+                  ...recovery,
+                  if (causes is Map)
+                    'causes': {
+                      for (final entry in causes.entries)
+                        entry.key: {
+                          if (entry.value is Map)
+                            ...Map.from(entry.value as Map),
+                          if (entry.value is Map &&
+                              players is Map &&
+                              players[(entry.value as Map)['uid']] is Map)
+                            'playerNickname':
+                                (players[(entry.value as Map)['uid']]
+                                    as Map)['nickname'],
+                        },
+                    },
+                }
+              : null,
+      });
     } finally {
       _acceptingNewGame = false;
     }
+    _updateReadiness();
   }
 
   /// 구독 오류를 어떻게 알릴지 결정합니다.
@@ -228,9 +716,12 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   @protected
   Future<bool> run(Future<Object?> Function() command) async {
     if (state.commandInFlight) return false;
+    final generation = _subscriptionGeneration;
+    _lastCommand = command;
     state = state.markCommandStarted();
     try {
       final result = await command();
+      if (!ref.mounted || generation != _subscriptionGeneration) return false;
       // 서버는 "아직 할 일이 아니다"를 예외가 아니라 정상 응답으로 알립니다
       // (예: 마감 전 타임아웃 호출 → {success: false, reason: "notExpired"}).
       // 이를 성공으로 넘기면 호출자가 재시도하지 않아 진행이 멈춥니다.
@@ -238,6 +729,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       if (result is Map && result['success'] == false) return false;
       return true;
     } catch (error, stack) {
+      if (!ref.mounted || generation != _subscriptionGeneration) return false;
       // 사용자에게는 짧은 안내만 보여 주고, 실제 원인은 따로 남깁니다.
       // 개발 중에는 화면 오른쪽 아래 표시로, 출시 뒤에는 Crashlytics로
       // 올라가 어떤 명령이 실패했는지 추적할 수 있습니다.
@@ -248,7 +740,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       );
       return false;
     } finally {
-      if (ref.mounted) {
+      if (ref.mounted && generation == _subscriptionGeneration) {
         state = state.markCommandFinished();
       }
     }
@@ -268,12 +760,11 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   }
 
   //=======================중단(끊김) 처리==============================
-  /// 기다렸다가 계속하는 쪽에 한 표를 던집니다.
-  Future<bool> voteToContinueInterruption() {
+  Future<bool> waitMoreForInterruptedPlayer() {
     final current = interruption;
     if (current == null) return Future.value(false);
     return run(
-      () => interruptionCommands.voteToContinue(
+      () => interruptionCommands.waitMore(
         roomCode: roomCode,
         interruptionId: current.id,
       ),
@@ -301,21 +792,6 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     if (current == null || !current.canContinue) return Future.value(false);
     return run(
       () => interruptionCommands.excludeAndContinue(
-        roomCode: roomCode,
-        interruptionId: current.id,
-      ),
-    );
-  }
-
-  /// 남은 인원이 부족한 중단을 마감 전에 즉시 종료합니다.
-  ///
-  /// [excludeInterruptedPlayerAndContinue]의 거울상입니다. 계속할 수 있는
-  /// 중단은 투표·제외 흐름의 몫이므로 여기서 끝내지 않습니다.
-  Future<bool> finishInterruptedGameNow() {
-    final current = interruption;
-    if (current == null || current.canContinue) return Future.value(false);
-    return run(
-      () => interruptionCommands.finishNow(
         roomCode: roomCode,
         interruptionId: current.id,
       ),

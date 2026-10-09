@@ -54,7 +54,7 @@ void main() {
     expect(snapshot.potTotal, 180);
   });
 
-  test('쇼다운 결과와 중단 투표 상태를 안전하게 변환한다', () {
+  test('쇼다운 결과와 다중 중단 원인을 안전하게 변환한다', () {
     final snapshot = HoldemPublicSnapshot.fromValue({
       'result': {
         'reason': 'showdown',
@@ -83,13 +83,19 @@ void main() {
         'amount': 120,
         'createdAt': 55,
       },
-      'interruption': {
-        'state': 'voting',
-        'missingUids': ['u3'],
-        'eligibleVoterUids': ['u1', 'u2'],
-        'continueVoterUids': ['u1'],
-        'requiredVotes': 2,
-        'deadlineAt': 999999,
+      'recovery': {
+        'paused': true,
+        'pauseId': 'pause-current',
+        'causes': {
+          'player:u3': {
+            'uid': 'u3',
+            'role': 'player',
+            'incidentId': 'incident-three',
+            'deadlineAt': 999999,
+            'canContinue': true,
+          },
+          'controller:t': {'uid': 't', 'role': 'controller'},
+        },
       },
     });
 
@@ -106,6 +112,10 @@ void main() {
     expect(snapshot.lastAction?.kind, 'raise');
     expect(snapshot.lastAction?.amount, 120);
     expect(snapshot.interruption, isNotNull);
+    expect(snapshot.interruption!.causes, hasLength(2));
+    expect(snapshot.interruption!.playerUid, 'u3');
+    expect(snapshot.interruption!.eligibleVoterUids, isEmpty);
+    expect(snapshot.interruption!.canContinue, isTrue);
   });
 
   test('잘못된 공개 상태는 UI가 처리할 수 있는 기본값으로 변환한다', () {

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/template_game.dart';
 
@@ -14,4 +15,45 @@ Future<void> prepareGameAssetsForPlay(TemplateGame game) async {
 
   await store.downloadGame(game.id);
   await store.prepareGame(game.id);
+}
+
+/// Recovery uses verified cached assets. Only proven missing/corrupt files offer repair.
+Future<bool> prepareGameAssetsForRecovery(
+  TemplateGame game,
+  BuildContext context,
+) async {
+  final store = GameAssetStore.instance;
+  try {
+    await store.prepareGame(game.id);
+    return true;
+  } catch (error) {
+    if (game.requiredAssetVersion <= 0 ||
+        error is! StateError ||
+        error.message != '게임 에셋을 먼저 다운로드해야 합니다.') {
+      rethrow;
+    }
+  }
+  if (!context.mounted) return false;
+  final repair = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      title: const Text('게임 파일을 복구할까요?'),
+      content: const Text('필요한 게임 파일이 없거나 손상되었습니다. 파일을 다시 받아야 게임을 이어갈 수 있습니다.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('게임과 그룹 나가기'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('파일 복구'),
+        ),
+      ],
+    ),
+  );
+  if (repair != true || !context.mounted) return false;
+  await store.downloadGame(game.id);
+  await store.prepareGame(game.id);
+  return true;
 }

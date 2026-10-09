@@ -330,3 +330,20 @@ P 사용자 packages 담당과 T 플랫폼/서버/검증 담당안, 허용 경�
 P/T는 실행 계획의 패키지/플랫폼·서버·검증 영역 표기이며 별도 사람이 아니다.
 최신 코드 기준·소비자·검증 공백·단일 담당을 E00 인수인계로 정리했고 다음 단위는 E01 검증 배선이다.
 채팅별 범위·완료 조건·의존 순서는 유지하며 기능 구현과 전체 검증 완료를 뜻하지 않는다.
+
+## 2026-10-09 E01 검증 기반 구현 후보
+
+develop `151eff8`에서 첫 구현 단위 E01의 누락 session/auth 회귀와 package/FULL 실행 배선을 복원했다.
+[E01 기록](../NETWORK_SESSION_E01_VALIDATION.md)은 기존 동작의 검증과 새 복구 정책의 후속 구현을 구분한다.
+이번 변경은 제품 세션 계약 구현이 아니며 해당 단위 완료 후 E02로 넘긴다. 공통 실행 근거는 TEST-REGRESSION-01에 연결한다.
+
+## 2026-10-09 E02~E12 순차 구현 후보
+
+사용자 요청으로 A~C 공용 계약부터 네 게임·플랫폼·UI·계측을 연결했다.
+[현재 계약](../../engineering/NETWORK_SESSION_CONTRACT.md)과 [후보/검증/기존 변경](../NETWORK_SESSION_E02_E12_IMPLEMENTATION.md)을 따른다.
+관련 검사와 승인 후 FULL을 구분한다. E13 emulator/CI·E14 기기·production은 미실행이며 일부 PASS로 태스크 전체 완료를 선언하지 않는다.
+
+같은 날 사용자 명시 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
+E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
+실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.
