@@ -198,3 +198,8 @@ FlutterFire/앱 통합·기기/성능 회귀와 원래 CI SDK 정렬 검토는 �
 실제 Scheduler delivery, native stream/parse·순서·응답 유실·저장 실패 주입, 계측과 원래 CI SDK
 정렬을 미실행으로 기록했다. [준비 문서](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)에
 현재 앱 연결·pub get/설치와 matching Functions/rules 준비를 연결했다. 문서 작업이며 구현 변경은 없다.
+
+후속 사용자 결정으로 기존 Firebase에 변경 전체 배포·Android 실기기 APK 테스트를 확정했다.
+구버전 호환은 완료 조건에서 요구하지 않는다. 후보 제품 코드 변경 없이 Functions lint/build와
+APK 빌드를 확인했다. [배포 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을
+따르며, 실제 Scheduler delivery·native 오류 주입·실기기 회귀 결과는 별도로 유지한다.

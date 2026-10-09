@@ -371,3 +371,7 @@ FlutterFire/앱 통합·기기/성능·출시 판정은 별도로 유지한다.
 [환경·설치·배포 준비](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)와
 [담당자 진단 후속](../../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)은 별도다.
 대상 환경·OS 조합은 미확정, 원격 접근/배포·앱 빌드/설치·실기기 실행은 미실행이다.
+
+후속 사용자 결정으로 기존 Firebase·Android APK 실기기·변경 사항 전체 배포·구버전 호환
+불필요를 확정했다. [준비/실행 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을 따른다.
+APK 빌드는 PASS이며 설치·기기 결과는 아직 미실행이다. 배포 결과와 기기 결과를 분리한다.
