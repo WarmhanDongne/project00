@@ -27,8 +27,9 @@ PASS를 판정하지 않으며 Project CLI, targeted suite 또는 `validate --fu
 다음 조건을 모두 유지한다.
 
 1. Firebase CLI에는 MCP 전용 Google 계정을 사용한다.
-2. 그 계정에는 `roles/firebasedatabase.viewer`만 부여하고 Owner, Editor, Firebase
-   Admin 또는 다른 write 권한을 함께 부여하지 않는다.
+2. 그 계정에는 `roles/firebasedatabase.viewer`와 사용자가 승인한
+   `roles/logging.viewer`만 부여한다. Owner, Editor, Firebase Admin 또는 다른
+   write 권한을 함께 부여하지 않는다.
 3. Firebase CLI의 `--tools`에는 `firebase_get_project`와
    `realtimedatabase_get_data`만 지정한다.
 4. Codex의 `enabled_tools`에도 같은 두 도구만 지정하고
@@ -136,8 +137,8 @@ macOS 사용자는 Firebase CLI 버전, `mcp --help`, 실제 노출 도구 두 �
    표시할 수 있으므로 출력을 채팅, issue 또는 보고서에 붙이지 않는다.
 2. 필요한 경우 사람이 `firebase login:use`로 MCP 전용 계정을 선택한다. Owner 계정이
    활성 상태라면 MCP를 시작하지 않는다.
-3. Google Cloud IAM에서 해당 계정이 `roles/firebasedatabase.viewer`이고 더 넓은
-   권한이 없는지 확인한다.
+3. Google Cloud IAM에서 해당 계정의 역할이 `roles/firebasedatabase.viewer`와
+   사용자가 승인한 `roles/logging.viewer`뿐인지 확인한다.
 4. AI는 `firebase_get_project`만 호출해 위의 project ID, 이름과 상태를 비교한다.
 5. database URL, 정확한 단일 경로, 조회 필요성, 예상값과 민감정보 가능성을 제시하고
    사용자에게 그 한 번의 production read 승인을 받는다.
@@ -145,6 +146,17 @@ macOS 사용자는 Firebase CLI 버전, `mcp --help`, 실제 노출 도구 두 �
 
 승인은 다른 경로, 다른 database 또는 재시도에 재사용하지 않는다. `/` 또는 상위
 collection 전체 조회, wildcard 성격의 조회와 사용자/Auth 데이터 탐색은 금지한다.
+
+## Server log access with the same account
+
+2026-10-09 사용자는 기존 조회용 계정에 `roles/logging.viewer`를 추가해 서버 로그
+조회에도 사용하기로 했고, 사람이 IAM 역할 추가를 완료했다고 보고했다. 이 보고는
+AI가 IAM·로그인·실제 로그 접근을 검증했다는 뜻이 아니다.
+
+서버 로그는 [Firebase Server Logs](FIREBASE_SERVER_LOGS.md)의 별도 Google Cloud CLI
+경로로 조회한다. Firebase CLI 로그인은 gcloud 로그인 설정을 대신하지 않는다.
+Firebase MCP의 노출 도구는 계속 두 개이며 RTDB 단일 경로 사전 승인 규칙도 유지한다.
+계정 역할 추가만으로 임의의 production 로그 조회 범위를 승인한 것으로 해석하지 않는다.
 
 ## Prohibited operations
 

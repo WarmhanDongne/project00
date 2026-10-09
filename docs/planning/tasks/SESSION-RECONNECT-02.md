@@ -375,3 +375,51 @@ FlutterFire/앱 통합·기기/성능·출시 판정은 별도로 유지한다.
 후속 사용자 결정으로 기존 Firebase·Android APK 실기기·변경 사항 전체 배포·구버전 호환
 불필요를 확정했다. [준비/실행 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을 따른다.
 APK 빌드는 PASS이며 설치·기기 결과는 아직 미실행이다. 배포 결과와 기기 결과를 분리한다.
+
+## 2026-10-09 실기기 정상 시작 실패 수정 후보
+
+사용자 요청으로 heartbeat 수명, 최초/후속 준비 제한, 라이어스포커 dealing 에셋 대기,
+진단 창 Overlay를 수정하고 session 회귀에 등록했다.
+[수정/검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)을 따른다.
+Guarded session 5단계, 관련 37개, 마지막 연결/수명 21개, 변경 파일 분석/포맷은
+PASS/exit 0이다. controller token 무효화 뒤 player heartbeat로 바뀌지 않는 것도 확인했다.
+기존 사용자 변경은 보존했고 branch/HEAD 유지, staged 없음이다.
+사용자 승인 FULL·수정 APK 설치·실기기 확인은 미실행이다. 기존 실기기 정상 시작 FAIL은
+새 후보에서 통과로 바꾸지 않으며, 시작 callable/퇴장 route의 미확정 근거는 남겨 둔다.
+
+후속 사용자 승인 후 현재 후보의 Windows guarded `validate --full --json`을 1회 실행했다.
+12/12 단계 PASS/exit 0, 앱 337개·5 package 174개·Functions 371개/skip 0,
+실행 전후 mutation PASS다. 기존 사용자 변경 4개도 전후 SHA-256 동일이다.
+수정/로컬 전체 검증 후보가 통과한 것이며 수정 APK/실기기 정상 시작과 미확정 시작 요청/
+퇴장 route의 확인은 남아 있다. branch/HEAD 유지, stage/commit/push/deploy 없음.
+
+## 2026-10-09 정상 준비 UI 분리 후보
+
+후속 사용자 UI 요청으로 준비/원인 없는 barrier는 기존 배경·연출을 유지하고,
+실제 실패/이탈만 기존 오류 안내를 사용하도록 수정했다. 별도 준비/퇴장 버튼을 제거하고
+기존 상단 메뉴·퇴장 모달을 유지했다. 서버 준비 조건과 canSend 보호는 유지한다.
+[변경 파일·검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 UI 후보 절을 따른다.
+최종 guarded session 5/5 PASS/exit 0, 관련 분석/19개 파일 포맷 PASS/exit 0이다.
+이전 후보 FULL 승인을 재사용하지 않으며 이번 후보 FULL의 새 승인을 요청한다.
+수정 APK/실기기 결과·미확정 시작 요청/퇴장 route 및 SESSION 출시 판정은 별도다.
+
+후속 사용자 “검증해” 승인으로 같은 UI 후보의 guarded FULL을 1회 실행했다.
+2026-10-09 21:37 KST 시작, 336776ms, 12/12 PASS/exit 0이다.
+앱 337·5 package 182·Functions 371/skip 0 및 mutation PASS다.
+[승인 FULL 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 절을 따른다.
+수정 APK/실기기 UI·연결 확인과 SESSION 출시 판정은 남아 있다.
+
+## 2026-10-09 진입 성공 후 룰렛·재시작 조사
+
+사용자가 정상 진입/준비 UI 해소와 로비 A 단절 대응 성공을 보고했다.
+[후속 조사](../NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation)에
+태블릿/휴대폰 로그와 실제 callable 오프라인 재현을 기록했다. 룰렛 추첨/확정 ID 충돌과
+시작 시간초과 뒤 새 서비스가 미확정 요청을 이어받지 못하는 결함을 확인했다.
+수동 종료 성공은 양 기기 로그로 확인했다. 최초 시작 지연/commit 경로는 서버 로그 요청 중이다.
+이번 요청은 원인 조사이며 제품 수정·production 조회/배포·새 FULL은 실행하지 않았다.
+
+후속 사용자의 기존 일반 로그 권한 확인/직접 조회 요청으로 gcloud 조회용 configuration에서
+시작 함수의 승인 시간대 로그를 읽었다. 60초 HTTP 504, 좌석 검증의 finished-function 비동기
+예외, 후속 HTTP 409를 확인했다. 정상 heartbeat까지 비교하는 fingerprint와 SDK callback
+예외의 미종료 경로를 추가 재현했다. 기존 Logs Viewer로 가능했으며 IAM 추가 변경은 없었다.
+production 데이터 commit 여부/실제 변경 필드는 로그만으로 확정하지 않았다. 제품 수정은 후속이다.

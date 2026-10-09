@@ -96,9 +96,20 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 | 재연결/foreground | UID·방·수명 확인 후 새 제한 묶음; 중첩 소유자 없음 |
 
 완료된 owner를 긴 구독이 상속하지 않는다. 늦은 operation의 이어 실행은 원래 deadline을 유지한다.
-소진된 request는 새 호출을 시작하지 않는다. AppNetworkGuard/GameRecoveryLayer는 주 안내 하나로 입력을 막는다.
-자기 퇴장은 처음부터, 상세 재시도는 10초 뒤, 서버 pause는 즉시 표시한다.
-phone은 자기 퇴장만, controller는 실제 제외·한 번 연장·확인 후 종료를 선택한다.
+복구 후 heartbeat timer와 완료 알림은 bounded 작업을 await한 바깥에서 시작한다.
+첫 게임 준비는 대기실의 오래된 owner를 재사용하지 않는다. 이미 준비된 게임의 새 pause는
+새 준비 묶음을 사용하되 같은 pause의 barrier/dataSeq 갱신이나 진행 중인 준비 대기는
+기존 deadline을 유지한다. 준비 실패 뒤 도착한 pause/데이터만으로 보호를 해제하지 않는다.
+소진된 request는 새 호출을 시작하지 않는다. AppNetworkGuard는 실제 네트워크 오류를 기존 연결 UI로 보호한다.
+2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임 준비와
+원인 없는 ready barrier는 기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
+실제 recovery causes/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
+GameRecoveryLayer는 휴대폰의 GameRequestNotice 한 곳에 중단/실패와 필요한 재시도를 표시한다.
+준비 실패 안내는 늦은 데이터로 지우지 않으며 명시 재시도가 시작되면 닫는다.
+휴대폰 나가기는 기존 상단바·퇴장 모달을 사용한다. 준비 실패/실제 중단 중에도 기존 메뉴를 사용할 수 있다.
+PhoneGameShell의 content 보호와 LP 카드 선택·제출/LIAR/FOLD 조건, 명령 서비스의 canSend 검사는
+로컬 준비·서버 확인·pause·연결·퇴장 상태를 계속 반영한다. UI를 숨겨도 서버 준비/입력 제한은 풀지 않는다.
+controller의 실제 중단에는 기존 제외·한 번 연장·확인 후 종료 UI를 유지한다.
 정상 캐시는 재다운로드하지 않는다. 누락/손상 파일만 동의 후 복구하고 디코딩·프레임을 다시 준비한다.
 route 완료와 게임 정리는 캡처한 game ID로 처리한다.
 

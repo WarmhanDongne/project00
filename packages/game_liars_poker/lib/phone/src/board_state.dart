@@ -244,11 +244,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     super.dispose();
   }
 
-  /// 상단바가 숨어 있는 구간(카드 분배·손패 공개)인지 판단합니다.
-  ///
-  /// 이 구간 자체는 정상이고 짧습니다. 여기서 true를 돌려줘도 곧바로 무언가
-  /// 보이지는 않습니다 — [GameConnectingOverlay]가 자기 지연 시간을 다 기다린
-  /// 뒤에야 나가기 버튼을 띄웁니다. 그래서 정상 연출에는 영향이 없습니다.
+  /// 카드 분배·손패 공개 중에는 게임 입력 준비를 계속 기다립니다.
   bool _isAwaitingHandTooLong(LiarsPokerController controller) {
     // 관전자는 전용 상단바가 있고, 종료 화면은 결과 다이얼로그에 버튼이 있습니다.
     if (controller.isEliminated || controller.isFinished) return false;
@@ -318,21 +314,10 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
 
           onExpired: controller.expireInterruption,
         ),
-        // 첫 서버 상태가 오래 오지 않으면 배경만 남는 화면 대신 대기 안내와
-        // 나가기 버튼을 표시해 영구 대기를 막습니다.
-        //
-        // 카드 분배·손패 공개 구간도 같은 탈출구를 씁니다. 그 구간에 상단바를
-        // 숨기는 것은 **연출 의도**입니다 — 패가 들어올 때 다른 요소가 없어야
-        // 합니다. 다만 그동안 나갈 수단이 하나도 없어서, 서버가 다음 상태를
-        // 주지 않으면 앱을 강제 종료하는 수밖에 없었습니다. 정상 흐름(분배
-        // 2.8초 + 공개)에서는 절대 뜨지 않는 지연 시간을 두어, 연출은 그대로
-        // 두고 갇히는 경우만 막습니다.
-        //
-        // 관전자와 종료 화면은 제외합니다. 둘 다 이미 나갈 방법이 있어
-        // 버튼이 겹칩니다.
+        // 정상 준비는 배경을 유지합니다. 실제 실패 안내와 재시도는 공용
+        // 요청 UI가, 나가기는 게임 화면의 기존 상단바·퇴장 모달이 담당합니다.
         connection: GameConnectionRecovery(
           isWaiting: !_hasEnteredGame || _isAwaitingHandTooLong(controller),
-          onExit: () => unawaited(_leaveRoom()),
         ),
         // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
         // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
@@ -350,7 +335,10 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
           // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
           transitionBuilder: _buildSpectatorTransition,
-          child: _hasEnteredGame
+          child:
+              _hasEnteredGame ||
+                  controller.errorMessage != null ||
+                  controller.interruption?.causes.isNotEmpty == true
               ? _buildGameContent(controller)
               : const KeyedSubtree(
                   key: ValueKey('liars-poker-game'),

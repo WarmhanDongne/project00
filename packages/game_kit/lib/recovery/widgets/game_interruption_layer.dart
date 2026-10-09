@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
+import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 enum GameInterruptionPresentation { player, tabletController }
 
-/// One protected notice for the entire server pause. Phones can leave themselves.
+/// Actual incidents use existing notices; a cause-free ready barrier stays silent.
 class GameInterruptionLayer extends StatefulWidget {
   const GameInterruptionLayer({
     super.key,
@@ -46,6 +47,7 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
       if (widget.presentation ==
               GameInterruptionPresentation.tabletController &&
           current != null &&
+          (current.causes.isNotEmpty || current.playerUid.isNotEmpty) &&
           current.deadlineAt > 0 &&
           _remaining(current) == 0 &&
           _expired != current.id) {
@@ -101,13 +103,22 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
   @override
   Widget build(BuildContext context) {
     final current = widget.interruption;
-    if (current == null) return const SizedBox.shrink();
+    if (current == null ||
+        (current.causes.isEmpty && current.playerUid.isEmpty)) {
+      return const SizedBox.shrink();
+    }
     final controller =
         widget.presentation == GameInterruptionPresentation.tabletController;
+    if (!controller) {
+      // 휴대폰의 기존 상단바·퇴장 모달을 유지하며 오류 안내만 재사용합니다.
+      return GameRequestNotice(
+        message: widget.failureMessage ?? '게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.',
+      );
+    }
     final seconds = current.deadlineAt > 0 ? _remaining(current) : null;
     return Positioned.fill(
       child: Material(
-        color: const Color(0xFF151D3D),
+        color: widget.scrimColor,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -204,11 +215,6 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
                           child: const Text('계속 기다리기'),
                         ),
                     ],
-                    if (widget.onExit != null)
-                      TextButton(
-                        onPressed: _busy ? null : widget.onExit,
-                        child: const Text('내가 나가기'),
-                      ),
                   ],
                 ),
               ),

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/recovery/services/game_command_batch.dart';
 import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
-import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 
 void main() {
   test(
@@ -160,35 +160,40 @@ void main() {
     },
   );
   testWidgets(
-    'own leave is immediately available and ten-second notice survives retry rebuilds',
+    'actual failure reuses the request notice and existing exit across retry rebuilds',
     (tester) async {
       var exits = 0, retries = 0;
       Widget screen() => MaterialApp(
         home: Scaffold(
-          body: Stack(
-            children: [
-              GameConnectingOverlay(
-                isWaiting: true,
-                onExit: () => exits++,
-                onRetry: () => retries++,
+          body: GameRecoveryLayer(
+            connection: GameConnectionRecovery(
+              isWaiting: true,
+              onRetry: () => retries++,
+            ),
+            request: const GameRequestRecovery(message: '화면 준비 실패'),
+            child: Align(
+              alignment: Alignment.topRight,
+              child: TextButton(
+                onPressed: () => exits++,
+                child: const Text('기존 나가기'),
               ),
-            ],
+            ),
           ),
         ),
       );
       await tester.pumpWidget(screen());
       expect(find.text('내가 나가기'), findsNothing);
-      expect(find.text('게임과 그룹 나가기'), findsOneWidget);
-      await tester.tap(find.text('게임과 그룹 나가기'));
+      expect(find.text('게임과 그룹 나가기'), findsNothing);
+      await tester.tap(find.text('기존 나가기'));
       expect(exits, 1);
       expect(find.text('다시 연결하기'), findsNothing);
       await tester.pump(const Duration(seconds: 10));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('다시 연결하기'), findsOneWidget);
-      await tester.tap(find.text('다시 연결하기'));
+      expect(find.text('재시도'), findsOneWidget);
+      await tester.tap(find.text('재시도'));
       await tester.pumpWidget(screen());
       expect(retries, 1);
-      expect(find.text('다시 연결하기'), findsOneWidget);
+      expect(find.text('재시도'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

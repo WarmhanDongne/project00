@@ -121,7 +121,6 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
         onExit: () => unawaited(_requestExit()),
       ),
       result: _TournamentResult(game: game, uid: args.uid),
-      onConnectingExit: () => unawaited(_requestExit()),
       onIntroCompleted: () {
         if (!mounted) return;
         setState(() {

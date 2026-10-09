@@ -8,6 +8,7 @@ import 'package:game_kit/recovery/models/game_session_state.dart';
 import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
+import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 
 Map<String, dynamic> public(
   int seq, {
@@ -15,12 +16,14 @@ Map<String, dynamic> public(
   int started = 100,
   String game = 'current-game',
   String status = 'alive',
+  String pauseId = 'initial-pause',
+  int resumeEpoch = 1,
 }) => {
   'gameInstanceId': game,
   'phaseSeq': 1,
   'turnSeq': 1,
   'dataSeq': seq,
-  'resumeEpoch': 1,
+  'resumeEpoch': resumeEpoch,
   'startedAt': started,
   'revision': seq,
   'status': 'playing',
@@ -29,7 +32,7 @@ Map<String, dynamic> public(
   'players': {
     'readiness-user': {'status': status},
   },
-  'recovery': {'paused': paused},
+  'recovery': {'paused': paused, 'pauseId': pauseId},
 };
 Map<String, dynamic> private(int seq, {String game = 'current-game'}) => {
   '_context': {
@@ -66,6 +69,160 @@ void main() {
       await query.priv.close();
     }
   });
+  testWidgets(
+    'first game does not inherit an expired lobby preparation budget',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      final lobby = RoomRecoveryBatch(
+        elapsed: () => const Duration(seconds: 31),
+      );
+      game.recoverySession.preparationBatch = lobby;
+      query.pub.add(_Event(public(1)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump(const Duration(milliseconds: 1));
+      final prepared = game.prepareScreen(() async {});
+      await tester.pump();
+      await tester.pump();
+      await prepared;
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, isNot(same(lobby)));
+      expect(game.recoverySession.localUsable, true);
+      expect(commands.reports.single['ready'], true);
+      query.pub.add(_Event(public(1, paused: false)));
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+
+  testWidgets(
+    'first public data arriving during recovery shares its active deadline',
+    (tester) async {
+      late _Controller game;
+      var elapsed = const Duration(seconds: 20);
+      final owner = RoomRecoveryBatch(elapsed: () => elapsed);
+      final received = Completer<void>();
+      final operation = owner.run(
+        () async {
+          start();
+          game = container.read(provider.notifier);
+          query.pub.add(_Event(public(1)));
+          await received.future;
+        },
+        isCurrent: () => true,
+        retryable: (_) => false,
+      );
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, same(owner));
+      received.complete();
+      await tester.pump();
+      await operation;
+      elapsed = const Duration(seconds: 25);
+      query.pub.add(_Event(public(2)));
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, same(owner));
+      await tester.pump(const Duration(seconds: 11));
+      expect(commands.reports.single['ready'], false);
+      expect(game.recoverySession.localUsable, false);
+    },
+  );
+
+  testWidgets(
+    'a later pause gets a fresh report budget while its barrier changes keep that budget',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      final prepared = game.prepareScreen(() async {});
+      await tester.pump();
+      await tester.pump();
+      await prepared;
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+      final expired = RoomRecoveryBatch(
+        elapsed: () => const Duration(seconds: 31),
+      );
+      game.recoverySession.preparationBatch = expired;
+      query.pub.add(_Event(public(1, pauseId: 'later-pause', resumeEpoch: 2)));
+      await tester.pump();
+      await tester.pump();
+      final pauseOwner = game.recoverySession.preparationBatch!;
+      expect(pauseOwner, isNot(same(expired)));
+      expect(pauseOwner.remaining, greaterThan(Duration.zero));
+      expect(game.recoverySession.canSend, false);
+      expect(commands.reports.length, 2);
+      query.pub.add(_Event(public(2, pauseId: 'later-pause', resumeEpoch: 3)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, same(pauseOwner));
+      query.pub.add(_Event(public(2, paused: false, resumeEpoch: 3)));
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+
+  testWidgets(
+    'pause during preparation cannot extend the deadline or release late data after exhaustion',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      final prepared = game.prepareScreen(() async {});
+      await tester.pump();
+      await tester.pump();
+      await prepared;
+      await tester.pump();
+      query.pub.add(_Event(public(2, paused: false)));
+      await tester.pump();
+      final owner = game.recoverySession.preparationBatch;
+      await tester.pump(const Duration(seconds: 20));
+      query.pub.add(
+        _Event(public(2, pauseId: 'pending-pause', resumeEpoch: 2)),
+      );
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, same(owner));
+      await tester.pump(const Duration(seconds: 11));
+      expect(commands.reports.last['ready'], false);
+      query.pub.add(
+        _Event(public(2, pauseId: 'failure-pause', resumeEpoch: 2)),
+      );
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, same(owner));
+      expect(game.recoverySession.localUsable, false);
+      expect(
+        commands.reports.where((report) => report['ready'] == true).length,
+        1,
+      );
+    },
+  );
+
+  testWidgets(
+    'first public snapshot cannot clear an earlier subscription failure',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      query.priv.addError(StateError('subscription failed before public'));
+      await tester.pump();
+      query.pub.add(_Event(public(1)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      final prepared = game.prepareScreen(() async {});
+      await tester.pump();
+      await tester.pump();
+      await prepared;
+      await tester.pump();
+      expect(game.recoverySession.localUsable, false);
+      expect(commands.reports, isEmpty);
+    },
+  );
+
   testWidgets(
     'private before public waits for decoded assets and a frame; pause still blocks input',
     (tester) async {
@@ -301,7 +458,45 @@ void main() {
       unawaited(query.priv.close());
       await tester.pump();
       expect(game.recoverySession.canSend, false);
+      expect(container.read(provider).errorMessage, isNotNull);
       expect(commands.reports.last['ready'], false);
+    },
+  );
+  testWidgets(
+    'asset failure stays visible across late data until an explicit retry',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      var failed = true;
+      Future<void> assets() async {
+        if (failed) throw StateError('decode failed');
+      }
+
+      await game.prepareScreen(assets);
+      await tester.pump();
+      expect(container.read(provider).errorMessage, isNotNull);
+      expect(game.recoverySession.canSend, false);
+      expect(commands.reports.last['ready'], false);
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      expect(container.read(provider).errorMessage, isNotNull);
+      expect(game.recoverySession.canSend, false);
+      failed = false;
+      final retried = game.retryRecovery();
+      await tester.pump();
+      expect(container.read(provider).errorMessage, isNull);
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      await tester.pump();
+      await retried;
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+      expect(container.read(provider).errorMessage, isNull);
     },
   );
 }
@@ -357,17 +552,17 @@ class _Commands extends Fake implements GameInterruptionCommandService {
 }
 
 class _State implements GameSessionState<_State> {
-  const _State();
+  const _State({this.errorMessage});
   @override
   bool get commandInFlight => false;
   @override
-  String? get errorMessage => null;
+  final String? errorMessage;
   @override
   _State markCommandStarted() => this;
   @override
   _State markCommandFinished() => this;
   @override
-  _State withError(String? message) => this;
+  _State withError(String? message) => _State(errorMessage: message);
   @override
   _State asRemovedGame() => this;
 }

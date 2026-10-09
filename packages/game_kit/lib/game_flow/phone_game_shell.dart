@@ -15,7 +15,7 @@ import 'package:game_kit/game_flow/phone_game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_auto_complete.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
-import 'package:game_kit/recovery/widgets/game_connecting_overlay.dart';
+import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 
 // ============================================================
 
@@ -109,10 +109,7 @@ class PhoneGameShell<TStage extends Enum> extends StatefulWidget {
   final VoidCallback onIntroCompleted;
   final VoidCallback onRoundIntroCompleted;
 
-  /// 연결 단계가 비정상적으로 길어질 때 표시하는 나가기 버튼의 동작입니다.
-  ///
-  /// 연결 단계는 배경만 보여 주는 것이 기본 연출이지만, 서버 상태가 오래
-  /// 오지 않으면 대기 안내와 탈출 수단을 제공해 영구 대기를 막습니다.
+  /// 기존 호출부 호환용입니다. 퇴장은 topBar의 기존 기능을 사용합니다.
   final VoidCallback? onConnectingExit;
 
   @override
@@ -190,6 +187,29 @@ class _PhoneGameShellState<TStage extends Enum>
 
   @override
   Widget build(BuildContext context) {
+    final session = _recovery?.session;
+    if (session == null) return _build(context);
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) => _build(context),
+    );
+  }
+
+  GameRecoveryLayer? get _recovery =>
+      context.findAncestorWidgetOfExactType<GameRecoveryLayer>();
+
+  bool get _hasRecoveryFailure {
+    final recovery = _recovery;
+    final interruption = recovery?.interruption?.state;
+    return recovery?.session?.transportConnected == false ||
+        (interruption != null &&
+            (interruption.causes.isNotEmpty ||
+                interruption.playerUid.isNotEmpty)) ||
+        (recovery?.request?.message?.isNotEmpty == true &&
+            recovery?.session?.canSend == false);
+  }
+
+  Widget _build(BuildContext context) {
     final flowStep = _flowStep;
     final announcement = flowStep.buildAnnouncement();
     return GameEntryUnroll(
@@ -237,11 +257,6 @@ class _PhoneGameShellState<TStage extends Enum>
                     ? widget.onIntroCompleted
                     : widget.onRoundIntroCompleted,
               ),
-            // 연결 단계가 길어지면 배경만 남는 화면 대신 대기 안내를 표시합니다.
-            GameConnectingOverlay(
-              isWaiting: widget.stageRole == PhoneGameShellStageRole.connecting,
-              onExit: widget.onConnectingExit,
-            ),
           ],
         ),
       ),
@@ -257,9 +272,11 @@ class _PhoneGameShellState<TStage extends Enum>
       Offstage(
         offstage: !flowStep.showScreen,
         child: AbsorbPointer(
-          // 안내 레이어는 항상 포인터를 통과시킵니다. 단계 자체가 입력을
-          // 막아야 할 때만 셸이 실제 게임 content를 차단합니다.
-          absorbing: flowStep.blocksInteraction,
+          // 정상 준비·서버 pause도 플레이 입력은 차단합니다. 상단 메뉴는
+          // 이 content 밖에 두어 기존 규칙·나가기 기능을 사용할 수 있습니다.
+          absorbing:
+              flowStep.blocksInteraction ||
+              _recovery?.session?.canSend == false,
           child: widget.content,
         ),
       ),
@@ -270,7 +287,9 @@ class _PhoneGameShellState<TStage extends Enum>
   /// 순간에도 퇴장할 수 있어야 하기 때문입니다.
   List<Widget> _buildTopBar() {
     final topBar = widget.topBar;
-    if (topBar == null || !_shouldShowTopBar) return const [];
+    if (topBar == null || (!_shouldShowTopBar && !_hasRecoveryFailure)) {
+      return const [];
+    }
     return [
       Positioned(
         top: 0,
@@ -278,13 +297,15 @@ class _PhoneGameShellState<TStage extends Enum>
         right: 0,
         child: SafeArea(
           bottom: false,
-          child: ControlEntryAnimation(
-            animation: _entryController,
-            style: ControlEntryStyle.header,
-            begin: 0,
-            end: 0.76,
-            child: topBar,
-          ),
+          child: _hasRecoveryFailure
+              ? topBar
+              : ControlEntryAnimation(
+                  animation: _entryController,
+                  style: ControlEntryStyle.header,
+                  begin: 0,
+                  end: 0.76,
+                  child: topBar,
+                ),
         ),
       ),
     ];

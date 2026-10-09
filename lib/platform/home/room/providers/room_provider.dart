@@ -1157,6 +1157,10 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     final uid = _currentUid();
     final code = roomCode;
     final epoch = _sessionEpoch;
+    final connectionEpoch = _connectionEpoch;
+    final controllerSessionId = code == null
+        ? null
+        : ControllerRoomSessionStore.instance.sessionIdForRoom(code);
     final batch = RoomRecoveryBatch();
     if (code != null && uid != null) {
       GameRecoverySession.forRoom(code, uid).preparationBatch = batch;
@@ -1181,9 +1185,30 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
                   'aborted',
                 }.contains(error.code)),
       );
+      if (_isDisposed ||
+          _currentUid() != uid ||
+          roomCode != code ||
+          code == null ||
+          _isLeaving ||
+          _sessionEpoch != epoch ||
+          _connectionEpoch != connectionEpoch) {
+        return;
+      }
+      // Periodic work must be created after leaving the bounded recovery Zone.
+      // Late operation continuations retain its deadline; future heartbeats do not.
+      if (controllerSessionId != null) {
+        if (ControllerRoomSessionStore.instance.sessionIdForRoom(code) !=
+            controllerSessionId) {
+          return;
+        }
+        _startControllerHeartbeat(code);
+      } else {
+        _startPlayerHeartbeat(code);
+      }
+      errorMessage = null;
+      notifyListeners();
       RecoveryMetrics.instance.mark(RecoveryStage.identity);
       if (_currentUid() == uid &&
-          code != null &&
           roomStatus != 'playing' &&
           GameRecoverySession.forRoom(code, uid ?? '').context == null) {
         RecoveryMetrics.instance.finish(success: true);
@@ -1196,8 +1221,6 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   Future<void> _performConnectionRecovery() async {
     final code = roomCode;
-    final sessionEpoch = _sessionEpoch;
-    final connectionEpoch = _connectionEpoch;
     if (code == null) {
       throw const RoomCommandException('복구할 방 정보가 없습니다.');
     }
@@ -1219,16 +1242,6 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       await _service.restoreControllerRoom().timeout(
         const Duration(seconds: 8),
       );
-      if (_isDisposed ||
-          roomCode != code ||
-          _isLeaving ||
-          _sessionEpoch != sessionEpoch ||
-          _connectionEpoch != connectionEpoch) {
-        return;
-      }
-      _startControllerHeartbeat(code);
-      errorMessage = null;
-      notifyListeners();
       return;
     }
 
@@ -1256,16 +1269,6 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
           characterId: characterId,
         )
         .timeout(const Duration(seconds: 8));
-    if (_isDisposed ||
-        roomCode != code ||
-        _isLeaving ||
-        _sessionEpoch != sessionEpoch ||
-        _connectionEpoch != connectionEpoch) {
-      return;
-    }
-    _startPlayerHeartbeat(code);
-    errorMessage = null;
-    notifyListeners();
   }
 
   /// 썸네일·설명 같은 화면용 Firestore 정보는 게임 시작 신호와 분리해 불러옵니다.

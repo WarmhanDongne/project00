@@ -23,6 +23,8 @@ import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 
 // ============================================================
 
+const _preparationFailureMessage = '화면 준비를 확인하지 못했어요. 다시 연결해주세요.';
+
 //=======================게임 세션 공통 뼈대==============================
 /// 게임 컨트롤러가 **게임 규칙과 무관하게** 똑같이 해야 하는 일을 모았습니다.
 ///
@@ -163,6 +165,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
     RecoveryMetrics.instance.finish(success: false);
     _preparationFailed = true;
+    state = state.withError(_preparationFailureMessage);
     recoverySession.invalidate();
     _reportedKey = null;
     unawaited(_report(false));
@@ -171,6 +174,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   void retrySession() {
     if (!ref.mounted) return;
     _cancelPreparationWait();
+    if (_preparationFailed) state = state.withError(null);
     _preparationFailed = false;
     _hadUsable = false;
     recoverySession.invalidate();
@@ -297,7 +301,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       RecoveryMetrics.instance.mark(RecoveryStage.assets);
     }
     final owner =
-        (!_hadUsable ? session.preparationBatch : null) ??
+        (!_hadUsable || session.paused ? session.preparationBatch : null) ??
         RoomRecoveryBatch.current ??
         RoomRecoveryBatch();
     session.preparationBatch = owner;
@@ -316,7 +320,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       if (!current()) {
         return;
       }
-      state = state.withError("화면 준비를 확인하지 못했어요. 다시 연결해주세요.");
+      state = state.withError(_preparationFailureMessage);
       reportPreparationFailure();
     });
     void scheduleRefresh() {
@@ -383,6 +387,9 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       _preparationFailed = false;
     }
     if (_preparationFailed) {
+      if (state.errorMessage == null) {
+        state = state.withError(_preparationFailureMessage);
+      }
       session.localUsable = false;
       session.changed();
       return;
@@ -589,18 +596,35 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       _priorGameIds.add(previous.gameInstanceId);
       if (_priorGameIds.length > 8) _priorGameIds.remove(_priorGameIds.first);
     }
-    if (previous != null && previous.gameInstanceId != context.gameInstanceId) {
+    final newGameInstance =
+        previous == null || previous.gameInstanceId != context.gameInstanceId;
+    final recovery = value['recovery'];
+    final previousRecovery = session.publicValue?['recovery'];
+    final paused = recovery is Map && recovery['paused'] == true;
+    final newPause =
+        paused &&
+        (!session.paused ||
+            (recovery['pauseId'] != null &&
+                (previousRecovery is! Map ||
+                    previousRecovery['pauseId'] != recovery['pauseId'])));
+    if (newGameInstance && (previous != null || !_preparationFailed)) {
       _cancelPreparationWait();
       _preparationFailed = false;
       _hadUsable = false;
       session.preparationBatch =
           RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+    } else if (newPause &&
+        _hadUsable &&
+        !_preparationFailed &&
+        _preparationOwner == null) {
+      // A later interruption must not send ready using an old lobby/game budget.
+      // Keep any ongoing preparation deadline and sticky failure until retry.
+      session.preparationBatch =
+          RoomRecoveryBatch.current ?? RoomRecoveryBatch();
     }
     session.context = context;
     session.publicValue = value;
-    session.paused =
-        value['recovery'] is Map &&
-        (value['recovery'] as Map)['paused'] == true;
+    session.paused = paused;
     if (previous?.key != context.key) {
       session.localUsable = false;
       if (session.paused) session.serverConfirmed = false;

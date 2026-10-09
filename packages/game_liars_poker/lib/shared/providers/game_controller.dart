@@ -199,10 +199,15 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
         isFinished;
   }
 
-  /// 첫 스냅샷이 도착할 때까지 기다립니다. 휴대폰은 공개 상태와 내 손패,
-  /// 태블릿은 공개 상태만 기다립니다.
+  // Dealing starts behind the ready barrier, before the server publishes hands.
+  // Asset preparation can start from public data while the hand entry gate stays shut.
+  bool get _isInitialDataReady =>
+      _hasPublicSnapshot && (phase == 'dealing' || isEntryDataReady);
+
+  /// 에셋 준비에 필요한 첫 데이터를 기다립니다. 분배 중에는 공개 상태만,
+  /// 진행 중인 게임에 진입하는 휴대폰은 대응하는 손패까지 기다립니다.
   Future<void> waitForInitialData() {
-    if (isEntryDataReady) return Future<void>.value();
+    if (_isInitialDataReady) return Future<void>.value();
     return _initialDataCompleter.future;
   }
 
@@ -265,6 +270,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canSelectCards =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       phase == 'playing' &&
       !isEliminated &&
@@ -275,6 +281,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canCallLiar =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       (phase == 'playing' || phase == 'lastCardChallenge') &&
       isMyTurn &&
@@ -284,6 +291,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   bool get canFoldLastCardChallenge =>
       status == 'playing' &&
+      recoverySession.canSend &&
       interruption == null &&
       phase == 'lastCardChallenge' &&
       isMyTurn &&
@@ -589,7 +597,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   }
 
   void _completeInitialDataIfReady() {
-    if (!isEntryDataReady || _initialDataCompleter.isCompleted) return;
+    if (!_isInitialDataReady || _initialDataCompleter.isCompleted) return;
     _initialDataCompleter.complete();
   }
 

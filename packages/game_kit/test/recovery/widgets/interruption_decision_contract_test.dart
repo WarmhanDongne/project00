@@ -37,7 +37,7 @@ void main() {
     },
   );
   testWidgets(
-    'phone pause offers only its own exit and never performs expiry, exclusion or game end',
+    'phone pause reuses the error notice and existing menu without controller decisions or extra exits',
     (tester) async {
       var exits = 0, decisions = 0;
       Future<bool> decide() async {
@@ -50,6 +50,13 @@ void main() {
           home: Scaffold(
             body: Stack(
               children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: TextButton(
+                    onPressed: () => exits++,
+                    child: const Text('기존 나가기'),
+                  ),
+                ),
                 GameInterruptionLayer(
                   interruption: pause(canContinue: true),
                   currentUid: 'phone',
@@ -64,13 +71,14 @@ void main() {
           ),
         ),
       );
-      expect(find.text('내가 나가기'), findsOneWidget);
+      expect(find.text('내가 나가기'), findsNothing);
+      expect(find.textContaining('게임을 잠시 멈췄어요'), findsOneWidget);
       expect(find.text('제외하고 계속하기'), findsNothing);
       expect(find.text('게임 종료'), findsNothing);
       expect(find.text('30초 더 기다리기'), findsNothing);
       await tester.pump(const Duration(seconds: 61));
       expect(decisions, 0);
-      await tester.tap(find.text('내가 나가기'));
+      await tester.tap(find.text('기존 나가기'));
       expect(exits, 1);
       await tester.pumpWidget(const SizedBox.shrink());
     },

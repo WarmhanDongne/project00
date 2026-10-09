@@ -203,3 +203,47 @@ FlutterFire/앱 통합·기기/성능 회귀와 원래 CI SDK 정렬 검토는 �
 구버전 호환은 완료 조건에서 요구하지 않는다. 후보 제품 코드 변경 없이 Functions lint/build와
 APK 빌드를 확인했다. [배포 기록](../../operations/NETWORK_SESSION_TEST_PREPARATION.md)을
 따르며, 실제 Scheduler delivery·native 오류 주입·실기기 회귀 결과는 별도로 유지한다.
+
+## 2026-10-09 실기기 시작 실패 회귀 보완
+
+[수정/검증 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)에 32초 실제 RoomService
+heartbeat, 만료 대기실 owner/active owner 공유/후속 pause/동일 barrier 예산/늦은 데이터,
+LP dealing/대응 손패, 진단 창 열기·복사·지우기·닫기 회귀를 남겼다.
+기존 session suite에 관련 검사를 추가했고 별도 suite/guard 실행 구조는 바꾸지 않았다.
+Guarded session 5단계·관련 37개·후속 연결 21개·변경 파일 분석/포맷 PASS/exit 0.
+초기 후보/harness FAIL과 수집 wrapper 경고도 같은 기록에 구분했다.
+FULL은 새 후보에 대한 사용자 승인 대기, 수정 APK/실기기 재확인은 미실행이다.
+
+후속 사용자 명시 승인으로 현재 후보의 Windows guarded `validate --full --json` 1회가
+12/12 PASS/exit 0이다. 앱 337·game_kit 70·LP 4·FC 14·Mafia 55·Holdem 31·
+Functions 371/skip 0 및 mutation PASS를 확인했다. JSON/한계는 위 수정 기록에 남겼다.
+로컬 회귀 검증 결과이며 실제 CI 재실행·수정 APK·실기기 결과는 별도로 남겨 둔다.
+
+## 2026-10-09 정상 준비/실제 오류 UI 회귀
+
+원인 없는 준비 barrier/오래 걸리는 정상 로딩의 무안내, 실제 실패의 단일 기존 안내,
+기존 메뉴 접근, 입력 차단/화면 State 유지, 늦은 데이터 뒤 실패 문구 유지와 명시 재시도를 보완했다.
+session suite에 공용 recovery UI/결정 회귀 두 파일을 추가하고 frozen manifest를 갱신했다.
+누락된 LP canSend 조건을 회귀에서 잡아 수정한 뒤 최종 guarded session 5/5 PASS/exit 0,
+Functions 73 PASS, mutation PASS와 관련 분석/포맷 PASS/exit 0을 확인했다.
+[실행 명령·파일·한계](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 UI 후보 절을 따른다.
+이번 후보의 FULL은 새 승인 대기다. 실제 APK/실기기 결과와 CI 재실행은 별도다.
+
+후속 사용자 “검증해” 승인으로 UI 후보 FULL 1회가 12/12 PASS/exit 0이다.
+앱 337·5 package 182·Functions 371/skip 0, 분석/포맷/lint/mutation 모두 PASS다.
+[승인 FULL 기록](../NETWORK_SESSION_STARTUP_INVESTIGATION.md)의 마지막 절에 명령·전후 상태를 남겼다.
+실제 APK/실기기 결과와 CI 재실행은 별도다.
+
+## 2026-10-09 룰렛·미확정 시작 요청의 회귀 공백
+
+[실기기 후속 조사](../NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation)에서
+실제 callable을 메모리 RTDB로 실행해 prepare→resolve ID 충돌과 미확정 시작 후 새 ID의
+already-exists를 재현했다. tsc/probe는 exit 0이며 후자는 알려진 결함 재현 성공을 뜻한다.
+기존 공통 검증·소스 패턴 테스트는 LP 두 단계 실제 명령 연결과 설정 완료 재시도의 서비스
+수명/요청 ID 보존을 다루지 않는다. 두 통합 회귀와 결과 적용 횟수 확인을 수정 시 추가해야 한다.
+정식 테스트나 제품 코드는 이번 조사에서 변경하지 않았고 FULL을 새로 실행하지 않았다.
+
+승인된 서버 로그 확인 후 heartbeat만 바뀌어도 시작 fingerprint가 aborted로 거부하는 것과
+설치 SDK rerun 함수가 callback 예외 시 완료/rollback에 도달하지 않는 경우를 추가 재현했다.
+ignored probe 7개 판정/exit 0이며 정상 heartbeat 경합·실제 roster 변경·비동기 abort 완료의
+회귀도 후속 수정 범위다. 기존 FULL PASS를 이 누락된 통합 경로 검증으로 확대하지 않는다.

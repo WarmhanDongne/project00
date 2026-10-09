@@ -187,8 +187,6 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           background: MafiaPhoneBackground(isNight: game.usesNightScene),
           onIntroCompleted: () {},
           onRoundIntroCompleted: () {},
-          // 아래 복구 안내가 담당합니다. 셸의 20초 탈출 버튼과 중복하지 않습니다.
-          onConnectingExit: null,
           topBar: MafiaPhoneTopBar(
             me: game.me,
             subtitle: MafiaPhoneTopBar.subtitleFor(

@@ -193,8 +193,12 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
           Positioned.fill(
             child: SafeArea(
               top: false,
-              child: _GameCommunicationSheet(
-                onClose: () => setState(() => _isDiagnosticsOpen = false),
+              // MaterialApp.builder puts this widget above Navigator's Overlay.
+              // Header tooltips need an Overlay within the diagnostics subtree.
+              child: Overlay.wrap(
+                child: _GameCommunicationSheet(
+                  onClose: () => setState(() => _isDiagnosticsOpen = false),
+                ),
               ),
             ),
           ),
