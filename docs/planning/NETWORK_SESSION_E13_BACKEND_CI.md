@@ -150,3 +150,22 @@ E14 OS/물리 네트워크/성능, E15 반영 계획, production 접근·deploy�
 호환 계획을 정리했다. [서버·진단 후속](../operations/NETWORK_SESSION_SERVER_FOLLOWUP.md)은
 실제 Scheduler delivery·배포 rules/trigger·native 오류 주입·응답 유실·파일 저장 실패·계측을
 분리한다. 환경 확정과 별도 승인이 선행되며 이 문서 작업에서 접근·배포하거나 기기 PASS를 주장하지 않는다.
+
+## 2026-10-09 기존 Firebase·APK 실기기 경로 확정
+
+사용자가 기존 Firebase에서 변경 사항 전체를 배포·테스트하고 구버전 앱 호환은 필요 없다고
+명시했다. 실기기 전체에 동일 Android APK를 설치하는 경로로 준비 문서를 통일했다.
+에뮬레이터·별도 Firebase·iOS 설치 선택지는 사용자 준비 안내에서 제외했다.
+
+배포 후보의 제품 코드는 `7bc3d31`과 동일하며 FULL/CI PASS 후보 이후 제품 변경은 없다.
+Functions lint/build, `flutter pub get --enforce-lockfile`,
+`flutter build apk --debug --no-pub`는 각각 PASS/exit 0이다. APK 및 최종 배포 결과는
+[준비 문서](../operations/NETWORK_SESSION_TEST_PREPARATION.md)의 후속 실행 기록에 남긴다.
+이 결정은 기존 계정/방 데이터 삭제·migration과 실제 기기 테스트 PASS를 의미하지 않는다.
+
+최종 실제 배포 결과: 변경 Functions 69개 7묶음 전부 PASS/exit 0, RTDB rules PASS/exit 0,
+제거된 3개 함수의 지정 리전 삭제 PASS/exit 0. 최종 원격 79개는 현재 index export와 이름이
+정확히 일치하며 전부 ACTIVE/Node 22·예정 리전이다. queue retry 설정도 일치한다.
+함수 metadata만 조회했으며 기존 방/사용자 데이터·실행 로그를 읽거나 migration하지 않았다.
+새 APK는 239409237 bytes, hash/경로와 최초 retry-policy 확인 실패는 준비 문서에 남겼다.
+기기 설치·화면 확인과 실제 Scheduler delivery·native 오류 주입은 미실행이다.
