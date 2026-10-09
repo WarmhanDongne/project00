@@ -4,7 +4,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {assertOnboardingComplete} from "../auth/require-complete-onboarding.js";
 import {allocateRoom, RoomAllocation, RoomReservation, terminalRoom} from "./room-allocation.js";
-import {parseSessionId} from "./session-contract.js";
+import {operationFingerprint, parseSessionId} from "./session-contract.js";
 import {reconcileTerminal} from "./room-cleanup.js";
 import {runPrimedTransaction} from "./room-transaction.js";
 
@@ -37,7 +37,8 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
     }
   }
   const slot = database.ref(`roomCreateSlots/${uid}`);
-  const claimed = await slot.transaction((raw) => {
+  const claimed = await runPrimedTransaction(slot, (value) => {
+    const raw = value as {operationId: string; status: string} | null;
     if (raw && raw.operationId !== operationId && raw.status !== "terminal") return;
     if (raw?.operationId === operationId) return raw;
     return {operationId, status: "reserved"};
@@ -55,7 +56,7 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
     const candidate: RoomReservation = {roomCode: code, roomInstanceId: randomUUID(),
       expectedAllocationGeneration: expected, allocationGeneration: expected + 1,
       controllerSessionId: randomUUID(), connectionId: randomUUID(), createdAt: now, status: "reserved"};
-    const reserved = await reservationRef.transaction((raw) => raw ?? candidate);
+    const reserved = await runPrimedTransaction(reservationRef, (raw) => raw ?? candidate);
     const reservation = reserved.snapshot.val() as RoomReservation;
     if (reservation.status === "terminal") return {status: "terminal"};
     const initial: RoomAllocation = {roomCode: reservation.roomCode,
@@ -76,12 +77,16 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
         return {status: "terminal"};
       }
       // Only a proven collision can change this reserved candidate; an unknown never does.
-      await reservationRef.transaction((raw) => raw?.roomInstanceId === reservation.roomInstanceId &&
-        raw.status === "reserved" ? null : undefined);
+      await runPrimedTransaction(reservationRef, (value) => {
+        const raw = value as RoomReservation | null;
+        return raw?.roomInstanceId === reservation.roomInstanceId && raw.status === "reserved" ? null : undefined;
+      });
       continue;
     }
-    await reservationRef.transaction((raw) => raw?.roomInstanceId === reservation.roomInstanceId &&
-      raw.status !== "terminal" ? {...raw, status: "created"} : undefined);
+    await runPrimedTransaction(reservationRef, (value) => {
+      const raw = value as RoomReservation | null;
+      return raw?.roomInstanceId === reservation.roomInstanceId && raw.status !== "terminal" ? {...raw, status: "created"} : undefined;
+    });
     const live = (await database.ref(`rooms/${reservation.roomCode}`).get()).val() as RoomAllocation;
     if (!live || live.roomInstanceId !== reservation.roomInstanceId || ["closed", "terminal"].includes(live.status)) {
       await reconcileTerminal(reservation.roomCode, {...reservation, status: "terminal", controllerUid: uid, creationOperationId: operationId});
@@ -96,8 +101,8 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
         throw new HttpsError("failed-precondition", "이미 사용 중인 방이 있습니다.");
       }
     }
-    const mapped = await mappingRef.transaction((raw) => {
-      if (JSON.stringify(raw) !== JSON.stringify(mapping)) return;
+    const mapped = await runPrimedTransaction(mappingRef, (raw) => {
+      if (operationFingerprint(raw) !== operationFingerprint(mapping)) return;
       return {roomCode: reservation.roomCode, roomInstanceId: reservation.roomInstanceId,
         allocationGeneration: reservation.allocationGeneration};
     });
@@ -106,9 +111,12 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
       await abandonReservation(reservation.roomCode, reservation, uid, operationId, now);
       return {status: "terminal"};
     }
-    await slot.transaction((raw) => raw?.operationId === operationId && raw.status !== "terminal" ?
-      {...raw, status: "created", roomInstanceId: reservation.roomInstanceId,
-        allocationGeneration: reservation.allocationGeneration} : undefined);
+    await runPrimedTransaction(slot, (value) => {
+      const raw = value as {operationId: string; status: string} | null;
+      return raw?.operationId === operationId && raw.status !== "terminal" ?
+        {...raw, status: "created", roomInstanceId: reservation.roomInstanceId,
+          allocationGeneration: reservation.allocationGeneration} : undefined;
+    });
     return {success: true, roomCode: reservation.roomCode, roomInstanceId: reservation.roomInstanceId,
       controllerSessionId: reservation.controllerSessionId,
       connectionId: live.controllerCurrentConnectionId, connectionSeq: live.controllerConnectionSeq};

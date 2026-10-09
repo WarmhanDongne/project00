@@ -33,10 +33,11 @@ export function cleanupScanPage(entries: Array<{code: string; room: CleanupRoom}
 async function enqueue(code: string, room: CleanupRoom): Promise<void> {
   const due = roomCleanupDeadline(room);
   if (due === null) return;
-  await getDatabase().ref(`roomCleanupQueue/${code}`).transaction((raw) => {
+  await runPrimedTransaction(getDatabase().ref(`roomCleanupQueue/${code}`), (value) => {
+    const raw = value as CleanupJob | null;
     if (raw && raw.allocationGeneration > room.allocationGeneration) return;
     return {roomInstanceId: room.roomInstanceId, allocationGeneration: room.allocationGeneration,
-      nextCheckAt: due, failures: sameCleanupTarget(raw, room) ? raw.failures ?? 0 : 0};
+      nextCheckAt: due, failures: sameCleanupTarget(raw, room) ? raw!.failures ?? 0 : 0};
   });
 }
 
@@ -52,11 +53,15 @@ export async function reconcileTerminal(code: string, room: CleanupRoom): Promis
   if (room.controllerUid && room.creationOperationId) {
     const uid = room.controllerUid;
     const op = room.creationOperationId;
-    await database.ref(`roomCreateRequests/${uid}/${op}`).transaction((raw) =>
-      sameCleanupTarget(raw, room) ? {...raw, status: "terminal"} : undefined);
-    await database.ref(`controllerRooms/${uid}`).transaction((raw) => sameCleanupTarget(raw, room) ? null : undefined);
-    await database.ref(`roomCreateSlots/${uid}`).transaction((raw) => raw?.operationId === op &&
-      (!raw.roomInstanceId || sameCleanupTarget(raw, room)) ? {...raw, status: "terminal"} : undefined);
+    await runPrimedTransaction(database.ref(`roomCreateRequests/${uid}/${op}`), (value) => {
+      const raw = value as RoomAllocation | null;
+      return sameCleanupTarget(raw, room) ? {...raw, status: "terminal"} : undefined;
+    });
+    await runPrimedTransaction(database.ref(`controllerRooms/${uid}`), (raw) => sameCleanupTarget(raw as RoomAllocation | null, room) ? null : undefined);
+    await runPrimedTransaction(database.ref(`roomCreateSlots/${uid}`), (value) => {
+      const raw = value as {operationId: string; roomInstanceId?: string; allocationGeneration?: number} | null;
+      return raw?.operationId === op && (!raw.roomInstanceId || sameCleanupTarget(raw, room)) ? {...raw, status: "terminal"} : undefined;
+    });
   }
   await runPrimedTransaction(database.ref(`rooms/${code}`), (raw) => {
     if (!sameCleanupTarget(raw as CleanupRoom | null, room) || (raw as CleanupRoom).status !== "terminal") return;
@@ -74,7 +79,8 @@ export const cleanupStaleRealtimeRooms = onSchedule({region: "asia-northeast3",
   const now = Date.now();
   const cursorRef = database.ref("roomCleanupScan/cursor");
   const cursor = (await cursorRef.get()).val() as string | null;
-  const scan = await database.ref("rooms").orderByKey().startAt(cursor ?? "").limitToFirst(101).get();
+  const scanQuery = database.ref("rooms").orderByKey();
+  const scan = await (cursor ? scanQuery.startAt(cursor) : scanQuery).limitToFirst(101).get();
   const scans: Array<{code: string; room: CleanupRoom}> = [];
   scan.forEach((child) => {
     if (child.key && child.key !== cursor) scans.push({code: child.key, room: child.val()});
@@ -105,16 +111,20 @@ export const cleanupStaleRealtimeRooms = onSchedule({region: "asia-northeast3",
         return terminal;
       });
       if (terminal) await reconcileTerminal(code, terminal);
-      await database.ref(`roomCleanupQueue/${code}`).transaction((raw) => {
+      await runPrimedTransaction(database.ref(`roomCleanupQueue/${code}`), (value) => {
+        const raw = value as CleanupJob | null;
         if (!sameCleanupTarget(raw, job)) return;
         return future !== null && future > now ? {...raw, nextCheckAt: future} : null;
       });
       if (future !== null && future > now) deferred++; else completed++;
     } catch {
       failed++;
-      await database.ref(`roomCleanupQueue/${code}`).transaction((raw) => sameCleanupTarget(raw, job) ?
-        {...raw, failures: (raw.failures ?? 0) + 1,
-          nextCheckAt: now + Math.min(30, 2 ** Math.min(raw.failures ?? 0, 5)) * 60000} : undefined);
+      await runPrimedTransaction(database.ref(`roomCleanupQueue/${code}`), (value) => {
+        const raw = value as CleanupJob | null;
+        return sameCleanupTarget(raw, job) ?
+          {...raw, failures: (raw!.failures ?? 0) + 1,
+            nextCheckAt: now + Math.min(30, 2 ** Math.min(raw!.failures ?? 0, 5)) * 60000} : undefined;
+      });
     }
   }
   logger.info("Room cleanup", {completed, deferred, failed, scanned: scans.length});
