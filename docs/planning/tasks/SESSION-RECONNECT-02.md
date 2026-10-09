@@ -347,3 +347,8 @@ develop `151eff8`에서 첫 구현 단위 E01의 누락 session/auth 회귀와 p
 12단계 모두 PASS/exit 0, root Flutter 334·5 package 167·Functions 368개와 전후 mutation PASS다.
 E02~E12 로컬 구현 검증 결과이며 E13 emulator/CI·E14 기기/성능·출시 판정은 남겨 둔다.
 실제 command/전체 step/working tree 근거는 위 후보 검증 문서에 기록했다.
+
+## 2026-10-09 E13 백엔드 emulator/CI 후보
+
+[E13 기록](../NETWORK_SESSION_E13_BACKEND_CI.md)에 기존 후보의 커밋·푸시와 같은 SHA의
+테스트 브랜치 분리, 실제 RTDB 생성/정리 결함과 별도 회귀 커밋, 현재 FULL·CI·기기 범위를 남긴다.

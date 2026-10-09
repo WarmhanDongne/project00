@@ -110,6 +110,9 @@ syncRoomCleanupQueue는 현재 방을 재조회한다. cleanupStaleRealtimeRooms
 지속 key cursor 100개를 함께 처리한다. waiting 유예는 heartbeat 후 3분, playing/finished는 15분,
 명시 close는 cleanupAt을 따른다. 매핑·예약·slot은 원래 room/generation일 때만 정리한다.
 실패는 backoff/cleanupPending, 최종 tombstone은 최소 식별·generation·종료 정보로 남긴다.
+조건부 생성·정리 CAS는 기존 runPrimedTransaction으로 value listener의 서버 값을 받은 뒤 실행한다.
+단독 get() 뒤의 초기 빈 SDK 캐시를 실제 부재로 판정하지 않는다. mapping 비교는 key 순서와 무관하며,
+정리 첫 key page에는 빈 문자열 경계를 넣지 않고 저장된 cursor가 있을 때만 startAt을 적용한다.
 
 RecoveryMetrics는 단조 episode/batch와 연결·인증·identity·구독·public/private·에셋·프레임·
 ready·barrier·입력 단계를 기록한다. debug event 200개와 독립 요약 50개로 제한한다.

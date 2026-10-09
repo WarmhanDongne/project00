@@ -1,5 +1,9 @@
 # E02~E12 네트워크·세션 구현 후보
 
+후속 2026-10-09: 이 후보를 `56cd535`로 커밋·푸시하고 동일 SHA에서 별도 E13 CI worktree를 만들었다.
+새로 발견한 제품 수정과 현재 검증은 [E13 기록](NETWORK_SESSION_E13_BACKEND_CI.md)에 남긴다.
+아래 dirty/FULL/미실행 설명은 E02~E12 당시 evidence이며 새 후보 판정으로 확대하지 않는다.
+
 2026-10-09 사용자가 E02~E12 순차 구현을 요청했다.
 [채택한 A~C와 실행 계획](NETWORK_SESSION_IMPLEMENTATION_PLAN.md),
 [현재 구현 계약](../engineering/NETWORK_SESSION_CONTRACT.md)에 따른 로컬 후보다.
