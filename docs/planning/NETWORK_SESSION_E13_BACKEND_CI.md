@@ -169,3 +169,6 @@ Functions lint/build, `flutter pub get --enforce-lockfile`,
 함수 metadata만 조회했으며 기존 방/사용자 데이터·실행 로그를 읽거나 migration하지 않았다.
 새 APK는 239409237 bytes, hash/경로와 최초 retry-policy 확인 실패는 준비 문서에 남겼다.
 기기 설치·화면 확인과 실제 Scheduler delivery·native 오류 주입은 미실행이다.
+
+사용자 요청으로 다음 채팅에서 재개할 [실기기 테스트·후속 개발 인계](NETWORK_SESSION_REAL_DEVICE_HANDOFF.md)를
+정리했다. 브랜치/검증/배포/APK와 미실행 범위를 보존하며, 기존 배포/FULL을 재개 이유만으로 반복하지 않는다.
