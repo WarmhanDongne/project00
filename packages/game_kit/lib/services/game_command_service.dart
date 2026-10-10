@@ -228,6 +228,10 @@ abstract class GameCommandService {
         ..remove('controllerSessionId');
       logicalKey = '$uid/$functionName/${jsonEncode(domain)}';
 
+      // Recovery calls may use _unresolved itself as their owner. Capture the
+      // prior state before reserving this request so its first send is not a replay.
+      final previouslyUnresolved = _unresolved.containsKey(logicalKey);
+
       if (!isStart) {
         payload = owner.putIfAbsent(
           logicalKey,
@@ -246,17 +250,29 @@ abstract class GameCommandService {
         jsonDecode(jsonEncode(payload)) as Map,
       );
       retainedCommandId = retained['commandId'] as String;
-      if (retainedStart ||
-          capturedPayload != null ||
-          _unresolved.containsKey(logicalKey)) {
-        final status = await retryPolicy.run(
-          () => functions.httpsCallable('game_common_operation_status').call({
-            ...refreshEnvelope(retained),
-            'operationId': retained['commandId'],
-          }),
-          enabled: false,
-          remainingBudget: remainingBudget(),
-        );
+      if (retainedStart || capturedPayload != null || previouslyUnresolved) {
+        final lookupElapsed = Stopwatch()..start();
+        late HttpsCallableResult<dynamic> status;
+        try {
+          status = await retryPolicy.run(
+            () => functions.httpsCallable('game_common_operation_status').call({
+              ...refreshEnvelope(retained),
+              'operationId': retained['commandId'],
+            }),
+            enabled: false,
+            remainingBudget: remainingBudget(),
+          );
+        } catch (error) {
+          GameCommunicationLog.instance.add(
+            level: GameCommunicationLevel.failure,
+            title: '미확정 요청 결과 조회 실패',
+            detail:
+                '${lookupElapsed.elapsedMilliseconds}ms · '
+                '${_communicationErrorDescription(error)}',
+            operation: functionName,
+          );
+          rethrow;
+        }
         final outcome = status.data is Map
             ? (status.data as Map)['status']
             : null;

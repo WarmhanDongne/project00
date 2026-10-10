@@ -100,14 +100,19 @@ function touch(game: RecoveryGame, now: number): void {
   game.public.updatedAt = now;
 }
 
-export function beginRecoveryPause(room: RecoveryRoom, now: number): void {
+export function beginRecoveryPause(
+  room: RecoveryRoom, now: number, observedAt: number = now,
+): void {
   const game = room.game;
   if (!game || game.public.status !== "playing" || game.public.recovery?.paused) return;
+  const timerReferenceAt = Number.isFinite(observedAt) && observedAt >= 0 && observedAt <= now ? observedAt : now;
   game.public.resumeEpoch = (game.public.resumeEpoch ?? 0) + 1;
   const pauseId = `${game.public.gameInstanceId}-${game.public.resumeEpoch}`;
   const deadline = game.public.turnDeadlineAt;
   game.server.recovery = {
-    startedAt: now, timer: recoveryTimer(deadline, now, game.public.phaseSeq ?? 0, game.public.turnSeq ?? 0), ready: {},
+    startedAt: now,
+    timer: recoveryTimer(deadline, timerReferenceAt, game.public.phaseSeq ?? 0, game.public.turnSeq ?? 0),
+    ready: {},
   };
   game.public.recovery = {paused: true, pauseId, pausedAt: now, causes: {}};
   game.public.turnDeadlineAt = null;
@@ -117,12 +122,13 @@ export function beginRecoveryPause(room: RecoveryRoom, now: number): void {
 export function registerRecoveryFailure(
   room: RecoveryRoom, uid: string, role: "player" | "controller", now: number,
   reason: RecoveryCause["reason"] = "disconnected",
+  observedAt: number = now,
 ): "paused" | "localOnly" | "ignored" {
   const game = room.game;
   if (!game || game.public.status !== "playing") return "ignored";
   const key = `${role}:${uid}`;
   if (!requiredRecoveryKeys(room).includes(key)) return "localOnly";
-  beginRecoveryPause(room, now);
+  beginRecoveryPause(room, now, observedAt);
   const recovery = game.public.recovery!;
   recovery.causes ??= {};
   delete game.server.recovery?.ready?.[key];
@@ -135,6 +141,34 @@ export function registerRecoveryFailure(
     touch(game, now);
   }
   return "paused";
+}
+
+export function reportStaleController(
+  room: RecoveryRoom, observedLastSeen: unknown, now: number,
+): Record<string, unknown> {
+  if (!Number.isSafeInteger(observedLastSeen) || (observedLastSeen as number) < 0) {
+    throw new HttpsError("invalid-argument", "올바른 진행 기기 heartbeat 시각이 필요합니다.");
+  }
+  const uid = room.controllerUid;
+  const connectionId = room.controllerCurrentConnectionId;
+  const connectionSeq = room.controllerConnectionSeq;
+  const connection = uid && connectionId ? room.connections?.[uid]?.[connectionId] : undefined;
+  if (!uid || !connectionId || !Number.isSafeInteger(connectionSeq) || !connection ||
+      connection.connectionSeq !== connectionSeq ||
+      room.controllerPresence?.lastSeen !== observedLastSeen ||
+      connection.lastSeen !== observedLastSeen) {
+    return {status: "staleContext"};
+  }
+  if (connection.connected !== true || room.controllerPresence?.connected === false ||
+      room.controllerConnected === false) {
+    return {status: "alreadyDisconnected"};
+  }
+  if (now - (observedLastSeen as number) <= 20000) return {status: "notStale"};
+  connection.connected = false;
+  room.controllerConnected = false;
+  room.controllerPresence = {connected: false, lastSeen: observedLastSeen as number};
+  registerRecoveryFailure(room, uid, "controller", now, "disconnected", connection.lastSeen);
+  return {status: "disconnected"};
 }
 
 export function clearFinishedRecovery(game: RecoveryGame): void {

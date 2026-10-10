@@ -8,9 +8,9 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
+import 'package:game_final_call/shared/models/game_models.dart';
+import 'package:game_final_call/shared/widgets/card_view.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_final_call/game_assets.dart';
 import 'package:game_final_call/game_copy.dart';
 
 // ============================================================
@@ -30,11 +30,13 @@ class FinalCallTabletRoleBook extends StatelessWidget {
       title: provider.selectedGame?.name ?? 'Final Call',
       markdown: FinalCallCopy.tabletRules,
       videoUrl: provider.selectedGame?.ruleVideoUrl,
-      cardImages: [
-        Assets.games.finalCall.images.cards.cardRed10.game,
-        Assets.games.finalCall.images.cards.cardBlue10.game,
-        Assets.games.finalCall.images.cards.cardYellow10.game,
-        Assets.games.finalCall.images.cards.cardGreen10.game,
+      // 게임 화면과 같은 Party Pop 카드를 보여 줍니다.
+      cards: [
+        for (final color in const ['red', 'blue', 'yellow', 'green'])
+          FinalCallCardFace(
+            card: FinalCallCard(id: 'rule-$color-10', color: color, value: 10),
+            width: 60,
+          ),
       ],
     );
   }

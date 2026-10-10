@@ -44,6 +44,7 @@ Mafia 고유 투표는 유지하지만 네트워크 제외 투표는 없다. 자
 | game_common_recovery_report | 현재 접속 ready/failed·reportSeq 및 필수 barrier |
 | game_common_operation_status | 미확정 작업의 applied/stale/notApplied 최소 상태 |
 | game_common_interruption_report_stale_player | 관찰한 현재 접속 heartbeat 실패 신고 |
+| game_common_interruption_report_stale_controller | 참가자가 관찰한 진행 기기 heartbeat 정체를 서버 현재 접속과 재검증 |
 | game_common_interruption_exclude_player | controller 실제 reducer preview/제외 |
 | game_common_interruption_wait_more | 만료된 현재 incident를 한 번 30초 연장 |
 | game_common_interruption_expire | 결정 대기 표시, 자동 제외/종료 없음 |
@@ -55,9 +56,9 @@ vote_to_continue/finish_now는 현재 index export와 소비자에서 제거했�
 
 | RTDB 함수 (싱가포르) | 경로·역할 |
 | --- | --- |
-| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약에 반영 |
-| game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause |
-| game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause |
+| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약하고 controller/player 단절 cause를 같은 transaction에 반영 |
+| game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause의 멱등 안전망 |
+| game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause의 멱등 안전망 |
 | syncRealtimeRoomGameStatus | game/public/status, 현재 game 상태를 방에 반영 |
 | syncRoomCleanupQueue | rooms/{room}, 현재 allocation 재조회 후 due queue 갱신 |
 
@@ -127,3 +128,15 @@ npm run lint && npm run build    # predeploy 가 eslint + tsc 를 강제한다
 
 RTDB 트리거를 옮기거나 이름을 바꿀 때는 **구·신 함수가 같은 이벤트를 중복 처리하지
 않게** 해야 한다. 배포 직후 잠깐 둘 다 살아 있는 구간이 생긴다.
+
+
+## 2026-10-10 로비 지연 개선 후보 (`디벨럽1`)
+
+기존 `createRealtimeRoom`은 확인된 종료 allocation의 completed 생성 슬롯을 조건부
+교체해 cleanup 주기 전 재생성을 허용한다. 다른 세대/미확정 생성은 보존한다.
+`createRealtimeRoom`, `closeRoom`, `game_common_operation_status`는 고정 단계별
+`room_action_timing` 로그를 남긴다. payload·식별자·오류 원문은 넣지 않는다.
+새 export/리전/minInstances/DB schema 변경은 없다. 2026-10-10 사용자 승인으로
+`createRealtimeRoom`만 `project0000-ec01e`에 배포했다(서울/Node22, CLI 성공·exit0).
+나머지 두 함수의 timing은 미배포다. 실제 재생성·속도 재측정은 대기이며
+[범위·측정 절차](../operations/ROOM_ACTION_LATENCY.md)를 따른다.

@@ -489,3 +489,27 @@ LIAR 실패 2단계→생존→다음 FOLD 3단계, 직접/자동 FOLD 1→2→3
 관련 서버 회귀 45/45, build/lint PASS/exit 0이다. [후속 후보](../LIARS_POKER_1545_FOLD_FOLLOWUP.md)의
 resolve_penalty 함수 하나를 사용자가 반영한 뒤 현재 APK로 재시험한다. 새 기기/운영 로그
 조회 없이 로컬 callable로 재현·검증했고 FULL은 계속 보류한다.
+
+## 2026-10-10 18:41 종료·태블릿 연결 후속
+
+사용자는 FOLD 추가 상승 통과와 새 종료/다음 시작 실패, 앱 재실행 후 같은 그룹 시작
+성공을 보고했다. 새 태블릿·A 로그 및 승인 서버 metadata로 종료의 서버 실행/태블릿
+확인 지연을 구분했다. [분석·설계](../LIARS_POKER_1841_EXIT_CONNECTION_DESIGN.md)에 미확인
+네트워크 기저 원인을 명시하고, 종료 미확정 확인·heartbeat 확인 실패 시 현재 접속 복구를
+제안한다. 새 복구 조건은 승인 후 구현하며 이번 제품 변경/배포는 없다. FULL 보류 유지.
+
+사용자 승인 뒤 현재 controller 단절을 같은 서버 transaction에서 pause로 반영하고, 연결값이
+true로 남아도 20초 넘은 heartbeat를 참가자가 보고하면 서버가 최신 접속과 재검증하도록
+구현했다. 휴대폰 자동 LIAR/FOLD/제출 차단, controller heartbeat 2회 실패 복구, 늦은 복구
+저장 보호도 포함한다. targeted session은 Flutter 160·Functions 97 PASS이며 새 APK와
+Functions 2개 반영 후 실기기 재시험을 기다린다. FULL은 보류한다.
+
+## 2026-10-11 복구 감지·표시·타이머 보완
+
+현재 접속 단절과 recovery cause를 같은 transaction에서 기록하고, onDisconnect가 마지막 성공
+heartbeat를 보존하도록 변경했다. 늦은 stale 보고는 신원 복구 뒤 요청당 8초·같은 관측 최대
+2회로 제한하며 성공한 관측은 반복하지 않는다. 타이머는 마지막 성공 heartbeat를 기준으로
+보존하고, 실제 pause 뒤 원인이 먼저 해소된 준비 barrier도 안내를 유지한다. 정상 경로에는
+추가 대기를 넣지 않았다. 첫 session은 변경된 재시도 기대값 1건으로 FAIL/exit 1이었고 회귀를
+수정한 뒤 Flutter 161·Functions 99, Functions 전체 396, 관련 UI·tracker 10, analyze/lint가
+PASS/exit 0이다. FULL·APK·배포·실기기는 실행하지 않았다.

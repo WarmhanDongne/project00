@@ -1,6 +1,5 @@
 import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
-import 'package:game_kit/recovery/services/callable_retry_policy.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'dart:async';
 
@@ -11,6 +10,7 @@ import 'package:game_kit/core/error/user_error_message.dart';
 import 'package:game_kit/firebase/services/realtime_database_service.dart';
 import 'package:game_kit/core/network/realtime_connection_monitor.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
+import 'package:project00/platform/home/room/services/room_action_timing.dart';
 import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:game_kit/session/controller_room_session_store.dart';
 import 'package:game_kit/recovery/models/room_session_identity.dart';
@@ -88,9 +88,12 @@ class RoomService {
     final owner = RoomRecoveryBatch.inherited;
     Future<HttpsCallableResult<dynamic>> send() =>
         _functions.httpsCallable(name).call(payload);
-    return owner != null
-        ? owner.request(send)
-        : send().timeout(const Duration(seconds: 8));
+    return RoomActionTiming.measure(
+      'callable:$name',
+      () => owner != null
+          ? owner.request(send)
+          : send().timeout(const Duration(seconds: 8)),
+    );
   }
 
   Future<T> _withRoomBatch<T>(Future<T> Function() action) {
@@ -146,13 +149,19 @@ class RoomService {
     }
 
     try {
-      final operation = await _operations.begin(
-        uid: user.uid,
-        kind: 'create',
-        scope: 'active',
-        payload: {'operationId': ?operationId},
+      final operation = await RoomActionTiming.measure(
+        'local:create_intent',
+        () async {
+          final operation = await _operations.begin(
+            uid: user.uid,
+            kind: 'create',
+            scope: 'active',
+            payload: {'operationId': ?operationId},
+          );
+          await _operations.mark(operation, 'awaitingResult');
+          return operation;
+        },
       );
-      await _operations.mark(operation, 'awaitingResult');
       // cloud function 호출: 방 생성 작업 요청
       final response = await _call('createRealtimeRoom', operation['payload']);
 
@@ -175,20 +184,35 @@ class RoomService {
         throw const RoomCommandException('생성된 방 코드를 확인할 수 없습니다.');
       }
       // 태블릿 기기에 roomCode와 controllerSessionId을 저장.
-      await ControllerRoomSessionStore.instance.save(
-        roomCode: roomCode,
-        sessionId: controllerSessionId,
+      await RoomActionTiming.measure('local:created_identity', () async {
+        await ControllerRoomSessionStore.instance.save(
+          roomCode: roomCode,
+          sessionId: controllerSessionId,
+        );
+        await _identities.save(
+          RoomSessionIdentity.fromJson({
+            ...data,
+            'uid': user.uid,
+            'role': 'controller',
+            'roomCode': roomCode,
+          }),
+        );
+      });
+      // A first, confirmed creation already owns the server's initial connection.
+      // Replayed/unknown results still allocate a fresh connection through resume,
+      // so an old onDisconnect reservation cannot tear down the current session.
+      if (operation['state'] == 'requested' && data['connectionSeq'] == 1) {
+        await markControllerConnected(roomCode);
+      } else if (await restoreControllerRoom() != roomCode) {
+        throw const RoomCommandException('방 연결을 확인하지 못했습니다. 다시 시도해주세요.');
+      }
+      if (_auth.currentUser?.uid != user.uid) {
+        throw const RoomCommandException('로그인 상태가 변경되었습니다.');
+      }
+      await RoomActionTiming.measure(
+        'local:create_confirmed',
+        () => _operations.mark(operation, 'confirmed'),
       );
-      await _identities.save(
-        RoomSessionIdentity.fromJson({
-          ...data,
-          'uid': user.uid,
-          'role': 'controller',
-          'roomCode': roomCode,
-        }),
-      );
-      await restoreControllerRoom();
-      await _operations.mark(operation, 'confirmed');
       // 호출한 함수에 방 코드 리턴
       return roomCode;
     } on FirebaseFunctionsException catch (error) {
@@ -239,11 +263,14 @@ class RoomService {
   Future<void> markControllerConnected(String roomCode) async {
     final identity = await _sessionIdentity(roomCode, 'controller');
     final presenceRef = _connectionReference(identity);
-    await _writeWithRetry(
-      () => presenceRef.update({
-        'connected': true,
-        'lastSeen': ServerValue.timestamp,
-      }),
+    await RoomActionTiming.measure(
+      'rtdb:presence_write',
+      () => _writeWithRetry(
+        () => presenceRef.update({
+          'connected': true,
+          'lastSeen': ServerValue.timestamp,
+        }),
+      ),
     );
     // 현재 연결 상태 갱신이 복구의 성공 기준입니다. 다음 단절 예약은 Android/iOS
     // native plugin에서 일시적인 `unknown`을 낼 수 있는 보조 기능이므로, 성공한
@@ -279,9 +306,15 @@ class RoomService {
     if (RoomRecoveryBatch.current == null) {
       return _withRoomBatch(() => closeControllerRoom(roomCode));
     }
-    final identity = await _sessionIdentity(roomCode, 'controller');
+    final identity = await RoomActionTiming.measure(
+      'local:close_identity',
+      () => _sessionIdentity(roomCode, 'controller'),
+    );
     try {
-      await _connectionReference(identity).onDisconnect().cancel();
+      await RoomActionTiming.measure(
+        'rtdb:disconnect_cancel',
+        () => _connectionReference(identity).onDisconnect().cancel(),
+      );
     } catch (_) {
       // 서버 close가 방 종료의 권위이므로 예약 취소 실패는 계속 진행합니다.
     }
@@ -319,10 +352,18 @@ class RoomService {
         'roomInstanceId': identity.roomInstanceId,
       }),
     );
+    final needsResultLookup = operation['state'] != 'requested';
     await _operations.mark(operation, 'awaitingResult');
     final payload = Map<String, dynamic>.from(operation['payload'] as Map);
-    final status = await _call('game_common_operation_status', payload);
-    if (!const {'applied', 'stale'}.contains(status.data['status'])) {
+    var alreadyApplied = false;
+    if (needsResultLookup) {
+      final status = await _call('game_common_operation_status', payload);
+      alreadyApplied = const {
+        'applied',
+        'stale',
+      }.contains(status.data['status']);
+    }
+    if (!alreadyApplied) {
       await _call('closeRoom', payload);
     }
     await _operations.mark(operation, 'confirmed');
@@ -343,6 +384,7 @@ class RoomService {
     if (RoomRecoveryBatch.current == null) {
       return _withRoomBatch(restoreControllerRoom);
     }
+    final owner = RoomRecoveryBatch.current!;
     final store = ControllerRoomSessionStore.instance;
     await store.load();
     await _identities.load();
@@ -379,8 +421,24 @@ class RoomService {
     if (roomCode == null || sessionId == null) return null;
     try {
       final identity = await _sessionIdentity(roomCode, 'controller');
+      bool current() {
+        final saved = _identities.current(uid, 'controller', roomCode);
+        return _auth.currentUser?.uid == uid &&
+            owner.remaining > Duration.zero &&
+            identical(RoomRecoveryBatch.current, owner) &&
+            store.sessionIdForRoom(roomCode) == sessionId &&
+            saved?.roomInstanceId == identity.roomInstanceId &&
+            saved?.connectionId == identity.connectionId &&
+            saved?.connectionSeq == identity.connectionSeq;
+      }
+
+      void requireCurrent() {
+        if (!current()) throw StateError('이전 방 복구 요청입니다.');
+      }
+
+      requireCurrent();
       final pending = _identities.pending(identity.uid, 'controller', roomCode);
-      var expectedSequence = identity.connectionSeq;
+      final expectedSequence = identity.connectionSeq;
       if (pending != null) {
         try {
           await _call('resumeRealtimeControllerRoom', pending);
@@ -391,11 +449,26 @@ class RoomService {
             rethrow;
           }
         }
+        requireCurrent();
         final latest = await _call(
           'fetchRealtimeRoomSession',
           controllerCommandData(roomCode),
         );
-        expectedSequence = (latest.data['connectionSeq'] as num).toInt();
+        requireCurrent();
+        final latestIdentity = RoomSessionIdentity.fromJson({
+          ...Map<String, dynamic>.from(latest.data as Map),
+          'uid': identity.uid,
+          'controllerSessionId': sessionId,
+          'role': 'controller',
+          'roomCode': roomCode,
+        });
+        await _identities.save(
+          latestIdentity,
+          completedOperationId: pending['operationId'] as String,
+          isCurrent: current,
+        );
+        await markControllerConnected(roomCode);
+        return roomCode;
       }
       final payload = {
         'roomCode': roomCode,
@@ -409,9 +482,10 @@ class RoomService {
         'controller',
         roomCode,
         payload,
+        isCurrent: current,
       );
       final resumed = await _call('resumeRealtimeControllerRoom', payload);
-      if (_auth.currentUser?.uid != identity.uid) return null;
+      requireCurrent();
       await _identities.save(
         RoomSessionIdentity.fromJson({
           ...Map<String, dynamic>.from(resumed.data as Map),
@@ -422,6 +496,7 @@ class RoomService {
           'roomCode': roomCode,
         }),
         completedOperationId: payload['operationId'] as String,
+        isCurrent: current,
       );
       await markControllerConnected(roomCode);
       return roomCode;
@@ -593,12 +668,36 @@ class RoomService {
       'playerConnectionId': player['currentConnectionId'],
       'playerConnectionSeq': player['connectionSeq'],
     };
-    final uid = _auth.currentUser?.uid;
-    await const CallableRetryPolicy().run(
-      () => _call('game_common_interruption_report_stale_player', payload),
-      enabled: true,
-      isCurrent: () => _auth.currentUser?.uid == uid,
-    );
+    await _call(
+      'game_common_interruption_report_stale_player',
+      payload,
+    ).timeout(const Duration(seconds: 8));
+  }
+
+  /// 휴대폰이 본 진행 기기 heartbeat 정체를 서버가 현재 접속과 다시 대조합니다.
+  Future<void> reportStaleController({
+    required String roomCode,
+    required int observedLastSeen,
+  }) async {
+    final identity = await _sessionIdentity(roomCode, 'player');
+    var context = GameRecoverySession.forRoom(roomCode, identity.uid).context;
+    if (context == null) {
+      final snapshot = await realtime.ref('rooms/$roomCode/game/public').get();
+      if (snapshot.value is Map) {
+        context = GameRecoveryContext.fromMap(snapshot.value as Map);
+      }
+    }
+    if (context == null) return;
+    final payload = {
+      ...identity.envelope,
+      ...context.envelope,
+      'commandId': newRecoveryOperationId('stale_controller'),
+      'observedLastSeen': observedLastSeen,
+    };
+    await _call(
+      'game_common_interruption_report_stale_controller',
+      payload,
+    ).timeout(const Duration(seconds: 8));
   }
 
   // ========================================================== phone ==================================================================
@@ -834,12 +933,13 @@ class RoomService {
         }
       }
     }
-    final roomId = (await _readWithRetry(
-      realtime.ref('rooms/$roomCode/roomInstanceId'),
-    )).value;
-    final player = (await _readWithRetry(
-      realtime.ref('rooms/$roomCode/players/$uid'),
-    )).value;
+    // Independent reads; the join transaction still checks both generations.
+    final snapshots = await Future.wait([
+      _readWithRetry(realtime.ref('rooms/$roomCode/roomInstanceId')),
+      _readWithRetry(realtime.ref('rooms/$roomCode/players/$uid')),
+    ]);
+    final roomId = snapshots[0].value;
+    final player = snapshots[1].value;
     final membership = player is Map ? player['membershipId'] : null;
     final sequence = player is Map ? player['connectionSeq'] : null;
     requireCurrent();
@@ -974,15 +1074,22 @@ class RoomService {
           },
         );
     final payload = Map<String, dynamic>.from(operation['payload'] as Map);
+    final needsResultLookup = operation['state'] != 'requested';
     await _operations.mark(operation, 'awaitingResult');
     try {
       if (identity != null) {
         await _connectionReference(identity).onDisconnect().cancel();
       }
     } catch (_) {}
-    final status = await _call('game_common_operation_status', payload);
-    final result = Map<String, dynamic>.from(status.data as Map);
-    if (!const {'applied', 'stale'}.contains(result['status'])) {
+    var alreadyApplied = false;
+    if (needsResultLookup) {
+      final status = await _call('game_common_operation_status', payload);
+      alreadyApplied = const {
+        'applied',
+        'stale',
+      }.contains(status.data['status']);
+    }
+    if (!alreadyApplied) {
       final response = await _call(cloudFunctionName, payload);
       final leaveResult = Map<String, dynamic>.from(response.data as Map);
       if (!const {'applied', 'stale'}.contains(leaveResult['status'])) {
@@ -1049,10 +1156,7 @@ class RoomService {
   /// 접속 여부 표시는 보조 기능이므로 예약 실패가 방 입장을 중단시키지 않습니다.
   Future<void> _registerDisconnectPresence(DatabaseReference playerRef) async {
     try {
-      await playerRef.onDisconnect().update({
-        'connected': false,
-        'lastSeen': ServerValue.timestamp,
-      });
+      await playerRef.onDisconnect().update({'connected': false});
     } catch (_) {
       // 실시간 게임 데이터와 재접속은 UID 기준이므로 presence 예약 없이도 안전합니다.
     }
@@ -1062,10 +1166,7 @@ class RoomService {
     DatabaseReference presenceRef,
   ) async {
     try {
-      await presenceRef.onDisconnect().update({
-        'connected': false,
-        'lastSeen': ServerValue.timestamp,
-      });
+      await presenceRef.onDisconnect().update({'connected': false});
     } catch (_) {
       // controller heartbeat와 scheduled cleanup이 최종 상태를 정리합니다.
     }

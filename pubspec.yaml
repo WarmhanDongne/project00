@@ -155,6 +155,12 @@ flutter:
     - family: BodoniModa
       fonts:
         - asset: assets/fonts/BodoniModa-Variable.ttf
+    - family: Rye
+      fonts:
+        - asset: assets/fonts/Rye-Regular.ttf
+    - family: BlackHanSans
+      fonts:
+        - asset: assets/fonts/BlackHanSans-Regular.ttf
 
 flutter_gen: 
   output: lib/gen/

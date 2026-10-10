@@ -53,11 +53,12 @@ void main() {
       final fraction = (_angle(tester) % (2 * math.pi)) / (2 * math.pi);
       final landedIndex = count - 1 - (fraction * count).floor();
       final landedColor = roulette.group.units[landedIndex].color;
+      // 탈락 칸은 빨강, 생존 칸은 두 가지 보라색이 번갈아 칠해져 있습니다.
       expect(
         landedColor,
         result == RouletteResult.eliminated
-            ? const Color(0xffd10000)
-            : const Color(0xff111111),
+            ? const Color(0xFFE0243A)
+            : isIn(const [Color(0xFF24152E), Color(0xFF34204A)]),
       );
       await tester.pump(const Duration(seconds: 1));
       expect(results, [result]);
@@ -145,11 +146,19 @@ Finder _leverFinder() => find.byWidgetPredicate(
 
 Future<void> _pullLever(WidgetTester tester) async {
   final rect = tester.getRect(_leverFinder());
+  // 레버 터치 영역 안에서 빨간 손잡이의 처음 중심을 잡고, 손잡이가 끝까지
+  // 내려가는 거리보다 조금 더 끌어내립니다(영역 크기에 비례).
+  final scale = rect.height / RouletteWheel.leverGestureHeight;
   final gesture = await tester.startGesture(
-    rect.topLeft + const Offset(265, 150),
+    rect.topLeft +
+        Offset(
+          rect.width / 2,
+          (RouletteWheel.leverHeadTop + RouletteWheel.leverHeadSize / 2) *
+              scale,
+        ),
   );
   await gesture.moveBy(const Offset(0, 20));
-  await gesture.moveBy(const Offset(0, 340));
+  await gesture.moveBy(Offset(0, RouletteWheel.leverTravel * scale * 1.2));
   await gesture.up();
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 250));

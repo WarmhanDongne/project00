@@ -121,7 +121,10 @@ export const game_common_controller_presence_changed = onValueWritten(
       if (raw === null) return;
       const room = raw as RecoveryRoom;
       if (room.controllerPresence?.connected !== false || !room.controllerUid) return;
-      registerRecoveryFailure(room, room.controllerUid, "controller", now);
+      registerRecoveryFailure(
+        room, room.controllerUid, "controller", now, "disconnected",
+        typeof room.controllerPresence.lastSeen === "number" ? room.controllerPresence.lastSeen : now,
+      );
       return room;
     });
   },

@@ -117,12 +117,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
 
     // 확인되면 버튼 안에 체크를 그리고 잠깐 보여 준 뒤 다음 화면으로 넘깁니다.
     setState(() => _joinSucceeded = true);
-    await Future<void>.delayed(
-      MosiMotion.of(
-        context,
-        MosiMotion.check + const Duration(milliseconds: 300),
-      ),
-    );
+    await Future<void>.delayed(MosiMotion.of(context, MosiMotion.check));
     if (!mounted) return;
 
     try {

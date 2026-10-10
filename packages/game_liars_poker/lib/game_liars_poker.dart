@@ -41,11 +41,12 @@ class LiarsPokerGame extends TemplateGame {
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.portraitAndLandscape;
+  // 자리 배치 화면의 테이블이 확대되며 게임 화면의 보랏빛 펠트로 이어집니다.
+  // 게임 화면 배경을 코드로 그리므로 별도 배경 이미지는 없습니다.
   @override
-  Color get tableColor => LiarsPokerColors.primary;
+  Color get tableColor => LiarsPokerColors.felt;
   @override
-  ImageProvider get tableBackgroundImage =>
-      Assets.games.liarsPoker.images.background.background.game.provider();
+  ImageProvider? get tableBackgroundImage => null;
   @override
   ImageProvider get layoutTableImage =>
       Assets.games.liarsPoker.images.layout.layoutTable.game.provider();

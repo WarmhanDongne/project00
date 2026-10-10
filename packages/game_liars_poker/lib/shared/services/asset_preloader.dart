@@ -76,26 +76,13 @@ Future<void> preloadLiarsPokerAssets(
   }
 
   final images = Assets.games.liarsPoker.images;
+  // 배경·버튼·룰렛은 코드로 그립니다. 남은 그림은 카드와 결과·판정·
+  // 나가기 확인창에서 쓰는 것뿐입니다.
   final localAssets = <GameImage>[
-    // Liar's Poker 휴대폰은 세로·가로 회전을 모두 허용합니다. 현재 방향의
-    // 배경만 준비하면 관전 진입이나 회전 시 반대 방향 배경을 처음 디코딩하며
-    // 한 프레임 번쩍일 수 있으므로 휴대폰에서는 두 배경을 모두 준비합니다.
-    if (isPhone) ...[
-      images.background.backgroundPhone.game,
-      images.background.background.game,
-    ] else
-      images.background.background.game,
-    images.background.a.game,
-    images.background.k.game,
-    images.background.q.game,
     ...images.cards.values.game,
-    ...images.button.values.game,
-    ...images.icons.values.game,
+    if (!isPhone) ...images.button.values.game,
     ...images.modal.values.game,
     ...images.other.values.game,
-    images.table.tableAceWhite.game,
-    images.table.tableKingWhite.game,
-    images.table.tableQueenWhite.game,
   ];
 
   // 한꺼번에 모든 대형 PNG를 디코딩해 메모리가 튀지 않도록 작은 묶음으로 준비합니다.

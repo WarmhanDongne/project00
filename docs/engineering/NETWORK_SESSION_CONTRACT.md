@@ -32,14 +32,23 @@ controllerSessionId는 UID별 controller identity에 보존하며 기존 저장�
 | resumeRealtimeControllerRoom | roomInstanceId, controllerSessionId, expectedConnectionSeq, operationId | 같은 작업 재생; 새 복구 작업은 다음 접속 할당 |
 | fetchRealtimeRoomSession | roomCode, controller는 session token | 현재 room/member/connection context |
 | game_common_operation_status | roomInstanceId, operationId, 필요 시 membership/controller token | applied / stale / notApplied; 게임의 비공개 결과는 반환하지 않음 |
-| leaveRealtimeRoom 및 게임별 leave | 원래 roomInstanceId·membershipId·operationId | 원래 자격만 제거. applied/stale 확인 후 intent/identity 정리 |
-| closeRoom | 원래 roomInstanceId, controller token, operationId | 같은 방만 close. 응답 유실은 결과 조회 우선 |
+| leaveRealtimeRoom 및 게임별 leave | 원래 roomInstanceId·membershipId·operationId | 최초 requested는 직접 전송, awaitingResult는 결과 조회 우선. 원래 자격만 제거하고 applied/stale 확인 후 intent/identity 정리 |
+| closeRoom | 원래 roomInstanceId, controller token, operationId | 최초 requested는 직접 전송, awaitingResult 재시도는 결과 조회 우선. 같은 방만 close |
 | fetchRealtimeRoomGroupEntitlements | roomInstanceId, 현재 방 참가 자격 | 구매 조회 전후 revision/자격 검사. 다른 방 controller라도 현재 참가자는 조회 가능 |
 
 UID/역할별 identity와 미확정 transport/durable 작업은 직렬 저장한다.
 저장 실패면 전송하지 않으며 결과 미확정 기록은 TTL로 버리지 않는다.
 퇴장 의도가 남으면 자동 참가·heartbeat보다 결과 확인을 먼저 한다.
 join/resume 재생은 최신 접속을 되돌리지 않는다. 현재 sequence를 읽어 새 복구 작업을 만든다.
+2026-10-10 로비 지연 후보: 최초 requested 생성의 응답 connectionSeq=1은 서버가 할당한
+초기 접속을 저장하고 presence/단절 예약을 설정한다. 생성 재생·미확정 결과·진행된 접속
+세대·실제 재접속은 resume을 유지한다. 복구가 실패하면 생성 성공으로 반환하지 않는다.
+
+2026-10-10 후속 지연 후보: join 준비의 roomInstanceId와 본인 player 조회는 병행하며
+최종 membership/sequence 판정은 기존 join transaction이 수행한다. 최초 leave도 close와
+같이 사전 status 조회를 생략한다. 게임 시작 서버 준비는 공용 착석 연출과 병행하지만
+화면 전환은 준비/연출/배경이 모두 끝난 후다. [개발팀 공유 문서](NETWORK_LATENCY_IMPROVEMENTS.md)에
+원인, 변경 전후, 회귀 및 배포·실측 한계를 정리한다.
 
 ## 공용 게임 중단과 명령
 
@@ -63,12 +72,16 @@ nickname/characterId/profileImageUrl을 비교한다. heartbeat·접속 갱신�
 
 최초 실패만 public.recovery.paused/pauseId/pausedAt 및 server.recovery.timer를 만든다.
 timer는 kind=none 또는 kind=remaining으로 저장해 RTDB의 null 생략에도 마감 없음과 0ms 남음을 구분한다.
+pausedAt은 서버 감지 시각이다. 타이머는 서버가 검증한 현재 접속의 마지막 성공 heartbeat부터
+멈추며, 유효한 heartbeat가 없을 때만 감지 시각을 사용한다. onDisconnect는 connected만 false로
+바꿔 마지막 성공 lastSeen을 보존한다.
 추가 원인은 최초 남은 시간을 덮어쓰지 않는다. 생략된 빈 causes/ready는 빈 집합으로 처리한다.
 
 | 공용 callable | 역할과 결과 |
 | --- | --- |
 | game_common_recovery_report | 현재 접속 ready/failed와 reportSeq. failed에는 알려진 game ID만으로 보고 가능 |
 | game_common_interruption_report_stale_player | controller가 관찰한 접속·sequence·lastSeen이 현재와 같을 때 실패 원인 추가 |
+| game_common_interruption_report_stale_controller | player가 관찰한 controller 접속·sequence·lastSeen이 현재와 같을 때 실패 원인 추가 |
 | game_common_interruption_expire | 만료를 awaitingDecision으로 표시; 자동 제외/종료 없음 |
 | game_common_interruption_wait_more | controller가 만료된 현재 incident를 한 번 수락 시각부터 30초 연장 |
 | game_common_interruption_exclude_player | controller의 현재 incident/pause 선택. 실제 reducer preview 뒤 제외 |
@@ -126,9 +139,11 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 소진된 request는 새 호출을 시작하지 않는다. AppNetworkGuard는 실제 네트워크 오류를 기존 연결 UI로 보호한다.
 팝업이 게임 라우트 위에 올라와도 가드의 wrapper와 child 위치를 유지한다. 가려진 라우트의
 안내와 입력 차단만 비활성화하며 게임 State·구독을 폐기하거나 중첩 가드 소유권을 교체하지 않는다.
-2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임 준비와
-원인 없는 ready barrier는 기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
-실제 recovery causes/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
+2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임의 최초 준비는
+기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
+2026-10-10 복구 결정: 실제 pause가 시작된 뒤 원인이 먼저 해소된 ready barrier는 모든 필수 기기의
+준비가 끝날 때까지 일반 중단 안내를 유지하되 별도 퇴장·결정 버튼은 만들지 않는다.
+실제 recovery pause/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
 GameRecoveryLayer는 휴대폰의 GameRequestNotice 한 곳에 중단/실패와 필요한 재시도를 표시한다.
 준비 실패 안내는 늦은 데이터로 지우지 않으며 명시 재시도가 시작되면 닫는다.
 휴대폰 나가기는 기존 상단바·퇴장 모달을 사용한다. 준비 실패/실제 중단 중에도 기존 메뉴를 사용할 수 있다.
@@ -164,7 +179,10 @@ roomCreateSlots/roomCreateRequests의 reserved/created/terminal, generation CAS�
 늦은 생성 부활과 새 generation의 삭제를 막는다. 부분 매핑 실패는 자신의 방만 terminal로 보상한다.
 syncRoomCleanupQueue는 현재 방을 재조회한다. cleanupStaleRealtimeRooms는 due index 최대 300개와
 지속 key cursor 100개를 함께 처리한다. waiting 유예는 heartbeat 후 3분, playing/finished는 15분,
-명시 close는 cleanupAt을 따른다. 매핑·예약·slot은 원래 room/generation일 때만 정리한다.
+명시 close의 물리 정리는 cleanupAt을 따른다. 매핑·예약·slot은 원래 room/generation일 때만 정리한다.
+새 생성은 기존 controller 매핑/방의 UID·instance·generation·closed/terminal을 확인한 경우
+그 방의 creationOperationId/generation과 일치하는 created 슬롯만 기존 슬롯 CAS에서 교체한다.
+미확정 reserved 슬롯과 다른 generation은 유지한다. 종료 방의 보존 기간은 줄이지 않는다.
 실패는 backoff/cleanupPending, 최종 tombstone은 최소 식별·generation·종료 정보로 남긴다.
 조건부 생성·정리 CAS는 기존 runPrimedTransaction으로 value listener의 서버 값을 받은 뒤 실행한다.
 단독 get() 뒤의 초기 빈 SDK 캐시를 실제 부재로 판정하지 않는다. mapping 비교는 key 순서와 무관하며,
@@ -177,3 +195,19 @@ ready·barrier·입력 단계를 기록한다. debug event 200개와 독립 요�
 N/A/미완료 및 버퍼 유실을 구분한다. 실제 UID·방/게임/명령 ID·카드·역할·토큰은 기록하지 않는다.
 입력 단계는 실제 canSend가 true인 시점에 기록해 서버 ready 수락보다 앞선 성공으로 집계하지 않는다.
 release 기록은 비활성이다. 성능 판정은 E14 실기기 측정과 목표 합의가 필요하다.
+
+
+로비 계측 후보의 debug 클라이언트는 단계별 시간·허용 목록의 오류 코드만 기록한다.
+서버 create/close/operation_status는 handler 내부의 고정 단계·시간·성공 여부를
+`room_action_timing`으로 기록하며 사용자 식별자나 오류 원문을 포함하지 않는다.
+[실측과 개선 범위](../operations/ROOM_ACTION_LATENCY.md)를 따른다. 이는 배포 완료를 뜻하지 않는다.
+
+
+### 2026-10-10 준비 보고 최초 전송 후속 후보
+
+공용 명령은 Map 예약 전 미확정 여부를 판정한다. 최초 ready/failed 보고는 status 조회
+없이 전송하고, 이미 전송한 요청의 응답 유실 재시도만 같은 ID/domain으로 조회·재생한다.
+서버 ready 승인 실패 안내는 로컬 화면 준비 실패와 구분하며 늦은 데이터에도 원래 실패
+종류를 유지한다. debug 진단은 고정 단계/허용 오류 코드만 기록한다. 모든 필수 기기의
+ready 수락 전 pause/입력 보호와 기존 예산은 유지한다. 앱 반영·최종 검증 현황은
+[개발팀 공유](NETWORK_LATENCY_IMPROVEMENTS.md#2026-10-10-게임-준비-보고-수정-후보)를 따른다.

@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:game_final_call/game_final_call.dart';
 import 'package:game_holdem/game_holdem.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/recovery/models/room_session_identity.dart';
 import 'package:game_kit/recovery/services/callable_retry_policy.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
@@ -137,6 +138,84 @@ void main() {
     GameRecoverySession.forRoom('ABCDE', _identity.uid).retryCommand = null;
   });
 
+  for (final ready in [true, false]) {
+    test(
+      'fresh preparation report ready=$ready skips status lookup even when lookup is unavailable',
+      () async {
+        final session = GameRecoverySession.forRoom('ABCDE', _identity.uid);
+        session.preparationBatch = RoomRecoveryBatch(wait: (_) async {});
+        session.transportRecovering = false;
+        session.transportConnected = true;
+        session.paused = true;
+        session.serverConfirmed = false;
+        final calls = _Calls()
+          ..reply = (name, data) async => name == 'game_common_operation_status'
+              ? _error('internal', 'status endpoint unavailable')
+              : [
+                  {'status': 'accepted'},
+                ];
+        calls.install();
+        final result = await GameInterruptionCommandService().report(
+          roomCode: 'ABCDE',
+          context: session.context!.envelope,
+          reportSeq: 901,
+          ready: ready,
+        );
+        expect(result['status'], 'accepted');
+        expect(calls.forName('game_common_operation_status'), isEmpty);
+        final report = calls.forName('game_common_recovery_report').single;
+        expect(report['state'], ready ? 'ready' : 'failed');
+        expect(report['role'], 'controller');
+        expect(report['connectionId'], _identity.connectionId);
+      },
+    );
+  }
+
+  test(
+    'lost ready response retains the original report when status lookup fails',
+    () async {
+      final session = GameRecoverySession.forRoom('ABCDE', _identity.uid);
+      session.preparationBatch = RoomRecoveryBatch(wait: (_) async {});
+      session.transportRecovering = false;
+      session.transportConnected = true;
+      GameCommunicationLog.instance.clear();
+      final calls = _Calls()
+        ..reply = (name, data) async => name == 'game_common_operation_status'
+            ? _error('internal', 'private diagnostic must not be logged')
+            : _error('unavailable', 'lost response');
+      calls.install();
+      final service = GameInterruptionCommandService();
+      await expectLater(
+        service.report(
+          roomCode: 'ABCDE',
+          context: session.context!.envelope,
+          reportSeq: 902,
+          ready: true,
+        ),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+      final original = calls.forName('game_common_recovery_report').single;
+      expect(
+        calls.forName('game_common_operation_status').single['operationId'],
+        original['commandId'],
+      );
+      final log = GameCommunicationLog.instance.entries.singleWhere(
+        (e) => e.title == '미확정 요청 결과 조회 실패',
+      );
+      expect(log.detail, contains('internal'));
+      expect(log.detail, isNot(contains('private diagnostic')));
+      calls.reply = (name, data) async => [
+        {
+          'status': name == 'game_common_operation_status'
+              ? 'applied'
+              : 'accepted',
+        },
+      ];
+      expect((await session.retryCommand!())['status'], 'accepted');
+      expect(calls.forName('game_common_recovery_report').last, original);
+    },
+  );
+
   test(
     'ready retry preserves operation and report sequence and retrieves saved response',
     () async {
@@ -176,6 +255,11 @@ void main() {
       expect(result['status'], 'accepted');
       final sent = calls.forName('game_common_recovery_report');
       expect(sent.length, 2);
+      expect(calls.forName('game_common_operation_status'), hasLength(1));
+      expect(
+        calls.requests.first['functionName'],
+        'game_common_recovery_report',
+      );
       expect(sent.last, sent.first);
       expect(sent.first['reportSeq'], 7);
       expect(

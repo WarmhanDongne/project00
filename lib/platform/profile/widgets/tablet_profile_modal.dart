@@ -38,10 +38,12 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
   bool _saved = false;
   bool _isPickingImage = false;
   bool _isDeletingAccount = false;
+  bool _isLoggingOut = false;
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
-  bool get _isBusy => _isSaving || _isPickingImage || _isDeletingAccount;
+  bool get _isBusy =>
+      _isSaving || _isPickingImage || _isDeletingAccount || _isLoggingOut;
 
   @override
   void initState() {
@@ -116,12 +118,7 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
         _isSaving = false;
         _saved = true;
       });
-      await Future<void>.delayed(
-        MosiMotion.of(
-          context,
-          MosiMotion.check + const Duration(milliseconds: 420),
-        ),
-      );
+      await Future<void>.delayed(MosiMotion.of(context, MosiMotion.check));
       if (mounted) Navigator.of(context).pop(true);
     } on AuthServiceException catch (error) {
       if (mounted) _showMessage(error.message);
@@ -132,9 +129,18 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
 
   Future<void> _logout() async {
     if (_isBusy) return;
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pop(true);
+    final navigator = Navigator.of(context);
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoggingOut = true);
+    try {
+      await FirebaseAuth.instance.signOut();
+      // 상점 등에서 연 프로필도 로그인 위에 이전 route를 남기지 않습니다.
+      if (navigator.mounted) navigator.popUntil((route) => route.isFirst);
+    } on FirebaseAuthException catch (_) {
+      if (mounted) _showMessage('로그아웃하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
   }
 
   Future<void> _deleteAccount() async {

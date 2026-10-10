@@ -13,10 +13,7 @@ import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_kit/sound/providers/sound_provider.dart';
 import 'package:game_kit/sound/sound_effects.dart';
-import 'package:game_kit/gen/assets.gen.dart';
-import 'package:game_kit/core/constants/room_character.dart';
 import 'package:roulette/roulette.dart';
-import 'package:game_kit/game_assets.dart';
 
 // ============================================================
 
@@ -45,13 +42,12 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   /// ============================================================
   /// 기준 디자인 사이즈
   ///
-  /// 모든 iPad에서 이 1300 × 900 화면을 기준으로
-  /// 전체 룰렛 UI가 동일한 비율로 확대/축소됩니다.
+  /// 정사각형 1000 × 1000 캔버스를 기준으로 전체 룰렛 UI가 같은 비율로
+  /// 확대/축소됩니다. 정사각형이라 게임이 대상 플레이어 쪽으로 통째로
+  /// 돌려도 잘리지 않습니다. 포인터와 레버는 캔버스 위쪽(대상 쪽)에 있습니다.
   /// ============================================================
-  static const double _designWidth = 1300;
-  static const double _designHeight = 900;
-  static const double _upperLeverStickEnd = 0.27499999999999986;
-  static const double _lowerLeverStickStart = 0.7387499999999977;
+  static const double _designWidth = 1000;
+  static const double _designHeight = 1000;
 
   static const List<bool> _firstAttemptSections = [
     true,
@@ -159,10 +155,13 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
   void _onLeverDragStart(DragStartDetails details) {
     if (_isLeverLocked || _isSpinning) return;
 
-    /// GestureDetector 자체도 1300 × 900 기준 캔버스와
+    /// GestureDetector 자체도 1000 × 1000 기준 캔버스와
     /// 같이 스케일링되기 때문에 이 좌표를 기기별로
-    /// 다시 계산할 필요가 없습니다.
-    const initialHeadCenter = Offset(265, 150);
+    /// 다시 계산할 필요가 없습니다. 레버 손잡이의 처음 중심입니다.
+    const initialHeadCenter = Offset(
+      RouletteWheel.leverGestureWidth / 2,
+      RouletteWheel.leverHeadTop + RouletteWheel.leverHeadSize / 2,
+    );
 
     _isLeverDragActive =
         (details.localPosition - initialHeadCenter).distance <= 200;
@@ -173,7 +172,8 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       return;
     }
 
-    final nextValue = _leverController.value + (details.delta.dy / 400);
+    final nextValue =
+        _leverController.value + (details.delta.dy / RouletteWheel.leverTravel);
 
     _leverController.value = nextValue.clamp(0.0, 1.0).toDouble();
   }
@@ -223,7 +223,8 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
       colorBuilder: (index) {
         final isEliminated = sections[index];
 
-        return isEliminated ? const Color(0xffd10000) : const Color(0xff111111);
+        if (isEliminated) return const Color(0xFFE0243A);
+        return index.isEven ? const Color(0xFF24152E) : const Color(0xFF34204A);
       },
       textBuilder: (_) => '',
     );
@@ -403,8 +404,8 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        /// 룰렛
-        Center(
+        /// 룰렛 · 포인터 · 레버
+        Positioned.fill(
           child: RouletteWheel(
             controller: _controller,
             group: _group,
@@ -420,10 +421,10 @@ class _PenaltyRouletteState extends State<PenaltyRoulette>
         /// 룰렛과 함께 동일한 비율로 스케일됩니다.
         /// ========================================================
         Positioned(
-          top: 120,
-          right: -150,
-          bottom: 120,
-          width: 420,
+          left: RouletteWheel.leverLeft - 50,
+          top: 0,
+          width: RouletteWheel.leverGestureWidth,
+          height: RouletteWheel.leverGestureHeight,
           child: IgnorePointer(
             ignoring: _isLeverLocked || _isSpinning,
             child: GestureDetector(
@@ -477,6 +478,10 @@ class _SuspenseDecelerationCurve extends Curve {
 // 룰렛 원판
 // ================================================================
 
+/// 금색 테두리 원판, 가운데 축, 위쪽 포인터와 오른쪽 위 레버입니다.
+///
+/// 1000 × 1000 캔버스 기준 좌표로 그립니다. 위쪽이 룰렛을 돌리는 사람
+/// 쪽이며, 레버는 그 사람이 손을 뻗기 쉬운 오른쪽 위에 있습니다.
 class RouletteWheel extends StatelessWidget {
   const RouletteWheel({
     super.key,
@@ -486,264 +491,229 @@ class RouletteWheel extends StatelessWidget {
     required this.centerCharacterId,
   });
 
-  /// 룰렛 자체의 기준 크기
+  /// 원판(금색 테두리 포함)의 지름입니다.
   static const double _rouletteSize = 700;
+  static const double _canvas = 1000;
+
+  static const double leverLeft = 800;
+  static const double leverWidth = 120;
+  static const double leverHeadTop = 40;
+  static const double leverHeadSize = 84;
+
+  /// 손잡이가 끝까지 내려가는 거리입니다. 드래그 거리와 같습니다.
+  static const double leverTravel = 200;
+  static const double leverGestureWidth = leverWidth + 100;
+  static const double leverGestureHeight = 420;
+
+  static const Color _gold = Color(0xFFC9A25B);
+  static const Color _abyss = Color(0xFF0D0912);
+  static const Color _ivory = Color(0xFFF3EEE6);
+  static const Color _red = Color(0xFFE0243A);
+  static const Color _plum = Color(0xFF3A2350);
 
   final RouletteController controller;
   final RouletteGroup group;
   final double leverProgress;
+
+  /// 이전 디자인의 가운데 얼굴 자리입니다. 새 디자인은 축만 그립니다.
   final String? centerCharacterId;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: _rouletteSize,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          // ========================================================
-          // 기본 룰렛
-          // ========================================================
-          SizedBox.square(
-            dimension: _rouletteSize,
-            child: Roulette(
-              group: group,
-              controller: controller,
-              style: const RouletteStyle(
-                dividerThickness: 5,
-                dividerColor: Color(0xfffafafa),
-                centerStickSizePercent: 0.12,
-                centerStickerColor: Color(0xfffafafa),
+    const wheelInset = (_canvas - _rouletteSize) / 2;
+    const rim = _rouletteSize * 12 / 480;
+    const sectorInset = _rouletteSize * 22 / 480;
+    const sectorSize = _rouletteSize - sectorInset * 2;
+    const hub = _rouletteSize * 100 / 480;
+    const knob = _rouletteSize * 40 / 480;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // 금색 테두리와 그 안쪽 검은 고리입니다.
+        Positioned(
+          left: wheelInset,
+          top: wheelInset,
+          width: _rouletteSize,
+          height: _rouletteSize,
+          child: IgnorePointer(
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _gold,
+                // 게임이 원판을 돌려 놓아도 어느 쪽에서나 같도록 그림자를
+                // 한쪽으로 밀지 않고 고르게 퍼뜨립니다.
+                boxShadow: [
+                  BoxShadow(color: Color(0x99000000), blurRadius: 90),
+                ],
+              ),
+              padding: const EdgeInsets.all(rim),
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _abyss,
+                ),
               ),
             ),
           ),
-
-          // ========================================================
-          // 실버 링
-          // ========================================================
-          const _SilverRing(size: 440, width: 5),
-
-          const _SilverRing(size: 290, width: 10),
-
-          // ========================================================
-          // 기본 화살표
-          // ========================================================
-          const Positioned(
-            top: -32,
-            child: Icon(
-              Icons.arrow_drop_down,
-              size: 70,
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black,
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
+        ),
+        // 회전하는 칸입니다.
+        Positioned(
+          left: wheelInset + sectorInset,
+          top: wheelInset + sectorInset,
+          width: sectorSize,
+          height: sectorSize,
+          child: Roulette(
+            group: group,
+            controller: controller,
+            style: const RouletteStyle(
+              dividerThickness: 2,
+              dividerColor: Color(0x59F3EEE6),
+              centerStickSizePercent: 0,
+              centerStickerColor: Colors.transparent,
+            ),
+          ),
+        ),
+        // 가운데 축입니다.
+        const Positioned(
+          left: (_canvas - hub) / 2,
+          top: (_canvas - hub) / 2,
+          width: hub,
+          height: hub,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _abyss,
+                border: Border.fromBorderSide(
+                  BorderSide(color: _gold, width: 9),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const Positioned(
+          left: (_canvas - knob) / 2,
+          top: (_canvas - knob) / 2,
+          width: knob,
+          height: knob,
+          child: IgnorePointer(child: _GoldKnob()),
+        ),
+        // 위쪽 포인터입니다.
+        const Positioned(
+          left: (_canvas - 64) / 2,
+          top: wheelInset - 26,
+          width: 64,
+          height: 76,
+          child: IgnorePointer(
+            child: CustomPaint(painter: _PointerPainter(_ivory)),
+          ),
+        ),
+        // 레버: 받침 · 막대 · 빨간 손잡이 순서로 쌓습니다.
+        Positioned(
+          left: leverLeft,
+          top: leverHeadTop + leverHeadSize / 2,
+          width: leverWidth,
+          height: leverTravel + 80,
+          child: IgnorePointer(
+            child: Column(
+              children: [
+                Container(
+                  width: 18,
+                  height: leverTravel + 20,
+                  decoration: BoxDecoration(
+                    color: _gold,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                ),
+                Container(
+                  width: leverWidth,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: _plum,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _gold, width: 4),
+                  ),
                 ),
               ],
             ),
           ),
-
-          // ========================================================
-          // 룰렛 외부 테두리
-          // ========================================================
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Transform.translate(
-                offset: const Offset(0, 35),
-                child: Transform.scale(
-                  scale: 1.6,
-                  child: Assets.images.widgets.roulette.border.game.image(
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ========================================================
-          // 중앙 스톤
-          // ========================================================
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Transform.translate(
-                offset: const Offset(0, 22),
-                child: Transform.scale(
-                  scale: 0.9,
-                  child: Assets.images.widgets.roulette.centerStone.game.image(
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ========================================================
-          // 중앙 프로필
-          // ========================================================
-          if (centerCharacterId != null)
-            Positioned(
-              top: (_rouletteSize - 320) / 2 + 22,
-              left: (_rouletteSize - 270) / 2,
-              child: IgnorePointer(
-                child: SizedBox.square(
-                  dimension: 270,
-                  child: ClipOval(
-                    child: Image.asset(
-                      roomCharacterAssetPath(centerCharacterId),
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // ========================================================
-          // 상단 포인터
-          // ========================================================
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Transform.translate(
-                offset: const Offset(0, -410),
-                child: Transform.scale(
-                  scale: 0.8,
-                  child: Assets.images.widgets.roulette.pointer.game.image(
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ========================================================
-          // 레버 바닥
-          // ========================================================
-          Positioned(
-            right: -400,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: SizedBox(
-                width: 450,
-                child: Assets.images.widgets.roulette.leverBottom.game.image(
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          ),
-
-          // ========================================================
-          // 레버 중앙 검은 원
-          // ========================================================
-          Positioned(
-            top: 330,
-            right: -175,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color.fromARGB(255, 0, 0, 0),
-              ),
-            ),
-          ),
-
-          // ========================================================
-          // 레버 스틱 - 위
-          // ========================================================
-          if (leverProgress < _PenaltyRouletteState._upperLeverStickEnd)
-            Positioned(
-              right: -230,
-              top: -120,
-              bottom: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 150,
-                  height: 150,
-                  child: ClipOval(
-                    child: Assets.images.widgets.roulette.leverStick.game.image(
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // ========================================================
-          // 레버 스틱 - 아래
-          // ========================================================
-          if (leverProgress > _PenaltyRouletteState._lowerLeverStickStart)
-            Positioned(
-              right: -230,
-              top: 120,
-              bottom: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 150,
-                  height: 150,
-                  child: ClipOval(
-                    child: Transform.rotate(
-                      angle: math.pi,
-                      child: Assets.images.widgets.roulette.leverStick.game
-                          .image(fit: BoxFit.contain),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // ========================================================
-          // 빨간 레버 손잡이
-          // ========================================================
-          Positioned(
-            right: -470,
-            top: 0,
-            bottom: 400,
-            child: IgnorePointer(
-              child: Transform.translate(
-                offset: Offset(0, 400 * leverProgress),
-                child: Center(
-                  child: SizedBox(
-                    width: 630,
-                    child: Transform.scale(
-                      scale: 1.3,
-                      child: Assets.images.widgets.roulette.leverHead.game
-                          .image(fit: BoxFit.contain),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        Positioned(
+          left: leverLeft + (leverWidth - leverHeadSize) / 2,
+          top: leverHeadTop + leverTravel * leverProgress,
+          width: leverHeadSize,
+          height: leverHeadSize,
+          child: const IgnorePointer(child: _LeverBall(color: _red)),
+        ),
+      ],
     );
   }
 }
 
-// ================================================================
-// 룰렛 중앙 실버 링
-// ================================================================
-
-class _SilverRing extends StatelessWidget {
-  const _SilverRing({required this.size, required this.width});
-
-  final double size;
-  final double width;
+class _GoldKnob extends StatelessWidget {
+  const _GoldKnob();
 
   @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xfffafafa), width: width),
-        ),
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(
+        center: Alignment(-.3, -.35),
+        radius: .9,
+        colors: [Color(0xFFE2C27E), Color(0xFFC9A25B), Color(0xFF8E7038)],
+        stops: [0, .55, 1],
       ),
-    );
+    ),
+  );
+}
+
+class _LeverBall extends StatelessWidget {
+  const _LeverBall({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(
+        center: const Alignment(-.35, -.4),
+        radius: .9,
+        colors: [
+          Color.lerp(color, Colors.white, .4)!,
+          color,
+          Color.lerp(color, Colors.black, .35)!,
+        ],
+        stops: const [0, .5, 1],
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x80000000),
+          blurRadius: 24,
+          offset: Offset(0, 12),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PointerPainter extends CustomPainter {
+  const _PointerPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas
+      ..drawShadow(path, Colors.black, 6, false)
+      ..drawPath(path, Paint()..color = color);
   }
+
+  @override
+  bool shouldRepaint(_PointerPainter oldDelegate) => color != oldDelegate.color;
 }

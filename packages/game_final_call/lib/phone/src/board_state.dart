@@ -209,6 +209,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     final expectedTurnUid = game.turnUid;
     final expectedDeadline = game.turnDeadlineAt;
     final submittedRevision = game.revision;
+    if (expectedDeadline != null && ServerClock.hasPassed(expectedDeadline)) {
+      return;
+    }
 
     // 버리기와 교체 모두 카드를 먼저 떠나보냅니다. 서버 응답 시점에
     // 애니메이션을 되돌리지 않고 공개 상태가 바뀔 때까지 유지합니다.
@@ -216,22 +219,13 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       replacementInProgress = true;
       replacingCardId = replaceCardId;
     });
-    await Future<void>.delayed(FinalCallPhoneTiming.phoneCardReplace);
-    if (!mounted) return;
-
-    if (game.turnUid != expectedTurnUid ||
-        (expectedDeadline != null && ServerClock.hasPassed(expectedDeadline)) ||
-        !game.canCompleteTurn) {
-      game.clearError();
-      setState(() {
-        replacementInProgress = false;
-        replacingCardId = null;
-        _turnSubmissionRevision = null;
-      });
-      return;
-    }
-
-    final completed = await game.completeTurn(replaceCardId);
+    // Send while the outgoing card animates; the command captures/validates the
+    // current turn immediately. Keep the animation's minimum display duration.
+    final results = await Future.wait<bool>([
+      game.completeTurn(replaceCardId),
+      Future<bool>.delayed(FinalCallPhoneTiming.phoneCardReplace, () => true),
+    ]);
+    final completed = results.first;
     if (!mounted) return;
     setState(() {
       if (completed) {

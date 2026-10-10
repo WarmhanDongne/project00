@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
+import 'package:game_final_call/shared/widgets/card_view.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:project00/platform/home/tablet/widgets/detail/game_detail_previews.dart';
 
 void main() {
@@ -180,7 +182,11 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       final images = tester.widgetList<Image>(find.byType(Image)).toList();
       // 홀덤은 다운로드형 게임이라 로비 구성품을 에셋 없이 코드로 그립니다.
-      expect(images, game == 'holdem' ? isEmpty : isNotEmpty);
+      // 홀덤과 파이널콜은 게임과 같은 카드·버튼 위젯을 코드로 그립니다.
+      expect(
+        images,
+        game == 'holdem' || game == 'final_call' ? isEmpty : isNotEmpty,
+      );
       final names = <String>{};
       for (final image in images) {
         final asset = image.image as AssetImage;
@@ -197,18 +203,17 @@ void main() {
         for (final face in ['A', 'K', 'Q', 'Joker', 'back']) {
           expect(names.any((p) => p.endsWith('white $face.webp')), isTrue);
         }
-        expect(names.any((p) => p.endsWith('button_fold.png')), isTrue);
+        // 휴대폰 버튼은 게임과 같은 퍽 위젯으로 그립니다.
+        expect(find.bySemanticsLabel('Liar, 제출, Fold 버튼'), findsOneWidget);
       } else if (game == 'final_call') {
-        for (final color in ['red', 'blue', 'yellow', 'green']) {
+        for (final color in ['빨강', '파랑', '노랑', '초록']) {
           for (var n = 1; n <= 10; n++) {
-            expect(
-              names.any((p) => p.endsWith('card_${color}_$n.webp')),
-              isTrue,
-            );
+            expect(find.bySemanticsLabel('$color $n'), findsWidgets);
           }
         }
-        expect(names.any((p) => p.endsWith('button_call.webp')), isTrue);
-        expect(names.any((p) => p.endsWith('icon_heart_red.webp')), isTrue);
+        expect(find.byType(FinalCallCardFace), findsNWidgets(44));
+        expect(find.byType(FinalCallPopHeart), findsNWidgets(3));
+        expect(find.bySemanticsLabel('CALL 버튼'), findsOneWidget);
       } else if (game == 'holdem') {
         expect(find.bySemanticsLabel('카드 뒷면'), findsNWidgets(4));
         for (final suit in ['스페이드', '하트', '다이아', '클로버']) {

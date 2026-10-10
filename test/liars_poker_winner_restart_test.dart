@@ -240,6 +240,9 @@ class _DialogObserver extends NavigatorObserver {
 
 class _Room extends Fake implements GameRoomContext {
   @override
+  Stream<bool> watchServerConnection() => const Stream<bool>.empty();
+
+  @override
   String? get roomCode => 'WINNER';
   @override
   List<GameRoomPlayer> get players => [];

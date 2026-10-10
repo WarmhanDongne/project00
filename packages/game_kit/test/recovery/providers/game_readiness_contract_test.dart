@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -124,7 +126,10 @@ void main() {
       expect(game.localUsable, true);
       expect(game.recoverySession.serverConfirmed, false);
       await tester.pump(const Duration(seconds: 31));
-      expect(container.read(provider).errorMessage, isNotNull);
+      expect(
+        container.read(provider).errorMessage,
+        '서버에서 게임 준비 완료를 확인하지 못했어요. 다시 연결해주세요.',
+      );
       expect(game.recoverySession.canSend, false);
       commands.readyResult!.complete({'status': 'accepted'});
       await tester.pump();
@@ -132,6 +137,55 @@ void main() {
       expect(commands.reports.where((r) => r['ready'] == false).length, 1);
     },
   );
+  testWidgets(
+    'ready report error is distinct from asset failure and remains until retry',
+    (tester) async {
+      start();
+      GameCommunicationLog.instance.clear();
+      final game = container.read(provider.notifier);
+      commands.readyResult = Completer<Map<String, dynamic>>();
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      commands.readyResult!.completeError(
+        FirebaseFunctionsException(
+          code: 'internal',
+          message: 'private payload must not be logged',
+        ),
+      );
+      await tester.pump();
+      const message = '서버에서 게임 준비 완료를 확인하지 못했어요. 다시 연결해주세요.';
+      expect(container.read(provider).errorMessage, message);
+      expect(game.recoverySession.canSend, false);
+      expect(commands.reports.last['ready'], false);
+      final log = GameCommunicationLog.instance.entries.singleWhere(
+        (entry) => entry.title == '게임 준비 확인 실패',
+      );
+      expect(log.detail, 'stage=ready_report code=internal');
+      expect(
+        GameCommunicationLog.instance.entries
+            .map((entry) => entry.asText)
+            .join(),
+        isNot(contains('private payload')),
+      );
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      expect(container.read(provider).errorMessage, message);
+      expect(game.recoverySession.canSend, false);
+      commands.readyResult = null;
+      await game.retryRecovery();
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(provider).errorMessage, isNull);
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+
   testWidgets('ignored report is not confirmation of a ready state', (
     tester,
   ) async {

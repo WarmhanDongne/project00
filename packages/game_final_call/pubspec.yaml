@@ -20,13 +20,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/games/final_call/animations/
-    - assets/games/final_call/images/background/
-    - assets/games/final_call/images/button/
-    - assets/games/final_call/images/cards/
-    - assets/games/final_call/images/icons/
-    - assets/games/final_call/images/layout/
     - assets/games/final_call/images/modal/
-    - assets/games/final_call/images/other/
     - assets/games/final_call/sounds/
 flutter_gen:
   output: lib/gen/

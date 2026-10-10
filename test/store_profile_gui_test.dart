@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
@@ -26,6 +27,72 @@ void main() {
   TestFirebaseCoreHostApi.setUp(_FirebaseCore());
   setUpAll(() async => Firebase.initializeApp());
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('로그아웃 중 중복 요청을 막고 실패 후 재시도·성공 시 상점 route까지 닫는다', (tester) async {
+    final messenger = tester.binding.defaultBinaryMessenger;
+    const channel =
+        'dev.flutter.pigeon.firebase_auth_platform_interface.FirebaseAuthHostApi.signOut';
+    var response = Completer<ByteData?>();
+    var calls = 0;
+    messenger.setMockMessageHandler(channel, (_) {
+      calls++;
+      return response.future;
+    });
+    addTearDown(() => messenger.setMockMessageHandler(channel, null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => Scaffold(
+                    body: TextButton(
+                      onPressed: () => showMosiDialog<bool>(
+                        context: context,
+                        builder: (_) =>
+                            TabletProfileModal(authService: _Auth()),
+                      ),
+                      child: const Text('상점 프로필'),
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('홈'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('홈'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('상점 프로필'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('로그아웃'));
+    await tester.pump();
+    await tester.tap(find.text('로그아웃'));
+    expect(calls, 1);
+    response.complete(
+      const StandardMessageCodec().encodeMessage([
+        'network-request-failed',
+        'test',
+        null,
+      ]),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TabletProfileModal), findsOneWidget);
+    expect(find.text('로그아웃하지 못했습니다. 잠시 후 다시 시도해주세요.'), findsOneWidget);
+    response = Completer<ByteData?>();
+    await tester.tap(find.text('로그아웃'));
+    await tester.pump();
+    expect(calls, 2);
+    response.complete(const StandardMessageCodec().encodeMessage([null]));
+    await tester.pumpAndSettle();
+    expect(find.byType(TabletProfileModal), findsNothing);
+    expect(find.text('상점 프로필'), findsNothing);
+    expect(find.text('홈'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('프로필에서 내 색을 제거하고 탈퇴 취소/실패/성공을 처리한다', (tester) async {
     final auth = _Auth();

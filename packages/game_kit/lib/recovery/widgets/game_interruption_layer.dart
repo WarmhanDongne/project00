@@ -6,7 +6,7 @@ import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 enum GameInterruptionPresentation { player, tabletController }
 
-/// Actual incidents use existing notices; a cause-free ready barrier stays silent.
+/// 실제 복구 중단은 원인이 해소된 준비 barrier까지 기존 안내로 표시합니다.
 class GameInterruptionLayer extends StatefulWidget {
   const GameInterruptionLayer({
     super.key,
@@ -104,7 +104,9 @@ class _GameInterruptionLayerState extends State<GameInterruptionLayer> {
   Widget build(BuildContext context) {
     final current = widget.interruption;
     if (current == null ||
-        (current.causes.isEmpty && current.playerUid.isEmpty)) {
+        (current.pauseId == null &&
+            current.causes.isEmpty &&
+            current.playerUid.isEmpty)) {
       return const SizedBox.shrink();
     }
     final controller =

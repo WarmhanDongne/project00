@@ -157,9 +157,8 @@ class MosiAuthTransition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 240);
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    const duration = Duration(milliseconds: 240);
     return AnimatedSize(
       duration: duration,
       alignment: Alignment.topCenter,
@@ -181,11 +180,20 @@ class MosiAuthTransition extends StatelessWidget {
         layoutBuilder: (current, previous) => Stack(
           alignment: Alignment.topCenter,
           children: [
-            for (final child in previous)
+            // 진입/퇴장 모두 같은 key와 위젯 구조를 유지합니다. 퇴장할 때만
+            // wrapper를 추가하면 RegisterScreen이 재생성되어 링크를 재사용합니다.
+            for (final child in [...previous, ?current])
               ExcludeFocus(
-                child: ExcludeSemantics(child: IgnorePointer(child: child)),
+                key: child.key,
+                excluding: child != current,
+                child: ExcludeSemantics(
+                  excluding: child != current,
+                  child: IgnorePointer(
+                    ignoring: child != current,
+                    child: child,
+                  ),
+                ),
               ),
-            ?current,
           ],
         ),
         child: child,

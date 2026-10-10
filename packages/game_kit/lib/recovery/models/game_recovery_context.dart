@@ -56,6 +56,12 @@ class GameRecoverySession extends ChangeNotifier with FrameSafeNotifier {
   RoomRecoveryBatch? preparationBatch;
   bool transportConnected = true;
   bool transportRecovering = false;
+
+  /// 휴대폰이 관찰한 진행 기기 접속 상태입니다.
+  ///
+  /// 휴대폰 자신의 Firebase transport와 별개입니다. 태블릿 재연결 안내가
+  /// 표시되는 동안 로컬 타이머도 명령을 보내지 못하게 합니다.
+  bool controllerAvailable = true;
   Future<void> Function()? reconnect;
   Map<dynamic, dynamic>? publicValue;
   VoidCallback? retry;
@@ -71,6 +77,7 @@ class GameRecoverySession extends ChangeNotifier with FrameSafeNotifier {
       localUsable &&
       transportConnected &&
       !transportRecovering &&
+      controllerAvailable &&
       serverConfirmed &&
       !paused &&
       !leaving;
