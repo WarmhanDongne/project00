@@ -75,7 +75,10 @@ class GameRecoveryLayer extends StatelessWidget {
                 interruption?.failureMessage ??
                 request?.message ??
                 '게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.',
-            onRetry: session?.localUsable == false && request?.message != null
+            onRetry:
+                session != null &&
+                    (!session!.localUsable || !session!.serverConfirmed) &&
+                    request?.message != null
                 ? connection?.onRetry ?? session?.retry
                 : null,
           ),

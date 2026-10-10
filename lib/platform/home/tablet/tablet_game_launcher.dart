@@ -19,6 +19,7 @@ import 'package:project00/platform/home/gamelist/service/game_compatibility.dart
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
+import 'package:project00/platform/home/tablet/tablet_game_start.dart';
 
 /// 로비를 유지한 채 자리 배치에서 게임으로 이어지는 기존 시작 흐름입니다.
 Future<void> launchTabletGame({
@@ -185,6 +186,15 @@ class _TabletGameLauncher {
     var startedGame = false;
 
     Future<bool> cancel() async {
+      if (await hasPendingTabletGameStart(roomCode)) {
+        if (layoutContext.mounted) {
+          _showMessage(
+            layoutContext,
+            '게임 시작 요청의 결과를 먼저 확인해주세요. 설정 완료로 다시 확인할 수 있습니다.',
+          );
+        }
+        return false;
+      }
       final cleared = await provider.clearSelectedGame();
       if (!layoutContext.mounted) return false;
       if (!cleared) {
@@ -200,22 +210,26 @@ class _TabletGameLauncher {
       PlayerLayoutModel completedLayout, {
       Map<String, Object?>? options,
     }) async {
-      //자리 realtime database에 저장
-      final saved = await provider.savePlayerSeatIndexes({
-        for (final player in completedLayout.players)
-          player.uid: player.seatIndex,
-      });
-      if (!layoutContext.mounted) return false;
-      if (!saved) {
-        _showMessage(
-          layoutContext,
-          provider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
-        );
-        return false;
-      }
-
       try {
-        await templateGame.startGame(roomCode, options: options);
+        final prepared = await prepareTabletGameStart(
+          roomCode: roomCode,
+          saveSeats: () => provider.savePlayerSeatIndexes({
+            for (final player in completedLayout.players)
+              player.uid: player.seatIndex,
+          }),
+          startGame: () => templateGame.startGame(roomCode, options: options),
+          isCurrent: () =>
+              layoutContext.mounted && provider.roomCode == roomCode,
+        );
+        if (!prepared) {
+          if (layoutContext.mounted && provider.roomCode == roomCode) {
+            _showMessage(
+              layoutContext,
+              provider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+            );
+          }
+          return false;
+        }
         startedGame = true;
       } catch (error) {
         if (!layoutContext.mounted) return false;
@@ -232,6 +246,8 @@ class _TabletGameLauncher {
     /// 원인을 알 수 없는 문구만 보입니다.
     Future<void> handleRosterChanged() async {
       if (startedGame || !layoutContext.mounted) return;
+      if (await hasPendingTabletGameStart(roomCode)) return;
+      if (!layoutContext.mounted || startedGame) return;
       // 화면을 닫기 전에 미리 잡아 둡니다. pop 뒤에는 이 context로 messenger를
       // 찾을 수 없어 안내가 사라진 화면과 함께 묻힙니다.
       final messenger = ScaffoldMessenger.of(layoutContext);

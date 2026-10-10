@@ -11,6 +11,43 @@ import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 void main() {
+  testWidgets(
+    'own ready acknowledgement failure exposes retry while locally usable',
+    (tester) async {
+      final session = GameRecoverySession()..localUsable = true;
+      var retries = 0;
+      session.retry = () => retries++;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GameRecoveryLayer(
+              session: session,
+              request: const GameRequestRecovery(
+                message: '화면 준비를 확인하지 못했어요. 다시 연결해주세요.',
+              ),
+              interruption: GameInterruptionRecovery(
+                state: GameInterruption.fromMap({
+                  'paused': true,
+                  'pauseId': 'pause',
+                  'causes': {
+                    'player:me': {'uid': 'me', 'reason': 'preparationFailed'},
+                  },
+                }),
+                currentUid: 'me',
+              ),
+              child: const Text('메뉴'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('재시도'), findsOneWidget);
+      expect(find.text('메뉴'), findsOneWidget);
+      await tester.tap(find.text('재시도'));
+      expect(retries, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      session.dispose();
+    },
+  );
   testWidgets('정상 연결 대기는 오래 걸려도 기존 배경만 유지한다', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

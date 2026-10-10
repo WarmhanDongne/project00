@@ -581,6 +581,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   }
 
   Widget _buildGameContent(LiarsPokerController game) {
+    final rouletteScope = game.rouletteScope;
     _startBackgroundMusicOnDeal();
     final flowConfig = buildLiarsPokerTabletFlowConfig(roundNumber: game.round);
     return Scaffold(
@@ -735,6 +736,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                             !game.isInsufficientPlayersEnding
                         ? LiarsPokerTabletGamePenalty(
                             key: ValueKey(
+                              '${rouletteScope}_'
                               '${game.penaltyTargetUid}_'
                               '${game.penaltyAttemptCount}_'
                               '${game.rouletteRetry}',
@@ -746,8 +748,12 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                                 )?.characterId ??
                                 'frog',
                             isResolving: game.isResolvingPenalty,
-                            onPrepareResult: game.prepareRoulette,
-                            onResult: game.resolveRoulette,
+                            onPrepareResult: () =>
+                                game.prepareRoulette(scope: rouletteScope),
+                            onResult: (result) => game.resolveRoulette(
+                              result,
+                              scope: rouletteScope,
+                            ),
                           )
                         : null,
                   ),

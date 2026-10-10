@@ -262,7 +262,11 @@ class RoomService {
 
   /// 백그라운드·dispose에서는 presence만 멈추며 방을 삭제하지 않습니다.
   Future<void> markControllerDisconnected(String roomCode) async {
-    final identity = await _sessionIdentity(roomCode, 'controller');
+    final uid = _auth.currentUser?.uid;
+    final identity = uid == null
+        ? null
+        : _identities.current(uid, 'controller', roomCode);
+    if (identity == null) return;
     await _writeWithRetry(
       () => _connectionReference(
         identity,
@@ -707,7 +711,11 @@ class RoomService {
   }
 
   Future<void> markPlayerDisconnected(String roomCode) async {
-    final identity = await _sessionIdentity(roomCode, 'player');
+    final uid = _auth.currentUser?.uid;
+    final identity = uid == null
+        ? null
+        : _identities.current(uid, 'player', roomCode);
+    if (identity == null) return;
     await _connectionReference(
       identity,
     ).update({'connected': false, 'lastSeen': ServerValue.timestamp});
@@ -766,19 +774,58 @@ class RoomService {
       throw const RoomCommandException('퇴장 결과를 먼저 확인해주세요.');
     }
     final pending = _identities.pending(uid, 'player', roomCode);
+    final owner = RoomRecoveryBatch.current!;
+    final capturedIdentity = _identities.current(uid, 'player', roomCode);
+    bool current() =>
+        _auth.currentUser?.uid == uid &&
+        owner.remaining > Duration.zero &&
+        identical(RoomRecoveryBatch.current, owner) &&
+        (_identities.current(uid, 'player', roomCode)?.roomInstanceId ==
+            capturedIdentity?.roomInstanceId) &&
+        (_identities.current(uid, 'player', roomCode)?.membershipId ==
+            capturedIdentity?.membershipId);
+    void requireCurrent() {
+      if (!current()) throw StateError('이전 방 복구 요청입니다.');
+    }
+
     if (pending != null) {
       try {
-        final replay = await _call('joinRealtimeRoom', pending);
-        if (_auth.currentUser?.uid != uid) return;
+        await _call('joinRealtimeRoom', pending);
+        requireCurrent();
+        // A saved allocation result may describe a connection since replaced.
+        // Adopt the server's current membership instead of allocating again.
+        final confirmed = await _call('fetchRealtimeRoomSession', {
+          'roomCode': roomCode,
+        });
+        requireCurrent();
+        final identity = RoomSessionIdentity.fromJson({
+          ...Map<String, dynamic>.from(confirmed.data as Map),
+          'uid': uid,
+          'role': 'player',
+          'roomCode': roomCode,
+        });
+        if (identity.roomInstanceId != pending['roomInstanceId'] ||
+            (pending['membershipId'] != null &&
+                identity.membershipId != pending['membershipId'])) {
+          throw const RoomCommandException('이 방에는 다시 참가할 수 없습니다.');
+        }
         await _identities.save(
-          RoomSessionIdentity.fromJson({
-            ...Map<String, dynamic>.from(replay.data as Map),
-            'uid': uid,
-            'role': 'player',
-            'roomCode': roomCode,
-          }),
+          identity,
           completedOperationId: pending['operationId'] as String,
+          isCurrent: current,
         );
+        if (!preserveProfile &&
+            (pending['nickname'] != nickname ||
+                pending['characterId'] != characterId)) {
+          // A different explicit profile edit is a new logical request.
+          return await _joinRoomWithRetry(
+            roomCode: roomCode,
+            nickname: nickname,
+            characterId: characterId,
+            preserveProfile: false,
+          );
+        }
+        return;
       } on FirebaseFunctionsException catch (error) {
         if (error.code != 'aborted' ||
             error.details is! Map ||
@@ -787,13 +834,15 @@ class RoomService {
         }
       }
     }
-    final roomId =
-        (await realtime.ref('rooms/$roomCode/roomInstanceId').get()).value;
-    final player =
-        (await realtime.ref('rooms/$roomCode/players/$uid').get()).value;
+    final roomId = (await _readWithRetry(
+      realtime.ref('rooms/$roomCode/roomInstanceId'),
+    )).value;
+    final player = (await _readWithRetry(
+      realtime.ref('rooms/$roomCode/players/$uid'),
+    )).value;
     final membership = player is Map ? player['membershipId'] : null;
     final sequence = player is Map ? player['connectionSeq'] : null;
-    if (_auth.currentUser?.uid != uid) return;
+    requireCurrent();
     final previousIdentity = _identities.current(uid, 'player', roomCode);
     if (preserveProfile &&
         (player is! Map ||
@@ -813,9 +862,16 @@ class RoomService {
       'membershipId': ?membership,
       'expectedConnectionSeq': sequence ?? 0,
     };
-    await _identities.savePending(uid, 'player', roomCode, payload);
+    await _identities.savePending(
+      uid,
+      'player',
+      roomCode,
+      payload,
+      isCurrent: current,
+    );
+    requireCurrent();
     final response = await _call('joinRealtimeRoom', payload);
-    if (_auth.currentUser?.uid != uid) return;
+    requireCurrent();
     await _identities.save(
       RoomSessionIdentity.fromJson({
         ...Map<String, dynamic>.from(response.data as Map),
@@ -824,6 +880,7 @@ class RoomService {
         'roomCode': roomCode,
       }),
       completedOperationId: payload['operationId'] as String,
+      isCurrent: current,
     );
   }
 
@@ -985,6 +1042,7 @@ class RoomService {
       }
     }
 
+    if (lastError != null && isPermissionDenied(lastError)) throw lastError;
     throw RoomCommandException(_databaseErrorMessage(lastError));
   }
 

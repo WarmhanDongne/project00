@@ -1,5 +1,8 @@
 # 작업 목록
 
+2026-10-10 새 채팅에서 LP 룰렛·재시작 원인 재확인 → 설계 → 구현을 이어가는 요청은
+[최신 수정 인계](NETWORK_SESSION_REPAIR_HANDOFF.md)를 따른다.
+
 ID를 누르면 작업별 상세 설명으로 이동한다. [관리 방법](TASK_MANAGEMENT.md) · [완료 작업](COMPLETED_TASKS.md) · [월별 기록](logs/) · [네트워크·세션 작업 보기](NETWORK_SESSION_TASKS.md)
 
 2026-10-08 네트워크·세션 조사와 `origin/newgui`의 `999c3e9` 비교를 반영했다.
@@ -37,8 +40,8 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — 실기기 진입 성공, 룰렛·재시작 결함 확인 | [조사 기록](NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation): 룰렛 ID 충돌·heartbeat 포함 시작 비교·트랜잭션 예외·미확정 요청 유실. 승인 로그의 504/409 확인, 수정·회귀는 후속 |
-| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — 기존 UI FULL PASS, 룰렛·시작 응답 유실 회귀 누락 확인 | [조사 기록](NETWORK_SESSION_STARTUP_INVESTIGATION.md#roulette-restart-investigation): 실제 callable의 오프라인 재현 exit 0. 추첨→확정·시작 응답 유실→재시도 통합 회귀 추가 필요 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 진행 중 — LP 후속 수정 후보 | [구현·검증](NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md): 접속 공유·현재 identity/heartbeat→ready, 준비 실패/재시도·룰렛 수명 보존. 관련 검사·새 APK·승인 Functions 63개 반영 PASS; 사용자 FULL 보류·실기기 시험 대기 |
+| [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — LP 후속 실제 controller/service 회귀 | [후속 후보](NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md): 준비/룰렛/현재 참가/늦은 응답/route 안내·실제 동시 ready 회귀. session 5/5·Flutter 156·서버 90 및 최종 보완 방 5·분석 PASS; 사용자 FULL 보류·실기기 우선 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |
 | [TEST-ACCOUNT-01](tasks/TEST-ACCOUNT-01.md#test-account-01) | 배포용 테스트 계정 준비 | 요구사항 확인 | 용도·환경·권한 확정 |

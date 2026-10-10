@@ -55,6 +55,8 @@ class GameRecoverySession extends ChangeNotifier with FrameSafeNotifier {
       serverConfirmed = false;
   RoomRecoveryBatch? preparationBatch;
   bool transportConnected = true;
+  bool transportRecovering = false;
+  Future<void> Function()? reconnect;
   Map<dynamic, dynamic>? publicValue;
   VoidCallback? retry;
   Future<Map<String, dynamic>> Function()? retryCommand;
@@ -68,6 +70,7 @@ class GameRecoverySession extends ChangeNotifier with FrameSafeNotifier {
   bool get canSend =>
       localUsable &&
       transportConnected &&
+      !transportRecovering &&
       serverConfirmed &&
       !paused &&
       !leaving;

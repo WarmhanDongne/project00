@@ -108,9 +108,6 @@ export const game_liars_poker_resolve_penalty = onCall<ResolvePenaltyData>(
     const roomCode = parseRoomCode(request.data?.roomCode);
     const commandId = parseCommandId(request.data?.commandId);
     const resolutionId = parseCommandId(request.data?.resolutionId);
-    if (resolutionId !== commandId) {
-      throw new HttpsError("invalid-argument", "벌칙 처리 식별자가 일치하지 않습니다.");
-    }
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     let response: Record<string, unknown> | null = null;
 

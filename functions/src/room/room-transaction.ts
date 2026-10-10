@@ -23,7 +23,22 @@ export async function runPrimedTransaction(
 
   try {
     await firstValue;
-    return await ref.transaction(update);
+    let failed = false;
+    let updateError: unknown;
+    // SDK 재실행 callback 밖으로 예외가 빠지면 rollback/완료가 누락될 수
+    // 있습니다. undefined로 정상 abort한 뒤 호출자에게 원래 오류를 전달합니다.
+    const result = await ref.transaction((current) => {
+      if (failed) return;
+      try {
+        return update(current);
+      } catch (error) {
+        failed = true;
+        updateError = error;
+        return;
+      }
+    });
+    if (failed) throw updateError;
+    return result;
   } finally {
     ref.off("value", valueListener);
   }
