@@ -1,12 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/recovery/services/callable_retry_policy.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('callable timeout is classified as a retryable transport failure', () {
+    expect(
+      CallableRetryPolicy.isRetryable(TimeoutException('timeout')),
+      isTrue,
+    );
+    expect(CallableRetryPolicy.isRetryable(StateError('state')), isFalse);
+  });
   test(
     'unknown intent survives restart, elapsed time and another account without changing its payload',
     () async {
@@ -129,6 +139,10 @@ void main() {
         ..paused = false;
       expect(session.canSend, false);
       session.serverConfirmed = true;
+      expect(session.canSend, true);
+      session.controllerAvailable = false;
+      expect(session.canSend, false);
+      session.controllerAvailable = true;
       expect(session.canSend, true);
       session.leaving = true;
       expect(session.canSend, false);

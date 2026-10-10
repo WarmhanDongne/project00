@@ -133,6 +133,7 @@ export {
   game_common_interruption_exclude_player,
   game_common_interruption_expire,
   game_common_interruption_on_connection_changed,
+  game_common_interruption_report_stale_controller,
   game_common_interruption_report_stale_player,
   game_common_interruption_wait_more,
   game_common_recovery_report,

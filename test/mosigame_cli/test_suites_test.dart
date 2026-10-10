@@ -13,6 +13,7 @@ void main() {
         'test/controller_presence_test.dart',
         'test/controller_reconnect_guard_test.dart',
         'test/controller_room_lifecycle_test.dart',
+        'test/controller_room_recovery_test.dart',
         'test/room_recovery_heartbeat_test.dart',
         'test/room_join_recovery_test.dart',
         'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',

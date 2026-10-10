@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {applyRecoveryReport, beginRecoveryPause, expireRecoveryCauses, extendRecoveryCause,
-  registerRecoveryFailure, tryResumeRecovery} from "../lib/game-interruption/recovery-state.js";
+  registerRecoveryFailure, reportStaleController,
+  tryResumeRecovery} from "../lib/game-interruption/recovery-state.js";
 
 function fixture(deadline = 20000) {
   const room = {roomInstanceId: "room-one", status: "playing", controllerUid: "t",
@@ -46,6 +47,14 @@ test("다중 단절은 시간·마감을 한 번만 보관하고 마지막 필�
   report(room, "b");
   assert.equal(room.game.public.recovery.paused, false);
   assert.equal(room.game.public.turnDeadlineAt, 24000);
+});
+
+test("늦게 감지한 단절은 마지막 성공 heartbeat부터 타이머를 멈춘다", () => {
+  const room = fixture(20000);
+  registerRecoveryFailure(room, "a", "player", 15000, "disconnected", 2000);
+  assert.equal(room.game.server.recovery.startedAt, 15000);
+  assert.equal(room.game.public.recovery.pausedAt, 15000);
+  assert.equal(room.game.server.recovery.timer.remainingMs, 18000);
 });
 
 test("추가 단절은 정상 기기의 같은 barrier 준비를 무효화하지 않는다", () => {
@@ -122,4 +131,35 @@ test('RTDB missing cause/ready maps accept a later disconnect and preserve the o
   assert.equal(registerRecoveryFailure(room,'a','player',2000),'paused');
   assert.equal(room.game.server.recovery.timer.remainingMs,19000);
   assert.ok(room.game.public.recovery.causes['player:a']);
+});
+
+test('오래된 현재 controller heartbeat만 서버 중단으로 확정한다',()=>{
+  const room=fixture();
+  room.controllerConnected=true;
+  room.controllerPresence={connected:true,lastSeen:1000};
+  room.connections.t.ct.lastSeen=1000;
+  assert.equal(reportStaleController(room,1000,21000).status,'notStale');
+  assert.equal(reportStaleController(room,1000,21001).status,'disconnected');
+  assert.equal(room.controllerPresence.connected,false);
+  assert.equal(room.connections.t.ct.connected,false);
+  assert.equal(room.game.public.recovery.paused,true);
+  assert.ok(room.game.public.recovery.causes['controller:t']);
+});
+
+test('새 heartbeat와 새 controller 접속은 이전 stale 보고를 무시한다',()=>{
+  const heartbeat=fixture();
+  heartbeat.controllerConnected=true;
+  heartbeat.controllerPresence={connected:true,lastSeen:2000};
+  heartbeat.connections.t.ct.lastSeen=2000;
+  assert.equal(reportStaleController(heartbeat,1000,30000).status,'staleContext');
+  assert.equal(heartbeat.game.public.recovery,undefined);
+
+  const connection=fixture();
+  connection.controllerConnected=true;
+  connection.controllerCurrentConnectionId='new';
+  connection.controllerConnectionSeq=2;
+  connection.controllerPresence={connected:true,lastSeen:3000};
+  connection.connections.t.new={roomInstanceId:'room-one',connectionSeq:2,connected:true,lastSeen:3000};
+  assert.equal(reportStaleController(connection,0,30000).status,'staleContext');
+  assert.equal(connection.game.public.recovery,undefined);
 });

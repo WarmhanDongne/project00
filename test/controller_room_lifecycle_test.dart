@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/controller_presence.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
@@ -75,6 +76,10 @@ void main() {
       expect(provider.roomCode, 'ABCDE');
       expect(provider.roomTerminationReason, isNull);
       expect(provider.wasRoomClosed, isFalse);
+      expect(
+        GameRecoverySession.forRoom('ABCDE', 'phone').controllerAvailable,
+        isFalse,
+      );
 
       service.roomStatus.add('finished');
       await _flushEvents();
@@ -88,6 +93,71 @@ void main() {
         provider.controllerPresenceState,
         ControllerPresenceState.connected,
       );
+      expect(
+        GameRecoverySession.forRoom('ABCDE', 'phone').controllerAvailable,
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'stale controller heartbeat is reported once for that observation',
+    () async {
+      final service = _LifecycleRoomService();
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..listenRoom();
+      addTearDown(() async {
+        provider.dispose();
+        await service.dispose();
+      });
+
+      final staleLastSeen = ServerClock.nowMillis() - 21000;
+      service.serverConnection.add(true);
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: staleLastSeen),
+      );
+      await _flushEvents();
+
+      expect(service.staleControllerReports, [staleLastSeen]);
+      expect(
+        provider.controllerPresenceState,
+        ControllerPresenceState.reconnecting,
+      );
+
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: staleLastSeen),
+      );
+      await _flushEvents();
+      expect(service.staleControllerReports, [staleLastSeen]);
+    },
+  );
+
+  test(
+    'failed stale controller report retries once for the same observation',
+    () async {
+      final service = _LifecycleRoomService()
+        ..staleControllerErrorsRemaining = 1;
+      final provider = _provider(service)
+        ..roomCode = 'ABCDE'
+        ..listenRoom();
+      addTearDown(() async {
+        provider.dispose();
+        await service.dispose();
+      });
+
+      final staleLastSeen = ServerClock.nowMillis() - 21000;
+      service.serverConnection.add(true);
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: staleLastSeen),
+      );
+      await _flushEvents();
+      service.controllerPresence.add(
+        ControllerPresence(connected: true, lastSeen: staleLastSeen),
+      );
+      await _flushEvents();
+
+      expect(service.staleControllerReports, [staleLastSeen, staleLastSeen]);
     },
   );
 
@@ -144,8 +214,11 @@ Future<void> _flushEvents() async {
   await Future<void>.delayed(Duration.zero);
 }
 
-RoomProvider _provider(_LifecycleRoomService service) =>
-    RoomProvider(service: service, gameService: _NoopGameService());
+RoomProvider _provider(_LifecycleRoomService service) => RoomProvider(
+  service: service,
+  gameService: _NoopGameService(),
+  currentUidReader: () => 'phone',
+);
 
 class _LifecycleRoomService implements RoomService {
   final serverConnection = StreamController<bool>.broadcast();
@@ -155,6 +228,8 @@ class _LifecycleRoomService implements RoomService {
   bool confirmedRoomExists = true;
   Completer<bool>? roomExistsGate;
   int roomExistenceReads = 0;
+  final List<int> staleControllerReports = <int>[];
+  int staleControllerErrorsRemaining = 0;
 
   @override
   Stream<bool> watchServerConnection() => serverConnection.stream;
@@ -173,6 +248,18 @@ class _LifecycleRoomService implements RoomService {
     roomExistsGate = null;
     if (gate != null) return gate.future;
     return confirmedRoomExists;
+  }
+
+  @override
+  Future<void> reportStaleController({
+    required String roomCode,
+    required int observedLastSeen,
+  }) async {
+    staleControllerReports.add(observedLastSeen);
+    if (staleControllerErrorsRemaining > 0) {
+      staleControllerErrorsRemaining -= 1;
+      throw StateError('temporary stale report failure');
+    }
   }
 
   @override

@@ -5,6 +5,7 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {applyRoomPresence, parseSessionId, roomOperationResult, SessionRoom} from "./session-contract.js";
 import {assertControllerSession} from "./controller-session.js";
 import {runPrimedTransaction} from "./room-transaction.js";
+import {RecoveryRoom, registerRecoveryFailure} from "../game-interruption/recovery-state.js";
 
 function requestTarget(uid: string | undefined, data: Record<string, unknown>): {uid: string; roomCode: string} {
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
@@ -59,10 +60,20 @@ export const game_common_operation_status = onCall({region: "asia-northeast3"}, 
 export const syncRealtimeRoomConnection = onValueWritten({
   ref: "/rooms/{roomCode}/connections/{uid}/{connectionId}", region: "asia-southeast1",
 }, async (event) => {
+  const now = Date.now();
   await runPrimedTransaction(getDatabase().ref(`rooms/${event.params.roomCode}`), (raw) => {
     if (!raw) return;
     const room = raw as SessionRoom;
-    if (!applyRoomPresence(room, event.params.uid, event.params.connectionId)) return;
+    if (!applyRoomPresence(room, event.params.uid, event.params.connectionId, (role, observedAt) => {
+      registerRecoveryFailure(
+        room as unknown as RecoveryRoom,
+        event.params.uid,
+        role,
+        now,
+        "disconnected",
+        observedAt,
+      );
+    })) return;
     return room;
   });
 });

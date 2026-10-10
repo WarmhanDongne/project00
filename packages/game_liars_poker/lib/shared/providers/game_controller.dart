@@ -25,6 +25,7 @@ import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/services/callable_retry_policy.dart';
 export 'package:game_liars_poker/shared/models/game_models.dart'
     show PhoneGamePlayer, PhoneHandCard, PhonePenaltyResult, PublicLastPlay;
 
@@ -806,14 +807,36 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   Future<bool> completeDealing() async {
     // 이전 서버 버전이나 개발용 로컬 상태에서는 별도 완료 호출이 필요 없습니다.
     if (phase != 'dealing') return true;
+    final scope = (gameStartedAt, round);
 
     try {
       final result = await service.command.completeDealing(roomCode: roomCode);
       return result['success'] != false;
     } catch (error) {
+      if (_isTransientCommandError(error) &&
+          await _waitForPublicState(
+            () => (gameStartedAt, round) == scope && phase != 'dealing',
+          )) {
+        _logError(error);
+        return true;
+      }
       _reportError('카드 배분 완료 상태를 반영하지 못했습니다.', error);
       return false;
     }
+  }
+
+  bool _isTransientCommandError(Object error) =>
+      CallableRetryPolicy.isRetryable(error);
+
+  /// callable 응답만 유실되고 서버 전이가 RTDB로 확인되는 경우의 짧은 확인 창입니다.
+  /// 진행 command의 전체 12초 예산을 늘리지 않으며, 새 판으로 바뀐 응답을 성공으로
+  /// 오인하지 않도록 현재 controller가 받은 공개 phase만 확인합니다.
+  Future<bool> _waitForPublicState(bool Function() accepted) async {
+    for (var attempt = 0; attempt < 25; attempt += 1) {
+      if (accepted()) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    return accepted();
   }
 
   /// 실제 결과는 회전 전에 서버가 추첨합니다. 클라이언트는 그 결과에 맞는 칸으로

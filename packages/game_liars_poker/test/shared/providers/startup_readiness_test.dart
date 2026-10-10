@@ -15,10 +15,12 @@ void main() {
   late ProviderContainer container;
   late _Query query;
   late _Reports reports;
+  late _Commands commands;
   late LiarsPokerController game;
   void start() {
     query = _Query();
     reports = _Reports();
+    commands = _Commands();
     container = ProviderContainer();
     final provider =
         NotifierProvider<LiarsPokerController, LiarsPokerGameState>(
@@ -26,7 +28,7 @@ void main() {
             roomCode: 'LPREADY${++sessionNumber}',
             uid: 'phone',
             service: LiarsPokerService(
-              command: _Commands(),
+              command: commands,
               query: query,
               interruption: reports,
             ),
@@ -135,6 +137,29 @@ void main() {
       expect(game.canFoldLastCardChallenge, false);
     },
   );
+  testWidgets(
+    'dealing timeout accepts the matching public phase instead of showing a false failure',
+    (tester) async {
+      start();
+      commands.completeError = TimeoutException('response lost');
+      query.pub.add(_Event(_public('dealing')));
+      await tester.pump();
+      final prepared = game.prepareScreen(() async {});
+      await tester.pump();
+      await tester.pump();
+      await prepared;
+      await tester.pump();
+
+      final completion = game.completeDealing();
+      await tester.pump(const Duration(milliseconds: 300));
+      query.pub.add(_Event({..._public('playing'), 'revision': 2}));
+      query.priv.add(_Event(_private('liars-startup')));
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(await completion, isTrue);
+      expect(game.errorMessage, isNull);
+    },
+  );
 }
 
 Map<String, dynamic> _public(String phase) => {
@@ -194,7 +219,18 @@ class _Query extends Fake implements LiarsPokerQueryService {
   Future<DataSnapshot> readPublicGame(String roomCode) async => _Snapshot(null);
 }
 
-class _Commands extends Fake implements LiarsPokerCommandService {}
+class _Commands extends Fake implements LiarsPokerCommandService {
+  Object? completeError;
+
+  @override
+  Future<Map<String, dynamic>> completeDealing({
+    required String roomCode,
+  }) async {
+    final error = completeError;
+    if (error != null) throw error;
+    return {'success': true};
+  }
+}
 
 class _Reports extends Fake implements GameInterruptionCommandService {
   final ready = <bool>[];

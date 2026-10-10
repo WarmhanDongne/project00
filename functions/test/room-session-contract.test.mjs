@@ -54,6 +54,39 @@ test("옛 onDisconnect와 heartbeat는 새 접속과 재가입을 변경하지 �
   assert.equal(applyRoomPresence(room, "a", "connection-two"), false);
 });
 
+test("현재 태블릿 접속 단절만 같은 transaction의 중단 callback을 실행한다", () => {
+  const room = fixture();
+  allocateRoomConnection(room, {
+    uid: "tablet", role: "controller", operationId: "controller-one",
+    roomInstanceId: "room-one", expectedConnectionSeq: 0,
+    connectionId: "controller-connection-one", now: 1000,
+  });
+  allocateRoomConnection(room, {
+    uid: "tablet", role: "controller", operationId: "controller-two",
+    roomInstanceId: "room-one", expectedConnectionSeq: 1,
+    connectionId: "controller-connection-two", now: 2000,
+  });
+  const pauses = [];
+  room.connections.tablet["controller-connection-one"].connected = false;
+  assert.equal(applyRoomPresence(room, "tablet", "controller-connection-one",
+    (role, observedAt) => pauses.push({role, observedAt})), false);
+  assert.deepEqual(pauses, []);
+  room.connections.tablet["controller-connection-two"].connected = false;
+  assert.equal(applyRoomPresence(room, "tablet", "controller-connection-two",
+    (role, observedAt) => pauses.push({role, observedAt})), true);
+  assert.deepEqual(pauses, [{role: "controller", observedAt: 2000}]);
+});
+
+test("현재 참가자 단절도 같은 transaction에 role과 마지막 heartbeat를 전달한다", () => {
+  const room = fixture();
+  connect(room);
+  const pauses = [];
+  room.connections.a["connection-one"].connected = false;
+  assert.equal(applyRoomPresence(room, "a", "connection-one",
+    (role, observedAt) => pauses.push({role, observedAt})), true);
+  assert.deepEqual(pauses, [{role: "player", observedAt: 1000}]);
+});
+
 test("같은 작업 ID의 UID·종류·내용 변경은 거절한다", () => {
   const room = fixture();
   connect(room);

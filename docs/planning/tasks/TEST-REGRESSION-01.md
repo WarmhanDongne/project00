@@ -311,3 +311,17 @@ FULL 보류와 사용자 APK/배포 담당 방침을 유지하며 실기기 통�
 1→2→3→3단계·중복 결과 요청 횟수 보존을 추가했다. 수정 전 15개 중 1 FAIL/exit 1,
 서버 생존 처리 수정 후 관련 45/45 PASS/exit 0, build/lint PASS/exit 0이다. FULL 보류를
 유지하며 사용자 서버 함수 하나 반영 후 현재 APK 실기기 결과는 대기다.
+
+## 2026-10-10 18:41 종료·접속 확인 회귀 설계
+
+사용자가 FOLD 실기기 통과와 새 태블릿 종료/다음 시작 timeout을 보고했다. 이번 새 기기
+기록과 승인 서버 metadata는 [분석·설계](../LIARS_POKER_1841_EXIT_CONNECTION_DESIGN.md)에 있다.
+종료 응답 유실·늦은 RTDB·자연 우승 오인 방지, info=true heartbeat 확인 실패의 단일
+복구, 늦은 이전 결과의 새 게임 보호를 회귀 범위로 정했다. 아직 구현/테스트하지 않았고
+이전 서버 45 PASS를 새 연결 수정의 검증으로 쓰지 않는다. 설계 승인 뒤 guarded session,
+FULL은 보류를 유지한다.
+
+사용자 승인 뒤 controller 늦은 resume 보호, heartbeat 정체 단일 보고, 현재 단절의 원자적
+pause, 안내 중 자동 행동 차단, 분배 응답 유실 확인 회귀를 추가했다. session manifest에
+controller 복구 테스트를 연결했고 Flutter 160·Functions 97 및 Functions build/lint가
+통과했다. FULL·APK·배포·실기기 검증은 수행하지 않았다.
