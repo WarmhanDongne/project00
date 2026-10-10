@@ -57,6 +57,35 @@ test("늦게 감지한 단절은 마지막 성공 heartbeat부터 타이머를 �
   assert.equal(room.game.server.recovery.timer.remainingMs, 18000);
 });
 
+for (const [gameType, phase, limit] of [
+  ["liars_poker", "playing", 30000],
+  ["liars_poker", "lastCardChallenge", 10000],
+  ["final_call", "playing", 30000],
+  ["final_call", "finalTurns", 30000],
+]) {
+  test(`${gameType}/${phase}: 이전 턴 heartbeat가 현재 제한 시간을 늘리지 않는다`, () => {
+    const room = fixture(limit + 2000);
+    Object.assign(room.game.public, {gameType, phase});
+    registerRecoveryFailure(room, "a", "player", 5000, "disconnected", 0);
+    assert.equal(room.game.server.recovery.timer.remainingMs, limit);
+    registerRecoveryFailure(room, "b", "player", 6000, "disconnected", 5000);
+    assert.equal(room.game.server.recovery.timer.remainingMs, limit, "추가 단절은 최초 보관 값을 유지");
+    report(room, "a"); report(room, "b"); report(room, "t");
+    assert.equal(room.game.public.recovery.paused, false);
+    assert.equal(room.game.public.turnDeadlineAt, 5000 + limit);
+  });
+}
+
+test("다른 게임의 긴 단계 시간과 이미 지난 마감은 그대로 보존한다", () => {
+  const longPhase = fixture(92000);
+  Object.assign(longPhase.game.public, {gameType: "mafia", phase: "discussion"});
+  beginRecoveryPause(longPhase, 5000, 2000);
+  assert.equal(longPhase.game.server.recovery.timer.remainingMs, 90000);
+  const expired = fixture(1000);
+  beginRecoveryPause(expired, 5000, 2000);
+  assert.equal(expired.game.server.recovery.timer.remainingMs, 0);
+});
+
 test("추가 단절은 정상 기기의 같은 barrier 준비를 무효화하지 않는다", () => {
   const room = fixture(); beginRecoveryPause(room, 1000); report(room, "a");
   const epoch = room.game.public.resumeEpoch;

@@ -76,6 +76,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   final RoomCommandExecutor _commandExecutor;
   final GameCatalog gameCatalog;
   final String? Function() _currentUid;
+  final Zone _sessionZone = Zone.current;
 
   @override
   String? roomCode;
@@ -414,11 +415,11 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   void _startControllerHeartbeat(String code) {
     _controllerHeartbeatTimer?.cancel();
-    _controllerHeartbeatTimer = Timer.periodic(const Duration(seconds: 10), (
-      _,
-    ) {
-      if (roomCode == code) unawaited(_heartbeatControllerSafely(code));
-    });
+    _controllerHeartbeatTimer = _sessionZone.run(
+      () => Timer.periodic(const Duration(seconds: 10), (_) {
+        if (roomCode == code) unawaited(_heartbeatControllerSafely(code));
+      }),
+    );
   }
 
   Future<void> _heartbeatControllerSafely(String code) async {
@@ -958,12 +959,14 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   void _startPlayerHeartbeat(String code) {
     _playerHeartbeatTimer?.cancel();
-    unawaited(_heartbeatPlayerSafely(code));
-    _playerHeartbeatTimer = Timer.periodic(playerHeartbeatInterval, (_) {
-      if (roomCode == code && !_isLeaving) {
-        unawaited(_heartbeatPlayerSafely(code));
-      }
-    });
+    _sessionZone.run(() => unawaited(_heartbeatPlayerSafely(code)));
+    _playerHeartbeatTimer = _sessionZone.run(
+      () => Timer.periodic(playerHeartbeatInterval, (_) {
+        if (roomCode == code && !_isLeaving) {
+          unawaited(_heartbeatPlayerSafely(code));
+        }
+      }),
+    );
   }
 
   Future<void> _heartbeatPlayerSafely(String code) async {
@@ -1458,9 +1461,15 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     final controllerSessionId = ControllerRoomSessionStore.instance
         .sessionIdForRoom(code);
     if (controllerSessionId != null) {
-      await _service.restoreControllerRoom().timeout(
+      final restoredCode = await _service.restoreControllerRoom().timeout(
         const Duration(seconds: 8),
       );
+      if (restoredCode == null &&
+          roomCode == code &&
+          !_isDisposed &&
+          ControllerRoomSessionStore.instance.sessionIdForRoom(code) == null) {
+        _terminateRoom(RoomTerminationReason.closed, expectedRoomCode: code);
+      }
       return;
     }
 

@@ -109,10 +109,8 @@ GameFlowConfig<LiarsPokerTabletStage> buildLiarsPokerTabletFlowConfig({
         description: '첫 서버 상태를 기다린다',
         screenWidget: GameAnnouncementLayer,
         showScreen: false,
-        showAnnouncement: true,
-        announcementId: 'liars-poker-preparing',
-        announcementKind: GameAnnouncementKind.persistent,
-        announcement: GameFlowCopy.preparingGame,
+        // Keep the game background visible while the first snapshot arrives.
+        showAnnouncement: false,
         animation: GameFlowAnimationConfig.disabled(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),

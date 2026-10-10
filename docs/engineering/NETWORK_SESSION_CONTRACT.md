@@ -66,6 +66,10 @@ timer는 kind=none 또는 kind=remaining으로 저장해 RTDB의 null 생략에�
 pausedAt은 서버 감지 시각이다. 타이머는 서버가 검증한 현재 접속의 마지막 성공 heartbeat부터
 멈추며, 유효한 heartbeat가 없을 때만 감지 시각을 사용한다. onDisconnect는 connected만 false로
 바꿔 마지막 성공 lastSeen을 보존한다.
+heartbeat가 현재 턴 시작보다 이르면 남은 시간을 해당 턴 제한까지만 보존한다.
+LP playing은 30초, lastCardChallenge는 10초, Final Call은 30초이며 서버 턴 상수를
+사용한다. Mafia/Holdem의 단계 시간에는 이 상한을 적용하지 않는다. 0ms와 마감 없음의
+구분, 추가 단절이 최초 보관 시간을 덮어쓰지 않는 조건은 유지한다.
 추가 원인은 최초 남은 시간을 덮어쓰지 않는다. 생략된 빈 causes/ready는 빈 집합으로 처리한다.
 
 | 공용 callable | 역할과 결과 |
@@ -124,6 +128,15 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 
 완료된 owner를 긴 구독이 상속하지 않는다. 늦은 operation의 이어 실행은 원래 deadline을 유지한다.
 복구 후 heartbeat timer와 완료 알림은 bounded 작업을 await한 바깥에서 시작한다.
+신원 변경 알림이 bounded 요청 내부에서 발생해도 게임의 재구독과 주기 heartbeat는
+각 controller/provider의 세션 zone에서 시작한다. player의 즉시 heartbeat도 같은
+세션 zone을 사용한다. 복구 결과를 확인하는 첫 heartbeat는 원래 요청 owner 안에 둔다.
+재구독은 이전 준비 frame을 무효화하며 같은 context를 다시 받아도 현재 subscription
+generation의 frame을 예약해 준비 보고를 다시 수행한다.
+pending controller resume은 먼저 현재 identity를 조회한다. 같은 방 instance의 접속
+sequence가 이미 증가했다면 채택하고, 미적용이면 저장한 operationId로 재전송 후 다시
+조회한다. 종료된 방 또는 바뀐 방 instance는 기존 종료 정리 경로로 처리한다.
+복구가 null이고 controller session도 제거됐을 때만 provider의 같은 기존 방을 정리한다.
 첫 게임 준비는 대기실의 오래된 owner를 재사용하지 않는다. 이미 준비된 게임의 새 pause는
 새 준비 묶음을 사용하되 같은 pause의 barrier/dataSeq 갱신이나 진행 중인 준비 대기는
 기존 deadline을 유지한다. 준비 실패 뒤 도착한 pause/데이터만으로 보호를 해제하지 않는다.

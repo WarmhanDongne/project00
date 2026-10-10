@@ -186,6 +186,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     _decodedPrivateEvent = null;
     _reportedKey = null;
     _readyAckKey = null;
+    _screenReady = false;
     _bindSubscriptions();
   }
 
@@ -217,7 +218,14 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
   }
 
-  void _bindSubscriptions() {
+  // Identity notifications can arrive inside a bounded recovery operation.
+  // Stream callbacks belong to the session, not that operation's deadline.
+  late final Zone _sessionZone;
+  int? _readyFrameSubscription;
+
+  void _bindSubscriptions() => _sessionZone.run(_bindSessionSubscriptions);
+
+  void _bindSessionSubscriptions() {
     final generation = ++_subscriptionGeneration;
     RecoveryMetrics.instance.mark(RecoveryStage.subscriptions);
     unawaited(_publicSubscription?.cancel());
@@ -281,6 +289,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   void _scheduleReadyFrame(GameRecoveryContext context) {
     _screenReady = false;
     final subscription = _subscriptionGeneration, frame = ++_frameGeneration;
+    _readyFrameSubscription = subscription;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.mounted &&
           subscription == _subscriptionGeneration &&
@@ -592,6 +601,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   /// 정보(마피아의 역할 등)가 흘러들면 옆에서 보는 사람에게 다 드러납니다.
   @protected
   void startSession({required bool watchPrivate}) {
+    _sessionZone = Zone.current;
     if (!RecoveryMetrics.instance.active) RecoveryMetrics.instance.begin();
     RecoveryMetrics.instance.mark(RecoveryStage.auth);
     _watchPrivate = watchPrivate;
@@ -704,9 +714,13 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       session.localUsable = false;
       if (session.paused) session.serverConfirmed = false;
       _readyAckKey = null;
-      if (_assetsReady && context.valid) {
-        _scheduleReadyFrame(context);
-      }
+    }
+    if (_assetsReady &&
+        context.valid &&
+        (previous?.key != context.key ||
+            (!_screenReady &&
+                _readyFrameSubscription != _subscriptionGeneration))) {
+      _scheduleReadyFrame(context);
     }
     RecoveryMetrics.instance.mark(RecoveryStage.publicData);
     final newGame = startedAt != _gameStartedAt;

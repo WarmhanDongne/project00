@@ -70,10 +70,7 @@ void main() {
       };
 
       expect(await service.restoreControllerRoom(), identity.roomCode);
-      expect(functions.names, [
-        'resumeRealtimeControllerRoom',
-        'fetchRealtimeRoomSession',
-      ]);
+      expect(functions.names, ['fetchRealtimeRoomSession']);
       final current = RoomSessionIdentityStore.instance.current(
         identity.uid,
         identity.role,
@@ -94,6 +91,59 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'unapplied pending resume replays the original operation then confirms current connection',
+    () async {
+      await RoomSessionIdentityStore.instance
+          .savePending(identity.uid, identity.role, identity.roomCode, {
+            'operationId': 'same-resume',
+            'roomCode': identity.roomCode,
+            'roomInstanceId': identity.roomInstanceId,
+            'expectedConnectionSeq': 1,
+          });
+      var reads = 0;
+      functions.reply = (name, data) async {
+        if (name == 'resumeRealtimeControllerRoom') {
+          expect(data['operationId'], 'same-resume');
+        }
+        final sequence = name == 'fetchRealtimeRoomSession' && ++reads == 1
+            ? 1
+            : 2;
+        return {
+          'roomInstanceId': identity.roomInstanceId,
+          'connectionId': sequence == 1 ? 'old' : 'current',
+          'connectionSeq': sequence,
+        };
+      };
+      expect(await service.restoreControllerRoom(), identity.roomCode);
+      expect(functions.names, [
+        'fetchRealtimeRoomSession',
+        'resumeRealtimeControllerRoom',
+        'fetchRealtimeRoomSession',
+      ]);
+      expect(database.writes.single, endsWith('/current'));
+    },
+  );
+
+  test('pending resume does not heartbeat a closed room', () async {
+    await RoomSessionIdentityStore.instance
+        .savePending(identity.uid, identity.role, identity.roomCode, {
+          'operationId': 'pending-close',
+          'roomCode': identity.roomCode,
+          'roomInstanceId': identity.roomInstanceId,
+          'expectedConnectionSeq': 1,
+        });
+    functions.reply = (_, _) async => {
+      'roomInstanceId': identity.roomInstanceId,
+      'roomStatus': 'closed',
+      'connectionId': 'old',
+      'connectionSeq': 1,
+    };
+    expect(await service.restoreControllerRoom(), isNull);
+    expect(database.writes, isEmpty);
+    expect(ControllerRoomSessionStore.instance.roomCode, isNull);
+  });
 
   test('late controller resume cannot replace the saved connection', () async {
     var elapsed = Duration.zero;

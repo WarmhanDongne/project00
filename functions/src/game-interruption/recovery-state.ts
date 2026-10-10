@@ -1,6 +1,8 @@
 /* eslint-disable require-jsdoc, valid-jsdoc, max-len */
 import {HttpsError} from "firebase-functions/v2/https";
 import {assertRoomTarget, SessionRoom} from "../room/session-contract.js";
+import {TURN_DURATION_MS, LAST_CARD_CHALLENGE_DURATION_MS} from "../liars-poker/common/types.js";
+import {FINAL_CALL_TURN_MS} from "../final-call/types.js";
 
 export interface GameContext {
   gameInstanceId: string;
@@ -105,10 +107,19 @@ export function beginRecoveryPause(
 ): void {
   const game = room.game;
   if (!game || game.public.status !== "playing" || game.public.recovery?.paused) return;
-  const timerReferenceAt = Number.isFinite(observedAt) && observedAt >= 0 && observedAt <= now ? observedAt : now;
+  let timerReferenceAt = Number.isFinite(observedAt) && observedAt >= 0 && observedAt <= now ? observedAt : now;
   game.public.resumeEpoch = (game.public.resumeEpoch ?? 0) + 1;
   const pauseId = `${game.public.gameInstanceId}-${game.public.resumeEpoch}`;
   const deadline = game.public.turnDeadlineAt;
+  // The last heartbeat may precede the current turn. Preserve time from the
+  // turn's earliest possible start, so recovery cannot extend its full duration.
+  const turnLimit = game.public.gameType === "liars_poker" ?
+    (game.public.phase === "playing" ? TURN_DURATION_MS :
+      game.public.phase === "lastCardChallenge" ? LAST_CARD_CHALLENGE_DURATION_MS : undefined) :
+    game.public.gameType === "final_call" ? FINAL_CALL_TURN_MS : undefined;
+  if (turnLimit !== undefined && typeof deadline === "number" && Number.isFinite(deadline)) {
+    timerReferenceAt = Math.max(timerReferenceAt, deadline - turnLimit);
+  }
   game.server.recovery = {
     startedAt: now,
     timer: recoveryTimer(deadline, timerReferenceAt, game.public.phaseSeq ?? 0, game.public.turnSeq ?? 0),

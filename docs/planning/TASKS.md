@@ -40,7 +40,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
-| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 실기기 검증 대기 — LP 태블릿 단절 수정 후보 | [새 단절 수정](LIARS_POKER_1841_EXIT_CONNECTION_DESIGN.md): 현재 controller 단절의 원자적 pause, 20초 heartbeat 정체 서버 재검증, 자동 행동 차단, 늦은 controller 복구 결과 보호를 구현. 새 APK·Functions 2개 반영 후 20:22 시나리오 재시험, FULL 보류 |
+| [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — 10/11 복구·타이머 수정 후보 | [테스트 9–20 후속 후보](tasks/NETWORK_SESSION_20261011_IMPLEMENTATION.md): develop 병합 확인(동일 HEAD), 구독/heartbeat owner 분리·현재 controller 접속 채택·준비 frame 재예약·턴 상한·LP 배경 대기. session 167/104 PASS. 새 APK·필요 서버 반영 후 고착/32초/종료 재시험, 0초 추가 재현 및 FULL 보류 |
 | [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — LP 단절 후보 targeted PASS | controller 복구/정체·서버 pause·분배 응답 유실 회귀와 session Flutter 160·Functions 97 PASS. FULL은 사용자 지시로 보류, 실기기 결과 대기 |
 | [TABLET-ASSET-01](tasks/TABLET-ASSET-01.md#tablet-asset-01) | 게임 구성품 이미지 덮임 | 조사 전 | 기기·게임·빌드를 기록하고 재현 |
 | [TABLET-MEMBERS-01](tasks/TABLET-MEMBERS-01.md#tablet-members-01) | 키보드 등장 시 구성원 목록 깨짐 | 조사 전 | 닉네임 수정 흐름 재현 |

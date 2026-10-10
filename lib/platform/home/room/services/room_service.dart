@@ -398,28 +398,49 @@ class RoomService {
       final pending = _identities.pending(identity.uid, 'controller', roomCode);
       final expectedSequence = identity.connectionSeq;
       if (pending != null) {
-        try {
-          await _call('resumeRealtimeControllerRoom', pending);
-        } on FirebaseFunctionsException catch (error) {
-          if (error.code != 'aborted' ||
-              error.details is! Map ||
-              (error.details as Map)['reason'] != 'staleConnection') {
-            rethrow;
+        // A timed-out resume may already have replaced the server connection.
+        // Recover that current connection before replaying a delayed request.
+        Future<RoomSessionIdentity> readCurrentIdentity() async {
+          final latest = await _call(
+            'fetchRealtimeRoomSession',
+            controllerCommandData(roomCode),
+          );
+          requireCurrent();
+          final data = Map<String, dynamic>.from(latest.data as Map);
+          if (data['roomInstanceId'] != identity.roomInstanceId ||
+              data['roomStatus'] == 'closed' ||
+              data['roomStatus'] == 'terminal') {
+            throw FirebaseFunctionsException(
+              code: 'failed-precondition',
+              message: '이미 종료된 방입니다.',
+            );
           }
+          return RoomSessionIdentity.fromJson({
+            ...data,
+            'uid': identity.uid,
+            'controllerSessionId': sessionId,
+            'role': 'controller',
+            'roomCode': roomCode,
+          });
         }
-        requireCurrent();
-        final latest = await _call(
-          'fetchRealtimeRoomSession',
-          controllerCommandData(roomCode),
-        );
-        requireCurrent();
-        final latestIdentity = RoomSessionIdentity.fromJson({
-          ...Map<String, dynamic>.from(latest.data as Map),
-          'uid': identity.uid,
-          'controllerSessionId': sessionId,
-          'role': 'controller',
-          'roomCode': roomCode,
-        });
+
+        var latestIdentity = await readCurrentIdentity();
+        if (latestIdentity.connectionSeq <= expectedSequence) {
+          try {
+            await _call('resumeRealtimeControllerRoom', pending);
+          } on FirebaseFunctionsException catch (error) {
+            if (error.code != 'aborted' ||
+                error.details is! Map ||
+                (error.details as Map)['reason'] != 'staleConnection') {
+              rethrow;
+            }
+          }
+          requireCurrent();
+          latestIdentity = await readCurrentIdentity();
+        }
+        if (latestIdentity.connectionSeq <= expectedSequence) {
+          throw StateError('현재 방 접속을 확인하지 못했습니다.');
+        }
         await _identities.save(
           latestIdentity,
           completedOperationId: pending['operationId'] as String,
