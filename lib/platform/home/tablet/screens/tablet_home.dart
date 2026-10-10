@@ -397,8 +397,13 @@ class _TabletHomeState extends State<TabletHome>
         tween: ColorTween(end: theme.ground),
         duration: const Duration(milliseconds: 450),
         curve: Curves.easeOut,
-        builder: (context, ground, child) => LobbyConnectionBand(
-          connectionChanges: _serverConnection,
+        builder: (context, ground, child) => ListenableBuilder(
+          listenable: roomProvider,
+          builder: (context, body) => LobbyConnectionBand(
+            // An idle lobby can let RTDB sleep; only an adopted room requires it.
+            connectionChanges: roomProvider.isInRoom ? _serverConnection : null,
+            child: body!,
+          ),
           child: Scaffold(backgroundColor: ground, body: child),
         ),
         child: SafeArea(

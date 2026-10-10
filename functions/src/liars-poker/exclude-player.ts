@@ -23,7 +23,8 @@ export function excludeLiarsPokerPlayer(
 
   gamePlayer.status = "eliminated";
   gamePlayer.remainingCardCount = 0;
-  delete game.private[uid];
+  // During dealing RTDB omits private; hands remain in pendingHands.
+  delete game.private?.[uid];
   delete game.server.pendingHands?.[uid];
 
   const alivePlayers = Object.values(game.public.players).filter(

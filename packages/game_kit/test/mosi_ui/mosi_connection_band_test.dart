@@ -69,4 +69,62 @@ void main() {
     );
     expect(find.text('로비'), findsOneWidget);
   });
+
+  testWidgets('방 구독이 없는 유휴 로비는 90초 뒤에도 연결 장애로 표시하지 않는다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MosiConnectionBandHost(
+          connectionChanges: null,
+          labels: _labels,
+          child: const Scaffold(body: Text('로비')),
+        ),
+      ),
+    );
+    connection.add(
+      false,
+    ); // SDK idle false exists, but this lobby needs no room transport.
+    await tester.pump(const Duration(seconds: 90));
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+      const Offset(0, 1.1),
+    );
+  });
+
+  testWidgets('단절된 방에서 빈 로비로 바뀌면 이전 재연결 타이머를 정리한다', (tester) async {
+    await pumpHost(tester);
+    connection.add(false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(seconds: 3));
+    expect(
+      tester.widget<MosiConnectionBand>(find.byType(MosiConnectionBand)).phase,
+      MosiConnectionBandPhase.reconnecting,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MosiConnectionBandHost(
+          connectionChanges: null,
+          labels: _labels,
+          child: const Scaffold(body: Text('로비')),
+        ),
+      ),
+    );
+    connection.add(false);
+    await tester.pump(const Duration(seconds: 90));
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+      const Offset(0, 1.1),
+    );
+    // Adopting a room later re-enables genuine transport loss protection.
+    await pumpHost(tester);
+    connection.add(false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(seconds: 3));
+    expect(
+      tester.widget<MosiConnectionBand>(find.byType(MosiConnectionBand)).phase,
+      MosiConnectionBandPhase.reconnecting,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
 }

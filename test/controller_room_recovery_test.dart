@@ -181,6 +181,58 @@ void main() {
     );
     expect(database.writes, isEmpty);
   });
+
+  test(
+    'internal resume preserves identity and replays the saved operation before adopting',
+    () async {
+      functions.reply = (_, _) async => throw FirebaseFunctionsException(
+        code: 'internal',
+        message: 'server error',
+      );
+      await expectLater(
+        service.restoreControllerRoom(),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+      final store = RoomSessionIdentityStore.instance;
+      final pending = Map<String, dynamic>.from(
+        store.pending(identity.uid, 'controller', identity.roomCode)!,
+      );
+      expect(ControllerRoomSessionStore.instance.roomCode, identity.roomCode);
+      expect(
+        store
+            .current(identity.uid, 'controller', identity.roomCode)!
+            .connectionId,
+        'old',
+      );
+      expect(database.writes, isEmpty);
+
+      var sequence = 1;
+      functions.reply = (name, data) async {
+        if (name == 'resumeRealtimeControllerRoom') {
+          expect(data['operationId'], pending['operationId']);
+          sequence = 2;
+        }
+        return {
+          'roomInstanceId': identity.roomInstanceId,
+          'roomStatus': 'playing',
+          'connectionId': sequence == 1 ? 'old' : 'recovered',
+          'connectionSeq': sequence,
+        };
+      };
+      expect(await service.restoreControllerRoom(), identity.roomCode);
+      expect(
+        store
+            .current(identity.uid, 'controller', identity.roomCode)!
+            .connectionId,
+        'recovered',
+      );
+      expect(
+        store.pending(identity.uid, 'controller', identity.roomCode),
+        isNull,
+      );
+      expect(database.writes.single, endsWith('/recovered'));
+    },
+  );
 }
 
 class _Functions extends Fake implements FirebaseFunctions {

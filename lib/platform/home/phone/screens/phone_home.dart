@@ -180,8 +180,14 @@ class _PhoneHomeState extends State<PhoneHome> {
         onDecline: () => unawaited(_declineReturn()),
       );
     }
-    return LobbyConnectionBand(
-      connectionChanges: _serverConnection,
+    return ListenableBuilder(
+      listenable: _restoredRoomProvider,
+      builder: (context, child) => LobbyConnectionBand(
+        connectionChanges: _restoredRoomProvider.isInRoom
+            ? _serverConnection
+            : null,
+        child: child!,
+      ),
       child: Scaffold(
         backgroundColor: MosiColors.violet,
         body: SafeArea(

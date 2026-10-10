@@ -31,6 +31,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/controller_reconnect_guard_test.dart',
     'test/controller_room_lifecycle_test.dart',
     'test/controller_room_recovery_test.dart',
+    'test/controller_room_lobby_recovery_test.dart',
     'test/room_recovery_heartbeat_test.dart',
     'test/room_join_recovery_test.dart',
     'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
@@ -50,6 +51,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/room_leave_state_test.dart',
     'test/room_restore_to_waiting_test.dart',
     'test/session_return_prompt_test.dart',
+    'packages/game_kit/test/mosi_ui/mosi_connection_band_test.dart',
   ],
   functionsTests: <String>[
     'functions/test/controller-presence-timer.test.mjs',
@@ -59,6 +61,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'functions/test/game-recovery-state.test.mjs',
     'functions/test/game-command-contract.test.mjs',
     'functions/test/network-session-boundaries.test.mjs',
+    'functions/test/liars-poker-rtdb-recovery.test.mjs',
     'functions/test/room-presence-rules.test.mjs',
     'functions/test/start-game-transaction.test.mjs',
     'functions/test/room-transaction-rerun.test.mjs',

@@ -112,9 +112,18 @@ class _ConnectionNoticeHostState extends State<ConnectionNoticeHost> {
 
   void _subscribe() {
     unawaited(_subscription?.cancel());
-    _subscription = widget.connectionChanges?.listen(
-      _handle,
-      onError: (_) => _handle(false),
+    _timer?.cancel();
+    _stopSteps();
+    _shownThisOutage = false;
+    _phase = ConnectionNoticePhase.hidden;
+    final source = widget.connectionChanges;
+    _subscription = source?.listen(
+      (connected) {
+        if (identical(widget.connectionChanges, source)) _handle(connected);
+      },
+      onError: (_) {
+        if (identical(widget.connectionChanges, source)) _handle(false);
+      },
     );
   }
 
