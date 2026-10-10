@@ -164,7 +164,8 @@ export function allocateRoomConnection(
 }
 
 /** Returns false for old connections, memberships, and reused room codes. */
-export function applyRoomPresence(room: SessionRoom, uid: string, connectionId: string): boolean {
+export function applyRoomPresence(room: SessionRoom, uid: string, connectionId: string,
+  onCurrentDisconnected?: (role: "controller" | "player", observedAt: number) => void): boolean {
   if (room.status === "closed" || room.status === "terminal") return false;
   const connection = room.connections?.[uid]?.[connectionId];
   if (!connection || connection.roomInstanceId !== room.roomInstanceId) return false;
@@ -172,6 +173,7 @@ export function applyRoomPresence(room: SessionRoom, uid: string, connectionId: 
       room.controllerConnectionSeq === connection.connectionSeq) {
     room.controllerConnected = connection.connected;
     room.controllerPresence = {connected: connection.connected, lastSeen: connection.lastSeen};
+    if (connection.connected === false) onCurrentDisconnected?.("controller", connection.lastSeen);
     return true;
   }
   const player = room.players?.[uid];
@@ -180,6 +182,7 @@ export function applyRoomPresence(room: SessionRoom, uid: string, connectionId: 
       player.membershipId !== connection.membershipId) return false;
   player.isConnected = connection.connected;
   player.lastSeen = connection.lastSeen;
+  if (connection.connected === false) onCurrentDisconnected?.("player", connection.lastSeen);
   return true;
 }
 

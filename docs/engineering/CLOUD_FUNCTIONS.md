@@ -44,6 +44,7 @@ Mafia 고유 투표는 유지하지만 네트워크 제외 투표는 없다. 자
 | game_common_recovery_report | 현재 접속 ready/failed·reportSeq 및 필수 barrier |
 | game_common_operation_status | 미확정 작업의 applied/stale/notApplied 최소 상태 |
 | game_common_interruption_report_stale_player | 관찰한 현재 접속 heartbeat 실패 신고 |
+| game_common_interruption_report_stale_controller | 참가자가 관찰한 진행 기기 heartbeat 정체를 서버 현재 접속과 재검증 |
 | game_common_interruption_exclude_player | controller 실제 reducer preview/제외 |
 | game_common_interruption_wait_more | 만료된 현재 incident를 한 번 30초 연장 |
 | game_common_interruption_expire | 결정 대기 표시, 자동 제외/종료 없음 |
@@ -55,9 +56,9 @@ vote_to_continue/finish_now는 현재 index export와 소비자에서 제거했�
 
 | RTDB 함수 (싱가포르) | 경로·역할 |
 | --- | --- |
-| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약에 반영 |
-| game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause |
-| game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause |
+| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약하고 controller/player 단절 cause를 같은 transaction에 반영 |
+| game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause의 멱등 안전망 |
+| game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause의 멱등 안전망 |
 | syncRealtimeRoomGameStatus | game/public/status, 현재 game 상태를 방에 반영 |
 | syncRoomCleanupQueue | rooms/{room}, 현재 allocation 재조회 후 due queue 갱신 |
 

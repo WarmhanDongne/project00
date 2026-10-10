@@ -442,7 +442,11 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   // 제한 시간 종료
   // ---------------------------------------------------------------------------
   void _handleTurnTimeout(LiarsPokerController controller) {
-    if (!controller.isMyTurn || controller.phase == 'penalty') return;
+    if (!controller.recoverySession.canSend ||
+        !controller.isMyTurn ||
+        controller.phase == 'penalty') {
+      return;
+    }
 
     // 잔여카드를 가진 마지막 1인이 응답하지 않으면 상대를 의심하지 않고
     // FOLD 처리해 새 라운드로 진행합니다.

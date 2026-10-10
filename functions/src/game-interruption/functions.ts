@@ -15,7 +15,7 @@ import {
   withTransactionRandom,
 } from "../common/transaction-random.js";
 import {applyRecoveryReport, assertRecoveryConnection, expireRecoveryCauses, extendRecoveryCause,
-  RecoveryReportInput, RecoveryRoom, registerRecoveryFailure} from "./recovery-state.js";
+  RecoveryReportInput, RecoveryRoom, registerRecoveryFailure, reportStaleController} from "./recovery-state.js";
 import {
   decorateRecoveryCauses,
   previewRecoveryExclusion,
@@ -117,9 +117,13 @@ export const game_common_interruption_report_stale_player = onCall<Data>({region
     if (now - connection.lastSeen <= 20000) return {status: "notStale"};
     connection.connected = false;
     player.isConnected = false;
-    registerRecoveryFailure(room, uid, "player", now);
+    registerRecoveryFailure(room, uid, "player", now, "disconnected", connection.lastSeen);
     return {status: "disconnected"};
   }));
+
+export const game_common_interruption_report_stale_controller = onCall<Data>({region: REGION}, (request) =>
+  execute(request.auth?.uid, request.data, "staleController", false, (room, _uid, now) =>
+    reportStaleController(room, request.data.observedLastSeen, now)));
 
 /** Presence is a loss signal; connected=true never supplies readiness. */
 export const game_common_interruption_on_connection_changed = onValueWritten({
@@ -132,7 +136,10 @@ export const game_common_interruption_on_connection_changed = onValueWritten({
     const room = raw as RecoveryRoom;
     const player = room.players?.[event.params.uid];
     if (player?.isConnected !== false) return;
-    registerRecoveryFailure(room, event.params.uid, "player", now);
+    registerRecoveryFailure(
+      room, event.params.uid, "player", now, "disconnected",
+      typeof player.lastSeen === "number" ? player.lastSeen : now,
+    );
     decorateRecoveryCauses(room, now);
     return room;
   });

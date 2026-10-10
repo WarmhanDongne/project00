@@ -63,12 +63,16 @@ nickname/characterId/profileImageUrl을 비교한다. heartbeat·접속 갱신�
 
 최초 실패만 public.recovery.paused/pauseId/pausedAt 및 server.recovery.timer를 만든다.
 timer는 kind=none 또는 kind=remaining으로 저장해 RTDB의 null 생략에도 마감 없음과 0ms 남음을 구분한다.
+pausedAt은 서버 감지 시각이다. 타이머는 서버가 검증한 현재 접속의 마지막 성공 heartbeat부터
+멈추며, 유효한 heartbeat가 없을 때만 감지 시각을 사용한다. onDisconnect는 connected만 false로
+바꿔 마지막 성공 lastSeen을 보존한다.
 추가 원인은 최초 남은 시간을 덮어쓰지 않는다. 생략된 빈 causes/ready는 빈 집합으로 처리한다.
 
 | 공용 callable | 역할과 결과 |
 | --- | --- |
 | game_common_recovery_report | 현재 접속 ready/failed와 reportSeq. failed에는 알려진 game ID만으로 보고 가능 |
 | game_common_interruption_report_stale_player | controller가 관찰한 접속·sequence·lastSeen이 현재와 같을 때 실패 원인 추가 |
+| game_common_interruption_report_stale_controller | player가 관찰한 controller 접속·sequence·lastSeen이 현재와 같을 때 실패 원인 추가 |
 | game_common_interruption_expire | 만료를 awaitingDecision으로 표시; 자동 제외/종료 없음 |
 | game_common_interruption_wait_more | controller가 만료된 현재 incident를 한 번 수락 시각부터 30초 연장 |
 | game_common_interruption_exclude_player | controller의 현재 incident/pause 선택. 실제 reducer preview 뒤 제외 |
@@ -126,9 +130,11 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 소진된 request는 새 호출을 시작하지 않는다. AppNetworkGuard는 실제 네트워크 오류를 기존 연결 UI로 보호한다.
 팝업이 게임 라우트 위에 올라와도 가드의 wrapper와 child 위치를 유지한다. 가려진 라우트의
 안내와 입력 차단만 비활성화하며 게임 State·구독을 폐기하거나 중첩 가드 소유권을 교체하지 않는다.
-2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임 준비와
-원인 없는 ready barrier는 기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
-실제 recovery causes/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
+2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임의 최초 준비는
+기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
+2026-10-10 복구 결정: 실제 pause가 시작된 뒤 원인이 먼저 해소된 ready barrier는 모든 필수 기기의
+준비가 끝날 때까지 일반 중단 안내를 유지하되 별도 퇴장·결정 버튼은 만들지 않는다.
+실제 recovery pause/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
 GameRecoveryLayer는 휴대폰의 GameRequestNotice 한 곳에 중단/실패와 필요한 재시도를 표시한다.
 준비 실패 안내는 늦은 데이터로 지우지 않으며 명시 재시도가 시작되면 닫는다.
 휴대폰 나가기는 기존 상단바·퇴장 모달을 사용한다. 준비 실패/실제 중단 중에도 기존 메뉴를 사용할 수 있다.

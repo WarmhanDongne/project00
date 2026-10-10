@@ -111,7 +111,7 @@ void main() {
   });
 
   for (final role in GameInterruptionPresentation.values) {
-    testWidgets('원인 없는 준비 barrier는 $role 중단 안내를 띄우지 않는다', (tester) async {
+    testWidgets('복구 원인이 해소된 준비 barrier도 $role 중단 안내를 유지한다', (tester) async {
       final session = GameRecoverySession();
       addTearDown(session.dispose);
       var retries = 0, exits = 0;
@@ -137,8 +137,14 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 12));
       expect(find.text('기존 배경'), findsOneWidget);
-      expect(find.byType(GameInterruptionLayer), findsNothing);
-      expect(find.textContaining('게임을 잠시 멈췄어요'), findsNothing);
+      if (role == GameInterruptionPresentation.player) {
+        expect(find.byType(GameRequestNotice), findsOneWidget);
+        expect(find.text('게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.'), findsOneWidget);
+      } else {
+        expect(find.byType(GameInterruptionLayer), findsOneWidget);
+        expect(find.text('게임을 잠시 멈췄어요'), findsOneWidget);
+        expect(find.text('모든 기기의 화면 준비를 확인하고 있어요.'), findsOneWidget);
+      }
       expect(find.byType(GameConnectingOverlay), findsNothing);
       expect(find.byType(TextButton), findsNothing);
       expect(find.byType(OutlinedButton), findsNothing);

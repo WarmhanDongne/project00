@@ -45,6 +45,11 @@ class CallableRetryPolicy {
     'unavailable',
   };
 
+  static bool isRetryable(Object error) =>
+      error is TimeoutException ||
+      (error is FirebaseFunctionsException &&
+          retryableCodes.contains(error.code));
+
   Future<T> run<T>(
     Future<T> Function() request, {
     required bool enabled,

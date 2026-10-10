@@ -7,7 +7,7 @@ import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 export 'package:game_kit/recovery/widgets/game_interruption_layer.dart'
     show GameInterruptionPresentation;
 
-/// 정상 준비는 게임 화면을 유지하고, 실제 실패·이탈만 기존 안내로 표시합니다.
+/// 초기 준비는 게임 화면을 유지하고, 복구 중단과 실패는 기존 안내로 표시합니다.
 ///
 /// 각 게임이 전달한 준비·중단 원인과 콜백으로 화면만 구성합니다.
 /// 서버 상태와 게임 규칙은 변경하지 않습니다.
@@ -48,7 +48,9 @@ class GameRecoveryLayer extends StatelessWidget {
     final state = interruption?.state;
     final interrupted =
         state != null &&
-        (state.causes.isNotEmpty || state.playerUid.isNotEmpty);
+        (state.pauseId != null ||
+            state.causes.isNotEmpty ||
+            state.playerUid.isNotEmpty);
     final playerInterruption =
         interrupted &&
         interruption?.presentation == GameInterruptionPresentation.player;
