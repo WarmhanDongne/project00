@@ -10,10 +10,18 @@ type StartableRoom = {
 
 /** 시작 준비와 커밋 사이에 로비 참가자/좌석이 바뀌었는지 비교합니다. */
 export function startGameFingerprint(room: StartableRoom): string {
+  const players = room.players && typeof room.players === "object" ?
+    Object.fromEntries(Object.entries(room.players).map(([uid, value]) => {
+      const player = value as Record<string, unknown>;
+      return [uid, Object.fromEntries([
+        "role", "status", "membershipId", "seatIndex", "nickname",
+        "characterId", "profileImageUrl",
+      ].map((key) => [key, player?.[key]]))];
+    })) : room.players;
   return JSON.stringify(stableValue({
     selectedGame: room.selectedGame,
     status: room.status,
-    players: room.players,
+    players,
   }));
 }
 

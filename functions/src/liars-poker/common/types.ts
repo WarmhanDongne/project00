@@ -82,7 +82,7 @@ export interface ServerGameState {
   lastPlayCards: GameCard[] | null;
   processedCommands: Record<string, ProcessedCommand>;
   roundStarterUid: string;
-  /** 1대1 LIAR 실패로 룰렛 전에 penaltyCount를 이미 올렸는지 표시합니다. */
+  /** 마지막 카드 도전의 LIAR 실패로 룰렛 전에 penaltyCount를 올렸는지 표시합니다. */
   penaltyCountIncrementedBeforeRoulette?: boolean;
   /** 서버가 추첨하고 태블릿 연출 완료를 기다리는 벌칙 결과입니다. */
   pendingPenaltyResolution?: {

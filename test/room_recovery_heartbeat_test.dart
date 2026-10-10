@@ -4,6 +4,8 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/recovery/models/room_session_identity.dart';
 import 'package:game_kit/recovery/services/controller_room_session_store.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
@@ -18,6 +20,65 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'route retries and resumed lifecycle share a completed connection episode',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      await ControllerRoomSessionStore.instance.clear();
+      const identity = RoomSessionIdentity(
+        uid: 'coalesced',
+        role: 'player',
+        roomCode: 'ABCDE',
+        roomInstanceId: 'room',
+        membershipId: 'member',
+        connectionId: 'current',
+        connectionSeq: 1,
+      );
+      await RoomSessionIdentityStore.instance.save(identity);
+      final database = _Database();
+      final service = _RecoveryService(identity, database)
+        ..playerRestore = Completer<void>();
+      final provider =
+          RoomProvider(
+              service: service,
+              gameService: _UnusedGameService(),
+              currentUidReader: () => identity.uid,
+            )
+            ..roomCode = identity.roomCode
+            ..players = [
+              RoomPlayer.fromJson({
+                'nickname': 'Tester',
+                'characterId': 'frog',
+              }, key: identity.uid),
+            ]
+            ..listenRoom();
+      addTearDown(() async {
+        provider.dispose();
+        await service.connected.close();
+        await RoomSessionIdentityStore.instance.clear(
+          identity.uid,
+          'player',
+          'ABCDE',
+        );
+      });
+      service.connected.add(true);
+      await Future<void>.delayed(Duration.zero);
+      final first = provider.retryConnectionRecovery();
+      final second = provider.retryConnectionRecovery();
+      provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(service.playerRestores, 1);
+      final session = GameRecoverySession.forRoom('ABCDE', identity.uid);
+      expect(session.transportRecovering, true);
+      service.playerRestore!.complete();
+      await Future.wait([first, second]);
+      expect(session.transportRecovering, false);
+      await provider.retryConnectionRecovery();
+      provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(service.playerRestores, 1);
+    },
+  );
   test('invalidated controller restore cannot start player heartbeats', () async {
     SharedPreferences.setMockInitialValues({});
     const identity = RoomSessionIdentity(
@@ -156,7 +217,13 @@ void main() {
           reason:
               '${service.identity.role} must outlive the recovery operation',
         );
-        expect(service.database.ownersAtWrite, everyElement(isNull));
+        expect(
+          service.database.ownersAtWrite.first,
+          same(service.recoveryOwner),
+          reason:
+              'Recovery confirms one heartbeat inside its owner before ready',
+        );
+        expect(service.database.ownersAtWrite.skip(1), everyElement(isNull));
         expect(
           service.database.paths,
           everyElement(
@@ -182,6 +249,8 @@ class _RecoveryService extends RoomService {
   final connected = StreamController<bool>.broadcast();
   RoomRecoveryBatch? recoveryOwner;
   Future<void> Function()? afterControllerRestore;
+  Completer<void>? playerRestore;
+  int playerRestores = 0;
 
   @override
   Future<String?> restoreControllerRoom() async {
@@ -197,6 +266,8 @@ class _RecoveryService extends RoomService {
     required String characterId,
   }) async {
     recoveryOwner = RoomRecoveryBatch.current;
+    playerRestores++;
+    await playerRestore?.future;
   }
 
   @override

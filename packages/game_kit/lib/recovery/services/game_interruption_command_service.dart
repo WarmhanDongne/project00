@@ -13,6 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
 
 // ============================================================
 
@@ -48,7 +49,18 @@ class GameInterruptionCommandService extends GameCommandService {
       isCurrent: () =>
           FirebaseAuth.instance.currentUser?.uid == uid &&
           !session.leaving &&
-          session.transportConnected,
+          session.transportConnected &&
+          !session.transportRecovering &&
+          session.context?.key == GameRecoveryContext.fromMap(context).key &&
+          (context['connectionId'] == null ||
+              RoomSessionIdentityStore.instance
+                      .current(uid ?? '', 'player', roomCode)
+                      ?.connectionId ==
+                  context['connectionId'] ||
+              RoomSessionIdentityStore.instance
+                      .current(uid ?? '', 'controller', roomCode)
+                      ?.connectionId ==
+                  context['connectionId']),
       retryable: (error) =>
           error is TimeoutException ||
           (error is FirebaseFunctionsException &&

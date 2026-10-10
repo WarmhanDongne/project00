@@ -9,6 +9,9 @@ import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
+import 'package:game_kit/recovery/models/room_session_identity.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Map<String, dynamic> public(
   int seq, {
@@ -69,6 +72,125 @@ void main() {
       await query.priv.close();
     }
   });
+  testWidgets(
+    'same sequence in a new room membership invalidates an old ready acknowledgement',
+    (tester) async {
+      start();
+      SharedPreferences.setMockInitialValues({});
+      final game = container.read(provider.notifier);
+      RoomSessionIdentity identity(String room, String member) =>
+          RoomSessionIdentity(
+            uid: game.uid,
+            role: 'player',
+            roomCode: game.roomCode,
+            roomInstanceId: room,
+            membershipId: member,
+            connectionId: 'connection',
+            connectionSeq: 1,
+          );
+      await RoomSessionIdentityStore.instance.save(
+        identity('old-room', 'old-member'),
+      );
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+      await RoomSessionIdentityStore.instance.save(
+        identity('new-room', 'new-member'),
+      );
+      expect(game.recoverySession.canSend, false);
+      await RoomSessionIdentityStore.instance.clear(
+        game.uid,
+        'player',
+        game.roomCode,
+      );
+    },
+  );
+  testWidgets(
+    'ready acknowledgement deadline survives local usability and rejects late success',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      commands.readyResult = Completer<Map<String, dynamic>>();
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      await tester.pump();
+      expect(game.localUsable, true);
+      expect(game.recoverySession.serverConfirmed, false);
+      await tester.pump(const Duration(seconds: 31));
+      expect(container.read(provider).errorMessage, isNotNull);
+      expect(game.recoverySession.canSend, false);
+      commands.readyResult!.complete({'status': 'accepted'});
+      await tester.pump();
+      expect(game.recoverySession.serverConfirmed, false);
+      expect(commands.reports.where((r) => r['ready'] == false).length, 1);
+    },
+  );
+  testWidgets('ignored report is not confirmation of a ready state', (
+    tester,
+  ) async {
+    start();
+    final game = container.read(provider.notifier);
+    commands.readyResult = Completer<Map<String, dynamic>>()
+      ..complete({'status': 'ignored', 'reconciled': true});
+    query.pub.add(_Event(public(1, paused: false)));
+    query.priv.add(_Event(private(1)));
+    await tester.pump();
+    game.reportScreenReady(assetsReady: true);
+    await tester.pump();
+    await tester.pump();
+    expect(game.recoverySession.serverConfirmed, false);
+    expect(container.read(provider).errorMessage, isNotNull);
+  });
+  testWidgets(
+    'room transport confirmation precedes ready even when data arrives first',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      game.recoverySession.transportRecovering = true;
+      game.recoverySession.changed();
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      expect(commands.reports, isEmpty);
+      expect(game.recoverySession.canSend, false);
+      game.recoverySession.transportRecovering = false;
+      game.recoverySession.changed();
+      await tester.pump();
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      await tester.pump();
+      expect(commands.reports.single['ready'], true);
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+  testWidgets(
+    'own accepted ready does not expire while another participant is missing',
+    (tester) async {
+      start();
+      final game = container.read(provider.notifier);
+      query.pub.add(_Event(public(1)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 31));
+      expect(game.recoverySession.serverConfirmed, true);
+      expect(game.recoverySession.canSend, false);
+      expect(container.read(provider).errorMessage, isNull);
+      expect(commands.reports.length, 1);
+    },
+  );
   testWidgets(
     'first game does not inherit an expired lobby preparation budget',
     (tester) async {

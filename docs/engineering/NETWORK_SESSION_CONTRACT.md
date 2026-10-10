@@ -1,6 +1,6 @@
 # 네트워크·세션 구현 계약
 
-2026-10-09 E02~E12 로컬 구현 후보의 계약이다. 배포 여부를 뜻하지 않는다.
+2026-10-09 E02~E12 및 2026-10-10 룰렛·시작 재시도 로컬 구현 후보의 계약이다. 배포 여부를 뜻하지 않는다.
 [채택한 A~C와 실행 계획](../planning/NETWORK_SESSION_IMPLEMENTATION_PLAN.md),
 [현재 검증과 한계](../planning/NETWORK_SESSION_E02_E12_IMPLEMENTATION.md),
 [Engineering Contract](ENGINEERING_CONTRACT.md)를 함께 따른다.
@@ -53,6 +53,14 @@ resumeEpoch는 공개 barrier와 준비 보고에만 사용하며 private 대응
 중복 명령은 UID·종류·domain이 같아야 기존 결과를 반환한다.
 저장한 domain/ID는 자동·수동 재시도에서 유지한다. 종료·자기 퇴장·복구 선택은 pause 중에도 서버 검증을 거친다.
 
+LP 추첨의 resolutionId와 확정의 commandId는 별개다. 확정은 현재 pending 추첨 ID와
+대상을 검증하고 같은 확정 재시도는 원래 commandId/domain을 유지한다. 같은 추첨의
+prepare 재호출은 저장 결과를 반환한다. 다른 kind에 같은 ID를 재사용하는 것은 거절한다.
+
+시작 fingerprint는 selectedGame/status와 UID별 role/status/membershipId/seatIndex/
+nickname/characterId/profileImageUrl을 비교한다. heartbeat·접속 갱신은 준비 입력 변경이
+아니며 실제 명단·자격·좌석·표시 정보 변경은 거절한다. 접속 권한과 준비 barrier 검사는 유지한다.
+
 최초 실패만 public.recovery.paused/pauseId/pausedAt 및 server.recovery.timer를 만든다.
 timer는 kind=none 또는 kind=remaining으로 저장해 RTDB의 null 생략에도 마감 없음과 0ms 남음을 구분한다.
 추가 원인은 최초 남은 시간을 덮어쓰지 않는다. 생략된 빈 causes/ready는 빈 집합으로 처리한다.
@@ -92,8 +100,23 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 | --- | --- |
 | 방/세션/준비 복구 | RoomRecoveryBatch: 최초 포함 6회, 1/2/4/8/8초, 요청별 8초, 전체 30초 |
 | 게임 행동·진행 | GameCommandBatch/CallableRetryPolicy: 최초 포함 4회, 0.25/0.5/1초, 요청별 8초, 전체 12초 |
+| 게임 시작 | 자동 반복 전송 없이 단일 요청; 미확정이면 저장한 시작을 수동 확인/재생 |
 | 소진 뒤 | 미확정 ID/domain 유지, 결과 확인 후 실제 수동 재시도 |
 | 재연결/foreground | UID·방·수명 확인 후 새 제한 묶음; 중첩 소유자 없음 |
+
+시작은 기존 UID/role identity에 pendingGameStart(functionName/input/payload)를 전송 전에
+직렬 저장한다. 같은 roomInstanceId/membershipId의 접속 교체·새 서비스·앱 재실행은
+원래 ID와 옵션을 이어받는다. 저장 실패면 전송하지 않으며 TTL로 버리지 않는다.
+성공·stale 또는 최초 요청의 확정 거절은 해당 ID만 정리한다. 이미 미확정인 시작의
+후속 already-exists 등은 최초 요청의 완료를 입증하지 못하므로 의도를 유지한다.
+다른 게임/옵션으로 교체하지 않으며 방·참가 교체나 명시 방 정리는 원래 의도를 제거한다.
+
+미확정 재시도는 operation_status부터 조회한다. applied는 결과 없는 success로 변환하지
+않고 원래 callable/domain/ID를 재생해 저장 응답을 받는다. notApplied도 원래 요청을
+재전송한다. 전송 시 현재 UID·방·참가를 확인하고 접속 envelope만 갱신한다. applied
+재생은 이후 phase/pause 변경에도 가능하다. 늦은 응답은 새로운 ID/재시도 owner를 정리하지 않는다.
+태블릿 설정 완료는 pending 시작이 있으면 좌석 저장을 반복하지 않고 결과 확인부터 한다.
+미확정 중 설정 취소·명단 변경에 의한 선택 정리도 원래 시작을 덮어쓰지 않는다.
 
 완료된 owner를 긴 구독이 상속하지 않는다. 늦은 operation의 이어 실행은 원래 deadline을 유지한다.
 복구 후 heartbeat timer와 완료 알림은 bounded 작업을 await한 바깥에서 시작한다.
@@ -101,6 +124,8 @@ public/private 불일치는 하나의 최대 30초 준비 묶음에서 현재 �
 새 준비 묶음을 사용하되 같은 pause의 barrier/dataSeq 갱신이나 진행 중인 준비 대기는
 기존 deadline을 유지한다. 준비 실패 뒤 도착한 pause/데이터만으로 보호를 해제하지 않는다.
 소진된 request는 새 호출을 시작하지 않는다. AppNetworkGuard는 실제 네트워크 오류를 기존 연결 UI로 보호한다.
+팝업이 게임 라우트 위에 올라와도 가드의 wrapper와 child 위치를 유지한다. 가려진 라우트의
+안내와 입력 차단만 비활성화하며 게임 State·구독을 폐기하거나 중첩 가드 소유권을 교체하지 않는다.
 2026-10-09 사용자 UI 결정: 정상 진입·카드 분배·public/private/에셋/프레임 준비와
 원인 없는 ready barrier는 기존 게임 배경·연출을 유지하며 별도 문구·안내창·퇴장 버튼을 띄우지 않는다.
 실제 recovery causes/기존 플레이어 이탈 또는 로컬 준비 실패가 있을 때만 기존 오류 UI를 사용한다.
@@ -113,6 +138,26 @@ controller의 실제 중단에는 기존 제외·한 번 연장·확인 후 종�
 정상 캐시는 재다운로드하지 않는다. 누락/손상 파일만 동의 후 복구하고 디코딩·프레임을 다시 준비한다.
 route 완료와 게임 정리는 캡처한 game ID로 처리한다.
 
+## 2026-10-10 LP 후속 후보
+
+transportRecovering 동안 ready와 입력은 막는다. 현재 identity 저장과 해당 접속 heartbeat 확인
+뒤 구독/ready를 다시 준비한다. 진행 Future와 완료된 UID/방/세션·접속 세대/connection scope를
+공유한다. pending join은 원래 결과 재생 뒤 현재 참가·접속을 확인해 채택한다. 별도 명시 프로필
+수정은 새 요청이다. 만료·이전 참가 owner의 identity/pending 저장과 새 접속에 대한 늦은 disconnect를
+막는다. 현재 Navigator route만 네트워크 안내를 맡고 퇴장/dispose는 자신의 callback만 해제한다.
+heartbeat 권한 거절은 episode당 한 번 제한 재확인, ready staleConnection은 같은 준비 예산을 쓴다.
+
+localUsable과 현재 ready accepted는 별개다. 자신의 ack까지 같은 30초 owner와 기존 최대 6회/8초
+요청을 유지한다. 같은 ID/reportSeq/domain을 재전송하고 원래 응답을 확인한다. ignored/reconciled/
+operation_status applied만으로 serverConfirmed를 설정하지 않는다. 실패/소진은 기존 오류와
+명시 재시도이며 자신의 accepted 뒤 타인 pause는 자기 실패가 아니다. 보고 순서는 프로세스 시간
+seed와 공용 단조 증가로 controller 재생성의 1부터 재사용을 막는다. persistent JSON은 유지한다.
+방/참가/접속 전체 변경은 이전 ack를 무효화한다. 정상 준비에는 새 안내 화면을 만들지 않는다.
+
+LP draw는 gameInstance/phaseSeq/대상과 개별 coordinator가 소유한다. 동일 penalty public/ready/
+pause에서 보존하고 회전 callback은 scope를 캡처한다. 중단 중 완료는 현재 ready까지 보관하며,
+실패 재시도는 원래 draw/resolve ID다. 새 penalty/종료/새 게임의 이전 Future는 새 pending·오류를
+바꾸지 못한다. 서버 권위·pause 검사를 유지한다. [후속 반영 기록](../planning/NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md)에 따라 기존 Functions 63개 반영은 완료했다. FULL은 사용자 지시로 보류했고 새 APK의 실기기 결과는 아직 미확인이다.
 ## 생성·정리·debug 기록
 
 roomCreateSlots/roomCreateRequests의 reserved/created/terminal, generation CAS와 tombstone이
@@ -124,6 +169,8 @@ syncRoomCleanupQueue는 현재 방을 재조회한다. cleanupStaleRealtimeRooms
 조건부 생성·정리 CAS는 기존 runPrimedTransaction으로 value listener의 서버 값을 받은 뒤 실행한다.
 단독 get() 뒤의 초기 빈 SDK 캐시를 실제 부재로 판정하지 않는다. mapping 비교는 key 순서와 무관하며,
 정리 첫 key page에는 빈 문자열 경계를 넣지 않고 저장된 cursor가 있을 때만 startAt을 적용한다.
+transaction update 예외는 첫 예외를 보관하고 undefined로 abort한다. SDK의 완료·rollback
+경로를 await한 뒤 원래 예외를 전파하며 listener는 finally에서 제거한다.
 
 RecoveryMetrics는 단조 episode/batch와 연결·인증·identity·구독·public/private·에셋·프레임·
 ready·barrier·입력 단계를 기록한다. debug event 200개와 독립 요약 50개로 제한한다.

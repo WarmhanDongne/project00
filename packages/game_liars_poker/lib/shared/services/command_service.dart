@@ -15,6 +15,7 @@ import 'package:game_kit/services/game_command_service.dart';
 
 class LiarsPokerCommandService extends GameCommandService {
   LiarsPokerCommandService({super.functions, super.retryPolicy});
+  final Map<String, String> _resolutionCommands = {};
 
   /// 태블릿 딜링 중 첫 카드 제출과 라이어 함수의 콜드 스타트를 미리 끝냅니다.
   Future<void> warmUpGameplayCommands() => warmUpCommands(const [
@@ -114,11 +115,18 @@ class LiarsPokerCommandService extends GameCommandService {
   Future<Map<String, dynamic>> resolvePenalty({
     required String roomCode,
     required String resolutionId,
-  }) {
-    return invoke('game_liars_poker_resolve_penalty', {
+  }) async {
+    final key = '${roomCode.trim().toUpperCase()}/$resolutionId';
+    final requestId = _resolutionCommands.putIfAbsent(
+      key,
+      () => commandId('resolve'),
+    );
+    final response = await invoke('game_liars_poker_resolve_penalty', {
       'roomCode': roomCode,
-      'commandId': resolutionId,
+      'commandId': requestId,
       'resolutionId': resolutionId,
     }, retryTransientFailure: true);
+    _resolutionCommands.remove(key);
+    return response;
   }
 }

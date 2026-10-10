@@ -102,6 +102,30 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   String? _activePenaltyResultKey;
 
   late LiarsPokerPenaltyCoordinator _penaltyCoordinator;
+  String? _pendingRouletteScope;
+  RouletteResult? _pendingRouletteResult;
+  Future<void>? _rouletteResolution;
+  bool _rouletteCompletionRequested = false;
+  String? get rouletteScope {
+    final context = recoverySession.context;
+    if (context == null ||
+        phase != 'penalty' ||
+        isFinished ||
+        penaltyTargetUid == null) {
+      return null;
+    }
+    return '${context.gameInstanceId}/${context.phaseSeq}/$penaltyTargetUid';
+  }
+
+  void _resumeRoulette() {
+    if (_rouletteCompletionRequested &&
+        recoverySession.canSend &&
+        _rouletteResolution == null) {
+      unawaited(
+        resolveRoulette(_pendingRouletteResult!, scope: _pendingRouletteScope),
+      );
+    }
+  }
 
   /// [state]를 한 번에 바꿉니다. 화면이 사라진 뒤에는 아무 일도 하지 않습니다.
   ///
@@ -128,7 +152,9 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
       _scheduleGameplayWarmUp();
     }
     startSession(watchPrivate: watchPrivateHand);
+    recoverySession.addListener(_resumeRoulette);
     ref.onDispose(() {
+      recoverySession.removeListener(_resumeRoulette);
       _readyTurnCommand.dispose();
       _liarVerdictDelayTimer?.cancel();
       _liarVerdictTimer?.cancel();
@@ -376,6 +402,26 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     final nextPenaltyTargetUid = liarsPokerNullableString(
       data['penaltyTargetUid'],
     );
+    final context = recoverySession.context;
+    final nextRouletteScope =
+        nextStatus == 'playing' &&
+            nextPhase == 'penalty' &&
+            nextPenaltyTargetUid != null &&
+            context != null
+        ? '${context.gameInstanceId}/${context.phaseSeq}/$nextPenaltyTargetUid'
+        : null;
+    if (_pendingRouletteScope != null &&
+        _pendingRouletteScope != nextRouletteScope) {
+      _pendingRouletteScope = null;
+      _pendingRouletteResult = null;
+      _rouletteCompletionRequested = false;
+      _rouletteResolution = null;
+      _penaltyCoordinator = LiarsPokerPenaltyCoordinator(
+        roomCode: roomCode,
+        commandService: service.command,
+      );
+    }
+    final keepResolving = _pendingRouletteScope != null && isResolvingPenalty;
     final nextRound = liarsPokerInteger(data['round']) ?? 1;
     final nextRevision = liarsPokerInteger(data['revision']) ?? revision;
     final nextTurnDeadlineAt = liarsPokerInteger(data['turnDeadlineAt']);
@@ -465,7 +511,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
         playersChanged ||
         roundPlaysChanged ||
         // 룰렛 결과 전송 중 표시는 서버 반영 확인(다음 공개 상태)과 함께 끝냅니다.
-        isResolvingPenalty ||
+        isResolvingPenalty != keepResolving ||
         errorMessage != null;
 
     _hasPublicSnapshot = true;
@@ -537,7 +583,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
           hasRevealedHand: nextHasRevealedHand,
           errorMessage: null,
           interruption: nextInterruption,
-          isResolvingPenalty: false,
+          isResolvingPenalty: keepResolving,
           isPenaltyResultVisible: nextPenaltyResultVisible,
         ),
       );
@@ -772,13 +818,29 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
 
   /// 실제 결과는 회전 전에 서버가 추첨합니다. 클라이언트는 그 결과에 맞는 칸으로
   /// 원판을 움직일 뿐 확률이나 생존/탈락을 결정하지 않습니다.
-  Future<RouletteResult?> prepareRoulette() async {
-    if (isResolvingPenalty || penaltyTargetUid == null) return null;
+  Future<RouletteResult?> prepareRoulette({String? scope}) async {
+    final captured = scope ?? rouletteScope;
+    if (captured == null ||
+        captured != rouletteScope ||
+        isResolvingPenalty ||
+        !recoverySession.canSend) {
+      return null;
+    }
+    _pendingRouletteScope = captured;
+    final coordinator = _penaltyCoordinator;
+    bool current() =>
+        ref.mounted &&
+        captured == rouletteScope &&
+        captured == _pendingRouletteScope &&
+        identical(coordinator, _penaltyCoordinator);
     _update((current) => current.copyWith(isResolvingPenalty: true));
-
     try {
-      return await _penaltyCoordinator.prepare();
+      final result = _pendingRouletteResult ?? await coordinator.prepare();
+      if (!current()) return null;
+      _pendingRouletteResult = result;
+      return result;
     } catch (error) {
+      if (!current()) return null;
       _update(
         (current) => current.copyWith(
           isResolvingPenalty: false,
@@ -790,24 +852,50 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     }
   }
 
-  /// 서버가 정한 결과대로 룰렛 연출이 끝났음을 알립니다.
-  Future<void> resolveRoulette(RouletteResult _) async {
-    if (!isResolvingPenalty || penaltyTargetUid == null) {
+  /// Completion retains its draw while the server's recovery barrier is closed.
+  Future<void> resolveRoulette(RouletteResult result, {String? scope}) async {
+    final captured = scope ?? rouletteScope;
+    if (captured == null ||
+        captured != rouletteScope ||
+        captured != _pendingRouletteScope ||
+        result != _pendingRouletteResult) {
       return;
     }
-
-    try {
-      await _penaltyCoordinator.complete();
-    } catch (error) {
-      _penaltyCoordinator.reset();
-      _update(
-        (current) => current.copyWith(
-          isResolvingPenalty: false,
-          rouletteRetry: current.rouletteRetry + 1,
-        ),
-      );
-      _reportError('룰렛 결과를 반영하지 못했습니다.', error);
+    _rouletteCompletionRequested = true;
+    if (!recoverySession.canSend) return;
+    final active = _rouletteResolution;
+    if (active != null) return active;
+    final coordinator = _penaltyCoordinator;
+    bool current() =>
+        ref.mounted &&
+        captured == rouletteScope &&
+        captured == _pendingRouletteScope &&
+        identical(coordinator, _penaltyCoordinator);
+    Future<void> send() async {
+      try {
+        await coordinator.complete();
+        if (!current()) return;
+        _rouletteCompletionRequested = false;
+        _pendingRouletteResult = null;
+        _pendingRouletteScope = null;
+        _update((current) => current.copyWith(isResolvingPenalty: false));
+      } catch (error) {
+        if (!current()) return;
+        _rouletteCompletionRequested = false;
+        _update(
+          (current) => current.copyWith(
+            isResolvingPenalty: false,
+            rouletteRetry: current.rouletteRetry + 1,
+          ),
+        );
+        _reportError('룰렛 결과를 반영하지 못했습니다.', error);
+      }
     }
+
+    final operation = send();
+    _rouletteResolution = operation;
+    await operation;
+    if (identical(_rouletteResolution, operation)) _rouletteResolution = null;
   }
 
   Future<bool> _runMenuCommand(

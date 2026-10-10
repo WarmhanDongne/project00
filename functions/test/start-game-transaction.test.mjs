@@ -36,3 +36,32 @@ test("게임 준비 중 좌석이 바뀌면 시작 커밋을 거부한다", () =
     /참가자 또는 좌석이 바뀌었습니다/,
   );
 });
+
+test("heartbeat와 접속 교체는 같은 시작 입력으로 비교한다", () => {
+  const initial = room();
+  Object.assign(initial.players.u1, {lastSeen: 1000, isConnected: true,
+    currentConnectionId: 'connection-old', connectionSeq: 1});
+  const changed = structuredClone(initial);
+  Object.assign(changed.players.u1, {lastSeen: 2000, isConnected: false,
+    currentConnectionId: 'connection-new', connectionSeq: 2});
+  assert.doesNotThrow(() => assertStartGameSnapshot(startGameFingerprint(initial), changed));
+});
+
+test("참가 자격·명단·표시 정보·게임 선택의 실제 변경은 시작을 거절한다", () => {
+  for (const mutate of [
+    value => { delete value.players.u2; },
+    value => { value.players.u1.role = 'spectator'; },
+    value => { value.players.u1.status = 'left'; },
+    value => { value.players.u1.membershipId = 'new-membership'; },
+    value => { value.players.u1.nickname = 'new-name'; },
+    value => { value.players.u1.characterId = 'new-character'; },
+    value => { value.players.u1.profileImageUrl = 'new-image'; },
+    value => { value.selectedGame = 'holdem'; },
+    value => { value.status = 'waiting'; },
+  ]) {
+    const changed = room();
+    mutate(changed);
+    assert.throws(() => assertStartGameSnapshot(startGameFingerprint(room()), changed),
+      error => error.code === 'aborted');
+  }
+});

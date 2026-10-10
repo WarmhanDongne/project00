@@ -24,7 +24,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   bool _hasEnteredGame = false;
   bool _isResultDialogOpen = false;
   String? _shownWinnerUid;
-  BuildContext? _resultDialogContext;
+  DialogRoute<void>? _resultDialogRoute;
   int _resultDialogGeneration = 0;
   bool _wasMyTurn = false;
   bool _wasPenaltyPhase = false;
@@ -170,6 +170,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     if (winnerUid == null || winner == null) return;
     if (_isResultDialogOpen && _shownWinnerUid == winnerUid) return;
 
+    _closeResultDialog();
     _isResultDialogOpen = true;
     _shownWinnerUid = winnerUid;
     final generation = ++_resultDialogGeneration;
@@ -177,12 +178,14 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || generation != _resultDialogGeneration) return;
 
-      await showDialog<void>(
+      final navigator = Navigator.of(context, rootNavigator: true);
+      final route = DialogRoute<void>(
         context: context,
+        themes: InheritedTheme.capture(from: context, to: navigator.context),
+        traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
         barrierDismissible: false,
         barrierColor: const Color(0xC7000000),
-        builder: (dialogContext) {
-          _resultDialogContext = dialogContext;
+        builder: (_) {
           // 우승자 발표는 뒤로 가기로 닫지 않습니다. 이 제한은 다이얼로그
           // 라우트에만 걸어야 합니다. PhoneResultDialog 안에 두면 파이널콜처럼
           // 화면에 직접 그리는 게임에서 게임 라우트가 잠겨 버립니다.
@@ -195,9 +198,12 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           );
         },
       );
+      // 첫 화면이 그려지기 전에 재시작이 도착해도 이 팝업을 닫을 수 있습니다.
+      _resultDialogRoute = route;
+      await navigator.push(route);
 
       if (generation == _resultDialogGeneration) {
-        _resultDialogContext = null;
+        _resultDialogRoute = null;
         _isResultDialogOpen = false;
         _shownWinnerUid = null;
       }
@@ -206,13 +212,14 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
 
   void _closeResultDialog() {
     _resultDialogGeneration += 1;
-    final dialogContext = _resultDialogContext;
-    _resultDialogContext = null;
+    final route = _resultDialogRoute;
+    _resultDialogRoute = null;
     _isResultDialogOpen = false;
     _shownWinnerUid = null;
 
-    if (dialogContext != null && dialogContext.mounted) {
-      Navigator.of(dialogContext).pop();
+    final navigator = route?.navigator;
+    if (route != null && navigator != null) {
+      navigator.removeRoute(route);
     }
   }
 
@@ -239,6 +246,19 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   @override
   void dispose() {
     _resultDialogGeneration += 1;
+    final resultRoute = _resultDialogRoute;
+    _resultDialogRoute = null;
+    if (resultRoute != null) {
+      // 화면 State가 교체돼도 root Navigator의 팝업은 자동으로 없어지지 않습니다.
+      // dispose는 Navigator가 화면을 정리하는 중에도 호출되므로 프레임 뒤에
+      // 이 State가 소유한 팝업만 제거합니다. 새 State의 팝업은 건드리지 않습니다.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navigator = resultRoute.navigator;
+        if (navigator != null && resultRoute.isActive) {
+          navigator.removeRoute(resultRoute);
+        }
+      });
+    }
     _sessionSubscription?.close();
     // ---------------------------------------------------------------------------
     // 게임 종료 후 플랫폼 화면 정책 복원

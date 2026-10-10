@@ -9,6 +9,58 @@ import 'package:game_kit/recovery/widgets/app_network_guard.dart';
 import 'package:game_kit/recovery/widgets/network_unavailable_modal.dart';
 
 void main() {
+  testWidgets(
+    'only foreground navigator route owns recovery notices and retry',
+    (tester) async {
+      final connection = StreamController<bool>.broadcast();
+      var lobbyRetries = 0, gameRetries = 0;
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigator,
+          home: Scaffold(
+            body: AppNetworkGuard(
+              connectionChanges: connection.stream,
+              onRetry: () async {
+                lobbyRetries++;
+              },
+              child: const Text('lobby'),
+            ),
+          ),
+        ),
+      );
+      unawaited(
+        navigator.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: AppNetworkGuard(
+                connectionChanges: connection.stream,
+                onRetry: () async {
+                  gameRetries++;
+                },
+                child: const Text('game'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      connection.add(false);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 11));
+      expect(
+        find.byType(NetworkUnavailableModal, skipOffstage: false),
+        findsOneWidget,
+      );
+      connection.add(true);
+      await tester.pump();
+      await tester.pump();
+      expect(gameRetries, 1);
+      expect(lobbyRetries, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await connection.close();
+    },
+  );
   testWidgets('3초 미만 단절은 안내 없이 복구하고 그동안 입력을 막는다', (tester) async {
     final connection = StreamController<bool>.broadcast();
     addTearDown(connection.close);

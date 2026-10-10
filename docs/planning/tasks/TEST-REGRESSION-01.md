@@ -247,3 +247,67 @@ already-exists를 재현했다. tsc/probe는 exit 0이며 후자는 알려진 �
 설치 SDK rerun 함수가 callback 예외 시 완료/rollback에 도달하지 않는 경우를 추가 재현했다.
 ignored probe 7개 판정/exit 0이며 정상 heartbeat 경합·실제 roster 변경·비동기 abort 완료의
 회귀도 후속 수정 범위다. 기존 FULL PASS를 이 누락된 통합 경로 검증으로 확대하지 않는다.
+
+## 2026-10-10 룰렛·시작 재시도 통합 회귀 후보
+
+승인한 수정에 실제 네 게임 start/end와 LP prepare/resolve callable, 설치 SDK rerun/abort
+본문, Flutter 네 TemplateGame·LP command/coordinator·응답 유실 채널과 영속 저장 회귀를
+추가해 session manifest에 연결했다. 수정 전 9개 실패를 재현한 뒤 서버 회귀 16개가 통과했다.
+[후보 검증](../NETWORK_SESSION_ROULETTE_RESTART_REPAIR.md)의 guarded session 127/89,
+Functions 전체 385, 기존 identity/manifest 회귀 31 및 분석/포맷/lint PASS/exit 0이다.
+SDK 본문 고립 실행은 실제 emulator/기기 검증과 구분한다. 최종 후보 FULL은 별도 승인 대기다.
+
+후속 사용자 승인으로 같은 제품 후보 guarded FULL 한 번이 12/12 PASS/exit 0이다.
+2026-10-10 07:05 KST, 239473ms, 앱 346/다섯 package 188/Functions 385(fail·skip 0),
+분석·포맷·lint·mutation PASS다. 위 후보 문서에 원래 결과 JSON과 전후 상태를 기록했다.
+제품 소스는 검증 중·후 변경하지 않았다. 실제 CI·수정 APK/실기기는 별도다.
+## 2026-10-10 LP 새 실기기 후속 오류 분석·설계
+
+사용자는 새 APK 설치/Functions 미배포와 약 12:30~12:40 KST 테스트를 확인했다.
+이전 디바이스 로그를 이번 증거로 재사용하지 않고 A/태블릿/B를 새로 추출했다.
+세 설치 APK hash가 같고 로컬 빌드와 일치한다. 조회 계정 역할을 사람이 확인한 뒤
+승인 시간/관련 함수만 metadata·정제 오류로 조회했다(반환 81/고유 74건, RTDB 미조회).
+[후속 분석·해결 설계](../NETWORK_SESSION_LP_DEVICE_FOLLOWUP_DESIGN.md)에 시간축,
+실제 명령/status/exit code, 확정 사실·가설·필요 회귀를 기록했다.
+
+룰렛 확정 두 번의 invalid-argument/서버 HTTP 400은 이전 서버의 동일 ID 검사와 일치한다.
+A는 복구 완료 안내 뒤에도 ready/LIAR 권한 거절과 접속 heartbeat 실패가 지속됐다.
+B/태블릿도 동시 ready 지연을 겪었지만 후속 보고는 성공했다. 접속 교체 조건의 정확한
+귀속과 타이머 수치/첫 원판 규칙은 현재 기록만으로 모두 확정하지 않았다.
+실제 LP controller의 public 수신 중 resolve 누락/최종 ready 실패 뒤 무기한 대기를
+ignored probe로 관찰했다(2/2 PASS/exit 0). 이는 결함 재현이고 해결 검증은 아니다.
+제품 소스·정식 suite·새 FULL·배포·migration·commit/push는 수행하지 않았다.
+직전 후보 FULL PASS는 보존하며 위 추가 결함의 수정·필요 서버 반영·실기기 재시험은 후속이다.
+
+## 2026-10-10 후속 구현 후보
+
+사용자 진행 요청으로 [LP 후속 수정](../NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md)을 구현했다. 중간 session 5/5·서버 90 PASS/exit 0과 실제 controller/방 서비스/위젯 회귀·분석 PASS다. 최종 재확인 후 새 승인 FULL·APK·서버 반영·실기기 순서로 진행하며 이전 FULL을 재사용하지 않는다.
+
+후속 사용자가 FULL 검증을 보류하고 직접 실기기 테스트를 우선하겠다고 지시했다. 관련 검사 통과 후보의 새 APK를 준비하며 FULL은 미실행으로 유지한다. 서버 반영·실기기 결과는 별도로 기록한다.
+
+사용자 기존 Functions 63개 업데이트 승인으로 배포와 사후 metadata 확인이 PASS/exit 0이다. 전체 79개 이름 유지·승인 대상 63개 ACTIVE, 리전/런타임 동일·함수 추가/삭제 없음(2026-10-10 14:13:59 KST). 새 APK와 [시험 체크리스트](../NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md#승인된-서버-반영실기기-인계)를 인계하며 FULL은 보류, 실제 기기 설치·재시험은 사용자 대기다. commit/push 없음.
+
+## 2026-10-10 휴대폰 위너 재시작 후속
+
+사용자는 첫 게임·룰렛 반영 성공을 보고했고, 다시하기에서 위너 팝업이 남는 오류만 수정하도록 요청했다.
+[위너 재시작 수정](../LIARS_POKER_WINNER_RESTART_FIX.md)은 결과 route의 첫 build 전 재시작을 재현한
+FAIL/exit 1 뒤 route를 직접 추적·제거하는 최소 휴대폰 수정이다. 최종 회귀 3/3와 관련 분석·포맷
+PASS/exit 0이며 서버·네트워크 계약은 변경하지 않았다. FULL 보류를 유지한다. APK 빌드·설치와
+향후 필요한 Functions 배포는 사용자가 VS Code에서 담당한다. 이번 배포 대상은 없고 실기기는 대기다.
+
+## 2026-10-10 15:00 실기기 재보고의 회귀 보완
+
+[15:00 후속 수정](../LIARS_POKER_1500_FOLLOWUP_FIX.md)은 가드 없는 기존 board 회귀의 한계를
+보완한다. 실제 GameExit route/네트워크 가드 아래 재시작, board 재생성 시 소유 위너 잔존,
+마지막 결과 표시 후 paused 재시작을 추가했다. 직접/자동 일반 LIAR 실패의 첫 룰렛 단계와
+실제 세 번의 추첨/확정 및 마지막 카드 도전 추가 상승도 검증한다. 수정 전 FAIL/exit 1을
+확인한 뒤 위너 6·가드 8·LP 서버 43·guarded session 5/5·분석 PASS/exit 0이다.
+FULL 보류와 사용자 APK/배포 담당 방침을 유지하며 실기기 통과는 아직 확인하지 않았다.
+
+## 2026-10-10 15:45 LIAR 생존→FOLD 회귀
+
+사용자 기존 두 문제 해결 보고 뒤 새 FOLD 현상을 [후속 후보](../LIARS_POKER_1545_FOLD_FOLLOWUP.md)에
+기록했다. 사용자 확인 규칙으로 실제 LIAR→2단계 생존→FOLD 3단계와 직접/타임아웃 FOLD의
+1→2→3→3단계·중복 결과 요청 횟수 보존을 추가했다. 수정 전 15개 중 1 FAIL/exit 1,
+서버 생존 처리 수정 후 관련 45/45 PASS/exit 0, build/lint PASS/exit 0이다. FULL 보류를
+유지하며 사용자 서버 함수 하나 반영 후 현재 APK 실기기 결과는 대기다.

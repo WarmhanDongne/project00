@@ -7,9 +7,11 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/errors/services/user_error_message.dart';
@@ -89,6 +91,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   int? _publicRevision;
   bool _acceptingNewGame = false;
   bool _watchPrivate = false, _screenReady = false, _assetsReady = false;
+  static int _nextReportSeq = DateTime.now().millisecondsSinceEpoch;
   int _subscriptionGeneration = 0, _reportSeq = 0;
   DatabaseEvent? _privateEvent;
   DatabaseEvent? _decodedPrivateEvent;
@@ -96,7 +99,8 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   final Set<String> _priorGameIds = {};
   String? _reportedKey;
   String? _readyAckKey;
-  int _connectionSeq = 0;
+  String? _identityKey;
+  bool _transportRecovering = false;
   Future<Object?> Function()? _lastCommand;
   Future<void> Function()? _prepareAssets;
   GameRecoverySession get recoverySession =>
@@ -192,9 +196,23 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       role,
       roomCode,
     );
-    if (identity != null && identity.connectionSeq != _connectionSeq) {
-      _connectionSeq = identity.connectionSeq;
+    final key = identity == null
+        ? null
+        : '${identity.roomInstanceId}/${identity.membershipId}/${identity.controllerSessionId}/${identity.connectionId}/${identity.connectionSeq}';
+    if (key != _identityKey) {
+      _identityKey = key;
       _reportSeq = 0;
+      retrySession();
+    }
+  }
+
+  void _transportChanged() {
+    final recovering = recoverySession.transportRecovering;
+    if (_transportRecovering == recovering) return;
+    _transportRecovering = recovering;
+    if (recovering) {
+      recoverySession.invalidate();
+    } else {
       retrySession();
     }
   }
@@ -312,7 +330,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
         ref.mounted &&
         generation == _preparationGeneration &&
         !session.leaving &&
-        !session.localUsable;
+        (!session.localUsable || !session.serverConfirmed);
     final budget = owner.remaining > Duration.zero
         ? owner.remaining
         : Duration.zero;
@@ -335,8 +353,10 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       _preparationRefresh = Timer(delay, () async {
         _preparationRefresh = null;
         if (!current() || !session.transportConnected) {
+          scheduleRefresh();
           return;
         }
+        if (session.localUsable) return;
         if (!RecoveryMetrics.instance.active) {
           RecoveryMetrics.instance.begin();
           RecoveryMetrics.instance.mark(RecoveryStage.auth);
@@ -394,6 +414,11 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       session.changed();
       return;
     }
+    if (session.transportRecovering || !session.transportConnected) {
+      session.invalidate();
+      _watchPreparation();
+      return;
+    }
     if (!context.valid) {
       _watchPreparation();
       return;
@@ -433,7 +458,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
         !session.leaving;
     session.localUsable = usable;
     session.changed();
-    if (usable) {
+    if (usable && session.serverConfirmed) {
       _cancelPreparationWait();
       _hadUsable = true;
     } else {
@@ -455,7 +480,8 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
         }
       }
       if (value['status'] == 'playing' &&
-          (!session.serverConfirmed || session.paused) &&
+          (!session.serverConfirmed ||
+              (session.paused && _readyAckKey != context.key)) &&
           _reportedKey != context.key) {
         _reportedKey = context.key;
         unawaited(_report(true));
@@ -472,11 +498,17 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       return;
     }
     final generation = _subscriptionGeneration;
+    final sequence = _reportSeq = ++_nextReportSeq;
     final identity = RoomSessionIdentityStore.instance.current(
       uid,
       _watchPrivate ? 'player' : 'controller',
       roomCode,
     );
+    if (kDebugMode) {
+      debugPrint(
+        '[game_comm] level=info event=ready_report_started operation=recovery detail=generation_${generation}_connectionSeq_${identity?.connectionSeq ?? 0}_reportSeq_${sequence}_ready_${ready}_localUsable_${recoverySession.localUsable}_confirmed_${recoverySession.serverConfirmed}_paused_${recoverySession.paused}',
+      );
+    }
     try {
       final response = await interruptionCommands.report(
         roomCode: roomCode,
@@ -485,27 +517,63 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
           if (identity != null) 'connectionId': identity.connectionId,
           if (identity != null) 'connectionSeq': identity.connectionSeq,
         },
-        reportSeq: ++_reportSeq,
+        reportSeq: sequence,
         ready: ready,
       );
+      if (kDebugMode) {
+        final status =
+            const {
+              'accepted',
+              'ignored',
+              'stale',
+              'staleContext',
+              'dataMissing',
+            }.contains(response['status'])
+            ? response['status']
+            : 'other';
+        debugPrint(
+          '[game_comm] level=info event=ready_report_returned operation=recovery detail=generation_${generation}_reportSeq_${sequence}_status_${status}_current_${generation == _subscriptionGeneration && sequence == _reportSeq}',
+        );
+      }
       if (ref.mounted &&
           generation == _subscriptionGeneration &&
+          !_preparationFailed &&
+          !recoverySession.transportRecovering &&
+          sequence == _reportSeq &&
           ready &&
           recoverySession.context?.key == context.key) {
-        if (response['status'] == 'accepted' ||
-            response['status'] == 'ignored' ||
-            response['reconciled'] == true) {
+        if (response['status'] == 'accepted') {
           _readyAckKey = context.key;
           recoverySession.serverConfirmed = true;
           RecoveryMetrics.instance.mark(RecoveryStage.ready);
           _updateReadiness();
         } else {
-          _reportedKey = null;
+          reportPreparationFailure();
         }
       }
-    } catch (_) {
-      if (ref.mounted && generation == _subscriptionGeneration) {
-        _reportedKey = null;
+    } catch (error) {
+      if (ref.mounted &&
+          generation == _subscriptionGeneration &&
+          sequence == _reportSeq &&
+          recoverySession.context?.key == context.key &&
+          ready &&
+          !_preparationFailed) {
+        final staleConnection =
+            error is FirebaseFunctionsException &&
+            error.code == 'permission-denied' &&
+            error.details is Map &&
+            (error.details as Map)['reason'] == 'staleConnection';
+        if (staleConnection && recoverySession.reconnect != null) {
+          try {
+            await recoverySession.reconnect!();
+          } catch (_) {
+            if (ref.mounted && generation == _subscriptionGeneration) {
+              reportPreparationFailure();
+            }
+          }
+        } else {
+          reportPreparationFailure();
+        }
       }
     }
   }
@@ -527,6 +595,8 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     if (!RecoveryMetrics.instance.active) RecoveryMetrics.instance.begin();
     RecoveryMetrics.instance.mark(RecoveryStage.auth);
     _watchPrivate = watchPrivate;
+    _transportRecovering = recoverySession.transportRecovering;
+    recoverySession.addListener(_transportChanged);
     recoverySession.retry = () => unawaited(retryRecovery());
     recoverySession.leaving = false;
     _bindSubscriptions();
@@ -535,6 +605,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       _publicGeneration += 1;
       _subscriptionGeneration += 1;
       RoomSessionIdentityStore.instance.removeListener(_identityChanged);
+      recoverySession.removeListener(_transportChanged);
       recoverySession.retry = null;
       recoverySession.retryCommand = null;
       recoverySession.invalidate();
@@ -612,7 +683,9 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       _preparationFailed = false;
       _hadUsable = false;
       session.preparationBatch =
-          RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+          RoomRecoveryBatch.current ??
+          (session.transportRecovering ? session.preparationBatch : null) ??
+          RoomRecoveryBatch();
     } else if (newPause &&
         _hadUsable &&
         !_preparationFailed &&
@@ -620,7 +693,9 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       // A later interruption must not send ready using an old lobby/game budget.
       // Keep any ongoing preparation deadline and sticky failure until retry.
       session.preparationBatch =
-          RoomRecoveryBatch.current ?? RoomRecoveryBatch();
+          RoomRecoveryBatch.current ??
+          (session.transportRecovering ? session.preparationBatch : null) ??
+          RoomRecoveryBatch();
     }
     session.context = context;
     session.publicValue = value;

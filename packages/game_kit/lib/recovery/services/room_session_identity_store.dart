@@ -59,10 +59,101 @@ class RoomSessionIdentityStore extends ChangeNotifier {
     return value is Map ? Map<String, dynamic>.from(value) : null;
   }
 
+  /// Starts survive service recreation and process restart until their result is known.
+  Map<String, dynamic>? pendingGameStart(
+    String uid,
+    String role,
+    String roomCode,
+  ) {
+    final record = _records?[_key(uid, role, roomCode)];
+    final value = record is Map ? record['pendingGameStart'] : null;
+    final identity = current(uid, role, roomCode);
+    if (value is! Map ||
+        identity == null ||
+        value['payload'] is! Map ||
+        value['payload']['roomInstanceId'] != identity.roomInstanceId ||
+        value['payload']['membershipId'] != identity.membershipId) {
+      return null;
+    }
+    return Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
+  }
+
+  /// Serial reservation prevents concurrent new services from allocating two IDs.
+  Future<Map<String, dynamic>> retainGameStart(
+    RoomSessionIdentity identity,
+    String functionName,
+    Map<String, dynamic> input,
+    Map<String, dynamic> payload,
+  ) async {
+    if (payload['roomInstanceId'] != identity.roomInstanceId ||
+        payload['membershipId'] != identity.membershipId ||
+        payload['commandId'] is! String) {
+      throw StateError('이전 참가 세션의 요청입니다.');
+    }
+    late Map<String, dynamic> retained;
+    await _change(() {
+      final currentIdentity = current(
+        identity.uid,
+        identity.role,
+        identity.roomCode,
+      );
+      if (currentIdentity?.roomInstanceId != identity.roomInstanceId ||
+          currentIdentity?.membershipId != identity.membershipId) {
+        throw StateError('방 연결이 변경되었습니다.');
+      }
+      final existing = pendingGameStart(
+        identity.uid,
+        identity.role,
+        identity.roomCode,
+      );
+      if (existing != null) {
+        if (existing['functionName'] != functionName ||
+            jsonEncode(_stableValue(existing['input'])) !=
+                jsonEncode(_stableValue(input))) {
+          throw StateError('이전 게임 시작 요청의 결과를 먼저 확인해주세요.');
+        }
+        retained = existing;
+        return;
+      }
+      retained = Map<String, dynamic>.from(
+        jsonDecode(
+              jsonEncode({
+                'functionName': functionName,
+                'input': input,
+                'payload': payload,
+              }),
+            )
+            as Map,
+      );
+      final key = _key(identity.uid, identity.role, identity.roomCode);
+      (_records![key] as Map)['pendingGameStart'] = retained;
+    });
+    return Map<String, dynamic>.from(retained['payload'] as Map);
+  }
+
+  Future<void> completeGameStart(
+    RoomSessionIdentity identity,
+    String commandId,
+  ) => _change(() {
+    final pending = pendingGameStart(
+      identity.uid,
+      identity.role,
+      identity.roomCode,
+    );
+    if (pending?['payload']['roomInstanceId'] != identity.roomInstanceId ||
+        pending?['payload']['commandId'] != commandId) {
+      return;
+    }
+    (_records![_key(identity.uid, identity.role, identity.roomCode)] as Map)
+        .remove('pendingGameStart');
+  });
+
   Future<void> save(
     RoomSessionIdentity identity, {
     String? completedOperationId,
+    bool Function()? isCurrent,
   }) => _change(() {
+    if (isCurrent != null && !isCurrent()) throw StateError('이전 방 복구 요청입니다.');
     final previous = current(identity.uid, identity.role, identity.roomCode);
     if (previous?.roomInstanceId == identity.roomInstanceId &&
         previous!.connectionSeq > identity.connectionSeq) {
@@ -73,11 +164,20 @@ class RoomSessionIdentityStore extends ChangeNotifier {
       identity.role,
       identity.roomCode,
     );
+    final pendingStart = pendingGameStart(
+      identity.uid,
+      identity.role,
+      identity.roomCode,
+    );
     _records![_key(identity.uid, identity.role, identity.roomCode)] = {
       'identity': identity.toJson(),
       if (pendingValue != null &&
           pendingValue['operationId'] != completedOperationId)
         'pending': pendingValue,
+      if (previous?.roomInstanceId == identity.roomInstanceId &&
+          previous?.membershipId == identity.membershipId &&
+          pendingStart != null)
+        'pendingGameStart': pendingStart,
     };
   });
 
@@ -85,8 +185,10 @@ class RoomSessionIdentityStore extends ChangeNotifier {
     String uid,
     String role,
     String roomCode,
-    Map<String, dynamic> payload,
-  ) => _change(() {
+    Map<String, dynamic> payload, {
+    bool Function()? isCurrent,
+  }) => _change(() {
+    if (isCurrent != null && !isCurrent()) throw StateError('이전 방 복구 요청입니다.');
     final key = _key(uid, role, roomCode);
     final existing = _records![key];
     _records![key] = {
@@ -116,8 +218,8 @@ class RoomSessionIdentityStore extends ChangeNotifier {
       await load();
       final before = jsonEncode(_records);
       update();
+      final preferences = await SharedPreferences.getInstance();
       try {
-        final preferences = await SharedPreferences.getInstance();
         if (!await (persist ?? preferences.setString)(
           storageKey,
           jsonEncode(_records),
@@ -127,10 +229,28 @@ class RoomSessionIdentityStore extends ChangeNotifier {
         notifyListeners();
       } catch (_) {
         _records = Map<String, dynamic>.from(jsonDecode(before) as Map);
+        // setString changes its memory cache before the platform write returns.
+        // A failed native write must not leave an unsent intent in that cache.
+        if (persist == null) {
+          try {
+            await preferences.reload();
+          } catch (_) {
+            // Preserve the original write error and the restored live records.
+          }
+        }
         rethrow;
       }
     });
     _writes = next;
     return next;
   }
+}
+
+Object? _stableValue(Object? value) {
+  if (value is List) return value.map(_stableValue).toList();
+  if (value is Map) {
+    final keys = value.keys.cast<String>().toList()..sort();
+    return {for (final key in keys) key: _stableValue(value[key])};
+  }
+  return value;
 }

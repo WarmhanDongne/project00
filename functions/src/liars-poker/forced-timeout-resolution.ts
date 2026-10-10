@@ -84,18 +84,9 @@ export function resolveForcedTimeout(
       (card) => card.rank === game.public.table || card.rank === "JOKER",
     );
     const penaltyTargetUid = truthful ? turnUid : lastPlay.playerUid;
-    const alivePlayerCount = Object.values(game.public.players).filter(
-      (candidate) => candidate.status === "alive",
-    ).length;
-    const shouldIncreasePenaltyBeforeRoulette =
-      (alivePlayerCount === 2 ||
-        game.public.phase === "lastCardChallenge") && truthful;
-    if (shouldIncreasePenaltyBeforeRoulette) {
-      player.penaltyCount += 1;
-      game.server.penaltyCountIncrementedBeforeRoulette = true;
-    } else {
-      delete game.server.penaltyCountIncrementedBeforeRoulette;
-    }
+    // 마지막 카드 도전 타임아웃은 위에서 FOLD로 처리됩니다.
+    // 일반 턴의 자동 LIAR는 생존자 수와 무관하게 추가 상승하지 않습니다.
+    delete game.server.penaltyCountIncrementedBeforeRoulette;
 
     const actualRanks = actualCards.map((card) => card.rank);
     const revealedLastPlay = {...lastPlay, revealed: true, actualRanks};

@@ -89,21 +89,15 @@ export const game_liars_poker_call_liar = onCall<CallLiarData>(
           (card) => card.rank === game.public.table || card.rank === "JOKER",
         );
         const penaltyTargetUid = truthful ? uid : lastPlay.playerUid;
-        const alivePlayerCount = Object.values(game.public.players).filter(
-          (player) => player.status === "alive",
-        ).length;
-        // 카드를 가진 사람이 둘만 남은 1대1 상황에서 LIAR 판정에 실패하면 이번
-        // 룰렛부터 한 단계 높은 탈락 확률을 적용합니다. FOLD 안내 문구가 이
-        // 규칙을 그대로 알리고 있으므로, lastCardChallenge 단계에서도 동일하게
-        // 적용해야 안내와 실제 동작이 어긋나지 않습니다.
+        // 잔여카드 보유자가 혼자인 마지막 카드 도전에서만 LIAR 실패 시
+        // 이번 룰렛을 한 단계 올립니다. 생존자가 둘이라는 이유로 올리지 않습니다.
         const shouldIncreasePenaltyBeforeRoulette =
-        (alivePlayerCount === 2 ||
-          game.public.phase === "lastCardChallenge") && truthful;
+          game.public.phase === "lastCardChallenge" && truthful;
         const now = transactionNow;
         const actualRanks = actualCards.map((card) => card.rank);
 
-        // 1대1에서 LIAR 판정에 실패하면 이번 룰렛부터 한 단계 높아진
-        // 탈락 확률을 적용합니다. 생존 후에는 중복 증가하지 않습니다.
+        // 마지막 카드 도전에서 LIAR 판정에 실패하면 이번 룰렛부터 한 단계 높아진
+        // 탈락 확률을 적용합니다. 생존 시 다음 벌칙 단계 상승은 별도로 적용합니다.
         if (shouldIncreasePenaltyBeforeRoulette) {
           challenger.penaltyCount += 1;
           game.server.penaltyCountIncrementedBeforeRoulette = true;

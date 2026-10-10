@@ -1,4 +1,5 @@
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -147,6 +148,11 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   Future<void>? _roomDeletionConfirmation;
   int _playerRemovalCheckId = 0;
   Future<void>? _connectionRecoveryFuture;
+  (String?, String?, int, int, String?)? _confirmedRecovery;
+  bool _heartbeatPermissionRecoveryAttempted = false;
+  RoomRecoveryBatch? _requestedRecoveryOwner;
+  GameRecoverySession? _reconnectSession;
+  Future<void> Function()? _reconnectCallback;
   Timer? _controllerHeartbeatTimer;
   Timer? _playerHeartbeatTimer;
 
@@ -477,10 +483,16 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       unawaited(retryConnectionRecovery().catchError((Object _) {}));
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _connectionEpoch++;
+      _confirmedRecovery = null;
       _playerHeartbeatTimer?.cancel();
       _controllerHeartbeatTimer?.cancel();
       final uid = _currentUid();
-      if (uid != null) GameRecoverySession.forRoom(code, uid).invalidate();
+      if (uid != null) {
+        final session = GameRecoverySession.forRoom(code, uid);
+        session.transportRecovering = true;
+        session.invalidate();
+      }
       if (ControllerRoomSessionStore.instance.sessionIdForRoom(code) != null) {
         unawaited(
           _service.markControllerDisconnected(code).catchError((Object _) {}),
@@ -852,6 +864,22 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     try {
       await _service.heartbeatPlayer(code);
     } catch (error) {
+      if (isPermissionDenied(error) &&
+          !_heartbeatPermissionRecoveryAttempted &&
+          !_isDisposed &&
+          roomCode == code &&
+          !_isLeaving) {
+        _heartbeatPermissionRecoveryAttempted = true;
+        _confirmedRecovery = null;
+        try {
+          await retryConnectionRecovery();
+        } catch (_) {
+          if (!_isDisposed && roomCode == code) {
+            errorMessage = '방 연결을 확인하지 못했어요. 다시 연결해주세요.';
+            notifyListeners();
+          }
+        }
+      }
       if (kDebugMode) {
         debugPrint(
           '[room_connection] event=player_heartbeat_failed '
@@ -936,11 +964,29 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   void _handleServerConnection(bool isConnected) {
     // 현재 연결 상태 저장과 화면 알림
     if (_isServerConnected != isConnected) _connectionEpoch += 1;
+    if (!isConnected) {
+      _confirmedRecovery = null;
+      _heartbeatPermissionRecoveryAttempted = false;
+    }
     _isServerConnected = isConnected;
     final sessionUid = _currentUid(), sessionCode = roomCode;
     if (sessionUid != null && sessionCode != null) {
-      GameRecoverySession.forRoom(sessionCode, sessionUid).transportConnected =
-          isConnected;
+      final session = GameRecoverySession.forRoom(sessionCode, sessionUid);
+      session.transportConnected = isConnected;
+      if (!isConnected) session.transportRecovering = true;
+      _reconnectSession = session;
+      _reconnectCallback = () async {
+        if (_isDisposed ||
+            _currentUid() != sessionUid ||
+            roomCode != sessionCode) {
+          throw const RoomCommandException('이전 방 복구 요청입니다.');
+        }
+        _requestedRecoveryOwner = session.preparationBatch;
+        _confirmedRecovery = null;
+        await retryConnectionRecovery();
+      };
+      session.reconnect = _reconnectCallback;
+      session.changed();
     }
     _syncPlayerPresenceTimer();
     notifyListeners();
@@ -1133,6 +1179,22 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
     final code = roomCode, uid = _currentUid();
     final connectionEpoch = _connectionEpoch;
+    final role =
+        code != null &&
+            ControllerRoomSessionStore.instance.sessionIdForRoom(code) != null
+        ? 'controller'
+        : 'player';
+    final identity = code == null || uid == null
+        ? null
+        : RoomSessionIdentityStore.instance.current(uid, role, code);
+    final scope = (
+      uid,
+      code,
+      _sessionEpoch,
+      connectionEpoch,
+      identity?.connectionId,
+    );
+    if (_confirmedRecovery == scope && _isServerConnected) return;
     final recovery = _recoverCurrentConnection();
     _connectionRecoveryFuture = recovery;
     try {
@@ -1161,16 +1223,39 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     final controllerSessionId = code == null
         ? null
         : ControllerRoomSessionStore.instance.sessionIdForRoom(code);
-    final batch = RoomRecoveryBatch();
+    final batch = _requestedRecoveryOwner ?? RoomRecoveryBatch();
+    _requestedRecoveryOwner = null;
     if (code != null && uid != null) {
-      GameRecoverySession.forRoom(code, uid).preparationBatch = batch;
+      final session = GameRecoverySession.forRoom(code, uid);
+      session.preparationBatch = batch;
+      session.transportRecovering = true;
+      session.invalidate();
     }
     RecoveryMetrics.instance.begin(newEpisode: false);
     RecoveryMetrics.instance.mark(RecoveryStage.connection);
     if (uid != null) RecoveryMetrics.instance.mark(RecoveryStage.auth);
     try {
       await batch.run(
-        _performConnectionRecovery,
+        () async {
+          await _performConnectionRecovery();
+          if (_isDisposed ||
+              _currentUid() != uid ||
+              roomCode != code ||
+              _sessionEpoch != epoch ||
+              code == null ||
+              _isLeaving) {
+            return;
+          }
+          if (controllerSessionId != null) {
+            if (ControllerRoomSessionStore.instance.sessionIdForRoom(code) !=
+                controllerSessionId) {
+              return;
+            }
+            await _service.heartbeatController(code);
+          } else {
+            await _service.heartbeatPlayer(code);
+          }
+        },
         isCurrent: () =>
             !_isDisposed &&
             _currentUid() == uid &&
@@ -1204,6 +1289,22 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
         _startControllerHeartbeat(code);
       } else {
         _startPlayerHeartbeat(code);
+      }
+      final role = controllerSessionId == null ? 'player' : 'controller';
+      final identity = uid == null
+          ? null
+          : RoomSessionIdentityStore.instance.current(uid, role, code);
+      _confirmedRecovery = (
+        uid,
+        code,
+        epoch,
+        connectionEpoch,
+        identity?.connectionId,
+      );
+      if (uid != null) {
+        final session = GameRecoverySession.forRoom(code, uid);
+        session.transportRecovering = false;
+        session.changed();
       }
       errorMessage = null;
       notifyListeners();
@@ -1679,6 +1780,17 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     return left;
   }
 
+  void _releaseReconnect() {
+    if (identical(_reconnectSession?.reconnect, _reconnectCallback)) {
+      _reconnectSession?.reconnect = null;
+    }
+    _reconnectSession = null;
+    _reconnectCallback = null;
+    _confirmedRecovery = null;
+    _requestedRecoveryOwner = null;
+    _heartbeatPermissionRecoveryAttempted = false;
+  }
+
   // 메모리 초기화 leaveRoom에서 사용
   void clearRoom({
     String? expectedRoomCode,
@@ -1710,6 +1822,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     statusSubscription = null;
     controllerPresenceSubscription = null;
     roomExistenceSubscription = null;
+    _releaseReconnect();
     roomCode = null;
     players = [];
     _removingPlayerUids.clear();
@@ -1743,6 +1856,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   @override
   void dispose() {
     _isDisposed = true;
+    _releaseReconnect();
     _lifecycleBinding?.removeObserver(this);
     roomSubscription?.cancel();
     playerSubscription?.cancel();

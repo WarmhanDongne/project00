@@ -62,6 +62,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
   int _connectionGeneration = 0;
   bool _hasParentGuard = false;
   bool _didSubscribe = false;
+  bool _isCurrentRoute = true;
 
   // RTDB 연결은 SDK가 복구합니다. 이 간격은 연결 후 세션 복구 실패에만 적용하며
   // 카드 제출/CALL 등 게임 행동을 새 명령으로 재전송하지 않습니다.
@@ -76,6 +77,22 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final currentRoute = ModalRoute.of(context)?.isCurrent ?? true;
+    if (_isCurrentRoute != currentRoute) {
+      _isCurrentRoute = currentRoute;
+      if (!currentRoute) {
+        _showTimer?.cancel();
+        _showTimer = null;
+        _noticeTimer?.cancel();
+        _noticeTimer = null;
+      } else if (_needsRecovery) {
+        _scheduleNotices();
+        // Do not synchronously setState during dependency updates.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_retry());
+        });
+      }
+    }
     final hasParent =
         context.dependOnInheritedWidgetOfExactType<_NetworkGuardScope>() !=
         null;
@@ -155,7 +172,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
 
   // 연결이 반복해서 끊기거나 세션 복구만 실패해도 안내 시간을 초기화하지 않습니다.
   void _scheduleNotices() {
-    if (!_isForeground || !_needsRecovery) return;
+    if (!_isCurrentRoute || !_isForeground || !_needsRecovery) return;
     if (!_isNoticeVisible && _noticeTimer == null) {
       _noticeTimer = Timer(widget.noticeDelay, () {
         _noticeTimer = null;
@@ -176,7 +193,11 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
 
   Future<void> _retry() async {
     // 오프라인에는 callable을 반복 호출하지 않고 SDK의 연결 복구를 기다립니다.
-    if (!_isForeground || !_needsRecovery || _isRetrying || !_isConnected) {
+    if (!_isCurrentRoute ||
+        !_isForeground ||
+        !_needsRecovery ||
+        _isRetrying ||
+        !_isConnected) {
       return;
     }
     final subscriptionGeneration = _subscriptionGeneration;
@@ -265,6 +286,10 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
     if (_hasParentGuard || widget.connectionChanges == null) {
       return widget.child;
     }
+    // 다이얼로그가 위에 올라와도 child의 위치를 유지합니다. wrapper를 빼면
+    // 게임 State와 구독이 폐기되어 root Navigator의 결과 팝업만 남습니다.
+    // 가려진 화면에서는 안내·입력 차단만 비활성화합니다.
+    final active = _isCurrentRoute;
     return _NetworkGuardScope(
       child: Stack(
         fit: StackFit.expand,
@@ -272,10 +297,13 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
           // 화면은 유지하되 오래된 손패/턴을 보고 행동하지 못하도록 입력을 보호합니다.
           // 서버의 턴 시간과 이미 전송된 명령은 이 레이어가 중지하지 않습니다.
           AbsorbPointer(
-            absorbing: _needsRecovery,
-            child: ExcludeFocus(excluding: _needsRecovery, child: widget.child),
+            absorbing: active && _needsRecovery,
+            child: ExcludeFocus(
+              excluding: active && _needsRecovery,
+              child: widget.child,
+            ),
           ),
-          if (_isNoticeVisible && !_isModalVisible)
+          if (active && _isNoticeVisible && !_isModalVisible)
             const Positioned(
               top: 12,
               left: 16,
@@ -301,7 +329,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
                 ),
               ),
             ),
-          if (_isModalVisible)
+          if (active && _isModalVisible)
             Positioned.fill(
               child: NetworkUnavailableModal(
                 isRetrying: _isRetrying,
