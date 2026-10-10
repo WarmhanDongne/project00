@@ -12,8 +12,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/models/game_room_context.dart';
+import 'package:game_kit/widgets/game_exit_route.dart';
 import 'package:game_kit/phone/widgets/result_dialog.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+import 'package:game_kit/recovery/widgets/app_network_guard.dart';
 import 'package:game_liars_poker/phone/phone_board.dart';
 import 'package:game_liars_poker/phone/screens/game_screen.dart';
 import 'package:game_liars_poker/shared/services/command_service.dart';
@@ -47,35 +49,118 @@ void main() {
   Future<_Query> mount(
     WidgetTester tester, {
     NavigatorObserver? observer,
+    bool pushedRoute = false,
+    bool guarded = false,
   }) async {
     final query = _Query();
+    final navigatorKey = GlobalKey<NavigatorState>();
+    final service = LiarsPokerService(
+      query: query,
+      command: _Commands(),
+      interruption: _Reports(),
+    );
+    final roomCode = 'WINNER${++roomNumber}';
+    final game = ValueListenableBuilder<int>(
+      valueListenable: query.boardRevision,
+      builder: (_, revision, _) => LiarsPokerPhoneGame(
+        key: ValueKey(revision),
+        roomCode: roomCode,
+        provider: _Room(),
+        gameService: service,
+        onExitRoom: () async => true,
+      ),
+    );
+    final guardedGame = guarded
+        ? AppNetworkGuard(connectionChanges: query.network.stream, child: game)
+        : game;
     await tester.pumpWidget(
       ProviderScope(
         child: DefaultAssetBundle(
           bundle: _Assets(),
           child: MaterialApp(
+            navigatorKey: navigatorKey,
             navigatorObservers: [?observer],
-            home: LiarsPokerPhoneGame(
-              roomCode: 'WINNER${++roomNumber}',
-              provider: _Room(),
-              gameService: LiarsPokerService(
-                query: query,
-                command: _Commands(),
-                interruption: _Reports(),
-              ),
-              onExitRoom: () async => true,
-            ),
+            home: pushedRoute ? const Scaffold() : guardedGame,
           ),
         ),
       ),
     );
+    if (pushedRoute) {
+      unawaited(
+        navigatorKey.currentState!.push(
+          GameExitMaterialPageRoute<void>(builder: (_) => guardedGame),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
       await query.pub.close();
       await query.priv.close();
+      await query.network.close();
     });
     return query;
   }
+
+  testWidgets(
+    'winner popup on guarded game preserves the board subscription through restart',
+    (tester) async {
+      final query = await mount(tester, pushedRoute: true, guarded: true);
+      query.send('first', finished: true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsOneWidget);
+      expect(
+        query.publicSubscriptions,
+        1,
+        reason: 'Covering the game with its winner must not recreate the board',
+      );
+      query.send('second', finished: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsNothing);
+      expect(find.byType(LiarsPokerPhoneGameScreen), findsOneWidget);
+      expect(query.publicSubscriptions, 1);
+    },
+  );
+
+  testWidgets(
+    'recreated game board cannot leave its previous winner above the new deal',
+    (tester) async {
+      final query = await mount(tester, pushedRoute: true);
+      query.send('first', finished: true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsOneWidget);
+      query.boardRevision.value++;
+      await tester.pump();
+      query.send('second', finished: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsNothing);
+      expect(find.byType(LiarsPokerPhoneGameScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'last roulette winner closes on a pushed game route during paused restart',
+    (tester) async {
+      final query = await mount(tester, pushedRoute: true);
+      query.send('first', finished: false);
+      await tester.pump();
+      query.send('first', finished: true, penaltyResult: true);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsOneWidget);
+      query.send('second', finished: false, paused: true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneResultDialog), findsNothing);
+      expect(find.byType(LiarsPokerPhoneGameScreen), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'restart before winner dialog builds removes the old winner route',
@@ -165,9 +250,22 @@ class _Room extends Fake implements GameRoomContext {
 }
 
 class _Query extends Fake implements LiarsPokerQueryService {
-  final pub = StreamController<DatabaseEvent>.broadcast();
+  _Query() {
+    pub = StreamController<DatabaseEvent>.broadcast(
+      onListen: () => publicSubscriptions++,
+    );
+  }
+  int publicSubscriptions = 0;
+  final network = StreamController<bool>.broadcast();
+  final boardRevision = ValueNotifier<int>(0);
+  late final StreamController<DatabaseEvent> pub;
   final priv = StreamController<DatabaseEvent>.broadcast();
-  void send(String game, {required bool finished}) {
+  void send(
+    String game, {
+    required bool finished,
+    bool penaltyResult = false,
+    bool paused = false,
+  }) {
     pub.add(
       _Event({
         'gameInstanceId': game,
@@ -179,6 +277,12 @@ class _Query extends Fake implements LiarsPokerQueryService {
         'status': finished ? 'finished' : 'playing',
         'phase': finished ? 'finished' : 'dealing',
         'winnerUid': finished ? 'phone' : null,
+        if (penaltyResult)
+          'penaltyResult': {
+            'targetUid': 'other',
+            'result': 'eliminated',
+            'resolvedAt': DateTime.now().millisecondsSinceEpoch,
+          },
         'gameType': 'liars_poker',
         'players': {
           'phone': {
@@ -194,7 +298,7 @@ class _Query extends Fake implements LiarsPokerQueryService {
             'remainingCardCount': 5,
           },
         },
-        'recovery': {'paused': false},
+        'recovery': {'paused': paused},
       }),
     );
     priv.add(

@@ -11,6 +11,10 @@ const games = ['liars_poker', 'final_call', 'mafia', 'holdem'].map(id => {
 });
 const {game_liars_poker_prepare_penalty: prepare, game_liars_poker_resolve_penalty: resolve} =
   require('../lib/liars-poker/finish-penalty.js');
+const {game_liars_poker_call_liar: callLiar} = require('../lib/liars-poker/call-liar.js');
+const {game_liars_poker_pass_challenge: fold} = require('../lib/liars-poker/pass-challenge.js');
+const {game_liars_poker_force_timeout: forceTimeout} = require('../lib/liars-poker/force-timeout.js');
+const transactionRandom = require('../lib/common/transaction-random.js');
 const {applyWaitingGameSelection} = require('../lib/room/room-seating-policy.js');
 const controllerSessionId = '11111111-1111-4111-8111-111111111111';
 
@@ -69,6 +73,119 @@ async function penaltyRoom(t) {
   ref.value.game.public.phase = 'penalty';
   ref.value.game.public.penaltyTargetUid = 'player0';
   return ref;
+}
+
+async function twoPlayerLiarRoom(t) {
+  const ref = setup(t);
+  ref.value.players = Object.fromEntries(Object.entries(ref.value.players).slice(0, 2));
+  for (const [uid, player] of Object.entries(ref.value.players)) {
+    player.currentConnectionId = `connection-${uid}`;
+    player.connectionSeq = 1;
+    ref.value.connections[uid] = {[player.currentConnectionId]: {roomInstanceId: 'room-current',
+      membershipId: player.membershipId, connectionSeq: 1, connected: true, lastSeen: 1}};
+  }
+  await games[0].start.run(ref.request('start-liar-sequence'));
+  delete ref.value.game.public.recovery;
+  delete ref.value.game.server.recovery;
+  return ref;
+}
+
+function liarRequest(ref, commandId) {
+  const request = ref.request(commandId);
+  request.auth.uid = 'player0';
+  Object.assign(request.data, {role: 'player', membershipId: ref.value.players.player0.membershipId,
+    connectionId: ref.value.players.player0.currentConnectionId, connectionSeq: 1});
+  delete request.data.controllerSessionId;
+  return request;
+}
+
+function setTruthfulPlay(ref, phase = 'playing') {
+  const game = ref.value.game;
+  game.public.phase = phase;
+  game.public.turnUid = 'player0';
+  game.public.lastPlay = {playId: `play-${game.public.revision}`, round: game.public.round,
+    playerUid: 'player1', cardCount: 1, declaredRank: game.public.table,
+    revealed: false, submittedAt: Date.now()};
+  game.server.lastPlayCards = [{id: 'truth-card', rank: game.public.table}];
+}
+
+test('two players with cards use first→second→final roulette without LIAR failure pre-increment', async t => {
+  const ref = await twoPlayerLiarRoom(t);
+  const bounds = [];
+  t.mock.method(transactionRandom, 'gameRandomInt', max => { bounds.push(max); return max - 1; });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    setTruthfulPlay(ref);
+    assert.ok(Object.values(ref.value.game.public.players).every(p => p.remainingCardCount > 0));
+    const liar = await callLiar.run(liarRequest(ref, `normal-liar-${attempt}`));
+    assert.equal(liar.truthful, true);
+    assert.equal(ref.value.game.public.players.player0.penaltyCount, attempt);
+    assert.equal(ref.value.game.server.penaltyCountIncrementedBeforeRoulette, undefined);
+    const offset = bounds.length;
+    const drawn = await prepare.run(ref.request(`prepare-${attempt}`));
+    assert.equal(bounds[offset], [16, 15, 12][attempt]);
+    assert.equal(drawn.result, 'safe');
+    await resolve.run(ref.request(`resolve-${attempt}`, {resolutionId: drawn.resolutionId}));
+    assert.equal(ref.value.game.public.players.player0.penaltyCount, attempt + 1);
+  }
+});
+
+test('last-card LIAR failure uses second roulette, survival advances next FOLD to final exactly once', async t => {
+  const ref = await twoPlayerLiarRoom(t);
+  ref.value.game.public.players.player1.remainingCardCount = 0;
+  setTruthfulPlay(ref, 'lastCardChallenge');
+  const bounds = [];
+  t.mock.method(transactionRandom, 'gameRandomInt', max => {bounds.push(max); return max - 1;});
+  await callLiar.run(liarRequest(ref, 'last-card-liar'));
+  assert.equal(ref.value.game.public.players.player0.penaltyCount, 1);
+  assert.equal(ref.value.game.server.penaltyCountIncrementedBeforeRoulette, true);
+  const firstOffset = bounds.length;
+  const drawn = await prepare.run(ref.request('last-card-prepare'));
+  assert.equal(bounds[firstOffset], 15);
+  const finishRequest = ref.request('last-card-resolve', {resolutionId: drawn.resolutionId});
+  const result = await resolve.run(finishRequest);
+  assert.equal(ref.value.game.public.players.player0.penaltyCount, 2);
+  assert.equal(ref.value.game.server.penaltyCountIncrementedBeforeRoulette, undefined);
+  const afterSurvival = structuredClone(ref.value);
+  assert.deepEqual(await resolve.run(finishRequest), result);
+  assert.deepEqual(ref.value, afterSurvival, 'lost response replay must not increment again');
+
+  ref.value.game.public.players.player1.remainingCardCount = 0;
+  setTruthfulPlay(ref, 'lastCardChallenge');
+  await fold.run(liarRequest(ref, 'following-fold'));
+  assert.equal(ref.value.game.public.players.player0.penaltyCount, 2);
+  const foldOffset = bounds.length;
+  await prepare.run(ref.request('following-fold-prepare'));
+  assert.equal(bounds[foldOffset], 12, 'next FOLD must use the final roulette');
+});
+
+for (const automatic of [false, true]) {
+  test(`${automatic ? 'timeout' : 'manual'} FOLD follows first→second→final and stays at final`, async t => {
+    const ref = await twoPlayerLiarRoom(t);
+    const bounds = [];
+    t.mock.method(transactionRandom, 'gameRandomInt', max => {bounds.push(max); return max - 1;});
+    for (let attempt = 0; attempt < 4; attempt++) {
+      ref.value.game.public.players.player1.remainingCardCount = 0;
+      setTruthfulPlay(ref, 'lastCardChallenge');
+      ref.value.game.public.turnDeadlineAt = Date.now() - 1;
+      const commandId = `fold-${automatic}-${attempt}`;
+      if (automatic) {
+        assert.equal((await forceTimeout.run(ref.request(commandId))).type, 'forcedFold');
+      } else {
+        assert.equal((await fold.run(liarRequest(ref, commandId))).type, 'passPenalty');
+      }
+      assert.equal(ref.value.game.public.players.player0.penaltyCount, attempt);
+      const offset = bounds.length;
+      const drawn = await prepare.run(ref.request(`fold-prepare-${automatic}-${attempt}`));
+      assert.equal(bounds[offset], [16, 15, 12, 12][attempt]);
+      assert.equal(drawn.result, 'safe');
+      const finishRequest = ref.request(`fold-resolve-${automatic}-${attempt}`, {resolutionId: drawn.resolutionId});
+      const result = await resolve.run(finishRequest);
+      assert.equal(ref.value.game.public.players.player0.penaltyCount, attempt + 1);
+      const afterSurvival = structuredClone(ref.value);
+      assert.deepEqual(await resolve.run(finishRequest), result);
+      assert.deepEqual(ref.value, afterSurvival);
+    }
+  });
 }
 
 test('LP prepare→resolve uses separate IDs, replays lost responses and applies exactly once', async t => {

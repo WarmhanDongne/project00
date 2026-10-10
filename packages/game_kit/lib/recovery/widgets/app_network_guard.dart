@@ -283,11 +283,13 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
 
   @override
   Widget build(BuildContext context) {
-    if (!_isCurrentRoute ||
-        _hasParentGuard ||
-        widget.connectionChanges == null) {
+    if (_hasParentGuard || widget.connectionChanges == null) {
       return widget.child;
     }
+    // 다이얼로그가 위에 올라와도 child의 위치를 유지합니다. wrapper를 빼면
+    // 게임 State와 구독이 폐기되어 root Navigator의 결과 팝업만 남습니다.
+    // 가려진 화면에서는 안내·입력 차단만 비활성화합니다.
+    final active = _isCurrentRoute;
     return _NetworkGuardScope(
       child: Stack(
         fit: StackFit.expand,
@@ -295,10 +297,13 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
           // 화면은 유지하되 오래된 손패/턴을 보고 행동하지 못하도록 입력을 보호합니다.
           // 서버의 턴 시간과 이미 전송된 명령은 이 레이어가 중지하지 않습니다.
           AbsorbPointer(
-            absorbing: _needsRecovery,
-            child: ExcludeFocus(excluding: _needsRecovery, child: widget.child),
+            absorbing: active && _needsRecovery,
+            child: ExcludeFocus(
+              excluding: active && _needsRecovery,
+              child: widget.child,
+            ),
           ),
-          if (_isNoticeVisible && !_isModalVisible)
+          if (active && _isNoticeVisible && !_isModalVisible)
             const Positioned(
               top: 12,
               left: 16,
@@ -324,7 +329,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
                 ),
               ),
             ),
-          if (_isModalVisible)
+          if (active && _isModalVisible)
             Positioned.fill(
               child: NetworkUnavailableModal(
                 isRetrying: _isRetrying,

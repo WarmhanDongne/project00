@@ -129,6 +129,25 @@ test("직전 제출이 있으면 LIAR를 대신 선언한다 — 진실이면 �
   assert.equal(result.penaltyTargetUid, "p1");
 });
 
+test("두 생존자 모두 카드가 남은 자동 LIAR 실패는 룰렛 단계를 미리 올리지 않는다", () => {
+  const game = makeGame({
+    public: {
+      lastPlay: {
+        playId: "truth", round: 1, playerUid: "p2", cardCount: 1,
+        declaredRank: "A", revealed: false, submittedAt: 900,
+      },
+    },
+    server: {lastPlayCards: [{id: "truth-card", rank: "A"}]},
+  });
+  delete game.public.players.p3;
+  game.server.penaltyCountIncrementedBeforeRoulette = true;
+  const result = resolveForcedTimeout(game, 2000);
+  assert.equal(result.type, "forcedLiar");
+  assert.equal(result.truthful, true);
+  assert.equal(game.public.players.p1.penaltyCount, 0);
+  assert.equal(game.server.penaltyCountIncrementedBeforeRoulette, undefined);
+});
+
 test("마지막 카드 도전 단계에서는 FOLD로 자신이 벌칙을 받는다", () => {
   const game = makeGame({
     public: {

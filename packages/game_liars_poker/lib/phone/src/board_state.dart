@@ -242,6 +242,19 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
   @override
   void dispose() {
     _resultDialogGeneration += 1;
+    final resultRoute = _resultDialogRoute;
+    _resultDialogRoute = null;
+    if (resultRoute != null) {
+      // 화면 State가 교체돼도 root Navigator의 팝업은 자동으로 없어지지 않습니다.
+      // dispose는 Navigator가 화면을 정리하는 중에도 호출되므로 프레임 뒤에
+      // 이 State가 소유한 팝업만 제거합니다. 새 State의 팝업은 건드리지 않습니다.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navigator = resultRoute.navigator;
+        if (navigator != null && resultRoute.isActive) {
+          navigator.removeRoute(resultRoute);
+        }
+      });
+    }
     _sessionSubscription?.close();
     // ---------------------------------------------------------------------------
     // 게임 종료 후 플랫폼 화면 정책 복원

@@ -153,9 +153,9 @@ export const game_liars_poker_resolve_penalty = onCall<ResolvePenaltyData>(
 
         const now = transactionNow;
         if (result === "safe") {
-          if (game.server.penaltyCountIncrementedBeforeRoulette !== true) {
-            target.penaltyCount += 1;
-          }
+          // 마지막 카드 LIAR 실패의 추가 상승과 별개로, 생존하면 다음
+          // 벌칙 단계를 올립니다. 동일 요청은 위의 작업 기록으로 중복 방지합니다.
+          target.penaltyCount += 1;
         } else {
           target.status = "eliminated";
           target.remainingCardCount = 0;
