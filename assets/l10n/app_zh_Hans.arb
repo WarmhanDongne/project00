@@ -142,5 +142,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "connectionBandLost": "连接已断开 · 将自动重新连接",
+  "connectionBandReconnecting": "正在重新连接… 请保持此画面",
+  "connectionBandRestored": "已重新连接"
 }

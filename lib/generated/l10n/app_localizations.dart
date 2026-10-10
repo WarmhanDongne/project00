@@ -875,6 +875,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'POT {chips}'**
   String previewPot(String chips);
+
+  /// 로비 아래 띠: 서버 연결이 끊겼을 때
+  ///
+  /// In ko, this message translates to:
+  /// **'연결이 끊겼어요 · 자동으로 다시 이어 볼게요'**
+  String get connectionBandLost;
+
+  /// 로비 아래 띠: 자동으로 다시 연결하는 중
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 연결하는 중… 화면은 그대로 두세요'**
+  String get connectionBandReconnecting;
+
+  /// 로비 아래 띠: 연결이 복구된 직후 잠깐
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 연결됐어요'**
+  String get connectionBandRestored;
 }
 
 class _AppLocalizationsDelegate

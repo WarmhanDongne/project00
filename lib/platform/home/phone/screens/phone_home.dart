@@ -1,3 +1,4 @@
+import 'package:project00/platform/localization/lobby_connection_band.dart';
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:async';
 
@@ -32,6 +33,10 @@ class _PhoneHomeState extends State<PhoneHome> {
     gameCatalog: widget.gameCatalog,
   );
   StreamSubscription<bool>? _connectionSubscription;
+
+  /// 아래 연결 띠가 듣는 서버 연결 상태입니다. 다시 그려도 같은 스트림을 씁니다.
+  late final Stream<bool> _serverConnection = _restoredRoomProvider
+      .watchServerConnection();
   bool _restoreInFlight = false;
   bool _waitingRoomOpen = false;
 
@@ -175,17 +180,20 @@ class _PhoneHomeState extends State<PhoneHome> {
         onDecline: () => unawaited(_declineReturn()),
       );
     }
-    return Scaffold(
-      backgroundColor: MosiColors.violet,
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: Column(
-          children: [
-            const PhoneHeader(),
-            PhoneOwnGameList(games: _games),
-            _buildJoinBar(),
-          ],
+    return LobbyConnectionBand(
+      connectionChanges: _serverConnection,
+      child: Scaffold(
+        backgroundColor: MosiColors.violet,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              const PhoneHeader(),
+              PhoneOwnGameList(games: _games),
+              _buildJoinBar(),
+            ],
+          ),
         ),
       ),
     );

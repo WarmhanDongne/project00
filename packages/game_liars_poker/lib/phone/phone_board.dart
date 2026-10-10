@@ -7,6 +7,7 @@ library;
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
@@ -46,6 +47,9 @@ part 'src/board_state.dart';
 // ============================================================================
 // 화면 흐름·연출 설정
 // ============================================================================
+
+/// 화면 맨 아래 LED 연결 띠입니다(시안: 타이머와 같은 LED 전광판).
+const liarsPokerConnectionLed = GameConnectionLedStyle.classic;
 
 abstract final class LiarsPokerPhoneTiming {
   /// 휴대폰 ROUND N 문구 유지시간입니다. 태블릿 안내와 별도로 조절합니다.

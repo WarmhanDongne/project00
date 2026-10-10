@@ -1,3 +1,4 @@
+import 'package:project00/platform/localization/lobby_connection_band.dart';
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:project00/platform/localization/locale_settings_button.dart';
 import 'dart:async';
@@ -46,6 +47,11 @@ class _TabletHomeState extends State<TabletHome>
     duration: const Duration(milliseconds: 180),
   );
   bool _isOpeningStore = false;
+
+  /// 아래 연결 띠가 듣는 서버 연결 상태입니다. 다시 그려도 같은 스트림을 씁니다.
+  late final Stream<bool> _serverConnection = roomProvider
+      .watchServerConnection();
+
   late final RoomProvider roomProvider = RoomProvider(
     gameCatalog: widget.gameCatalog,
   );
@@ -383,8 +389,10 @@ class _TabletHomeState extends State<TabletHome>
         tween: ColorTween(end: theme.ground),
         duration: const Duration(milliseconds: 450),
         curve: Curves.easeOut,
-        builder: (context, ground, child) =>
-            Scaffold(backgroundColor: ground, body: child),
+        builder: (context, ground, child) => LobbyConnectionBand(
+          connectionChanges: _serverConnection,
+          child: Scaffold(backgroundColor: ground, body: child),
+        ),
         child: SafeArea(
           child: TabletLobbyLayout(
             header: StoreExit(

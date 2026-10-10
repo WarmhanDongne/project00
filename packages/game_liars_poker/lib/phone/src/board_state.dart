@@ -11,6 +11,10 @@ part of '../phone_board.dart';
 // └─ ④ 구독과 화면 방향 정책 정리
 
 class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
+  /// 화면 맨 아래 LED 연결 띠가 듣는 서버 연결 상태입니다. 다시 그려도 같은 스트림을 씁니다.
+  late final Stream<bool> _serverConnection = widget.provider
+      .watchServerConnection();
+
   LiarsPokerController? _controller;
   LiarsPokerSessionArgs? _sessionArgs;
   ProviderSubscription<LiarsPokerGameState>? _sessionSubscription;
@@ -319,51 +323,55 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     // 남고 하위 화면이 사라집니다.
     _hasEnteredGame |= controller.isEntryDataReady;
 
-    return GameEntryUnroll(
-      child: GameRecoveryLayer(
-        session: controller.recoverySession,
-        request: GameRequestRecovery(
-          message: controller.errorMessage,
-          onRetry: () => unawaited(controller.retryLastCommand()),
-        ),
-        interruption: GameInterruptionRecovery(
-          state: controller.interruption,
-          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-          isSubmitting: controller.commandInFlight,
-          failureMessage: controller.errorMessage,
-
-          onExpired: controller.expireInterruption,
-        ),
-        // 정상 준비는 배경을 유지합니다. 실제 실패 안내와 재시도는 공용
-        // 요청 UI가, 나가기는 게임 화면의 기존 상단바·퇴장 모달이 담당합니다.
-        connection: GameConnectionRecovery(
-          isWaiting: !_hasEnteredGame || _isAwaitingHandTooLong(controller),
-        ),
-        // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
-        // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
-        // key를 사용하므로, 관전 화면이 등장하거나 사라질 때만 한 번 페이드합니다.
-        child: AnimatedSwitcher(
-          duration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
-          reverseDuration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          layoutBuilder: (currentChild, previousChildren) => Stack(
-            fit: StackFit.expand,
-            children: [...previousChildren, ?currentChild],
+    return GameConnectionLedHost(
+      connectionChanges: _serverConnection,
+      style: liarsPokerConnectionLed,
+      child: GameEntryUnroll(
+        child: GameRecoveryLayer(
+          session: controller.recoverySession,
+          request: GameRequestRecovery(
+            message: controller.errorMessage,
+            onRetry: () => unawaited(controller.retryLastCommand()),
           ),
-          // 양쪽 화면을 동시에 반투명하게 만들면 중간 프레임에서 뒤의 검은
-          // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
-          // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
-          transitionBuilder: _buildSpectatorTransition,
-          child:
-              _hasEnteredGame ||
-                  controller.errorMessage != null ||
-                  controller.interruption?.causes.isNotEmpty == true
-              ? _buildGameContent(controller)
-              : const KeyedSubtree(
-                  key: ValueKey('liars-poker-game'),
-                  child: _PhoneGameBackground(),
-                ),
+          interruption: GameInterruptionRecovery(
+            state: controller.interruption,
+            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            isSubmitting: controller.commandInFlight,
+            failureMessage: controller.errorMessage,
+
+            onExpired: controller.expireInterruption,
+          ),
+          // 정상 준비는 배경을 유지합니다. 실제 실패 안내와 재시도는 공용
+          // 요청 UI가, 나가기는 게임 화면의 기존 상단바·퇴장 모달이 담당합니다.
+          connection: GameConnectionRecovery(
+            isWaiting: !_hasEnteredGame || _isAwaitingHandTooLong(controller),
+          ),
+          // 서버 상태 갱신마다 화면 전체를 다시 전환하면 관전자 화면이 계속
+          // 번쩍입니다. 일반 게임 단계는 모두 같은 key를 쓰고 관전 화면만 다른
+          // key를 사용하므로, 관전 화면이 등장하거나 사라질 때만 한 번 페이드합니다.
+          child: AnimatedSwitcher(
+            duration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
+            reverseDuration: LiarsPokerPhoneTiming.phoneSpectatorTransition,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              fit: StackFit.expand,
+              children: [...previousChildren, ?currentChild],
+            ),
+            // 양쪽 화면을 동시에 반투명하게 만들면 중간 프레임에서 뒤의 검은
+            // 바탕이 비쳐 화면이 한 번 어두워집니다. 이전 화면은 완전히 유지하고
+            // 새 화면만 그 위에서 나타나게 해 밝기 변화 없는 전환을 만듭니다.
+            transitionBuilder: _buildSpectatorTransition,
+            child:
+                _hasEnteredGame ||
+                    controller.errorMessage != null ||
+                    controller.interruption?.causes.isNotEmpty == true
+                ? _buildGameContent(controller)
+                : const KeyedSubtree(
+                    key: ValueKey('liars-poker-game'),
+                    child: _PhoneGameBackground(),
+                  ),
+          ),
         ),
       ),
     );

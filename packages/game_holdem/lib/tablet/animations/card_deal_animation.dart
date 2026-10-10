@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_holdem/game_sounds.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
+import 'package:game_kit/shared/animations/progress_sound_cue.dart';
+import 'package:game_kit/sound/sound_effects.dart';
 
 /// 라이어스 포커의 중앙 덱 분배 흐름을 홀덤의 기존 타원형 좌석에 맞춥니다.
 class HoldemCardDealAnimation extends StatefulWidget {
@@ -26,10 +29,36 @@ class HoldemCardDealAnimation extends StatefulWidget {
 
 class _HoldemCardDealAnimationState extends State<HoldemCardDealAnimation>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2950),
-  )..addStatusListener(_onStatus);
+  late final AnimationController _controller =
+      AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 2950),
+        )
+        ..addStatusListener(_onStatus)
+        ..addListener(_playDealingSounds);
+  int _dealtSoundCount = 0;
+
+  static double _dealStart(int order, int count) =>
+      .23 + (count == 1 ? 0 : order / (count - 1) * .51);
+
+  void _playDealingSounds() {
+    if (!mounted) return;
+    final count =
+        widget.seatIndexes
+            .where((index) => index >= 0 && index < widget.seatCount)
+            .length *
+        2;
+    final lead =
+        ProgressSoundCue.lead.inMilliseconds /
+        _controller.duration!.inMilliseconds;
+    // 라이어스 포커와 같은 비행 69% 착지 판정 + 출력 지연 120ms 보정.
+    while (_dealtSoundCount < count &&
+        _controller.value >=
+            _dealStart(_dealtSoundCount, count) + .17 * .69 - lead) {
+      _dealtSoundCount++;
+      SoundEffects.play(context, HoldemSounds.dealing);
+    }
+  }
 
   @override
   void initState() {
@@ -47,6 +76,7 @@ class _HoldemCardDealAnimationState extends State<HoldemCardDealAnimation>
   void dispose() {
     _controller
       ..removeStatusListener(_onStatus)
+      ..removeListener(_playDealingSounds)
       ..dispose();
     super.dispose();
   }
@@ -133,7 +163,7 @@ class _HoldemCardDealAnimationState extends State<HoldemCardDealAnimation>
     final deck = center + Offset(0, (count - order) * 1.2 * widget.scale);
     final fromAbove = deck - Offset(0, size.height / 2 + cardHeight);
     final landing = Offset.lerp(fromAbove, deck, deckEntry)!;
-    final start = .23 + (count == 1 ? 0 : order / (count - 1) * .51);
+    final start = _dealStart(order, count);
     final travel = Curves.easeOutCubic.transform(
       ((value - start) / .17).clamp(0.0, 1.0),
     );

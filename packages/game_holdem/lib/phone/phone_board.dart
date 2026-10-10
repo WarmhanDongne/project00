@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:game_kit/recovery/services/required_image.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,17 @@ import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/phone/widgets/exit_modal.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 
+/// 화면 맨 아래 LED 연결 띠입니다(시안: 펠트보다 짙은 초록 바탕, 위쪽 금색 빛 한 줄,
+/// 복구는 민트 초록).
+const holdemConnectionLed = GameConnectionLedStyle(
+  background: Color(0xFF07251A),
+  topLineColor: Color(0x99D4AF5A),
+  offColor: Color(0xFFFF4B3E),
+  retryColor: Color(0xFFFFC14A),
+  onColor: Color(0xFF62E6B0),
+  textColor: Color(0xFFE6EFE9),
+);
+
 class HoldemPhoneGame extends ConsumerStatefulWidget {
   const HoldemPhoneGame({
     super.key,
@@ -39,6 +51,10 @@ class HoldemPhoneGame extends ConsumerStatefulWidget {
 }
 
 class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
+  /// 화면 맨 아래 LED 연결 띠가 듣는 서버 연결 상태입니다. 다시 그려도 같은 스트림을 씁니다.
+  late final Stream<bool> _serverConnection = widget.provider
+      .watchServerConnection();
+
   HoldemSessionArgs? _args;
   bool _introCompleted = false;
   int _announcedHand = 0;
@@ -134,21 +150,25 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
         }
       },
     );
-    return GameRecoveryLayer(
-      session: controller.recoverySession,
-      onExit: () => unawaited(_requestExit()),
-      request: GameRequestRecovery(
-        message: game.errorMessage,
-        onRetry: () => unawaited(controller.retryLastCommand()),
+    return GameConnectionLedHost(
+      connectionChanges: _serverConnection,
+      style: holdemConnectionLed,
+      child: GameRecoveryLayer(
+        session: controller.recoverySession,
+        onExit: () => unawaited(_requestExit()),
+        request: GameRequestRecovery(
+          message: game.errorMessage,
+          onRetry: () => unawaited(controller.retryLastCommand()),
+        ),
+        interruption: GameInterruptionRecovery(
+          state: game.interruption,
+          currentUid: args.uid,
+          isSubmitting: game.commandInFlight,
+          failureMessage: game.errorMessage,
+          onExpired: controller.expireInterruption,
+        ),
+        child: shell,
       ),
-      interruption: GameInterruptionRecovery(
-        state: game.interruption,
-        currentUid: args.uid,
-        isSubmitting: game.commandInFlight,
-        failureMessage: game.errorMessage,
-        onExpired: controller.expireInterruption,
-      ),
-      child: shell,
     );
   }
 

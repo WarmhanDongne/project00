@@ -36,7 +36,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀와 현재 FULL PASS. E13 통합·E14 실기기 확인 |
+| [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀의 기존 FULL PASS 유지. 10/10 로컬 사운드·진동·연결 띠 통합 후보 검증 중. E13 통합·E14 실기기 확인 |
 | [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
 | [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
