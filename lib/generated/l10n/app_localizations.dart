@@ -893,6 +893,18 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'다시 연결됐어요'**
   String get connectionBandRestored;
+
+  /// 프로필 저장 버튼: 저장이 끝난 직후 체크 옆 문구
+  ///
+  /// In ko, this message translates to:
+  /// **'저장됐어요'**
+  String get profileSaved;
+
+  /// No description provided for @gamePreparing.
+  ///
+  /// In ko, this message translates to:
+  /// **'게임 준비 중'**
+  String get gamePreparing;
 }
 
 class _AppLocalizationsDelegate

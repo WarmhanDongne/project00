@@ -149,6 +149,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   }
 
   late List<int> _playerSlotIndexes;
+
+  /// 자리를 바꿀 때마다 올라가는 카드별 도착 번호입니다. 번호가 바뀐 카드는
+  /// 새 자리에 닿는 순간 테두리가 한 번 반짝입니다(로비 연출 7번).
+  final Map<int, int> _arrivals = {};
   List<Offset> _slotPositions = const [];
   final Map<int, Offset> _draggingPositions = {};
   late final AnimationController _entranceController;
@@ -352,8 +356,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     setState(() {
       if (targetPlayerIndex != -1 && targetPlayerIndex != playerIndex) {
         _playerSlotIndexes[targetPlayerIndex] = currentSlotIndex;
+        _arrivals.update(targetPlayerIndex, (n) => n + 1, ifAbsent: () => 1);
       }
       _playerSlotIndexes[playerIndex] = targetSlotIndex;
+      _arrivals.update(playerIndex, (n) => n + 1, ifAbsent: () => 1);
     });
   }
 
@@ -735,6 +741,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
         theme: widget.seatTheme,
         isDragging: isDragging,
         isSelected: _selectedSlotIndex == slotIndex,
+        arrival: _arrivals[playerIndex] ?? 0,
       ),
     );
 
@@ -1095,7 +1102,11 @@ class _SeatCard extends StatefulWidget {
     required this.theme,
     required this.isDragging,
     required this.isSelected,
+    this.arrival = 0,
   });
+
+  /// 자리를 옮길 때마다 바뀌는 번호입니다. 바뀌면 도착 반짝임을 한 번 냅니다.
+  final int arrival;
 
   final PlayerLayoutPlayer player;
   final int seatNumber;
@@ -1108,12 +1119,18 @@ class _SeatCard extends StatefulWidget {
   State<_SeatCard> createState() => _SeatCardState();
 }
 
-class _SeatCardState extends State<_SeatCard>
-    with SingleTickerProviderStateMixin {
+class _SeatCardState extends State<_SeatCard> with TickerProviderStateMixin {
   late final AnimationController _wiggle = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 500),
   );
+
+  /// 새 자리에 닿을 때 한 번 퍼지는 라임 테두리입니다.
+  late final AnimationController _land = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+  Timer? _landDelay;
 
   @override
   void initState() {
@@ -1124,6 +1141,13 @@ class _SeatCardState extends State<_SeatCard>
   @override
   void didUpdateWidget(covariant _SeatCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.arrival != oldWidget.arrival) {
+      // 카드가 이동(0.45초)을 거의 마친 뒤에 반짝입니다.
+      _landDelay?.cancel();
+      _landDelay = Timer(const Duration(milliseconds: 380), () {
+        if (mounted) _land.forward(from: 0);
+      });
+    }
     if (widget.isSelected && !_wiggle.isAnimating) {
       _wiggle.repeat();
     } else if (!widget.isSelected && _wiggle.isAnimating) {
@@ -1135,6 +1159,8 @@ class _SeatCardState extends State<_SeatCard>
 
   @override
   void dispose() {
+    _landDelay?.cancel();
+    _land.dispose();
     _wiggle.dispose();
     super.dispose();
   }
@@ -1159,44 +1185,66 @@ class _SeatCardState extends State<_SeatCard>
                 : 0,
             child: child,
           ),
-          child: AnimatedScale(
-            scale: widget.isDragging ? 1.06 : 1,
-            duration: const Duration(milliseconds: 120),
-            child: Container(
-              width: metrics.size.width,
-              height: metrics.size.height,
-              padding: EdgeInsets.symmetric(horizontal: metrics.padding),
-              decoration: BoxDecoration(
-                color: highlighted ? theme.selected : MosiColors.white,
-                borderRadius: BorderRadius.circular(metrics.radius),
-                border: Border.all(color: MosiColors.ink, width: 3),
-                boxShadow: [
-                  if (highlighted)
-                    BoxShadow(color: theme.ring, spreadRadius: 5),
-                  BoxShadow(color: theme.deep, offset: const Offset(6, 6)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  MosiFace(
-                    characterId: widget.player.characterId,
-                    size: metrics.avatar,
-                  ),
-                  SizedBox(width: metrics.gap),
-                  Expanded(
-                    child: Text(
-                      widget.player.nickname,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: MosiFonts.sans(
-                        color: MosiColors.navy,
-                        size: metrics.nicknameSize,
-                        weight: FontWeight.w700,
-                        letterSpacing: -0.5,
+          child: AnimatedBuilder(
+            animation: _land,
+            builder: (context, child) {
+              final t = _land.value;
+              final glow = t == 0 ? 0.0 : math.sin(t * math.pi);
+              return DecoratedBox(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(metrics.radius + 2),
+                  boxShadow: glow == 0
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: MosiColors.lime.withValues(alpha: glow),
+                            spreadRadius: 6 * glow,
+                          ),
+                        ],
+                ),
+                child: child,
+              );
+            },
+            child: AnimatedScale(
+              scale: widget.isDragging ? 1.06 : 1,
+              duration: const Duration(milliseconds: 120),
+              child: Container(
+                width: metrics.size.width,
+                height: metrics.size.height,
+                padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+                decoration: BoxDecoration(
+                  color: highlighted ? theme.selected : MosiColors.white,
+                  borderRadius: BorderRadius.circular(metrics.radius),
+                  border: Border.all(color: MosiColors.ink, width: 3),
+                  boxShadow: [
+                    if (highlighted)
+                      BoxShadow(color: theme.ring, spreadRadius: 5),
+                    BoxShadow(color: theme.deep, offset: const Offset(6, 6)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    MosiFace(
+                      characterId: widget.player.characterId,
+                      size: metrics.avatar,
+                    ),
+                    SizedBox(width: metrics.gap),
+                    Expanded(
+                      child: Text(
+                        widget.player.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MosiFonts.sans(
+                          color: MosiColors.navy,
+                          size: metrics.nicknameSize,
+                          weight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

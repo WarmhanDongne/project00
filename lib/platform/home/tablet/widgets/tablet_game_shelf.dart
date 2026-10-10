@@ -22,7 +22,15 @@ class TabletGameShelf extends StatefulWidget {
     required this.theme,
     required this.onlyPlayable,
     required this.onOnlyPlayableChanged,
+    this.preparing = false,
+    this.selectedCoverKey,
   });
+
+  /// 고른 게임을 준비 중인지입니다(책 위 준비 표시).
+  final bool preparing;
+
+  /// 고른 책 자리를 재는 키입니다(책이 열리는 화면 전환).
+  final GlobalKey? selectedCoverKey;
 
   final GameProvider gameProvider;
   final RoomProvider roomProvider;
@@ -157,6 +165,8 @@ class _TabletGameShelfState extends State<TabletGameShelf> {
                   theme: widget.theme,
                   onSelect: widget.onSelect,
                   onOpenDetail: widget.onOpenDetail,
+                  preparing: widget.preparing,
+                  selectedCoverKey: widget.selectedCoverKey,
                 ),
               ),
           ],
@@ -325,8 +335,12 @@ class _ShelfBody extends StatelessWidget {
     required this.theme,
     required this.onSelect,
     required this.onOpenDetail,
+    this.preparing = false,
+    this.selectedCoverKey,
   });
 
+  final bool preparing;
+  final GlobalKey? selectedCoverKey;
   final List<GameInfo> games;
   final GameInfo selected;
   final RoomProvider roomProvider;
@@ -359,6 +373,8 @@ class _ShelfBody extends StatelessWidget {
               emptyColor: theme.fgDim,
               onSelect: onSelect,
               onOpenDetail: onOpenDetail,
+              preparing: preparing,
+              selectedCoverKey: selectedCoverKey,
             ),
             // 선반 판자: 왼쪽 화면 끝까지 이어집니다.
             SizedBox(

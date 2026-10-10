@@ -145,5 +145,7 @@
   },
   "connectionBandLost": "连接已断开 · 将自动重新连接",
   "connectionBandReconnecting": "正在重新连接… 请保持此画面",
-  "connectionBandRestored": "已重新连接"
+  "connectionBandRestored": "已重新连接",
+  "profileSaved": "已保存",
+  "gamePreparing": "准备中"
 }

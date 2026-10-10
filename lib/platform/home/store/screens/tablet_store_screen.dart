@@ -1032,58 +1032,86 @@ class _CounterCard extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: MosiFonts.sans(
-                          locale: locale,
-                          size: compact ? 22 : 30,
-                          weight: FontWeight.w700,
-                          color: MosiColors.navy,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    _StatusTag(label: status, locale: locale),
-                    if (!compact) ...[
-                      const SizedBox(width: 12),
+            // 고른 책이 바뀌면 이전 설명은 위로 빠지고 새 설명이 아래에서
+            // 올라옵니다(로비 연출 11번).
+            child: AnimatedSwitcher(
+              duration: MosiMotion.of(
+                context,
+                const Duration(milliseconds: 260),
+              ),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.centerLeft,
+                children: [...previous, ?current],
+              ),
+              transitionBuilder: (child, animation) {
+                final entering = child.key == ValueKey(name);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(0, entering ? 0.35 : -0.35),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
+                key: ValueKey(name),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
                       Flexible(
                         child: Text(
-                          meta,
+                          name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: MosiFonts.sans(
                             locale: locale,
-                            size: 13,
-                            color: MosiColors.muted,
+                            size: compact ? 22 : 30,
+                            weight: FontWeight.w700,
+                            color: MosiColors.navy,
+                            height: 1.2,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      _StatusTag(label: status, locale: locale),
+                      if (!compact) ...[
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MosiFonts.sans(
+                              locale: locale,
+                              size: 13,
+                              color: MosiColors.muted,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: MosiFonts.sans(
-                    locale: locale,
-                    size: compact ? 13 : 15,
-                    color: const Color(0xFF4A4766),
-                    height: 1.5,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: MosiFonts.sans(
+                      locale: locale,
+                      size: compact ? 13 : 15,
+                      color: const Color(0xFF4A4766),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           SizedBox(width: compact ? 14 : 28),

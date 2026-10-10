@@ -408,4 +408,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get connectionBandRestored => '다시 연결됐어요';
+
+  @override
+  String get profileSaved => '저장됐어요';
+
+  @override
+  String get gamePreparing => '게임 준비 중';
 }
