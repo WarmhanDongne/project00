@@ -152,3 +152,20 @@ room_recovery_heartbeat_test다. 중괄호 보정은 테스트 동작/기대값�
 이번 턴에 배포 승인을 요청하거나 실행하지 않았으며 배포 대상 산정도 완료하지 않았다.
 FULL은 기존 사용자 보류를 유지했다. APK/실기기는 사용자 담당 대기이며 전체 완료로
 판정하지 않는다. 운영 데이터 조회·쓰기·migration도 수행하지 않았다.
+
+## 2026-10-11 — 디벨럽1 통합본 자동 테스트
+
+- 대상 branch `codex/e01-validation-wiring`, HEAD `b84ca12`.
+  부모 `9a26728`의 네트워크 수정과 `0c5cc01`의 디벨럽1 변경을 포함한다.
+- 실행 전후 staged/unstaged/untracked 상태는 모두 비어 있었다. 아래 결과를
+  기록하기 위해 이 문서와 월별 일지만 이후 수정했다. 제품 코드 수정은 없다.
+
+| 명령 | status / exit code / 확인 범위 |
+| --- | --- |
+| `.\tool\invoke_mosigame.ps1 test session` | PASS / 0 / 5단계 모두 PASS; Flutter 172, Functions 107; working-tree-mutation PASS |
+| `flutter test --no-pub test/room_action_fast_path_test.dart test/room_action_timing_test.dart test/table_background_transition_test.dart` | PASS / 0 / Flutter 23; 생성·종료·퇴장 미확정 ID 재사용, 실패한 초기 presence 재시도, 계측 Zone, 착석 준비와 배경 전환 |
+
+Final Call 전용 동작·애니메이션 테스트는 사용자 요청으로 보류했다. session suite의
+공통 서버 계약 테스트에 포함된 Final Call 케이스는 suite를 변경하지 않고 실행했다.
+실기기 단절·잠금·시작 응답 유실 및 옛 cleanup 도착을 검증한 결과는 아니다.
+`validate --full`은 기존 보류 상태로 미실행이다. develop 병합·push·배포는 하지 않았다.
