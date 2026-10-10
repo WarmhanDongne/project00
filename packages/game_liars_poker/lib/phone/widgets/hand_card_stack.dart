@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:game_liars_poker/game_copy.dart';
+import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
@@ -710,6 +711,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
               cardWidth: cardWidth,
               cardHeight: cardHeight,
               isSelected: isSelected,
+              badgeOnLeft: widget.isLandscape,
             ),
           ),
         ),
@@ -849,38 +851,74 @@ class _StaticCardFace extends StatelessWidget {
     required this.cardWidth,
     required this.cardHeight,
     required this.isSelected,
+    this.badgeOnLeft = false,
   });
-
-  static const Color _selectedBorderColor = Color(0xFF8CA695);
-  static const Color _selectedShadowColor = Color(0x66394F42);
 
   final GameImage asset;
   final double cardWidth;
   final double cardHeight;
   final bool isSelected;
 
+  /// 가로 손패는 오른쪽 카드가 겹쳐 덮으므로 선택 표시를 왼쪽 위에 둡니다.
+  final bool badgeOnLeft;
+
   @override
   Widget build(BuildContext context) {
-    return GameCardFace(
-      asset: asset,
-      width: cardWidth,
-      height: cardHeight,
-      radius: 8,
-      shadow: isSelected
-          ? const BoxShadow(
-              color: _selectedShadowColor,
-              blurRadius: 14,
-              spreadRadius: 1,
-              offset: Offset(0, 8),
-            )
-          : const BoxShadow(
-              color: GameShadowColors.strong,
-              blurRadius: 7,
-              offset: Offset(0, 5),
+    final badge = cardWidth * .2;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? const [
+                    BoxShadow(color: LiarsPokerColors.gold, spreadRadius: 4),
+                    BoxShadow(
+                      color: Color(0x8C000000),
+                      blurRadius: 26,
+                      spreadRadius: 4,
+                      offset: Offset(0, 14),
+                    ),
+                  ]
+                : const [
+                    BoxShadow(
+                      color: GameShadowColors.strong,
+                      blurRadius: 14,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+          ),
+          child: GameCardFace(
+            asset: asset,
+            width: cardWidth,
+            height: cardHeight,
+            radius: 8,
+            shadow: const BoxShadow(color: Colors.transparent),
+          ),
+        ),
+        if (isSelected)
+          Positioned(
+            top: -badge * .3,
+            left: badgeOnLeft ? -badge * .3 : null,
+            right: badgeOnLeft ? null : -badge * .3,
+            child: Container(
+              width: badge,
+              height: badge,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: LiarsPokerColors.gold,
+                border: Border.all(color: LiarsPokerColors.night, width: 3),
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                size: badge * .62,
+                color: LiarsPokerColors.night,
+              ),
             ),
-      border: isSelected
-          ? Border.all(color: _selectedBorderColor, width: 2.4)
-          : null,
+          ),
+      ],
     );
   }
 }

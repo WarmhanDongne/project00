@@ -1,3 +1,4 @@
+import {traceRoomAction} from "./room-action-timing.js";
 /* eslint-disable require-jsdoc, valid-jsdoc, max-len */
 import {getDatabase} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
@@ -40,11 +41,11 @@ export const fetchRealtimeRoomSession = onCall({region: "asia-northeast3"}, asyn
 });
 
 /** A missing result never cancels an already transmitted request. */
-export const game_common_operation_status = onCall({region: "asia-northeast3"}, async (request) => {
+export const game_common_operation_status = onCall({region: "asia-northeast3"}, async (request) => traceRoomAction("game_common_operation_status", async (timing) => {
   const {uid, roomCode} = requestTarget(request.auth?.uid, request.data ?? {});
   const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
   const operationId = parseSessionId(request.data?.operationId, "작업 ID");
-  const room = (await getDatabase().ref(`rooms/${roomCode}`).get()).val() as SessionRoom | null;
+  const room = (await timing.measure("room_read", () => getDatabase().ref(`rooms/${roomCode}`).get())).val() as SessionRoom | null;
   if (!room || room.roomInstanceId !== roomInstanceId) return {status: "stale"};
   const saved = roomOperationResult(room, uid, operationId);
   if (saved) return {status: "applied"};
@@ -54,7 +55,7 @@ export const game_common_operation_status = onCall({region: "asia-northeast3"}, 
   }
   if (room.controllerUid === uid) assertControllerSession(room, uid, request.data?.controllerSessionId);
   return {status: "notApplied", context: roomSessionContext(room, uid)};
-});
+}));
 
 /** Only the server-selected current connection can update presence summaries. */
 export const syncRealtimeRoomConnection = onValueWritten({

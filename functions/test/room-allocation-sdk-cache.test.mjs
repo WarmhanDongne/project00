@@ -6,10 +6,11 @@ const require = createRequire(import.meta.url);
 const adminDatabase = require('firebase-admin/database');
 const onboarding = require('../lib/auth/require-complete-onboarding.js');
 const {createRealtimeRoom} = require('../lib/room/create-room.js');
+const {closeRoom} = require('../lib/room/realtime-room-lifecycle.js');
 const {cleanupStaleRealtimeRooms, reconcileTerminal} = require('../lib/room/room-cleanup.js');
 
 function snapshot(value) {
-  return {val: () => structuredClone(value), child: key => snapshot(value?.[key] ?? null),
+  return {val: () => structuredClone(value), exists: () => value != null, child: key => snapshot(value?.[key] ?? null),
     forEach(callback) { for (const [key, child] of Object.entries(value ?? {})) callback({...snapshot(child), key}); }};
 }
 
@@ -65,6 +66,59 @@ test('cold RTDB cache keeps same creation operation live and finalizes its reser
   const replay = await createRealtimeRoom.run(request);
   assert.equal(replay.roomInstanceId, first.roomInstanceId);
   assert.equal(database.values.get(`rooms/${first.roomCode}`).status, 'waiting');
+});
+
+test('create-close-create succeeds immediately, and old requests/cleanup preserve the new room', async t => {
+  const database = setup(t);
+  const auth = {uid: 'test-controller'};
+  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  const closeRequest = {auth, data: {...first, operationId: 'close-first'}};
+  await closeRoom.run(closeRequest);
+  const closed = structuredClone(database.values.get(`rooms/${first.roomCode}`));
+  assert.equal(closed.status, 'closed');
+  const second = await createRealtimeRoom.run({auth, data: {operationId: 'create-second'}});
+  assert.equal(second.success, true);
+  assert.notEqual(second.roomInstanceId, first.roomInstanceId);
+  assert.equal(database.values.get(`rooms/${first.roomCode}`).status, 'closed', 'retention is unchanged');
+  const replacement = structuredClone(database.values.get('controllerRooms/test-controller'));
+  await closeRoom.run(closeRequest);
+  await assert.rejects(createRealtimeRoom.run({auth, data: {operationId: 'create-first'}}),
+    error => error.code === 'failed-precondition');
+  await reconcileTerminal(first.roomCode, {...closed, status: 'terminal'});
+  assert.deepEqual(database.values.get('controllerRooms/test-controller'), replacement);
+  assert.equal(database.values.get('roomCreateSlots/test-controller').operationId, 'create-second');
+  assert.equal(database.values.get(`rooms/${second.roomCode}`).status, 'waiting');
+});
+
+test('closed-room proof cannot replace an unrelated pending slot or another generation', async t => {
+  const database = setup(t);
+  const auth = {uid: 'test-controller'};
+  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  await closeRoom.run({auth, data: {...first, operationId: 'close-first'}});
+  const original = structuredClone(database.values.get('roomCreateSlots/test-controller'));
+  for (const slot of [
+    {...original, operationId: 'unknown-pending', status: 'reserved'},
+    {...original, allocationGeneration: original.allocationGeneration + 1},
+    {...original, roomInstanceId: 'another-instance'},
+  ]) {
+    database.values.set('roomCreateSlots/test-controller', slot);
+    await assert.rejects(createRealtimeRoom.run({auth, data: {operationId: 'create-second'}}),
+      error => error.code === 'failed-precondition' && error.details?.reason === 'creationPending');
+    assert.deepEqual(database.values.get('roomCreateSlots/test-controller'), slot);
+  }
+});
+
+test('two concurrent replacements of a closed room allocate only one live room', async t => {
+  const database = setup(t);
+  const auth = {uid: 'test-controller'};
+  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  await closeRoom.run({auth, data: {...first, operationId: 'close-first'}});
+  const results = await Promise.allSettled(['create-next-a', 'create-next-b'].map(operationId =>
+    createRealtimeRoom.run({auth, data: {operationId}})));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  const rooms = [...database.values.entries()].filter(([path, room]) => path.startsWith('rooms/') && room.status === 'waiting');
+  assert.equal(rooms.length, 1);
+  assert.equal(database.values.get('controllerRooms/test-controller').roomInstanceId, rooms[0][1].roomInstanceId);
 });
 
 test('cold cache terminal reconciliation completes matching records and preserves a replacement mapping', async t => {

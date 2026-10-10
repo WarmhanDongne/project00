@@ -3,12 +3,11 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
 import 'package:game_liars_poker/tablet/widgets/rulebook.dart';
 import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
 import 'package:game_liars_poker/tablet/providers/game_stage.dart';
 import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/models/game_room_context.dart';
 
 // ============================================================
@@ -19,7 +18,6 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
     super.key,
     required this.provider,
     required this.stage,
-    required this.tableCardValue,
     required this.onRestartGame,
     required this.onEndGame,
   });
@@ -27,9 +25,6 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
   final GameRoomContext provider;
   final LiarsPokerTabletStage stage;
 
-  /// 현재 라운드의 기준 카드(K/Q/A)입니다. 휴대폰 상단바처럼 좌상단에
-  /// `KING's TABLE` 형태의 라벨로 표시합니다.
-  final String tableCardValue;
   final VoidCallback onRestartGame;
   final VoidCallback onEndGame;
 
@@ -45,58 +40,18 @@ class LiarsPokerTabletGameOverlay extends StatelessWidget {
       return const SizedBox.expand();
     }
 
-    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
-    // 사이드바(TabletGameMenuOverlay)와 같은 여백 규칙을 사용해 양쪽 상단이
-    // 나란히 정렬되게 합니다.
-    final inset = (shortestSide * 0.025).clamp(16.0, 24.0);
-    final labelHeight = (shortestSide * 0.06).clamp(40.0, 64.0);
-
-    final icons = Assets.games.liarsPoker.images.icons;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // ---------------------------------------------------------------------------
-        // 좌상단 테이블 라벨
-        // ---------------------------------------------------------------------------
-        // 휴대폰 상단바와 같은 자산을 사용해 현재 테이블(KING/QUEEN/ACE)을
-        // 태블릿에서도 항상 확인할 수 있게 합니다.
-        SizedBox.expand(
-          child: SafeArea(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: EdgeInsets.all(inset),
-                child: IgnorePointer(
-                  child: _tableAsset(tableCardValue).image(
-                    height: labelHeight,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        TabletGameMenuOverlay(
-          visible: true,
-          roleIcon: icons.iconRole.image(fit: BoxFit.contain),
-          settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
-          roleDialogBuilder: (_) =>
-              LiarsPokerTabletRulebook(provider: provider),
-          settingDialogBuilder: (_) => TabletGameSettingsDialog(
-            provider: provider,
-            onRestartGame: onRestartGame,
-            onEndGame: onEndGame,
-          ),
-        ),
-      ],
+    // 오른쪽 위 규칙·설정 버튼입니다. 기준 카드는 테이블 원의 표식으로
+    // 네 방향 모두에서 읽히므로 따로 라벨을 두지 않습니다.
+    return TabletGameMenuOverlay(
+      visible: true,
+      roleIcon: const NoirRingGlyph(icon: Icons.question_mark_rounded),
+      settingIcon: const NoirRingGlyph(icon: Icons.settings_rounded),
+      roleDialogBuilder: (_) => LiarsPokerTabletRulebook(provider: provider),
+      settingDialogBuilder: (_) => TabletGameSettingsDialog(
+        provider: provider,
+        onRestartGame: onRestartGame,
+        onEndGame: onEndGame,
+      ),
     );
-  }
-
-  GameImage _tableAsset(String cardValue) {
-    return switch (cardValue.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
-    };
   }
 }

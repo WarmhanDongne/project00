@@ -17,18 +17,17 @@ import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_liars_poker/shared/providers/game_controller.dart';
 import 'package:game_liars_poker/phone/widgets/hand_card_stack.dart';
 import 'package:game_liars_poker/phone/widgets/liar_accusation.dart';
+import 'package:game_liars_poker/phone/widgets/liar_reveal.dart';
 import 'package:game_liars_poker/phone/widgets/penalty_status.dart';
 import 'package:game_liars_poker/phone/widgets/exit_modal.dart';
-import 'package:game_liars_poker/phone/widgets/settings_dialog.dart';
+import 'package:game_liars_poker/phone/widgets/table_info.dart';
 import 'package:game_liars_poker/phone/widgets/turn_timer.dart';
 import 'package:game_liars_poker/phone/widgets/top_bar.dart';
 import 'package:game_liars_poker/phone/widgets/turn_action_switcher.dart';
-import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
+import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
 import 'package:game_kit/phone/widgets/rule_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_liars_poker/phone/providers/game_stage.dart';
 
@@ -237,10 +236,18 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     final showPenaltyHandOverlay = controller?.showPenaltyHandOverlay ?? false;
     // 허위 선언 판정 문구를 보여주는 동안에는 기존 요청대로 손패를
     // 어둡게 유지하고, 실제 벌칙 진행 및 결과 표시 단계에서는 숨깁니다.
+    // 거짓이 밝혀진 뒤의 역할별 공개 화면과 룰렛 결과는 화면 전체를 쓰므로
+    // 판정 문구가 떠 있는 동안에도 손패를 숨깁니다.
+    final showsFullStage =
+        controller != null &&
+        !controller.isLiarVerdictPending &&
+        (controller.lastPlayDeclarationWasFalse == true ||
+            controller.isPenaltyResultVisible);
     final hideHandDuringPenalty =
         showPenaltyHandOverlay &&
-        controller?.liarVerdictMessage == null &&
-        controller?.isLiarVerdictPending != true;
+        (showsFullStage ||
+            (controller?.liarVerdictMessage == null &&
+                controller?.isLiarVerdictPending != true));
     final isGameStartReady =
         controller == null ||
         (!controller.isInitialLoading &&
@@ -323,6 +330,90 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // 상단 프로필과 기준 카드·남은 시간
+  // ---------------------------------------------------------------------------
+  Widget _buildHeader(
+    LiarsPokerController? controller, {
+    Animation<double>? entryAnimation,
+  }) {
+    final me = controller?.players[controller.uid];
+    final eliminated = controller?.isEliminated ?? false;
+    final String? status;
+    final Color statusColor;
+    if (eliminated) {
+      status = LiarsPokerCopy.eliminated;
+      statusColor = LiarsPokerColors.pink;
+    } else if (controller != null &&
+        controller.isMyTurn &&
+        (controller.phase == 'playing' ||
+            controller.phase == 'lastCardChallenge')) {
+      status = '내 차례';
+      statusColor = LiarsPokerColors.goldLight;
+    } else {
+      status = null;
+      statusColor = LiarsPokerColors.goldLight;
+    }
+    return PhoneGameTopBar(
+      characterId: me?.characterId ?? 'frog',
+      nickname: me?.nickname ?? '나',
+      penaltyCount: me?.penaltyCount ?? 0,
+      statusLabel: status,
+      statusColor: statusColor,
+      eliminated: eliminated,
+      entryAnimation: entryAnimation,
+      onTipPressedAt: _showRules,
+      onOutPressedAt: (origin) => unawaited(_showExitModal(origin: origin)),
+    );
+  }
+
+  Widget _buildInfoRow(
+    LiarsPokerController controller, {
+    required PhoneGamePlayer? turnPlayer,
+    required bool showTimer,
+    required double height,
+    bool compact = false,
+  }) {
+    // 카드(1.46배) + 간격 + 이름 줄이 줄 높이 안에 들어오도록 맞춥니다.
+    final cardWidth = (height / 1.86).clamp(40.0, 76.0);
+    final ringSize = height.clamp(80.0, 128.0);
+    final deadline = controller.turnDeadlineAt;
+    final Widget right;
+    if (showTimer &&
+        controller.isMyTurn &&
+        deadline != null &&
+        controller.phase != 'penalty') {
+      right = PhoneTimer(
+        expiresAt: deadline,
+        window: liarsPokerTurnWindow(controller.phase),
+        size: ringSize,
+        onTimeout: () => _handleTurnTimeout(controller),
+      );
+    } else if (!controller.isMyTurn &&
+        turnPlayer != null &&
+        controller.phase != 'penalty') {
+      right = PhoneTurnBadge(player: turnPlayer, size: ringSize);
+    } else {
+      right = SizedBox.square(dimension: ringSize);
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Center(
+            child: PhoneTableCard(
+              cardValue: controller.table,
+              cardWidth: cardWidth,
+            ),
+          ),
+        ),
+        SizedBox(width: compact ? 8 : 16),
+        right,
+        if (!compact) const SizedBox(width: 4),
+      ],
+    );
+  }
+
   void _showRules([Offset? origin]) {
     final screenSize = MediaQuery.sizeOf(context);
     showPhoneRippleDialog<void>(
@@ -331,7 +422,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
       builder: (_) => const PhoneGameRuleDialog(
         title: "LIAR'S POKER",
         rules: LiarsPokerCopy.phoneRules,
-        surfaceColor: LiarsPokerColors.spectatorSurface,
+        surfaceColor: LiarsPokerColors.night,
         foregroundColor: Colors.white,
         showSurface: false,
         dismissOnAnyTap: true,
@@ -513,16 +604,5 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
         style: TextStyle(color: Colors.white70, fontSize: 17),
       ),
     );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 테이블 카드 자산
-  // ---------------------------------------------------------------------------
-  GameImage _tableAsset(String cardValue) {
-    return switch (cardValue.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.table.tableAceWhite.game,
-      'Q' => Assets.games.liarsPoker.images.table.tableQueenWhite.game,
-      _ => Assets.games.liarsPoker.images.table.tableKingWhite.game,
-    };
   }
 }

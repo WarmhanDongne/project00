@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_liars_poker/tablet/animations/card_play_animation.dart';
 import 'package:game_liars_poker/tablet/screens/card_presentation.dart';
+import 'package:game_liars_poker/tablet/widgets/seat_plate.dart';
 
 // ============================================================
 
@@ -58,6 +59,7 @@ class LiarsPokerTabletGameAnimation extends StatelessWidget {
     required Size boardSize,
   }) {
     final isActivePlay = play.eventId == activePlayId;
+    final isLatest = pileIndex == roundPlays.length - 1;
 
     return CardPlayAnimation(
       key: ValueKey(play.eventId),
@@ -68,6 +70,10 @@ class LiarsPokerTabletGameAnimation extends StatelessWidget {
       tableAlignment: _pileAlignment(pileIndex, boardSize),
       initiallyPlayed: !play.animateEntry,
       revealCards: play.isRevealed,
+      cardWidth: 176 * tabletDesignScale(boardSize),
+      // 맨 위에 방금 놓인 묶음만 밝게, 그 아래 예전 카드는 어둡게 그립니다.
+      highlighted: isLatest && !play.isRevealed,
+      dimmed: !isLatest,
       onCardsPlayed: isActivePlay ? onCardsPlayed : null,
       onRevealed: isActivePlay && play.isRevealed ? onCardsRevealed : null,
     );

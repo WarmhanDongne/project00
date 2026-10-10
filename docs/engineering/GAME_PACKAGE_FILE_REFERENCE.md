@@ -1521,8 +1521,9 @@
 ## 5. `game_final_call` — 파이널콜
 
 - 설정: [packages/game_final_call/pubspec.yaml](../../packages/game_final_call/pubspec.yaml)
-- 총 74개 (`(확장자 없음)` 3개, `.m4a` 4개, `.md` 1개, `.mp3` 2개, `.png` 7개, `.webp` 57개)
-- 파일이 많은 폴더: `packages/game_final_call/assets/games/final_call/images/cards` 42개, `packages/game_final_call/assets/games/final_call/images/icons` 11개, `packages/game_final_call/assets/games/final_call/sounds` 7개, `packages/game_final_call/assets/games/final_call/images/button` 4개, `packages/game_final_call/assets/games/final_call/images/background` 2개, `packages/game_final_call/assets/games/final_call/images/layout` 2개, `packages/game_final_call/assets/games/final_call/images/modal` 2개, `packages/game_final_call/assets` 1개
+- 총 11개 (`(확장자 없음)` 3개, `.m4a` 4개, `.md` 1개, `.mp3` 2개, `.webp` 1개)
+- 카드·배경·버튼·하트·메뉴 아이콘·자리 배치 그림은 Party Pop 위젯으로 그려 번들 이미지가 없다. 남은 이미지는 휴대폰 나가기 확인창의 `images/modal/modal_image_door.webp`뿐이다.
+- 파일이 많은 폴더: `packages/game_final_call/assets/games/final_call/sounds` 7개
 
 #### 148. [`packages/game_final_call/lib/phone/animations/card_receive_animation.dart`](../../packages/game_final_call/lib/phone/animations/card_receive_animation.dart)
 

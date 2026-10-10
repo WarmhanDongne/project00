@@ -17,23 +17,35 @@ class GameService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
+  Future<QuerySnapshot<Map<String, dynamic>>>? _catalogRequest;
+
+  // Share only an active read, never retain stale ownership/catalog decisions.
+  Future<QuerySnapshot<Map<String, dynamic>>> _readCatalog() async {
+    final request = _catalogRequest ??= _firestore.collection('games').get();
+    try {
+      return await request;
+    } finally {
+      if (identical(_catalogRequest, request)) _catalogRequest = null;
+    }
+  }
 
   /// 전체 게임 목록을 불러오고 현재 사용자의 보유 여부를 함께 반환
   Future<List<GameInfo>> fetchGames() async {
     final user = _auth.currentUser;
 
-    // 전체 게임 목록
-    final gameSnapshot = await _firestore.collection('games').get();
-
-    // 내가 보유한 게임 ID
+    late QuerySnapshot<Map<String, dynamic>> gameSnapshot;
     Set<String> ownedGameIds = {};
-
-    if (user != null) {
-      final userSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      ownedGameIds = _ownedGameIds(userSnapshot.data()?['ownedGames']);
+    await Future.wait<void>([
+      _readCatalog().then((value) {
+        gameSnapshot = value;
+      }),
+      if (user != null)
+        _firestore.collection('users').doc(user.uid).get().then((value) {
+          ownedGameIds = _ownedGameIds(value.data()?['ownedGames']);
+        }),
+    ]);
+    if (_auth.currentUser?.uid != user?.uid) {
+      throw StateError('계정이 변경되었습니다. 다시 조회해주세요.');
     }
 
     final games = gameSnapshot.docs
@@ -61,21 +73,32 @@ class GameService {
     // 전달된 UID는 화면 갱신 중복 방지에만 사용합니다. 권한 판정 대상은 서버가
     // 현재 controllerRooms 매핑과 실제 방 참가자 명단에서 다시 계산합니다.
     // 클라이언트가 다른 사용자의 프로필 문서를 읽지 않게 하는 보안 경계입니다.
-    final entitlementResult = await _functions
-        .httpsCallable('fetchRealtimeRoomGroupEntitlements')
-        .call<Map<String, dynamic>>({
-          'roomCode': roomCode,
-          'roomInstanceId': roomInstanceId,
-        });
+    final uid = _auth.currentUser?.uid;
+    late HttpsCallableResult<Map<String, dynamic>> entitlementResult;
+    late QuerySnapshot<Map<String, dynamic>> gameSnapshot;
+    await Future.wait<void>([
+      _functions
+          .httpsCallable('fetchRealtimeRoomGroupEntitlements')
+          .call<Map<String, dynamic>>({
+            'roomCode': roomCode,
+            'roomInstanceId': roomInstanceId,
+          })
+          .then((value) {
+            entitlementResult = value;
+          }),
+      _readCatalog().then((value) {
+        gameSnapshot = value;
+      }),
+    ]);
+    if (_auth.currentUser?.uid != uid) {
+      throw StateError('계정이 변경되었습니다. 다시 조회해주세요.');
+    }
     if (entitlementResult.data['status'] == 'stale') {
       throw StateError('그룹 구성이 변경되었습니다.');
     }
     final groupOwnedGameIds = _ownedGameIds(
       entitlementResult.data['ownedGameIds'],
     );
-
-    // 전체 게임 목록 가져오기
-    final gameSnapshot = await _firestore.collection('games').get();
 
     // 그룹이 가진 게임만 필터링하여 GameInfo 객체로 반환
     final games = gameSnapshot.docs

@@ -23,6 +23,7 @@ import 'package:project00/platform/home/room/services/player_presence.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/room/services/room_action_timing.dart';
 import 'package:project00/platform/home/room/providers/room_command_executor.dart';
 
 //==============================================================================
@@ -235,30 +236,33 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 룸 코드가 없거나 로딩 중이면 리턴
     if (roomCode != null || isLoading) return;
 
-    // room_service에 전달
-    final operationId = _pendingCreateRoomOperationId ??=
-        'create_room_${DateTime.now().microsecondsSinceEpoch}';
-    // 코드 반환 받기 위한 메서드 실행
-    // _runCommand -> RoomCommandExecutor ->
-    final code = await _runCommand<String>(
-      () => _service.createRoom(operationId: operationId),
-    );
+    await RoomActionTiming.run(RoomTimedAction.create, () async {
+      // room_service에 전달
+      final operationId = _pendingCreateRoomOperationId ??=
+          'create_room_${DateTime.now().microsecondsSinceEpoch}';
+      // 코드 반환 받기 위한 메서드 실행
+      // _runCommand -> RoomCommandExecutor ->
+      final code = await _runCommand<String>(
+        () => _service.createRoom(operationId: operationId),
+      );
 
-    //코드 반환 후 과정
-    if (code != null) {
-      // 재시도용 요청 id 정리
-      _pendingCreateRoomOperationId = null;
-      // 현재 방 코드 설정
-      roomCode = code;
-      // 이 태블릿이 방을 관리 중이라고 표시
-      _ownsControllerSession = true;
-      // 구독: 방 데이터 구독
-      listenRoom();
-      // 하트 비트: 태블릿 접속 정보 주기적 갱신
-      _startControllerHeartbeat(code);
-      // 화면에 상태 변경 알림
-      notifyListeners();
-    }
+      //코드 반환 후 과정
+      if (code != null) {
+        // 재시도용 요청 id 정리
+        _pendingCreateRoomOperationId = null;
+        // 현재 방 코드 설정
+        roomCode = code;
+        // 이 태블릿이 방을 관리 중이라고 표시
+        _ownsControllerSession = true;
+        // 구독: 방 데이터 구독
+        listenRoom();
+        // 하트 비트: 태블릿 접속 정보 주기적 갱신
+        _startControllerHeartbeat(code);
+        // 화면에 상태 변경 알림
+        notifyListeners();
+      }
+      return code != null;
+    });
   }
 
   // [방 종료] 서버에서 방 종료 후, 방 상태를 초기화하는 비동기 메서드
@@ -266,19 +270,22 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     final currentCode = roomCode;
     if (currentCode == null || isLoading) return;
 
-    _isLeaving = true;
-    _controllerHeartbeatTimer?.cancel();
-    _playerHeartbeatTimer?.cancel();
-    // 방 종료 요청
-    final success = await _runCommand<bool>(() async {
-      await _service.closeControllerRoom(currentCode);
-      return true;
-    });
+    await RoomActionTiming.run(RoomTimedAction.close, () async {
+      _isLeaving = true;
+      _controllerHeartbeatTimer?.cancel();
+      _playerHeartbeatTimer?.cancel();
+      // 방 종료 요청
+      final success = await _runCommand<bool>(() async {
+        await _service.closeControllerRoom(currentCode);
+        return true;
+      });
 
-    //앱 내부 상태 초기화
-    if (success == true) {
-      clearRoom(expectedRoomCode: currentCode);
-    }
+      //앱 내부 상태 초기화
+      if (success == true) {
+        clearRoom(expectedRoomCode: currentCode);
+      }
+      return success == true;
+    });
   }
 
   Future<bool> selectGame(String gameId) async {

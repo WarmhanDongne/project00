@@ -258,6 +258,12 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       // 어느 경우에도 닫히기 직전 결과 화면으로 교체하지 않습니다.
     } else if (game.isNaturalResult) {
       _stage = LiarsPokerTabletStage.result;
+    } else if (game.phase == 'dealing' &&
+        game.isPenaltyResultVisible &&
+        _stage == LiarsPokerTabletStage.penalty) {
+      // 서버는 룰렛 결과와 함께 바로 다음 라운드를 엽니다. 휴대폰이 결과를
+      // 보여 주는 동안(약 3초) 태블릿도 생존·탈락 화면을 유지하고, 표시가
+      // 끝나는 상태 갱신에서 카드 분배로 넘어갑니다.
     } else if (game.phase == 'dealing') {
       // 더미 초기화를 먼저 반영하고 새 라운드 카드 배분만 표시합니다.
       _stage = LiarsPokerTabletStage.dealing;
@@ -359,6 +365,82 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   }
 
   /// 최초 자리 배치 순서를 유지한 채 현재 생존자의 실제 좌석 번호만 반환합니다.
+  /// 자리 배치 순서대로 자리판에 보여 줄 공개 정보입니다.
+  List<TabletSeatInfo> get _seatInfos {
+    final counts = _remainingCardCounts;
+    final players = _controller?.players ?? const <String, PhoneGamePlayer>{};
+    return [
+      for (final (index, layoutPlayer) in widget.playerLayout.players.indexed)
+        TabletSeatInfo(
+          nickname:
+              _playerByUid(layoutPlayer.uid)?.nickname ?? layoutPlayer.nickname,
+          characterId:
+              _playerByUid(layoutPlayer.uid)?.characterId ??
+              layoutPlayer.characterId,
+          penaltyCount: players[layoutPlayer.uid]?.penaltyCount ?? 0,
+          remainingCardCount: counts[index],
+          eliminated: players[layoutPlayer.uid]?.status == 'eliminated',
+        ),
+    ];
+  }
+
+  /// 거짓이 밝혀진 카드 공개 연출입니다. 필요한 정보가 없으면 null입니다.
+  Widget? _revealOverlay(LiarsPokerController game) {
+    final play = game.roundPlays
+        .where((play) => play.playId == game.lastPlayId)
+        .firstOrNull;
+    final caughtUid = game.lastPlayPlayerUid;
+    final caught = _playerByUid(caughtUid);
+    if (play == null || caught == null || play.actualCardValues.isEmpty) {
+      return null;
+    }
+    final caller = _playerByUid(game.liarCallerUid);
+    return TabletLiarRevealOverlay(
+      key: ValueKey('liar-reveal-${play.playId}'),
+      tableCardValue: game.table,
+      cardValues: play.actualCardValues,
+      caught: TabletRevealPerson(
+        nickname: caught.nickname,
+        characterId: caught.characterId,
+        penaltyCount: game.players[caughtUid]?.penaltyCount ?? 0,
+      ),
+      caller: caller == null
+          ? null
+          : TabletRevealPerson(
+              nickname: caller.nickname,
+              characterId: caller.characterId,
+            ),
+    );
+  }
+
+  /// 벌칙 단계의 자리 배치입니다. 대상이 자리 배치에 없으면 null입니다.
+  TabletPenaltyLayout? _penaltyLayout(String? targetUid) {
+    if (targetUid == null) return null;
+    final index = widget.playerLayout.players.indexWhere(
+      (player) => player.uid == targetUid,
+    );
+    if (index < 0) return null;
+    return TabletPenaltyLayout(
+      seats: _seatInfos,
+      seatIndexes: _seatIndexes,
+      targetIndex: index,
+    );
+  }
+
+  /// 아직 공개되지 않은 직전 제출의 주인입니다. 주장 칩을 그 사람 쪽에 둡니다.
+  int? _claimPlayerIndex(LiarsPokerController game) {
+    if (game.lastPlayRevealed) return null;
+    if (game.phase != 'playing' && game.phase != 'lastCardChallenge') {
+      return null;
+    }
+    final uid = game.lastPlayPlayerUid;
+    if (uid == null) return null;
+    final index = widget.playerLayout.players.indexWhere(
+      (player) => player.uid == uid,
+    );
+    return index < 0 ? null : index;
+  }
+
   List<int> get _activeSeatIndexes {
     if (!_hasReceivedFirstState) {
       return List<int>.generate(_playerCount, (index) => index);
@@ -582,6 +664,9 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
 
   Widget _buildGameContent(LiarsPokerController game) {
     final rouletteScope = game.rouletteScope;
+    final shownPenaltyResult = game.isPenaltyResultVisible
+        ? game.penaltyResult
+        : null;
     _startBackgroundMusicOnDeal();
     final flowConfig = buildLiarsPokerTabletFlowConfig(roundNumber: game.round);
     return Scaffold(
@@ -638,8 +723,12 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                     cardPileVersion: _cardPileVersion,
                     table: game.table,
                     winnerPlayer: _playerByUid(game.winnerUid),
-                    remainingCardCounts: _remainingCardCounts,
+                    seats: _seatInfos,
                     currentTurnPlayerIndex: _currentTurnPlayerIndex,
+                    turnDeadlineAt: game.turnDeadlineAt,
+                    turnWindow: liarsPokerTurnWindow(game.phase),
+                    claimPlayerIndex: _claimPlayerIndex(game),
+                    claimCount: game.lastPlayCardCount,
                     onDealCompleted: _onDealCompleted,
                     onRoundRevealCompleted: _onRoundRevealCompleted,
                     onRestartGame: _restartGame,
@@ -682,6 +771,12 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                           ),
                   ),
 
+                // LIAR로 거짓이 밝혀지면 공개 카드 위에 조명을 낮추고 판정을
+                // 크게 보여 줍니다. 진실이었던 경우는 기존 더미 공개만 씁니다.
+                if (_stage == LiarsPokerTabletStage.cardsRevealing &&
+                    game.lastPlayDeclarationWasFalse == true)
+                  if (_revealOverlay(game) case final overlay?)
+                    Positioned.fill(child: overlay),
                 if (game.isInsufficientPlayersEnding)
                   Positioned.fill(
                     child: GameAnnouncementLayer(
@@ -735,12 +830,26 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                         _stage == LiarsPokerTabletStage.penalty &&
                             !game.isInsufficientPlayersEnding
                         ? LiarsPokerTabletGamePenalty(
-                            key: ValueKey(
-                              '${rouletteScope}_'
-                              '${game.penaltyTargetUid}_'
-                              '${game.penaltyAttemptCount}_'
-                              '${game.rouletteRetry}',
+                            key: shownPenaltyResult != null
+                                ? ValueKey(
+                                    'result-${shownPenaltyResult.targetUid}-'
+                                    '${shownPenaltyResult.resolvedAt}',
+                                  )
+                                : ValueKey(
+                                    '${rouletteScope}_'
+                                    '${game.penaltyTargetUid}_'
+                                    '${game.penaltyAttemptCount}_'
+                                    '${game.rouletteRetry}',
+                                  ),
+                            layout: _penaltyLayout(
+                              shownPenaltyResult?.targetUid ??
+                                  game.penaltyTargetUid,
                             ),
+                            result: switch (shownPenaltyResult?.result) {
+                              'eliminated' => RouletteResult.eliminated,
+                              'safe' => RouletteResult.safe,
+                              _ => null,
+                            },
                             attemptCount: game.penaltyAttemptCount,
                             characterId:
                                 _playerByUid(
@@ -762,7 +871,6 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                   child: LiarsPokerTabletGameOverlay(
                     provider: widget.provider,
                     stage: _stage,
-                    tableCardValue: game.table,
                     onRestartGame: _restartGame,
                     onEndGame: _endGame,
                   ),
@@ -848,11 +956,18 @@ class _GameBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: Colors.black,
-      child: Assets.games.liarsPoker.images.background.background.game.image(
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
+    // 보랏빛 펠트 가장자리를 어둡게 눌러 가운데 테이블에 시선을 모읍니다.
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          radius: 0.9,
+          colors: [
+            LiarsPokerColors.felt,
+            LiarsPokerColors.felt,
+            Color(0xFF241034),
+          ],
+          stops: [0, .55, 1],
+        ),
       ),
     );
   }

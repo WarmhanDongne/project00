@@ -9,10 +9,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: deprecated_member_use,directives_ordering,implicit_dynamic_list_literal,unnecessary_import
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart' as _svg;
-import 'package:vector_graphics/vector_graphics.dart' as _vg;
 
 class $AssetsGamesGen {
   const $AssetsGamesGen();
@@ -51,10 +48,6 @@ class $AssetsGamesLiarsPokerAnimationsGen {
 class $AssetsGamesLiarsPokerImagesGen {
   const $AssetsGamesLiarsPokerImagesGen();
 
-  /// Directory path: assets/games/liars_poker/images/background
-  $AssetsGamesLiarsPokerImagesBackgroundGen get background =>
-      const $AssetsGamesLiarsPokerImagesBackgroundGen();
-
   /// Directory path: assets/games/liars_poker/images/button
   $AssetsGamesLiarsPokerImagesButtonGen get button =>
       const $AssetsGamesLiarsPokerImagesButtonGen();
@@ -62,10 +55,6 @@ class $AssetsGamesLiarsPokerImagesGen {
   /// Directory path: assets/games/liars_poker/images/cards
   $AssetsGamesLiarsPokerImagesCardsGen get cards =>
       const $AssetsGamesLiarsPokerImagesCardsGen();
-
-  /// Directory path: assets/games/liars_poker/images/icons
-  $AssetsGamesLiarsPokerImagesIconsGen get icons =>
-      const $AssetsGamesLiarsPokerImagesIconsGen();
 
   /// Directory path: assets/games/liars_poker/images/layout
   $AssetsGamesLiarsPokerImagesLayoutGen get layout =>
@@ -78,10 +67,6 @@ class $AssetsGamesLiarsPokerImagesGen {
   /// Directory path: assets/games/liars_poker/images/other
   $AssetsGamesLiarsPokerImagesOtherGen get other =>
       const $AssetsGamesLiarsPokerImagesOtherGen();
-
-  /// Directory path: assets/games/liars_poker/images/table
-  $AssetsGamesLiarsPokerImagesTableGen get table =>
-      const $AssetsGamesLiarsPokerImagesTableGen();
 }
 
 class $AssetsGamesLiarsPokerSoundsGen {
@@ -107,51 +92,12 @@ class $AssetsGamesLiarsPokerSoundsGen {
   List<String> get values => [aGitkeep, submit, voiceLiar, win];
 }
 
-class $AssetsGamesLiarsPokerImagesBackgroundGen {
-  const $AssetsGamesLiarsPokerImagesBackgroundGen();
-
-  /// File path: assets/games/liars_poker/images/background/A.webp
-  AssetGenImage get a =>
-      const AssetGenImage('assets/games/liars_poker/images/background/A.webp');
-
-  /// File path: assets/games/liars_poker/images/background/K.webp
-  AssetGenImage get k =>
-      const AssetGenImage('assets/games/liars_poker/images/background/K.webp');
-
-  /// File path: assets/games/liars_poker/images/background/Q.webp
-  AssetGenImage get q =>
-      const AssetGenImage('assets/games/liars_poker/images/background/Q.webp');
-
-  /// File path: assets/games/liars_poker/images/background/background.webp
-  AssetGenImage get background => const AssetGenImage(
-    'assets/games/liars_poker/images/background/background.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/background/background_phone.webp
-  AssetGenImage get backgroundPhone => const AssetGenImage(
-    'assets/games/liars_poker/images/background/background_phone.webp',
-  );
-
-  /// List of all assets
-  List<AssetGenImage> get values => [a, k, q, background, backgroundPhone];
-}
-
 class $AssetsGamesLiarsPokerImagesButtonGen {
   const $AssetsGamesLiarsPokerImagesButtonGen();
-
-  /// File path: assets/games/liars_poker/images/button/button_fold.png
-  AssetGenImage get buttonFold => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_fold.png',
-  );
 
   /// File path: assets/games/liars_poker/images/button/button_home.webp
   AssetGenImage get buttonHome => const AssetGenImage(
     'assets/games/liars_poker/images/button/button_home.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/button_liar.webp
-  AssetGenImage get buttonLiar => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_liar.webp',
   );
 
   /// File path: assets/games/liars_poker/images/button/button_retry.webp
@@ -159,46 +105,12 @@ class $AssetsGamesLiarsPokerImagesButtonGen {
     'assets/games/liars_poker/images/button/button_retry.webp',
   );
 
-  /// File path: assets/games/liars_poker/images/button/button_submit.webp
-  AssetGenImage get buttonSubmit => const AssetGenImage(
-    'assets/games/liars_poker/images/button/button_submit.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/liar_button_down.webp
-  AssetGenImage get liarButtonDown => const AssetGenImage(
-    'assets/games/liars_poker/images/button/liar_button_down.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/liar_button_up.webp
-  AssetGenImage get liarButtonUp => const AssetGenImage(
-    'assets/games/liars_poker/images/button/liar_button_up.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/button/liar_ring_up.webp
-  AssetGenImage get liarRingUp => const AssetGenImage(
-    'assets/games/liars_poker/images/button/liar_ring_up.webp',
-  );
-
   /// List of all assets
-  List<AssetGenImage> get values => [
-    buttonFold,
-    buttonHome,
-    buttonLiar,
-    buttonRetry,
-    buttonSubmit,
-    liarButtonDown,
-    liarButtonUp,
-    liarRingUp,
-  ];
+  List<AssetGenImage> get values => [buttonHome, buttonRetry];
 }
 
 class $AssetsGamesLiarsPokerImagesCardsGen {
   const $AssetsGamesLiarsPokerImagesCardsGen();
-
-  /// File path: assets/games/liars_poker/images/cards/card_count.webp
-  AssetGenImage get cardCount => const AssetGenImage(
-    'assets/games/liars_poker/images/cards/card_count.webp',
-  );
 
   /// File path: assets/games/liars_poker/images/cards/finishCard.webp
   AssetGenImage get finishCard => const AssetGenImage(
@@ -229,63 +141,12 @@ class $AssetsGamesLiarsPokerImagesCardsGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [
-    cardCount,
     finishCard,
     whiteA,
     whiteJoker,
     whiteK,
     whiteQ,
     whiteBack,
-  ];
-}
-
-class $AssetsGamesLiarsPokerImagesIconsGen {
-  const $AssetsGamesLiarsPokerImagesIconsGen();
-
-  /// File path: assets/games/liars_poker/images/icons/icon_again_black.webp
-  AssetGenImage get iconAgainBlack => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_again_black.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_home_black.webp
-  AssetGenImage get iconHomeBlack => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_home_black.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_out.webp
-  AssetGenImage get iconOut => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_out.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_role.webp
-  AssetGenImage get iconRole => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_role.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_role_phone.webp
-  AssetGenImage get iconRolePhone => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_role_phone.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_setting.webp
-  AssetGenImage get iconSetting => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_setting.webp',
-  );
-
-  /// File path: assets/games/liars_poker/images/icons/icon_setting_phone.png
-  AssetGenImage get iconSettingPhone => const AssetGenImage(
-    'assets/games/liars_poker/images/icons/icon_setting_phone.png',
-  );
-
-  /// List of all assets
-  List<AssetGenImage> get values => [
-    iconAgainBlack,
-    iconHomeBlack,
-    iconOut,
-    iconRole,
-    iconRolePhone,
-    iconSetting,
-    iconSettingPhone,
   ];
 }
 
@@ -327,50 +188,6 @@ class $AssetsGamesLiarsPokerImagesOtherGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [stamp];
-}
-
-class $AssetsGamesLiarsPokerImagesTableGen {
-  const $AssetsGamesLiarsPokerImagesTableGen();
-
-  /// File path: assets/games/liars_poker/images/table/table_ace_black.svg
-  SvgGenImage get tableAceBlack => const SvgGenImage(
-    'assets/games/liars_poker/images/table/table_ace_black.svg',
-  );
-
-  /// File path: assets/games/liars_poker/images/table/table_ace_white.png
-  AssetGenImage get tableAceWhite => const AssetGenImage(
-    'assets/games/liars_poker/images/table/table_ace_white.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/table/table_king_black.svg
-  SvgGenImage get tableKingBlack => const SvgGenImage(
-    'assets/games/liars_poker/images/table/table_king_black.svg',
-  );
-
-  /// File path: assets/games/liars_poker/images/table/table_king_white.png
-  AssetGenImage get tableKingWhite => const AssetGenImage(
-    'assets/games/liars_poker/images/table/table_king_white.png',
-  );
-
-  /// File path: assets/games/liars_poker/images/table/table_queen_black.svg
-  SvgGenImage get tableQueenBlack => const SvgGenImage(
-    'assets/games/liars_poker/images/table/table_queen_black.svg',
-  );
-
-  /// File path: assets/games/liars_poker/images/table/table_queen_white.png
-  AssetGenImage get tableQueenWhite => const AssetGenImage(
-    'assets/games/liars_poker/images/table/table_queen_white.png',
-  );
-
-  /// List of all assets
-  List<dynamic> get values => [
-    tableAceBlack,
-    tableAceWhite,
-    tableKingBlack,
-    tableKingWhite,
-    tableQueenBlack,
-    tableQueenWhite,
-  ];
 }
 
 abstract final class Assets {
@@ -472,81 +289,4 @@ class AssetGenImageAnimation {
   final bool isAnimation;
   final Duration duration;
   final int frames;
-}
-
-class SvgGenImage {
-  const SvgGenImage(this._assetName, {this.size, this.flavors = const {}})
-    : _isVecFormat = false;
-
-  const SvgGenImage.vec(this._assetName, {this.size, this.flavors = const {}})
-    : _isVecFormat = true;
-
-  final String _assetName;
-  final Size? size;
-  final Set<String> flavors;
-  final bool _isVecFormat;
-
-  static const String package = 'game_liars_poker';
-
-  _svg.SvgPicture svg({
-    Key? key,
-    bool matchTextDirection = false,
-    AssetBundle? bundle,
-    @Deprecated('Do not specify package for a generated library asset')
-    String? package = package,
-    double? width,
-    double? height,
-    BoxFit fit = BoxFit.contain,
-    AlignmentGeometry alignment = Alignment.center,
-    bool allowDrawingOutsideViewBox = false,
-    WidgetBuilder? placeholderBuilder,
-    String? semanticsLabel,
-    bool excludeFromSemantics = false,
-    _svg.SvgTheme? theme,
-    _svg.ColorMapper? colorMapper,
-    ColorFilter? colorFilter,
-    Clip clipBehavior = Clip.hardEdge,
-    @deprecated Color? color,
-    @deprecated BlendMode colorBlendMode = BlendMode.srcIn,
-    @deprecated bool cacheColorFilter = false,
-  }) {
-    final _svg.BytesLoader loader;
-    if (_isVecFormat) {
-      loader = _vg.AssetBytesLoader(
-        _assetName,
-        assetBundle: bundle,
-        packageName: package,
-      );
-    } else {
-      loader = _svg.SvgAssetLoader(
-        _assetName,
-        assetBundle: bundle,
-        packageName: package,
-        theme: theme,
-        colorMapper: colorMapper,
-      );
-    }
-    return _svg.SvgPicture(
-      loader,
-      key: key,
-      matchTextDirection: matchTextDirection,
-      width: width,
-      height: height,
-      fit: fit,
-      alignment: alignment,
-      allowDrawingOutsideViewBox: allowDrawingOutsideViewBox,
-      placeholderBuilder: placeholderBuilder,
-      semanticsLabel: semanticsLabel,
-      excludeFromSemantics: excludeFromSemantics,
-      colorFilter:
-          colorFilter ??
-          (color == null ? null : ColorFilter.mode(color, colorBlendMode)),
-      clipBehavior: clipBehavior,
-      cacheColorFilter: cacheColorFilter,
-    );
-  }
-
-  String get path => _assetName;
-
-  String get keyName => 'packages/game_liars_poker/$_assetName';
 }

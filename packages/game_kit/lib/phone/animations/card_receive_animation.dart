@@ -22,8 +22,9 @@ import 'package:game_kit/game_assets.dart';
 class CardReceiveAnimation extends StatefulWidget {
   const CardReceiveAnimation({
     super.key,
-    required this.frontCardAssets,
-    required this.backCardAsset,
+    this.frontCardAssets = const [],
+    this.backCardAsset,
+    this.cardCount,
     this.cardWidth = 169.0,
     this.spreadStepX = 35.0,
     this.spreadStepY = 35.0,
@@ -36,12 +37,20 @@ class CardReceiveAnimation extends StatefulWidget {
     this.onRevealStarted,
     this.onCompleted,
     this.cardBuilder,
-  }) : assert(frontCardAssets.length > 0),
+  }) : assert(
+         cardBuilder == null
+             ? frontCardAssets.length > 0 && backCardAsset != null
+             : (cardCount ?? frontCardAssets.length) > 0,
+         '카드 그림 또는 cardBuilder와 cardCount가 필요합니다.',
+       ),
        assert(cardWidth > 0),
        assert(totalDuration > Duration.zero);
 
   final List<GameImage> frontCardAssets;
-  final GameImage backCardAsset;
+  final GameImage? backCardAsset;
+
+  /// [cardBuilder]로 그릴 때의 장 수입니다. 비우면 [frontCardAssets] 길이를 씁니다.
+  final int? cardCount;
   final double cardWidth;
   final double spreadStepX;
   final double spreadStepY;
@@ -65,8 +74,8 @@ class CardReceiveAnimation extends StatefulWidget {
 
   /// 카드 그림 대신 위젯으로 카드를 그리는 게임이 씁니다.
   ///
-  /// 지정하면 [frontCardAssets]는 장 수로만 쓰이고 [backCardAsset]은 그리지
-  /// 않습니다. `front`가 true면 앞면입니다.
+  /// 지정하면 카드 그림 대신 이 위젯을 그립니다. 장 수는 [cardCount]로
+  /// 넘깁니다. `front`가 true면 앞면입니다.
   final Widget Function(BuildContext context, int cardIndex, bool front)?
   cardBuilder;
 
@@ -76,6 +85,8 @@ class CardReceiveAnimation extends StatefulWidget {
 
 class _CardReceiveAnimationState extends State<CardReceiveAnimation>
     with TickerProviderStateMixin {
+  int get _cardCount => widget.cardCount ?? widget.frontCardAssets.length;
+
   late final AnimationController _entryController;
   late final AnimationController _revealController;
   late final AnimationController _idleController;
@@ -194,11 +205,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  for (
-                    var index = 0;
-                    index < widget.frontCardAssets.length;
-                    index++
-                  )
+                  for (var index = 0; index < _cardCount; index++)
                     _buildAnimatedCard(frame: frame, cardIndex: index),
                   if (_canReveal) _buildRevealTapTarget(frame),
                 ],
@@ -287,7 +294,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
                   : GameCardFace(
                       asset: frame.isFrontVisible
                           ? widget.frontCardAssets[cardIndex]
-                          : widget.backCardAsset,
+                          : widget.backCardAsset!,
                       radius: 8,
                       // 뒤집는 동안 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
                       shadow: BoxShadow(
@@ -349,7 +356,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
 
   _PhoneCardFrame _frameFor(Size size) {
     final cardHeight = widget.cardWidth * kCardAspectRatio;
-    final cardCount = widget.frontCardAssets.length;
+    final cardCount = _cardCount;
     final center = size.center(Offset.zero);
     final entryProgress = Curves.easeOutCubic.transform(_entryController.value);
     final flipProgress = intervalProgress(

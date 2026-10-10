@@ -104,8 +104,14 @@ class _AuthGateState extends State<AuthGate> {
       stream: _userChanges,
       builder: (context, authSnapshot) {
         final view = _buildView(context, authSnapshot);
-        if (view is Home) return view;
-        return MosiAuthScaffold(child: MosiAuthTransition(child: view));
+        return _AuthSurfaceTransition(
+          child: KeyedSubtree(
+            key: ValueKey(view is Home ? 'home' : 'auth'),
+            child: view is Home
+                ? view
+                : MosiAuthScaffold(child: MosiAuthTransition(child: view)),
+          ),
+        );
       },
     );
   }
@@ -314,6 +320,64 @@ class _AuthGateState extends State<AuthGate> {
       _emailLinkError = error;
       if (error == null) _reauthenticationEmail = null;
     });
+  }
+}
+
+/// 홈 전체가 빠져나간 뒤 인증 화면이 들어옵니다. 인증 내부의 카드 교체는
+/// 같은 scaffold를 유지하므로 입력·가입 단계가 다시 만들어지지 않습니다.
+class _AuthSurfaceTransition extends StatelessWidget {
+  const _AuthSurfaceTransition({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    return ColoredBox(
+      color: MosiColors.violet,
+      child: AnimatedSwitcher(
+        duration: reducedMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 460),
+        reverseDuration: reducedMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
+        layoutBuilder: (current, previous) =>
+            Stack(fit: StackFit.expand, children: [...previous, ?current]),
+        transitionBuilder: (child, animation) => AnimatedBuilder(
+          animation: animation,
+          child: child,
+          builder: (context, child) {
+            final exiting = animation.status == AnimationStatus.reverse;
+            final progress = exiting
+                ? Curves.easeOutCubic.transform(animation.value)
+                : const Interval(
+                    0.4,
+                    1,
+                    curve: Curves.easeOutCubic,
+                  ).transform(animation.value);
+            final blocked = animation.status != AnimationStatus.completed;
+            return IgnorePointer(
+              ignoring: blocked,
+              child: ExcludeFocus(
+                excluding: blocked,
+                child: ExcludeSemantics(
+                  excluding: blocked,
+                  child: Opacity(
+                    opacity: progress,
+                    child: Transform.translate(
+                      offset: Offset(0, (exiting ? -24 : 24) * (1 - progress)),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        child: child,
+      ),
+    );
   }
 }
 

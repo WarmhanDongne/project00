@@ -38,7 +38,6 @@ flutter:
     - assets/images/others/
     - assets/images/character/
     - assets/images/covers/
-    - assets/images/widgets/roulette/
   fonts:
     - family: IBMPlexSansKR
       fonts:

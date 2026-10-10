@@ -390,29 +390,29 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       // 자리 배치 연출과 동시에 다음 화면 배경을 메모리에 준비합니다.
       final backgroundReady = _precacheGameBackground();
 
-      // 1) 블록 퇴장 → 테이블 → 의자 착석을 끝까지 재생합니다.
-      await _entranceController.forward(from: 0);
-      if (!mounted) return;
-      // 2) 착석한 모습을 잠깐 보여준 뒤에야 줌인을 시작합니다.
-      await Future<void>.delayed(_zoomHold);
-      if (!mounted) return;
-
-      // 3) 좌석 저장과 서버 게임 생성을 줌 전에 끝냅니다. 서버 응답을 테이블이
-      // 화면 전체를 덮은 뒤 기다리면 마지막 어두운 프레임이 고정되어 검은 화면처럼
-      // 보입니다. 준비가 길어져도 Scrim이나 로딩 없이 테이블 화면을 유지합니다.
-      final prepared = await widget.onPrepare(completedLayout);
-      if (!mounted) return;
-      if (!prepared) return;
-      await backgroundReady;
-      if (!mounted) return;
+      // 확정한 좌석의 서버 준비를 착석 연출과 함께 시작합니다. 두 작업의 오류를
+      // 즉시 구독하고, 모두 끝나기 전에는 줌이나 게임 화면 전환을 시작하지 않습니다.
+      final ready = await Future.wait<bool>([
+        Future<bool>.sync(() => widget.onPrepare(completedLayout)),
+        () async {
+          await _entranceController.forward(from: 0).orCancel;
+          if (!mounted) return false;
+          await Future<void>.delayed(_zoomHold);
+          return mounted;
+        }(),
+        backgroundReady.then((_) => true),
+      ]);
+      if (!mounted || ready.any((value) => !value)) return;
 
       // 4) 서버 상태와 배경이 준비된 뒤에만 줌인하고, 완료 즉시 게임 화면으로
       // 교체합니다. 줌 완료 프레임에서는 네트워크 작업을 절대 기다리지 않습니다.
-      await _zoomController.forward(from: 0);
+      await _zoomController.forward(from: 0).orCancel;
       if (!mounted) return;
       handedOffToGame = true;
       _handedOffToGame = true;
       widget.onComplete(completedLayout);
+    } on TickerCanceled {
+      // 화면이 닫히면 진행 중이던 연출만 취소합니다. 늦은 서버 결과로 이동하지 않습니다.
     } finally {
       // 준비가 실패한 경우만 다시 배치할 수 있도록 연출을 되돌립니다.
       // pushReplacement를 호출한 직후에는 기존 route가 아직 mounted일 수 있으므로,

@@ -11,24 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
-import 'package:game_final_call/game_assets.dart';
 
 // ============================================================
 
 /// Final Call 앞면 카드 원본(700 × 1026)의 높이/너비 비율입니다.
 const double finalCallCardHeightRatio = 1026 / 700;
-
-GameImage finalCallCardAsset(FinalCallCard card) {
-  // 에셋 압축(2026-08-22)으로 확장자가 webp가 됐습니다.
-  final suffix = '${card.color}_${card.value}.webp';
-  return Assets.games.finalCall.images.cards.values
-      .firstWhere(
-        (asset) => asset.path.endsWith(suffix),
-        orElse: () => Assets.games.finalCall.images.cards.cardBack,
-      )
-      .game;
-}
 
 /// Party Pop 시안의 카드입니다. 색으로 꽉 채운 면 위에 큰 숫자를 둡니다.
 ///

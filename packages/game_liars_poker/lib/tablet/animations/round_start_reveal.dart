@@ -1,30 +1,32 @@
 // [round_start_reveal.dart] 라운드 시작 시 태블릿에
-// 기준 테이블·플레이어별 잔여 카드·현재 턴 표시를 등장시키는 파일이다.
+// 기준 카드 원·자리판·주장 칩·차례 화살표를 등장시키는 파일이다.
 
 // ========================[ import ]==========================
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/tablet/animations/board_element_entrance.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/tablet/widgets/seat_plate.dart';
 
 // ============================================================
 
-/// 라운드 시작 시 중앙 테이블과 플레이어별 잔여 카드 수를 동시에 띄웁니다.
+/// 라운드 시작 시 테이블과 자리판을 함께 띄우고, 진행 중 차례·주장을 보여 줍니다.
 class RoundStartReveal extends StatefulWidget {
   const RoundStartReveal({
     super.key,
-    required this.tableAsset,
+    required this.tableCardValue,
     required this.playerCount,
-    required this.remainingCardCounts,
+    required this.seats,
     this.activePlayerIndex,
     this.playerSeatIndexes,
-    this.tableWidth = 200,
+    this.turnDeadlineAt,
+    this.turnWindow = const Duration(seconds: 30),
+    this.claimPlayerIndex,
+    this.claimCount = 0,
     this.duration = const Duration(milliseconds: 980),
     this.onCompleted,
   }) : assert(playerCount > 0),
-       assert(remainingCardCounts.length == playerCount),
+       assert(seats.length == playerCount),
        assert(
          activePlayerIndex == null ||
              (activePlayerIndex >= 0 && activePlayerIndex < playerCount),
@@ -35,13 +37,22 @@ class RoundStartReveal extends StatefulWidget {
          'playerSeatIndexes의 개수는 playerCount와 같아야 합니다.',
        );
 
-  final GameImage tableAsset;
+  final String tableCardValue;
   final int playerCount;
-  final List<int> remainingCardCounts;
+
+  /// 자리 배치 순서대로 각 자리의 공개 정보입니다.
+  final List<TabletSeatInfo> seats;
   final int? activePlayerIndex;
   final List<int>? playerSeatIndexes;
 
-  final double tableWidth;
+  /// 차례인 사람의 얼굴 테두리가 줄어드는 기준인 서버 마감 시각입니다.
+  final int? turnDeadlineAt;
+  final Duration turnWindow;
+
+  /// 직전에 카드를 낸 사람과 장 수입니다. 주장 칩을 그 사람 쪽에 둡니다.
+  final int? claimPlayerIndex;
+  final int claimCount;
+
   final Duration duration;
 
   final VoidCallback? onCompleted;
@@ -90,6 +101,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
+          final unit = tabletDesignScale(size);
 
           return AnimatedBuilder(
             animation: _controller,
@@ -98,64 +110,54 @@ class _RoundStartRevealState extends State<RoundStartReveal>
               final opacity = BoardEntranceCurves.opacityFor(progress);
               // 등장 곡선은 다른 게임 보드와 공유합니다. (BoardEntranceCurves)
               final scale = BoardEntranceCurves.depthScale.transform(progress);
-              final elevation = BoardEntranceCurves.elevation.transform(
-                progress,
-              );
-              final shadowBlur = 7 + (22 * elevation);
-              final shadowSpread = 1 + (5 * elevation);
-              final shadowOpacity = 0.34 + (0.16 * elevation);
               final activePlayerIndex = widget.activePlayerIndex;
-              final turnLightCenter = activePlayerIndex == null
-                  ? null
-                  : _playerCenter(size, activePlayerIndex);
+              final claimIndex = widget.claimPlayerIndex;
+
+              Widget entrance(Widget child) => Opacity(
+                opacity: opacity,
+                child: Transform.scale(scale: scale, child: child),
+              );
 
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Center(
-                    child: Opacity(
-                      opacity: opacity,
-                      child: Transform.scale(
-                        scale: scale,
-                        child: widget.tableAsset.image(
-                          width: widget.tableWidth,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                    child: entrance(
+                      SizedBox.square(
+                        dimension: 480 * unit,
+                        child: FittedBox(
+                          child: TabletTableRing(
+                            cardValue: widget.tableCardValue,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  if (turnLightCenter != null)
-                    AnimatedPositioned(
-                      key: const ValueKey('moving-turn-light'),
-                      duration: const Duration(milliseconds: 620),
-                      curve: Curves.easeInOutCubic,
-                      left: turnLightCenter.dx - 128,
-                      top: turnLightCenter.dy - 128,
-                      width: 256,
-                      height: 256,
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Transform.scale(
-                          scale: scale,
-                          child: const _TurnCircleLight(),
-                        ),
-                      ),
-                    ),
+                  if (activePlayerIndex != null)
+                    _buildTurnArrow(size, unit, activePlayerIndex, opacity),
                   for (
                     var playerIndex = 0;
                     playerIndex < widget.playerCount;
                     playerIndex++
                   )
-                    _buildRemainingCard(
+                    _buildSeat(
                       size: size,
+                      unit: unit,
                       playerIndex: playerIndex,
-                      opacity: opacity,
-                      scale: scale,
-                      shadowBlur: shadowBlur,
-                      shadowSpread: shadowSpread,
-                      shadowOpacity: shadowOpacity,
+                      child: entrance(
+                        TabletSeatPlate(
+                          key: ValueKey('seat-$playerIndex'),
+                          seat: widget.seats[playerIndex],
+                          isTurn: activePlayerIndex == playerIndex,
+                          turnDeadlineAt: activePlayerIndex == playerIndex
+                              ? widget.turnDeadlineAt
+                              : null,
+                          turnWindow: widget.turnWindow,
+                        ),
+                      ),
                     ),
+                  if (claimIndex != null && widget.claimCount > 0)
+                    _buildClaim(size, unit, claimIndex, opacity),
                 ],
               );
             },
@@ -165,56 +167,86 @@ class _RoundStartRevealState extends State<RoundStartReveal>
     );
   }
 
-  Widget _buildRemainingCard({
+  Widget _buildSeat({
     required Size size,
+    required double unit,
     required int playerIndex,
-    required double opacity,
-    required double scale,
-    required double shadowBlur,
-    required double shadowSpread,
-    required double shadowOpacity,
+    required Widget child,
   }) {
-    const cardWidth = 82.0;
-    const cardHeight = 104.0;
-    final center = Offset(size.width / 2, size.height / 2);
-    final playerCenter = _playerCenter(size, playerIndex);
-    final direction = playerCenter - center;
-    final isCurrentTurn = widget.activePlayerIndex == playerIndex;
-    final angle = direction.distanceSquared == 0
-        ? math.pi
-        : math.atan2(direction.dy, direction.dx) + math.pi / 2 + math.pi;
-
+    final anchor = tabletSeatCenter(size, _orbitCenter(size, playerIndex));
+    const plate = TabletSeatPlate.size;
+    final rotation = tabletSeatRotation(size, anchor);
     return Positioned(
-      left: playerCenter.dx - cardWidth / 2,
-      top: playerCenter.dy - cardHeight / 2,
-      width: cardWidth,
-      height: cardHeight,
+      left: anchor.dx - plate.width * unit / 2,
+      top: anchor.dy - plate.height * unit / 2,
+      width: plate.width * unit,
+      height: plate.height * unit,
+      child: Transform.rotate(
+        angle: rotation,
+        child: FittedBox(child: child),
+      ),
+    );
+  }
+
+  Widget _buildTurnArrow(
+    Size size,
+    double unit,
+    int playerIndex,
+    double opacity,
+  ) {
+    final board = size.center(Offset.zero);
+    final seat = tabletSeatCenter(size, _orbitCenter(size, playerIndex));
+    final direction = seat - board;
+    final angle = math.atan2(direction.dy, direction.dx);
+    final unitVector = Offset(math.cos(angle), math.sin(angle));
+    // 더미 가장자리에서 출발해 자리판 바로 앞까지 자리 쪽을 가리킵니다.
+    final start = board + unitVector * (190 * unit);
+    final length = (direction.distance - 190 * unit - 105 * unit).clamp(
+      48 * unit,
+      140 * unit,
+    );
+    final height = 28 * unit;
+    return Positioned(
+      left: start.dx,
+      top: start.dy - height / 2,
+      width: length,
+      height: height,
       child: Opacity(
         opacity: opacity,
-        child: Transform.scale(
-          scale: scale,
-          child: Transform.rotate(
-            angle: angle,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Center(
-                  child: _FloorShadow(
-                    width: cardWidth * 0.48,
-                    height: cardHeight * 0.52,
-                    blurRadius: shadowBlur,
-                    spreadRadius: shadowSpread * 0.55,
-                    opacity: shadowOpacity,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                _RemainingCardCounter(
-                  key: ValueKey(playerIndex),
-                  asset: Assets.games.liarsPoker.images.cards.cardCount.game,
-                  count: widget.remainingCardCounts[playerIndex],
-                  isCurrentTurn: isCurrentTurn,
-                ),
-              ],
+        child: Transform.rotate(
+          angle: angle,
+          alignment: Alignment.centerLeft,
+          child: const TabletTurnArrow(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClaim(Size size, double unit, int playerIndex, double opacity) {
+    final board = size.center(Offset.zero);
+    final seat = tabletSeatCenter(size, _orbitCenter(size, playerIndex));
+    final rotation = tabletSeatRotation(size, seat);
+    final direction = seat - board;
+    final distance = direction.distance;
+    final towardSeat = distance == 0 ? Offset.zero : direction / distance;
+    final side = Offset(-towardSeat.dy, towardSeat.dx);
+    // 카드 더미 옆, 주장한 사람 쪽에 그 사람을 향해 둡니다.
+    final center = board + towardSeat * (230 * unit) - side * (150 * unit);
+    const chip = Size(150, 46);
+    return Positioned(
+      left: center.dx - chip.width * unit / 2,
+      top: center.dy - chip.height * unit / 2,
+      width: chip.width * unit,
+      height: chip.height * unit,
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.rotate(
+          angle: rotation,
+          child: FittedBox(
+            child: TabletClaimChip(
+              characterId: widget.seats[playerIndex].characterId,
+              cardValue: widget.tableCardValue,
+              count: widget.claimCount,
             ),
           ),
         ),
@@ -222,7 +254,7 @@ class _RoundStartRevealState extends State<RoundStartReveal>
     );
   }
 
-  Offset _playerCenter(Size size, int playerIndex) {
+  Offset _orbitCenter(Size size, int playerIndex) {
     final centers = playerCentersForBoard(
       playerCount: widget.playerCount,
       boardSize: size,
@@ -230,246 +262,5 @@ class _RoundStartRevealState extends State<RoundStartReveal>
     );
     final seatIndex = widget.playerSeatIndexes?[playerIndex] ?? playerIndex;
     return centers[seatIndex];
-  }
-}
-
-/// 현재 턴 플레이어 사이를 이동하는 펠트 텍스처 원형 조명입니다.
-class _TurnCircleLight extends StatelessWidget {
-  const _TurnCircleLight();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x665A2F55),
-              blurRadius: 34,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: ClipOval(
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (bounds) => const RadialGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xE8FFFFFF), Color(0x00FFFFFF)],
-              stops: [0, 0.58, 1],
-            ).createShader(bounds),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Opacity(
-                  opacity: 0.82,
-                  child: Assets
-                      .games
-                      .liarsPoker
-                      .images
-                      .background
-                      .background
-                      .game
-                      .image(
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        filterQuality: FilterQuality.high,
-                      ),
-                ),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        Color(0x7088467C),
-                        Color(0x405F3259),
-                        Color(0x00281927),
-                      ],
-                      stops: [0, 0.56, 1],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 탑뷰에서 높이를 느낄 수 있도록 물체 아래에 퍼지는 바닥 그림자입니다.
-class _FloorShadow extends StatelessWidget {
-  const _FloorShadow({
-    required this.width,
-    required this.height,
-    required this.blurRadius,
-    required this.spreadRadius,
-    required this.opacity,
-    this.borderRadius,
-  });
-
-  final double width;
-  final double height;
-  final double blurRadius;
-  final double spreadRadius;
-  final double opacity;
-  final BorderRadius? borderRadius;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0x01000000),
-          borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, opacity),
-              blurRadius: blurRadius,
-              spreadRadius: spreadRadius,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 카드 수 이미지 위에서 이전 숫자와 새 숫자를 교차 이동시킵니다.
-///
-/// 부모 [RoundStartReveal]의 상태가 유지되는 동안 서버에서 잔여 카드 수가
-/// 갱신되면, 감소한 숫자는 위로 사라지고 새 숫자는 아래에서 올라옵니다.
-class _RemainingCardCounter extends StatefulWidget {
-  const _RemainingCardCounter({
-    super.key,
-    required this.asset,
-    required this.count,
-    required this.isCurrentTurn,
-  });
-
-  final GameImage asset;
-  final int count;
-  final bool isCurrentTurn;
-
-  @override
-  State<_RemainingCardCounter> createState() => _RemainingCardCounterState();
-}
-
-class _RemainingCardCounterState extends State<_RemainingCardCounter>
-    with SingleTickerProviderStateMixin {
-  static const _animationDuration = Duration(milliseconds: 420);
-  static const _numberOffsetX = 5.0;
-  static const _numberStyle = TextStyle(
-    color: Colors.black,
-    fontSize: 36,
-    height: 1,
-    fontWeight: FontWeight.w800,
-  );
-
-  late final AnimationController _numberController;
-  late int _previousCount;
-  late int _currentCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousCount = widget.count;
-    _currentCount = widget.count;
-    _numberController = AnimationController(
-      vsync: this,
-      duration: _animationDuration,
-      value: 1,
-    );
-  }
-
-  @override
-  void didUpdateWidget(_RemainingCardCounter oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.count == widget.count) return;
-
-    // 빠르게 연속 제출해도 화면에 마지막으로 보인 수에서 새 값으로 이어집니다.
-    _previousCount = _currentCount;
-    _currentCount = widget.count;
-    _numberController.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _numberController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(end: widget.isCurrentTurn ? 1 : 0),
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.easeInOutCubic,
-      child: Stack(
-        fit: StackFit.expand,
-        alignment: Alignment.center,
-        children: [
-          widget.asset.image(
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-          ),
-          AnimatedBuilder(
-            animation: _numberController,
-            builder: (context, _) {
-              final progress = Curves.easeOutCubic.transform(
-                _numberController.value,
-              );
-              final isDecreasing = _currentCount < _previousCount;
-              final direction = isDecreasing ? -1.0 : 1.0;
-
-              return Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  if (_numberController.isAnimating)
-                    _buildNumber(
-                      _previousCount,
-                      opacity: 1 - progress,
-                      offsetY: direction * 14 * progress,
-                    ),
-                  _buildNumber(
-                    _currentCount,
-                    opacity: progress,
-                    offsetY: -direction * 14 * (1 - progress),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-      builder: (context, progress, child) {
-        final brightness = 0.42 + (0.58 * progress);
-        final channel = (255 * brightness).round();
-        return ColorFiltered(
-          colorFilter: ColorFilter.mode(
-            Color.fromARGB(255, channel, channel, channel),
-            BlendMode.modulate,
-          ),
-          child: child,
-        );
-      },
-    );
-  }
-
-  Widget _buildNumber(
-    int count, {
-    required double opacity,
-    required double offsetY,
-  }) {
-    return Opacity(
-      opacity: opacity.clamp(0.0, 1.0),
-      child: Transform.translate(
-        offset: Offset(_numberOffsetX, offsetY),
-        child: Text('$count', style: _numberStyle),
-      ),
-    );
   }
 }

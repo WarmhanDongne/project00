@@ -21,14 +21,6 @@ GameImage cardAssetForValue(String cardValue) {
 }
 
 /// 서버에서 받은 테이블 카드 값을 중앙 테이블 이미지로 변환합니다.
-GameImage tableAssetForValue(String cardValue) {
-  return switch (cardValue.toUpperCase()) {
-    'A' => Assets.games.liarsPoker.images.background.a.game,
-    'K' => Assets.games.liarsPoker.images.background.k.game,
-    'Q' => Assets.games.liarsPoker.images.background.q.game,
-    _ => Assets.games.liarsPoker.images.background.q.game,
-  };
-}
 
 /// 태블릿 중앙에 표현할 한 번의 카드 제출 정보입니다.
 class SubmittedPlay {

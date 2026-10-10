@@ -265,6 +265,20 @@ class _EmptyRoom extends StatelessWidget {
           ),
         ),
         const Spacer(),
+        if (provider.errorMessage != null) ...[
+          Text(
+            provider.errorMessage!,
+            key: const Key('room-create-error'),
+            textAlign: TextAlign.center,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 13,
+              weight: FontWeight.w600,
+              color: MosiColors.red,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         MosiButton(
           label: provider.isLoading
               ? context.l10n.creating

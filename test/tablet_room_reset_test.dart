@@ -72,6 +72,23 @@ void main() {
   });
 
   group('TabletRoomPanel Figma state flow', () {
+    testWidgets('방 생성 실패는 빈 로비에 표시하고 재시도 성공 시 지운다', (tester) async {
+      final service = _FakeRoomService(failFirstCreate: true);
+      final provider = _provider(service);
+      await _pumpPanel(tester, provider);
+      await tester.tap(find.text('초대하기'));
+      await tester.pumpAndSettle();
+      expect(provider.roomCode, isNull);
+      expect(find.byKey(const Key('room-create-error')), findsOneWidget);
+      expect(find.text(provider.errorMessage!), findsOneWidget);
+      await tester.tap(find.text('초대하기'));
+      await tester.pumpAndSettle();
+      expect(provider.roomCode, 'NEW12');
+      expect(find.byKey(const Key('room-create-error')), findsNothing);
+      expect(service.createOperationIds[1], service.createOperationIds[0]);
+      provider.dispose();
+    });
+
     testWidgets('연결이 끊긴 참가자를 명단에서 명확히 표시한다', (tester) async {
       final service = _FakeRoomService();
       final provider = _provider(service)

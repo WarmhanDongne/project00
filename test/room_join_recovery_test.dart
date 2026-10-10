@@ -57,6 +57,46 @@ void main() {
     characterId: 'frog',
   );
   test(
+    'fresh join reads room and membership concurrently before sending',
+    () async {
+      await RoomSessionIdentityStore.instance.save(
+        identity,
+        completedOperationId: 'pending',
+      );
+      final room = Completer<DataSnapshot>();
+      final player = Completer<DataSnapshot>();
+      database.pendingReads['rooms/ABCDE/roomInstanceId'] = room;
+      database.pendingReads['rooms/ABCDE/players/${identity.uid}'] = player;
+      functions.reply = (_, data) async {
+        expect(data['roomInstanceId'], 'room');
+        expect(data['membershipId'], 'member');
+        expect(data['expectedConnectionSeq'], 1);
+        return {
+          'roomInstanceId': 'room',
+          'membershipId': 'member',
+          'connectionId': 'new',
+          'connectionSeq': 2,
+        };
+      };
+      final operation = service.updateRoomPlayerProfile(
+        'ABCDE',
+        'Updated',
+        characterId: 'frog',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(database.reads, hasLength(2));
+      expect(functions.names, isEmpty);
+      player.complete(
+        _Snapshot({'membershipId': 'member', 'connectionSeq': 1}),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(functions.names, isEmpty);
+      room.complete(_Snapshot('room'));
+      await operation;
+      expect(functions.names, ['joinRealtimeRoom']);
+    },
+  );
+  test(
     'a different explicit profile edit follows replay as its own request',
     () async {
       database.values['rooms/ABCDE/roomInstanceId'] = 'room';
@@ -249,6 +289,7 @@ class _User extends Fake implements User {
 }
 
 class _Database extends Fake implements FirebaseDatabase {
+  final pendingReads = <String, Completer<DataSnapshot>>{};
   bool denied = false;
   final values = <String, Object>{};
   final reads = <String>[], writes = <String>[];
@@ -264,6 +305,7 @@ class _Reference extends Fake implements DatabaseReference {
   @override
   Future<DataSnapshot> get() async {
     database.reads.add(path);
+    if (database.pendingReads[path] case final pending?) return pending.future;
     if (database.values.containsKey(path)) {
       return _Snapshot(database.values[path]);
     }

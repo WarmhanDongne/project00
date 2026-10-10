@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:game_kit/core/assets/game_asset_manifest.dart';
 import 'package:game_kit/core/assets/game_asset_source.dart';
+
 // ============================================================
 
 /// 검증된 게임 파일만 버전 디렉터리에 설치하는 런타임 캐시입니다.
@@ -57,29 +58,13 @@ class GameAssetCache {
     }
     if (await marker.exists()) await marker.delete();
 
-    for (final entry in manifest.files) {
-      final target = File('${versionRoot.path}/${entry.path}');
-      if (await _isValid(target, entry)) continue;
-      await target.parent.create(recursive: true);
-      final partial = File('${target.path}.part');
-      try {
-        if (await partial.exists()) await partial.delete();
-        await source.downloadFile(
-          manifest: manifest,
-          file: entry,
-          destination: partial,
-        );
-        if (!await _isValid(partial, entry)) {
-          throw const FormatException('다운로드한 게임 에셋 검증에 실패했습니다.');
-        }
-        if (await target.exists()) {
-          await target.delete();
-        }
-        await partial.rename(target.path);
-      } catch (_) {
-        if (await partial.exists()) await partial.delete();
-        rethrow;
-      }
+    // Bound disk/network pressure and drain the batch before reporting failure.
+    // A retry must never race a still-running writer from the previous attempt.
+    for (var index = 0; index < manifest.files.length; index += 3) {
+      await Future.wait([
+        for (final entry in manifest.files.skip(index).take(3))
+          _installFile(versionRoot, manifest, source, entry),
+      ]);
     }
 
     await _writeManifest(versionRoot, manifest);
@@ -87,6 +72,36 @@ class GameAssetCache {
       '${manifest.gameId}:${manifest.assetVersion}',
       flush: true,
     );
+  }
+
+  Future<void> _installFile(
+    Directory versionRoot,
+    GameAssetManifest manifest,
+    GameAssetSource source,
+    GameAssetFile entry,
+  ) async {
+    final target = File('${versionRoot.path}/${entry.path}');
+    if (await _isValid(target, entry)) return;
+    await target.parent.create(recursive: true);
+    final partial = File('${target.path}.part');
+    try {
+      if (await partial.exists()) await partial.delete();
+      await source.downloadFile(
+        manifest: manifest,
+        file: entry,
+        destination: partial,
+      );
+      if (!await _isValid(partial, entry)) {
+        throw const FormatException('다운로드한 게임 에셋 검증에 실패했습니다.');
+      }
+      if (await target.exists()) {
+        await target.delete();
+      }
+      await partial.rename(target.path);
+    } catch (_) {
+      if (await partial.exists()) await partial.delete();
+      rethrow;
+    }
   }
 
   bool isInstalled(String gameId, int assetVersion) =>

@@ -37,8 +37,8 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
 | [HOLDEM-01](tasks/HOLDEM-01.md#holdem-01) | 다운로드형 텍사스 홀덤·복구 흐름 보완 | 검증 대기 — E04/E07 로컬 검증 PASS | 복구·allIn 회귀의 기존 FULL PASS 유지. 10/10 로컬 사운드·진동·연결 띠 통합 후보 검증 중. E13 통합·E14 실기기 확인 |
-| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — E08/E09 로컬 검증 PASS | 단일 안내·복귀/에셋/route 검사와 현재 FULL PASS. E13/E14 확인 |
-| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구 체감 지연 | 진행 중 — E12 계측 로컬 검증 PASS | 계측 회귀와 현재 FULL PASS. E14 실측 뒤 목표/출시 기준 합의 |
+| [NEWGUI-RECOVERY-01](tasks/NEWGUI-RECOVERY-01.md#newgui-recovery-01) | 새 연결 화면·로비·에셋·퇴장 흐름에 세션 복구 연결 | 검증 대기 — 10/11 통합 관련 검사 PASS | [develop 네트워크·로컬 GUI 통합 후보](DEVELOP_GUI_INTEGRATION_20261011.md): 세션·인증·GUI PASS, 이번 후보 FULL 승인 대기. E13/E14 확인 |
+| [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#net-recovery-01) | 네트워크 복구·앱 응답 지연 | 진행 중 — 준비 보고 FULL PASS, 휴대폰 재참여 실패 조사 필요 | [개발팀 공유](../engineering/NETWORK_LATENCY_IMPROVEMENTS.md): 최초 퇴장·입장/목록 병행·자리 배치/FC 요청 전 대기·파일 다운로드 개선 후보. 관련 검사·session/auth·FULL PASS(99초/exit0). createRealtimeRoom만 승인 배포 PASS. 후속 최초 ready 사전 조회 수정·오류 단계 구분: session Flutter161/Functions97 PASS, 후속 FULL 1006개/exit0·세 기기 반영 완료, iPad ready568ms 승인 확인. 휴대폰 재참여 실패로 분배·첫 턴 및 E14 미완료 |
 | [GAME-COMM-DIAGNOSTICS-01](tasks/GAME-COMM-DIAGNOSTICS-01.md#game-comm-diagnostics-01) | 게임 통신 실시간 진단 | 검증 대기 — E12 로컬 검증 PASS | debug·버퍼/N/A·단계 회귀와 현재 FULL PASS. E14 룰렛·실측 확인 |
 | [SESSION-RECONNECT-02](tasks/SESSION-RECONNECT-02.md#session-reconnect-02) | 4게임 재접속·단절/퇴장 오류·네트워크 가드·기기별 검증 | 검증 대기 — 10/11 복구·타이머 수정 후보 | [테스트 9–20 후속 후보](tasks/NETWORK_SESSION_20261011_IMPLEMENTATION.md): develop 병합 확인(동일 HEAD), 구독/heartbeat owner 분리·현재 controller 접속 채택·준비 frame 재예약·턴 상한·LP 배경 대기. session 167/104 PASS. 새 APK·필요 서버 반영 후 고착/32초/종료 재시험, 0초 추가 재현 및 FULL 보류 |
 | [TEST-REGRESSION-01](tasks/TEST-REGRESSION-01.md#test-regression-01) | 핵심 회귀 테스트 복원·추가 작성과 검증 배선 | 진행 중 — LP 단절 후보 targeted PASS | controller 복구/정체·서버 pause·분배 응답 유실 회귀와 session Flutter 160·Functions 97 PASS. FULL은 사용자 지시로 보류, 실기기 결과 대기 |
@@ -68,7 +68,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 요구사항 확인 | newgui 구현 후보와 기존 요구 대조, 세션 연동 회귀는 NEWGUI-RECOVERY-01과 연결 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/10 메일 인증 중복 처리 수정·로그아웃 전환 후보의 FULL 승인 및 실기기 메일 확인, 세션 연동 회귀는 NEWGUI-RECOVERY-01과 연결 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
 | [GAME-TUTORIAL-01](tasks/GAME-TUTORIAL-01.md#game-tutorial-01) | 게임 첫 플레이 튜토리얼 | 요구사항 확인 | 게임별 안내 범위 결정 |
