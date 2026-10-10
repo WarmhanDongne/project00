@@ -399,4 +399,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String previewPot(String chips) {
     return 'POT $chips';
   }
+
+  @override
+  String get connectionBandLost => '연결이 끊겼어요 · 자동으로 다시 이어 볼게요';
+
+  @override
+  String get connectionBandReconnecting => '다시 연결하는 중… 화면은 그대로 두세요';
+
+  @override
+  String get connectionBandRestored => '다시 연결됐어요';
 }

@@ -53,6 +53,8 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   (int, String)? _street;
   late final AnimationController _actionController;
   final ProgressSoundCue _chipLandingCue = ProgressSoundCue();
+  final ProgressSoundCue _actionCue = ProgressSoundCue();
+  final ProgressSoundCue _awardCue = ProgressSoundCue();
   final GameBackgroundMusic _backgroundMusic = GameBackgroundMusic();
   late final AnimationController _awardController;
   late final AnimationController _resultHoldController;
@@ -74,16 +76,18 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
             vsync: this,
             duration: const Duration(milliseconds: 1450),
           )
-          ..addListener(_playChipLandingSound)
+          ..addListener(_playActionSounds)
           ..addStatusListener(_onActionStatus);
     _awardController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1450),
-    );
+    )..addListener(_playAwardSound);
     _resultHoldController = AnimationController(vsync: this);
     _observedActionKey = _actionKey(widget.game);
     _observeForcedBlinds();
     _observeResult(HoldemGameState.initial());
+    // 결과 화면 복원 때 이미 지급된 팟 소리를 반복하지 않습니다.
+    _awardCue.markPlayed();
     _syncStreetActions();
   }
 
@@ -110,7 +114,7 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
     _actionGapTimer?.cancel();
     _awardStartTimer?.cancel();
     _actionController
-      ..removeListener(_playChipLandingSound)
+      ..removeListener(_playActionSounds)
       ..removeStatusListener(_onActionStatus)
       ..dispose();
     _awardController.dispose();
@@ -141,6 +145,7 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
     }
     if (key == _observedResultKey) return;
     _observedResultKey = key;
+    _awardCue.reset();
     final result = widget.game.result!;
     _resultHoldController
       ..duration = HoldemTiming.handResult(result.reason)
@@ -240,6 +245,7 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
     if (_activeAction != null || _actionQueue.isEmpty) return;
     _activeAction = _actionQueue.removeAt(0);
     _chipLandingCue.reset();
+    _actionCue.reset();
     _actionController.duration = switch (_activeAction!.kind) {
       'blind' => const Duration(milliseconds: 1150),
       'fold' => const Duration(milliseconds: 1050),
@@ -247,6 +253,48 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
       _ => const Duration(milliseconds: 1450),
     };
     _actionController.forward(from: 0);
+  }
+
+  void _playAwardSound() {
+    if (!mounted || _awardStartStacks.isEmpty) return;
+    // 팟 칩이 중앙에서 출발하는 .2 지점에 맞춰 한 번만 재생합니다.
+    _awardCue.maybePlay(
+      context,
+      HoldemSounds.potAward,
+      value: _awardController.value,
+      threshold:
+          .2 -
+          ProgressSoundCue.lead.inMilliseconds /
+              _awardController.duration!.inMilliseconds,
+    );
+  }
+
+  void _playActionSounds() {
+    if (!mounted || _activeAction == null) return;
+    final kind = _activeAction!.kind;
+    final duration = _actionController.duration!.inMilliseconds;
+    final asset = switch (kind) {
+      'check' => HoldemSounds.check,
+      'fold' => HoldemSounds.cardTable,
+      'allIn' => HoldemSounds.allIn,
+      _ => null,
+    };
+    if (asset != null) {
+      // 폴드는 라이어스 포커처럼 착지 시점에, 체크는 퍽 도착에 맞춥니다.
+      // 올인은 행동 연출 시작과 함께 강조하고 칩 착지음은 별도로 유지합니다.
+      final threshold = switch (kind) {
+        'fold' => .73,
+        'check' => .7 - ProgressSoundCue.lead.inMilliseconds / duration,
+        _ => 0.0,
+      };
+      _actionCue.maybePlay(
+        context,
+        asset,
+        value: _actionController.value,
+        threshold: threshold,
+      );
+    }
+    _playChipLandingSound();
   }
 
   void _playChipLandingSound() {
@@ -564,43 +612,153 @@ class _TableCenter extends StatelessWidget {
         RotatedBox(quarterTurns: 2, child: block),
         SizedBox(height: 26 * scale),
         TweenAnimationBuilder<double>(
-          key: ValueKey('board-${game.handNumber}-${game.phase}'),
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 520),
-          curve: Curves.easeOutCubic,
-          builder: (_, reveal, child) => Opacity(
-            opacity: .01 + .99 * reveal,
-            alwaysIncludeSemantics: true,
-            child: Transform.scale(scale: .97 + .03 * reveal, child: child),
+          tween: Tween(
+            begin: 128 * scale,
+            end: result?.reason == 'showdown' ? 142 * scale : 128 * scale,
           ),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(
-              begin: 128 * scale,
-              end: result?.reason == 'showdown' ? 142 * scale : 128 * scale,
-            ),
-            duration: const Duration(milliseconds: 580),
-            curve: Curves.easeOutBack,
-            builder: (_, cardWidth, _) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var index = 0; index < 5; index++) ...[
-                  if (index > 0) SizedBox(width: 10 * scale),
-                  if (index < game.communityCards.length)
-                    HoldemCardView(
-                      card: game.communityCards[index],
-                      width: cardWidth,
-                      emphasis: _emphasis(game.communityCards[index], winning),
-                    )
-                  else
-                    HoldemCardSlot(width: cardWidth),
-                ],
-              ],
-            ),
+          duration: const Duration(milliseconds: 580),
+          curve: Curves.easeOutBack,
+          builder: (_, cardWidth, _) => _CommunityCards(
+            handNumber: game.handNumber,
+            phase: game.phase,
+            cards: game.communityCards,
+            width: cardWidth,
+            gap: 10 * scale,
+            winning: winning,
           ),
         ),
         SizedBox(height: 26 * scale),
         block,
       ],
+    );
+  }
+}
+
+/// 새로 공개된 카드만 뒤집습니다. 최초 snapshot은 복원으로 보고 조용히 표시합니다.
+class _CommunityCards extends StatefulWidget {
+  const _CommunityCards({
+    required this.handNumber,
+    required this.phase,
+    required this.cards,
+    required this.width,
+    required this.gap,
+    required this.winning,
+  });
+
+  final int handNumber;
+  final String phase;
+  final List<HoldemCardModel> cards;
+  final double width;
+  final double gap;
+  final Set<String>? winning;
+
+  @override
+  State<_CommunityCards> createState() => _CommunityCardsState();
+}
+
+class _CommunityCardsState extends State<_CommunityCards>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+    value: 1,
+  )..addListener(_playLanding);
+  final ProgressSoundCue _cue = ProgressSoundCue();
+  late int _revealedCount = widget.cards.length;
+
+  void _playLanding() {
+    if (!mounted) return;
+    // 라이어스 포커의 첫 카드 뒤집기 종료(.16 + .56)에 맞춰 묶음당 1회.
+    _cue.maybePlay(
+      context,
+      HoldemSounds.cardTable,
+      value: _flip.value,
+      threshold: .72,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _cue.markPlayed();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CommunityCards oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.handNumber != widget.handNumber ||
+        widget.cards.length < oldWidget.cards.length) {
+      _cue.markPlayed();
+      _revealedCount = widget.cards.length;
+      _flip.value = 1;
+    } else if (widget.cards.length > oldWidget.cards.length) {
+      _revealedCount = oldWidget.cards.length;
+      _cue.reset();
+      _flip.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _flip.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    key: ValueKey('board-${widget.handNumber}-${widget.phase}'),
+    tween: Tween(begin: 0, end: 1),
+    duration: const Duration(milliseconds: 520),
+    curve: Curves.easeOutCubic,
+    builder: (_, reveal, child) => Opacity(
+      opacity: .01 + .99 * reveal,
+      alwaysIncludeSemantics: true,
+      child: Transform.scale(scale: .97 + .03 * reveal, child: child),
+    ),
+    child: AnimatedBuilder(
+      animation: _flip,
+      builder: (_, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < 5; index++) ...[
+            if (index > 0) SizedBox(width: widget.gap),
+            if (index < widget.cards.length)
+              _card(index)
+            else
+              HoldemCardSlot(width: widget.width),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _card(int index) {
+    final start = .16 + (index - _revealedCount) * .055;
+    final end = math.min(.92, start + .56);
+    final progress = index < _revealedCount
+        ? 1.0
+        : Curves.easeInOutCubic.transform(
+            ((_flip.value - start) / (end - start)).clamp(0.0, 1.0),
+          );
+    final lift = math.sin(progress * math.pi);
+    final front = progress >= .5;
+    return Transform.translate(
+      offset: Offset(
+        0,
+        -widget.width * HoldemCardView.aspectRatio * .09 * lift,
+      ),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, .001)
+          ..rotateY(math.pi * (front ? 1 - progress : progress)),
+        child: HoldemCardView(
+          card: widget.cards[index],
+          width: widget.width,
+          faceDown: !front,
+          emphasis: _emphasis(widget.cards[index], widget.winning),
+        ),
+      ),
     );
   }
 }

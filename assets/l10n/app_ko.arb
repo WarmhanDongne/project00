@@ -142,5 +142,17 @@
         "type": "String"
       }
     }
+  },
+  "connectionBandLost": "연결이 끊겼어요 · 자동으로 다시 이어 볼게요",
+  "connectionBandReconnecting": "다시 연결하는 중… 화면은 그대로 두세요",
+  "connectionBandRestored": "다시 연결됐어요",
+  "@connectionBandLost": {
+    "description": "로비 아래 띠: 서버 연결이 끊겼을 때"
+  },
+  "@connectionBandReconnecting": {
+    "description": "로비 아래 띠: 자동으로 다시 연결하는 중"
+  },
+  "@connectionBandRestored": {
+    "description": "로비 아래 띠: 연결이 복구된 직후 잠깐"
   }
 }

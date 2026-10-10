@@ -398,6 +398,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String previewPot(String chips) {
     return '底池 $chips';
   }
+
+  @override
+  String get connectionBandLost => '连接已断开 · 将自动重新连接';
+
+  @override
+  String get connectionBandReconnecting => '正在重新连接… 请保持此画面';
+
+  @override
+  String get connectionBandRestored => '已重新连接';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -794,6 +803,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String previewPot(String chips) {
     return '底池 $chips';
   }
+
+  @override
+  String get connectionBandLost => '连接已断开 · 将自动重新连接';
+
+  @override
+  String get connectionBandReconnecting => '正在重新连接… 请保持此画面';
+
+  @override
+  String get connectionBandRestored => '已重新连接';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1190,4 +1208,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String previewPot(String chips) {
     return '底池 $chips';
   }
+
+  @override
+  String get connectionBandLost => '連線已中斷 · 將自動重新連線';
+
+  @override
+  String get connectionBandReconnecting => '正在重新連線… 請保持此畫面';
+
+  @override
+  String get connectionBandRestored => '已重新連線';
 }

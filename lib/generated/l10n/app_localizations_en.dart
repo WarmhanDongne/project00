@@ -402,4 +402,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String previewPot(String chips) {
     return 'POT $chips';
   }
+
+  @override
+  String get connectionBandLost =>
+      'Connection lost · We\'ll reconnect automatically';
+
+  @override
+  String get connectionBandReconnecting =>
+      'Reconnecting… keep this screen open';
+
+  @override
+  String get connectionBandRestored => 'Reconnected';
 }

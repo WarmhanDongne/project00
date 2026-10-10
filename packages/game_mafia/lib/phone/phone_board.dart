@@ -8,6 +8,7 @@ library;
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
@@ -44,6 +45,21 @@ part 'src/board_state.dart';
 // ============================================================================
 // 화면 흐름·연출 설정
 // ============================================================================
+
+/// 화면 맨 아래 LED 연결 띠입니다(시안: 누아르 잉크 바탕에 놋쇠 윗선, 숫자는
+/// 주홍·놋쇠·청록, 문구는 누아르 말투).
+const mafiaConnectionLed = GameConnectionLedStyle(
+  background: MafiaColors.noirInk,
+  topLineColor: Color(0x99B08A4A),
+  offColor: MafiaColors.noirScarlet,
+  retryColor: MafiaColors.noirBrass,
+  onColor: MafiaColors.noirCitizen,
+  textColor: MafiaColors.noirPaper,
+  dividerColor: Color(0x55B08A4A),
+  lostLabel: '통신이 끊겼다',
+  reconnectingLabel: '다시 잇는 중…',
+  restoredLabel: '통신 복구',
+);
 
 /// 마피아 휴대폰의 모든 화면 단계와 표시 영역입니다.
 ///
