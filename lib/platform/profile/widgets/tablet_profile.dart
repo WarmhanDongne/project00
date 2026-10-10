@@ -20,6 +20,8 @@ class Profile extends StatelessWidget {
         final name = profileDisplayName(user);
         void openProfile() => showMosiDialog<bool>(
           context: context,
+          // 누른 버튼 자리에서 펼쳐지고 같은 자리로 접힙니다(로비 연출 8번).
+          origin: mosiOriginOf(context),
           builder: (_) => const TabletProfileModal(),
         );
         return Semantics(

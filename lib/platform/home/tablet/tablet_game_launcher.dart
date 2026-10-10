@@ -14,6 +14,7 @@ import 'package:game_kit/widgets/game_route_exit.dart';
 import 'package:game_kit/widgets/game_exit_route.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:project00/game_assets/game_asset_prepare.dart';
+import 'package:project00/platform/home/tablet/book_open_route.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_compatibility.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -29,6 +30,7 @@ Future<void> launchTabletGame({
   required Future<bool> Function() ensureSelection,
   required bool Function() isCurrent,
   required VoidCallback onLaunched,
+  Rect? Function()? originRect,
 }) => _TabletGameLauncher(
   context,
   game,
@@ -36,6 +38,7 @@ Future<void> launchTabletGame({
   ensureSelection,
   isCurrent,
   onLaunched,
+  originRect,
 ).start();
 
 class _TabletGameLauncher {
@@ -46,6 +49,7 @@ class _TabletGameLauncher {
     this.ensureSelection,
     this.isCurrent,
     this.onLaunched,
+    this.originRect,
   );
   final BuildContext context;
   final GameInfo game;
@@ -53,6 +57,9 @@ class _TabletGameLauncher {
   final Future<bool> Function() ensureSelection;
   final bool Function() isCurrent;
   final VoidCallback onLaunched;
+
+  /// 화면에서 고른 책의 자리입니다. 있으면 그 책이 열리며 자리 배치로 넘어갑니다.
+  final Rect? Function()? originRect;
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
@@ -155,17 +162,26 @@ class _TabletGameLauncher {
 
     //================상태바 표시=================
     // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
+    final origin = originRect?.call();
     unawaited(AppSystemUi.enterGameFullscreen());
     onLaunched();
+    Widget buildSetup(BuildContext layoutContext) => _buildStartSetup(
+      layoutContext,
+      templateGame: templateGame,
+      initialLayout: initialLayout,
+      roomCode: roomCode,
+    );
     Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (layoutContext) => _buildStartSetup(
-          layoutContext,
-          templateGame: templateGame,
-          initialLayout: initialLayout,
-          roomCode: roomCode,
-        ),
-      ),
+      origin == null
+          ? MaterialPageRoute(builder: buildSetup)
+          : BookOpenRoute(
+              origin: origin,
+              coverColor: MosiGameArt.of(
+                game.id,
+                fallbackName: game.name,
+              ).spineColor,
+              builder: buildSetup,
+            ),
     );
   }
 

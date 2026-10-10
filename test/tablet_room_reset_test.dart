@@ -128,7 +128,16 @@ void main() {
         greaterThan(0),
       );
 
-      await tester.pump(_playerAnimationTestDuration);
+      // 들어오는 도중에는 오른쪽에서 왼쪽으로 계속 다가옵니다.
+      await tester.pump(const Duration(milliseconds: 120));
+      final midway = tester
+          .widget<Transform>(motionFinder)
+          .transform
+          .getTranslation()
+          .x;
+      expect(midway, greaterThan(0));
+
+      await tester.pump(_playerEntranceTestDuration);
       expect(
         tester.widget<Transform>(motionFinder).transform.getTranslation().x,
         0,
@@ -297,7 +306,7 @@ void main() {
   });
 }
 
-const _playerAnimationTestDuration = Duration(milliseconds: 260);
+const _playerEntranceTestDuration = Duration(milliseconds: 560);
 
 RoomProvider _provider(_FakeRoomService service) =>
     RoomProvider(service: service, gameService: _FakeGameService());

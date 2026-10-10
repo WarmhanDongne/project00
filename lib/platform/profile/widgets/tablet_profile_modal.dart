@@ -33,6 +33,9 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
   String? _pickedImageName;
   String? _pickedImageType;
   bool _isSaving = false;
+
+  /// 저장이 끝나 체크를 보여 주는 중입니다(로비 연출 9번).
+  bool _saved = false;
   bool _isPickingImage = false;
   bool _isDeletingAccount = false;
 
@@ -107,6 +110,18 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
       }
       if (nicknameChanged) await _authService.updateDisplayName(nickname);
       await _authService.createUserDocument();
+      if (!mounted) return;
+      // 버튼 안에 체크를 그려 저장된 것을 보여 준 뒤 닫습니다.
+      setState(() {
+        _isSaving = false;
+        _saved = true;
+      });
+      await Future<void>.delayed(
+        MosiMotion.of(
+          context,
+          MosiMotion.check + const Duration(milliseconds: 420),
+        ),
+      );
       if (mounted) Navigator.of(context).pop(true);
     } on AuthServiceException catch (error) {
       if (mounted) _showMessage(error.message);
@@ -479,7 +494,10 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                         radius: 12,
                         expand: true,
                         loading: _isSaving,
-                        onPressed: _isBusy ? null : _save,
+                        loadingDots: true,
+                        success: _saved,
+                        successLabel: context.l10n.profileSaved,
+                        onPressed: _isBusy || _saved ? null : _save,
                       ),
                     ),
                   ],
@@ -523,17 +541,37 @@ class _AvatarButton extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              ProfileAvatar(
-                user: user,
-                size: size,
-                color: const Color(0xFFE7E2FF),
-                image: picked == null ? null : MemoryImage(picked!),
-                placeholder: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: size * 0.82,
-                    color: MosiColors.lilac,
+              // 새 사진을 고르면 이전 사진 위로 살짝 작아지며 겹쳐 바뀝니다.
+              AnimatedSwitcher(
+                duration: MosiMotion.of(
+                  context,
+                  const Duration(milliseconds: 300),
+                ),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 1.12, end: 1).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                    child: child,
+                  ),
+                ),
+                child: ProfileAvatar(
+                  key: ValueKey(picked == null ? 0 : identityHashCode(picked)),
+                  user: user,
+                  size: size,
+                  color: const Color(0xFFE7E2FF),
+                  image: picked == null ? null : MemoryImage(picked!),
+                  placeholder: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Icon(
+                      Icons.person_rounded,
+                      size: size * 0.82,
+                      color: MosiColors.lilac,
+                    ),
                   ),
                 ),
               ),

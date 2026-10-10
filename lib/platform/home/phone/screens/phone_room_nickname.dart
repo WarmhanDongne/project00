@@ -31,6 +31,9 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   final math.Random _random = math.Random();
   late final TextEditingController _nicknameController;
   String? _selectedCharacterId;
+
+  /// 닉네임 칸 오류가 날 때마다 바뀌어 그 칸만 흔듭니다(로비 연출 10번).
+  int _nicknameShake = 0;
   bool _isOpeningWaitingRoom = false;
 
   RoomProvider get _roomProvider => widget.provider;
@@ -99,12 +102,12 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     final characterId = _selectedCharacterId;
     if (nickname.isEmpty) {
       _roomProvider.errorMessage = '닉네임을 입력해주세요.';
-      setState(() {});
+      setState(() => _nicknameShake++);
       return;
     }
     if (nickname.length > nicknameMaxLength) {
       _roomProvider.errorMessage = '닉네임은 $nicknameMaxLength자 이하로 입력해주세요.';
-      setState(() {});
+      setState(() => _nicknameShake++);
       return;
     }
     if (characterId == null) {
@@ -119,7 +122,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     );
     if (duplicateNickname) {
       _roomProvider.errorMessage = '이미 사용 중인 닉네임입니다.';
-      setState(() {});
+      setState(() => _nicknameShake++);
       return;
     }
     if (_occupiedCharacterIds.contains(characterId)) {
@@ -189,13 +192,17 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
               ),
               const SizedBox(height: 10),
             ],
-            if (_roomProvider.errorMessage != null) ...[
-              Semantics(
-                liveRegion: true,
-                child: _SetupAlert(message: _roomProvider.errorMessage!),
+            // 오류 안내는 부드럽게 펼쳐지고, 고치면 접힙니다(로비 연출 10번).
+            MosiReveal(
+              visible: _roomProvider.errorMessage != null,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Semantics(
+                  liveRegion: true,
+                  child: _SetupAlert(message: _roomProvider.errorMessage ?? ''),
+                ),
               ),
-              const SizedBox(height: 10),
-            ],
+            ),
             PlatformButton(
               label: '입장하기',
               onPressed: _selectedCharacterId == null || _isOpeningWaitingRoom
@@ -227,22 +234,25 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _nicknameController,
-                        maxLength: nicknameMaxLength,
-                        inputFormatters: [
-                          LengthLimitingTextInputFormatter(nicknameMaxLength),
-                        ],
-                        style: mosiFieldTextStyle(),
-                        decoration: mosiInputDecoration(
-                          hintText: '닉네임 · 최대 $nicknameMaxLength자',
-                        ).copyWith(counterText: ''),
-                        onChanged: (_) {
-                          if (_roomProvider.errorMessage != null) {
-                            _roomProvider.errorMessage = null;
-                            setState(() {});
-                          }
-                        },
+                      child: MosiShake(
+                        trigger: _nicknameShake == 0 ? null : _nicknameShake,
+                        child: TextField(
+                          controller: _nicknameController,
+                          maxLength: nicknameMaxLength,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(nicknameMaxLength),
+                          ],
+                          style: mosiFieldTextStyle(),
+                          decoration: mosiInputDecoration(
+                            hintText: '닉네임 · 최대 $nicknameMaxLength자',
+                          ).copyWith(counterText: ''),
+                          onChanged: (_) {
+                            if (_roomProvider.errorMessage != null) {
+                              _roomProvider.errorMessage = null;
+                              setState(() {});
+                            }
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -433,38 +443,44 @@ class _CharacterChoice extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      FittedBox(
-                        child: disabled
-                            ? ColorFiltered(
-                                colorFilter: const ColorFilter.matrix(<double>[
-                                  0.2126,
-                                  0.7152,
-                                  0.0722,
-                                  0,
-                                  0,
-                                  0.2126,
-                                  0.7152,
-                                  0.0722,
-                                  0,
-                                  0,
-                                  0.2126,
-                                  0.7152,
-                                  0.0722,
-                                  0,
-                                  0,
-                                  0,
-                                  0,
-                                  0,
-                                  1,
-                                  0,
-                                ]),
-                                child: face,
-                              )
-                            : face,
+                      // 고른 얼굴이 살짝 커졌다 안착합니다(로비 연출 2번).
+                      MosiSelectPop(
+                        selected: selected,
+                        child: FittedBox(
+                          child: disabled
+                              ? ColorFiltered(
+                                  colorFilter:
+                                      const ColorFilter.matrix(<double>[
+                                        0.2126,
+                                        0.7152,
+                                        0.0722,
+                                        0,
+                                        0,
+                                        0.2126,
+                                        0.7152,
+                                        0.0722,
+                                        0,
+                                        0,
+                                        0.2126,
+                                        0.7152,
+                                        0.0722,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                      ]),
+                                  child: face,
+                                )
+                              : face,
+                        ),
                       ),
-                      if (selected)
-                        Align(
-                          alignment: Alignment.bottomRight,
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: MosiPopBadge(
+                          visible: selected,
                           child: Container(
                             width: 20,
                             height: 20,
@@ -483,6 +499,7 @@ class _CharacterChoice extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),

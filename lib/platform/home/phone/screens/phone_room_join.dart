@@ -31,6 +31,12 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
   bool _codeMode = false;
   RoomJoinFeedback? _feedback;
 
+  /// 입장 확인이 끝나 체크를 보여 주는 중인지입니다(로비 연출 3번).
+  bool _joinSucceeded = false;
+
+  /// 코드가 틀릴 때마다 바뀌어 코드 칸만 흔듭니다.
+  int _codeShake = 0;
+
   @override
   void initState() {
     super.initState();
@@ -104,9 +110,20 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
       setState(() {
         _isOpeningNameInput = false;
         _feedback = roomJoinFeedbackFor(_roomProvider.errorMessage);
+        _codeShake++;
       });
       return;
     }
+
+    // 확인되면 버튼 안에 체크를 그리고 잠깐 보여 준 뒤 다음 화면으로 넘깁니다.
+    setState(() => _joinSucceeded = true);
+    await Future<void>.delayed(
+      MosiMotion.of(
+        context,
+        MosiMotion.check + const Duration(milliseconds: 300),
+      ),
+    );
+    if (!mounted) return;
 
     try {
       await _scannerController.stop();
@@ -124,7 +141,10 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     );
 
     if (!mounted) return;
-    setState(() => _isOpeningNameInput = false);
+    setState(() {
+      _isOpeningNameInput = false;
+      _joinSucceeded = false;
+    });
     if (_codeMode) return;
     try {
       await _scannerController.start();
@@ -287,18 +307,30 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                               ),
                               const SizedBox(height: 22),
                             ],
-                            _RoomCodeBoxes(
-                              key: const ValueKey('room-code-boxes'),
-                              controller: _roomCodeController,
-                              focusNode: _codeFocusNode,
-                              onSubmitted: _openNameInput,
-                              feedback: _feedback,
-                              enabled: !_isOpeningNameInput,
+                            // 확인하는 동안에도 코드 칸은 그대로 두고, 틀리면 칸만
+                            // 흔듭니다(로비 연출 3번).
+                            MosiShake(
+                              trigger: _codeShake == 0 ? null : _codeShake,
+                              child: _RoomCodeBoxes(
+                                key: const ValueKey('room-code-boxes'),
+                                controller: _roomCodeController,
+                                focusNode: _codeFocusNode,
+                                onSubmitted: _openNameInput,
+                                feedback: _feedback,
+                                enabled: !_isOpeningNameInput,
+                              ),
                             ),
-                            if (_feedback != null) ...[
-                              const SizedBox(height: 12),
-                              _InlineJoinFeedback(feedback: _feedback!),
-                            ],
+                            MosiReveal(
+                              visible: _feedback != null,
+                              child: _feedback == null
+                                  ? const SizedBox.shrink()
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: _InlineJoinFeedback(
+                                        feedback: _feedback!,
+                                      ),
+                                    ),
+                            ),
                             if (_codeMode)
                               TextButton.icon(
                                 onPressed: _isOpeningNameInput
@@ -376,7 +408,9 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                             foreground: canSubmit
                                 ? MosiColors.navy
                                 : MosiColors.white,
-                            loading: _isOpeningNameInput,
+                            loading: _isOpeningNameInput && !_joinSucceeded,
+                            loadingDots: true,
+                            success: _joinSucceeded,
                             onPressed: canSubmit && !_isOpeningNameInput
                                 ? _openNameInput
                                 : null,

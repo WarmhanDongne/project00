@@ -14,6 +14,13 @@ import 'package:qr_flutter/qr_flutter.dart';
 // 플레이어 명단, 아래 시작 버튼.
 const _playerMotionDuration = Duration(milliseconds: 260);
 
+/// 새 참가자가 오른쪽 끝에서 미끄러져 들어오는 시간입니다. 자리가 먼저 벌어지고
+/// 카드가 그 자리로 부드럽게 감속하며 들어옵니다.
+const _playerEntranceDuration = Duration(milliseconds: 560);
+
+/// 자리 벌어짐은 들어오기보다 짧게 끝내 카드가 빈자리로 미끄러져 들어가게 합니다.
+const _playerSlotOpenDuration = Duration(milliseconds: 300);
+
 class TabletRoomPanel extends StatefulWidget {
   const TabletRoomPanel({
     super.key,
@@ -141,21 +148,25 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
         staticUids: _staticUids,
         start: widget.onStart == null
             ? null
-            : MosiButton(
-                key: const Key('room-start-button'),
-                label: activeCount == 0
-                    ? context.l10n.waitingPlayers
-                    : context.l10n.startWithPlayers(activeCount),
-                onPressed: activeCount == 0 ? null : widget.onStart,
-                loading: widget.startLoading,
-                background: widget.startBackground,
-                foreground: widget.startForeground,
-                borderColor: MosiColors.ink,
-                shadowColor: widget.deep,
-                shadowOffset: 5,
-                height: 56,
-                fontSize: 18,
-                expand: true,
+            // 시작할 수 있게 되는 순간 한 번만 가볍게 들립니다(로비 연출 4번).
+            : MosiReadyLift(
+                ready: activeCount > 0,
+                child: MosiButton(
+                  key: const Key('room-start-button'),
+                  label: activeCount == 0
+                      ? context.l10n.waitingPlayers
+                      : context.l10n.startWithPlayers(activeCount),
+                  onPressed: activeCount == 0 ? null : widget.onStart,
+                  loading: widget.startLoading,
+                  background: widget.startBackground,
+                  foreground: widget.startForeground,
+                  borderColor: MosiColors.ink,
+                  shadowColor: widget.deep,
+                  shadowOffset: 5,
+                  height: 56,
+                  fontSize: 18,
+                  expand: true,
+                ),
               ),
       );
     }
@@ -312,7 +323,22 @@ class _RoomBody extends StatelessWidget {
                       ? const Key('active-room-qr-expand')
                       : const Key('invite-room-qr-expand'),
                   onTap: () => _showExpandedQr(context, roomCode),
-                  child: RoomQrCard(roomCode: roomCode, size: qrSize),
+                  // 방이 생기면 코드 글자 뒤에 QR이 나타나고, 누르면 바로 이
+                  // QR이 커져 확대 창이 됩니다(로비 연출 6번).
+                  child: Builder(
+                    // 확대 창이 이 QR 자리에서 커져 나옵니다.
+                    builder: (qrContext) => GestureDetector(
+                      onTap: () => _showExpandedQr(
+                        qrContext,
+                        roomCode,
+                        origin: mosiOriginOf(qrContext),
+                      ),
+                      child: _QrEntrance(
+                        roomCode: roomCode,
+                        child: RoomQrCard(roomCode: roomCode, size: qrSize),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -352,7 +378,11 @@ class _RoomBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  _CopyableRoomCode(roomCode: roomCode, fontSize: 28),
+                  _CopyableRoomCode(
+                    roomCode: roomCode,
+                    fontSize: 28,
+                    staggered: true,
+                  ),
                 ],
               ),
             ),
@@ -517,7 +547,7 @@ class _AnimatedPlayerListState extends State<_AnimatedPlayerList> {
       currentUids.add(player.uid);
       _listKey.currentState?.insertItem(
         insertionIndex,
-        duration: _playerMotionDuration,
+        duration: _playerSlotOpenDuration,
       );
     }
 
@@ -599,6 +629,10 @@ class _EmptySeatRow extends StatelessWidget {
   }
 }
 
+/// 새 참가자 카드가 목록 오른쪽 끝 너머에서 제자리로 미끄러져 들어옵니다.
+///
+/// 이동 거리는 카드 폭 전체라 화면 밖에서 들어오는 것처럼 보이고, 끝에서
+/// 천천히 멈춥니다. 목록이 가장자리를 자르므로 패널 밖으로 삐져나오지 않습니다.
 class _PlayerEntranceTransition extends StatelessWidget {
   const _PlayerEntranceTransition({
     super.key,
@@ -611,21 +645,37 @@ class _PlayerEntranceTransition extends StatelessWidget {
   final Widget child;
   final bool animate;
 
+  /// 빠르게 출발해 길게 감속합니다.
+  static const Curve _slideCurve = Curves.easeOutQuint;
+
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: animate ? 0 : 1, end: 1),
-      duration: _playerMotionDuration,
-      curve: Curves.easeOutCubic,
-      child: child,
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(
-          key: ValueKey('room-player-motion-$playerUid'),
-          offset: Offset(28 * (1 - value), 0),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final distance = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : 320.0;
+        return TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: animate ? 0 : 1, end: 1),
+          duration: _playerEntranceDuration,
           child: child,
-        ),
-      ),
+          builder: (context, value, child) {
+            final slide = _slideCurve.transform(value);
+            // 들어오는 앞부분에서 빨리 또렷해지게 합니다.
+            final opacity = Curves.easeOut.transform(
+              (value / 0.45).clamp(0.0, 1.0),
+            );
+            return Opacity(
+              opacity: opacity,
+              child: Transform.translate(
+                key: ValueKey('room-player-motion-$playerUid'),
+                offset: Offset(distance * (1 - slide), 0),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -667,9 +717,39 @@ class _PlayerExitTransition extends StatelessWidget {
   }
 }
 
-Future<void> _showExpandedQr(BuildContext context, String roomCode) {
+/// 방 코드 글자가 다 나온 뒤 QR이 살짝 커지며 나타납니다. 같은 방에서
+/// 다시 그려질 때는 움직이지 않습니다.
+class _QrEntrance extends StatelessWidget {
+  const _QrEntrance({required this.roomCode, required this.child});
+
+  final String roomCode;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    key: ValueKey('qr-entrance-$roomCode'),
+    tween: Tween(begin: 0, end: 1),
+    duration: MosiMotion.of(context, const Duration(milliseconds: 760)),
+    builder: (context, t, child) {
+      // 앞의 0.44초는 코드 글자 차례, 뒤의 0.32초에 QR이 나타납니다.
+      final q = Curves.easeOutCubic.transform(((t - 0.58) / 0.42).clamp(0, 1));
+      return Opacity(
+        opacity: q,
+        child: Transform.scale(scale: 0.85 + 0.15 * q, child: child),
+      );
+    },
+    child: child,
+  );
+}
+
+Future<void> _showExpandedQr(
+  BuildContext context,
+  String roomCode, {
+  Rect? origin,
+}) {
   return showMosiDialog<void>(
     context: context,
+    origin: origin,
     builder: (_) => _ExpandedRoomQrDialog(roomCode: roomCode),
   );
 }
@@ -971,14 +1051,25 @@ class _CopyableRoomCode extends StatelessWidget {
     required this.roomCode,
     required this.fontSize,
     this.alignment = Alignment.centerLeft,
+    this.staggered = false,
   });
 
   final String roomCode;
   final double fontSize;
   final Alignment alignment;
 
+  /// 새 방 코드가 생기면 글자가 한 자씩 차례로 또렷해집니다.
+  final bool staggered;
+
   @override
   Widget build(BuildContext context) {
+    final style = MosiFonts.grotesk(
+      locale: Localizations.maybeLocaleOf(context),
+      size: fontSize,
+      color: MosiColors.navy,
+      letterSpacing: fontSize * 0.18,
+      height: 1,
+    );
     return Semantics(
       button: true,
       label: '방 코드 $roomCode 복사',
@@ -993,16 +1084,9 @@ class _CopyableRoomCode extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: alignment,
-          child: Text(
-            roomCode,
-            style: MosiFonts.grotesk(
-              locale: Localizations.maybeLocaleOf(context),
-              size: fontSize,
-              color: MosiColors.navy,
-              letterSpacing: fontSize * 0.18,
-              height: 1,
-            ),
-          ),
+          child: staggered
+              ? MosiStaggeredText(text: roomCode, style: style)
+              : Text(roomCode, style: style),
         ),
       ),
     );

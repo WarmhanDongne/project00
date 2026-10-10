@@ -407,6 +407,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get connectionBandRestored => '已重新连接';
+
+  @override
+  String get profileSaved => '已保存';
+
+  @override
+  String get gamePreparing => '准备中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -812,6 +818,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get connectionBandRestored => '已重新连接';
+
+  @override
+  String get profileSaved => '已保存';
+
+  @override
+  String get gamePreparing => '准备中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1217,4 +1229,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get connectionBandRestored => '已重新連線';
+
+  @override
+  String get profileSaved => '已儲存';
+
+  @override
+  String get gamePreparing => '準備中';
 }

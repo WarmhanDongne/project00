@@ -64,46 +64,46 @@ class PhoneRoomParticipantList extends StatelessWidget {
               border: Border.all(color: MosiColors.ink, width: 2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Column(
-              children: [
-                for (final (index, player) in players.indexed) ...[
-                  if (index > 0) const SizedBox(height: 8),
-                  SizedBox(
-                    height: compact ? 36 : 46,
-                    child: Row(
-                      children: [
-                        MosiFace(
-                          characterId: player.characterId,
-                          size: compact ? 30 : 38,
-                          ring: true,
-                        ),
-                        SizedBox(width: compact ? 10 : 12),
-                        Expanded(
-                          child: Text(
-                            player.nickname,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: MosiFonts.sans(
-                              size: compact ? 14 : 16,
-                              weight: FontWeight.w700,
-                              color: MosiColors.navy,
-                            ),
-                          ),
-                        ),
-                        if (!player.isConnected)
-                          const MosiPill(
-                            label: '연결 끊김',
-                            color: MosiColors.red,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 3,
-                            ),
-                          ),
-                      ],
+            // 새 참가자는 작게 나타나 안착하고, 나간 자리는 접혀 남은 사람들이
+            // 미끄러지듯 메웁니다(로비 연출 1번).
+            child: MosiAnimatedItems<RoomPlayer>(
+              items: players,
+              keyOf: (player) => player.uid,
+              spacing: 8,
+              itemBuilder: (context, player) => SizedBox(
+                height: compact ? 36 : 46,
+                child: Row(
+                  children: [
+                    MosiFace(
+                      characterId: player.characterId,
+                      size: compact ? 30 : 38,
+                      ring: true,
                     ),
-                  ),
-                ],
-              ],
+                    SizedBox(width: compact ? 10 : 12),
+                    Expanded(
+                      child: Text(
+                        player.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MosiFonts.sans(
+                          size: compact ? 14 : 16,
+                          weight: FontWeight.w700,
+                          color: MosiColors.navy,
+                        ),
+                      ),
+                    ),
+                    if (!player.isConnected)
+                      const MosiPill(
+                        label: '연결 끊김',
+                        color: MosiColors.red,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
       ],

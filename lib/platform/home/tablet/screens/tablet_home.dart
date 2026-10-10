@@ -52,6 +52,9 @@ class _TabletHomeState extends State<TabletHome>
   late final Stream<bool> _serverConnection = roomProvider
       .watchServerConnection();
 
+  /// 선반에서 고른 책 자리를 잽니다. 게임을 시작하면 이 책이 열립니다.
+  final GlobalKey _selectedCoverKey = GlobalKey();
+
   late final RoomProvider roomProvider = RoomProvider(
     gameCatalog: widget.gameCatalog,
   );
@@ -331,6 +334,11 @@ class _TabletHomeState extends State<TabletHome>
           _isDetailOpen = false;
           _selection.didLaunch();
         },
+        // 선반에서 시작했다면 그 책이 열리며 자리 배치로 넘어갑니다.
+        originRect: () {
+          final coverContext = _selectedCoverKey.currentContext;
+          return coverContext == null ? null : mosiOriginOf(coverContext);
+        },
       );
     } finally {
       if (mounted) setState(() => _isStarting = false);
@@ -424,6 +432,8 @@ class _TabletHomeState extends State<TabletHome>
                           onSelect: (game) =>
                               setState(() => _selectedGameId = game.id),
                           onOpenDetail: _openDetail,
+                          preparing: _isStarting,
+                          selectedCoverKey: _selectedCoverKey,
                         )
                       : TabletGameDetailContent(
                           key: ValueKey('lobby-detail-${detail.id}'),

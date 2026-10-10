@@ -8,7 +8,10 @@
 // import하지 않아도 같은 디자인을 쓸 수 있습니다.
 
 // ========================[ import ]==========================
+import 'package:game_kit/mosi_ui/mosi_motion.dart';
 import 'package:flutter/material.dart';
+
+export 'package:game_kit/mosi_ui/mosi_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 
@@ -316,6 +319,9 @@ class MosiButton extends StatefulWidget {
     this.trailing,
     this.padding = const EdgeInsets.symmetric(horizontal: 22),
     this.semanticLabel,
+    this.loadingDots = false,
+    this.success = false,
+    this.successLabel,
   });
 
   final String label;
@@ -337,6 +343,17 @@ class MosiButton extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final String? semanticLabel;
 
+  /// 로딩 중 원형 표시 대신 버튼 색을 유지한 채 점 세 개를 튀깁니다.
+  ///
+  /// 로비 시안: 누른 버튼만 진행 중으로 바뀌고 회색으로 꺼지지 않습니다.
+  final bool loadingDots;
+
+  /// 방금 끝난 일을 체크 표시로 알립니다(입장 성공·저장 완료). 누를 수 없습니다.
+  final bool success;
+
+  /// [success]일 때 체크 옆에 붙는 문구입니다. 없으면 체크만 그립니다.
+  final String? successLabel;
+
   @override
   State<MosiButton> createState() => _MosiButtonState();
 }
@@ -344,7 +361,12 @@ class MosiButton extends StatefulWidget {
 class _MosiButtonState extends State<MosiButton> {
   bool _pressed = false;
 
-  bool get _enabled => widget.onPressed != null && !widget.loading;
+  bool get _enabled =>
+      widget.onPressed != null && !widget.loading && !widget.success;
+
+  /// 점 로딩·성공 상태는 버튼 색을 그대로 둡니다(꺼진 것처럼 보이지 않게).
+  bool get _keepsColor =>
+      (widget.loading && widget.loadingDots) || widget.success;
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
@@ -355,19 +377,42 @@ class _MosiButtonState extends State<MosiButton> {
   Widget build(BuildContext context) {
     final filled = widget.variant == MosiButtonVariant.filled;
     final ghost = widget.variant == MosiButtonVariant.ghost;
-    final shadow = filled && _enabled ? widget.shadowOffset : 0.0;
+    final lit = _enabled || _keepsColor;
+    final shadow = filled && lit ? widget.shadowOffset : 0.0;
     final shift = _pressed ? shadow : 0.0;
-    final background = !_enabled && filled
+    final background = !lit && filled
         ? const Color(0xFFE4E2EA)
         : filled
         ? widget.background
         : Colors.transparent;
-    final foreground = _enabled
+    final foreground = lit
         ? widget.foreground
         : widget.foreground.withValues(alpha: 0.55);
     final borderWidth = widget.borderWidth ?? (filled ? 3.0 : 2.0);
 
-    final content = widget.loading
+    final content = widget.success
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MosiDrawnCheck(color: foreground, size: 24),
+              if (widget.successLabel != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  widget.successLabel!,
+                  maxLines: 1,
+                  style: MosiFonts.sans(
+                    locale: Localizations.maybeLocaleOf(context),
+                    size: widget.fontSize,
+                    weight: FontWeight.w700,
+                    color: foreground,
+                  ),
+                ),
+              ],
+            ],
+          )
+        : widget.loading && widget.loadingDots
+        ? MosiLoadingDots(color: foreground)
+        : widget.loading
         ? SizedBox(
             width: 20,
             height: 20,
@@ -463,7 +508,13 @@ class _MosiButtonState extends State<MosiButton> {
               // widthFactor로 내용 폭만 차지하게 합니다.
               child: Center(
                 widthFactor: widget.expand ? null : 1,
-                child: content,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  child: KeyedSubtree(
+                    key: ValueKey((widget.loading, widget.success)),
+                    child: content,
+                  ),
+                ),
               ),
             ),
           ),
@@ -800,27 +851,44 @@ Future<T?> showMosiDialog<T>({
   required WidgetBuilder builder,
   bool barrierDismissible = true,
   bool useRootNavigator = true,
+  Rect? origin,
 }) {
+  // 누른 버튼 자리([origin])가 있으면 그 자리에서 펼쳐지고 같은 곳으로
+  // 접힙니다(로비 시안 8번). 없으면 화면 가운데에서 살짝 커집니다.
+  final screen = MediaQuery.sizeOf(context);
+  final alignment = origin == null || screen.isEmpty
+      ? Alignment.center
+      : Alignment(
+          (origin.center.dx / screen.width * 2 - 1).clamp(-1.0, 1.0),
+          (origin.center.dy / screen.height * 2 - 1).clamp(-1.0, 1.0),
+        );
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: MosiColors.scrim,
     useRootNavigator: useRootNavigator,
-    transitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: Duration(milliseconds: origin == null ? 220 : 320),
     pageBuilder: (context, _, _) => SafeArea(
       child: Center(child: Builder(builder: builder)),
     ),
     transitionBuilder: (context, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutBack,
-        reverseCurve: Curves.easeIn,
+        curve: origin == null ? Curves.easeOutBack : Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
       );
       return FadeTransition(
-        opacity: animation,
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0, 0.6),
+        ),
         child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+          alignment: alignment,
+          scale: Tween<double>(
+            begin: origin == null ? 0.92 : 0.2,
+            end: 1,
+          ).animate(curved),
           child: child,
         ),
       );

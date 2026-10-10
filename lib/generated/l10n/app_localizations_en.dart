@@ -413,4 +413,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionBandRestored => 'Reconnected';
+
+  @override
+  String get profileSaved => 'Saved';
+
+  @override
+  String get gamePreparing => 'Getting ready';
 }
