@@ -753,6 +753,7 @@ class RoomService {
       // 설정 화면에서 확정한 값을 사용합니다. 앱 재시작·네트워크 복구 경로만
       // preserveProfile=true로 기존 방 프로필을 유지합니다.
       preserveProfile: false,
+      allowNewMembershipAfterRemoval: true,
     );
 
     // 참가 저장은 Cloud Function에서 완료됩니다. 접속 종료 표시는 보조
@@ -869,6 +870,7 @@ class RoomService {
     required String nickname,
     required String characterId,
     required bool preserveProfile,
+    bool allowNewMembershipAfterRemoval = false,
   }) async {
     if (RoomRecoveryBatch.current == null) {
       return _withRoomBatch(
@@ -877,6 +879,7 @@ class RoomService {
           nickname: nickname,
           characterId: characterId,
           preserveProfile: preserveProfile,
+          allowNewMembershipAfterRemoval: allowNewMembershipAfterRemoval,
         ),
       );
     }
@@ -909,14 +912,17 @@ class RoomService {
     }
 
     if (pending != null) {
+      var checkingCurrentMembership = false;
       try {
         await _call('joinRealtimeRoom', pending);
         requireCurrent();
         // A saved allocation result may describe a connection since replaced.
         // Adopt the server's current membership instead of allocating again.
+        checkingCurrentMembership = true;
         final confirmed = await _call('fetchRealtimeRoomSession', {
           'roomCode': roomCode,
         });
+        checkingCurrentMembership = false;
         requireCurrent();
         final identity = RoomSessionIdentity.fromJson({
           ...Map<String, dynamic>.from(confirmed.data as Map),
@@ -943,11 +949,18 @@ class RoomService {
             nickname: nickname,
             characterId: characterId,
             preserveProfile: false,
+            allowNewMembershipAfterRemoval: allowNewMembershipAfterRemoval,
           );
         }
         return;
       } on FirebaseFunctionsException catch (error) {
-        if (error.code != 'aborted' ||
+        if (checkingCurrentMembership &&
+            error.code == 'permission-denied' &&
+            allowNewMembershipAfterRemoval) {
+          // The old join was applied, then its membership was removed. Only an
+          // explicit join may replace it; timeout and auto-restore retain it.
+          requireCurrent();
+        } else if (error.code != 'aborted' ||
             error.details is! Map ||
             (error.details as Map)['reason'] != 'staleConnection') {
           rethrow;

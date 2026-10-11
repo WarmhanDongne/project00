@@ -156,7 +156,20 @@ class RoomSessionIdentityStore extends ChangeNotifier {
     if (isCurrent != null && !isCurrent()) throw StateError('이전 방 복구 요청입니다.');
     final previous = current(identity.uid, identity.role, identity.roomCode);
     if (previous?.roomInstanceId == identity.roomInstanceId &&
+        previous?.membershipId == identity.membershipId &&
         previous!.connectionSeq > identity.connectionSeq) {
+      // A replay can finish after a newer connection was already adopted.
+      // Keep that connection but acknowledge this exact completed allocation.
+      if (completedOperationId != null &&
+          pending(
+                identity.uid,
+                identity.role,
+                identity.roomCode,
+              )?['operationId'] ==
+              completedOperationId) {
+        (_records![_key(identity.uid, identity.role, identity.roomCode)] as Map)
+            .remove('pending');
+      }
       return;
     }
     final pendingValue = pending(

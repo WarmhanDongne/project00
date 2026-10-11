@@ -15,6 +15,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
   int? completedRevealRound;
   int? previousGameStartedAt;
   final _dealingCommand = GameProgressCommand();
+  (int?, int)? _completedDealing;
   final _resultRevealCommand = GameProgressCommand();
   final _timeoutCommand = GameProgressCommand();
   final _nextRoundCommand = GameProgressCommand();
@@ -81,6 +82,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
       _handleState();
     });
     controller = ref.read(provider.notifier);
+    controller!.recoverySession.addListener(_handleRecoveryChanged);
   }
 
   void _handleState() {
@@ -96,6 +98,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
       phaseTimer?.cancel();
       turnTimer?.cancel();
       _dealingCommand.cancel();
+      _completedDealing = null;
       _resultRevealCommand.cancel();
       hasPlayedWinSound = false;
       _announcedCallerUid = null;
@@ -162,6 +165,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     }
 
     _celebrateWinIfNeeded(game);
+    _sendCompletedDealing();
   }
 
   /// 우승 발표 오버레이가 화면에 뜨는 순간 승리음을 한 번 재생합니다.
@@ -282,6 +286,23 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     final game = controller;
     if (game == null) return;
     final key = (game.gameStartedAt, game.round);
+    _completedDealing = key;
+    _sendCompletedDealing();
+  }
+
+  void _handleRecoveryChanged() {
+    // Readiness can change independently of the game DTO. Keep the completed
+    // animation pending without spending the command retry budget on pause.
+    scheduleMicrotask(() {
+      if (mounted) _sendCompletedDealing();
+    });
+  }
+
+  void _sendCompletedDealing() {
+    final game = controller;
+    if (game == null || !game.recoverySession.canSend) return;
+    final key = (game.gameStartedAt, game.round);
+    if (_completedDealing != key || game.interruption != null) return;
     _dealingCommand.run(
       key: key,
       isCurrent: () =>
@@ -290,7 +311,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
           !game.isFinished &&
           game.phase == 'dealing' &&
           (game.gameStartedAt, game.round) == key,
-      send: () => game.interruption != null
+      send: () => !game.recoverySession.canSend || game.interruption != null
           ? Future.value(false)
           : game.completeDealing(),
     );
@@ -425,6 +446,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
 
   @override
   void dispose() {
+    controller?.recoverySession.removeListener(_handleRecoveryChanged);
     _dealingCommand.dispose();
     _resultRevealCommand.dispose();
     _timeoutCommand.dispose();

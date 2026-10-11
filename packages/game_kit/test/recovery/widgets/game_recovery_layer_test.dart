@@ -11,6 +11,40 @@ import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
 
 void main() {
+  test('purpose만 변경돼도 중단 모델은 새로운 상태로 구분한다', () {
+    final initial = GameInterruption.fromMap({
+      'paused': true,
+      'pauseId': 'pause',
+      'purpose': 'initialReadiness',
+    });
+    final recovery = GameInterruption.fromMap({
+      'paused': true,
+      'pauseId': 'pause',
+      'purpose': 'recovery',
+    });
+    expect(initial, isNot(recovery));
+    expect(initial.isInitialReadiness, true);
+    expect(recovery.isInitialReadiness, false);
+    expect(
+      GameInterruption.fromMap({
+        'paused': true,
+        'pauseId': 'pause',
+        'purpose': 'unknown',
+      }).isInitialReadiness,
+      false,
+    );
+    expect(
+      GameInterruption.fromMap({
+        'paused': true,
+        'pauseId': 'pause',
+        'purpose': 'initialReadiness',
+        'causes': {
+          'controller:t': {'uid': 't', 'role': 'controller'},
+        },
+      }).isInitialReadiness,
+      false,
+    );
+  });
   testWidgets(
     'own ready acknowledgement failure exposes retry while locally usable',
     (tester) async {
@@ -111,6 +145,66 @@ void main() {
   });
 
   for (final role in GameInterruptionPresentation.values) {
+    testWidgets('서버 최초 준비는 $role 게임 배경을 유지하며 입력은 차단한다', (tester) async {
+      final session = GameRecoverySession();
+      addTearDown(session.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GameRecoveryLayer(
+              session: session,
+              interruption: GameInterruptionRecovery(
+                state: GameInterruption.fromMap({
+                  'paused': true,
+                  'pauseId': 'game-1',
+                  'purpose': 'initialReadiness',
+                }),
+                currentUid: 'player',
+                presentation: role,
+              ),
+              child: const Text('게임 배경'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 61));
+      expect(find.text('게임 배경'), findsOneWidget);
+      expect(find.byType(GameInterruptionLayer), findsNothing);
+      expect(find.byType(GameRequestNotice), findsNothing);
+      expect(session.canSend, false);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('원인이 해소된 명시적 recovery도 $role 안내를 유지한다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GameRecoveryLayer(
+              interruption: GameInterruptionRecovery(
+                state: GameInterruption.fromMap({
+                  'paused': true,
+                  'pauseId': 'game-1',
+                  'purpose': 'recovery',
+                }),
+                currentUid: 'player',
+                presentation: role,
+              ),
+              child: const Text('게임 배경'),
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.byType(
+          role == GameInterruptionPresentation.player
+              ? GameRequestNotice
+              : GameInterruptionLayer,
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('복구 원인이 해소된 준비 barrier도 $role 중단 안내를 유지한다', (tester) async {
       final session = GameRecoverySession();
       addTearDown(session.dispose);

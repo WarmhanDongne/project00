@@ -18,6 +18,11 @@
 
 클라이언트는 자신의 현재 connections 노드의 connected/lastSeen만 갱신한다.
 서버 선택 접속과 membership/room이 일치해야 rules와 syncRealtimeRoomConnection이 반영한다.
+로컬 connectionSeq 역행 방지는 같은 roomInstanceId와 membershipId 안에서만 적용한다.
+새 membership은 순번이 작아도 저장한다. 같은 membership의 옛 성공 결과는 최신 접속을
+유지하면서 해당 completedOperationId의 pending만 정리한다. 미확정 결과는 유지한다.
+pending join 재생 후 현재 참가 조회에서 자격 상실이 확정되면 직접 join만 새 요청을
+만들 수 있다. 자동 복구·프로필 편집·통신 오류는 새 참가를 생성하지 않는다.
 옛 onDisconnect와 늦은 presence 이벤트는 현재 접속을 끊지 않는다.
 controllerSessionId는 UID별 controller identity에 보존하며 기존 저장소는 호환 조회에 사용한다.
 
@@ -246,3 +251,39 @@ ready 보호는 유지한다. 띠의 연결 소스가 해제/교체되면 이전
 LP 정상 시작은 로비 책 위의 `게임 준비 중` 표시를 생략하고, 게임 진입 후 첫 서버 상태는
 기존 게임 배경에서 기다린다. 시작 중 입력 잠금·책의 전환 시작 위치 계산과 실제 단절/
 준비 실패 안내는 유지한다. 다른 게임의 로비 준비 표시는 변경하지 않는다.
+
+controller는 같은 UID의 player가 방에 참가해 있어도 자신의 phone membership로
+채택하지 않는다. player 삭제 확인은 player 역할에만 적용하며, 늦은 확인 결과는
+역할·UID·방/session epoch가 유지될 때만 반영한다. controller의 방은 실제 종료/삭제
+확인으로 정리한다. 로컬 roomCode가 없더라도 저장된 controller 세션이 남아 있으면
+새 생성보다 기존 방 복구를 먼저 시도한다. 서버 활성 방 생성 guard는 유지한다.
+
+설정 완료 뒤 정상 시작 대기는 공용 자리 배치의 게임 배경에서 유지한다. LP/마피아와
+공용 phone connecting 단계는 이미 별도 정상 준비 안내를 표시하지 않는다. Final Call과
+게임 템플릿의 connecting도 준비 announcement를 명시적으로 끈다. 실제 단절/실패와
+ready 입력 보호는 유지한다. 홀덤 단일 기기 보호 문제는 이번 후속 범위에서 제외했다.
+
+### 2026-10-11 최초 준비와 실제 복구 구분 후보
+
+사용자 승인에 따라 `game/public/recovery.purpose`를 선택 필드로 추가한다.
+새 게임의 최초 barrier는 `initialReadiness`이며 게임 배경을 유지한다. 필수 기기의
+단절·준비 실패가 등록되면 `recovery`로 전환하고, 원인이 해소돼도 전체 ready 완료 전까지
+그 목적을 유지한다. 필드 부재·알 수 없는 값·실제 cause가 있는 데이터는 기존 중단
+안내를 유지한다. pause/ready/CAS/입력·타이머 계약은 변경하지 않는다. 구버전 앱은 새
+필드를 무시하므로 최초 준비 안내가 남을 수 있고, 신버전 앱과 구 서버 조합도 기존
+안내를 유지한다. 서버와 앱 모두 반영한 뒤 36번을 다시 판정한다.
+
+현재 세션 조회는 UID만으로 controller를 우선 선택하지 않는다. 유효한 controller
+토큰을 제공한 요청만 controller context를 얻고, 나머지는 현재 active player membership을
+조회한다. 동일 계정의 두 역할은 각 connectionId/sequence를 유지하며 추방된 phone은
+controller context를 얻지 못한다. 잘못된 controller 토큰은 player로 우회하지 않는다.
+
+게임 화면의 controller가 새로 만들어지면 준비 확인은 새 화면의 예산을 사용한다.
+방 단위로 보존된 세션의 이전 화면 예산을 재사용해 첫 데이터 수신 즉시 실패시키지
+않는다. 진행 중인 방 복구가 있으면 그 복구의 기존 30초 예산은 공유하며, 같은 화면의
+데이터 갱신이나 늦은 ready로 실패를 자동 해제하거나 예산을 계속 연장하지 않는다.
+
+Final Call 태블릿은 분배 연출 완료를 시작 시각·라운드로 기억한다. 전체 ready와
+pause 해제가 확인된 뒤 분배 완료 명령을 전송하며, 준비 대기 자체는 진행 명령의
+재시도 횟수를 소모하지 않는다. 같은 완료는 한 번만 처리하고 새 판·라운드나 화면
+종료 후에는 옛 완료를 전송하지 않는다. 서버의 단계·세션 검증은 그대로 적용한다.

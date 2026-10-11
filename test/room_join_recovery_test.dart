@@ -190,6 +190,159 @@ void main() {
       'old',
     );
   });
+
+  test(
+    'same-room new membership sends heartbeat using its new connection',
+    () async {
+      final store = RoomSessionIdentityStore.instance;
+      await store.save(
+        RoomSessionIdentity.fromJson({
+          ...identity.toJson(),
+          'connectionSeq': 3,
+        }),
+        completedOperationId: 'pending',
+      );
+      database.values['rooms/ABCDE/roomInstanceId'] = 'room';
+      database.values['rooms/ABCDE/players/${identity.uid}'] = null;
+      functions.reply = (name, data) async => {
+        'roomInstanceId': 'room',
+        'membershipId': 'new-member',
+        'connectionId': 'new-connection',
+        'connectionSeq': 1,
+      };
+      await service.joinRoom('ABCDE', 'Tester', characterId: 'frog');
+      expect(
+        store.current(identity.uid, 'player', 'ABCDE')!.membershipId,
+        'new-member',
+      );
+      expect(store.pending(identity.uid, 'player', 'ABCDE'), isNull);
+      await service.heartbeatPlayer('ABCDE');
+      expect(
+        database.writes.single,
+        'rooms/ABCDE/connections/${identity.uid}/new-connection',
+      );
+    },
+  );
+
+  test(
+    'explicit rejoin replaces a revoked pending request after current membership rejection',
+    () async {
+      database.values['rooms/ABCDE/roomInstanceId'] = 'room';
+      database.values['rooms/ABCDE/players/${identity.uid}'] = null;
+      var joins = 0;
+      functions.reply = (name, data) async {
+        if (name == 'fetchRealtimeRoomSession') {
+          throw FirebaseFunctionsException(
+            code: 'permission-denied',
+            message: 'removed',
+          );
+        }
+        if (++joins == 1) {
+          expect(data['operationId'], 'pending');
+          return {};
+        }
+        expect(data['operationId'], isNot('pending'));
+        expect(data['expectedConnectionSeq'], 0);
+        expect(data['membershipId'], isNull);
+        return {
+          'roomInstanceId': 'room',
+          'membershipId': 'new-member',
+          'connectionId': 'new-connection',
+          'connectionSeq': 1,
+        };
+      };
+      await service.joinRoom('ABCDE', 'Tester', characterId: 'frog');
+      expect(functions.names, [
+        'joinRealtimeRoom',
+        'fetchRealtimeRoomSession',
+        'joinRealtimeRoom',
+      ]);
+      expect(
+        RoomSessionIdentityStore.instance.pending(
+          identity.uid,
+          'player',
+          'ABCDE',
+        ),
+        isNull,
+      );
+      await service.heartbeatPlayer('ABCDE');
+      expect(
+        database.writes.single,
+        'rooms/ABCDE/connections/${identity.uid}/new-connection',
+      );
+    },
+  );
+
+  test('profile edit cannot recreate a removed membership', () async {
+    functions.reply = (name, data) async {
+      if (name == 'fetchRealtimeRoomSession') {
+        throw FirebaseFunctionsException(
+          code: 'permission-denied',
+          message: 'removed',
+        );
+      }
+      return {};
+    };
+    await expectLater(
+      service.updateRoomPlayerProfile('ABCDE', 'Tester', characterId: 'frog'),
+      throwsA(isA<FirebaseFunctionsException>()),
+    );
+    expect(database.reads, isEmpty);
+    expect(functions.names, ['joinRealtimeRoom', 'fetchRealtimeRoomSession']);
+  });
+
+  test(
+    'a rejected pending join is not mistaken for revoked membership lookup',
+    () async {
+      functions.reply = (name, data) async => throw FirebaseFunctionsException(
+        code: 'permission-denied',
+        message: 'operation rejected',
+      );
+      await expectLater(
+        service.joinRoom('ABCDE', 'Tester', characterId: 'frog'),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+      expect(functions.names, ['joinRealtimeRoom']);
+      expect(database.reads, isEmpty);
+      expect(
+        RoomSessionIdentityStore.instance.pending(
+          identity.uid,
+          'player',
+          'ABCDE',
+        )!['operationId'],
+        'pending',
+      );
+    },
+  );
+
+  test(
+    'unknown current membership lookup preserves pending even for explicit join',
+    () async {
+      functions.reply = (name, data) async {
+        if (name == 'fetchRealtimeRoomSession') {
+          throw FirebaseFunctionsException(
+            code: 'internal',
+            message: 'unknown',
+          );
+        }
+        return {};
+      };
+      await expectLater(
+        service.joinRoom('ABCDE', 'Tester', characterId: 'frog'),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+      expect(functions.names, ['joinRealtimeRoom', 'fetchRealtimeRoomSession']);
+      expect(database.reads, isEmpty);
+      expect(
+        RoomSessionIdentityStore.instance.pending(
+          identity.uid,
+          'player',
+          'ABCDE',
+        )!['operationId'],
+        'pending',
+      );
+    },
+  );
   test(
     'late replay after its owner deadline cannot save or clear intent',
     () async {
@@ -291,7 +444,7 @@ class _User extends Fake implements User {
 class _Database extends Fake implements FirebaseDatabase {
   final pendingReads = <String, Completer<DataSnapshot>>{};
   bool denied = false;
-  final values = <String, Object>{};
+  final values = <String, Object?>{};
   final reads = <String>[], writes = <String>[];
   @override
   DatabaseReference ref([String? path]) => _Reference(this, path!);
@@ -322,6 +475,14 @@ class _Reference extends Fake implements DatabaseReference {
     }
     database.writes.add(path);
   }
+
+  @override
+  OnDisconnect onDisconnect() => _Disconnect();
+}
+
+class _Disconnect extends Fake implements OnDisconnect {
+  @override
+  Future<void> update(Map<String, Object?> value) async {}
 }
 
 class _Snapshot extends Fake implements DataSnapshot {

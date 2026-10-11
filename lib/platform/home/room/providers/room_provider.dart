@@ -236,7 +236,8 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 룸 코드가 없거나 로딩 중이면 리턴
     if (roomCode != null || isLoading || _controllerRestoreInFlight) return;
     // A failed restore is still an existing room, not permission to allocate another.
-    if (_pendingControllerRestore) {
+    if (_pendingControllerRestore ||
+        ControllerRoomSessionStore.instance.roomCode != null) {
       await restoreControllerRoom();
       return;
     }
@@ -875,7 +876,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
         _evaluateStalePlayers();
 
         final myUid = _currentUid();
-        if (myUid != null && myUid.isNotEmpty) {
+        if (!_ownsControllerSession && myUid != null && myUid.isNotEmpty) {
           final isMeInPlayers = roomPlayer.any(
             (p) => p.uid == myUid && p.isActive,
           );
@@ -1234,9 +1235,10 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     String expectedRoomCode, {
     required String expectedUid,
   }) async {
-    if (!_isServerConnected) return;
+    if (!_isServerConnected || _ownsControllerSession) return;
     final checkId = ++_playerRemovalCheckId;
     final connectionEpoch = _connectionEpoch;
+    final sessionEpoch = _sessionEpoch;
     try {
       final results = await Future.wait<bool>([
         _service.roomExists(expectedRoomCode),
@@ -1245,6 +1247,10 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       final roomStillExists = results[0];
       final playerStillExists = results[1];
       if (checkId != _playerRemovalCheckId ||
+          _isDisposed ||
+          _ownsControllerSession ||
+          _currentUid() != expectedUid ||
+          _sessionEpoch != sessionEpoch ||
           _connectionEpoch != connectionEpoch ||
           !_isServerConnected ||
           roomCode != expectedRoomCode ||
@@ -1589,6 +1595,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 수 있습니다. 이미 다른 방으로 넘어갔거나 퇴장 중이면 사용자 오류로
     // 표시하지 않습니다.
     if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
+
     if (_isLeaving) return;
     DevErrorLog.instance.add(
       error: error,
@@ -1954,6 +1961,16 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 이전 방의 늦은 closed/players 이벤트가 새 방 상태를 지우지
     // 못하게 구독을 시작한 방 identity를 검증합니다.
     if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
+
+    if (kDebugMode && roomCode != null) {
+      debugPrint(
+        '[room_connection] event=room_cleared '
+        'role=${_ownsControllerSession ? 'controller' : 'player'} '
+        'termination=${roomTerminationReason?.name ?? 'none'} '
+        'wasKicked=$wasKicked leaving=$_isLeaving '
+        'serverConnected=$_isServerConnected',
+      );
+    }
 
     roomSubscription?.cancel();
     playerSubscription?.cancel();
