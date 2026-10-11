@@ -290,7 +290,9 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
               scale: bookScale * shrink,
               alignment: Alignment.bottomCenter,
               child: _PreparingBadge(
-                visible: selected && widget.preparing,
+                // LP continues into its game background without a ready badge.
+                visible:
+                    selected && widget.preparing && game.id != 'liars_poker',
                 child: KeyedSubtree(
                   key: selected && interactive ? widget.selectedCoverKey : null,
                   child: _TurningBook(

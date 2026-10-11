@@ -520,3 +520,26 @@ index export를 추적한 변경 코드 포함 함수 14개다. Final Call 등�
 createRealtimeRoom의 활성 방 guard는 변경하지 않았다. 운영 배포 승인은 별도이며,
 FULL 재개·서버 반영과 새 APK 후 10/27/28/29 관련 실기기 경로를 확인해야 한다.
 게임 준비 중 UI, 최초 heartbeat/접속 거절, expire 403은 별도 미해결로 유지한다.
+
+## 2026-10-11 — LP 정상 시작 준비 표시 제거 후속
+
+사용자의 추가 수정 요청으로 로비 TabletBookCarousel의 LP 준비 badge 표시를 제거했다.
+게임 보드 waiting 단계는 이미 announcement 없이 게임 배경을 유지하며 공용 recovery
+layer도 정상 준비를 덮지 않는다. 남아 있던 정확한 `게임 준비 중` 문구는 로비 책 위의
+badge 경로였다. 시작 입력 잠금·선택한 책 위치 계산·실제 단절/실패 안내를 변경하지 않았다.
+다른 게임의 badge는 유지하고 서버/세션/API/저장 형식은 변경하지 않았다.
+
+기존 book_carousel 회귀를 확장해 LP 준비 중 표시 미노출과 cover geometry 보존을 확인했다.
+첫 실행은 투명 badge의 Text까지 찾는 assertion 때문에 FAIL/exit 1이었다. 기존 fade 구조를
+보존하고 화면 노출 기준(hitTestable)으로 검사한 재실행은 11개 PASS/exit 0이다.
+명령 `flutter test --no-pub test/book_carousel_test.dart`; 변경 두 경로의
+`flutter analyze --no-pub lib/platform/home/tablet/widgets/tablet_book_carousel.dart test/book_carousel_test.dart`
+도 PASS/exit 0. 이후 테스트에는 설명 주석과 finder 기준만 정정했다. UI 전용 변경이므로
+session/build/lint는 재실행하지 않았다. FULL/Final Call 전용 시험의 기존 보류를 유지한다.
+
+시작 working tree는 clean, branch codex/e01-validation-wiring,
+HEAD f5f126ac22ffc4c9fdb670950dc99cda1de84e63. 제품/회귀 각 1개와 계약·실기기 체크리스트·
+planning 문서만 수정했으며 stage/commit/배포/새 APK/운영 조회 없음.
+27/34번을 새 APK에서 확인해야 하며 서버 수정의 기존 14개 배포 목록에는 추가 대상이 없다.
+이전 기록의 준비 UI 미해결 표시는 당시 판단으로 보존한다. 현재 로비 문구는 수정 후보이며
+실기기 전체 시작 흐름은 확인 대기, 최초 heartbeat/접속 거절/expire 403은 계속 미확인이다.
