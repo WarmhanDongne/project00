@@ -18,6 +18,11 @@
 
 클라이언트는 자신의 현재 connections 노드의 connected/lastSeen만 갱신한다.
 서버 선택 접속과 membership/room이 일치해야 rules와 syncRealtimeRoomConnection이 반영한다.
+로컬 connectionSeq 역행 방지는 같은 roomInstanceId와 membershipId 안에서만 적용한다.
+새 membership은 순번이 작아도 저장한다. 같은 membership의 옛 성공 결과는 최신 접속을
+유지하면서 해당 completedOperationId의 pending만 정리한다. 미확정 결과는 유지한다.
+pending join 재생 후 현재 참가 조회에서 자격 상실이 확정되면 직접 join만 새 요청을
+만들 수 있다. 자동 복구·프로필 편집·통신 오류는 새 참가를 생성하지 않는다.
 옛 onDisconnect와 늦은 presence 이벤트는 현재 접속을 끊지 않는다.
 controllerSessionId는 UID별 controller identity에 보존하며 기존 저장소는 호환 조회에 사용한다.
 

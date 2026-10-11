@@ -35,6 +35,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/table_background_transition_test.dart',
     'test/room_recovery_heartbeat_test.dart',
     'test/room_join_recovery_test.dart',
+    'packages/game_kit/test/recovery/room_session_identity_store_test.dart',
     'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
     'test/game_command_response_loss_test.dart',
     'test/final_call_dealing_readiness_test.dart',

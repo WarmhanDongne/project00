@@ -60,7 +60,138 @@
   FC 분배 중 단절→복구는 같은 판을 유지하고 준비 전 입력 금지·준비 후 완료 전송을 확인한다.
   이전 라운드/게임의 늦은 연출 완료가 새 판을 진행시키지 않아야 한다.
 
+## 2026-10-12 02:25 이후 — B 준비 실패·제외 후 LP 고착 조사
+
+사용자가 B/태블릿 로그 수집과 관련 서버 조회를 승인하고 조회 계정의 두 읽기 권한을
+확인했다. B는 다른 기기와 Google 계정을 공유하지 않았다. 태블릿 가로 시작은 사용자가
+성공을 확인했다. 이번 요청은 원인 조사이며 제품 코드를 추가 수정하지 않았다.
+
+### 설치·조회 범위
+
+- B(SM-A325N)와 태블릿(SM-P610)은 모두 debug APK이며 SHA256이
+  `1BFA8D63CA3A59FD47BC2C0A3F6426C90BFC4A07593F6B7872081ED34E2F3E3D`로 일치한다.
+  설치 갱신은 B 02:16:11, 태블릿 02:13:44다. 이전 release APK 착오와 구분한다.
+- 기기 버퍼는 메모리에서 정제했고 02:25~03:00 범위의 수집 당시 남은 기록만 저장했다.
+  서버는 02:25~02:40 KST의 관련 함수 실행 메타데이터와 오류 분류를 조회했다.
+  정제 evidence는 ignored `build/device-test/lp-b-0225-20261012/`에 있다.
+- LP 시작3/분배 완료2/종료3, ready13, 게임 내 제외1건은 HTTP200이다.
+  fetchRealtimeRoomSession은 성공2/HTTP403 5건이다. sync는 최대100건에서 잘렸으므로
+  전체 건수로 해석하지 않는다. HTTP200만으로 ready accepted를 판정하지 않는다.
+
+### 시간순 근거와 원인 구분
+
+1. B는 02:25:02부터 게임 시작 전에도 heartbeat 쓰기 권한 거부를 반복했다.
+   Firebase transport connected 기록과 쓰기 권한 회복은 별개다. 02:25:56.444 첫 공개
+   dealing 상태 수신 직후 56.511 local_data timeout, 56.524 failed_report timeout이
+   발생했다. assets 완료는 02:26:09.871로 뒤에 있어 단순 이미지 로딩30초 초과가 아니다.
+   진행 중인 transport 복구의 기존 준비 예산을 게임 진입에서도 공유하는 경로와 일치한다.
+   접속 권한 거부를 먼저 해결해야 하며 예산만 반복 초기화하면 복구 제한을 무력화한다.
+2. 태블릿은 02:25:57.944 최초 ready accepted였다. 제외 요청은 02:26:26.343에 시작해
+   29.199 성공했고 29.212 dealing revision8을 수신했다. 29.354 ready=true 재보고를
+   시작했으나 29.364 ready_report timeout, 29.386 failed_report timeout이 발생했다.
+   제외 자체의 실패가 아니라 남은 태블릿의 준비 재확인 실패가 직접 확인됐다.
+3. 서버 finalizeGameMutation은 pause 중 변경 때 dataSeq/resumeEpoch를 바꾸고 ready를
+   비운다. 클라이언트는 새 게임 또는 새 pauseId에서만 준비 예산을 갱신하므로 같은 pause의
+   제외 후에는 소진된 최초 예산을 재사용할 수 있다. GameInterruptionCommandService도
+   같은 preparationBatch를 사용하며 잔여0이면 전송 전에 timeout한다. 태블릿의 10ms 실패와
+   실제 ready callable 미전송이 이 경로와 일치한다.
+4. LP _onDealCompleted는 interruption 동안 false를 반환하고 짧은 진행 명령 재시도를
+   소진한다. 연출 완료를 유지한 채 ready 해제를 다시 관찰하는 FC 수정은 LP에 없었다.
+   첫 게임의 complete_dealing 요청은 없고, 방으로 돌아온 다음 두 게임에서는 ready accepted
+   후 complete_dealing/playing이 확인된다. 예산 문제 해결 뒤에도 이 전송 고착 경로는 남는다.
+5. B는 02:26:29.742 wasKicked=true로 방을 정리했다. 제외 후 참가 자격 거절 자체는 정상이다.
+   이후 서버 세션 조회403이5건 반복된다. pending join 복구는 예전 join 성공을 재생한 뒤
+   현재 세션을 조회하지만 membership 거절 때 pending을 정리하지 않아 같은 요청을
+   반복할 수 있다. HTTP200 join은 새 참가 성공의 증거가 아니다. 서버 실행 메타데이터에는
+   사용자 식별자가 없어 각403을 B 요청으로 개별 확정하지는 않았다.
+
+### 재현된 결함과 남은 확인
+
+RoomSessionIdentityStore.save의 순번 비교는 roomInstanceId만 같으면 실행된다. 같은 방의
+새 membership이 seq1로 시작해도 옛 membership seq3이 있으면 새 신원 저장과 완료된
+pending join 정리가 함께 건너뛰어진다. synthetic old/new membership을 사용한 실제 저장소
+probe로 old identity와 pending이 남는 현상을 재현했다. `flutter test --no-pub
+build/device-test/lp-b-0225-20261012/identity_generation_probe_test.dart`는 PASS/exit0이다.
+이는 현재 결함을 확인하는 probe이며 수정 회귀가 통과했다는 의미가 아니다.
+
+B의 실제 로컬·서버 membership/connection 값을 최초 조사에서는 비교하지 않았으므로
+저장 결함을 당시 권한 거부의 유일한 직접 원인으로 확정하지 않았다. 같은 계정 충돌은
+사용자 답변으로 배제됐고, 신원 저장·미확정 join 정리 결함은 재현과 코드로 확인했다.
+
+### 02:51 B 추가 수집 — 실제 저장 상태 확인
+
+사용자가 B를 다시 연결해 장애 전 02:10 이후 로그와 앱의 방 신원 진단 키를 읽었다.
+Auth 저장소는 조회하지 않았으며 raw 기기 버퍼·참가 신원·계정 식별자를 저장하지 않았다.
+02:14:54에도 이전 앱 프로세스의 쓰기 거절/seq3 준비 실패가 있었고, 최신 설치 후
+02:24:52부터 같은 방의 다른 접속 경로가 거절됐다. 따라서 최초 발생을 02:25로 한정하지
+않는다. 추가 수집에는 02:46/02:48의 seq1 ready accepted도 있어 B의 영구 기기 장애로
+해석하지 않는다.
+
+실제 로컬 기록에서 권한 거부 경로와 일치하는 player 신원은 connectionSeq3이고,
+같은 roomInstanceId의 pending join(expectedConnectionSeq0, membershipId 없음,
+preserveProfile=false)이 남아 있다. 이는 신원 저장·완료 요청 정리 결함의 실제 발생을
+뒷받침한다. 다만 요청 생성만으로 서버 성공을 확정하지 않으므로 해당 operation의 결과
+connectionSeq 숫자 한 개를 별도 경로 승인 후 비교해야 한다. 새 요청의 서버 결과가1인데
+로컬은3이라면 synthetic probe에서 확인한 세대 간 순번 비교 결함을 실제 사고와 연결한다.
+사용자가 단일 값 조회를 승인했다. 노출 Firebase 도구는 project 조회와 RTDB 읽기 두 개이며
+project0000-ec01e/mosigame/ACTIVE를 확인했다. 승인된 operation 결과 connectionSeq 경로를
+정확히 한 번 읽은 결과는 null이다. 당시 숫자를 복원하지 못했으며 null을1로 해석하지
+않는다. 방 삭제 여부를 판정하거나 다른 경로를 추가 조회하지 않았다.
+
+추가 네이티브 분류에서 02:24:52.166과02:25:03.191은 onDisconnect update 거절이고,
+그 뒤 주기적인 일반 update 거절은 heartbeat다. RoomService는 join/restore의
+_joinRoomWithRetry가 끝난 뒤 저장 신원을 다시 읽어 onDisconnect를 등록한다. 따라서
+참가 호출이 끝난 뒤에도 허용되지 않는 저장 접속을 사용한 흐름이 실제 B에서 확인된다.
+local seq3·같은 방의 최초 참가 pending·참가 후 접속 등록 거절은 save의 낮은 순번 무시와
+완료 pending 누락 경로를 강하게 뒷받침한다. 서버의 당시 반환 순번 자체와 정확한
+membership 값은 직접 관측하지 못했으므로 관측 사실과 코드로 추론한 부분을 구분한다.
+
+02:10~02:25 서버 함수5개를 최대100건씩 추가 조회한 결과 join4/fetch1/leave1/remove1/
+connection_changed7은 HTTP200이며 limit에 도달하지 않았다. 조회와 B 추가 수집 exit0.
+정제 evidence는 ignored `build/device-test/lp-b-identity-20261012/`에 있다.
+
+후속 수정 후보는 membership 범위에서만 순번 역행을 막는 저장 처리, 확정된 참가 자격
+상실과 미확정 통신 오류를 구분한 pending 정리, 제외 후 새 ready context의 예산 처리,
+LP 연출 완료 보존과 준비 해제 후 전송이다. 자동 복귀로 추방을 뒤집지 않으며 동일 복구의
+30초 제한을 보존해야 한다. 새로운 복구 상태 계약이 필요하면 구현 전 별도 승인한다.
+이번 조사에서 배포·앱 조작·RTDB 직접 조회·commit/push·FULL 실행은 하지 않았다.
+
 ## 2026-10-12 정리 기준 요약
+
+### 2026-10-12 — B 재참가 신원 저장 수정 계획과 실행
+
+사용자가 개발 계획 수립과 실행을 요청했다. 시작 branch는 codex/e01-validation-wiring,
+HEAD4bbd31eca6dee73d16b86fbdbca963f8245fcf24, staged0·기존 수정4개(시험 문서·작업 목록·
+월별 기록·본 상세 기록)였다. 기존 실기기 문서의 사용자 편집을 보존하고38번만 추가했다.
+
+계획은 (1) membership별 순번 비교와 완료 pending 정리, (2) 확정된 자격 상실 이후 직접
+join의 새 요청 허용, (3) 실제 서비스 heartbeat 경로·자동 복귀 금지·늦은 응답 회귀다.
+공개 API·저장 형식·서버 권한·복구30초 제한은 변경하지 않는다. 태블릿의 게임 내 제외 후
+ready 예산과 LP 완료 전송 문제는 이번 B 신원 수정과 분리해 미해결로 유지한다.
+
+- RoomSessionIdentityStore는 같은 방+같은 membership일 때만 낮은 connectionSeq를
+  무시한다. 새 membership은 seq1이라도 저장하며 완료 join과 옛 시작 intent를 정리한다.
+  같은 membership의 옛 성공 응답은 최신 접속을 유지하고 정확히 일치하는 완료 pending만
+  정리한다. 다른 pending과 owner가 무효화된 늦은 응답은 덮어쓰지 않는다.
+- RoomService는 pending join 성공 재생 후 현재 참가 lookup이 permission-denied이고
+  직접 join 요청일 때만 현재 방을 다시 읽어 새 참가 요청을 저장한다. 기존 pending은
+  새 요청 저장이 성공하기 전까지 보존한다. 자동 복구·프로필 편집·join 자체의 거절과
+  unknown 오류는 이 경로로 새 참가를 만들지 않는다.
+- 서비스 수준에서 old seq3→new membership seq1→새 경로 heartbeat를 확인한다.
+  저장 후 앱 재시작, 같은 membership의 최신 접속 보존, 완료 pending 선택 정리,
+  자동 참가 금지·프로필 편집 금지·unknown 결과 보존·owner 만료도 검증한다.
+  저장소 회귀를 기존 Project CLI session suite에 추가했다.
+
+수정 전 신규 저장소2개와 직접 재참가 회귀는 FAIL이었다. 최초 서비스 시험에서 누락된
+없는 참가자 snapshot/onDisconnect Fake를 보완했고 수정 후 관련16개 PASS/exit0을
+확인했다. 추가 안전성3개까지 포함한 guarded `test session`은 Flutter212/Functions123/
+working-tree-mutation 모두 PASS/exit0이다. 변경5파일 `flutter analyze --no-pub`도
+문제0/exit0이다. `flutter build apk --debug`는 PASS/exit0이며 새 debug APK SHA256은
+`4D9BA7F4DE8F923BC476CDFEA7484D08DEF8E0FD8D43A8B437C0A91A19675AFA`다.
+설치하지 않았다. 최종 Git 상태는 staged0·수정10개·untracked0이며 기존4개 문서 변경을
+보존했다. git diff --check exit0. FULL은 승인 요청 후 미실행이고38번 실기기도 미실행이다.
+따라서 구현 후보 검증과 최종 해결 확인을 구분한다.
+이 변경은 클라이언트만 해당하므로 추가 Functions 배포 대상은 없다. commit/push 없음.
 
 현재 상태·다음 행동의 원본은 [작업 목록](../TASKS.md)의 SESSION-RECONNECT-02다.
 아래 조사·미검증·미배포 설명은 각 기록 시점의 이력이며 최신 판정과 구분한다.
