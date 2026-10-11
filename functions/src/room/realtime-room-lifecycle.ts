@@ -223,7 +223,7 @@ async function assertGameAccessible(
     throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
   }
   const accessType = game.data()?.accessType;
-  if (accessType !== "paid") return;
+  if (isGameAccessibleToGroup(accessType, gameId, [])) return;
 
   const users = await Promise.all(
     activeGroupUids(room, controllerUid).map((groupUid) =>
@@ -244,6 +244,7 @@ export function isGameAccessibleToGroup(
   gameId: string,
   ownedGamesByUser: unknown[],
 ): boolean {
+  if (["liars_poker", "final_call", "holdem"].includes(gameId)) return true;
   if (accessType !== "paid") return true;
   return ownedGamesByUser.some((ownedGames) =>
     Array.isArray(ownedGames) && ownedGames.includes(gameId));

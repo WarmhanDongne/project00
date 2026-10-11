@@ -132,7 +132,16 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
         : const Duration(milliseconds: 360);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final scale = math.min(1.0, constraints.maxWidth / stageWidth);
+        // 폭이나 (부모가 정해 준) 높이가 모자라면 선반 그림 전체를 줄입니다.
+        final scale = math.min(
+          1.0,
+          math.min(
+            constraints.maxWidth / stageWidth,
+            constraints.hasBoundedHeight
+                ? constraints.maxHeight / stageHeight
+                : double.infinity,
+          ),
+        );
         return GestureDetector(
           key: const Key('book-carousel'),
           behavior: HitTestBehavior.opaque,
@@ -440,8 +449,9 @@ class _PreparingBadge extends StatelessWidget {
           curve: Curves.easeOutBack,
           child: child,
         ),
+        // 선반 그림 위 여백(24px) 안에 들어오도록 표지 윗변에 걸쳐 띄웁니다.
         Positioned(
-          top: -46,
+          top: -14,
           child: IgnorePointer(
             child: AnimatedOpacity(
               opacity: visible ? 1 : 0,

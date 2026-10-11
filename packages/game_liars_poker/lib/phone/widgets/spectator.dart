@@ -13,6 +13,7 @@ import 'package:game_liars_poker/shared/providers/game_controller.dart';
 import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
 import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/models/game_room_context.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_kit/phone/widgets/rule_dialog.dart';
 import 'package:game_liars_poker/game_theme.dart';
@@ -134,9 +135,11 @@ class PhoneSpectator extends StatelessWidget {
                               ],
                             ),
                           ),
+                          // 가로 화면은 높이가 낮아, 남은 사람 목록을 스크롤로
+                          // 자르지 않고 높이에 맞춰 한 번에 보이도록 줄입니다.
                           SizedBox(
                             width: 360,
-                            child: SingleChildScrollView(child: list),
+                            child: MosiFitHeight(child: list),
                           ),
                         ],
                       )
@@ -145,13 +148,17 @@ class PhoneSpectator extends StatelessWidget {
                           const SizedBox(height: 26),
                           heading,
                           const SizedBox(height: 22),
+                          // 작은 휴대폰에서도 목록 전체가 한 번에 보이도록 줄입니다.
                           Expanded(
-                            child: SingleChildScrollView(
+                            child: Center(
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
                                   maxWidth: 400,
                                 ),
-                                child: list,
+                                child: MosiFitHeight(
+                                  alignment: Alignment.topCenter,
+                                  child: list,
+                                ),
                               ),
                             ),
                           ),
@@ -222,28 +229,31 @@ class _SurvivorRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: player.nickname),
-                      if (isTurn)
-                        const TextSpan(
-                          text: '  차례',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: LiarsPokerColors.goldLight,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: player.nickname),
+                        if (isTurn)
+                          const TextSpan(
+                            text: '  차례',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: LiarsPokerColors.goldLight,
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: LiarsPokerFonts.text(
-                    size: 16,
-                    weight: FontWeight.w700,
-                    color: danger
-                        ? LiarsPokerColors.pink
-                        : LiarsPokerColors.ivory,
+                      ],
+                    ),
+                    maxLines: 1,
+                    style: LiarsPokerFonts.text(
+                      size: 16,
+                      weight: FontWeight.w700,
+                      color: danger
+                          ? LiarsPokerColors.pink
+                          : LiarsPokerColors.ivory,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -320,13 +330,16 @@ class _EliminatedRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  '${player.nickname} (나)',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: LiarsPokerFonts.text(
-                    size: 16,
-                    weight: FontWeight.w700,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${player.nickname} (나)',
+                    maxLines: 1,
+                    style: LiarsPokerFonts.text(
+                      size: 16,
+                      weight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

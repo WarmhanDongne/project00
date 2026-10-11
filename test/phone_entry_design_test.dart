@@ -113,13 +113,32 @@ void main() {
     expect(camera.stops, greaterThan(0));
     expect(find.text('2글자 더 입력해 주세요'), findsOneWidget);
     expect(find.byType(MosiButton), findsNothing);
-    tester.view.viewInsets = const FakeViewPadding(bottom: 290);
-    await tester.enterText(find.byType(TextField), 'k7q2m');
+    // 기기 키보드 대신 전용 자판으로 나머지 두 글자를 넣고 지웠다 다시 넣습니다.
+    final keyboard = find.byKey(const ValueKey('room-code-keyboard'));
+    expect(keyboard, findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).keyboardType,
+      TextInputType.none,
+    );
+    expect(find.text('3 / 5'), findsOneWidget);
+    await tester.tap(find.descendant(of: keyboard, matching: find.text('2')));
+    await tester.tap(find.descendant(of: keyboard, matching: find.text('X')));
+    await tester.pump();
+    expect(find.text('5 / 5'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('지우기'));
+    await tester.pump();
+    expect(find.text('4 / 5'), findsOneWidget);
+    await tester.tap(find.descendant(of: keyboard, matching: find.text('M')));
     await tester.pumpAndSettle();
     expect(
-      tester.getRect(find.byType(MosiButton)).bottom,
-      lessThanOrEqualTo(410),
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'K7Q2M',
     );
+    expect(
+      tester.getRect(find.byType(MosiButton)).bottom,
+      lessThanOrEqualTo(tester.getRect(keyboard).top),
+    );
+    expect(tester.getRect(keyboard).bottom, 700);
     await tester.tap(find.byType(MosiButton));
     await tester.pump();
     await tester.tap(find.byType(MosiButton));

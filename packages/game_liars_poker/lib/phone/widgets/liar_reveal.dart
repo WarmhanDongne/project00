@@ -59,8 +59,10 @@ class PhoneLiarReveal extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: SizedBox(
               width: 354,
+              // 들킨 사람 화면이 가장 길어 가로에서도 그만큼의 높이를 확보한 뒤
+              // 화면에 맞춰 줄입니다(520이면 아래 패널·버튼이 넘쳤습니다).
               height: math.max(
-                landscape ? 520.0 : 640.0,
+                landscape ? 620.0 : 640.0,
                 constraints.maxHeight -
                     MediaQuery.paddingOf(context).vertical -
                     (landscape ? 76 : 110),

@@ -22,6 +22,7 @@ import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
 import 'package:project00/platform/home/store/screens/tablet_store_screen.dart';
 import 'package:project00/platform/home/tablet/screens/tablet_game_detail.dart';
+import 'package:project00/platform/sound/lobby_music.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_shelf.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_lobby_layout.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_lobby_content_transition.dart';
@@ -367,7 +368,10 @@ class _TabletHomeState extends State<TabletHome>
         reverseTransitionDuration: Duration(
           milliseconds: reduceMotion ? 0 : 180,
         ),
-        pageBuilder: (_, _, _) => TabletStoreScreen(gameProvider: gameProvider),
+        pageBuilder: (_, _, _) => LobbyMusic(
+          track: LobbyTracks.store,
+          child: TabletStoreScreen(gameProvider: gameProvider),
+        ),
         transitionsBuilder: (context, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
@@ -388,80 +392,85 @@ class _TabletHomeState extends State<TabletHome>
     final art = MosiGameArt.of(_selectedGameId ?? 'liars_poker');
     final theme = art.shelfTheme;
     final detail = _isDetailOpen ? _selection.game : null;
-    return PopScope(
-      canPop: !_isDetailOpen && !_isStarting,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _isDetailOpen) unawaited(_closeDetail());
-      },
-      child: TweenAnimationBuilder<Color?>(
-        tween: ColorTween(end: theme.ground),
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeOut,
-        builder: (context, ground, child) => ListenableBuilder(
-          listenable: roomProvider,
-          builder: (context, body) => LobbyConnectionBand(
-            // An idle lobby can let RTDB sleep; only an adopted room requires it.
-            connectionChanges: roomProvider.isInRoom ? _serverConnection : null,
-            child: body!,
-          ),
-          child: Scaffold(backgroundColor: ground, body: child),
-        ),
-        child: SafeArea(
-          child: TabletLobbyLayout(
-            header: StoreExit(
-              progress: _storeExit,
-              offset: const Offset(0, -2),
-              child: _HomeHeader(
-                theme: theme,
-                onOpenStore: _openStore,
-                onBack: detail == null ? null : () => unawaited(_closeDetail()),
-                busy: _isStarting,
-              ),
+    return LobbyMusic(
+      track: LobbyTracks.lobby,
+      child: PopScope(
+        canPop: !_isDetailOpen && !_isStarting,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && _isDetailOpen) unawaited(_closeDetail());
+        },
+        child: TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: theme.ground),
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOut,
+          builder: (context, ground, child) => ListenableBuilder(
+            listenable: roomProvider,
+            builder: (context, body) => LobbyConnectionBand(
+              // An idle lobby can let RTDB sleep; only an adopted room requires it.
+              connectionChanges: roomProvider.isInRoom ? _serverConnection : null,
+              child: body!,
             ),
-            content: StoreExit(
-              progress: _storeExit,
-              offset: const Offset(-1.15, 0.2),
-              child: IgnorePointer(
-                ignoring: _isStarting,
-                child: TabletLobbyContentTransition(
-                  child: detail == null
-                      ? TabletGameShelf(
-                          key: const ValueKey('lobby-shelf'),
-                          gameProvider: gameProvider,
-                          roomProvider: roomProvider,
-                          selectedGameId: _selectedGameId,
-                          theme: theme,
-                          onlyPlayable: _onlyPlayable,
-                          onOnlyPlayableChanged: (value) =>
-                              setState(() => _onlyPlayable = value),
-                          onSelect: (game) =>
-                              setState(() => _selectedGameId = game.id),
-                          onOpenDetail: _openDetail,
-                          preparing: _isStarting,
-                          selectedCoverKey: _selectedCoverKey,
-                        )
-                      : TabletGameDetailContent(
-                          key: ValueKey('lobby-detail-${detail.id}'),
-                          game: detail,
-                          roomProvider: roomProvider,
-                        ),
+            child: Scaffold(backgroundColor: ground, body: child),
+          ),
+          child: SafeArea(
+            child: TabletLobbyLayout(
+              header: StoreExit(
+                progress: _storeExit,
+                offset: const Offset(0, -2),
+                child: _HomeHeader(
+                  theme: theme,
+                  onOpenStore: _openStore,
+                  onBack: detail == null
+                      ? null
+                      : () => unawaited(_closeDetail()),
+                  busy: _isStarting,
                 ),
               ),
-            ),
-            roomPanel: StoreExit(
-              progress: _storeExit,
-              offset: const Offset(1.2, 0.15),
-              child: IgnorePointer(
-                ignoring: _isStarting,
-                child: TabletRoomPanel(
-                  key: const ValueKey('lobby-room-panel'),
-                  provider: roomProvider,
-                  deep: theme.deep,
-                  startBackground: theme.btnBg,
-                  startForeground: theme.btnFg,
-                  maxSlots: detail == null ? null : _maxSlots(detail),
-                  startLoading: _isStarting,
-                  onStart: () => unawaited(_startSelectedGame()),
+              content: StoreExit(
+                progress: _storeExit,
+                offset: const Offset(-1.15, 0.2),
+                child: IgnorePointer(
+                  ignoring: _isStarting,
+                  child: TabletLobbyContentTransition(
+                    child: detail == null
+                        ? TabletGameShelf(
+                            key: const ValueKey('lobby-shelf'),
+                            gameProvider: gameProvider,
+                            roomProvider: roomProvider,
+                            selectedGameId: _selectedGameId,
+                            theme: theme,
+                            onlyPlayable: _onlyPlayable,
+                            onOnlyPlayableChanged: (value) =>
+                                setState(() => _onlyPlayable = value),
+                            onSelect: (game) =>
+                                setState(() => _selectedGameId = game.id),
+                            onOpenDetail: _openDetail,
+                            preparing: _isStarting,
+                            selectedCoverKey: _selectedCoverKey,
+                          )
+                        : TabletGameDetailContent(
+                            key: ValueKey('lobby-detail-${detail.id}'),
+                            game: detail,
+                            roomProvider: roomProvider,
+                          ),
+                  ),
+                ),
+              ),
+              roomPanel: StoreExit(
+                progress: _storeExit,
+                offset: const Offset(1.2, 0.15),
+                child: IgnorePointer(
+                  ignoring: _isStarting,
+                  child: TabletRoomPanel(
+                    key: const ValueKey('lobby-room-panel'),
+                    provider: roomProvider,
+                    deep: theme.deep,
+                    startBackground: theme.btnBg,
+                    startForeground: theme.btnFg,
+                    maxSlots: detail == null ? null : _maxSlots(detail),
+                    startLoading: _isStarting,
+                    onStart: () => unawaited(_startSelectedGame()),
+                  ),
                 ),
               ),
             ),

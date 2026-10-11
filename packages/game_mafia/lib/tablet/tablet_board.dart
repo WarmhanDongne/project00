@@ -241,30 +241,33 @@ class MafiaTabletStageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 해는 아침·낮·투표에 걸쳐 **같은 자리에 그대로 있습니다.** 화면마다
-        // 따로 그리면 단계가 바뀔 때 해가 사라졌다 다시 떠 산만해집니다.
-        // 개표는 흰 개표판이 해를 덮는 시안이라 제외합니다(처형 발표 화면은
-        // 개표 뒤에 오므로 자기 해를 직접 그립니다).
-        // 단계가 바뀔 때 있던 요소가 빠지고 새 요소가 들어옵니다(확정 2026-08).
-        // key가 단계 이름이라 같은 단계 안의 상태 변화로는 다시 시작하지 않습니다.
-        MafiaPhaseTransition(
-          child: KeyedSubtree(
-            key: ValueKey(_transitionKey),
-            child: _buildStage(),
+    // 어느 태블릿에서도 시안 이상의 자리에서 그린 뒤 화면에 맞춥니다.
+    return MafiaTabletCanvas(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 해는 아침·낮·투표에 걸쳐 **같은 자리에 그대로 있습니다.** 화면마다
+          // 따로 그리면 단계가 바뀔 때 해가 사라졌다 다시 떠 산만해집니다.
+          // 개표는 흰 개표판이 해를 덮는 시안이라 제외합니다(처형 발표 화면은
+          // 개표 뒤에 오므로 자기 해를 직접 그립니다).
+          // 단계가 바뀔 때 있던 요소가 빠지고 새 요소가 들어옵니다(확정 2026-08).
+          // key가 단계 이름이라 같은 단계 안의 상태 변화로는 다시 시작하지 않습니다.
+          MafiaPhaseTransition(
+            child: KeyedSubtree(
+              key: ValueKey(_transitionKey),
+              child: _buildStage(),
+            ),
           ),
-        ),
-        // 룰북·설정 아이콘은 단계와 무관하게 **늘 같은 자리에 있습니다.**
-        // 각 화면이 따로 그리면 단계마다 아이콘이 깜빡여 화면 전체가 새로
-        // 그려지는 느낌이 납니다. 결과 화면은 자체 버튼이 있어 제외합니다.
-        if (stage != MafiaTabletStage.finished)
-          MafiaTabletChrome(
-            onRulebookPressed: onRulebookPressed,
-            onSettingsPressed: onSettingsPressed,
-          ),
-      ],
+          // 룰북·설정 아이콘은 단계와 무관하게 **늘 같은 자리에 있습니다.**
+          // 각 화면이 따로 그리면 단계마다 아이콘이 깜빡여 화면 전체가 새로
+          // 그려지는 느낌이 납니다. 결과 화면은 자체 버튼이 있어 제외합니다.
+          if (stage != MafiaTabletStage.finished)
+            MafiaTabletChrome(
+              onRulebookPressed: onRulebookPressed,
+              onSettingsPressed: onSettingsPressed,
+            ),
+        ],
+      ),
     );
   }
 

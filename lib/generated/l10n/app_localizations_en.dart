@@ -419,4 +419,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gamePreparing => 'Getting ready';
+
+  @override
+  String get previewDeck => 'Deck';
+
+  @override
+  String get previewOpenCard => 'Open card';
+
+  @override
+  String get previewSubmit => 'Submit';
 }

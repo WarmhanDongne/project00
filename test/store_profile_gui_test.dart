@@ -192,6 +192,7 @@ void main() {
             'id': 'final_call',
             'name': '파이널콜',
             'isOwned': owned,
+            'storeVisible': true,
           }),
         ];
       addTearDown(games.dispose);
@@ -220,7 +221,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('₩3,900'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('store-book-finalCall')));
+      await tester.tap(find.byKey(const ValueKey('store-book-final_call')));
       await tester.pump();
       expect(find.text(owned ? '보유 중' : '무료'), findsOneWidget);
       await tester.tap(find.text('선반에서 하기'));
@@ -281,35 +282,108 @@ void main() {
   testWidgets('상점은 결제·알림 신청·음악 재생을 완료한 것처럼 표시하지 않는다', (tester) async {
     final games = GameProvider(service: _Games())
       ..games = [
-        GameInfo.fromJson({'id': 'liars_poker', 'name': '라이어스 포커'}),
+        GameInfo.fromJson({
+          'id': 'liars_poker',
+          'name': '라이어스 포커',
+          'storeVisible': true,
+        }),
+        GameInfo.fromJson({'id': 'mafia', 'name': '마피아', 'storeVisible': true}),
       ];
     addTearDown(games.dispose);
     await tester.pumpWidget(
       MaterialApp(home: TabletStoreScreen(gameProvider: games)),
     );
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.widgetWithText(MosiButton, '자세히 보기'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('store-book-soon')));
     await tester.pump();
     expect(find.text('공개 준비 중'), findsOneWidget);
+    expect(find.text('곧 새로운 게임이 이 매대에 진열될 거예요. 조금만 기다려 주세요!'), findsOneWidget);
+    // '곧 나올 게임' 자리에는 상세 버튼이 없습니다.
+    expect(find.widgetWithText(MosiButton, '자세히 보기'), findsNothing);
     await tester.tap(find.text('공개 준비 중'));
     await tester.pump();
     expect(find.text('알림 켜짐'), findsNothing);
     expect(find.textContaining('알림 신청은 준비'), findsOneWidget);
+
+    // 상점 상세는 추후 개발이라 버튼은 보이지만 눌리지 않습니다.
     await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(TabletStoreMafiaDetail), findsNothing);
-    // 선택된 표지를 다시 눌러도 상세를 열지 않습니다.
-    await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(TabletStoreMafiaDetail), findsNothing);
-    await tester.tap(find.widgetWithText(MosiButton, '자세히 보기'));
+    final details = find.widgetWithText(MosiButton, '자세히 보기');
+    expect(details, findsOneWidget);
+    expect(tester.widget<MosiButton>(details).onPressed, isNull);
+    await tester.tap(details, warnIfMissed: false);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(TabletStoreMafiaDetail), findsOneWidget);
+    expect(find.byType(TabletStoreMafiaDetail), findsNothing);
+    expect(find.text('선반에서 하기'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // 나중에 쓸 마피아 상세도 음악을 재생 중인 것처럼 보이지 않습니다.
+    await tester.pumpWidget(
+      const MaterialApp(home: TabletStoreMafiaDetail(game: null)),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('배경 음악 · 준비 중'), findsOneWidget);
     expect(find.text('배경 음악 · 재생 중'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('상점은 storeVisible이 true인 게임만 order 순서로 진열하고 끝에 곧 나올 게임을 둔다', (
+    tester,
+  ) async {
+    final games = GameProvider(service: _Games())
+      ..games = [
+        GameInfo.fromJson({
+          'id': 'mafia',
+          'name': '마피아',
+          'order': 2,
+          'storeVisible': true,
+        }),
+        GameInfo.fromJson({
+          'id': 'holdem',
+          'name': '텍사스 홀덤',
+          'order': 1,
+          'storeVisible': true,
+        }),
+        GameInfo.fromJson({
+          'id': 'final_call',
+          'name': '파이널콜',
+          'order': 0,
+          'storeVisible': false,
+        }),
+        GameInfo.fromJson({'id': 'liars_poker', 'name': '라이어스 포커', 'order': 0}),
+      ];
+    addTearDown(games.dispose);
+    await tester.pumpWidget(
+      MaterialApp(home: TabletStoreScreen(gameProvider: games)),
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+    final books = find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith('store-book-'),
+    );
+    final order =
+        books
+            .evaluate()
+            .map((element) => element.widget.key! as ValueKey<String>)
+            .toList()
+          ..sort(
+            (a, b) => tester
+                .getCenter(find.byKey(a))
+                .dx
+                .compareTo(tester.getCenter(find.byKey(b)).dx),
+          );
+    expect(order.map((key) => key.value), [
+      'store-book-holdem',
+      'store-book-mafia',
+      'store-book-soon',
+    ]);
+    // 처음에는 맨 앞 책(홀덤)을 고르고 계산대에 그 게임을 보여 줍니다.
+    expect(find.text('홀덤'), findsOneWidget);
+    expect(find.text('칩을 걸고 한 판 승부!'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -317,7 +391,12 @@ void main() {
   testWidgets('상점 등장 시간축에서 간판이 먼저 내려오고 책은 차례로 등장한다', (tester) async {
     final games = GameProvider(service: _Games())
       ..games = [
-        GameInfo.fromJson({'id': 'liars_poker', 'name': '라이어스 포커'}),
+        for (final (id, name) in const [
+          ('liars_poker', '라이어스 포커'),
+          ('mafia', '마피아'),
+          ('final_call', '파이널콜'),
+        ])
+          GameInfo.fromJson({'id': id, 'name': name, 'storeVisible': true}),
       ];
     addTearDown(games.dispose);
     await tester.pumpWidget(

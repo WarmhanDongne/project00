@@ -159,5 +159,8 @@
   "@profileSaved": {
     "description": "프로필 저장 버튼: 저장이 끝난 직후 체크 옆 문구"
   },
-  "gamePreparing": "게임 준비 중"
+  "gamePreparing": "게임 준비 중",
+  "previewDeck": "덱",
+  "previewOpenCard": "공개 카드",
+  "previewSubmit": "제출"
 }

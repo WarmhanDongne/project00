@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
@@ -360,21 +362,35 @@ class _ShelfBody extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 좁은 태블릿에서는 선반 높이를 줄여 아래 소개가 잘리지 않게 합니다.
-        final compact = constraints.maxHeight < 560;
+        final compact = constraints.maxHeight < 640;
         final coverWidth = compact ? 200.0 : 240.0;
+        // 아래 소개(이름·설명·안내·버튼)가 기기 글자 크기에서 차지할 높이를
+        // 먼저 남기고, 선반 그림은 남은 높이에 맞춰 통째로 줄입니다. 그래도
+        // 모자라면 소개 전체를 살짝 줄입니다(스크롤·잘림 없음).
+        final textScale = MediaQuery.textScalerOf(context).scale(100) / 100;
+        final infoHeight = 92 + 120 * textScale;
+        final shelfHeight = math.max(
+          (coverWidth * 4 / 3 + 24) * .6,
+          constraints.maxHeight - infoHeight - 20,
+        );
         return Column(
           children: [
-            TabletBookCarousel(
-              games: games,
-              selected: selected,
-              coverWidth: coverWidth,
-              deep: theme.deep,
-              emptyColor: theme.fgDim,
-              onSelect: onSelect,
-              onOpenDetail: onOpenDetail,
-              preparing: preparing,
-              selectedCoverKey: selectedCoverKey,
+            // 책 표지·책등 글자는 그림의 일부라 기기 글자 크기를 따르지 않습니다.
+            MediaQuery.withNoTextScaling(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: shelfHeight),
+                child: TabletBookCarousel(
+                  games: games,
+                  selected: selected,
+                  coverWidth: coverWidth,
+                  deep: theme.deep,
+                  emptyColor: theme.fgDim,
+                  onSelect: onSelect,
+                  onOpenDetail: onOpenDetail,
+                  preparing: preparing,
+                  selectedCoverKey: selectedCoverKey,
+                ),
+              ),
             ),
             // 선반 판자: 왼쪽 화면 끝까지 이어집니다.
             SizedBox(
@@ -397,96 +413,96 @@ class _ShelfBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
+            // 아래 소개는 스크롤하지 않습니다. 문구가 길거나(파이널콜처럼 시작
+            // 인원 안내가 붙을 때) 기기 글자가 커도 자리에 맞춰 조금 줄여 이름·
+            // 설명·버튼이 한 번에 다 보이게 합니다.
             Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+              child: MosiFitHeight(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      art.koreanName == selected.id
+                          ? selected.name
+                          : art.koreanName,
+                      style: MosiFonts.sans(
+                        locale: Localizations.maybeLocaleOf(context),
+                        size: compact ? 26 : 32,
+                        weight: FontWeight.w700,
+                        color: theme.fg,
+                        letterSpacing: -1,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      art.englishName,
+                      style: MosiFonts.grotesk(
+                        locale: Localizations.maybeLocaleOf(context),
+                        size: 12,
+                        color: art.id == 'liars_poker'
+                            ? theme.accA
+                            : theme.accB,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                    if (selected.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      // 줄 수를 막지 않고 칸에 맞춰 함께 줄여 끝까지 보여 줍니다.
                       Text(
-                        art.koreanName == selected.id
-                            ? selected.name
-                            : art.koreanName,
+                        selected.description,
+                        textAlign: TextAlign.center,
                         style: MosiFonts.sans(
                           locale: Localizations.maybeLocaleOf(context),
-                          size: compact ? 26 : 32,
-                          weight: FontWeight.w700,
+                          size: 14,
                           color: theme.fg,
-                          letterSpacing: -1,
-                          height: 1.1,
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        art.englishName,
-                        style: MosiFonts.grotesk(
-                          locale: Localizations.maybeLocaleOf(context),
-                          size: 12,
-                          color: art.id == 'liars_poker'
-                              ? theme.accA
-                              : theme.accB,
-                          letterSpacing: 3,
-                        ),
-                      ),
-                      if (selected.description.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          selected.description,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: MosiFonts.sans(
-                            locale: Localizations.maybeLocaleOf(context),
-                            size: 14,
-                            color: theme.fg,
-                          ),
-                        ),
-                      ],
-                      if (cannotStart != null) ...[
-                        const SizedBox(height: 8),
-                        MosiPill(
-                          label: cannotStart,
-                          background: MosiColors.sun,
-                          borderColor: MosiColors.ink,
-                          fontSize: 13,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        runSpacing: 10,
-                        children: [
-                          if (range.isNotEmpty) ...[
-                            MosiPill(label: range, color: theme.fg),
-                            const SizedBox(width: 8),
-                          ],
-                          if (selected.playTime > 0) ...[
-                            MosiPill(
-                              label: '${selected.playTime}분',
-                              color: theme.fg,
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          const SizedBox(width: 6),
-                          MosiButton(
-                            label: context.l10n.details,
-                            onPressed: () => onOpenDetail(selected),
-                            background: theme.btnBg,
-                            foreground: theme.btnFg,
-                            shadowColor: theme.deep,
-                            height: 48,
-                            fontSize: 15,
-                            radius: 6,
-                          ),
-                        ],
                       ),
                     ],
-                  ),
+                    if (cannotStart != null) ...[
+                      const SizedBox(height: 8),
+                      MosiPill(
+                        label: cannotStart,
+                        background: MosiColors.sun,
+                        borderColor: MosiColors.ink,
+                        fontSize: 13,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 10,
+                      children: [
+                        if (range.isNotEmpty) ...[
+                          MosiPill(label: range, color: theme.fg),
+                          const SizedBox(width: 8),
+                        ],
+                        if (selected.playTime > 0) ...[
+                          MosiPill(
+                            label: '${selected.playTime}분',
+                            color: theme.fg,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        const SizedBox(width: 6),
+                        MosiButton(
+                          label: context.l10n.details,
+                          onPressed: () => onOpenDetail(selected),
+                          background: theme.btnBg,
+                          foreground: theme.btnFg,
+                          shadowColor: theme.deep,
+                          height: 48,
+                          fontSize: 15,
+                          radius: 6,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),

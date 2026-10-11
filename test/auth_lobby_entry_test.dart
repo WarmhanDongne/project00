@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+import 'package:project00/platform/auth/legal/signup_terms.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
@@ -120,6 +121,19 @@ void main() {
       expect(tester.element(find.byType(Scaffold)), same(scaffold));
       expect(tester.element(find.byType(MosiLogo).first), same(logo));
       expect(tester.getRect(find.byType(MosiLogo).first), bounds);
+      // 새 가입은 약관 동의부터 받고, 동의하면 같은 화면에서 이메일 단계로 넘어갑니다.
+      expect(find.text('모시겜을 시작하기 전에\n약관을 확인해 주세요'), findsOneWidget);
+      expect(find.text('인증 메일 보내기'), findsNothing);
+      // 화면 전환이 끝나야 약관 행을 누를 수 있습니다.
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('terms-all')));
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('terms-continue')));
+      await tester.tap(find.byKey(const ValueKey('terms-continue')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(observer.pushes, 1);
+      expect(tester.element(find.byType(MosiLogo).first), same(logo));
       expect(find.text('인증 메일 보내기'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pump();
@@ -145,6 +159,10 @@ void main() {
   }
 
   testWidgets('서버 가입 단계가 비밀번호→프로필로 바뀌어도 인증 바탕은 유지한다', (tester) async {
+    // 이메일 가입은 첫 단계에서 약관에 동의해 기기에 남아 있습니다.
+    await SignupConsentStore().save(
+      const SignupConsents(age14: true, terms: true, privacy: true),
+    );
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

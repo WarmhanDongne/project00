@@ -905,6 +905,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'게임 준비 중'**
   String get gamePreparing;
+
+  /// No description provided for @previewDeck.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱'**
+  String get previewDeck;
+
+  /// No description provided for @previewOpenCard.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 카드'**
+  String get previewOpenCard;
+
+  /// No description provided for @previewSubmit.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출'**
+  String get previewSubmit;
 }
 
 class _AppLocalizationsDelegate

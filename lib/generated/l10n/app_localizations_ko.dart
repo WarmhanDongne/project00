@@ -414,4 +414,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get gamePreparing => '게임 준비 중';
+
+  @override
+  String get previewDeck => '덱';
+
+  @override
+  String get previewOpenCard => '공개 카드';
+
+  @override
+  String get previewSubmit => '제출';
 }

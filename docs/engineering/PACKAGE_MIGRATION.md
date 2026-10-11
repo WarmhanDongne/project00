@@ -99,7 +99,7 @@ python3 tool/check_package_boundaries.py
 ```
 
 루트 앱은 부트스트랩·조립·레지스트리와 플랫폼을 소유한다. 공용 코드·에셋은
-`game_kit`, 게임 3종의 코드·에셋은 각 게임 패키지가 소유한다. 플랫폼 에셋과 생성물은
+`game_kit`, 게임 4종의 코드·에셋은 각 게임 패키지가 소유한다. 플랫폼 에셋과 생성물은
 루트 `assets/`와 `lib/gen/`에 있다. 각 에셋 소유 패키지는 자기 `assets.gen.dart`를
 생성한다. 패키지 에셋은 `GameImage`가 package 이름을
 보존하며, 사운드는 `packages/<package>/assets/...` 번들 키를 그대로 재생한다.
@@ -119,11 +119,18 @@ python3 tool/check_package_boundaries.py
 `Assets....game`(`GameImage`)나 원격 핸들만 쓰므로 **화면 코드를 고치지
 않고** 저장 위치를 바꿀 수 있다.
 
-### 번들 게임 3종
+### 번들 게임 4종
 
 각 패키지가 자기 `assets/`를 갖고 자기 `assets.gen.dart`를 생성한다
 (`flutter_gen`의 패키지별 설정). 참조 경로는 `packages/<패키지명>/...`이 된다.
 이렇게 해야 `gen/assets.gen.dart` 위반 61건이 사라진다.
+
+앱 출시 기본 게임은 라이어스 포커·파이널콜·마피아·홀덤이다(2026-10-11 결정). 홀덤은
+다운로드 게임(`assetVersion` 2)으로 시작했지만 이제 이미지 5개를 `GameImage.bundled`로
+패키지에 넣고 `requiredAssetVersion`을 0으로 둔다. 그래서 다운로드 저장소에 등록되지 않고
+로비에서 받기·업데이트 안내 없이 바로 시작한다. 루트 `assets/game-assets/holdem/`의
+매니페스트는 다운로드 경로 자동 테스트(`test/local_game_assets_test.dart`)의 표본으로만
+남는다.
 
 ### 다운로드 게임
 

@@ -147,5 +147,8 @@
   "connectionBandReconnecting": "正在重新连接… 请保持此画面",
   "connectionBandRestored": "已重新连接",
   "profileSaved": "已保存",
-  "gamePreparing": "准备中"
+  "gamePreparing": "准备中",
+  "previewDeck": "牌堆",
+  "previewOpenCard": "公开牌",
+  "previewSubmit": "提交"
 }

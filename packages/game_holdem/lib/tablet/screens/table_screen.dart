@@ -847,28 +847,29 @@ class _ResultBlock extends StatelessWidget {
             HoldemPill(label: '상대가 모두 폴드했어요', fontSize: 14 * scale),
             SizedBox(height: 8 * scale),
           ],
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Flexible(
-                child: Text(
+          // 이긴 사람 이름이 길거나 여럿이어도 자르지 않고 줄 전체를 줄입니다.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
                   split ? '$names 나눠 가짐' : '$names 승리',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: HoldemFonts.text(
                     size: 36 * scale,
                     weight: FontWeight.w900,
                     height: 1,
                   ),
                 ),
-              ),
-              SizedBox(width: 12 * scale),
-              Text(
-                '+${holdemChips(total)}',
-                style: HoldemFonts.numbers(size: 32 * scale),
-              ),
-            ],
+                SizedBox(width: 12 * scale),
+                Text(
+                  '+${holdemChips(total)}',
+                  style: HoldemFonts.numbers(size: 32 * scale),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -924,17 +925,21 @@ class _Seat extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        // 딜러 표시와 베팅 금액이 좌석 폭보다 길면 넘치지 않게 줄입니다.
         SizedBox(
           height: 40,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (game.dealerUid == uid) ...[
-                const _DealerPuck(),
-                const SizedBox(width: 10),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (game.dealerUid == uid) ...[
+                  const _DealerPuck(),
+                  const SizedBox(width: 10),
+                ],
+                ..._statusRow(player, turn),
               ],
-              ..._statusRow(player, turn),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -978,15 +983,19 @@ class _Seat extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            player.nickname,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: HoldemFonts.text(
-                              size: 17,
-                              weight: FontWeight.w700,
-                              color: foreground,
-                              height: 1.3,
+                          // 닉네임(최대 8자)은 자르지 않고 칸에 맞춰 줄입니다.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              player.nickname,
+                              maxLines: 1,
+                              style: HoldemFonts.text(
+                                size: 17,
+                                weight: FontWeight.w700,
+                                color: foreground,
+                                height: 1.3,
+                              ),
                             ),
                           ),
                           _AnimatedStackAmount(

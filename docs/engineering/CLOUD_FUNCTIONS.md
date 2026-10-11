@@ -22,6 +22,11 @@ leaveRealtimeRoom, closeRoom, fetchRealtimeRoomSession.
 auth/ callable 8개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
 recoverLegacyOnboarding, checkEmailDuplicate, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount.
 registerProfile은 별도 HTTP다.
+completeOnboardingProfile은 처음 가입을 마칠 때 현재 `SIGNUP_TERMS_VERSION`의 필수 동의
+(`consents`: age14·terms·privacy, 선택 marketing)가 없으면 `failed-precondition`으로 거절하고,
+`users/{uid}.consents`(동의 항목·`agreedAt`·`marketingUpdatedAt`)와
+`userOnboarding/{uid}.consentVersion`을 저장한다. 이 검사는 동의를 보내지 않는 이전 앱의
+가입 완료를 막으므로 Functions와 앱을 함께 배포한다.
 
 ## 3. 네 게임
 

@@ -14,6 +14,7 @@ void main() {
         'test/controller_reconnect_guard_test.dart',
         'test/controller_room_lifecycle_test.dart',
         'test/controller_room_recovery_test.dart',
+        'test/controller_room_lobby_recovery_test.dart',
         'test/room_recovery_heartbeat_test.dart',
         'test/room_join_recovery_test.dart',
         'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
@@ -33,6 +34,7 @@ void main() {
         'test/room_leave_state_test.dart',
         'test/room_restore_to_waiting_test.dart',
         'test/session_return_prompt_test.dart',
+        'packages/game_kit/test/mosi_ui/mosi_connection_band_test.dart',
       ]);
       expect(sessionTestSuite.functionsTests, const <String>[
         'functions/test/controller-presence-timer.test.mjs',
@@ -42,6 +44,7 @@ void main() {
         'functions/test/game-recovery-state.test.mjs',
         'functions/test/game-command-contract.test.mjs',
         'functions/test/network-session-boundaries.test.mjs',
+        'functions/test/liars-poker-rtdb-recovery.test.mjs',
         'functions/test/room-presence-rules.test.mjs',
         'functions/test/start-game-transaction.test.mjs',
         'functions/test/room-transaction-rerun.test.mjs',
@@ -59,6 +62,7 @@ void main() {
         'test/auth/google_login_button_test.dart',
         'test/auth/onboarding_parity_test.dart',
         'test/auth/register_loading_test.dart',
+        'test/auth/signup_terms_test.dart',
         'test/auth/tablet_auth_parity_test.dart',
         'test/platform_auth_shell_test.dart',
         'test/social_login_button_test.dart',

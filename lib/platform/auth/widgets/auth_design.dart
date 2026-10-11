@@ -586,7 +586,10 @@ class _Pips extends StatelessWidget {
 }
 
 //=======================제목 + 단계==============================
-/// 회원가입 머리: 뒤로 버튼 + 제목 + 3단계 진행 막대.
+/// 회원가입 진행 단계 이름입니다(약관 동의 → 이메일 인증 → 비밀번호 → 프로필).
+const signupSteps = ['약관 동의', '이메일 인증', '비밀번호', '프로필'];
+
+/// 회원가입 머리: 뒤로 버튼 + 제목 + 단계 진행 막대.
 class MosiAuthHeader extends StatelessWidget {
   const MosiAuthHeader({
     super.key,

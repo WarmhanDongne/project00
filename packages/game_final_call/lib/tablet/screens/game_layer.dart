@@ -419,16 +419,19 @@ class _FinalCallTurnPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 닉네임(최대 8자)을 자르지 않고 알약 폭에 맞춰 줄입니다.
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
-            child: Text(
-              FinalCallCopy.turnOf(player.nickname),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: finalCallPopText(
-                20,
-                color: Colors.white,
-                shadows: finalCallPopOutline(),
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                FinalCallCopy.turnOf(player.nickname),
+                maxLines: 1,
+                style: finalCallPopText(
+                  20,
+                  color: Colors.white,
+                  shadows: finalCallPopOutline(),
+                ),
               ),
             ),
           ),
@@ -605,28 +608,38 @@ class _SeatPlate extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 이름표가 좁아도 닉네임을 자르지 않고 칸에 맞춰 줄입니다.
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          player.nickname,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: finalCallPopText(compact ? 20 : 22),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            player.nickname,
+                            maxLines: 1,
+                            style: finalCallPopText(compact ? 20 : 22),
+                          ),
                         ),
                       ),
                       if (tag != null) ...[const SizedBox(width: 6), tag],
                     ],
                   ),
                   if (partner != null)
-                    Text(
-                      FinalCallCopy.teamWithPartner(
-                        player.team.label,
-                        partner.nickname,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        FinalCallCopy.teamWithPartner(
+                          player.team.label,
+                          partner.nickname,
+                        ),
+                        maxLines: 1,
+                        style: finalCallPopText(
+                          13,
+                          color: FinalCallColors.muted,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: finalCallPopText(13, color: FinalCallColors.muted),
                     ),
                 ],
               ),

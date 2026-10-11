@@ -335,73 +335,85 @@ class _PendingCardAction extends StatelessWidget {
             for (final handCard in hand)
               handCard.id == selected.id ? card : handCard,
           ]);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    // 가장 낮은 가로 휴대폰(SE)에서는 버튼 높이를 줄여 패널을 넘지 않게 합니다.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 250;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _PendingCardEntry(
-              key: ValueKey(
-                'pending-${card.id}-${controller.pendingDrawSource}',
-              ),
-              card: card,
-              revealFromBack: controller.pendingDrawSource == 'deck',
-              leavingForReplacement: replacementInProgress,
+            Row(
+              children: [
+                _PendingCardEntry(
+                  key: ValueKey(
+                    'pending-${card.id}-${controller.pendingDrawSource}',
+                  ),
+                  card: card,
+                  revealFromBack: controller.pendingDrawSource == 'deck',
+                  leavingForReplacement: replacementInProgress,
+                  cardWidth: compact ? 62 : 72,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: after == null
+                      ? Text(
+                          FinalCallCopy.pickToPreview,
+                          style: finalCallPopText(
+                            13,
+                            color: FinalCallColors.muted,
+                          ),
+                        )
+                      : _ScorePreview(before: current.score, after: after),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: after == null
-                  ? Text(
-                      FinalCallCopy.pickToPreview,
-                      style: finalCallPopText(13, color: FinalCallColors.muted),
-                    )
-                  : _ScorePreview(before: current.score, after: after),
+            const Spacer(),
+            // 마지막 교체를 최종 제출로 오해하지 않도록 두 동작을 분리합니다.
+            // 이 버튼이 끝난 뒤 별도 최종 제출 화면이 열립니다.
+            FinalCallPopButton(
+              semanticLabel: selected == null
+                  ? FinalCallCopy.pickCardToReplace
+                  : FinalCallCopy.replaceWith(
+                      finalCallCardColorLabel(selected.color),
+                      selected.value,
+                    ),
+              onPressed: selected == null || replacementInProgress
+                  ? null
+                  : () => onCompleteTurn(selected.id),
+              color: FinalCallColors.violet,
+              height: compact ? 46 : 54,
+              radius: 18,
+              borderWidth: 4,
+              shadowDepth: 5,
+              child: Text(
+                selected == null
+                    ? FinalCallCopy.pickCardToReplace
+                    : FinalCallCopy.replaceWith(
+                        finalCallCardColorLabel(selected.color),
+                        selected.value,
+                      ),
+                style: finalCallPopText(
+                  18,
+                  color: Colors.white,
+                  shadows: finalCallPopOutline(),
+                ),
+              ),
+            ),
+            SizedBox(height: compact ? 6 : 8),
+            FinalCallPopButton(
+              semanticLabel: FinalCallCopy.discardNewCard,
+              onPressed: replacementInProgress
+                  ? null
+                  : () => onCompleteTurn(null),
+              height: compact ? 38 : 44,
+              child: Text(
+                FinalCallCopy.discardNewCard,
+                style: finalCallPopText(16),
+              ),
             ),
           ],
-        ),
-        const Spacer(),
-        // 마지막 교체를 최종 제출로 오해하지 않도록 두 동작을 분리합니다.
-        // 이 버튼이 끝난 뒤 별도 최종 제출 화면이 열립니다.
-        FinalCallPopButton(
-          semanticLabel: selected == null
-              ? FinalCallCopy.pickCardToReplace
-              : FinalCallCopy.replaceWith(
-                  finalCallCardColorLabel(selected.color),
-                  selected.value,
-                ),
-          onPressed: selected == null || replacementInProgress
-              ? null
-              : () => onCompleteTurn(selected.id),
-          color: FinalCallColors.violet,
-          height: 54,
-          radius: 18,
-          borderWidth: 4,
-          shadowDepth: 5,
-          child: Text(
-            selected == null
-                ? FinalCallCopy.pickCardToReplace
-                : FinalCallCopy.replaceWith(
-                    finalCallCardColorLabel(selected.color),
-                    selected.value,
-                  ),
-            style: finalCallPopText(
-              18,
-              color: Colors.white,
-              shadows: finalCallPopOutline(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        FinalCallPopButton(
-          semanticLabel: FinalCallCopy.discardNewCard,
-          onPressed: replacementInProgress ? null : () => onCompleteTurn(null),
-          height: 44,
-          child: Text(
-            FinalCallCopy.discardNewCard,
-            style: finalCallPopText(16),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -472,8 +484,11 @@ class _PendingCardEntry extends StatelessWidget {
     required this.card,
     required this.revealFromBack,
     required this.leavingForReplacement,
+    this.cardWidth = 72,
   });
 
+  /// 새 카드 너비입니다. 낮은 휴대폰에서는 조금 작게 그립니다.
+  final double cardWidth;
   final FinalCallCard card;
   final bool revealFromBack;
   final bool leavingForReplacement;
@@ -507,17 +522,22 @@ class _PendingCardEntry extends StatelessWidget {
                   transform: Matrix4.identity()
                     ..setEntry(3, 2, 0.0016)
                     ..rotateY(rotationY),
+                  // NEW 꼬리표가 카드 밖으로 튀어나와 잘리지 않도록 카드
+                  // 둘레에 꼬리표 자리만큼 여백을 두고 그 안에 겹쳐 붙입니다.
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      FinalCallCardView(
-                        card: card,
-                        faceDown: !showFront,
-                        width: 72,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, right: 10),
+                        child: FinalCallCardView(
+                          card: card,
+                          faceDown: !showFront,
+                          width: cardWidth,
+                        ),
                       ),
                       Positioned(
-                        right: -10,
-                        top: -10,
+                        right: 0,
+                        top: 0,
                         child: Transform.rotate(
                           angle: 0.17,
                           child: const FinalCallPopTag(

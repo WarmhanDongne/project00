@@ -79,9 +79,10 @@ class MosiConnectionLayout extends StatelessWidget {
           color: background,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final wide =
-                  constraints.maxWidth > constraints.maxHeight &&
-                  constraints.maxWidth >= 700;
+              // 가로로 눕힌 화면은 폭이 좁은 휴대폰(SE 가로 568)이어도 장면과
+              // 안내를 나란히 둡니다. 세로 배치를 쓰면 아래 판이 너무 낮아
+              // 안내·버튼이 스크롤 아래로 잘립니다.
+              final wide = constraints.maxWidth > constraints.maxHeight;
               return wide
                   ? _buildWide(context, constraints)
                   : _buildTall(context, constraints);

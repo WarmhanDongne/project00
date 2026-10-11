@@ -127,14 +127,17 @@ class PhoneTurnBadge extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: LiarsPokerColors.night, width: 2),
                 ),
-                child: Text(
-                  '${current.nickname} 차례',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: LiarsPokerFonts.text(
-                    size: size * .1,
-                    weight: FontWeight.w700,
-                    color: LiarsPokerColors.night,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${current.nickname} 차례',
+                    maxLines: 1,
+                    style: LiarsPokerFonts.text(
+                      size: size * .1,
+                      weight: FontWeight.w700,
+                      color: LiarsPokerColors.night,
+                    ),
                   ),
                 ),
               ),

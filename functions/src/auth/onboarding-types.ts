@@ -18,6 +18,48 @@ export type OnboardingProvider = typeof ONBOARDING_PROVIDERS[number];
 export const ONBOARDING_SCHEMA_VERSION = 1;
 export const INCOMPLETE_ACCOUNT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * 회원가입 때 보여 주는 약관 묶음(이용약관·개인정보 처리방침)의 버전입니다.
+ *
+ * 앱 `SignupTermsVersion.current`와 같아야 합니다
+ * (`test/auth/onboarding_parity_test.dart`가 대조합니다). 약관을 고치면 두
+ * 값을 함께 올립니다.
+ */
+export const SIGNUP_TERMS_VERSION = "2026-10-12";
+
+/** 회원가입 약관 동의 내용입니다. 필수 세 가지와 선택 마케팅 수신입니다. */
+export type SignupConsents = {
+  version: string;
+  age14: true;
+  terms: true;
+  privacy: true;
+  marketing: boolean;
+};
+
+/**
+ * 앱이 보낸 약관 동의를 확인합니다. 필수 항목(만 14세 이상·이용약관·개인정보
+ * 수집·이용)에 모두 동의했고 지금 약관 버전이면 동의 내용을, 아니면
+ * undefined를 돌려줍니다.
+ * @param {unknown} value Candidate consents from the client.
+ * @return {SignupConsents|undefined} Parsed consents when valid.
+ */
+export function parseSignupConsents(value: unknown):
+  SignupConsents | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (raw.version !== SIGNUP_TERMS_VERSION) return undefined;
+  if (raw.age14 !== true || raw.terms !== true || raw.privacy !== true) {
+    return undefined;
+  }
+  return {
+    version: SIGNUP_TERMS_VERSION,
+    age14: true,
+    terms: true,
+    privacy: true,
+    marketing: raw.marketing === true,
+  };
+}
+
 export type OnboardingDocument = {
   uid: string;
   status: OnboardingStatus;

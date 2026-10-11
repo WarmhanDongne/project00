@@ -161,6 +161,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
         child: Scaffold(
           backgroundColor: MosiColors.violet,
           body: SafeArea(
+            bottom: !_codeMode,
             child: Column(
               children: [
                 Padding(
@@ -364,7 +365,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                 ),
                 if (_codeMode || canSubmit || _isOpeningNameInput)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 22, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                     child: !canSubmit && !_isOpeningNameInput
                         ? Semantics(
                             button: true,
@@ -411,11 +412,42 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                 : null,
                           ),
                   ),
+                // 방 코드는 영문 대문자·숫자뿐이라 기기 키보드 대신 전용 자판을
+                // 띄웁니다. 숨은 입력칸은 실제 키보드·화면 읽기용으로만 남습니다.
+                if (_codeMode)
+                  _RoomCodeKeyboard(
+                    length: _roomCodeController.text.length,
+                    enabled: !_isOpeningNameInput,
+                    onKey: _typeCode,
+                    onBackspace: _eraseCode,
+                  ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  void _typeCode(String character) {
+    final code = _roomCodeController.text;
+    if (code.length >= 5) return;
+    HapticFeedback.selectionClick();
+    final next = code + character;
+    _roomCodeController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+  }
+
+  void _eraseCode() {
+    final code = _roomCodeController.text;
+    if (code.isEmpty) return;
+    HapticFeedback.selectionClick();
+    final next = code.substring(0, code.length - 1);
+    _roomCodeController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
     );
   }
 
@@ -507,7 +539,10 @@ class _RoomCodeBoxes extends StatelessWidget {
                       duration: const Duration(milliseconds: 160),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: MosiColors.white,
+                        // 아직 비어 있는 뒤쪽 칸은 살짝 흐리게 둡니다.
+                        color: index <= code.length || !focusNode.hasFocus
+                            ? MosiColors.white
+                            : const Color(0xE0FFFFFF),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: const [
                           BoxShadow(
@@ -536,13 +571,13 @@ class _RoomCodeBoxes extends StatelessWidget {
                         index < code.length ? code[index] : '',
                         style: MosiFonts.grotesk(
                           color: MosiColors.navy,
-                          size: 24,
+                          size: 26,
                         ),
                       ),
                     ),
                   ),
                 ),
-                if (index < 4) const SizedBox(width: 8),
+                if (index < 4) const SizedBox(width: 10),
               ],
             ],
           ),
@@ -559,7 +594,9 @@ class _RoomCodeBoxes extends StatelessWidget {
                 enableInteractiveSelection: false,
                 maxLength: 5,
                 textCapitalization: TextCapitalization.characters,
-                keyboardType: TextInputType.visiblePassword,
+                // 기기 키보드를 띄우지 않습니다(전용 자판 사용). 연결된 실제
+                // 키보드 입력은 그대로 받습니다.
+                keyboardType: TextInputType.none,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
                   TextInputFormatter.withFunction(
@@ -576,6 +613,184 @@ class _RoomCodeBoxes extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 방 코드 전용 자판입니다. 숫자는 노란 키, 영문 대문자는 흰 키입니다.
+class _RoomCodeKeyboard extends StatelessWidget {
+  const _RoomCodeKeyboard({
+    required this.length,
+    required this.enabled,
+    required this.onKey,
+    required this.onBackspace,
+  });
+
+  final int length;
+  final bool enabled;
+  final ValueChanged<String> onKey;
+  final VoidCallback onBackspace;
+
+  static const _rows = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  static const _gap = 6.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewPaddingOf(context).bottom;
+    return Container(
+      key: const ValueKey('room-code-keyboard'),
+      decoration: const BoxDecoration(
+        color: MosiColors.navy,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      padding: EdgeInsets.fromLTRB(8, 12, 8, bottom > 0 ? bottom + 6 : 26),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 한 줄 10키가 꼭 맞는 폭입니다. 큰 화면에서는 너무 넓어지지 않게 둡니다.
+          final keyWidth = ((constraints.maxWidth - _gap * 9) / 10).clamp(
+            22.0,
+            44.0,
+          );
+          Widget row(List<Widget> keys) => Padding(
+            padding: const EdgeInsets.only(top: 9),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (final (index, key) in keys.indexed) ...[
+                  if (index > 0) const SizedBox(width: _gap),
+                  key,
+                ],
+              ],
+            ),
+          );
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '영문 · 숫자만 입력돼요',
+                        style: MosiFonts.sans(
+                          size: 11,
+                          color: const Color(0x99FFFFFF),
+                          letterSpacing: .4,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$length / 5',
+                      style: MosiFonts.grotesk(
+                        size: 12,
+                        color: MosiColors.lime,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              for (final (index, letters) in _rows.indexed)
+                row([
+                  for (final character in letters.split(''))
+                    _CodeKey(
+                      label: character,
+                      width: keyWidth,
+                      digit: index == 0,
+                      onPressed: enabled && length < 5
+                          ? () => onKey(character)
+                          : null,
+                    ),
+                  if (index == _rows.length - 1)
+                    _CodeKey(
+                      width: keyWidth * 2 + _gap,
+                      semanticLabel: '지우기',
+                      onPressed: enabled && length > 0 ? onBackspace : null,
+                    ),
+                ]),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 누르면 아래 그림자만큼 내려앉는 자판 키입니다. [label]이 없으면 지우기 키입니다.
+class _CodeKey extends StatefulWidget {
+  const _CodeKey({
+    required this.width,
+    required this.onPressed,
+    this.label,
+    this.digit = false,
+    this.semanticLabel,
+  });
+
+  final String? label;
+  final double width;
+  final bool digit;
+  final String? semanticLabel;
+  final VoidCallback? onPressed;
+
+  @override
+  State<_CodeKey> createState() => _CodeKeyState();
+}
+
+class _CodeKeyState extends State<_CodeKey> {
+  bool _down = false;
+
+  void _setDown(bool value) {
+    if (_down == value || !mounted) return;
+    setState(() => _down = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.label;
+    final (face, shade, ink) = label == null
+        ? (MosiColors.ink2, MosiColors.navyDeepest, MosiColors.white)
+        : widget.digit
+        ? (MosiColors.sun, const Color(0xFF9C8C1E), MosiColors.navy)
+        : (MosiColors.white, MosiColors.lilac, MosiColors.navy);
+    final enabled = widget.onPressed != null;
+    final depth = _down ? 0.0 : 3.0;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.semanticLabel ?? label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => _setDown(true) : null,
+        onTapCancel: () => _setDown(false),
+        onTapUp: (_) => _setDown(false),
+        onTap: widget.onPressed,
+        child: SizedBox(
+          width: widget.width,
+          height: 49,
+          child: Opacity(
+            // 다섯 글자를 다 넣으면 글자 키는 흐려지고 지우기만 남습니다.
+            opacity: enabled || label == null ? 1 : .55,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 60),
+              margin: EdgeInsets.only(top: 3 - depth, bottom: depth),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: face,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(color: shade, offset: Offset(0, depth))],
+              ),
+              child: label == null
+                  ? const Icon(
+                      Icons.backspace_outlined,
+                      size: 20,
+                      color: MosiColors.white,
+                    )
+                  : Text(label, style: MosiFonts.grotesk(size: 18, color: ink)),
+            ),
+          ),
+        ),
       ),
     );
   }

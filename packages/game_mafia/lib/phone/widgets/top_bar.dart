@@ -87,47 +87,57 @@ class MafiaPhoneTopBar extends StatelessWidget {
                 grayscale: spectating,
               ),
               const SizedBox(width: 10),
-              Flexible(
+              // 이름 칸이 버튼 앞까지 남은 폭을 모두 씁니다. 그래도 길면
+              // (닉네임 8자 + 관전, 작은 휴대폰) 자르지 않고 줄입니다.
+              Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text.rich(
-                      TextSpan(
-                        text: me.nickname,
-                        children: [
-                          if (spectating)
-                            TextSpan(
-                              text: '  관전',
-                              style: mafiaNoirBody(
-                                12,
-                                color: MafiaColors.noirBlood,
-                                weight: FontWeight.w700,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          text: me.nickname,
+                          children: [
+                            if (spectating)
+                              TextSpan(
+                                text: '  관전',
+                                style: mafiaNoirBody(
+                                  12,
+                                  color: MafiaColors.noirBlood,
+                                  weight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
+                        maxLines: 1,
+                        style: mafiaNoirDisplay(18, color: nameColor),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: mafiaNoirDisplay(18, color: nameColor),
                     ),
                     if (subtitle != null)
-                      Text(
-                        spectating ? '$subtitle 진행 중' : subtitle!,
-                        maxLines: 1,
-                        style: mafiaNoirBody(
-                          12,
-                          color: dark
-                              ? MafiaColors.noirDust
-                              : MafiaColors.noirUmber,
-                          height: 1.3,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          spectating ? '$subtitle 진행 중' : subtitle!,
+                          maxLines: 1,
+                          style: mafiaNoirBody(
+                            12,
+                            color: dark
+                                ? MafiaColors.noirDust
+                                : MafiaColors.noirUmber,
+                            height: 1.3,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-            ],
-            const Spacer(),
+              const SizedBox(width: 10),
+            ] else
+              const Spacer(),
             Builder(
               builder: (buttonContext) => MafiaNoirIconButton(
                 semanticLabel: '게임 규칙 열기',
