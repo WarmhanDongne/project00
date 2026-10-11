@@ -145,3 +145,16 @@ RTDB 트리거를 옮기거나 이름을 바꿀 때는 **구·신 함수가 같�
 `createRealtimeRoom`만 `project0000-ec01e`에 배포했다(서울/Node22, CLI 성공·exit0).
 나머지 두 함수의 timing은 미배포다. 실제 재생성·속도 재측정은 대기이며
 [범위·측정 절차](../operations/ROOM_ACTION_LATENCY.md)를 따른다.
+
+## 2026-10-11 최초 준비·동일 계정 세션 조회 배포
+
+사용자 승인 후 recovery.purpose와 동일 계정 역할 조회 수정의 대상14개를
+project0000-ec01e에 배포했다. 각 게임 start_game4개, joinRealtimeRoom,
+resumeRealtimeControllerRoom, syncRealtimeRoomConnection,
+game_common_controller_presence_changed, game_common_recovery_report,
+game_common_interruption_report_stale_player, game_common_interruption_report_stale_controller,
+game_common_interruption_on_connection_changed, fetchRealtimeRoomSession,
+game_common_operation_status의 CLI 업데이트 모두 성공(exit0). predeploy eslint/tsc도 통과했다.
+위 과거 기록의 game_common_operation_status timing 미배포는 이 배포로 갱신되며 closeRoom의
+운영 일치는 이번 배포 범위에 포함하지 않았다. 새 APK와 실기기36/37의 통과는 별도 판정한다.
+[배포 근거·남은 검증](../planning/tasks/NETWORK_SESSION_20261011_IMPLEMENTATION.md)을 따른다.

@@ -659,6 +659,13 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     RecoveryMetrics.instance.mark(RecoveryStage.auth);
     _watchPrivate = watchPrivate;
     _transportRecovering = recoverySession.transportRecovering;
+    // The retained room session outlives a game screen. A fresh screen must
+    // not spend a previous screen's exhausted preparation budget. An active
+    // transport recovery still owns its original end-to-end deadline.
+    recoverySession.preparationBatch =
+        RoomRecoveryBatch.current ??
+        (_transportRecovering ? recoverySession.preparationBatch : null) ??
+        RoomRecoveryBatch();
     recoverySession.addListener(_transportChanged);
     recoverySession.retry = () => unawaited(retryRecovery());
     recoverySession.leaving = false;

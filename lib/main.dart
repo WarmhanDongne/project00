@@ -32,7 +32,6 @@ void main() async {
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
   // 기기 판별은 DeviceLayout 한 곳에서 합니다(게임 종료 후 방향 복원과 같은
   // 기준을 써야 로비 방향이 어긋나지 않습니다).
-  final isTablet = DeviceLayout.isTabletDevice();
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   // 빌드 실패 시 오류 전송
   try {
@@ -108,7 +107,7 @@ void main() async {
   );
 
   //=======================[ iOS scene 연결 이후 초기 방향 ]==============================
-  _InitialOrientationApplier(isTablet: isTablet).start();
+  _InitialOrientationApplier().start();
 
   //=======================[ 첫 프레임 이후 네이티브 초기화 ]==============================
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -171,14 +170,14 @@ class _StartupFailureApp extends StatelessWidget {
 /// 있으므로 `addPostFrameCallback`만으로는 충분하지 않습니다. lifecycle의
 /// `resumed`를 기준으로 해야 실제 창에 방향 요청이 전달됩니다.
 class _InitialOrientationApplier with WidgetsBindingObserver {
-  _InitialOrientationApplier({required this.isTablet});
-
-  final bool isTablet;
   bool _completed = false;
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
     _applyIfReady(WidgetsBinding.instance.lifecycleState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyIfReady(WidgetsBinding.instance.lifecycleState);
+    });
   }
 
   @override
@@ -186,8 +185,17 @@ class _InitialOrientationApplier with WidgetsBindingObserver {
     _applyIfReady(state);
   }
 
+  @override
+  void didChangeMetrics() {
+    _applyIfReady(WidgetsBinding.instance.lifecycleState);
+  }
+
   void _applyIfReady(AppLifecycleState? state) {
     if (_completed || state != AppLifecycleState.resumed) return;
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    final view = dispatcher.implicitView ?? dispatcher.views.firstOrNull;
+    if (view == null || view.physicalSize.isEmpty) return;
+    final isTablet = DeviceLayout.isTabletDevice();
     _completed = true;
     WidgetsBinding.instance.removeObserver(this);
 

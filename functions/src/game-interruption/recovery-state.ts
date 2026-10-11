@@ -26,6 +26,7 @@ export interface RecoveryCause {
 
 export interface RecoveryPublic {
   paused: boolean;
+  purpose?: "initialReadiness" | "recovery";
   pauseId: string;
   pausedAt: number;
   causes: Record<string, RecoveryCause>;
@@ -104,6 +105,7 @@ function touch(game: RecoveryGame, now: number): void {
 
 export function beginRecoveryPause(
   room: RecoveryRoom, now: number, observedAt: number = now,
+  purpose: "initialReadiness" | "recovery" = "recovery",
 ): void {
   const game = room.game;
   if (!game || game.public.status !== "playing" || game.public.recovery?.paused) return;
@@ -125,7 +127,7 @@ export function beginRecoveryPause(
     timer: recoveryTimer(deadline, timerReferenceAt, game.public.phaseSeq ?? 0, game.public.turnSeq ?? 0),
     ready: {},
   };
-  game.public.recovery = {paused: true, pauseId, pausedAt: now, causes: {}};
+  game.public.recovery = {paused: true, purpose, pauseId, pausedAt: now, causes: {}};
   game.public.turnDeadlineAt = null;
   touch(game, now);
 }
@@ -141,6 +143,8 @@ export function registerRecoveryFailure(
   if (!requiredRecoveryKeys(room).includes(key)) return "localOnly";
   beginRecoveryPause(room, now, observedAt);
   const recovery = game.public.recovery!;
+  // Remain a recovery pause even after its last cause is cleared by a report.
+  recovery.purpose = "recovery";
   recovery.causes ??= {};
   delete game.server.recovery?.ready?.[key];
   if (!recovery.causes[key]) {

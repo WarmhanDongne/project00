@@ -144,6 +144,8 @@ void main() {
           );
           await tester.pump(const Duration(milliseconds: 1000));
           await _expectEdges(tester, key, useImage ? _imageColor : _gameColor);
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(find.textContaining('게임을 준비 중'), findsNothing);
           await tester.pump(const Duration(milliseconds: 700));
           await tester.pump(const Duration(milliseconds: 300));
           expect(prepared, 1);

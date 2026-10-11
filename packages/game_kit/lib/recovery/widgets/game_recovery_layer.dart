@@ -48,6 +48,7 @@ class GameRecoveryLayer extends StatelessWidget {
     final state = interruption?.state;
     final interrupted =
         state != null &&
+        !state.isInitialReadiness &&
         (state.pauseId != null ||
             state.causes.isNotEmpty ||
             state.playerUid.isNotEmpty);
