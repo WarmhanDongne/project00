@@ -131,38 +131,42 @@ class _LiarAccusationState extends State<LiarAccusation>
         ),
       ),
     );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        puck,
-        SizedBox(height: widget.isLandscape ? 10 : 16),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: Text.rich(
-            key: ValueKey(widget.showSubmit),
-            widget.showSubmit
-                ? const TextSpan(text: '카드를 다시 누르면 선택이 풀려요')
-                : const TextSpan(
-                    children: [
-                      TextSpan(text: '카드를 고르면 '),
-                      TextSpan(
-                        text: '제출',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: LiarsPokerColors.goldLight,
+    // 가장 낮은 가로 휴대폰에서는 버튼과 안내를 함께 살짝 줄여 자리에 맞춥니다.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          puck,
+          SizedBox(height: widget.isLandscape ? 10 : 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: Text.rich(
+              key: ValueKey(widget.showSubmit),
+              widget.showSubmit
+                  ? const TextSpan(text: '카드를 다시 누르면 선택이 풀려요')
+                  : const TextSpan(
+                      children: [
+                        TextSpan(text: '카드를 고르면 '),
+                        TextSpan(
+                          text: '제출',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: LiarsPokerColors.goldLight,
+                          ),
                         ),
-                      ),
-                      TextSpan(text: ' 버튼으로 바뀌어요'),
-                    ],
-                  ),
-            textAlign: TextAlign.center,
-            style: LiarsPokerFonts.text(
-              size: widget.isLandscape ? 12 : 13,
-              color: LiarsPokerColors.muted,
+                        TextSpan(text: ' 버튼으로 바뀌어요'),
+                      ],
+                    ),
+              textAlign: TextAlign.center,
+              style: LiarsPokerFonts.text(
+                size: widget.isLandscape ? 12 : 13,
+                color: LiarsPokerColors.muted,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

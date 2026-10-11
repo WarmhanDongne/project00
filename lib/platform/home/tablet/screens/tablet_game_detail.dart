@@ -71,9 +71,10 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
           ),
           if (description.isNotEmpty) ...[
             const SizedBox(height: 8),
+            // 세로 태블릿·큰 글자에서도 소개를 끝까지 보여 줍니다.
             Text(
               description,
-              maxLines: 2,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: MosiFonts.sans(size: 15, color: theme.fg),
             ),
@@ -115,7 +116,11 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
         ? buildGamePlayPreview(widget.game.id)
         : buildGameParts(widget.game.id);
     if (scene != null) {
-      return _tab == _DetailTab.play ? scene : GameDetailStage(child: scene);
+      // 미리보기·구성품은 상자에 맞춰 통째로 줄이는 그림이라 기기 글자 크기를
+      // 따르지 않습니다. 따르면 정해진 칸을 넘어 글자가 잘립니다.
+      return MediaQuery.withNoTextScaling(
+        child: _tab == _DetailTab.play ? scene : GameDetailStage(child: scene),
+      );
     }
     // 미리보기가 등록되지 않은 게임은 서버의 구성품 사진을 보여 줍니다.
     final url = widget.game.componentImageUrl;

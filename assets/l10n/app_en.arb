@@ -147,5 +147,8 @@
   "connectionBandReconnecting": "Reconnecting… keep this screen open",
   "connectionBandRestored": "Reconnected",
   "profileSaved": "Saved",
-  "gamePreparing": "Getting ready"
+  "gamePreparing": "Getting ready",
+  "previewDeck": "Deck",
+  "previewOpenCard": "Open card",
+  "previewSubmit": "Submit"
 }

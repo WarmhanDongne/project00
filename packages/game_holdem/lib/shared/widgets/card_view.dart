@@ -18,7 +18,7 @@ enum HoldemCardLayout {
 /// 쇼다운에서 카드가 최종 5장에 들었는지 표시합니다.
 enum HoldemCardEmphasis { none, win, lose }
 
-/// 코드로 그리는 홀덤 카드입니다. 뒷면만 다운로드 에셋을 씁니다.
+/// 코드로 그리는 홀덤 카드입니다. 뒷면은 패키지에 포함된 이미지를 씁니다.
 class HoldemCardView extends StatelessWidget {
   const HoldemCardView({
     super.key,

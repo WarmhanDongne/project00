@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -468,19 +469,23 @@ class _WaitingHeadline extends StatelessWidget {
     final thinking = me?.status != 'eliminated' && current != null;
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
+        // 긴 닉네임도 자르지 않고 한 줄에 맞춰 줄입니다.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
                 title,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: HoldemFonts.text(size: 20, weight: FontWeight.w900),
               ),
-            ),
-            if (thinking) ...[const SizedBox(width: 10), const _ThinkingDots()],
-          ],
+              if (thinking) ...[
+                const SizedBox(width: 10),
+                const _ThinkingDots(),
+              ],
+            ],
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -605,40 +610,48 @@ class _ActionPucks extends StatelessWidget {
         : legal.raise
         ? 'Raise'
         : 'All-in';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 0, 2, 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          HoldemPuckButton(
-            label: 'Fold',
-            dark: true,
-            busy: submittingAction == 'fold',
-            semanticLabel: '폴드, 이번 판 포기',
-            onPressed: enabled && legal.fold ? onFold : null,
+    // 퍽 세 개(100·112·100)가 좁은 휴대폰 폭보다 넓으면 같은 비율로 줄입니다.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = math.min(1.0, (constraints.maxWidth - 4) / 324);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              HoldemPuckButton(
+                size: 100 * scale,
+                label: 'Fold',
+                dark: true,
+                busy: submittingAction == 'fold',
+                semanticLabel: '폴드, 이번 판 포기',
+                onPressed: enabled && legal.fold ? onFold : null,
+              ),
+              HoldemPuckButton(
+                label: canCheck ? 'Check' : 'Call',
+                amount: canCheck ? null : holdemChips(callAmount),
+                size: 112 * scale,
+                busy: submittingAction == 'check' || submittingAction == 'call',
+                semanticLabel: canCheck ? '체크' : '콜 ${holdemChips(callAmount)}',
+                onPressed: enabled && checkOrCallSynchronized
+                    ? () => onCheckOrCall(checkOrCallAction)
+                    : null,
+              ),
+              HoldemPuckButton(
+                size: 100 * scale,
+                label: raiseLabel,
+                busy:
+                    submittingAction == 'bet' ||
+                    submittingAction == 'raise' ||
+                    submittingAction == 'allIn',
+                semanticLabel: '$raiseLabel 금액 고르기',
+                onPressed: enabled && canRaise ? onRaise : null,
+              ),
+            ],
           ),
-          HoldemPuckButton(
-            label: canCheck ? 'Check' : 'Call',
-            amount: canCheck ? null : holdemChips(callAmount),
-            size: 112,
-            busy: submittingAction == 'check' || submittingAction == 'call',
-            semanticLabel: canCheck ? '체크' : '콜 ${holdemChips(callAmount)}',
-            onPressed: enabled && checkOrCallSynchronized
-                ? () => onCheckOrCall(checkOrCallAction)
-                : null,
-          ),
-          HoldemPuckButton(
-            label: raiseLabel,
-            busy:
-                submittingAction == 'bet' ||
-                submittingAction == 'raise' ||
-                submittingAction == 'allIn',
-            semanticLabel: '$raiseLabel 금액 고르기',
-            onPressed: enabled && canRaise ? onRaise : null,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -651,18 +664,22 @@ class _MyChips extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     label: '내 칩 ${holdemChips(amount)}',
     excludeSemantics: true,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const HoldemChip(size: 18),
-        const SizedBox(width: 8),
-        Text(
-          '내 칩',
-          style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
-        ),
-        const SizedBox(width: 8),
-        Text(holdemChips(amount), style: HoldemFonts.numbers(size: 27)),
-      ],
+    // 칩 숫자가 커도 넘치지 않게 줄 전체를 폭에 맞춰 줄입니다.
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const HoldemChip(size: 18),
+          const SizedBox(width: 8),
+          Text(
+            '내 칩',
+            style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
+          ),
+          const SizedBox(width: 8),
+          Text(holdemChips(amount), style: HoldemFonts.numbers(size: 27)),
+        ],
+      ),
     ),
   );
 }

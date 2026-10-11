@@ -64,6 +64,46 @@ abstract final class MafiaTabletDesign {
   );
 }
 
+/// 태블릿 화면 전체를 시안(1194 × 834)보다 작지 않은 논리 크기로 그린 뒤
+/// 기기 화면에 꼭 맞게 줄이거나 키웁니다.
+///
+/// 짧거나(960×600) 4:3에 가까운(1024×768) 태블릿에서 시안 좌표 그대로
+/// 고정 크기 글자·시계를 그리면 칸을 넘쳐 잘립니다. 논리 크기의 짧은 쪽을
+/// 시안에 맞추고 긴 쪽만 늘리므로 모든 화면이 시안 이상의 자리를 얻고,
+/// 비율은 기기와 같아 빈 띠 없이 화면을 채웁니다.
+class MafiaTabletCanvas extends StatelessWidget {
+  const MafiaTabletCanvas({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final actual = MafiaTabletDesign.resolve(constraints);
+        final scale = MafiaTabletDesign.scaleOf(actual);
+        if (scale <= 0) return child;
+        final logical = Size(actual.width / scale, actual.height / scale);
+        final media = MediaQuery.of(context);
+        return FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox.fromSize(
+            size: logical,
+            child: MediaQuery(
+              data: media.copyWith(
+                size: logical,
+                padding: media.padding / scale,
+                viewPadding: media.viewPadding / scale,
+              ),
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// 시안 사각형을 그 자리에 놓습니다.
 ///
 /// 태블릿 시안은 좌표가 촘촘해서 `Positioned`를 매번 쓰면 값이 흩어집니다.

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project00/platform/auth/legal/signup_terms.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 
 //=======================앱·서버 온보딩 값 대조==============================
@@ -47,5 +48,15 @@ void main() {
       OnboardingProvider.values.map((provider) => provider.name),
       contains('apple'),
     );
+  });
+
+  test('약관 버전이 서버와 같다', () {
+    // 어긋나면 서버가 모든 새 가입의 약관 동의를 거절해 가입을 마칠 수 없습니다.
+    final source = types.readAsStringSync();
+    final match = RegExp(
+      r'export const SIGNUP_TERMS_VERSION = "([^"]+)";',
+    ).firstMatch(source);
+    expect(match, isNotNull, reason: 'SIGNUP_TERMS_VERSION을 찾지 못했습니다');
+    expect(SignupTermsVersion.current, match!.group(1));
   });
 }

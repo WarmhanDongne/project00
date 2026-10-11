@@ -58,7 +58,8 @@ Mosigame 정식 앱 바이너리
 ```
 
 - 플랫폼과 `game_kit`은 앱이 실행되기 전에 이미 바이너리에 포함된다.
-- workspace는 `game_kit`, `game_template`, 번들 게임 3종의 5개 패키지다.
+- workspace는 `game_kit`, `game_template`, 번들 게임 4종(라이어스 포커·파이널콜·
+  마피아·홀덤)의 6개 패키지다.
   `game_template`은 앱 의존성에 없으며 복사용으로만 관리한다.
 - 게임 패키지는 내부 패키지 중 `game_kit`에만 의존하고 앱이나 다른 게임을
   참조하지 않는다. `game_kit`도 앱·게임 패키지를 참조하지 않는다.

@@ -104,7 +104,10 @@ export async function updateGameRules({dryRun = false} = {}) {
       firestore.collection("games").doc(gameId),
       {
         rules,
-        accessType: "free",
+        // 마피아의 공개/판매 결정은 보류합니다. 규칙 갱신으로 접근 정책을
+        // 암묵적으로 무료로 바꾸지 않습니다.
+        ...(["liars_poker", "final_call", "holdem"].includes(gameId) ?
+          {accessType: "free"} : {}),
         // 목록의 인원 범위도 새 6인 게임에 맞춥니다. 실제 시작은 4·6인만 허용합니다.
         ...(gameId === "final_call" ? {minPlayers: 4, maxPlayers: 6} : {}),
         ...(gameId === "holdem" ? {minPlayers: 2, maxPlayers: 8} : {}),

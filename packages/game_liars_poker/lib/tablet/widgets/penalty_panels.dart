@@ -140,16 +140,19 @@ class TabletSeatNotice extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                eliminated ? '탈락했습니다' : seat.nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: eliminated
-                    ? LiarsPokerFonts.headline(
-                        size: 22,
-                        color: LiarsPokerColors.pink,
-                      )
-                    : LiarsPokerFonts.text(size: 17, weight: FontWeight.w700),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  eliminated ? '탈락했습니다' : seat.nickname,
+                  maxLines: 1,
+                  style: eliminated
+                      ? LiarsPokerFonts.headline(
+                          size: 22,
+                          color: LiarsPokerColors.pink,
+                        )
+                      : LiarsPokerFonts.text(size: 17, weight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -167,15 +170,18 @@ class TabletSeatNotice extends StatelessWidget {
               ),
             ),
           ),
-          child: Text.rich(
-            message,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: LiarsPokerFonts.text(
-              size: 14,
-              color: eliminated
-                  ? LiarsPokerColors.ivory
-                  : LiarsPokerColors.mutedLight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              message,
+              maxLines: 1,
+              style: LiarsPokerFonts.text(
+                size: 14,
+                color: eliminated
+                    ? LiarsPokerColors.ivory
+                    : LiarsPokerColors.mutedLight,
+              ),
             ),
           ),
         ),
@@ -224,13 +230,16 @@ class TabletTargetNotice extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${seat.nickname} · ${_roundName(seat.penaltyCount)} 룰렛',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: LiarsPokerFonts.text(
-                        size: 18,
-                        weight: FontWeight.w700,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${seat.nickname} · ${_roundName(seat.penaltyCount)} 룰렛',
+                        maxLines: 1,
+                        style: LiarsPokerFonts.text(
+                          size: 18,
+                          weight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     Text(

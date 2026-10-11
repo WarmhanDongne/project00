@@ -76,6 +76,8 @@ class _HoldemHandResultViewState extends State<HoldemHandResultView>
       for (final card in result?.revealedHands[focusUid] ?? const []) card.id,
     };
     final remaining = _progress.duration! * (1 - _progress.value);
+    // SE처럼 낮은 휴대폰에서는 간격과 금액 글자를 줄여 결과가 넘치지 않게 합니다.
+    final compact = MediaQuery.sizeOf(context).height < 640;
     return Column(
       children: [
         const Spacer(flex: 2),
@@ -87,13 +89,13 @@ class _HoldemHandResultViewState extends State<HoldemHandResultView>
               : 'LOSE',
           strong: won,
         ),
-        const SizedBox(height: 28),
+        SizedBox(height: compact ? 16 : 28),
         if (amount != 0)
           HoldemChipAmount(
             amount: amount.abs(),
             prefix: amount > 0 ? '+' : '-',
             chipSize: 26,
-            fontSize: 64,
+            fontSize: compact ? 52 : 64,
             gap: 10,
           ),
         const SizedBox(height: 18),
@@ -103,7 +105,7 @@ class _HoldemHandResultViewState extends State<HoldemHandResultView>
           style: HoldemFonts.text(size: 18, weight: FontWeight.w900),
         ),
         if (best.isNotEmpty) ...[
-          const SizedBox(height: 34),
+          SizedBox(height: compact ? 20 : 34),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: .82, end: 1),
             duration: const Duration(milliseconds: 650),
@@ -132,21 +134,28 @@ class _HoldemHandResultViewState extends State<HoldemHandResultView>
           ),
         ],
         const SizedBox(height: 26),
+        // 칩 숫자가 커도 넘치지 않게 줄 전체를 폭에 맞춰 줄입니다.
         if (me != null)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const HoldemChip(size: 18),
-              const SizedBox(width: 8),
-              Text('내 칩', style: HoldemFonts.text(color: HoldemColors.muted)),
-              const SizedBox(width: 8),
-              Text(holdemChips(me.stack), style: HoldemFonts.numbers(size: 26)),
-              const SizedBox(width: 6),
-              Text(
-                '· ${_rank(game, me)}위',
-                style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
-              ),
-            ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const HoldemChip(size: 18),
+                const SizedBox(width: 8),
+                Text('내 칩', style: HoldemFonts.text(color: HoldemColors.muted)),
+                const SizedBox(width: 8),
+                Text(
+                  holdemChips(me.stack),
+                  style: HoldemFonts.numbers(size: 26),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '· ${_rank(game, me)}위',
+                  style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
+                ),
+              ],
+            ),
           ),
         const Spacer(flex: 3),
         Row(

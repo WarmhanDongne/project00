@@ -432,16 +432,19 @@ class _MosiButtonState extends State<MosiButton> {
                 ),
                 const SizedBox(width: 8),
               ],
+              // 버튼 폭이 좁아도(작은 휴대폰·긴 번역) 글자를 자르지 않고 줄입니다.
               Flexible(
-                child: Text(
-                  widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: MosiFonts.sans(
-                    locale: Localizations.maybeLocaleOf(context),
-                    size: widget.fontSize,
-                    weight: FontWeight.w700,
-                    color: foreground,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    style: MosiFonts.sans(
+                      locale: Localizations.maybeLocaleOf(context),
+                      size: widget.fontSize,
+                      weight: FontWeight.w700,
+                      color: foreground,
+                    ),
                   ),
                 ),
               ),
@@ -571,6 +574,31 @@ class MosiIconButton extends StatelessWidget {
 }
 
 //=======================알약(칩)==============================
+/// 폭은 부모에 맞춰 줄바꿈하고, 높이가 모자라면 스크롤하거나 자르지 않고
+/// 내용 전체를 조금 줄여 한눈에 보이게 합니다.
+///
+/// 기기 글자 크기를 키웠거나 문구가 긴 언어에서도 고정 높이 칸(상점 계산대,
+/// 로비 선반 아래 소개)의 글자와 버튼이 잘리지 않게 할 때 씁니다.
+class MosiFitHeight extends StatelessWidget {
+  const MosiFitHeight({
+    super.key,
+    required this.child,
+    this.alignment = Alignment.center,
+  });
+
+  final Widget child;
+  final AlignmentGeometry alignment;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: alignment,
+      child: SizedBox(width: constraints.maxWidth, child: child),
+    ),
+  );
+}
+
 class MosiPill extends StatelessWidget {
   const MosiPill({
     super.key,

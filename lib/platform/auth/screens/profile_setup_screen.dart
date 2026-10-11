@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:project00/platform/auth/legal/signup_terms.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
+import 'package:project00/platform/auth/widgets/signup_terms_view.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
 import 'package:project00/platform/auth/widgets/register_step_two.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
@@ -17,11 +19,16 @@ class ProfileSetupScreen extends StatefulWidget {
     this.authService,
     this.onboardingService,
     this.imagePicker,
+    this.consentStore,
   });
 
   final FirebaseAuthService? authService;
   final OnboardingService? onboardingService;
   final ImagePicker? imagePicker;
+
+  /// 약관 동의를 보관하는 곳입니다. 이메일 가입은 첫 단계에서 이미 동의해
+  /// 여기 남아 있고, Google·Apple 가입은 이 화면에서 처음 동의합니다.
+  final SignupConsentStore? consentStore;
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -31,6 +38,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   late final FirebaseAuthService _authService;
   late final OnboardingService _onboardingService;
   late final ImagePicker _imagePicker;
+  late final SignupConsentStore _consentStore;
+
+  /// 가입을 마칠 때 서버에 함께 보낼 약관 동의입니다.
+  SignupConsents? _consents;
+  bool _checkingConsent = true;
   final _nicknameController = TextEditingController();
   Uint8List? _profileImageBytes;
   String? _profileImageName;
@@ -45,8 +57,25 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _authService = widget.authService ?? FirebaseAuthService();
     _onboardingService = widget.onboardingService ?? OnboardingService();
     _imagePicker = widget.imagePicker ?? ImagePicker();
+    _consentStore = widget.consentStore ?? SignupConsentStore();
+    unawaited(_loadConsents());
     _nicknameController.text =
         FirebaseAuth.instance.currentUser?.displayName ?? '';
+  }
+
+  Future<void> _loadConsents() async {
+    final consents = await _consentStore.read();
+    if (!mounted) return;
+    setState(() {
+      _consents = consents;
+      _checkingConsent = false;
+    });
+  }
+
+  Future<void> _agreeToTerms(SignupConsents consents) async {
+    await _consentStore.save(consents);
+    if (!mounted) return;
+    setState(() => _consents = consents);
   }
 
   @override
@@ -115,7 +144,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       await _onboardingService.completeProfile(
         nickname: nickname,
         profileImageUrl: profileImageUrl,
+        consents: _consents,
       );
+      // 서버에 기록됐으니 기기에 남긴 동의는 지웁니다.
+      await _consentStore.clear();
     } on AuthServiceException catch (error) {
       if (mounted) setState(() => _errorMessage = error.message);
     } finally {
@@ -131,6 +163,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       message: '다음에 로그인하면 프로필 설정부터 이어서 할 수 있어요.',
     );
     if (shouldLeave != true) return;
+    await _consentStore.clear();
     await FirebaseAuth.instance.signOut();
   }
 
@@ -150,34 +183,44 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             MosiAuthHeader(
               title: '회원가입',
               onBack: () => unawaited(_requestBack()),
-              stepIndex: 2,
+              steps: signupSteps,
+              stepIndex: _consents == null ? 0 : 3,
             ),
             const SizedBox(height: 16),
-            RegisterStepTwo(
-              nicknameController: _nicknameController,
-              isLoading: isBusy,
-              googlePhotoURL: FirebaseAuth.instance.currentUser?.photoURL,
-              profileImageBytes: _profileImageBytes,
-              onPickProfileImage: _pickProfileImage,
-              onCheckNickname: _completeProfile,
-              onUseAccountPhoto: () => setState(() {
-                _profileImageBytes = null;
-                _profileImageName = null;
-                _profileImageType = null;
-              }),
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 12),
-              MosiNotice(message: _errorMessage!),
+            if (_checkingConsent)
+              const SizedBox(height: 120)
+            else if (_consents == null)
+              // Google·Apple 가입은 이메일 단계가 없어 여기서 처음 동의를 받습니다.
+              SignupTermsView(
+                onAgreed: (consents) => unawaited(_agreeToTerms(consents)),
+              )
+            else ...[
+              RegisterStepTwo(
+                nicknameController: _nicknameController,
+                isLoading: isBusy,
+                googlePhotoURL: FirebaseAuth.instance.currentUser?.photoURL,
+                profileImageBytes: _profileImageBytes,
+                onPickProfileImage: _pickProfileImage,
+                onCheckNickname: _completeProfile,
+                onUseAccountPhoto: () => setState(() {
+                  _profileImageBytes = null;
+                  _profileImageName = null;
+                  _profileImageType = null;
+                }),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                MosiNotice(message: _errorMessage!),
+              ],
+              const SizedBox(height: 16),
+              MosiButton(
+                label: '가입 완료',
+                height: 54,
+                expand: true,
+                loading: _isSaving,
+                onPressed: isBusy ? null : _completeProfile,
+              ),
             ],
-            const SizedBox(height: 16),
-            MosiButton(
-              label: '가입 완료',
-              height: 54,
-              expand: true,
-              loading: _isSaving,
-              onPressed: isBusy ? null : _completeProfile,
-            ),
           ],
         ),
       ),

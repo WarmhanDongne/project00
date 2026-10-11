@@ -91,14 +91,17 @@ class PhoneGameRuleDialog extends StatelessWidget {
                         color: theme.deep,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: MosiFonts.sans(
-                          size: 12,
-                          weight: FontWeight.w700,
-                          color: MosiColors.white,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          style: MosiFonts.sans(
+                            size: 12,
+                            weight: FontWeight.w700,
+                            color: MosiColors.white,
+                          ),
                         ),
                       ),
                     ),

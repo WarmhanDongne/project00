@@ -80,6 +80,7 @@ const authTestSuite = TestSuiteDefinition(
     'test/auth/google_login_button_test.dart',
     'test/auth/onboarding_parity_test.dart',
     'test/auth/register_loading_test.dart',
+    'test/auth/signup_terms_test.dart',
     'test/auth/tablet_auth_parity_test.dart',
     'test/platform_auth_shell_test.dart',
     'test/social_login_button_test.dart',

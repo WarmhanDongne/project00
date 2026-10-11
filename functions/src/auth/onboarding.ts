@@ -12,6 +12,7 @@ import {
   OnboardingProvider,
   isValidNickname,
   parseOnboardingStatus,
+  parseSignupConsents,
   resolveLegacyStatus,
 } from "./onboarding-types.js";
 
@@ -20,6 +21,7 @@ const REGION = "asia-northeast3";
 type ProfileData = {
   nickname?: unknown;
   profileImageUrl?: unknown;
+  consents?: unknown;
 };
 
 /**
@@ -145,6 +147,9 @@ export const completeOnboardingProfile = onCall<ProfileData>(
     }
     const nickname = rawNickname.trim();
     const profileImageUrl = optionalProfileUrl(request.data?.profileImageUrl);
+    // 처음 가입을 마칠 때는 약관 동의(필수 세 가지·지금 버전)가 있어야 합니다.
+    // 동의 기록은 서버 시각으로 남깁니다.
+    const consents = parseSignupConsents(request.data?.consents);
     const db = getFirestore();
     const onboardingRef = db.collection("userOnboarding").doc(uid);
     const userRef = db.collection("users").doc(uid);
@@ -162,6 +167,12 @@ export const completeOnboardingProfile = onCall<ProfileData>(
           "프로필을 설정할 수 있는 단계가 아닙니다.",
         );
       }
+      if (status !== "complete" && !consents) {
+        throw new HttpsError(
+          "failed-precondition",
+          "약관에 동의해야 가입을 마칠 수 있습니다.",
+        );
+      }
 
       transaction.set(userRef, {
         uid,
@@ -172,6 +183,17 @@ export const completeOnboardingProfile = onCall<ProfileData>(
         ...(!userSnapshot.exists ? {
           createdAt: FieldValue.serverTimestamp(),
         } : {}),
+        ...(consents ? {
+          consents: {
+            version: consents.version,
+            age14: true,
+            terms: true,
+            privacy: true,
+            marketing: consents.marketing,
+            agreedAt: FieldValue.serverTimestamp(),
+            marketingUpdatedAt: FieldValue.serverTimestamp(),
+          },
+        } : {}),
       }, {merge: true});
       transaction.set(onboardingRef, {
         uid,
@@ -180,6 +202,7 @@ export const completeOnboardingProfile = onCall<ProfileData>(
         updatedAt: FieldValue.serverTimestamp(),
         completedAt: FieldValue.serverTimestamp(),
         expiresAt: FieldValue.delete(),
+        ...(consents ? {consentVersion: consents.version} : {}),
       }, {merge: true});
     });
 

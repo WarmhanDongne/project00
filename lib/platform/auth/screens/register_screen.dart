@@ -8,11 +8,15 @@ import 'package:project00/platform/auth/models/email_link_error_message.dart';
 import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
+import 'package:project00/platform/auth/legal/signup_terms.dart';
 import 'package:project00/platform/auth/services/pending_email_store.dart';
+import 'package:project00/platform/auth/widgets/signup_terms_view.dart';
 import 'package:project00/platform/auth/widgets/register_step_one.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 
 enum RegisterStep {
+  /// 약관 동의입니다. 새로 가입을 시작할 때 이메일 입력 전에 한 번 거칩니다.
+  terms,
   emailInput,
   awaitingEmailLink,
   emailLinkFailed,
@@ -33,6 +37,7 @@ class RegisterScreen extends StatefulWidget {
     this.onReauthenticationStarted,
     this.onboardingService,
     this.pendingEmailStore,
+    this.consentStore,
   });
 
   final RegisterStep initialStep;
@@ -45,6 +50,9 @@ class RegisterScreen extends StatefulWidget {
   final OnboardingService? onboardingService;
   final PendingEmailStore? pendingEmailStore;
 
+  /// 가입을 마칠 때까지 약관 동의를 보관하는 곳입니다.
+  final SignupConsentStore? consentStore;
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -55,6 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   late final OnboardingService _onboardingService;
   late final PendingEmailStore _pendingEmailStore;
+  late final SignupConsentStore _consentStore;
+
+  /// 이미 동의했는지 확인하는 동안에는 이메일 단계를 그리지 않습니다.
+  bool _checkingConsent = false;
   final _emailController = TextEditingController();
   final _customDomainController = TextEditingController();
   final _customDomainFocusNode = FocusNode();
@@ -87,7 +99,14 @@ class _RegisterScreenState extends State<RegisterScreen>
     WidgetsBinding.instance.addObserver(this);
     _onboardingService = widget.onboardingService ?? OnboardingService();
     _pendingEmailStore = widget.pendingEmailStore ?? PendingEmailStore();
+    _consentStore = widget.consentStore ?? SignupConsentStore();
     _step = widget.initialStep;
+    // 새로 가입을 시작하면 약관 동의부터 받습니다. 이미 동의하고 메일 단계로
+    // 넘어갔다가 돌아온 경우에는 다시 묻지 않습니다.
+    if (_step == RegisterStep.emailInput && widget.initialEmailLink == null) {
+      _checkingConsent = true;
+      unawaited(_checkConsent());
+    }
     _errorMessage = widget.initialError;
     _setInitialEmail(widget.initialEmail);
     if (widget.initialEmailLink != null) {
@@ -113,6 +132,26 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (state != AppLifecycleState.resumed || !mounted) return;
     setState(() {});
     if (_cooldownSeconds > 0) _startCooldownTicker();
+  }
+
+  Future<void> _checkConsent() async {
+    final consents = await _consentStore.read();
+    if (!mounted) return;
+    setState(() {
+      _checkingConsent = false;
+      if (consents == null && _step == RegisterStep.emailInput) {
+        _step = RegisterStep.terms;
+      }
+    });
+  }
+
+  Future<void> _agreeToTerms(SignupConsents consents) async {
+    await _consentStore.save(consents);
+    if (!mounted) return;
+    setState(() {
+      _step = RegisterStep.emailInput;
+      _errorMessage = null;
+    });
   }
 
   void _setInitialEmail(String? email) {
@@ -346,13 +385,16 @@ class _RegisterScreenState extends State<RegisterScreen>
     final shouldLeave = await showMosiLeaveDialog(
       context,
       title: '회원가입을 중단할까요?',
-      message: _step == RegisterStep.emailInput
+      message: _step == RegisterStep.emailInput || _step == RegisterStep.terms
           ? '입력한 이메일은 저장되지 않아요.'
           : '다음에 로그인하면 여기서부터 이어서 할 수 있어요.',
     );
     if (shouldLeave != true || !mounted) return;
     _isLeaving = true;
-    if (_step != RegisterStep.emailInput) {
+    // 가입을 그만두면 이 기기에 남긴 약관 동의도 지웁니다. 다음에 같은 기기로
+    // 다른 사람이 가입할 때 동의 없이 넘어가지 않게 합니다.
+    await _consentStore.clear();
+    if (_step != RegisterStep.emailInput && _step != RegisterStep.terms) {
       await _pendingEmailStore.clear();
       await FirebaseAuth.instance.signOut();
     }
@@ -383,28 +425,41 @@ class _RegisterScreenState extends State<RegisterScreen>
             MosiAuthHeader(
               title: context.l10n.signUp,
               onBack: () => unawaited(_requestBack()),
-              stepIndex: _step == RegisterStep.settingPassword ? 1 : 0,
+              steps: signupSteps,
+              stepIndex: switch (_step) {
+                RegisterStep.terms => 0,
+                RegisterStep.settingPassword => 2,
+                _ => 1,
+              },
             ),
             const SizedBox(height: 16),
             MosiAuthTransition(
-              child: RegisterStepOne(
-                key: ValueKey(_step),
-                emailController: _emailController,
-                customDomainController: _customDomainController,
-                customDomainFocusNode: _customDomainFocusNode,
-                passwordController: _passwordController,
-                confirmPasswordController: _confirmPasswordController,
-                emailDomain: _emailDomain,
-                isCustomDomain: _isCustomDomain,
-                step: _step,
-                action: _action,
-                cooldownSeconds: _cooldownSeconds,
-                errorMessage: _errorMessage,
-                onDomainChanged: _changeDomain,
-                onSendEmail: _sendEmail,
-                onResendEmail: () => _sendEmail(resend: true),
-                onSetPassword: _setPassword,
-              ),
+              child: _checkingConsent
+                  ? const SizedBox(key: ValueKey('checking-consent'))
+                  : _step == RegisterStep.terms
+                  ? SignupTermsView(
+                      key: const ValueKey(RegisterStep.terms),
+                      onAgreed: (consents) =>
+                          unawaited(_agreeToTerms(consents)),
+                    )
+                  : RegisterStepOne(
+                      key: ValueKey(_step),
+                      emailController: _emailController,
+                      customDomainController: _customDomainController,
+                      customDomainFocusNode: _customDomainFocusNode,
+                      passwordController: _passwordController,
+                      confirmPasswordController: _confirmPasswordController,
+                      emailDomain: _emailDomain,
+                      isCustomDomain: _isCustomDomain,
+                      step: _step,
+                      action: _action,
+                      cooldownSeconds: _cooldownSeconds,
+                      errorMessage: _errorMessage,
+                      onDomainChanged: _changeDomain,
+                      onSendEmail: _sendEmail,
+                      onResendEmail: () => _sendEmail(resend: true),
+                      onSetPassword: _setPassword,
+                    ),
             ),
           ],
         ),

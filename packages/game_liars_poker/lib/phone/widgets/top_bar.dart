@@ -54,25 +54,28 @@ class PhoneGameTopBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: nickname),
-                    if (status != null) ...[
-                      const TextSpan(text: ' · '),
-                      TextSpan(
-                        text: status,
-                        style: TextStyle(color: statusColor),
-                      ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: nickname),
+                      if (status != null) ...[
+                        const TextSpan(text: ' · '),
+                        TextSpan(
+                          text: status,
+                          style: TextStyle(color: statusColor),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: LiarsPokerFonts.text(
-                  size: 16,
-                  weight: FontWeight.w700,
-                  height: 1,
+                  ),
+                  maxLines: 1,
+                  style: LiarsPokerFonts.text(
+                    size: 16,
+                    weight: FontWeight.w700,
+                    height: 1,
+                  ),
                 ),
               ),
               if (!eliminated) ...[

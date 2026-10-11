@@ -51,8 +51,12 @@ abstract final class MafiaTabletSeatRow {
   static double cardLeft(int index, int count, {double? centeredGap}) {
     final card = cardWidth(count);
     if (centeredGap != null) {
-      final total = count * card + (count - 1) * centeredGap;
-      return 597 - total / 2 + index * (card + centeredGap);
+      // 사람이 많아 줄이 화면 폭을 넘으면 간격을 좁혀 양 끝 카드가 잘리지 않게 합니다.
+      final gap = count <= 1
+          ? centeredGap
+          : math.min(centeredGap, (width - count * card) / (count - 1));
+      final total = count * card + (count - 1) * gap;
+      return 597 - total / 2 + index * (card + gap);
     }
     if (count <= 1) return 597 - card / 2;
     return left + index * (width - card) / (count - 1);

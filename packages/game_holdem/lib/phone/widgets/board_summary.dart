@@ -166,11 +166,15 @@ class HoldemTimerRing extends StatelessWidget {
             color: HoldemColors.night,
             shape: BoxShape.circle,
           ),
-          child: Text(
-            '$seconds',
-            style: HoldemFonts.numbers(
-              size: 22,
-              color: seconds <= 5 ? HoldemColors.danger : HoldemColors.ivory,
+          // 숫자 글꼴의 줄 높이가 원보다 커서 위아래가 잘리지 않게 맞춥니다.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$seconds',
+              style: HoldemFonts.numbers(
+                size: 22,
+                color: seconds <= 5 ? HoldemColors.danger : HoldemColors.ivory,
+              ).copyWith(height: 1),
             ),
           ),
         ),

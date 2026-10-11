@@ -253,20 +253,22 @@ class TurnPlayerIndicator extends StatelessWidget {
           constraints: BoxConstraints(
             maxWidth: isLandscape ? 220 : 250.w.clamp(210.0, 300.0),
           ),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: player.nickname,
-                  style: const TextStyle(color: LiarsPokerColors.goldLight),
-                ),
-                const TextSpan(text: ' 차례'),
-              ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: player.nickname,
+                    style: const TextStyle(color: LiarsPokerColors.goldLight),
+                  ),
+                  const TextSpan(text: ' 차례'),
+                ],
+              ),
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: LiarsPokerFonts.headline(size: isLandscape ? 26 : 30),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: LiarsPokerFonts.headline(size: isLandscape ? 26 : 30),
           ),
         ),
         SizedBox(height: spacing + 4),

@@ -35,7 +35,7 @@ class HoldemGame extends TemplateGame {
   ImageProvider get layoutChairImage => HoldemAssets.layoutChair.provider();
 
   @override
-  int get requiredAssetVersion => HoldemAssets.assetVersion;
+  int get requiredAssetVersion => 0;
 
   @override
   Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>

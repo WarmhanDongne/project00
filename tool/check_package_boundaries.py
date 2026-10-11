@@ -38,10 +38,11 @@ NON_GAME_IMPLEMENTATION_PACKAGES = (
     | {"game_contract"}
 )
 
-# 첫 정식 바이너리에 코드와 에셋을 함께 넣는 기본 게임입니다.
+# 앱 바이너리에 코드와 에셋을 함께 넣는 무료 게임입니다.
 BUNDLED_GAME_PACKAGES = {
     "game_liars_poker",
     "game_final_call",
+    "game_holdem",
     "game_mafia",
 }
 

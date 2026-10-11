@@ -418,14 +418,20 @@ class _TallyList extends StatelessWidget {
           children: [
             leading,
             const SizedBox(width: 14),
+            // 닉네임(최대 8자)을 자르지 않고 칸에 맞춰 줄입니다.
             Expanded(
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: mafiaNoirDisplay(
-                  26,
-                  color: filled ? MafiaColors.noirPaper : MafiaColors.noirDust,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  style: mafiaNoirDisplay(
+                    26,
+                    color: filled
+                        ? MafiaColors.noirPaper
+                        : MafiaColors.noirDust,
+                  ),
                 ),
               ),
             ),

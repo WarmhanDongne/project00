@@ -71,3 +71,41 @@ dart format --output=none --set-exit-if-changed lib/platform/home/room/providers
 `c8b6a74`이고 원격 `디벨럽1`은 아직 없었다. 내용 통합 커밋과 develop 이력 병합을
 기록한 뒤 새 원격 브랜치로 게시한다. 이 요청은 FULL 실행이나 Firebase 배포
 승인을 뜻하지 않으며 전체 검증은 미실행 상태다.
+
+## 2026-10-11 추가 게시된 develop d9a61f8 동기화
+
+사용자가 새 develop을 재조회하고 현재 작업을 보존해 디벨럽1에 적용하도록 요청했다.
+`git fetch origin` PASS(exit0), 최신 `d9a61f8d450df4dfe1c27a5c7aa4259971925d99` 확인.
+이전 develop `c8b6a74` 이후에는 지난 디벨럽1의 GUI 통합도 포함되어 있었으므로,
+현재 HEAD `0c5cc01`부터 새 develop까지의 순수 후속 변경 26개 파일을 적용했다.
+
+- 방 복구 재시도·명시 종료 및 복구 중 새 방 생성 차단.
+- LP 분배 중 private 부재 상태의 퇴장·제외·복구 오류 수정.
+- heartbeat와 구독이 이전 복구 요청의 deadline을 상속하지 않도록 수명 분리.
+- LP 30초/10초, Final Call 30초의 복구 타이머 상한.
+- 방 없는 로비의 연결 띠 정리, LP 준비 배지/초기 안내 제거.
+- 로컬의 음악·디자인·크기 대응·에셋 변경은 보존했다. 81개 기존 변경/미추적 파일을
+  저장소 밖 임시 사본으로 보존했고, 79개는 원본 해시가 동일하다.
+  겹친 tablet_home.dart와 tablet_book_carousel.dart는 로비 음악과 높이 대응을 유지하며
+  원격의 방 보유 조건/LP 준비 배지 조건을 함께 적용했다.
+- 원격 변경만 인덱스에 반영한 뒤 `git merge --ff-only origin/develop`로 이력을 전진시켰다.
+  로컬 develop도 동일 커밋으로 전진했다. 사용자 변경은 stage/commit/stash 없이
+  미커밋 상태로 유지했고, 최종 staged 파일은 없다. GitHub push는 이번 요청에서 하지 않았다.
+
+검증(macOS raw CLI, session의 Node는 기존 v22.23.1):
+
+| 명령 | 결과 |
+| --- | --- |
+| `dart run :mosigame test session` | PASS / exit0, Flutter180·Functions116, 전후 working-tree 동일 |
+| 아래 GUI/목록 검사 | 최초 FAIL / exit1: 71 PASS, 목록 기대값 1 FAIL. GUI·음악·글자 크기 검사는 모두 통과 |
+| `flutter test --no-pub test/mosigame_cli/test_suites_test.dart` | 원격에서 추가한 테스트 3개의 기대 목록 누락 보완 후 20 PASS / exit0 |
+| `dart analyze lib/platform/home/tablet/screens/tablet_home.dart` | PASS / exit0, No issues found |
+| `git diff --check` | PASS / exit0 |
+
+```sh
+flutter test --no-pub test/book_carousel_test.dart test/tablet_room_reset_test.dart test/lobby_music_test.dart test/lobby_text_fit_test.dart test/store_profile_gui_test.dart test/table_background_transition_test.dart test/mosigame_cli/test_suites_test.dart
+```
+
+테스트를 삭제하거나 약화하지 않고 새 session 목록과 frozen manifest 기대값만 일치시켰다.
+이번 후보의 `validate --full`은 사용자 승인 대기이며 미실행이다. 실기기·Firebase 배포도
+수행하지 않았다. 이전 후보의 FULL/실기기 근거를 이번 후보로 확대하지 않는다.

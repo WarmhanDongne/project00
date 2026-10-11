@@ -525,17 +525,25 @@ class MafiaNoirBanner extends StatelessWidget {
           angle: spec.angle * math.pi / 180,
           child: Transform.scale(scaleX: value, child: child),
         ),
+        // 띠는 카드보다 넓게 그려 양 끝이 잘려 나가므로, 글자는 카드 안에
+        // 보이는 가운데 폭에 맞춰 줄입니다(긴 닉네임이 잘리지 않게).
         child: Container(
           color: spec.color,
-          padding: EdgeInsets.symmetric(vertical: fontSize * 0.12),
+          padding: EdgeInsets.symmetric(
+            vertical: fontSize * 0.12,
+            horizontal: cardWidth * 0.26,
+          ),
           alignment: Alignment.center,
-          child: Text(
-            spec.label,
-            maxLines: 1,
-            style: mafiaNoirDisplay(
-              fontSize,
-              color: spec.textColor,
-              letterSpacing: fontSize * spec.letterSpacing,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              spec.label,
+              maxLines: 1,
+              style: mafiaNoirDisplay(
+                fontSize,
+                color: spec.textColor,
+                letterSpacing: fontSize * spec.letterSpacing,
+              ),
             ),
           ),
         ),
@@ -977,17 +985,24 @@ class MafiaNoirRuledLabel extends StatelessWidget {
     decoration: BoxDecoration(
       border: Border.symmetric(horizontal: BorderSide(color: lineColor)),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: mafiaNoirBody(14, color: labelColor, letterSpacing: 2),
-        ),
-        const SizedBox(width: 10),
-        valueWidget ??
-            Text(value, style: mafiaNoirDisplay(valueSize, color: valueColor)),
-      ],
+    // 값(동료 이름 여럿 등)이 길면 넘치지 않게 줄 전체를 폭에 맞춰 줄입니다.
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: mafiaNoirBody(14, color: labelColor, letterSpacing: 2),
+          ),
+          const SizedBox(width: 10),
+          valueWidget ??
+              Text(
+                value,
+                style: mafiaNoirDisplay(valueSize, color: valueColor),
+              ),
+        ],
+      ),
     ),
   );
 }

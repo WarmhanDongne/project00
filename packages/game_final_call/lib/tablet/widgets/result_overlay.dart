@@ -243,48 +243,52 @@ class _WinnerPresentation extends StatelessWidget {
           top: 122,
           child: Column(
             children: [
-              Text(
-                victoryLabel,
-                key: const Key('final-call-winning-team-label'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 72,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.5,
-                  shadows: [
-                    Shadow(
-                      color: GameShadowColors.strongest,
-                      blurRadius: 7,
-                      offset: Offset(3, 5),
-                    ),
-                  ],
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  victoryLabel,
+                  key: const Key('final-call-winning-team-label'),
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 72,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.5,
+                    shadows: [
+                      Shadow(
+                        color: GameShadowColors.strongest,
+                        blurRadius: 7,
+                        offset: Offset(3, 5),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (nickname.isNotEmpty) ...[
                 const SizedBox(height: 15),
-                Text(
-                  nickname,
-                  key: const Key('final-call-winner-nickname'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFE4E9ED),
-                    fontSize: 34,
-                    height: 1,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    shadows: [
-                      Shadow(
-                        color: GameShadowColors.strongest,
-                        blurRadius: 5,
-                        offset: Offset(2, 3),
-                      ),
-                    ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    nickname,
+                    key: const Key('final-call-winner-nickname'),
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFE4E9ED),
+                      fontSize: 34,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                      shadows: [
+                        Shadow(
+                          color: GameShadowColors.strongest,
+                          blurRadius: 5,
+                          offset: Offset(2, 3),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

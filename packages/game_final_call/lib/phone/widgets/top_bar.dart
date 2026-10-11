@@ -112,13 +112,16 @@ class _ProfileChip extends StatelessWidget {
         children: [
           FinalCallPopAvatar(characterId: player.characterId, color: color),
           const SizedBox(width: 6),
+          // 닉네임(최대 8자)을 자르지 않고 칸에 맞춰 줄입니다.
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 96),
-            child: Text(
-              player.nickname,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: finalCallPopText(15),
+            constraints: const BoxConstraints(maxWidth: 124),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                player.nickname,
+                maxLines: 1,
+                style: finalCallPopText(15),
+              ),
             ),
           ),
           const SizedBox(width: 6),

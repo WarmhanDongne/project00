@@ -10,6 +10,9 @@ enum GameAccessType {
       value == 'paid' ? GameAccessType.paid : GameAccessType.free;
 }
 
+/// 앱에 포함되어 누구나 플레이할 수 있는 게임입니다.
+const bundledFreeGameIds = {'liars_poker', 'final_call', 'holdem'};
+
 class GameInfo implements GameRoomMetadata {
   const GameInfo({
     required this.id,
@@ -29,6 +32,7 @@ class GameInfo implements GameRoomMetadata {
     required this.isOwned,
     this.accessType = GameAccessType.free,
     this.minAppVersion = '',
+    this.storeVisible = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -63,6 +67,7 @@ class GameInfo implements GameRoomMetadata {
       isOwned: json['isOwned'] == true,
       accessType: GameAccessType.fromFirestore(json['accessType']),
       minAppVersion: firestoreString(json['minAppVersion']),
+      storeVisible: json['storeVisible'] == true,
       createdAt: firestoreDateTime(json['createdAt']),
       updatedAt: firestoreDateTime(json['updatedAt']),
     );
@@ -95,7 +100,8 @@ class GameInfo implements GameRoomMetadata {
   final bool isOwned;
   final GameAccessType accessType;
 
-  bool get isFree => accessType == GameAccessType.free;
+  bool get isFree =>
+      bundledFreeGameIds.contains(id) || accessType == GameAccessType.free;
   bool get isAccessible => isFree || isOwned;
 
   /// 이 게임을 실행하는 데 필요한 최소 앱 버전입니다(Firestore `minAppVersion`).
@@ -104,6 +110,12 @@ class GameInfo implements GameRoomMetadata {
   /// 그 이전 빌드에서는 시작 대신 업데이트 안내가 표시됩니다. 빈 값이면
   /// 모든 버전에서 허용합니다.
   final String minAppVersion;
+
+  /// 상점 매대에 진열할지입니다(Firestore `storeVisible`).
+  ///
+  /// `true`인 게임만 상점에 보입니다. 값이 없거나 `false`면 진열하지 않으며,
+  /// 로비 선반·방 게임 목록에는 영향을 주지 않습니다.
+  final bool storeVisible;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 

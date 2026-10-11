@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:project00/platform/auth/legal/signup_terms.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/email_link_config.dart';
@@ -128,14 +129,20 @@ class OnboardingService {
     }
   }
 
+  /// 프로필을 저장하고 가입을 마칩니다.
+  ///
+  /// [consents]는 처음 가입을 마칠 때 서버가 요구하는 약관 동의입니다.
+  /// 서버가 동의 시각과 약관 버전을 기록합니다.
   Future<void> completeProfile({
     required String nickname,
     String? profileImageUrl,
+    SignupConsents? consents,
   }) async {
     try {
       await _callAuthenticated('completeOnboardingProfile', {
         'nickname': nickname,
         'profileImageUrl': profileImageUrl,
+        if (consents != null) 'consents': consents.toJson(),
       });
     } on FirebaseFunctionsException catch (error) {
       throw AuthServiceException(

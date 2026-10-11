@@ -10,7 +10,9 @@ import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 
 //=======================게임 상점 (UI만)==============================
-// 시안 '모시 서점(신간 매대)'과 마피아 예고편 상세입니다. 결제·구매 복원·배경 음악은
+// 시안 '모시 서점(신간 매대)'입니다. 매대에는 Firestore `games`에서
+// `storeVisible`이 true인 게임만 진열합니다. 상점 상세(아래 마피아 예고편 포함)는
+// 추후 개발이라 '자세히 보기'를 누를 수 없습니다. 결제·구매 복원·배경 음악은
 // 아직 연결되지 않았습니다. 누르면 준비 중이라고만 알립니다
 // (docs/planning/NEWGUI_FEATURE_GAP.md 참고).
 
@@ -47,7 +49,111 @@ class _DesignCanvas extends StatelessWidget {
   }
 }
 
-enum _StoreItem { liar, mafia, finalCall, soon }
+/// 매대 쪽지와 계산대 카드 문구입니다.
+class _StoreCopy {
+  const _StoreCopy({
+    required this.note,
+    required this.sub,
+    required this.meta,
+    this.description = '',
+    this.tilt = 0,
+    this.spineShade = .2,
+  });
+
+  final String note;
+  final String sub;
+  final String meta;
+
+  /// 비어 있으면 Firestore 소개(`tabletDescription`·`description`)를 씁니다.
+  final String description;
+
+  /// 손글씨 쪽지가 기울어진 각도(도)입니다.
+  final double tilt;
+  final double spineShade;
+}
+
+/// 시안에서 다듬은 게임별 문구입니다. 여기에 없는 새 게임은 Firestore 값으로 채웁니다.
+const _knownCopy = {
+  'liars_poker': _StoreCopy(
+    note: '거짓말도 실력이에요!',
+    sub: '카드 · 블러핑',
+    meta: '카드 · 블러핑 · 2026',
+    description: '카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.',
+    tilt: -2,
+    spineShade: .22,
+  ),
+  'mafia': _StoreCopy(
+    note: '태블릿이 사회자가 돼요',
+    sub: '역할 추리 · 점원 추천',
+    meta: '역할 추리 · 2026',
+    description: '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 되고, 내 역할은 내 휴대폰에만 보여요.',
+    tilt: 1.5,
+    spineShade: .3,
+  ),
+  'final_call': _StoreCopy(
+    note: '둘이 한 팀, 끝까지!',
+    sub: '팀전 카드',
+    meta: '팀전 카드 · 2026',
+    description: '4명은 2대2, 6명은 2대2대2 팀전이에요.',
+    tilt: -1,
+    spineShade: .1,
+  ),
+  'holdem': _StoreCopy(
+    note: '칩을 걸고 한 판 승부!',
+    sub: '카드 · 베팅',
+    meta: '카드 · 베팅 · 2026',
+    tilt: 1,
+    spineShade: .18,
+  ),
+};
+
+/// 매대 맨 끝 '곧 나올 게임' 자리 문구입니다.
+const _comingSoonCopy = _StoreCopy(
+  note: '새 게임이 곧 진열돼요',
+  sub: '다음 신간',
+  meta: '다음 신간',
+  description: '곧 새로운 게임이 이 매대에 진열될 거예요. 조금만 기다려 주세요!',
+  tilt: 2,
+  spineShade: .12,
+);
+
+/// 매대에 놓이는 책 한 권입니다. [game]이 없으면 '곧 나올 게임' 자리입니다.
+class _StoreEntry {
+  const _StoreEntry({required this.id, required this.game, required this.copy});
+
+  /// 책 키(`store-book-<id>`)에 쓰는 값입니다. 게임 id 또는 `soon`입니다.
+  final String id;
+  final GameInfo? game;
+  final _StoreCopy copy;
+
+  String get name {
+    final game = this.game;
+    if (game == null) return '곧 나올 게임';
+    return MosiGameArt.isKnown(game.id)
+        ? MosiGameArt.of(game.id).koreanName
+        : game.name;
+  }
+
+  String get description {
+    final game = this.game;
+    if (copy.description.isNotEmpty || game == null) return copy.description;
+    return game.effectiveTabletDescription;
+  }
+
+  bool get canPlay {
+    final game = this.game;
+    return game != null && game.enabled && game.isAccessible;
+  }
+}
+
+_StoreCopy _copyFor(GameInfo game, int index) =>
+    _knownCopy[game.id] ??
+    _StoreCopy(
+      note: game.name,
+      sub: game.genres.isEmpty ? '새 게임' : game.genres.take(2).join(' · '),
+      meta: game.genres.join(' · '),
+      tilt: index.isEven ? -1.5 : 1.5,
+    );
 
 class TabletStoreScreen extends StatefulWidget {
   const TabletStoreScreen({super.key, required this.gameProvider});
@@ -58,7 +164,8 @@ class TabletStoreScreen extends StatefulWidget {
 }
 
 class _TabletStoreScreenState extends State<TabletStoreScreen> {
-  _StoreItem _selected = _StoreItem.mafia;
+  /// 고른 책(`_StoreEntry.id`)입니다. 없으면 매대의 첫 책을 고릅니다.
+  String? _selectedId;
   @override
   void initState() {
     super.initState();
@@ -78,109 +185,77 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     super.dispose();
   }
 
-  GameInfo? _game(_StoreItem item) {
-    final id = switch (item) {
-      _StoreItem.liar => 'liars_poker',
-      _StoreItem.mafia => 'mafia',
-      _StoreItem.finalCall => 'final_call',
-      _StoreItem.soon => null,
-    };
-    return widget.gameProvider.games
-        .where((g) => g.id == id && g.enabled)
-        .firstOrNull;
+  /// Firestore `storeVisible`이 true인 게임만 `order` 순서로 진열하고,
+  /// 맨 끝에 '곧 나올 게임' 자리를 둡니다.
+  List<_StoreEntry> get _entries {
+    final games =
+        widget.gameProvider.games.where((game) => game.storeVisible).toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    return [
+      for (final (index, game) in games.indexed)
+        _StoreEntry(id: game.id, game: game, copy: _copyFor(game, index)),
+      const _StoreEntry(id: 'soon', game: null, copy: _comingSoonCopy),
+    ];
   }
 
-  String _status(_StoreItem item) {
-    if (item == _StoreItem.soon) return context.l10n.comingSoon;
+  _StoreEntry _current(List<_StoreEntry> entries) => entries.firstWhere(
+    (entry) => entry.id == _selectedId,
+    orElse: () => entries.first,
+  );
+
+  String _status(_StoreEntry entry) {
+    final game = entry.game;
+    if (game == null) return context.l10n.comingSoon;
     if (widget.gameProvider.isLoading) return context.l10n.checking;
     if (widget.gameProvider.errorMessage != null) {
       return context.l10n.checkFailed;
     }
-    final game = _game(item);
-    return game?.isOwned == true
+    return game.isOwned
         ? context.l10n.owned
-        : game?.isFree == true
+        : game.isFree
         ? context.l10n.free
         : context.l10n.purchaseSoon;
   }
 
-  void _select(_StoreItem item) => setState(() {
-    _selected = item;
-  });
+  void _select(_StoreEntry entry) => setState(() => _selectedId = entry.id);
 
-  Future<void> _openFrame(_StoreItem item) async {
-    _select(item);
-    if (item != _StoreItem.mafia) return;
-    final selected = await Navigator.of(context).push<String>(
-      PageRouteBuilder<String>(
-        transitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, _, _) => TabletStoreMafiaDetail(game: _game(item)),
-        transitionsBuilder: (context, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
-    if (selected != null && mounted) Navigator.of(context).pop(selected);
-  }
-
-  void _act() {
+  void _act(_StoreEntry entry) {
     if (widget.gameProvider.errorMessage != null) {
       widget.gameProvider.fetchGames();
       return;
     }
-    if (_selected == _StoreItem.mafia) {
-      _openFrame(_selected);
+    if (entry.canPlay) {
+      Navigator.of(context).pop(entry.game!.id);
       return;
     }
-    final game = _game(_selected);
-    if (game?.isAccessible == true) {
-      Navigator.of(context).pop(game!.id);
-    } else {
-      _notReady(
-        context,
-        _selected == _StoreItem.soon
-            ? '새 게임 소식은 상점에서 확인해 주세요. 알림 신청은 준비 중이에요.'
-            : context.l10n.purchaseNotice,
-      );
-    }
+    _notReady(
+      context,
+      entry.game == null
+          ? '새 게임 소식은 상점에서 확인해 주세요. 알림 신청은 준비 중이에요.'
+          : context.l10n.purchaseNotice,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.maybeLocaleOf(context);
-    final (name, meta, description) = switch (_selected) {
-      _StoreItem.mafia => (
-        '마피아',
-        '역할 추리 · 2026',
-        '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 되고, 내 역할은 내 휴대폰에만 보여요.',
-      ),
-      _StoreItem.liar => (
-        '라이어스 포커',
-        '카드 · 블러핑 · 2026',
-        '카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.',
-      ),
-      _StoreItem.finalCall => (
-        '파이널콜',
-        '팀전 카드 · 2026',
-        '4명은 2대2, 6명은 2대2대2 팀전이에요.',
-      ),
-      _StoreItem.soon => (
-        '곧 나올 게임',
-        '다음 신간',
-        '아직 공개 전이에요. 새 게임 소식은 이곳에서 확인해 주세요.',
-      ),
-    };
-    final chip = _status(_selected);
+    final entries = _entries;
+    final current = _current(entries);
+    final chip = _status(current);
     final buttonLabel = widget.gameProvider.isLoading
         ? context.l10n.checkingProgress
         : widget.gameProvider.errorMessage != null
         ? context.l10n.checkAgain
-        : _selected == _StoreItem.mafia
-        ? context.l10n.details
-        : _game(_selected)?.isAccessible == true
+        : current.canPlay
         ? context.l10n.playFromShelf
-        : _selected == _StoreItem.soon
+        : current.game == null
         ? context.l10n.releaseSoon
         : context.l10n.purchaseSoon;
+    // 책이 많아지면 매대를 넓히고, 화면에는 비율을 지켜 줄여 넣습니다.
+    final bookRow = Size(
+      math.max(_bookRow.width, entries.length * 268.5),
+      _bookRow.height,
+    );
 
     return Scaffold(
       backgroundColor: MosiColors.cream,
@@ -200,8 +275,8 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
               height - counterHeight - displayTop,
             );
             final scale = math.min(
-              (width - inset * 2) / _bookRow.width,
-              displayHeight / _bookRow.height,
+              (width - inset * 2) / bookRow.width,
+              displayHeight / bookRow.height,
             );
             final tableHeight = 78 * scale;
             final wallBottom = counterHeight + _wallBottomRatio * 506 * scale;
@@ -256,19 +331,19 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                       fit: BoxFit.contain,
                       alignment: Alignment.bottomCenter,
                       child: SizedBox.fromSize(
-                        size: _bookRow,
+                        size: bookRow,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            for (final (i, book) in _books.indexed)
+                            for (final (i, entry) in entries.indexed)
                               _StoreBook(
-                                key: ValueKey('store-book-${book.item.name}'),
-                                book: book,
-                                owned: _game(book.item)?.isOwned == true,
+                                key: ValueKey('store-book-${entry.id}'),
+                                entry: entry,
+                                owned: entry.game?.isOwned == true,
                                 entranceIndex: i,
-                                selected: _selected == book.item,
-                                onTap: () => _select(book.item),
+                                selected: entry.id == current.id,
+                                onTap: () => _select(entry),
                               ),
                           ],
                         ),
@@ -342,15 +417,18 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                       start: .45,
                       offset: const Offset(0, 80),
                       child: _CounterCard(
-                        name: name,
+                        name: current.name,
                         status: chip,
-                        meta: meta,
-                        description: description,
+                        meta: current.copy.meta,
+                        description: current.description,
                         hint: width >= 1100,
                         compact: compact,
                         buttonLabel: buttonLabel,
-                        onPressed: widget.gameProvider.isLoading ? null : _act,
+                        onPressed: widget.gameProvider.isLoading
+                            ? null
+                            : () => _act(current),
                         locale: locale,
+                        showDetails: current.game != null,
                       ),
                     ),
                   ),
@@ -415,62 +493,66 @@ class _HangingSign extends StatelessWidget {
     final locale = Localizations.maybeLocaleOf(context);
     Widget string() =>
         Container(width: 3, height: stringLength, color: MosiColors.ink);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            string(),
-            SizedBox(width: compact ? 90 : 120),
-            string(),
-          ],
-        ),
-        Container(
-          padding: EdgeInsets.fromLTRB(
-            compact ? 24 : 34,
-            compact ? 6 : 10,
-            compact ? 24 : 34,
-            compact ? 8 : 12,
-          ),
-          decoration: BoxDecoration(
-            color: MosiColors.navy,
-            border: Border.all(color: MosiColors.ink, width: 3),
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: const [
-              BoxShadow(color: MosiColors.ink, offset: Offset(5, 5)),
-            ],
-          ),
-          child: Column(
+    // 간판은 정해진 크기의 그림이라 기기 글자 크기를 따르지 않습니다.
+    // 따르면 머리줄 높이를 넘어 간판 아래가 잘립니다.
+    return MediaQuery.withNoTextScaling(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                title,
-                style: MosiFonts.sans(
-                  locale: locale,
-                  size: compact ? 22 : 30,
-                  weight: FontWeight.w700,
-                  color: MosiColors.cream,
-                  letterSpacing: 1,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'NEW ARRIVALS · AUTUMN',
-                style: MosiFonts.grotesk(
-                  locale: locale,
-                  size: compact ? 9 : 11,
-                  weight: FontWeight.w700,
-                  color: MosiColors.sun,
-                  letterSpacing: compact ? 3 : 5,
-                  height: 1.2,
-                ),
-              ),
+              string(),
+              SizedBox(width: compact ? 90 : 120),
+              string(),
             ],
           ),
-        ),
-      ],
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              compact ? 24 : 34,
+              compact ? 6 : 10,
+              compact ? 24 : 34,
+              compact ? 8 : 12,
+            ),
+            decoration: BoxDecoration(
+              color: MosiColors.navy,
+              border: Border.all(color: MosiColors.ink, width: 3),
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: const [
+                BoxShadow(color: MosiColors.ink, offset: Offset(5, 5)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: MosiFonts.sans(
+                    locale: locale,
+                    size: compact ? 22 : 30,
+                    weight: FontWeight.w700,
+                    color: MosiColors.cream,
+                    letterSpacing: 1,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'NEW ARRIVALS · AUTUMN',
+                  style: MosiFonts.grotesk(
+                    locale: locale,
+                    size: compact ? 9 : 11,
+                    weight: FontWeight.w700,
+                    color: MosiColors.sun,
+                    letterSpacing: compact ? 3 : 5,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -564,72 +646,17 @@ class _DisplayTable extends StatelessWidget {
   }
 }
 
-class _Book {
-  const _Book({
-    required this.item,
-    required this.label,
-    required this.note,
-    required this.sub,
-    required this.tilt,
-    required this.spineShade,
-  });
-
-  final _StoreItem item;
-  final String label;
-  final String note;
-  final String sub;
-
-  /// 손글씨 쪽지가 기울어진 각도(도)입니다.
-  final double tilt;
-  final double spineShade;
-}
-
-const _books = [
-  _Book(
-    item: _StoreItem.liar,
-    label: '라이어스 포커',
-    note: '거짓말도 실력이에요!',
-    sub: '카드 · 블러핑',
-    tilt: -2,
-    spineShade: .22,
-  ),
-  _Book(
-    item: _StoreItem.mafia,
-    label: '마피아',
-    note: '태블릿이 사회자가 돼요',
-    sub: '역할 추리 · 점원 추천',
-    tilt: 1.5,
-    spineShade: .3,
-  ),
-  _Book(
-    item: _StoreItem.finalCall,
-    label: '파이널콜',
-    note: '둘이 한 팀, 끝까지!',
-    sub: '팀전 카드',
-    tilt: -1,
-    spineShade: .1,
-  ),
-  _Book(
-    item: _StoreItem.soon,
-    label: '곧 나올 게임',
-    note: '곧 입고돼요',
-    sub: '다음 신간',
-    tilt: 2,
-    spineShade: .12,
-  ),
-];
-
 class _StoreBook extends StatelessWidget {
   const _StoreBook({
     super.key,
-    required this.book,
+    required this.entry,
     required this.owned,
     required this.entranceIndex,
     required this.selected,
     required this.onTap,
   });
 
-  final _Book book;
+  final _StoreEntry entry;
   final bool owned;
   final int entranceIndex;
   final bool selected;
@@ -640,12 +667,8 @@ class _StoreBook extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.maybeLocaleOf(context);
-    final gameId = switch (book.item) {
-      _StoreItem.liar => 'liars_poker',
-      _StoreItem.mafia => 'mafia',
-      _StoreItem.finalCall => 'final_call',
-      _StoreItem.soon => null,
-    };
+    final game = entry.game;
+    final book = entry.copy;
     const radius = BorderRadius.only(
       topLeft: Radius.circular(2),
       bottomLeft: Radius.circular(2),
@@ -680,12 +703,18 @@ class _StoreBook extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (gameId == null)
+            if (game == null)
               const _ComingSoonCover()
             else
               FittedBox(
                 fit: BoxFit.cover,
-                child: MosiGameCover(gameId: gameId, width: 180, shadow: 0),
+                child: MosiGameCover(
+                  gameId: game.id,
+                  width: 180,
+                  shadow: 0,
+                  fallbackName: game.name,
+                  fallbackImageUrl: game.imageUrl,
+                ),
               ),
             Positioned(
               left: 0,
@@ -760,7 +789,7 @@ class _StoreBook extends StatelessWidget {
       child: Semantics(
         button: true,
         selected: selected,
-        label: book.label,
+        label: entry.name,
         onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
@@ -777,7 +806,7 @@ class _StoreBook extends StatelessWidget {
                   note: book.note,
                   sub: book.sub,
                   tilt: book.tilt,
-                  dashed: book.item == _StoreItem.soon,
+                  dashed: game == null,
                   locale: locale,
                 ),
                 const SizedBox(height: 10),
@@ -946,16 +975,19 @@ class _TapedNote extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 시안의 손글씨(Nanum Pen Script)는 번들하지 않아 굵은 본문체로 대신합니다.
-          Text(
-            note,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: MosiFonts.sans(
-              locale: locale,
-              size: 15,
-              weight: FontWeight.w700,
-              color: MosiColors.ink,
-              height: 1.25,
+          // 글꼴·언어에 따라 쪽지보다 길어지면 자르지 않고 살짝 줄입니다.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              note,
+              maxLines: 1,
+              style: MosiFonts.sans(
+                locale: locale,
+                size: 15,
+                weight: FontWeight.w700,
+                color: MosiColors.ink,
+                height: 1.25,
+              ),
             ),
           ),
           Text(
@@ -1005,6 +1037,7 @@ class _CounterCard extends StatelessWidget {
     required this.buttonLabel,
     required this.onPressed,
     required this.locale,
+    this.showDetails = true,
   });
 
   final String name;
@@ -1016,6 +1049,9 @@ class _CounterCard extends StatelessWidget {
   final String buttonLabel;
   final VoidCallback? onPressed;
   final Locale? locale;
+
+  /// 게임 상세 버튼을 둘지입니다. 상점 상세는 아직 없어 눌리지 않습니다.
+  final bool showDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -1058,18 +1094,23 @@ class _CounterCard extends StatelessWidget {
                   ),
                 );
               },
-              child: Column(
+              // 계산대 높이는 정해져 있어, 설명이 길거나 기기 글자가 크면
+              // 자르지 않고 내용 전체를 살짝 줄입니다.
+              child: MosiFitHeight(
                 key: ValueKey(name),
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 이름·꼬리표·설명 줄은 넘치면 다음 줄로 넘어갑니다(말줄임 없음).
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
                           name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: MosiFonts.sans(
                             locale: locale,
                             size: compact ? 22 : 30,
@@ -1078,39 +1119,30 @@ class _CounterCard extends StatelessWidget {
                             height: 1.2,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      _StatusTag(label: status, locale: locale),
-                      if (!compact) ...[
-                        const SizedBox(width: 12),
-                        Flexible(
-                          child: Text(
+                        _StatusTag(label: status, locale: locale),
+                        if (!compact)
+                          Text(
                             meta,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: MosiFonts.sans(
                               locale: locale,
                               size: 13,
                               color: MosiColors.muted,
                             ),
                           ),
-                        ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: MosiFonts.sans(
-                      locale: locale,
-                      size: compact ? 13 : 15,
-                      color: const Color(0xFF4A4766),
-                      height: 1.5,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      style: MosiFonts.sans(
+                        locale: locale,
+                        size: compact ? 13 : 15,
+                        color: const Color(0xFF4A4766),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1149,17 +1181,34 @@ class _CounterCard extends StatelessWidget {
             ),
             const SizedBox(width: 28),
           ],
-          SizedBox(
-            width: compact ? 160 : 236,
-            child: MosiButton(
-              label: buttonLabel,
+          if (showDetails) ...[
+            // 상점 상세는 추후 개발합니다. 지금은 자리만 두고 누를 수 없습니다.
+            MosiButton(
+              label: context.l10n.details,
               background: MosiColors.white,
               height: compact ? 54 : 62,
               radius: 10,
               shadowOffset: 5,
-              fontSize: compact ? 16 : 20,
-              expand: true,
-              onPressed: onPressed,
+              fontSize: compact ? 15 : 18,
+              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 22),
+              onPressed: null,
+            ),
+            SizedBox(width: compact ? 10 : 14),
+          ],
+          // 번역 문구가 길면 버튼이 글자에 맞춰 넓어지고, 설명 칸이 줄어듭니다.
+          ConstrainedBox(
+            constraints: BoxConstraints(minWidth: compact ? 160 : 236),
+            child: IntrinsicWidth(
+              child: MosiButton(
+                label: buttonLabel,
+                background: MosiColors.white,
+                height: compact ? 54 : 62,
+                radius: 10,
+                shadowOffset: 5,
+                fontSize: compact ? 16 : 20,
+                expand: true,
+                onPressed: onPressed,
+              ),
             ),
           ),
         ],
