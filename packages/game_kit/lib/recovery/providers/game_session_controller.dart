@@ -22,10 +22,12 @@ import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/recovery/services/room_session_identity_store.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 
 // ============================================================
 
 const _preparationFailureMessage = '화면 준비를 확인하지 못했어요. 다시 연결해주세요.';
+const _readyConfirmationFailureMessage = '서버에서 게임 준비 완료를 확인하지 못했어요. 다시 연결해주세요.';
 
 //=======================게임 세션 공통 뼈대==============================
 /// 게임 컨트롤러가 **게임 규칙과 무관하게** 똑같이 해야 하는 일을 모았습니다.
@@ -86,6 +88,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   RoomRecoveryBatch? _preparationOwner;
   int _preparationGeneration = 0, _preparationRefreshAttempt = 0;
   bool _preparationFailed = false, _hadUsable = false;
+  String _preparationErrorMessage = _preparationFailureMessage;
   int _publicGeneration = 0;
   int? _gameStartedAt;
   int? _publicRevision;
@@ -114,8 +117,9 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       RecoveryMetrics.instance.mark(RecoveryStage.assets);
       await WidgetsBinding.instance.endOfFrame;
       if (ref.mounted) reportScreenReady(assetsReady: true);
-    } catch (_) {
+    } catch (error) {
       if (ref.mounted) {
+        _recordPreparationFailure('screen', error);
         _assetsReady = false;
         _screenReady = false;
         reportPreparationFailure();
@@ -153,7 +157,10 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     _updateReadiness();
   }
 
-  void reportPreparationFailure() {
+  void reportPreparationFailure() =>
+      _failPreparation(_preparationFailureMessage);
+
+  void _failPreparation(String message) {
     if (_preparationFailed) {
       return;
     }
@@ -169,10 +176,39 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
     RecoveryMetrics.instance.finish(success: false);
     _preparationFailed = true;
-    state = state.withError(_preparationFailureMessage);
+    _preparationErrorMessage = message;
+    state = state.withError(message);
     recoverySession.invalidate();
     _reportedKey = null;
     unawaited(_report(false));
+  }
+
+  void _recordPreparationFailure(String stage, Object error) {
+    final code = error is TimeoutException
+        ? 'timeout'
+        : error is FirebaseFunctionsException
+        ? switch (error.code) {
+            'aborted' ||
+            'deadline-exceeded' ||
+            'unavailable' ||
+            'unauthenticated' ||
+            'permission-denied' ||
+            'failed-precondition' ||
+            'invalid-argument' ||
+            'not-found' ||
+            'internal' ||
+            'unknown' => error.code,
+            _ => 'functions-other',
+          }
+        : error is StateError
+        ? 'state'
+        : 'client-other';
+    GameCommunicationLog.instance.add(
+      level: GameCommunicationLevel.failure,
+      title: '게임 준비 확인 실패',
+      detail: 'stage=$stage code=$code',
+      operation: 'recovery',
+    );
   }
 
   void retrySession() {
@@ -186,6 +222,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     _decodedPrivateEvent = null;
     _reportedKey = null;
     _readyAckKey = null;
+    _screenReady = false;
     _bindSubscriptions();
   }
 
@@ -217,7 +254,14 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
   }
 
-  void _bindSubscriptions() {
+  // Identity notifications can arrive inside a bounded recovery operation.
+  // Stream callbacks belong to the session, not that operation's deadline.
+  late final Zone _sessionZone;
+  int? _readyFrameSubscription;
+
+  void _bindSubscriptions() => _sessionZone.run(_bindSessionSubscriptions);
+
+  void _bindSessionSubscriptions() {
     final generation = ++_subscriptionGeneration;
     RecoveryMetrics.instance.mark(RecoveryStage.subscriptions);
     unawaited(_publicSubscription?.cancel());
@@ -281,6 +325,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   void _scheduleReadyFrame(GameRecoveryContext context) {
     _screenReady = false;
     final subscription = _subscriptionGeneration, frame = ++_frameGeneration;
+    _readyFrameSubscription = subscription;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.mounted &&
           subscription == _subscriptionGeneration &&
@@ -338,8 +383,16 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       if (!current()) {
         return;
       }
-      state = state.withError(_preparationFailureMessage);
-      reportPreparationFailure();
+      final waitingForAck = session.localUsable && !session.serverConfirmed;
+      _recordPreparationFailure(
+        waitingForAck ? 'ready_ack' : 'local_data',
+        TimeoutException('preparation deadline'),
+      );
+      _failPreparation(
+        waitingForAck
+            ? _readyConfirmationFailureMessage
+            : _preparationFailureMessage,
+      );
     });
     void scheduleRefresh() {
       const delays = [1, 2, 4, 8, 8];
@@ -408,7 +461,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
     }
     if (_preparationFailed) {
       if (state.errorMessage == null) {
-        state = state.withError(_preparationFailureMessage);
+        state = state.withError(_preparationErrorMessage);
       }
       session.localUsable = false;
       session.changed();
@@ -548,10 +601,18 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
           RecoveryMetrics.instance.mark(RecoveryStage.ready);
           _updateReadiness();
         } else {
-          reportPreparationFailure();
+          _recordPreparationFailure(
+            'ready_response',
+            StateError('not accepted'),
+          );
+          _failPreparation(_readyConfirmationFailureMessage);
         }
       }
     } catch (error) {
+      _recordPreparationFailure(
+        ready ? 'ready_report' : 'failed_report',
+        error,
+      );
       if (ref.mounted &&
           generation == _subscriptionGeneration &&
           sequence == _reportSeq &&
@@ -566,13 +627,14 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
         if (staleConnection && recoverySession.reconnect != null) {
           try {
             await recoverySession.reconnect!();
-          } catch (_) {
+          } catch (error) {
+            _recordPreparationFailure('ready_reconnect', error);
             if (ref.mounted && generation == _subscriptionGeneration) {
-              reportPreparationFailure();
+              _failPreparation(_readyConfirmationFailureMessage);
             }
           }
         } else {
-          reportPreparationFailure();
+          _failPreparation(_readyConfirmationFailureMessage);
         }
       }
     }
@@ -592,6 +654,7 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   /// 정보(마피아의 역할 등)가 흘러들면 옆에서 보는 사람에게 다 드러납니다.
   @protected
   void startSession({required bool watchPrivate}) {
+    _sessionZone = Zone.current;
     if (!RecoveryMetrics.instance.active) RecoveryMetrics.instance.begin();
     RecoveryMetrics.instance.mark(RecoveryStage.auth);
     _watchPrivate = watchPrivate;
@@ -704,9 +767,13 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
       session.localUsable = false;
       if (session.paused) session.serverConfirmed = false;
       _readyAckKey = null;
-      if (_assetsReady && context.valid) {
-        _scheduleReadyFrame(context);
-      }
+    }
+    if (_assetsReady &&
+        context.valid &&
+        (previous?.key != context.key ||
+            (!_screenReady &&
+                _readyFrameSubscription != _subscriptionGeneration))) {
+      _scheduleReadyFrame(context);
     }
     RecoveryMetrics.instance.mark(RecoveryStage.publicData);
     final newGame = startedAt != _gameStartedAt;

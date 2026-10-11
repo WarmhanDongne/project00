@@ -385,27 +385,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('게임 준비 중에는 고른 책 위에 준비 표시가 뜨고 책 자리를 잴 수 있다', (tester) async {
+  testWidgets('준비 표시와 LP 배경 대기에서도 선택한 책 자리를 잴 수 있다', (tester) async {
     final coverKey = GlobalKey();
-    Widget carousel({required bool preparing}) => MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: SizedBox(
-            width: 620,
-            child: TabletBookCarousel(
-              games: _books,
-              selected: _books[1],
-              coverWidth: 200,
-              deep: Colors.black,
-              onSelect: (_) {},
-              onOpenDetail: (_) {},
-              preparing: preparing,
-              selectedCoverKey: coverKey,
+    Widget carousel({required bool preparing, GameInfo? selected}) =>
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 620,
+                child: TabletBookCarousel(
+                  games: _books,
+                  selected: selected ?? _books[1],
+                  coverWidth: 200,
+                  deep: Colors.black,
+                  onSelect: (_) {},
+                  onOpenDetail: (_) {},
+                  preparing: preparing,
+                  selectedCoverKey: coverKey,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        );
     double badgeOpacity() => tester
         .widget<AnimatedOpacity>(
           find
@@ -428,6 +429,15 @@ void main() {
     final cover = tester.getRect(find.byKey(coverKey));
     expect(cover.width, greaterThan(0));
     expect(cover.height, greaterThan(0));
+
+    await tester.pumpWidget(carousel(preparing: true, selected: _books.first));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('shelf-preparing-badge')), findsNothing);
+    // Other books retain their transparent badges for the fade transition.
+    expect(find.text('게임 준비 중').hitTestable(), findsNothing);
+    final lpCover = tester.getRect(find.byKey(coverKey));
+    expect(lpCover.width, greaterThan(0));
+    expect(lpCover.height, greaterThan(0));
   });
 }
 

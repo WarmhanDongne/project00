@@ -55,6 +55,7 @@ void main() {
         'test/auth/auth_gate_rotation_test.dart',
         'test/auth/auth_gate_stuck_loading_test.dart',
         'test/auth/email_link_error_message_test.dart',
+        'test/auth/email_link_service_test.dart',
         'test/auth/google_login_button_test.dart',
         'test/auth/onboarding_parity_test.dart',
         'test/auth/register_loading_test.dart',

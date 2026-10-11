@@ -32,9 +32,6 @@ class $AssetsImagesGen {
 
   /// Directory path: assets/images/reconnect
   $AssetsImagesReconnectGen get reconnect => const $AssetsImagesReconnectGen();
-
-  /// Directory path: assets/images/widgets
-  $AssetsImagesWidgetsGen get widgets => const $AssetsImagesWidgetsGen();
 }
 
 class $AssetsSoundsGen {
@@ -267,52 +264,6 @@ class $AssetsImagesReconnectGen {
 
   /// List of all assets
   List<AssetGenImage> get values => [gameController, star];
-}
-
-class $AssetsImagesWidgetsGen {
-  const $AssetsImagesWidgetsGen();
-
-  /// Directory path: assets/images/widgets/roulette
-  $AssetsImagesWidgetsRouletteGen get roulette =>
-      const $AssetsImagesWidgetsRouletteGen();
-}
-
-class $AssetsImagesWidgetsRouletteGen {
-  const $AssetsImagesWidgetsRouletteGen();
-
-  /// File path: assets/images/widgets/roulette/border.webp
-  AssetGenImage get border =>
-      const AssetGenImage('assets/images/widgets/roulette/border.webp');
-
-  /// File path: assets/images/widgets/roulette/centerStone.webp
-  AssetGenImage get centerStone =>
-      const AssetGenImage('assets/images/widgets/roulette/centerStone.webp');
-
-  /// File path: assets/images/widgets/roulette/lever_bottom.webp
-  AssetGenImage get leverBottom =>
-      const AssetGenImage('assets/images/widgets/roulette/lever_bottom.webp');
-
-  /// File path: assets/images/widgets/roulette/lever_head.webp
-  AssetGenImage get leverHead =>
-      const AssetGenImage('assets/images/widgets/roulette/lever_head.webp');
-
-  /// File path: assets/images/widgets/roulette/lever_stick.webp
-  AssetGenImage get leverStick =>
-      const AssetGenImage('assets/images/widgets/roulette/lever_stick.webp');
-
-  /// File path: assets/images/widgets/roulette/pointer.webp
-  AssetGenImage get pointer =>
-      const AssetGenImage('assets/images/widgets/roulette/pointer.webp');
-
-  /// List of all assets
-  List<AssetGenImage> get values => [
-    border,
-    centerStone,
-    leverBottom,
-    leverHead,
-    leverStick,
-    pointer,
-  ];
 }
 
 abstract final class Assets {

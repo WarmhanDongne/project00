@@ -8,14 +8,13 @@
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_final_call/phone/phone_board.dart';
 import 'package:game_final_call/tablet/tablet_board.dart';
 import 'package:game_final_call/shared/services/game_service.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_final_call/game_assets.dart';
 import 'package:game_kit/recovery/widgets/critical_network_guard.dart';
 
 // ============================================================
@@ -34,17 +33,12 @@ class FinalCallGame extends TemplateGame {
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.landscapeOnly;
+  // 자리 배치 화면은 Party Pop 게임 바탕색으로 테이블과 의자를 그립니다.
+  // 게임 화면이 그림 대신 코드로 그리는 배경이라 별도 이미지가 없습니다.
   @override
-  Color get tableColor => const Color(0xFFF2F0EB);
+  Color get tableColor => FinalCallColors.night;
   @override
-  ImageProvider get tableBackgroundImage =>
-      Assets.games.finalCall.images.background.background.game.provider();
-  @override
-  ImageProvider get layoutTableImage =>
-      Assets.games.finalCall.images.layout.layoutTable.game.provider();
-  @override
-  ImageProvider get layoutChairImage =>
-      Assets.games.finalCall.images.layout.layoutChair.game.provider();
+  ImageProvider? get tableBackgroundImage => null;
 
   @override
   Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>

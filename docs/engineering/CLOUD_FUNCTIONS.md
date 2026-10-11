@@ -128,3 +128,15 @@ npm run lint && npm run build    # predeploy 가 eslint + tsc 를 강제한다
 
 RTDB 트리거를 옮기거나 이름을 바꿀 때는 **구·신 함수가 같은 이벤트를 중복 처리하지
 않게** 해야 한다. 배포 직후 잠깐 둘 다 살아 있는 구간이 생긴다.
+
+
+## 2026-10-10 로비 지연 개선 후보 (`디벨럽1`)
+
+기존 `createRealtimeRoom`은 확인된 종료 allocation의 completed 생성 슬롯을 조건부
+교체해 cleanup 주기 전 재생성을 허용한다. 다른 세대/미확정 생성은 보존한다.
+`createRealtimeRoom`, `closeRoom`, `game_common_operation_status`는 고정 단계별
+`room_action_timing` 로그를 남긴다. payload·식별자·오류 원문은 넣지 않는다.
+새 export/리전/minInstances/DB schema 변경은 없다. 2026-10-10 사용자 승인으로
+`createRealtimeRoom`만 `project0000-ec01e`에 배포했다(서울/Node22, CLI 성공·exit0).
+나머지 두 함수의 timing은 미배포다. 실제 재생성·속도 재측정은 대기이며
+[범위·측정 절차](../operations/ROOM_ACTION_LATENCY.md)를 따른다.

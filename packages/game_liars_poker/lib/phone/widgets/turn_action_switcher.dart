@@ -5,7 +5,9 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_liars_poker/shared/providers/game_controller.dart';
+
 // ============================================================
 
 /// 내 턴의 라이어 버튼과 다른 플레이어의 턴 안내를 같은 자리에서 교체합니다.
@@ -223,7 +225,10 @@ class _TurnActionSwitcherState extends State<TurnActionSwitcher>
   }
 }
 
-/// 현재 턴 플레이어의 프로필과 닉네임을 표시합니다.
+/// 다른 사람 차례에 행동 자리에 보여 주는 안내입니다.
+///
+/// 얼굴은 위쪽 기준 카드 옆에 이미 크게 보이므로 여기서는 이름과 상태만
+/// 퍽 버튼과 같은 무게의 글자로 보여 줍니다.
 class TurnPlayerIndicator extends StatelessWidget {
   const TurnPlayerIndicator({
     super.key,
@@ -241,89 +246,33 @@ class TurnPlayerIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ---------------------------------------------------------------------------
-    // 가로 턴 정보
-    // ---------------------------------------------------------------------------
-    if (isLandscape) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          PhonePlayerProfile(player: player, size: profileSize),
-          SizedBox(width: spacing),
-          Expanded(
-            child: _TurnPlayerText(
-              nickname: player.nickname,
-              fontSize: nicknameFontSize,
-              textAlign: TextAlign.left,
-            ),
-          ),
-        ],
-      );
-    }
-
-    // ---------------------------------------------------------------------------
-    // 세로 턴 정보
-    // ---------------------------------------------------------------------------
     return Column(
       mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        PhonePlayerProfile(player: player, size: profileSize),
-        SizedBox(height: spacing),
         ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 250.w.clamp(210.0, 280.0)),
-          child: _TurnPlayerText(
-            nickname: player.nickname,
-            fontSize: nicknameFontSize,
+          constraints: BoxConstraints(
+            maxWidth: isLandscape ? 220 : 250.w.clamp(210.0, 300.0),
+          ),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: player.nickname,
+                  style: const TextStyle(color: LiarsPokerColors.goldLight),
+                ),
+                const TextSpan(text: ' 차례'),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
+            style: LiarsPokerFonts.headline(size: isLandscape ? 26 : 30),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// 닉네임만 말줄임하고 고정 안내 문구는 항상 온전히 표시합니다.
-class _TurnPlayerText extends StatelessWidget {
-  const _TurnPlayerText({
-    required this.nickname,
-    required this.fontSize,
-    required this.textAlign,
-  });
-
-  final String nickname;
-  final double fontSize;
-  final TextAlign textAlign;
-
-  @override
-  Widget build(BuildContext context) {
-    final alignment = textAlign == TextAlign.center
-        ? CrossAxisAlignment.center
-        : CrossAxisAlignment.start;
-    final fittedAlignment = textAlign == TextAlign.center
-        ? Alignment.center
-        : Alignment.centerLeft;
-    final style = TextStyle(
-      fontSize: fontSize,
-      color: Colors.white,
-      fontWeight: FontWeight.w600,
-    );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: alignment,
-      children: [
+        SizedBox(height: spacing + 4),
         Text(
-          nickname,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: textAlign,
-          style: style,
-        ),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: fittedAlignment,
-          child: Text('님 차례입니다', maxLines: 1, style: style),
+          '카드를 고르는 중이에요',
+          style: LiarsPokerFonts.text(size: 13, color: LiarsPokerColors.muted),
         ),
       ],
     );

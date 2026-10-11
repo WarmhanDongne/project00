@@ -3,11 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart' as liar;
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
-import 'package:game_final_call/gen/assets.gen.dart' as final_call;
-import 'package:game_final_call/game_assets.dart';
+import 'package:game_liars_poker/game_theme.dart';
+import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
+import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
@@ -957,11 +958,12 @@ class _LiarCardFace extends StatelessWidget {
 class _FinalPlayScene extends StatelessWidget {
   const _FinalPlayScene();
 
-  static const _black = Color(0xFF141414);
-  static const _red = Color(0xFFE0302E);
-  static const _blue = Color(0xFF2F5BEA);
-  static const _yellow = Color(0xFFE5DB00);
-  static const _green = Color(0xFF2EB872);
+  // 게임과 같은 Party Pop 색입니다.
+  static const _black = FinalCallColors.ink;
+  static const _screen = FinalCallColors.night;
+  static const _red = FinalCallColors.red;
+  static const _blue = FinalCallColors.blue;
+  static const _yellow = FinalCallColors.yellow;
 
   @override
   Widget build(BuildContext context) {
@@ -969,21 +971,11 @@ class _FinalPlayScene extends StatelessWidget {
       period: const Duration(milliseconds: 14660),
       builder: (context, p) {
         Widget handCard(
-          Color border,
+          String color,
+          int value,
           double rotate, {
           double w = 20,
-          double h = 28,
-        }) => _rotated(
-          rotate,
-          _miniCard(
-            width: w,
-            height: h,
-            background: const Color(0xFF111111),
-            border: border,
-            borderWidth: 1.5,
-            radius: 2,
-          ),
-        );
+        }) => _rotated(rotate, _finalCardFace(color, value, w));
 
         final drawX = _kf(p, [(1.6, 230), (9.2, 0)]);
         final drawY = _kf(p, [(1.6, -274), (9.2, 0)]);
@@ -1111,14 +1103,7 @@ class _FinalPlayScene extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: border, width: 2),
               ),
-              child: Text(
-                text,
-                style: MosiFonts.grotesk(
-                  locale: Localizations.maybeLocaleOf(context),
-                  size: 13,
-                  color: fg,
-                ),
-              ),
+              child: Text(text, style: finalCallPopText(13, color: fg)),
             ),
           ),
         );
@@ -1126,47 +1111,23 @@ class _FinalPlayScene extends StatelessWidget {
         Widget bigCard(
           String n,
           String label,
-          Color color, {
+          String color, {
           double dy = 0,
           double opacity = 1,
         }) => _fade(
           opacity,
           Transform.translate(
             offset: Offset(0, dy),
-            child: Container(
-              width: 60,
-              height: 88,
-              decoration: BoxDecoration(
-                color: const Color(0xFF111111),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: color, width: 3),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black, offset: Offset(3, 3)),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    n,
-                    style: MosiFonts.playfair(
-                      locale: Localizations.maybeLocaleOf(context),
-                      size: 36,
-                      color: color,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    style: MosiFonts.sans(
-                      locale: Localizations.maybeLocaleOf(context),
-                      size: 9,
-                      weight: FontWeight.w700,
-                      color: const Color(0xFFB9B4A8),
-                    ),
-                  ),
-                ],
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _finalCardFace(color, int.parse(n), 60),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: finalCallPopText(9, color: FinalCallColors.lilac),
+                ),
+              ],
             ),
           ),
         );
@@ -1178,21 +1139,26 @@ class _FinalPlayScene extends StatelessWidget {
               190,
               30,
               _TabletFrame(
-                screen: ColoredBox(
-                  color: const Color(0xFFEFEDE8),
+                screen: FinalCallPopBackground(
+                  spacing: 12,
                   child: Stack(
                     children: [
                       Center(
                         child: Container(
                           width: 156,
                           height: 156,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7F6F2),
+                          decoration: const BoxDecoration(
+                            color: FinalCallColors.lilac,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF2A2A2A),
-                              width: 9,
+                            border: Border.fromBorderSide(
+                              BorderSide(color: FinalCallColors.ink, width: 5),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: FinalCallColors.ink,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1235,36 +1201,7 @@ class _FinalPlayScene extends StatelessWidget {
               ),
             ),
             // 카드 더미
-            _at(
-              296,
-              114,
-              Container(
-                width: 30,
-                height: 42,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: Colors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0xFF2A2A2A), offset: Offset(2, 2)),
-                  ],
-                ),
-                child: _rotated(
-                  45,
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFFB9B4A8),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            _at(296, 114, const FinalCallCardBack(width: 30)),
             _at(
               346,
               112,
@@ -1276,14 +1213,7 @@ class _FinalPlayScene extends StatelessWidget {
                     discardRot,
                     Transform.scale(
                       scale: discardScale,
-                      child: _miniCard(
-                        width: 30,
-                        height: 42,
-                        background: const Color(0xFF111111),
-                        border: _blue,
-                        borderWidth: 1.5,
-                        label: '2',
-                      ),
+                      child: _finalCardFace('blue', 2, 30),
                     ),
                   ),
                 ),
@@ -1298,14 +1228,7 @@ class _FinalPlayScene extends StatelessWidget {
                   offset: Offset(drawX, drawY),
                   child: Transform.scale(
                     scale: drawScale,
-                    child: _miniCard(
-                      width: 30,
-                      height: 42,
-                      background: const Color(0xFF111111),
-                      border: _red,
-                      borderWidth: 1.5,
-                      label: '7',
-                    ),
+                    child: _finalCardFace('red', 7, 30),
                   ),
                 ),
               ),
@@ -1338,7 +1261,7 @@ class _FinalPlayScene extends StatelessWidget {
                   width: 88,
                   height: 152,
                   small: true,
-                  screenColor: _black,
+                  screenColor: _screen,
                   child: Stack(
                     children: [
                       Align(
@@ -1356,22 +1279,22 @@ class _FinalPlayScene extends StatelessWidget {
                       Positioned(
                         left: 12,
                         bottom: 10,
-                        child: handCard(_blue, -10, w: 17, h: 24),
+                        child: handCard('blue', 5, -10, w: 17),
                       ),
                       Positioned(
                         left: 25,
                         bottom: 12,
-                        child: handCard(_blue, -3, w: 17, h: 24),
+                        child: handCard('blue', 8, -3, w: 17),
                       ),
                       Positioned(
                         left: 38,
                         bottom: 12,
-                        child: handCard(_yellow, 4, w: 17, h: 24),
+                        child: handCard('yellow', 1, 4, w: 17),
                       ),
                       Positioned(
                         left: 51,
                         bottom: 10,
-                        child: handCard(_red, 11, w: 17, h: 24),
+                        child: handCard('red', 9, 11, w: 17),
                       ),
                     ],
                   ),
@@ -1385,7 +1308,7 @@ class _FinalPlayScene extends StatelessWidget {
               _rotated(
                 -8,
                 _PhoneFrame(
-                  screenColor: _black,
+                  screenColor: _screen,
                   glow: glowA,
                   glowColor: _yellow,
                   child: Stack(
@@ -1408,7 +1331,7 @@ class _FinalPlayScene extends StatelessWidget {
                                   locale: Localizations.maybeLocaleOf(context),
                                   size: 10,
                                   weight: FontWeight.w600,
-                                  color: const Color(0xFFB9B4A8),
+                                  color: FinalCallColors.lilac,
                                 ),
                               ),
                             ],
@@ -1418,22 +1341,22 @@ class _FinalPlayScene extends StatelessWidget {
                       Positioned(
                         left: 10,
                         bottom: 12,
-                        child: handCard(_red, -12),
+                        child: handCard('red', 7, -12),
                       ),
                       Positioned(
                         left: 26,
                         bottom: 15,
-                        child: handCard(_red, -4),
+                        child: handCard('red', 3, -4),
                       ),
                       Positioned(
                         left: 42,
                         bottom: 15,
-                        child: handCard(_blue, 4),
+                        child: handCard('blue', 7, 4),
                       ),
                       Positioned(
                         left: 58,
                         bottom: 12,
-                        child: handCard(_yellow, 12),
+                        child: handCard('yellow', 2, 12),
                       ),
                     ],
                   ),
@@ -1453,7 +1376,7 @@ class _FinalPlayScene extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       _PhoneFrame(
-                        screenColor: _black,
+                        screenColor: _screen,
                         child: Stack(
                           children: [
                             Align(
@@ -1503,23 +1426,28 @@ class _FinalPlayScene extends StatelessWidget {
                                             child: Container(
                                               alignment: Alignment.center,
                                               decoration: BoxDecoration(
-                                                color: _yellow,
+                                                color: _red,
                                                 borderRadius:
-                                                    BorderRadius.circular(6),
+                                                    BorderRadius.circular(8),
                                                 border: Border.all(
-                                                  color: MosiColors.ink,
+                                                  color: _black,
                                                   width: 2.5,
                                                 ),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: _black,
+                                                    offset: Offset(0, 3),
+                                                  ),
+                                                ],
                                               ),
                                               child: Text(
-                                                'CALL',
-                                                style: MosiFonts.playfair(
-                                                  locale:
-                                                      Localizations.maybeLocaleOf(
-                                                        context,
-                                                      ),
-                                                  size: 15,
-                                                  color: _black,
+                                                'CALL!',
+                                                style: finalCallPopText(
+                                                  14,
+                                                  color: Colors.white,
+                                                  shadows: finalCallPopOutline(
+                                                    1.5,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -1534,17 +1462,17 @@ class _FinalPlayScene extends StatelessWidget {
                             Positioned(
                               left: 18,
                               bottom: 12,
-                              child: handCard(_blue, -8),
+                              child: handCard('blue', 4, -8),
                             ),
                             Positioned(
                               left: 34,
                               bottom: 14,
-                              child: handCard(_blue, 0),
+                              child: handCard('blue', 6, 0),
                             ),
                             Positioned(
                               left: 50,
                               bottom: 12,
-                              child: handCard(_green, 8),
+                              child: handCard('green', 3, 8),
                             ),
                           ],
                         ),
@@ -1562,7 +1490,6 @@ class _FinalPlayScene extends StatelessWidget {
                               background: _yellow,
                               foreground: _black,
                               fontSize: 20,
-                              serif: true,
                               tailRight: true,
                             ),
                           ),
@@ -1578,7 +1505,7 @@ class _FinalPlayScene extends StatelessWidget {
               285 + shakeC,
               300,
               _PhoneFrame(
-                screenColor: _black,
+                screenColor: _screen,
                 child: Stack(
                   children: [
                     Align(
@@ -1596,9 +1523,9 @@ class _FinalPlayScene extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const _Heart(size: 16),
+                                const FinalCallPopHeart(color: _red, size: 16),
                                 const SizedBox(width: 4),
-                                const _Heart(size: 16),
+                                const FinalCallPopHeart(color: _red, size: 16),
                                 const SizedBox(width: 4),
                                 _fade(
                                   heartOpacity,
@@ -1606,7 +1533,10 @@ class _FinalPlayScene extends StatelessWidget {
                                     offset: Offset(0, heartY),
                                     child: Transform.scale(
                                       scale: heartScale,
-                                      child: const _Heart(size: 16),
+                                      child: const FinalCallPopHeart(
+                                        color: _red,
+                                        size: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1619,14 +1549,18 @@ class _FinalPlayScene extends StatelessWidget {
                     Positioned(
                       left: 18,
                       bottom: 12,
-                      child: handCard(_green, -8),
+                      child: handCard('green', 2, -8),
                     ),
                     Positioned(
                       left: 34,
                       bottom: 14,
-                      child: handCard(_yellow, 0),
+                      child: handCard('yellow', 6, 0),
                     ),
-                    Positioned(left: 50, bottom: 12, child: handCard(_red, 8)),
+                    Positioned(
+                      left: 50,
+                      bottom: 12,
+                      child: handCard('red', 5, 8),
+                    ),
                   ],
                 ),
               ),
@@ -1719,7 +1653,7 @@ class _FinalPlayScene extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                           decoration: BoxDecoration(
-                            color: _black,
+                            color: _screen,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Stack(
@@ -1744,14 +1678,14 @@ class _FinalPlayScene extends StatelessWidget {
                                         bigCard(
                                           '7',
                                           context.l10n.previewRed,
-                                          _red,
+                                          'red',
                                           dy: r7,
                                         ),
                                         const SizedBox(width: 8),
                                         bigCard(
                                           '3',
                                           context.l10n.previewRed,
-                                          _red,
+                                          'red',
                                           dy: r3y,
                                           opacity: r3o,
                                         ),
@@ -1759,14 +1693,14 @@ class _FinalPlayScene extends StatelessWidget {
                                         bigCard(
                                           '7',
                                           context.l10n.previewBlue,
-                                          _blue,
+                                          'blue',
                                           dy: b7,
                                         ),
                                         const SizedBox(width: 8),
                                         bigCard(
                                           '2',
                                           context.l10n.previewYellow,
-                                          _yellow,
+                                          'yellow',
                                           opacity: y2,
                                         ),
                                       ],
@@ -1796,15 +1730,13 @@ class _FinalPlayScene extends StatelessWidget {
                                                           vertical: 6,
                                                         ),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFF2A1A1A,
-                                                      ),
+                                                      color: _red,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             8,
                                                           ),
                                                       border: Border.all(
-                                                        color: _red,
+                                                        color: _black,
                                                         width: 2,
                                                       ),
                                                     ),
@@ -1910,8 +1842,8 @@ class _FinalPlayScene extends StatelessWidget {
                                           ),
                                           boxShadow: const [
                                             BoxShadow(
-                                              color: Colors.black,
-                                              offset: Offset(4, 4),
+                                              color: _black,
+                                              offset: Offset(0, 4),
                                             ),
                                           ],
                                         ),
@@ -1921,13 +1853,8 @@ class _FinalPlayScene extends StatelessWidget {
                                           children: [
                                             Text(
                                               '14',
-                                              style: MosiFonts.grotesk(
-                                                locale:
-                                                    Localizations.maybeLocaleOf(
-                                                      context,
-                                                    ),
-                                                size: 32,
-                                                color: _black,
+                                              style: finalCallPopText(
+                                                32,
                                                 height: 1,
                                               ),
                                             ),
@@ -1995,7 +1922,7 @@ class _TeamLinePainter extends CustomPainter {
         Path()
           ..moveTo(120, 330)
           ..quadraticBezierTo(220, 420, 300, 400),
-        const Color(0xFFE0302E).withValues(alpha: redOpacity),
+        FinalCallColors.red.withValues(alpha: redOpacity),
       );
     }
     if (blueOpacity > 0) {
@@ -2004,7 +1931,7 @@ class _TeamLinePainter extends CustomPainter {
         Path()
           ..moveTo(600, 170)
           ..quadraticBezierTo(640, 220, 600, 262),
-        const Color(0xFF2F5BEA).withValues(alpha: blueOpacity),
+        FinalCallColors.blue.withValues(alpha: blueOpacity),
       );
     }
   }
@@ -2013,50 +1940,6 @@ class _TeamLinePainter extends CustomPainter {
   bool shouldRepaint(covariant _TeamLinePainter oldDelegate) =>
       oldDelegate.redOpacity != redOpacity ||
       oldDelegate.blueOpacity != blueOpacity;
-}
-
-class _Heart extends StatelessWidget {
-  const _Heart({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: Size(size, size * 20 / 22),
-    painter: const _HeartPainter(stroke: false),
-  );
-}
-
-class _HeartPainter extends CustomPainter {
-  const _HeartPainter({required this.stroke});
-
-  final bool stroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.scale(size.width / 22, size.height / 20);
-    final path = Path()
-      ..moveTo(0, 5)
-      ..cubicTo(0, -2, 9, -3, 11, 4)
-      ..cubicTo(13, -3, 22, -2, 22, 5)
-      ..cubicTo(22, 12, 11, 18, 11, 20)
-      ..cubicTo(11, 18, 0, 12, 0, 5)
-      ..close();
-    canvas.drawPath(path, Paint()..color = const Color(0xFFE0302E));
-    if (stroke) {
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = MosiColors.ink
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeartPainter oldDelegate) =>
-      oldDelegate.stroke != stroke;
 }
 
 //=======================마피아 미리보기 (10초)==============================
@@ -2806,9 +2689,16 @@ GameImage _liarCard(String face) {
   };
 }
 
-GameImage _finalCard(String color, int value) => finalCallCardAsset(
-  FinalCallCard(id: 'parts-$color-$value', color: color, value: value),
-);
+/// 게임과 같은 Party Pop 카드 앞면입니다.
+Widget _finalCardFace(String color, int value, double width) =>
+    FinalCallCardFace(
+      card: FinalCallCard(
+        id: 'preview-$color-$value',
+        color: color,
+        value: value,
+      ),
+      width: width,
+    );
 
 //=======================구성품 공통==============================
 /// 구성품 카드가 아래에서 살짝 올라오며 나타납니다(mg-in).
@@ -3261,40 +3151,42 @@ class _LiarParts extends StatelessWidget {
                     children: [
                       Text('내 휴대폰 버튼', style: _partsTitle()),
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Semantics(
-                            image: true,
-                            label: 'LIAR 버튼',
-                            child: const LiarsPokerArcadeButtonSurface(
-                              label: 'LIAR',
-                              width: 78,
-                              height: 58,
-                              pressed: false,
-                            ),
+                      // 게임과 같은 상아색 퍽 버튼입니다(Liar · 제출 · Fold).
+                      Semantics(
+                        image: true,
+                        label: 'Liar, 제출, Fold 버튼',
+                        excludeSemantics: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
                           ),
-                          const SizedBox(width: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1B1022),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: _partsImage(
-                              liar
-                                  .Assets
-                                  .games
-                                  .liarsPoker
-                                  .images
-                                  .button
-                                  .buttonFold
-                                  .game,
-                              'FOLD 버튼',
-                              width: 90,
-                              height: 48,
-                            ),
+                          decoration: BoxDecoration(
+                            color: LiarsPokerColors.night,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ],
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              NoirPuck(
+                                label: 'Liar',
+                                ringColor: LiarsPokerColors.red,
+                                size: 54,
+                              ),
+                              NoirPuck(
+                                label: '제출',
+                                western: false,
+                                ringColor: LiarsPokerColors.gold,
+                                size: 54,
+                              ),
+                              NoirPuck(
+                                label: 'Fold',
+                                ringColor: LiarsPokerColors.dim,
+                                size: 54,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -3315,27 +3207,23 @@ class _LiarParts extends StatelessWidget {
                     children: [
                       Container(
                         width: 102,
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4A1A5E),
+                          color: LiarsPokerColors.night,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
                           children: [
-                            _partsImage(
-                              liar
-                                  .Assets
-                                  .games
-                                  .liarsPoker
-                                  .images
-                                  .table
-                                  .tableAceWhite
-                                  .game,
-                              '에이스 기준 카드',
-                              width: 86,
-                              height: 26,
+                            FittedBox(
+                              child: Text(
+                                "ACE'S TABLE",
+                                style: LiarsPokerFonts.western(
+                                  size: 14,
+                                  color: LiarsPokerColors.goldLight,
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               '기준 카드 · A',
                               style: MosiFonts.sans(
@@ -3417,8 +3305,6 @@ class _WheelPainter extends CustomPainter {
 class _FinalParts extends StatelessWidget {
   const _FinalParts();
 
-  static const _black = Color(0xFF141414);
-
   @override
   Widget build(BuildContext context) {
     const rows = [
@@ -3438,7 +3324,7 @@ class _FinalParts extends StatelessWidget {
         Expanded(
           child: dashed
               ? MosiDashedBorder(
-                  color: const Color(0xFF2EB872),
+                  color: FinalCallColors.green,
                   radius: 8,
                   strokeWidth: 2.5,
                   child: Container(
@@ -3516,10 +3402,18 @@ class _FinalParts extends StatelessWidget {
                         for (var n = 1; n <= 10; n++) ...[
                           if (n > 1) const SizedBox(width: 4),
                           Expanded(
-                            child: _partsImage(
-                              _finalCard(color, n),
-                              '$name $n 카드',
-                              height: 40,
+                            child: Center(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) =>
+                                    _finalCardFace(
+                                      color,
+                                      n,
+                                      math.min(
+                                        constraints.maxWidth,
+                                        40 / finalCallCardHeightRatio,
+                                      ),
+                                    ),
+                              ),
                             ),
                           ),
                         ],
@@ -3544,12 +3438,12 @@ class _FinalParts extends StatelessWidget {
                           height: 86,
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
+                            color: FinalCallColors.ink,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: _black,
+                              color: FinalCallColors.night,
                               borderRadius: BorderRadius.circular(9),
                             ),
                             alignment: Alignment.center,
@@ -3561,12 +3455,7 @@ class _FinalParts extends StatelessWidget {
                                     offset: Offset(-6.0 * i, 0),
                                     child: _rotated(
                                       r,
-                                      _partsImage(
-                                        _finalCard(color, n),
-                                        '$color $n 카드',
-                                        width: 32,
-                                        height: 46,
-                                      ),
+                                      _finalCardFace(color, n, 31),
                                     ),
                                   ),
                               ],
@@ -3620,7 +3509,7 @@ class _FinalParts extends StatelessWidget {
                           color: const Color(0xFFFFE3E1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: const Color(0xFFE0302E),
+                            color: FinalCallColors.red,
                             width: 2,
                           ),
                         ),
@@ -3647,7 +3536,7 @@ class _FinalParts extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE5DB00),
+                          color: FinalCallColors.yellow,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: MosiColors.ink, width: 2),
                         ),
@@ -3700,22 +3589,14 @@ class _FinalParts extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          team(
-                            '레드팀',
-                            const Color(0xFFE0302E),
-                            MosiColors.white,
-                          ),
+                          team('레드팀', FinalCallColors.red, MosiColors.white),
                           const SizedBox(width: 8),
-                          team(
-                            '블루팀',
-                            const Color(0xFF2F5BEA),
-                            MosiColors.white,
-                          ),
+                          team('블루팀', FinalCallColors.blue, MosiColors.white),
                           const SizedBox(width: 8),
                           team(
                             '그린팀',
                             MosiColors.white,
-                            const Color(0xFF2EB872),
+                            FinalCallColors.green,
                             dashed: true,
                           ),
                         ],
@@ -3738,47 +3619,20 @@ class _FinalParts extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          _partsImage(
-                            final_call
-                                .Assets
-                                .games
-                                .finalCall
-                                .images
-                                .icons
-                                .iconHeartRed
-                                .game,
-                            '팀 하트',
-                            width: 30,
-                            height: 30,
+                          const FinalCallPopHeart(
+                            color: FinalCallColors.red,
+                            size: 30,
                           ),
                           const SizedBox(width: 8),
-                          _partsImage(
-                            final_call
-                                .Assets
-                                .games
-                                .finalCall
-                                .images
-                                .icons
-                                .iconHeartRed
-                                .game,
-                            '팀 하트',
-                            width: 30,
-                            height: 30,
+                          const FinalCallPopHeart(
+                            color: FinalCallColors.red,
+                            size: 30,
                           ),
                           const SizedBox(width: 8),
                           _Float(
-                            child: _partsImage(
-                              final_call
-                                  .Assets
-                                  .games
-                                  .finalCall
-                                  .images
-                                  .icons
-                                  .iconHeartRed
-                                  .game,
-                              '팀 하트',
-                              width: 30,
-                              height: 30,
+                            child: const FinalCallPopHeart(
+                              color: FinalCallColors.red,
+                              size: 30,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -3800,18 +3654,28 @@ class _FinalParts extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _partsImage(
-                          final_call
-                              .Assets
-                              .games
-                              .finalCall
-                              .images
-                              .button
-                              .buttonCall
-                              .game,
-                          'CALL 버튼',
-                          width: 110,
-                          height: 54,
+                        Semantics(
+                          image: true,
+                          excludeSemantics: true,
+                          label: 'CALL 버튼',
+                          child: FinalCallPopBox(
+                            color: FinalCallColors.red,
+                            radius: 14,
+                            borderWidth: 3,
+                            shadowDepth: 4,
+                            width: 110,
+                            height: 50,
+                            child: Center(
+                              child: Text(
+                                'CALL!',
+                                style: finalCallPopText(
+                                  20,
+                                  color: Colors.white,
+                                  shadows: finalCallPopOutline(),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(

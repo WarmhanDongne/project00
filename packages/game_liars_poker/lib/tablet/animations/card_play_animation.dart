@@ -35,6 +35,8 @@ class CardPlayAnimation extends StatefulWidget {
     this.revealCards = false,
     this.onCardsPlayed,
     this.onRevealed,
+    this.highlighted = false,
+    this.dimmed = false,
   }) : assert(frontCardAssets.length > 0),
        assert(playerCount > 0),
        assert(
@@ -71,6 +73,12 @@ class CardPlayAnimation extends StatefulWidget {
 
   final VoidCallback? onCardsPlayed;
   final VoidCallback? onRevealed;
+
+  /// 방금 낸 카드처럼 금색 테두리로 강조합니다.
+  final bool highlighted;
+
+  /// 더미 아래에 깔린 예전 카드처럼 어둡게 그립니다.
+  final bool dimmed;
 
   @override
   CardPlayAnimationState createState() => CardPlayAnimationState();
@@ -430,15 +438,37 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
   }
 
   Widget _buildCard(GameImage asset, {required double lift}) {
-    return GameCardFace(
+    Widget card = GameCardFace(
       asset: asset,
-      radius: 9,
+      radius: 12,
       // 공중에 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
       shadow: BoxShadow(
         color: GameShadowColors.strong,
-        blurRadius: 7 + lift * 9,
-        offset: Offset(0, 5 + lift * 7),
+        blurRadius: 16 + lift * 14,
+        offset: Offset(0, 8 + lift * 10),
       ),
+    );
+    if (widget.highlighted) {
+      card = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(color: Color(0xFFC9A25B), spreadRadius: 4),
+          ],
+        ),
+        child: card,
+      );
+    }
+    return ColorFiltered(
+      colorFilter: widget.dimmed
+          ? const ColorFilter.matrix([
+              .5, 0, 0, 0, 0, //
+              0, .5, 0, 0, 0, //
+              0, 0, .5, 0, 0, //
+              0, 0, 0, 1, 0,
+            ])
+          : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+      child: card,
     );
   }
 

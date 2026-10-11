@@ -31,6 +31,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
     required this.winnerUid,
     required this.penaltyTargetUid,
     required this.lastPlayPlayerUid,
+    this.liarCallerUid,
     required this.lastPlayId,
     required this.lastPlayRevealed,
     required this.lastPlayCardCount,
@@ -115,6 +116,10 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
 
   // ===[ 카드 제출 상태 ]===
   final String? lastPlayPlayerUid; // 마지막으로 카드를 제출한 플레이어
+
+  /// 이번 벌칙의 LIAR를 외친 플레이어입니다. 공개 상태에 없어 판정 직전의
+  /// 차례로 기억합니다. 판정 도중 재접속하면 알 수 없어 null입니다.
+  final String? liarCallerUid;
   final String? lastPlayId; // 마지막 카드 제출 기록 id
   final bool lastPlayRevealed; // 마지막 제출 카드 공개 여부
   final int lastPlayCardCount; // 마지막으로 제출한 카드 장수
@@ -180,6 +185,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
     Object? winnerUid = _notProvided,
     Object? penaltyTargetUid = _notProvided,
     Object? lastPlayPlayerUid = _notProvided,
+    Object? liarCallerUid = _notProvided,
     Object? lastPlayId = _notProvided,
     bool? lastPlayRevealed,
     int? lastPlayCardCount,
@@ -229,6 +235,9 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
       lastPlayPlayerUid: identical(lastPlayPlayerUid, _notProvided)
           ? this.lastPlayPlayerUid
           : lastPlayPlayerUid as String?,
+      liarCallerUid: identical(liarCallerUid, _notProvided)
+          ? this.liarCallerUid
+          : liarCallerUid as String?,
 
       lastPlayId: identical(lastPlayId, _notProvided)
           ? this.lastPlayId
@@ -309,6 +318,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
         winnerUid == other.winnerUid &&
         penaltyTargetUid == other.penaltyTargetUid &&
         lastPlayPlayerUid == other.lastPlayPlayerUid &&
+        liarCallerUid == other.liarCallerUid &&
         lastPlayId == other.lastPlayId &&
         lastPlayRevealed == other.lastPlayRevealed &&
         lastPlayCardCount == other.lastPlayCardCount &&
@@ -348,6 +358,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
     winnerUid,
     penaltyTargetUid,
     lastPlayPlayerUid,
+    liarCallerUid,
     lastPlayId,
     lastPlayRevealed,
     lastPlayCardCount,

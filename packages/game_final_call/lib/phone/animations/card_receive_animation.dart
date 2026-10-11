@@ -12,8 +12,6 @@ import 'package:game_final_call/phone/widgets/hand_card_stack.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
-import 'package:game_final_call/game_assets.dart';
 
 // ============================================================
 
@@ -48,10 +46,7 @@ class FinalCallCardReceiveAnimation extends StatelessWidget {
         final targetOffsetX = target.dx;
         final targetOffsetY = target.dy;
         return CardReceiveAnimation(
-          frontCardAssets: cards
-              .map(finalCallCardAsset)
-              .toList(growable: false),
-          backCardAsset: Assets.games.finalCall.images.cards.cardBack.game,
+          cardCount: cards.length,
           cardWidth: cardWidth,
           spreadStepX: isLandscape ? cardWidth + 14 : 30,
           spreadStepY: isLandscape ? 0 : 30,

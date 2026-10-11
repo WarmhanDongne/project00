@@ -23,14 +23,11 @@ dev_dependencies:
 flutter:
   assets:
     - assets/games/liars_poker/animations/
-    - assets/games/liars_poker/images/background/
     - assets/games/liars_poker/images/button/
     - assets/games/liars_poker/images/cards/
-    - assets/games/liars_poker/images/icons/
     - assets/games/liars_poker/images/layout/
     - assets/games/liars_poker/images/modal/
     - assets/games/liars_poker/images/other/
-    - assets/games/liars_poker/images/table/
     - assets/games/liars_poker/sounds/
 flutter_gen:
   output: lib/gen/

@@ -64,21 +64,10 @@ Future<void> preloadFinalCallAssets(
     );
   }
 
-  final images = Assets.games.finalCall.images;
+  // 카드·배경·버튼·하트는 모두 위젯으로 그립니다. 남은 그림은 휴대폰
+  // 나가기 확인창의 문 그림뿐입니다.
   final localAssets = <GameImage>[
-    // 분배가 끝나면 손패가 곧바로 펼쳐지므로 카드는 전부 준비합니다.
-    ...images.cards.values.game,
-    // 휴대폰은 휴대폰 배경만, 태블릿은 공용 판 배경만 준비합니다.
-    // 보이지 않는 반대 기기 배경/자리 배치를 디코딩하지 않습니다.
-    if (isPhone)
-      images.background.phoneBackground.game
-    else
-      images.background.background.game,
-    ...images.button.values.game,
-    ...images.icons.values.game,
-    if (!isPhone) ...images.layout.values.game,
-    ...images.modal.values.game,
-    ...images.other.values.game,
+    if (isPhone) Assets.games.finalCall.images.modal.modalImageDoor.game,
   ];
 
   // 한꺼번에 모든 대형 PNG를 디코딩해 메모리가 튀지 않도록 작은 묶음으로 준비합니다.

@@ -41,6 +41,11 @@ import 'package:game_liars_poker/tablet/screens/card_presentation.dart';
 import 'package:game_liars_poker/tablet/screens/game_overlay.dart';
 import 'package:game_liars_poker/tablet/screens/game_penalty.dart';
 import 'package:game_liars_poker/tablet/widgets/result.dart';
+import 'package:game_liars_poker/tablet/widgets/seat_plate.dart';
+import 'package:game_liars_poker/tablet/widgets/penalty_panels.dart';
+import 'package:game_liars_poker/tablet/widgets/liar_reveal_overlay.dart';
+import 'package:game_kit/penalty/roulette.dart';
+import 'package:game_liars_poker/game_theme.dart';
 
 // ============================================================
 
@@ -109,10 +114,8 @@ GameFlowConfig<LiarsPokerTabletStage> buildLiarsPokerTabletFlowConfig({
         description: '첫 서버 상태를 기다린다',
         screenWidget: GameAnnouncementLayer,
         showScreen: false,
-        showAnnouncement: true,
-        announcementId: 'liars-poker-preparing',
-        announcementKind: GameAnnouncementKind.persistent,
-        announcement: GameFlowCopy.preparingGame,
+        // Keep the game background visible while the first snapshot arrives.
+        showAnnouncement: false,
         animation: GameFlowAnimationConfig.disabled(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),
@@ -280,8 +283,12 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
     required this.roundNumber,
     required this.cardPileVersion,
     required this.table,
-    required this.remainingCardCounts,
+    required this.seats,
     required this.currentTurnPlayerIndex,
+    this.turnDeadlineAt,
+    this.turnWindow = const Duration(seconds: 30),
+    this.claimPlayerIndex,
+    this.claimCount = 0,
     required this.onDealCompleted,
     required this.onRoundRevealCompleted,
     required this.onRestartGame,
@@ -298,8 +305,12 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
   final int roundNumber;
   final int cardPileVersion;
   final String table;
-  final List<int> remainingCardCounts;
+  final List<TabletSeatInfo> seats;
   final int? currentTurnPlayerIndex;
+  final int? turnDeadlineAt;
+  final Duration turnWindow;
+  final int? claimPlayerIndex;
+  final int claimCount;
   final VoidCallback onDealCompleted;
   final VoidCallback onRoundRevealCompleted;
   final VoidCallback onRestartGame;
@@ -329,12 +340,15 @@ class LiarsPokerTabletGameLayer extends StatelessWidget {
       LiarsPokerTabletStage.cardsPlaying ||
       LiarsPokerTabletStage.cardsRevealing => RoundStartReveal(
         key: ValueKey('round-$roundNumber'),
-        tableAsset: tableAssetForValue(table),
+        tableCardValue: table,
         playerCount: playerCount,
         playerSeatIndexes: playerSeatIndexes,
-        remainingCardCounts: remainingCardCounts,
+        seats: seats,
         activePlayerIndex: currentTurnPlayerIndex,
-        tableWidth: 300,
+        turnDeadlineAt: turnDeadlineAt,
+        turnWindow: turnWindow,
+        claimPlayerIndex: claimPlayerIndex,
+        claimCount: claimCount,
         // 이 보드는 네 단계가 같은 인스턴스를 공유합니다. 어느 단계에서 그리든
         // 등장 시간은 **주인 단계**(roundStarting) 값을 씁니다. 현재 stage의
         // 카드 이동 시간으로 덮으면 재접속 시 보드 속도가 달라집니다.

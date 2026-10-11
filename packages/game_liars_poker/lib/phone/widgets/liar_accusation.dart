@@ -5,7 +5,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
+import 'package:game_liars_poker/game_theme.dart';
+import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
+
 // ============================================================
 
 class LiarAccusation extends StatefulWidget {
@@ -70,9 +72,18 @@ class _LiarAccusationState extends State<LiarAccusation>
     super.dispose();
   }
 
+  /// 퍽 아래 안내 문구 높이까지 포함한 퍽 크기입니다.
+  double get _puckSize {
+    if (widget.isLandscape) return 116;
+    final available = widget.portraitHeight ?? 193.h.clamp(140.0, 193.0);
+    return math.min(128.0, available - _hintSpace);
+  }
+
+  static const double _hintSpace = 40;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final puck = GestureDetector(
       onTapDown: widget.enabled
           ? (_) => setState(() => _isPressed = true)
           : null,
@@ -90,57 +101,77 @@ class _LiarAccusationState extends State<LiarAccusation>
           ? () => setState(() => _isPressed = false)
           : null,
       behavior: HitTestBehavior.opaque,
+      child: Semantics(
+        button: true,
+        enabled: widget.enabled,
+        label: widget.showSubmit ? '고른 카드 제출' : 'LIAR 외치기',
+        excludeSemantics: true,
+        child: AnimatedBuilder(
+          animation: _flipController,
+          builder: (context, _) {
+            final progress = Curves.easeInOutCubic.transform(
+              _flipController.value,
+            );
+            final showsSecondFace = progress >= 0.5;
+            final showSubmit = showsSecondFace
+                ? _targetShowsSubmit
+                : _sourceShowsSubmit;
+            final angle = showsSecondFace
+                ? -math.pi * (1 - progress)
+                : math.pi * progress;
 
-      child: AnimatedBuilder(
-        animation: _flipController,
-        builder: (context, _) {
-          final progress = Curves.easeInOutCubic.transform(
-            _flipController.value,
-          );
-          final showsSecondFace = progress >= 0.5;
-          final showSubmit = showsSecondFace
-              ? _targetShowsSubmit
-              : _sourceShowsSubmit;
-          final angle = showsSecondFace
-              ? -math.pi * (1 - progress)
-              : math.pi * progress;
-
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.0012)
-              ..rotateY(angle),
-            child: _buildButtonImage(showSubmit: showSubmit),
-          );
-        },
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.0012)
+                ..rotateY(angle),
+              child: _buildPuck(showSubmit: showSubmit),
+            );
+          },
+        ),
       ),
     );
-  }
-
-  Widget _buildButtonImage({required bool showSubmit}) {
-    final label = showSubmit ? '제출' : 'Liar';
-
-    // ---------------------------------------------------------------------------
-    // 가로 버튼
-    // ---------------------------------------------------------------------------
-    if (widget.isLandscape) {
-      return LiarsPokerArcadeButtonSurface(
-        label: label,
-        width: 195,
-        height: 170,
-        pressed: _isPressed,
-      );
-    }
-
-    // ---------------------------------------------------------------------------
-    // 세로 버튼
-    // ---------------------------------------------------------------------------
-    final availableHeight = widget.portraitHeight ?? 193.h.clamp(140.0, 193.0);
-    return LiarsPokerArcadeButtonSurface(
-      label: label,
-      width: math.min(305.w, availableHeight * 1.5),
-      height: availableHeight,
-      pressed: _isPressed,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        puck,
+        SizedBox(height: widget.isLandscape ? 10 : 16),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Text.rich(
+            key: ValueKey(widget.showSubmit),
+            widget.showSubmit
+                ? const TextSpan(text: '카드를 다시 누르면 선택이 풀려요')
+                : const TextSpan(
+                    children: [
+                      TextSpan(text: '카드를 고르면 '),
+                      TextSpan(
+                        text: '제출',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: LiarsPokerColors.goldLight,
+                        ),
+                      ),
+                      TextSpan(text: ' 버튼으로 바뀌어요'),
+                    ],
+                  ),
+            textAlign: TextAlign.center,
+            style: LiarsPokerFonts.text(
+              size: widget.isLandscape ? 12 : 13,
+              color: LiarsPokerColors.muted,
+            ),
+          ),
+        ),
+      ],
     );
   }
+
+  Widget _buildPuck({required bool showSubmit}) => NoirPuck(
+    label: showSubmit ? '제출' : 'Liar',
+    western: !showSubmit,
+    ringColor: showSubmit ? LiarsPokerColors.gold : LiarsPokerColors.red,
+    size: _puckSize,
+    pressed: _isPressed,
+    enabled: widget.enabled,
+  );
 }

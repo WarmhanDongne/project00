@@ -10,22 +10,56 @@ class _PenaltyStageSwitcher extends StatefulWidget {
     required this.verdictPending,
     required this.player,
     required this.result,
+    required this.meUid,
+    required this.lieRevealed,
+    required this.caller,
   });
 
+  /// 직전 카드의 거짓·진실 판정 문구와 공개 대기 상태입니다.
   final String? verdictMessage;
   final bool verdictPending;
+
+  /// 룰렛을 돌리는 사람과 그 결과(`safe`/`eliminated`)입니다.
   final PhoneGamePlayer? player;
   final String? result;
 
-  String get stageId => verdictPending
-      ? 'verdict-pending'
-      : verdictMessage == null
-      ? 'penalty-status'
-      : 'verdict-$verdictMessage';
+  final String meUid;
+
+  /// LIAR가 거짓을 밝혀냈는지입니다. 이 경우 역할별 공개 화면을 씁니다.
+  final bool lieRevealed;
+  final PhoneGamePlayer? caller;
+
+  bool get _hasResult => result == 'safe' || result == 'eliminated';
+
+  String get stageId {
+    if (_hasResult && player != null) return 'roulette-result';
+    if (verdictPending) return 'verdict-pending';
+    if (lieRevealed && player != null) return 'lie-reveal';
+    return verdictMessage == null
+        ? 'penalty-status'
+        : 'verdict-$verdictMessage';
+  }
 
   Widget buildStage() {
+    final target = player;
+    if (_hasResult && target != null) {
+      return PhoneRouletteResult(
+        key: ValueKey('roulette-result-${target.uid}'),
+        player: target,
+        eliminated: result == 'eliminated',
+        isMe: target.uid == meUid,
+      );
+    }
     if (verdictPending) {
       return const SizedBox.expand(key: ValueKey('verdict-pending'));
+    }
+    if (lieRevealed && target != null) {
+      return PhoneLiarReveal(
+        key: const ValueKey('lie-reveal'),
+        meUid: meUid,
+        caller: caller,
+        caught: target,
+      );
     }
     final message = verdictMessage;
     return message != null
@@ -138,7 +172,9 @@ class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
             builder: (context, child) {
               final value = _controller.value;
               final isExitingVerdict =
-                  value < 0.5 && _displayedStageId.startsWith('verdict-');
+                  value < 0.5 &&
+                  (_displayedStageId.startsWith('verdict-') ||
+                      _displayedStageId == 'lie-reveal');
               if (isExitingVerdict) {
                 final exitProgress = Curves.easeInCubic.transform(value * 2);
                 return Opacity(
@@ -153,6 +189,8 @@ class _PenaltyStageSwitcherState extends State<_PenaltyStageSwitcher>
               final isCenteredEntry =
                   value >= 0.5 &&
                   (_displayedStageId == 'penalty-status' ||
+                      _displayedStageId == 'lie-reveal' ||
+                      _displayedStageId == 'roulette-result' ||
                       _displayedStageId.startsWith('verdict-'));
               if (isCenteredEntry) return child ?? const SizedBox();
 

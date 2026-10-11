@@ -513,3 +513,28 @@ heartbeat를 보존하도록 변경했다. 늦은 stale 보고는 신원 복구 
 추가 대기를 넣지 않았다. 첫 session은 변경된 재시도 기대값 1건으로 FAIL/exit 1이었고 회귀를
 수정한 뒤 Flutter 161·Functions 99, Functions 전체 396, 관련 UI·tracker 10, analyze/lint가
 PASS/exit 0이다. FULL·APK·배포·실기기는 실행하지 않았다.
+
+## 2026-10-11 테스트 9–20 후속 개발 중단 지점
+
+사용자 진행 요청으로 구독/heartbeat의 bounded owner 전파 방지, 같은 context의
+준비 frame 재예약, pending controller resume 결과 확인 후보를 구현했다.
+[변경·검증·남은 작업](NETWORK_SESSION_20261011_IMPLEMENTATION.md)에 기록했다.
+guarded session은 기존 신원 저장 위젯 회귀에서 반복 정지하여 수동 중단 exit 1이다.
+Skill의 반복 실패 중단 규칙에 따라 추측성 수정을 멈췄다. 완료 판정은 하지 않는다.
+LP 시작 배경·서버 타이머 보완과 전체 검증은 남아 있다. FULL 보류를 유지하며
+APK·배포·production 조회·commit/push는 수행하지 않았다.
+
+후속 사용자 요청으로 신원 저장 대기 원인을 최소 재현해 확정했다. 먼저 추가된 위젯
+테스트의 FakeAsync 영역에서 만든 공유 store의 초기 Future가 다음 테스트의 저장 콜백을
+이전 영역에 예약하는 테스트 순서 의존성이었다. store 초기화를 setUpAll로 옮기고 저장·삭제를
+tester.runAsync로 실행해 기존 기대값을 유지했다. guarded session Flutter 165·Functions 99,
+5/5 PASS/exit 0, 포맷 exit 0, mutation PASS다. 상세 evidence는 위 구현 기록에 추가했다.
+테스트 정지 원인만 해결했으며 LP 배경·타이머 후속 구현과 FULL/실기기는 남아 있다.
+
+사용자 develop 병합·개발 계속 요청으로 fetch/merge를 실행했고 원격 develop과 HEAD가
+동일해 Already up to date/exit 0이었다. 중첩 owner의 즉시/주기 heartbeat와 null controller
+복구 정리를 회귀로 확인하고 LP 최초 대기는 안내 없이 배경을 유지하도록 명시했다.
+LP 30/10초·Final Call 30초의 서버 상수를 사용해 heartbeat가 턴 시작 이전인 경우의
+남은 시간 증가를 제한했다. session Flutter 167·Functions 104, 5/5 PASS/exit 0,
+Functions lint·관련 7개 Flutter 파일 분석 PASS다. 0초 실기기 원인은 아직 미확인이다.
+FULL 기존 보류·새 APK/배포/실기기 대기를 유지한다. 자세한 명령과 한계는 후속 후보 기록에 있다.

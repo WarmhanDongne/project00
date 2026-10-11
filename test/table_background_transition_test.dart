@@ -137,6 +137,11 @@ void main() {
           }
           await tester.tap(find.widgetWithText(MosiButton, '설정 완료'));
           await tester.pump();
+          expect(
+            prepared,
+            1,
+            reason: 'Server preparation starts with the entrance animation',
+          );
           await tester.pump(const Duration(milliseconds: 1000));
           await _expectEdges(tester, key, useImage ? _imageColor : _gameColor);
           await tester.pump(const Duration(milliseconds: 700));
@@ -163,6 +168,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final pending = Completer<bool>();
     var completed = 0;
+    var prepared = 0;
     final key = GlobalKey();
     await tester.pumpWidget(
       MaterialApp(
@@ -171,7 +177,10 @@ void main() {
           child: PlayerLayoutEditor(
             initialLayout: _layout,
             tableColor: _gameColor,
-            onPrepare: (_) => pending.future,
+            onPrepare: (_) {
+              prepared++;
+              return pending.future;
+            },
             onComplete: (_) => completed++,
             onCancel: () async => true,
           ),
@@ -181,9 +190,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(MosiButton, '설정 완료'));
     await tester.pump();
+    expect(prepared, 1);
+    pending.complete(true);
+    await tester.pump();
+    expect(completed, 0, reason: 'Fast response cannot skip the entrance/zoom');
     await tester.pump(const Duration(milliseconds: 1700));
     await tester.pump(const Duration(milliseconds: 300));
-    pending.complete(true);
     await tester.pumpAndSettle();
     expect(completed, 1);
     await _expectEdges(tester, key, _gameColor);

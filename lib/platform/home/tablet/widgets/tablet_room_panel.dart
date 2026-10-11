@@ -8,6 +8,7 @@ import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:game_kit/recovery/services/controller_room_session_store.dart';
 
 //=======================태블릿 방 카드==============================
 // 선반과 게임 상세 오른쪽에 같은 카드가 놓입니다: 위에 QR·방 코드, 가운데
@@ -192,6 +193,9 @@ class _EmptyRoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final restoring =
+        ControllerRoomSessionStore.instance.roomCode != null &&
+        (provider.isLoading || provider.errorMessage != null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -244,7 +248,7 @@ class _EmptyRoom extends StatelessWidget {
         const MosiDashedDivider(),
         const Spacer(),
         Text(
-          context.l10n.noPlayers,
+          restoring ? context.l10n.reconnecting : context.l10n.noPlayers,
           textAlign: TextAlign.center,
           style: MosiFonts.sans(
             locale: Localizations.maybeLocaleOf(context),
@@ -254,20 +258,39 @@ class _EmptyRoom extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          context.l10n.roomInviteHint,
-          textAlign: TextAlign.center,
-          style: MosiFonts.sans(
-            locale: Localizations.maybeLocaleOf(context),
-            size: 14,
-            color: MosiColors.muted,
-            height: 1.45,
+        if (!restoring)
+          Text(
+            context.l10n.roomInviteHint,
+            textAlign: TextAlign.center,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 14,
+              color: MosiColors.muted,
+              height: 1.45,
+            ),
           ),
-        ),
         const Spacer(),
+        if (provider.errorMessage != null) ...[
+          Text(
+            provider.errorMessage!,
+            key: const Key('room-create-error'),
+            textAlign: TextAlign.center,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 13,
+              weight: FontWeight.w600,
+              color: MosiColors.red,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         MosiButton(
           label: provider.isLoading
-              ? context.l10n.creating
+              ? restoring
+                    ? context.l10n.checkingProgress
+                    : context.l10n.creating
+              : restoring
+              ? context.l10n.retry
               : context.l10n.invite,
           onPressed: provider.isLoading ? null : provider.createRoom,
           height: 56,
@@ -275,6 +298,16 @@ class _EmptyRoom extends StatelessWidget {
           shadowOffset: 5,
           expand: true,
         ),
+        if (restoring && provider.errorMessage != null) ...[
+          const SizedBox(height: 8),
+          MosiButton(
+            key: const Key('close-unrestored-room'),
+            label: context.l10n.reset,
+            onPressed: provider.isLoading ? null : provider.closeRoom,
+            height: 48,
+            expand: true,
+          ),
+        ],
       ],
     );
   }

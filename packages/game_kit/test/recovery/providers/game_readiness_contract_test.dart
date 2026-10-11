@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:game_kit/core/diagnostics/game_communication_log.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,13 +54,20 @@ void main() {
   late _Commands commands;
   late ProviderContainer container;
   late NotifierProvider<_Controller, _State> provider;
-  void start() {
+  setUpAll(() async {
+    // The singleton's initial write Future must belong to the suite zone.
+    // A previous testWidgets' FakeAsync zone is no longer pumped by later tests.
+    SharedPreferences.setMockInitialValues({});
+    await RoomSessionIdentityStore.instance.load();
+  });
+  void start({bool watchPrivate = true}) {
     RecoveryMetrics.instance.finish(success: false);
     query = _Query();
     commands = _Commands();
     container = ProviderContainer();
     provider = NotifierProvider(
-      () => _Controller(query, commands, 'READY${++sessionNumber}'),
+      () =>
+          _Controller(query, commands, 'READY${++sessionNumber}', watchPrivate),
     );
     container.listen(provider, (_, _) {});
   }
@@ -72,6 +81,57 @@ void main() {
       await query.priv.close();
     }
   });
+  testWidgets(
+    'tablet retry reschedules an invalidated frame for the same context',
+    (tester) async {
+      start(watchPrivate: false);
+      final game = container.read(provider.notifier);
+      query.pub.add(_Event(public(1, paused: false)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      expect(game.recoverySession.localUsable, true);
+      query.pub.add(_Event(public(2)));
+      await tester.idle();
+      expect(game.recoverySession.localUsable, false);
+      game.retrySession();
+      query.pub.add(_Event(public(2)));
+      await tester.idle();
+      expect(game.recoverySession.localUsable, false);
+      await tester.pump();
+      await tester.pump();
+      expect(game.recoverySession.localUsable, true);
+      expect(commands.reports.last['ready'], true);
+      expect(
+        game.recoverySession.canSend,
+        false,
+        reason: 'server pause still protects input',
+      );
+    },
+  );
+
+  testWidgets(
+    'identity retry subscriptions do not inherit a bounded operation',
+    (tester) async {
+      start(watchPrivate: false);
+      final game = container.read(provider.notifier);
+      final batch = RoomRecoveryBatch();
+      await batch.run(
+        () async {
+          game.retrySession();
+        },
+        isCurrent: () => true,
+        retryable: (_) => false,
+      );
+      expect(query.subscriptionOwners, everyElement(isNull));
+      query.pub.add(_Event(public(1, paused: false)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+
   testWidgets(
     'same sequence in a new room membership invalidates an old ready acknowledgement',
     (tester) async {
@@ -88,9 +148,11 @@ void main() {
             connectionId: 'connection',
             connectionSeq: 1,
           );
-      await RoomSessionIdentityStore.instance.save(
-        identity('old-room', 'old-member'),
-      );
+      await tester.runAsync(() async {
+        await RoomSessionIdentityStore.instance.save(
+          identity('old-room', 'old-member'),
+        );
+      });
       query.pub.add(_Event(public(1, paused: false)));
       query.priv.add(_Event(private(1)));
       await tester.pump();
@@ -98,15 +160,19 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(game.recoverySession.canSend, true);
-      await RoomSessionIdentityStore.instance.save(
-        identity('new-room', 'new-member'),
-      );
+      await tester.runAsync(() async {
+        await RoomSessionIdentityStore.instance.save(
+          identity('new-room', 'new-member'),
+        );
+      });
       expect(game.recoverySession.canSend, false);
-      await RoomSessionIdentityStore.instance.clear(
-        game.uid,
-        'player',
-        game.roomCode,
-      );
+      await tester.runAsync(() async {
+        await RoomSessionIdentityStore.instance.clear(
+          game.uid,
+          'player',
+          game.roomCode,
+        );
+      });
     },
   );
   testWidgets(
@@ -124,7 +190,10 @@ void main() {
       expect(game.localUsable, true);
       expect(game.recoverySession.serverConfirmed, false);
       await tester.pump(const Duration(seconds: 31));
-      expect(container.read(provider).errorMessage, isNotNull);
+      expect(
+        container.read(provider).errorMessage,
+        '서버에서 게임 준비 완료를 확인하지 못했어요. 다시 연결해주세요.',
+      );
       expect(game.recoverySession.canSend, false);
       commands.readyResult!.complete({'status': 'accepted'});
       await tester.pump();
@@ -132,6 +201,55 @@ void main() {
       expect(commands.reports.where((r) => r['ready'] == false).length, 1);
     },
   );
+  testWidgets(
+    'ready report error is distinct from asset failure and remains until retry',
+    (tester) async {
+      start();
+      GameCommunicationLog.instance.clear();
+      final game = container.read(provider.notifier);
+      commands.readyResult = Completer<Map<String, dynamic>>();
+      query.pub.add(_Event(public(1, paused: false)));
+      query.priv.add(_Event(private(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      commands.readyResult!.completeError(
+        FirebaseFunctionsException(
+          code: 'internal',
+          message: 'private payload must not be logged',
+        ),
+      );
+      await tester.pump();
+      const message = '서버에서 게임 준비 완료를 확인하지 못했어요. 다시 연결해주세요.';
+      expect(container.read(provider).errorMessage, message);
+      expect(game.recoverySession.canSend, false);
+      expect(commands.reports.last['ready'], false);
+      final log = GameCommunicationLog.instance.entries.singleWhere(
+        (entry) => entry.title == '게임 준비 확인 실패',
+      );
+      expect(log.detail, 'stage=ready_report code=internal');
+      expect(
+        GameCommunicationLog.instance.entries
+            .map((entry) => entry.asText)
+            .join(),
+        isNot(contains('private payload')),
+      );
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      expect(container.read(provider).errorMessage, message);
+      expect(game.recoverySession.canSend, false);
+      commands.readyResult = null;
+      await game.retryRecovery();
+      query.pub.add(_Event(public(2, paused: false)));
+      query.priv.add(_Event(private(2)));
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(provider).errorMessage, isNull);
+      expect(game.recoverySession.canSend, true);
+    },
+  );
+
   testWidgets('ignored report is not confirmation of a ready state', (
     tester,
   ) async {
@@ -638,6 +756,7 @@ class _Event extends Fake implements DatabaseEvent {
 }
 
 class _Query extends Fake implements GameQueryService {
+  final subscriptionOwners = <RoomRecoveryBatch?>[];
   final pub = StreamController<DatabaseEvent>.broadcast(),
       priv = StreamController<DatabaseEvent>.broadcast();
   int reads = 0;
@@ -648,7 +767,11 @@ class _Query extends Fake implements GameQueryService {
   }
 
   @override
-  Stream<DatabaseEvent> watchPublicGame(String roomCode) => pub.stream;
+  Stream<DatabaseEvent> watchPublicGame(String roomCode) {
+    subscriptionOwners.add(RoomRecoveryBatch.inherited);
+    return pub.stream;
+  }
+
   @override
   Stream<DatabaseEvent> watchPrivatePlayer({
     required String roomCode,
@@ -690,7 +813,13 @@ class _State implements GameSessionState<_State> {
 }
 
 class _Controller extends GameSessionController<_State> {
-  _Controller(this.query, this.interruptionCommands, this.roomCode);
+  _Controller(
+    this.query,
+    this.interruptionCommands,
+    this.roomCode,
+    this.watchPrivate,
+  );
+  final bool watchPrivate;
   @override
   final GameQueryService query;
   @override
@@ -706,7 +835,7 @@ class _Controller extends GameSessionController<_State> {
   int decoded = 0;
   @override
   _State build() {
-    startSession(watchPrivate: true);
+    startSession(watchPrivate: watchPrivate);
     return const _State();
   }
 

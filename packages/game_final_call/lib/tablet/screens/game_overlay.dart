@@ -10,7 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/tablet/widgets/rulebook.dart';
 import 'package:game_kit/tablet/widgets/game_settings_dialog.dart';
 import 'package:game_kit/tablet/widgets/game_menu_overlay.dart';
-import 'package:game_final_call/gen/assets.gen.dart';
+import 'package:game_final_call/game_theme.dart';
+import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_kit/models/game_room_context.dart';
 
 // ============================================================
@@ -32,11 +33,13 @@ class FinalCallTabletGameOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icons = Assets.games.finalCall.images.icons;
     return TabletGameMenuOverlay(
       visible: visible,
-      roleIcon: icons.iconRole.image(fit: BoxFit.contain),
-      settingIcon: icons.iconSetting.image(fit: BoxFit.contain),
+      // 휴대폰 상단바와 같은 Party Pop 원형 버튼 모양입니다.
+      roleIcon: const _MenuGlyph(child: _QuestionMark()),
+      settingIcon: const _MenuGlyph(
+        child: Icon(Icons.settings_rounded, color: FinalCallColors.ink),
+      ),
       roleDialogBuilder: (_) => FinalCallTabletRoleBook(provider: provider),
       settingDialogBuilder: (_) => TabletGameSettingsDialog(
         provider: provider,
@@ -45,4 +48,41 @@ class FinalCallTabletGameOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 흰 바탕·남색 테두리의 원형 메뉴 아이콘입니다.
+class _MenuGlyph extends StatelessWidget {
+  const _MenuGlyph({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final size = constraints.biggest.shortestSide;
+      return Padding(
+        padding: EdgeInsets.only(bottom: size * .08),
+        child: FinalCallPopBox(
+          radius: size,
+          borderWidth: size * .07,
+          shadowDepth: size * .07,
+          child: Center(
+            child: FractionallySizedBox(
+              widthFactor: .52,
+              heightFactor: .52,
+              child: FittedBox(child: child),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _QuestionMark extends StatelessWidget {
+  const _QuestionMark();
+
+  @override
+  Widget build(BuildContext context) =>
+      Text('?', style: finalCallPopText(24, height: 1));
 }

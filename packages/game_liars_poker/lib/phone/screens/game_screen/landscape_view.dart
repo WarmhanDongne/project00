@@ -15,10 +15,15 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final controlsWidth = (constraints.maxWidth * 0.27).clamp(
-            170.0,
-            230.0,
+          final controlsWidth = (constraints.maxWidth * 0.29).clamp(
+            200.0,
+            250.0,
           );
+          final safe = MediaQuery.paddingOf(context);
+          final headerTop = 14.0 + safe.top;
+          const headerHeight = 48.0;
+          final bodyTop = headerTop + headerHeight + 6;
+          final infoHeight = (constraints.maxHeight * .26).clamp(84.0, 104.0);
           final sidePadding = (constraints.maxWidth * 0.025).clamp(16.0, 28.0);
           final isPersistent =
               announcement?.kind == GameAnnouncementKind.persistent;
@@ -34,50 +39,38 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
               if (showHeader)
                 Positioned(
                   key: const ValueKey('landscape-header-slot'),
-                  top: 12,
-                  left: sidePadding,
-                  right: sidePadding,
-                  child: SafeArea(
-                    bottom: false,
-                    child: PhoneGameTopBar(
-                      isLandscape: true,
-                      leadingWidget: _tableAsset(
-                        controller.table,
-                      ).image(height: 30, filterQuality: FilterQuality.high),
-                      centerWidget:
-                          regions.showTimer &&
-                              !widget.showSpectatorTopBar &&
-                              controller.turnDeadlineAt != null &&
-                              controller.phase != 'dealing' &&
-                              controller.phase != 'penalty' &&
-                              controller.isMyTurn
-                          ? PhoneTimer(
-                              expiresAt: controller.turnDeadlineAt!,
-                              onTimeout: () => _handleTurnTimeout(controller),
-                            )
-                          : null,
-                      onSettingPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (_) => const PhoneSettingsDialog(),
-                        );
-                      },
-                      onTipPressed: _showRules,
-                      onOutPressed: () => unawaited(_showExitModal()),
-                      onTipPressedAt: _showRules,
-                      onOutPressedAt: (origin) =>
-                          unawaited(_showExitModal(origin: origin)),
-                    ),
+                  top: headerTop,
+                  left: sidePadding + safe.left,
+                  right: sidePadding + safe.right,
+                  child: _buildHeader(controller),
+                ),
+              if (showHeader &&
+                  !showPenaltyHandOverlay &&
+                  !widget.showSpectatorTopBar &&
+                  !controller.isInitialLoading &&
+                  controller.phase != 'dealing')
+                Positioned(
+                  key: const ValueKey('landscape-timer-slot'),
+                  top: bodyTop,
+                  right: sidePadding + safe.right,
+                  width: controlsWidth,
+                  height: infoHeight + 22,
+                  child: _buildInfoRow(
+                    controller,
+                    turnPlayer: turnPlayer,
+                    showTimer: regions.showTimer,
+                    height: infoHeight,
+                    compact: true,
                   ),
                 ),
               // 방향 전환 전과 동일한 손패 State와 공개 완료값을 유지합니다.
               if (regions.showHand && !hideHandDuringPenalty)
                 Positioned(
                   key: const ValueKey('landscape-hand-slot'),
-                  top: 72,
-                  bottom: 8,
-                  left: sidePadding,
-                  right: controlsWidth + 24,
+                  top: bodyTop,
+                  bottom: 8 + safe.bottom,
+                  left: safe.left,
+                  right: controlsWidth + sidePadding + safe.right + 8,
                   child: RepaintBoundary(
                     child: _buildHand(
                       controller,
@@ -105,16 +98,21 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
                     verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
+                    meUid: controller.uid,
+                    lieRevealed:
+                        controller.lastPlayDeclarationWasFalse == true &&
+                        !controller.isLiarVerdictPending,
+                    caller: controller.players[controller.liarCallerUid],
                   ),
                 ),
               // 잔여카드 보유 생존자가 정확히 한 명일 때만 제출을 잠급니다.
               if (showFoldPrompt)
                 Positioned(
                   key: const ValueKey('landscape-two-player-pass-slot'),
-                  top: 72,
-                  bottom: 8,
-                  left: sidePadding,
-                  right: controlsWidth + 24,
+                  top: bodyTop,
+                  bottom: 8 + safe.bottom,
+                  left: sidePadding + safe.left,
+                  right: controlsWidth + sidePadding + safe.right + 8,
                   child: _FoldPrompt(
                     enabled: controller.canFoldLastCardChallenge,
                     onPressed: () =>
@@ -125,11 +123,12 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
               if (showControls)
                 Positioned(
                   key: const ValueKey('landscape-turn-action-slot'),
-                  right: sidePadding,
-                  top: 72,
-                  bottom: 8,
+                  right: sidePadding + safe.right,
+                  top: bodyTop + infoHeight + 22,
+                  bottom: 10 + safe.bottom,
                   width: controlsWidth,
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
                     child: TurnActionSwitcher(
                       isLandscape: true,
                       showLiarButton: controller.isMyTurn,
@@ -150,7 +149,7 @@ extension _LandscapeGameView on _LiarsPokerPhoneGameScreenState {
                   padding: isPersistent
                       ? EdgeInsets.fromLTRB(
                           sidePadding,
-                          72,
+                          bodyTop,
                           controlsWidth + 24,
                           8,
                         )

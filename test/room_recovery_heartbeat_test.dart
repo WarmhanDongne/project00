@@ -198,7 +198,14 @@ void main() {
         providers.add(provider);
         service.connected.add(true);
         await Future<void>.delayed(Duration.zero);
-        await provider.retryConnectionRecovery();
+        var parentElapsed = Duration.zero;
+        final parent = RoomRecoveryBatch(elapsed: () => parentElapsed);
+        await parent.run(
+          provider.retryConnectionRecovery,
+          isCurrent: () => true,
+          retryable: (_) => false,
+        );
+        parentElapsed = const Duration(seconds: 31);
         database.recoveryOwner = service.recoveryOwner;
         expect(service.recoveryOwner, isNotNull);
       }
@@ -234,6 +241,58 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 55)),
   );
+
+  for (final tokenCleared in [true, false]) {
+    test(
+      'null controller restore clears the room only after token removal: $tokenCleared',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        const identity = RoomSessionIdentity(
+          uid: 'closed-controller',
+          role: 'controller',
+          roomCode: 'CLOSE',
+          roomInstanceId: 'closed-room',
+          connectionId: 'connection',
+          connectionSeq: 1,
+          controllerSessionId: 'controller-session',
+        );
+        await RoomSessionIdentityStore.instance.save(identity);
+        await ControllerRoomSessionStore.instance.save(
+          roomCode: identity.roomCode,
+          sessionId: identity.controllerSessionId!,
+        );
+        final database = _Database();
+        final service = _RecoveryService(identity, database)
+          ..controllerClosed = true;
+        if (tokenCleared) {
+          service.afterControllerRestore =
+              ControllerRoomSessionStore.instance.clear;
+        }
+        final provider = RoomProvider(
+          service: service,
+          gameService: _UnusedGameService(),
+          currentUidReader: () => identity.uid,
+        )..roomCode = identity.roomCode;
+        addTearDown(() async {
+          provider.dispose();
+          await service.connected.close();
+          await RoomSessionIdentityStore.instance.clear(
+            identity.uid,
+            identity.role,
+            identity.roomCode,
+          );
+          await ControllerRoomSessionStore.instance.clear();
+        });
+        provider.listenRoom();
+        service.connected.add(true);
+        await Future<void>.delayed(Duration.zero);
+        await provider.retryConnectionRecovery();
+        expect(provider.roomCode, tokenCleared ? null : identity.roomCode);
+        expect(provider.wasRoomClosed, tokenCleared);
+        if (tokenCleared) expect(database.paths, isEmpty);
+      },
+    );
+  }
 }
 
 class _RecoveryService extends RoomService {
@@ -248,6 +307,7 @@ class _RecoveryService extends RoomService {
   final _Database database;
   final connected = StreamController<bool>.broadcast();
   RoomRecoveryBatch? recoveryOwner;
+  bool controllerClosed = false;
   Future<void> Function()? afterControllerRestore;
   Completer<void>? playerRestore;
   int playerRestores = 0;
@@ -256,7 +316,7 @@ class _RecoveryService extends RoomService {
   Future<String?> restoreControllerRoom() async {
     recoveryOwner = RoomRecoveryBatch.current;
     await afterControllerRestore?.call();
-    return identity.roomCode;
+    return controllerClosed ? null : identity.roomCode;
   }
 
   @override

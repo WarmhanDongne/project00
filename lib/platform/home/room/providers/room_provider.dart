@@ -23,6 +23,7 @@ import 'package:project00/platform/home/room/services/player_presence.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/room/services/room_action_timing.dart';
 import 'package:project00/platform/home/room/providers/room_command_executor.dart';
 
 //==============================================================================
@@ -76,6 +77,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   final RoomCommandExecutor _commandExecutor;
   final GameCatalog gameCatalog;
   final String? Function() _currentUid;
+  final Zone _sessionZone = Zone.current;
 
   @override
   String? roomCode;
@@ -232,52 +234,72 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 기존 방의 `초기화`는 closeRoom이 담당하며 새 코드를 만들지 않습니다.
 
     // 룸 코드가 없거나 로딩 중이면 리턴
-    if (roomCode != null || isLoading) return;
-
-    // room_service에 전달
-    final operationId = _pendingCreateRoomOperationId ??=
-        'create_room_${DateTime.now().microsecondsSinceEpoch}';
-    // 코드 반환 받기 위한 메서드 실행
-    // _runCommand -> RoomCommandExecutor ->
-    final code = await _runCommand<String>(
-      () => _service.createRoom(operationId: operationId),
-    );
-
-    //코드 반환 후 과정
-    if (code != null) {
-      // 재시도용 요청 id 정리
-      _pendingCreateRoomOperationId = null;
-      // 현재 방 코드 설정
-      roomCode = code;
-      // 이 태블릿이 방을 관리 중이라고 표시
-      _ownsControllerSession = true;
-      // 구독: 방 데이터 구독
-      listenRoom();
-      // 하트 비트: 태블릿 접속 정보 주기적 갱신
-      _startControllerHeartbeat(code);
-      // 화면에 상태 변경 알림
-      notifyListeners();
+    if (roomCode != null || isLoading || _controllerRestoreInFlight) return;
+    // A failed restore is still an existing room, not permission to allocate another.
+    if (_pendingControllerRestore) {
+      await restoreControllerRoom();
+      return;
     }
+
+    await RoomActionTiming.run(RoomTimedAction.create, () async {
+      // room_service에 전달
+      final operationId = _pendingCreateRoomOperationId ??=
+          'create_room_${DateTime.now().microsecondsSinceEpoch}';
+      // 코드 반환 받기 위한 메서드 실행
+      // _runCommand -> RoomCommandExecutor ->
+      final code = await _runCommand<String>(
+        () => _service.createRoom(operationId: operationId),
+      );
+
+      //코드 반환 후 과정
+      if (code != null) {
+        // 재시도용 요청 id 정리
+        _pendingCreateRoomOperationId = null;
+        // 현재 방 코드 설정
+        roomCode = code;
+        // 이 태블릿이 방을 관리 중이라고 표시
+        _ownsControllerSession = true;
+        // 구독: 방 데이터 구독
+        listenRoom();
+        // 하트 비트: 태블릿 접속 정보 주기적 갱신
+        _startControllerHeartbeat(code);
+        // 화면에 상태 변경 알림
+        notifyListeners();
+      }
+      return code != null;
+    });
   }
 
   // [방 종료] 서버에서 방 종료 후, 방 상태를 초기화하는 비동기 메서드
   Future<void> closeRoom() async {
-    final currentCode = roomCode;
-    if (currentCode == null || isLoading) return;
+    final currentCode =
+        roomCode ??
+        (_pendingControllerRestore
+            ? ControllerRoomSessionStore.instance.roomCode
+            : null);
+    if (currentCode == null || isLoading || _controllerRestoreInFlight) return;
+    final uid = _currentUid();
 
-    _isLeaving = true;
-    _controllerHeartbeatTimer?.cancel();
-    _playerHeartbeatTimer?.cancel();
-    // 방 종료 요청
-    final success = await _runCommand<bool>(() async {
-      await _service.closeControllerRoom(currentCode);
-      return true;
+    await RoomActionTiming.run(RoomTimedAction.close, () async {
+      _isLeaving = true;
+      _controllerHeartbeatTimer?.cancel();
+      _playerHeartbeatTimer?.cancel();
+      // 방 종료 요청
+      final success = await _runCommand<bool>(() async {
+        await _service.closeControllerRoom(currentCode);
+        return true;
+      });
+
+      //앱 내부 상태 초기화
+      if (success == true && !_isDisposed && _currentUid() == uid) {
+        if (roomCode == currentCode) {
+          clearRoom(expectedRoomCode: currentCode);
+        } else if (roomCode == null && _pendingControllerRestore) {
+          clearRoom();
+        }
+      }
+      return success == true;
     });
-
-    //앱 내부 상태 초기화
-    if (success == true) {
-      clearRoom(expectedRoomCode: currentCode);
-    }
   }
 
   Future<bool> selectGame(String gameId) async {
@@ -365,15 +387,18 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   }
 
   Future<void> restoreControllerRoom() async {
-    if (roomCode != null || _controllerRestoreInFlight) return;
+    if (roomCode != null || _controllerRestoreInFlight || isLoading) return;
     _controllerRestoreInFlight = true;
     _pendingControllerRestore = true;
-    connectionSubscription ??= _service.watchServerConnection().listen(
-      _handleServerConnection,
-    );
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
     final uid = _currentUid();
-    if (uid != null) await RoomLeaveIntent.load(uid);
     try {
+      connectionSubscription ??= _service.watchServerConnection().listen(
+        _handleServerConnection,
+      );
+      if (uid != null) await RoomLeaveIntent.load(uid);
       final owner = RoomRecoveryBatch.current ?? RoomRecoveryBatch();
       final restoredCode = RoomRecoveryBatch.current != null
           ? await _service.restoreControllerRoom()
@@ -402,23 +427,27 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       _startControllerHeartbeat(restoredCode);
       notifyListeners();
     } on RoomCommandException catch (error) {
+      if (_isDisposed || _currentUid() != uid) return;
       errorMessage = error.message;
       notifyListeners();
     } catch (_) {
-      errorMessage = "기존 방 연결을 확인하고 있습니다.";
+      if (_isDisposed || _currentUid() != uid) return;
+      errorMessage = "기존 방 연결을 확인하지 못했습니다. 다시 시도하거나 기존 방을 종료해주세요.";
       notifyListeners();
     } finally {
       _controllerRestoreInFlight = false;
+      isLoading = false;
+      if (!_isDisposed && _currentUid() == uid) notifyListeners();
     }
   }
 
   void _startControllerHeartbeat(String code) {
     _controllerHeartbeatTimer?.cancel();
-    _controllerHeartbeatTimer = Timer.periodic(const Duration(seconds: 10), (
-      _,
-    ) {
-      if (roomCode == code) unawaited(_heartbeatControllerSafely(code));
-    });
+    _controllerHeartbeatTimer = _sessionZone.run(
+      () => Timer.periodic(const Duration(seconds: 10), (_) {
+        if (roomCode == code) unawaited(_heartbeatControllerSafely(code));
+      }),
+    );
   }
 
   Future<void> _heartbeatControllerSafely(String code) async {
@@ -958,12 +987,14 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   void _startPlayerHeartbeat(String code) {
     _playerHeartbeatTimer?.cancel();
-    unawaited(_heartbeatPlayerSafely(code));
-    _playerHeartbeatTimer = Timer.periodic(playerHeartbeatInterval, (_) {
-      if (roomCode == code && !_isLeaving) {
-        unawaited(_heartbeatPlayerSafely(code));
-      }
-    });
+    _sessionZone.run(() => unawaited(_heartbeatPlayerSafely(code)));
+    _playerHeartbeatTimer = _sessionZone.run(
+      () => Timer.periodic(playerHeartbeatInterval, (_) {
+        if (roomCode == code && !_isLeaving) {
+          unawaited(_heartbeatPlayerSafely(code));
+        }
+      }),
+    );
   }
 
   Future<void> _heartbeatPlayerSafely(String code) async {
@@ -1458,9 +1489,15 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     final controllerSessionId = ControllerRoomSessionStore.instance
         .sessionIdForRoom(code);
     if (controllerSessionId != null) {
-      await _service.restoreControllerRoom().timeout(
+      final restoredCode = await _service.restoreControllerRoom().timeout(
         const Duration(seconds: 8),
       );
+      if (restoredCode == null &&
+          roomCode == code &&
+          !_isDisposed &&
+          ControllerRoomSessionStore.instance.sessionIdForRoom(code) == null) {
+        _terminateRoom(RoomTerminationReason.closed, expectedRoomCode: code);
+      }
       return;
     }
 
@@ -1959,6 +1996,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     _groupGamesRequestId += 1;
     _hasJoined = false;
     _isLeaving = false;
+    _pendingControllerRestore = false;
     _sessionEpoch += 1;
     _wasServerDisconnected = false;
     _isServerConnected = false;

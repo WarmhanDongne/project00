@@ -391,7 +391,11 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
       tableCardValue: controller.table,
       statusMessage: showStatusMessage ? controller.statusMessage : null,
       waitingMessage: controller.emptyHandWaitingMessage,
-      verdictMessage: controller.liarVerdictMessage,
+      // 거짓이 밝혀진 경우는 역할별 공개 화면이 같은 내용을 보여 주므로
+      // 가운데 판정 문구를 겹쳐 띄우지 않습니다.
+      verdictMessage: controller.lastPlayDeclarationWasFalse == true
+          ? null
+          : controller.liarVerdictMessage,
       lastPlayId: controller.lastPlayId,
     );
 
@@ -454,25 +458,11 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     // ============================================================================
     // 서버에서 eliminated가 확정되고 벌칙 결과 표시도 끝난 뒤 관전 화면으로
     // 전환합니다. 관전자는 게임 명령을 보낼 수 없고 생존자 상태만 구독합니다.
-    final survivors = controller.players.values
-        .where((p) => p.status != 'eliminated')
-        .toList();
-
-    final survivorPlayers = survivors
-        .map(
-          (p) => PlayerLayoutPlayer(
-            uid: p.uid,
-            nickname: p.nickname,
-            characterId: p.characterId,
-            seatIndex: 0,
-          ),
-        )
-        .toList();
-
     return LiarsPokerPhoneScreens.spectator(
       key: const ValueKey('liars-poker-spectator'),
-      players: survivorPlayers,
-      table: controller.table,
+      players: controller.players.values.toList(growable: false),
+      meUid: controller.uid,
+      turnUid: controller.turnUid,
       provider: widget.provider,
       onExitRoom: _leaveRoom,
     );
@@ -498,21 +488,8 @@ class _PhoneGameBackground extends StatelessWidget {
   const _PhoneGameBackground();
 
   @override
-  Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final background = isLandscape
-        ? Assets.games.liarsPoker.images.background.background.game
-        : Assets.games.liarsPoker.images.background.backgroundPhone.game;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SizedBox.expand(
-        child: background.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: LiarsPokerColors.night,
+    body: SizedBox.expand(),
+  );
 }

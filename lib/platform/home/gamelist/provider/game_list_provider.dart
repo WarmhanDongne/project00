@@ -12,6 +12,7 @@ class GameProvider extends ChangeNotifier {
   String? errorMessage;
 
   bool _isDisposed = false;
+  Future<void>? _fetchInFlight;
 
   @override
   void notifyListeners() {
@@ -26,13 +27,24 @@ class GameProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> fetchGames() async {
+  Future<void> fetchGames() {
+    if (_isDisposed) return Future.value();
+    return _fetchInFlight ??= Future<void>.microtask(_fetchGames).whenComplete(
+      () {
+        _fetchInFlight = null;
+      },
+    );
+  }
+
+  Future<void> _fetchGames() async {
+    if (_isDisposed) return;
     try {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
 
-      games = await _service.fetchGames();
+      final result = await _service.fetchGames();
+      if (!_isDisposed) games = result;
     } catch (e) {
       errorMessage = e.toString();
     } finally {

@@ -100,3 +100,13 @@ abstract final class LiarsPokerCopy {
     };
   }
 }
+
+/// 이름의 마지막 글자에 받침이 있는지입니다. 한글이 아니면 받침이 없다고 봅니다.
+bool _hasBatchim(String name) {
+  if (name.isEmpty) return false;
+  final code = name.codeUnitAt(name.length - 1);
+  return code >= 0xAC00 && code <= 0xD7A3 && (code - 0xAC00) % 28 != 0;
+}
+
+/// `민준이` · `서아가`처럼 이름 뒤에 붙일 주격 조사입니다.
+String liarsPokerSubjectParticle(String name) => _hasBatchim(name) ? '이' : '가';

@@ -15,6 +15,7 @@ import 'package:project00/platform/auth/screens/login_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/onboarding_service.dart';
 import 'package:project00/platform/auth/widgets/auth_gate.dart';
+import 'package:project00/platform/home/home.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -26,6 +27,75 @@ void main() {
   TestFirebaseCoreHostApi.setUp(_FirebaseCore());
   setUpAll(() async => Firebase.initializeApp());
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  for (final reducedMotion in [false, true]) {
+    testWidgets('로그아웃은 홈 퇴장 후 로그인으로 전환한다 (동작 줄이기=$reducedMotion)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final users = StreamController<User?>();
+      final onboarding = _Onboarding();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: const Size(390, 844),
+              disableAnimations: reducedMotion,
+            ),
+            child: AuthGate(
+              userChanges: users.stream,
+              onboardingService: onboarding,
+            ),
+          ),
+        ),
+      );
+      users.add(_User());
+      await tester.pump();
+      onboarding.states.add(
+        const UserOnboarding(
+          uid: 'test',
+          status: OnboardingStatus.complete,
+          provider: OnboardingProvider.emailLink,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(Home), findsOneWidget);
+      users.add(null);
+      await tester.pump();
+      if (!reducedMotion) {
+        expect(find.byType(Home), findsOneWidget);
+        final blockedHome = find.ancestor(
+          of: find.byType(Home),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is IgnorePointer && widget.ignoring,
+          ),
+        );
+        expect(blockedHome, findsWidgets);
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(find.byType(Home), findsNothing);
+        final loginOpacity = tester.widget<Opacity>(
+          find
+              .ancestor(
+                of: find.byType(LoginScreen),
+                matching: find.byType(Opacity),
+              )
+              .last,
+        );
+        expect(loginOpacity.opacity, lessThan(1));
+      }
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(Home), findsNothing);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      addTearDown(users.close);
+      addTearDown(onboarding.states.close);
+    });
+  }
 
   for (final size in [const Size(390, 844), const Size(1024, 768)]) {
     testWidgets('로그인→가입→취소는 $size에서 route·로고를 유지하고 입력을 복원한다', (tester) async {

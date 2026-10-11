@@ -25,13 +25,17 @@ class TabletGameRulebookDialog extends StatefulWidget {
     super.key,
     required this.title,
     required this.markdown,
-    required this.cardImages,
+    this.cardImages = const [],
+    this.cards = const [],
     this.videoUrl,
   });
 
   final String title;
   final String markdown;
   final List<GameImage> cardImages;
+
+  /// 카드를 그림 대신 위젯으로 그리는 게임이 씁니다. 64×90 칸에 맞춰 그립니다.
+  final List<Widget> cards;
   final String? videoUrl;
 
   @override
@@ -143,7 +147,33 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                 const SizedBox(height: 16),
                 _RuleVideo(videoUrl: widget.videoUrl, theme: theme),
                 const SizedBox(height: 16),
-                if (widget.cardImages.isNotEmpty) ...[
+                if (widget.cards.isNotEmpty) ...[
+                  Text(
+                    '카드',
+                    style: MosiFonts.sans(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: MosiColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 96,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.cards.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) => SizedBox(
+                        width: 64,
+                        height: 96,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: widget.cards[index],
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else if (widget.cardImages.isNotEmpty) ...[
                   Text(
                     '카드',
                     style: MosiFonts.sans(

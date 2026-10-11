@@ -186,6 +186,29 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   String? get winnerUid => state.winnerUid;
   String? get penaltyTargetUid => state.penaltyTargetUid;
   String? get lastPlayPlayerUid => state.lastPlayPlayerUid;
+
+  /// 이번 벌칙의 LIAR를 외친 플레이어입니다.
+  ///
+  /// 진실이었다면 외친 사람이 곧 벌칙 대상이라 재접속 뒤에도 알 수 있습니다.
+  String? get liarCallerUid {
+    if (phase != 'penalty' && !isPenaltyResultVisible) return null;
+    if (lastPlayDeclarationWasFalse == false) return penaltyTargetUid;
+    return state.liarCallerUid;
+  }
+
+  /// 공개된 마지막 제출이 거짓이었는지입니다. 아직 공개 전이면 null입니다.
+  bool? get lastPlayDeclarationWasFalse {
+    final play = roundPlays
+        .where((play) => play.playId == lastPlayId)
+        .firstOrNull;
+    if (play == null || !play.revealed || play.actualCardValues.isEmpty) {
+      return null;
+    }
+    return play.actualCardValues.any(
+      (value) => value.toUpperCase() != table && value.toUpperCase() != 'JOKER',
+    );
+  }
+
   String? get lastPlayId => state.lastPlayId;
   bool get lastPlayRevealed => state.lastPlayRevealed;
   int get lastPlayCardCount => state.lastPlayCardCount;
@@ -576,6 +599,11 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
           roundPlays: roundPlaysChanged ? nextRoundPlays : null,
           lastPlayId: nextLastPlayId,
           lastPlayPlayerUid: nextLastPlayPlayerUid,
+          liarCallerUid: didRevealLiarCards
+              ? turnUid
+              : nextPhase == 'penalty'
+              ? state.liarCallerUid
+              : null,
           lastPlayRevealed: nextLastPlayRevealed,
           lastPlayCardCount: nextLastPlayCardCount,
           liarVerdictMessage: nextLiarVerdictMessage,

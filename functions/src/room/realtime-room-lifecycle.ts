@@ -1,3 +1,4 @@
+import {traceRoomAction} from "./room-action-timing.js";
 import {decorateRecoveryCauses} from "../game-interruption/game-adapters.js";
 import {assertRoomGroupMember, RoomAllocation} from "./room-allocation.js";
 /* eslint-disable max-len, valid-jsdoc, require-jsdoc */
@@ -313,12 +314,12 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
 /** controller가 명시적으로 방을 닫습니다. 실제 삭제는 서버 cleanup이 담당합니다. */
 export const closeRoom = onCall<RoomData>(
   {region: REGION},
-  async (request) => {
+  async (request) => traceRoomAction("closeRoom", async (timing) => {
     const uid = requireUid(request.auth?.uid);
     const roomCode = parseRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const now = Date.now();
-    const roomSnapshot = await roomRef.get();
+    const roomSnapshot = await timing.measure("room_read", () => roomRef.get());
     if (!roomSnapshot.exists()) {
       throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
     }
@@ -329,7 +330,7 @@ export const closeRoom = onCall<RoomData>(
 
     const operationId = parseSessionId(request.data?.operationId, "작업 ID");
     const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
-    await runPrimedTransaction(roomRef, (raw) => {
+    await timing.measure("close_transaction", () => runPrimedTransaction(roomRef, (raw) => {
       if (!raw) return;
       const current = raw as RealtimeRoom & SessionRoom;
       assertControllerSession(current, uid, request.data?.controllerSessionId);
@@ -343,9 +344,9 @@ export const closeRoom = onCall<RoomData>(
       current.cleanupAt = now + CLOSED_ROOM_RETENTION_MS;
       recordRoomOperation(current, uid, operationId, "close", payload, {status: "applied"}, now);
       return current;
-    });
+    }));
     return {success: true, roomCode};
-  },
+  }),
 );
 
 /** 대기실의 게임 선택도 controller 세션 검증 뒤 서버에서 변경합니다. */
