@@ -553,6 +553,9 @@ void main() {
       final pendingPrepare = Completer<Object?>(),
           pendingResolve = Completer<Object?>();
       var prepares = 0, resolves = 0;
+      // 첫 호출 안의 자동 재전송도 응답을 받지 못하게 막아 둡니다. 시도 제한과
+      // 전체 예산이 같은 30ms라 타이머 오차로 재전송이 한 번 더 나갈 수 있습니다.
+      var answerPrepare = false, answerResolve = false;
       calls.reply = (name, data) async {
         if (name == 'game_common_operation_status') {
           return [
@@ -560,7 +563,7 @@ void main() {
           ];
         }
         if (name == 'game_liars_poker_prepare_penalty') {
-          if (++prepares == 1) return pendingPrepare.future;
+          if (++prepares == 1 || !answerPrepare) return pendingPrepare.future;
           return [
             {
               'success': true,
@@ -575,6 +578,7 @@ void main() {
             ..paused = true;
           return pendingResolve.future;
         }
+        if (!answerResolve) return pendingResolve.future;
         return [
           {'success': true, 'type': 'penaltyResolved'},
         ];
@@ -588,6 +592,7 @@ void main() {
         coordinator.prepare(),
         throwsA(isA<TimeoutException>()),
       );
+      answerPrepare = true;
       expect((await coordinator.prepare()).name, 'safe');
       final draw = calls.forName('game_liars_poker_prepare_penalty').first;
       expect(calls.forName('game_liars_poker_prepare_penalty').last, draw);
@@ -595,6 +600,7 @@ void main() {
         coordinator.complete(),
         throwsA(isA<TimeoutException>()),
       );
+      answerResolve = true;
       await coordinator.complete();
       final finish = calls.forName('game_liars_poker_resolve_penalty').first;
       expect(finish['resolutionId'], draw['commandId']);
