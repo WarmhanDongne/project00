@@ -1,6 +1,6 @@
 # Mosigame mobile store release checklist
 
-이 문서는 `1.0.0+2` 모바일 첫 출시의 코드 밖 작업과 안전한 배포 순서를 기록한다.
+이 문서는 `1.0.0` 모바일 첫 출시(현재 빌드 `1.0.0+4`)의 코드 밖 작업과 안전한 배포 순서를 기록한다.
 production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인해 수행한다.
 
 ## 0. 현재 출시 후보 상태
@@ -47,7 +47,7 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
    - `fetchRealtimeRoomGroupEntitlements`
    - `cleanupDeletedRoomCreationRequest`
 3. 배포된 callable을 개발/내부 테스트 앱에서 확인한다.
-4. `1.0.0+2` 앱을 내부 테스트에 배포한다.
+4. `1.0.0+4` 앱을 내부 테스트에 배포한다.
 5. 새 앱에서 무료·그룹 유료 게임 목록과 방 삭제 재시도를 확인한다.
 6. 새 클라이언트 전환이 확인된 뒤 `firestore.rules`와 `storage.rules`를 배포한다.
 7. 다른 UID의 `/users/{uid}` 읽기와 다른 사용자의 Storage 쓰기가 거부되는지 확인한다.
@@ -85,13 +85,17 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
 
 ## 5. Shorebird base release
 
-- 저장소 버전과 두 스토어 빌드를 `1.0.0+2`로 일치시킨다.
+- 저장소 버전과 두 스토어 빌드를 `1.0.0+4`로 일치시킨다.
+- 버전 규칙: `pubspec.yaml`의 `x.y.z`는 `AppConstants.appVersion`과 같아야 하고
+  (`app_version_constant_test.dart`), `+N` 빌드 번호는 스토어·Shorebird에 올린 적 있는
+  번호보다 항상 커야 한다. `1.0.0+2`는 2026-08-31 Shorebird Android 릴리스로, `1.0.0+3`은
+  저장소 밖 빌드로 이미 사용했으므로 다음 스토어 바이너리는 `1.0.0+4`이다. 새 바이너리를 올릴 때마다 `+N`만 1씩 올린다.
 - Shorebird CLI를 업데이트한 경우 doctor와 두 플랫폼 dry-run을 다시 실행한다.
 - 실제 스토어 바이너리는 일반 `flutter build`가 아니라 아래 release에서 생성한다.
 
 ```text
-shorebird release android --build-name=1.0.0 --build-number=2 --flutter-version=3.44.4
-shorebird release ios --build-name=1.0.0 --build-number=2 --flutter-version=3.44.4 --export-method=app-store
+shorebird release android --build-name=1.0.0 --build-number=4 --flutter-version=3.44.4
+shorebird release ios --build-name=1.0.0 --build-number=4 --flutter-version=3.44.4 --export-method=app-store
 ```
 
 Android 운영 릴리스 기록(2026-08-31 17:06 KST):
@@ -119,18 +123,18 @@ Android 운영 릴리스 기록(2026-08-31 17:06 KST):
 3. 먼저 staging track으로 패치한다.
 
 ```text
-shorebird patch android --release-version=1.0.0+2 --track=staging
-shorebird patch ios --release-version=1.0.0+2 --track=staging
+shorebird patch android --release-version=1.0.0+4 --track=staging
+shorebird patch ios --release-version=1.0.0+4 --track=staging
 ```
 
-4. 실제 기기에서 `shorebird preview --release-version=1.0.0+2 --track=staging`으로
+4. 실제 기기에서 `shorebird preview --release-version=1.0.0+4 --track=staging`으로
    확인한다. 이 앱은 첫 실행에 패치를 받고 “업데이트를 마쳤어요”를
    보여 준 뒤, 앱을 완전히 종료하고 다시 실행할 때 적용한다.
 5. 패치 번호를 확인한 후 stable로 승격한다.
 
 ```text
-shorebird patches list --release-version=1.0.0+2
-shorebird patches promote --release-version=1.0.0+2 --patch-number=<확인한 번호>
+shorebird patches list --release-version=1.0.0+4
+shorebird patches promote --release-version=1.0.0+4 --patch-number=<확인한 번호>
 ```
 
 - Dart 로직·UI·문구 수정은 patch 후보다.
