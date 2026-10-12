@@ -3,7 +3,7 @@
 export const HOLDEM_MIN_PLAYERS = 2;
 export const HOLDEM_MAX_PLAYERS = 8;
 export const HOLDEM_STARTING_CHIPS = 1000;
-export const HOLDEM_ACTION_MS = 20_000;
+export const HOLDEM_ACTION_MS = 60_000;
 export const HOLDEM_HANDS_PER_BLIND_LEVEL = 5;
 
 export const HOLDEM_BLIND_LEVELS = [

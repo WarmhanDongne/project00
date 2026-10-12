@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -90,12 +91,14 @@ class FinalCallCardFace extends StatelessWidget {
         height: width * finalCallCardHeightRatio,
         alignment: Alignment.center,
         decoration: _cardDecoration(finalCallCardColor(card.color), width),
+        // 두 자리 숫자(10)도 테두리에 붙지 않게 좌우 여백을 남깁니다.
+        padding: EdgeInsets.symmetric(horizontal: 16 * unit),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             '${card.value}',
             style: finalCallPopText(
-              (card.value >= 10 ? 62 : 76) * unit,
+              (card.value >= 10 ? 54 : 76) * unit,
               color: yellow ? FinalCallColors.ink : Colors.white,
               height: 1,
               shadows: yellow ? null : finalCallPopOutline(3 * unit),
@@ -107,7 +110,7 @@ class FinalCallCardFace extends StatelessWidget {
   }
 }
 
-/// 카드 뒷면(보라 + 노란 물음표 동전)입니다.
+/// 카드 뒷면입니다. 보라 바탕에 짙은 보라 창, 창 가득 보라 두 톤 사선 줄무늬를 깝니다.
 class FinalCallCardBack extends StatelessWidget {
   const FinalCallCardBack({super.key, required this.width, this.radius});
 
@@ -119,29 +122,70 @@ class FinalCallCardBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unit = _cardUnit(width);
-    final coin = 44 * unit;
     final decoration = _cardDecoration(FinalCallColors.violet, width);
-    return Container(
-      width: width,
-      height: width * finalCallCardHeightRatio,
-      alignment: Alignment.center,
-      decoration: radius == null
-          ? decoration
-          : decoration.copyWith(borderRadius: BorderRadius.circular(radius!)),
+    return Semantics(
+      label: GameLocale.select(
+        ko: '카드 뒷면',
+        en: 'Card back',
+        zhHans: '卡牌背面',
+        zhHant: '卡牌背面',
+      ),
+      excludeSemantics: true,
       child: Container(
-        width: coin,
-        height: coin,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: FinalCallColors.yellow,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: FinalCallColors.ink,
-            width: math.max(1.2, 3 * unit),
+        width: width,
+        height: width * finalCallCardHeightRatio,
+        padding: EdgeInsets.all(9 * unit),
+        decoration: radius == null
+            ? decoration
+            : decoration.copyWith(borderRadius: BorderRadius.circular(radius!)),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: FinalCallColors.violetDeep,
+            borderRadius: BorderRadius.circular(10 * unit),
+            border: Border.all(
+              color: FinalCallColors.lilac,
+              width: math.max(1, 2.5 * unit),
+            ),
+          ),
+          child: CustomPaint(
+            painter: _CardBackPainter(unit: unit),
+            child: const SizedBox.expand(),
           ),
         ),
-        child: Text('?', style: finalCallPopText(coin * 0.55, height: 1)),
       ),
     );
   }
+}
+
+/// 뒷면 창 안의 사선 줄무늬입니다(굵은 보라 줄과 옅은 연보라 줄이 번갈아 지나감).
+class _CardBackPainter extends CustomPainter {
+  const _CardBackPainter({required this.unit});
+
+  final double unit;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gap = 14 * unit;
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(10 * unit)),
+    );
+    for (var d = -size.height; d < size.width + size.height; d += gap) {
+      final index = ((d + size.height) / gap).round();
+      canvas.drawLine(
+        Offset(d, size.height),
+        Offset(d + size.height, 0),
+        Paint()
+          ..strokeWidth = gap * .5
+          ..color = index.isEven
+              ? FinalCallColors.violet.withValues(alpha: .8)
+              : FinalCallColors.lilac.withValues(alpha: .3),
+      );
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_CardBackPainter oldDelegate) => oldDelegate.unit != unit;
 }

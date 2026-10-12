@@ -17,6 +17,7 @@ import 'package:game_holdem/shared/services/game_service.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
 import 'package:game_holdem/tablet/screens/table_screen.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
@@ -164,7 +165,18 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
   Widget build(BuildContext context) {
     final args = _args;
     if (args == null) {
-      return const Scaffold(body: Center(child: Text('진행 기기 인증을 확인할 수 없습니다.')));
+      return Scaffold(
+        body: Center(
+          child: Text(
+            GameLocale.select(
+              ko: '진행 기기 인증을 확인할 수 없습니다.',
+              en: 'The host device could not be verified.',
+              zhHans: '无法验证主持设备。',
+              zhHant: '無法驗證主持裝置。',
+            ),
+          ),
+        ),
+      );
     }
     final game = ref.watch(holdemSessionProvider(args));
     final controller = ref.read(holdemSessionProvider(args).notifier);
@@ -243,7 +255,7 @@ class _HoldemTabletGameState extends ConsumerState<HoldemTabletGame> {
               visible: !game.loading && !game.isFinished,
               roleIcon: const _MenuGlyph(Icons.menu_book_rounded),
               settingIcon: const _MenuGlyph(Icons.settings_rounded),
-              roleDialogBuilder: (_) => const TabletGameRulebookDialog(
+              roleDialogBuilder: (_) => TabletGameRulebookDialog(
                 title: 'TEXAS HOLD’EM',
                 markdown: HoldemCopy.tabletRules,
                 cardImages: [],
@@ -323,7 +335,13 @@ class _TournamentResult extends StatelessWidget {
               const _ChampionStamp(),
               const SizedBox(height: 26),
               Text(
-                winner?.nickname ?? '승자',
+                winner?.nickname ??
+                    GameLocale.select(
+                      ko: '승자',
+                      en: 'Winner',
+                      zhHans: '获胜者',
+                      zhHant: '獲勝者',
+                    ),
                 textAlign: TextAlign.center,
                 style: HoldemFonts.text(size: 40, weight: FontWeight.w900),
               ),
@@ -379,13 +397,23 @@ class _TournamentResult extends StatelessWidget {
                     label: 'Home',
                     dark: true,
                     size: 108,
-                    semanticLabel: '게임 종료하고 홈으로',
+                    semanticLabel: GameLocale.select(
+                      ko: '게임 종료하고 홈으로',
+                      en: 'End game and go home',
+                      zhHans: '结束游戏并返回首页',
+                      zhHant: '結束遊戲並返回首頁',
+                    ),
                     onPressed: onHome,
                   ),
                   HoldemPuckButton(
                     label: 'Again',
                     size: 120,
-                    semanticLabel: '다시 하기',
+                    semanticLabel: GameLocale.select(
+                      ko: '다시 하기',
+                      en: 'Play again',
+                      zhHans: '再玩一次',
+                      zhHant: '再玩一次',
+                    ),
                     onPressed: () => unawaited(onRestart()),
                   ),
                 ],

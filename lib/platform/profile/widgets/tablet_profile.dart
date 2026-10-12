@@ -2,6 +2,7 @@ import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile_modal.dart';
 
 /// 선반 오른쪽 위 내 프로필 버튼입니다: 닉네임 + 동그란 얼굴.
@@ -73,7 +74,8 @@ class Profile extends StatelessWidget {
 String profileDisplayName(User? user) {
   final nickname = user?.displayName?.trim();
   if (nickname != null && nickname.isNotEmpty) return nickname;
-  return user?.email?.split('@').first ?? '사용자';
+  return user?.email?.split('@').first ??
+      GameLocale.select(ko: '사용자', en: 'User', zhHans: '用户', zhHant: '使用者');
 }
 
 /// 프로필 사진이 있으면 사진, 없으면 이니셜을 [color] 원 위에 그립니다.

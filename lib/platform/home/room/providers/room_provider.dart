@@ -152,6 +152,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   Future<void>? _connectionRecoveryFuture;
   (String?, String?, int, int, String?)? _confirmedRecovery;
   bool _heartbeatPermissionRecoveryAttempted = false;
+  bool _presencePaused = false;
   RoomRecoveryBatch? _requestedRecoveryOwner;
   GameRecoverySession? _reconnectSession;
   Future<void> Function()? _reconnectCallback;
@@ -453,6 +454,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   Future<void> _heartbeatControllerSafely(String code) async {
     if (!_isServerConnected ||
+        _presencePaused ||
         roomCode != code ||
         _isDisposed ||
         _controllerHeartbeatInFlight) {
@@ -479,6 +481,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
           !_controllerHeartbeatRecoveryStarted &&
           !_isDisposed &&
           roomCode == code &&
+          !_presencePaused &&
           _isServerConnected) {
         _controllerHeartbeatRecoveryStarted = true;
         _confirmedRecovery = null;
@@ -574,13 +577,17 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   Future<void> _reportStaleController(String code, int observedLastSeen) async {
     var succeeded = false;
+    final observed = _controllerPresence;
     try {
       await _service.reportStaleController(
         roomCode: code,
         observedLastSeen: observedLastSeen,
+        controllerConnectionId: observed.connectionId,
+        controllerConnectionSeq: observed.connectionSeq,
       );
       succeeded = true;
-      if (_controllerStaleReportLastSeen == observedLastSeen) {
+      if (_controllerPresence == observed &&
+          _controllerStaleReportLastSeen == observedLastSeen) {
         _controllerStaleReportAttempts = 2;
       }
     } catch (error) {
@@ -614,6 +621,11 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _presencePaused = false;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _presencePaused = true;
+    }
     final code = roomCode;
     if (_isDisposed || code == null) return;
     if (state == AppLifecycleState.resumed) {
@@ -643,10 +655,12 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   }
 
   Future<void> resumeControllerPresence() async {
+    _presencePaused = false;
     if (roomCode != null) await retryConnectionRecovery();
   }
 
   Future<void> pauseControllerPresence() async {
+    _presencePaused = true;
     _controllerHeartbeatTimer?.cancel();
     _controllerHeartbeatTimer = null;
     final code = roomCode;
@@ -781,7 +795,15 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
         .listen(
           (presence) {
             if (roomCode != listenedRoomCode) return;
+            if (_controllerPresence.connectionId != presence.connectionId ||
+                _controllerPresence.connectionSeq != presence.connectionSeq) {
+              _controllerStaleReportLastSeen = null;
+              _controllerStaleReportAttempts = 0;
+            }
             _controllerPresence = presence;
+            if (_ownsControllerSession && presence.connected == false) {
+              _handleOwnConnectionLost();
+            }
             _syncControllerPresenceTimer();
             _applyControllerPresenceVerdict();
           },
@@ -868,40 +890,63 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       onError: (Object error) =>
           _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode),
     );
-    playerSubscription = _service.watchRoomPlayers(listenedRoomCode).listen(
-      (roomPlayer) {
-        if (roomCode != listenedRoomCode) return;
-        players = roomPlayer;
-        _pruneStaleReports(roomPlayer);
-        _evaluateStalePlayers();
+    playerSubscription = _service
+        .watchRoomPlayers(
+          listenedRoomCode,
+          observeCurrent: _ownsControllerSession,
+          ownUid: _ownsControllerSession ? null : _currentUid(),
+        )
+        .listen(
+          (roomPlayer) {
+            if (roomCode != listenedRoomCode) return;
+            players = roomPlayer;
+            if (!_ownsControllerSession &&
+                roomPlayer.any(
+                  (p) =>
+                      p.uid == _currentUid() &&
+                      p.lastSeen != null &&
+                      !p.isConnected,
+                )) {
+              _handleOwnConnectionLost();
+            }
+            _pruneStaleReports(roomPlayer);
+            _evaluateStalePlayers();
 
-        final myUid = _currentUid();
-        if (!_ownsControllerSession && myUid != null && myUid.isNotEmpty) {
-          final isMeInPlayers = roomPlayer.any(
-            (p) => p.uid == myUid && p.isActive,
-          );
-          if (isMeInPlayers) {
-            _hasJoined = true;
-          } else if (_hasJoined && !_isLeaving) {
+            final myUid = _currentUid();
+            if (!_ownsControllerSession && myUid != null && myUid.isNotEmpty) {
+              final isMeInPlayers = roomPlayer.any(
+                (p) => p.uid == myUid && p.isActive,
+              );
+              if (isMeInPlayers) {
+                _hasJoined = true;
+              } else if (_hasJoined && !_isLeaving) {
+                unawaited(
+                  _verifyCurrentPlayerRemoval(
+                    listenedRoomCode,
+                    expectedUid: myUid,
+                  ),
+                );
+                return;
+              }
+            }
+            // players 변경(heartbeat 포함)은 Firestore 조회를 기다리지 않고 즉시
+            // 화면에 반영합니다.
+            notifyListeners();
+
+            // 활성화된 유저의 uids 추출
+            final activeUids = _groupMemberUids();
             unawaited(
-              _verifyCurrentPlayerRemoval(listenedRoomCode, expectedUid: myUid),
+              _refreshGroupGames(
+                activeUids,
+                expectedRoomCode: listenedRoomCode,
+              ),
             );
-            return;
-          }
-        }
-        // players 변경(heartbeat 포함)은 Firestore 조회를 기다리지 않고 즉시
-        // 화면에 반영합니다.
-        notifyListeners();
-
-        // 활성화된 유저의 uids 추출
-        final activeUids = _groupMemberUids();
-        unawaited(
-          _refreshGroupGames(activeUids, expectedRoomCode: listenedRoomCode),
+          },
+          onError: (Object error) => _handleSubscriptionError(
+            error,
+            expectedRoomCode: listenedRoomCode,
+          ),
         );
-      },
-      onError: (Object error) =>
-          _handleSubscriptionError(error, expectedRoomCode: listenedRoomCode),
-    );
   }
 
   /// 그룹 보유 게임은 활성 참가자 구성이 실제로 바뀔 때만 다시 조회합니다.
@@ -999,13 +1044,18 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   }
 
   Future<void> _heartbeatPlayerSafely(String code) async {
-    if (!_isServerConnected || _isLeaving || roomCode != code || _isDisposed) {
+    if (!_isServerConnected ||
+        _presencePaused ||
+        _isLeaving ||
+        roomCode != code ||
+        _isDisposed) {
       return;
     }
     try {
       await _service.heartbeatPlayer(code);
     } catch (error) {
       if (isPermissionDenied(error) &&
+          !_presencePaused &&
           !_heartbeatPermissionRecoveryAttempted &&
           !_isDisposed &&
           roomCode == code &&
@@ -1070,25 +1120,38 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
           _staleReportInFlight.contains(player.uid)) {
         continue;
       }
-      if (!_staleReportTracker.tryStartAttempt(player.uid, lastSeen)) continue;
+      if (!_staleReportTracker.tryStartAttempt(
+        player.uid,
+        lastSeen,
+        binding: playerPresenceBinding(player),
+      )) {
+        continue;
+      }
       _staleReportInFlight.add(player.uid);
       // 복구 신원이 확정된 뒤에도 실패하면 다음 1초 주기에서 한 번만 재확인합니다.
-      unawaited(_reportStalePlayer(code, player.uid, lastSeen));
+      unawaited(_reportStalePlayer(code, player, lastSeen));
     }
   }
 
   Future<void> _reportStalePlayer(
     String code,
-    String playerUid,
+    RoomPlayer player,
     int observedLastSeen,
   ) async {
     try {
+      final playerUid = player.uid;
       await _service.reportStalePlayer(
         roomCode: code,
         playerUid: playerUid,
         observedLastSeen: observedLastSeen,
+        playerConnectionId: player.currentConnectionId,
+        playerConnectionSeq: player.connectionSeq,
       );
-      _staleReportTracker.markSucceeded(playerUid, observedLastSeen);
+      _staleReportTracker.markSucceeded(
+        playerUid,
+        observedLastSeen,
+        binding: playerPresenceBinding(player),
+      );
     } catch (error) {
       // 다음 판정 주기에서 같은 관측값을 한 번만 더 확인합니다.
       if (kDebugMode) {
@@ -1098,12 +1161,31 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
         );
       }
     } finally {
-      _staleReportInFlight.remove(playerUid);
+      _staleReportInFlight.remove(player.uid);
     }
   }
 
   void _pruneStaleReports(List<RoomPlayer> currentPlayers) {
     _staleReportTracker.retainCurrent(currentPlayers);
+  }
+
+  void _handleOwnConnectionLost() {
+    if (_isDisposed ||
+        _presencePaused ||
+        _isLeaving ||
+        !_isServerConnected ||
+        _connectionRecoveryFuture != null ||
+        _heartbeatPermissionRecoveryAttempted) {
+      return;
+    }
+    _heartbeatPermissionRecoveryAttempted = true;
+    _confirmedRecovery = null;
+    final code = roomCode, uid = _currentUid();
+    if (code == null || uid == null) return;
+    final session = GameRecoverySession.forRoom(code, uid);
+    session.transportRecovering = true;
+    session.invalidate();
+    unawaited(retryConnectionRecovery().catchError((Object _) {}));
   }
 
   //================================[method]====================================
@@ -1455,6 +1537,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
         connectionEpoch,
         identity?.connectionId,
       );
+      _heartbeatPermissionRecoveryAttempted = false;
       if (uid != null) {
         final session = GameRecoverySession.forRoom(code, uid);
         session.transportRecovering = false;

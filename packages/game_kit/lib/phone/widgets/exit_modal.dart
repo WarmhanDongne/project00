@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 
@@ -133,7 +134,12 @@ class SharedPhoneExitModal extends StatelessWidget {
         ),
       ),
       child: Text(
-        '정말 갈 거예요?',
+        GameLocale.select(
+          ko: '정말 갈 거예요?',
+          en: 'Are you sure you want to leave?',
+          zhHans: '确定要离开吗？',
+          zhHant: '確定要離開嗎？',
+        ),
         style: MosiFonts.sans(
           size: 13,
           weight: FontWeight.w700,
@@ -252,7 +258,12 @@ class SharedPhoneExitModal extends StatelessWidget {
       crossAxisAlignment: crossAxis,
       children: [
         Text(
-          '게임과 그룹에서 나갈까요?',
+          GameLocale.select(
+            ko: '게임과 그룹에서 나갈까요?',
+            en: 'Leave the game and room?',
+            zhHans: '要离开游戏和房间吗？',
+            zhHant: '要離開遊戲和房間嗎？',
+          ),
           textAlign: align,
           style: MosiFonts.sans(
             color: MosiColors.navy,
@@ -264,7 +275,12 @@ class SharedPhoneExitModal extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '지금 나가면 이번 게임은 종료되고\n그룹에서도 빠져요.',
+          GameLocale.select(
+            ko: '지금 나가면 이번 게임은 종료되고\n그룹에서도 빠져요.',
+            en: 'Leaving now ends this game for you\nand removes you from the room.',
+            zhHans: '现在离开会结束你的本局游戏，\n并退出房间。',
+            zhHant: '現在離開會結束你的本局遊戲，\n並退出房間。',
+          ),
           textAlign: align,
           style: MosiFonts.sans(
             color: MosiColors.muted,
@@ -282,7 +298,7 @@ class SharedPhoneExitModal extends StatelessWidget {
         Expanded(
           flex: 10,
           child: MosiButton(
-            label: '나가기',
+            label: '나가기'.localized,
             background: MosiColors.white,
             foreground: MosiColors.ink,
             borderWidth: 2,
@@ -297,7 +313,7 @@ class SharedPhoneExitModal extends StatelessWidget {
         Expanded(
           flex: 14,
           child: MosiButton(
-            label: '더 놀래요',
+            label: '더 놀래요'.localized,
             background: MosiColors.lime,
             foreground: MosiColors.ink,
             shadowColor: MosiColors.ink,
@@ -332,19 +348,12 @@ class _ExitWarning extends StatelessWidget {
           const Icon(Icons.error_rounded, color: red, size: 22),
           const SizedBox(width: 10),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: '나가면 이 게임에 다시 들어올 수 없어요.\n'),
-                  TextSpan(
-                    text: '그룹에 다시 들어오려면 방 코드를 입력해야 해요.',
-                    style: MosiFonts.sans(
-                      size: 13,
-                      weight: FontWeight.w400,
-                      color: red.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
+            child: Text(
+              GameLocale.select(
+                ko: '나가면 이 게임에 다시 들어올 수 없어요.\n그룹에 다시 들어오려면 방 코드를 입력해야 해요.',
+                en: 'You cannot rejoin this game after leaving.\nEnter the room code to join the room again.',
+                zhHans: '离开后无法重新加入本局游戏。\n再次加入房间需要输入房间码。',
+                zhHant: '離開後無法重新加入本局遊戲。\n再次加入房間需要輸入房間碼。',
               ),
               style: MosiFonts.sans(
                 size: 13,

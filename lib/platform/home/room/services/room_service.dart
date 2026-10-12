@@ -86,8 +86,9 @@ class RoomService {
 
   Future<HttpsCallableResult<dynamic>> _call(String name, dynamic payload) {
     final owner = RoomRecoveryBatch.inherited;
-    Future<HttpsCallableResult<dynamic>> send() =>
-        _functions.httpsCallable(name).call(payload);
+    Future<HttpsCallableResult<dynamic>> send() => _functions
+        .httpsCallable(name)
+        .call(payload is Map ? {...payload, 'presenceProtocol': 2} : payload);
     return RoomActionTiming.measure(
       'callable:$name',
       () => owner != null
@@ -266,10 +267,7 @@ class RoomService {
     await RoomActionTiming.measure(
       'rtdb:presence_write',
       () => _writeWithRetry(
-        () => presenceRef.update({
-          'connected': true,
-          'lastSeen': ServerValue.timestamp,
-        }),
+        () => presenceRef.update({'lastSeen': ServerValue.timestamp}),
       ),
     );
     // 현재 연결 상태 갱신이 복구의 성공 기준입니다. 다음 단절 예약은 Android/iOS
@@ -283,7 +281,7 @@ class RoomService {
     await _writeWithRetry(
       () => _connectionReference(
         identity,
-      ).update({'connected': true, 'lastSeen': ServerValue.timestamp}),
+      ).child('lastSeen').set(ServerValue.timestamp),
     );
   }
 
@@ -553,10 +551,81 @@ class RoomService {
   /// `lastSeen`은 `ServerValue.timestamp`로 기록되므로 서버 시각입니다.
   /// 판정에는 반드시 `ServerClock.nowMillis()`를 쓰세요.
   Stream<ControllerPresence> watchControllerPresence(String roomCode) {
-    return realtime
-        .ref('rooms/${roomCode.trim().toUpperCase()}/controllerPresence')
-        .onValue
-        .map((event) => ControllerPresence.fromValue(event.snapshot.value));
+    late StreamController<ControllerPresence> output;
+    final metadata = <StreamSubscription<DatabaseEvent>>[];
+    StreamSubscription<ControllerPresence>? peer;
+    final values = <String, Object?>{};
+    var binding = '';
+    var epoch = 0;
+    var closed = false;
+    output = StreamController<ControllerPresence>(
+      onListen: () {
+        for (final key in [
+          'roomInstanceId',
+          'controllerUid',
+          'controllerCurrentConnectionId',
+          'controllerConnectionSeq',
+        ]) {
+          metadata.add(
+            realtime
+                .ref('rooms/$roomCode/$key')
+                .onValue
+                .listen(
+                  (event) {
+                    values[key] = event.snapshot.value;
+                    final next = values.toString();
+                    if (binding == next) return;
+                    binding = next;
+                    final captured = ++epoch;
+                    unawaited(peer?.cancel());
+                    peer = null;
+                    if (closed) return;
+                    output.add(ControllerPresence.unknown);
+                    final uid = values['controllerUid'],
+                        id = values['controllerCurrentConnectionId'];
+                    final seq = values['controllerConnectionSeq'];
+                    if (uid is! String ||
+                        id is! String ||
+                        seq is! num ||
+                        values['roomInstanceId'] is! String) {
+                      return;
+                    }
+                    peer =
+                        _watchConnectionLeaves(
+                          roomCode,
+                          uid,
+                          id,
+                          seq.toInt(),
+                        ).listen(
+                          (value) {
+                            if (!closed && epoch == captured) output.add(value);
+                          },
+                          onError: (Object _) {
+                            // A replaced peer may lose read permission; this is not our transport failure.
+                            if (!closed && epoch == captured) {
+                              output.add(ControllerPresence.unknown);
+                            }
+                          },
+                        );
+                  },
+                  onError: (Object _) {
+                    ++epoch;
+                    unawaited(peer?.cancel());
+                    peer = null;
+                    if (!closed) output.add(ControllerPresence.unknown);
+                  },
+                ),
+          );
+        }
+      },
+      onCancel: () async {
+        closed = true;
+        ++epoch;
+        await peer?.cancel();
+        await Future.wait(metadata.map((s) => s.cancel()));
+      },
+    );
+    return output.stream;
   }
 
   //[observe] 특정 방의 현재 상태를 파베에서 실시간으로 감시
@@ -580,11 +649,220 @@ class RoomService {
     return snapshot.exists;
   }
 
-  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) {
-    return realtime
-        .ref('rooms/$roomCode/players')
-        .onValue
-        .map((event) => _playersFromSnapshot(event.snapshot));
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String roomCode, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) {
+    if (!observeCurrent && ownUid == null) {
+      return realtime
+          .ref('rooms/$roomCode/players')
+          .onValue
+          .map((event) => _playersFromSnapshot(event.snapshot));
+    }
+    late StreamController<List<RoomPlayer>> output;
+    StreamSubscription<DatabaseEvent>? metadata;
+    StreamSubscription<DatabaseEvent>? status;
+    StreamSubscription<DatabaseEvent>? instance;
+    final peers = <String, StreamSubscription<ControllerPresence>>{};
+    final bindings = <String, String>{};
+    final observations = <String, ControllerPresence>{};
+    var players = <RoomPlayer>[];
+    var closed = false;
+    var playing = false;
+    String? roomInstance;
+    void emit() {
+      if (closed) return;
+      output.add(
+        players
+            .map((p) {
+              if (!(observeCurrent && playing) && p.uid != ownUid) return p;
+              final presence = observations[p.uid];
+              final json = p.toJson();
+              // Unknown/rebinding is not evidence for a stale report.
+              json.remove('lastSeen');
+              if (presence?.lastSeen != null) {
+                json['lastSeen'] = presence!.lastSeen;
+              }
+              if (presence?.connected != null) {
+                json['isConnected'] = presence!.connected;
+              }
+              return RoomPlayer.fromJson(json, key: p.uid);
+            })
+            .toList(growable: false),
+      );
+    }
+
+    void bind() {
+      final active = players
+          .where((p) => (observeCurrent && playing) || p.uid == ownUid)
+          .map((p) => p.uid)
+          .toSet();
+      for (final uid in peers.keys.toList()) {
+        if (active.contains(uid)) continue;
+        unawaited(peers.remove(uid)!.cancel());
+        bindings.remove(uid);
+        observations.remove(uid);
+      }
+      for (final p in players) {
+        if (!active.contains(p.uid)) continue;
+        final id = p.currentConnectionId;
+        final binding =
+            '$roomInstance/${p.membershipId}/$id/${p.connectionSeq}';
+        if (bindings[p.uid] == binding) continue;
+        bindings[p.uid] = binding;
+        observations.remove(p.uid);
+        unawaited(peers.remove(p.uid)?.cancel());
+        if (roomInstance == null || id == null || p.connectionSeq == null) {
+          continue;
+        }
+        peers[p.uid] =
+            _watchConnectionLeaves(
+              roomCode,
+              p.uid,
+              id,
+              p.connectionSeq!,
+            ).listen(
+              (value) {
+                if (closed || bindings[p.uid] != binding) return;
+                observations[p.uid] = value;
+                emit();
+              },
+              onError: (Object _) {
+                if (closed || bindings[p.uid] != binding) return;
+                observations.remove(p.uid);
+                emit();
+              },
+            );
+      }
+      emit();
+    }
+
+    output = StreamController<List<RoomPlayer>>(
+      onListen: () {
+        instance = realtime
+            .ref('rooms/$roomCode/roomInstanceId')
+            .onValue
+            .listen(
+              (event) {
+                roomInstance = event.snapshot.value as String?;
+                bind();
+              },
+              onError: (Object _) {
+                roomInstance = null;
+                bind();
+              },
+            );
+        if (observeCurrent) {
+          status = realtime
+              .ref('rooms/$roomCode/status')
+              .onValue
+              .listen(
+                (event) {
+                  playing = event.snapshot.value == 'playing';
+                  bind();
+                },
+                onError: (Object _) {
+                  playing = false;
+                  bind();
+                },
+              );
+        }
+        metadata = realtime.ref('rooms/$roomCode/players').onValue.listen((
+          event,
+        ) {
+          players = _playersFromSnapshot(event.snapshot);
+          bind();
+        }, onError: output.addError);
+      },
+      onCancel: () async {
+        closed = true;
+        await metadata?.cancel();
+        await status?.cancel();
+        await instance?.cancel();
+        await Future.wait(peers.values.map((s) => s.cancel()));
+      },
+    );
+    return output.stream;
+  }
+
+  // Only the two scalar leaves are readable by peers; never subscribe to C or R.
+  Stream<ControllerPresence> _watchConnectionLeaves(
+    String code,
+    String uid,
+    String id,
+    int seq,
+  ) {
+    late StreamController<ControllerPresence> output;
+    final subscriptions = <StreamSubscription<DatabaseEvent>>[];
+    bool? connected;
+    int? seen;
+    var closed = false;
+    var epoch = 0;
+    var retries = 0;
+    Timer? retry;
+    void emit() {
+      if (!closed) {
+        output.add(
+          connected == null || seen == null
+              ? ControllerPresence.unknown
+              : ControllerPresence(
+                  connected: connected,
+                  lastSeen: seen,
+                  connectionId: id,
+                  connectionSeq: seq,
+                ),
+        );
+      }
+    }
+
+    late void Function() bind;
+    void failed(Object error, int captured) {
+      if (closed || captured != epoch) return;
+      ++epoch;
+      connected = null;
+      seen = null;
+      output.addError(error);
+      for (final subscription in subscriptions) {
+        unawaited(subscription.cancel());
+      }
+      subscriptions.clear();
+      // One bounded retry for a still-current peer; never recover our own transport here.
+      if (retries++ == 0) retry = Timer(const Duration(seconds: 10), bind);
+    }
+
+    bind = () {
+      if (closed) return;
+      final captured = ++epoch;
+      final ref = realtime.ref('rooms/$code/connections/$uid/$id');
+      subscriptions.add(
+        ref.child('connected').onValue.listen((event) {
+          if (closed || captured != epoch) return;
+          connected = event.snapshot.value is bool
+              ? event.snapshot.value as bool
+              : null;
+          emit();
+        }, onError: (Object error) => failed(error, captured)),
+      );
+      subscriptions.add(
+        ref.child('lastSeen').onValue.listen((event) {
+          if (closed || captured != epoch) return;
+          final value = event.snapshot.value;
+          seen = value is num ? value.toInt() : null;
+          emit();
+        }, onError: (Object error) => failed(error, captured)),
+      );
+    };
+    output = StreamController<ControllerPresence>(
+      onListen: bind,
+      onCancel: () async {
+        closed = true;
+        ++epoch;
+        retry?.cancel();
+        await Future.wait(subscriptions.map((s) => s.cancel()));
+      },
+    );
+    return output.stream;
   }
 
   //[method] Firebase 서버와 이 앱 인스턴스의 실제 연결 상태 파악하는 메서드.
@@ -676,18 +954,18 @@ class RoomService {
     required String roomCode,
     required String playerUid,
     required int observedLastSeen,
+    String? playerConnectionId,
+    int? playerConnectionSeq,
   }) async {
-    final player =
-        (await realtime.ref('rooms/$roomCode/players/$playerUid').get()).value;
-    if (player is! Map) return;
+    if (playerConnectionId == null || playerConnectionSeq == null) return;
     final payload = {
       ...await _controllerEnvelope(roomCode),
       'commandId': newRecoveryOperationId('stale'),
       'role': 'controller',
       'playerUid': playerUid,
       'observedLastSeen': observedLastSeen,
-      'playerConnectionId': player['currentConnectionId'],
-      'playerConnectionSeq': player['connectionSeq'],
+      'playerConnectionId': playerConnectionId,
+      'playerConnectionSeq': playerConnectionSeq,
     };
     await _call(
       'game_common_interruption_report_stale_player',
@@ -699,6 +977,8 @@ class RoomService {
   Future<void> reportStaleController({
     required String roomCode,
     required int observedLastSeen,
+    String? controllerConnectionId,
+    int? controllerConnectionSeq,
   }) async {
     final identity = await _sessionIdentity(roomCode, 'player');
     var context = GameRecoverySession.forRoom(roomCode, identity.uid).context;
@@ -714,6 +994,8 @@ class RoomService {
       ...context.envelope,
       'commandId': newRecoveryOperationId('stale_controller'),
       'observedLastSeen': observedLastSeen,
+      'controllerConnectionId': controllerConnectionId,
+      'controllerConnectionSeq': controllerConnectionSeq,
     };
     await _call(
       'game_common_interruption_report_stale_controller',
@@ -849,7 +1131,7 @@ class RoomService {
     await _writeWithRetry(
       () => _connectionReference(
         identity,
-      ).update({'connected': true, 'lastSeen': ServerValue.timestamp}),
+      ).child('lastSeen').set(ServerValue.timestamp),
     );
   }
 

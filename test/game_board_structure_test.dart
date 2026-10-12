@@ -10,7 +10,6 @@ import 'package:game_liars_poker/phone/phone_board.dart';
 import 'package:game_liars_poker/phone/providers/game_stage.dart';
 import 'package:game_liars_poker/tablet/tablet_board.dart';
 import 'package:game_liars_poker/tablet/providers/game_stage.dart';
-import 'package:game_liars_poker/tablet/widgets/seat_plate.dart';
 import 'package:game_mafia/game_mafia.dart';
 import 'package:game_mafia/phone/phone_board.dart';
 import 'package:game_mafia/phone/providers/game_stage.dart';
@@ -124,20 +123,7 @@ void main() {
             roundNumber: 2,
             cardPileVersion: 1,
             table: 'K',
-            seats: const [
-              TabletSeatInfo(
-                nickname: 'A',
-                characterId: 'frog',
-                penaltyCount: 0,
-                remainingCardCount: 5,
-              ),
-              TabletSeatInfo(
-                nickname: 'B',
-                characterId: 'frog',
-                penaltyCount: 0,
-                remainingCardCount: 5,
-              ),
-            ],
+            remainingCardCounts: const [5, 5],
             currentTurnPlayerIndex: 0,
             onDealCompleted: () => completed++,
             onRoundRevealCompleted: () {},

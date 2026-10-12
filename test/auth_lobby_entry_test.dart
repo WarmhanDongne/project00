@@ -134,7 +134,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       expect(observer.pushes, 1);
       expect(tester.element(find.byType(MosiLogo).first), same(logo));
-      expect(find.text('인증 메일 보내기'), findsOneWidget);
+      expect(find.text('계정 만들고 인증하기'), findsOneWidget);
+      expect(find.text('비밀번호 재입력'), findsNWidgets(2));
       await tester.binding.handlePopRoute();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -301,6 +302,10 @@ class _FirebaseCore extends MockFirebaseApp {
 }
 
 class _User implements User {
+  @override
+  bool get isAnonymous => false;
+  @override
+  bool get emailVerified => true;
   @override
   String get uid => 'test';
   @override

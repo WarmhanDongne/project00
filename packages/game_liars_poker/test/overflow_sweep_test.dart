@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_kit/penalty/roulette.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
 import 'package:game_liars_poker/phone/phone_board.dart';
@@ -20,10 +19,7 @@ import 'package:game_liars_poker/shared/services/query_service.dart';
 import 'package:game_liars_poker/tablet/providers/game_stage.dart';
 import 'package:game_liars_poker/tablet/screens/game_penalty.dart';
 import 'package:game_liars_poker/tablet/tablet_board.dart';
-import 'package:game_liars_poker/tablet/widgets/liar_reveal_overlay.dart';
-import 'package:game_liars_poker/tablet/widgets/penalty_panels.dart';
 import 'package:game_liars_poker/tablet/widgets/result.dart';
-import 'package:game_liars_poker/tablet/widgets/seat_plate.dart';
 
 import 'support/overflow_sweep.dart';
 
@@ -149,15 +145,8 @@ Future<(LiarsPokerController, ProviderContainer, _Query)> _controller(
   return (game, container, query);
 }
 
-List<TabletSeatInfo> _seats(int count) => [
-  for (var i = 0; i < count; i++)
-    TabletSeatInfo(
-      nickname: _names[i],
-      characterId: 'frog',
-      penaltyCount: i % 3,
-      remainingCardCount: i == 3 ? 0 : 5,
-      eliminated: i == 3,
-    ),
+List<int> _cardCounts(int count) => [
+  for (var i = 0; i < count; i++) i == 3 ? 0 : 5,
 ];
 
 void main() {
@@ -216,10 +205,15 @@ void main() {
               body: PhoneSpectator(
                 players: [
                   for (var i = 0; i < 6; i++)
-                    PhoneGamePlayer.fromMap(_uid(i), _player(i, out: i == 0)),
+                    if (i != 0)
+                      PlayerLayoutPlayer(
+                        uid: _uid(i),
+                        nickname: _names[i],
+                        characterId: 'frog',
+                        seatIndex: i,
+                      ),
                 ],
-                meUid: 'phone',
-                turnUid: 'p2',
+                table: 'K',
                 provider: _Room(),
                 onExitRoom: () async => true,
               ),
@@ -254,26 +248,31 @@ void main() {
         roundNumber: 2,
         cardPileVersion: 1,
         table: 'K',
-        seats: _seats(6),
+        remainingCardCounts: _cardCounts(6),
         currentTurnPlayerIndex: 4,
-        turnDeadlineAt: DateTime.now().millisecondsSinceEpoch + 24000,
-        claimPlayerIndex: 2,
-        claimCount: 3,
         onDealCompleted: () {},
         onRoundRevealCompleted: () {},
         onRestartGame: () {},
         onExitToLobby: () {},
         winnerPlayer: null,
       ),
-      'LIAR 공개': () => const TabletLiarRevealOverlay(
-        tableCardValue: 'K',
-        cardValues: ['A', 'Q', 'JOKER'],
-        caught: TabletRevealPerson(
-          nickname: '가나다라마바사아',
-          characterId: 'frog',
-          penaltyCount: 2,
-        ),
-        caller: TabletRevealPerson(nickname: '서윤서윤서윤서윤', characterId: 'frog'),
+      'LIAR 공개': () => LiarsPokerTabletGameLayer(
+        stage: LiarsPokerTabletStage.cardsRevealing,
+        flowConfig: buildLiarsPokerTabletFlowConfig(roundNumber: 2),
+        playerCount: 6,
+        playerSeatIndexes: const [0, 1, 2, 3, 4, 5],
+        dealPlayerSeatIndexes: const [0, 1, 2, 4, 5],
+        cardsPerPlayer: 5,
+        roundNumber: 2,
+        cardPileVersion: 1,
+        table: 'K',
+        remainingCardCounts: _cardCounts(6),
+        currentTurnPlayerIndex: 4,
+        onDealCompleted: () {},
+        onRoundRevealCompleted: () {},
+        onRestartGame: () {},
+        onExitToLobby: () {},
+        winnerPlayer: null,
       ),
       '룰렛': () => LiarsPokerTabletGamePenalty(
         attemptCount: 2,
@@ -281,37 +280,13 @@ void main() {
         isResolving: false,
         onPrepareResult: () async => null,
         onResult: (_) {},
-        layout: TabletPenaltyLayout(
-          seats: _seats(6),
-          seatIndexes: const [0, 1, 2, 3, 4, 5],
-          targetIndex: 1,
-        ),
       ),
-      '룰렛 생존': () => LiarsPokerTabletGamePenalty(
+      '룰렛 처리 중': () => LiarsPokerTabletGamePenalty(
         attemptCount: 2,
         characterId: 'frog',
-        isResolving: false,
+        isResolving: true,
         onPrepareResult: () async => null,
         onResult: (_) {},
-        layout: TabletPenaltyLayout(
-          seats: _seats(6),
-          seatIndexes: const [0, 1, 2, 3, 4, 5],
-          targetIndex: 1,
-        ),
-        result: RouletteResult.safe,
-      ),
-      '룰렛 탈락': () => LiarsPokerTabletGamePenalty(
-        attemptCount: 3,
-        characterId: 'frog',
-        isResolving: false,
-        onPrepareResult: () async => null,
-        onResult: (_) {},
-        layout: TabletPenaltyLayout(
-          seats: _seats(6),
-          seatIndexes: const [0, 1, 2, 3, 4, 5],
-          targetIndex: 4,
-        ),
-        result: RouletteResult.eliminated,
       ),
       '우승': () => Result(
         winnerPlayer: const PlayerLayoutPlayer(

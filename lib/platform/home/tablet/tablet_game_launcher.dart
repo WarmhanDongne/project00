@@ -21,6 +21,7 @@ import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:project00/platform/home/room/services/room_restore_to_waiting.dart';
 import 'package:project00/platform/home/tablet/tablet_game_start.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 로비를 유지한 채 자리 배치에서 게임으로 이어지는 기존 시작 흐름입니다.
 Future<void> launchTabletGame({
@@ -80,7 +81,15 @@ class _TabletGameLauncher {
         : RoomLimits.defaultMaxPlayers;
 
     if (game.id.isEmpty) {
-      _showMessage(context, '게임 정보를 확인할 수 없습니다.');
+      _showMessage(
+        context,
+        GameLocale.select(
+          ko: '게임 정보를 확인할 수 없습니다.',
+          en: 'Game information is unavailable.',
+          zhHans: '无法确认游戏信息。',
+          zhHant: '無法確認遊戲資訊。',
+        ),
+      );
       return;
     }
 
@@ -96,8 +105,14 @@ class _TabletGameLauncher {
         !supportedCounts.contains(currentPlayerCount)) {
       _showMessage(
         context,
-        '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. '
-        '현재 $currentPlayerCount명이 참여 중입니다.',
+        GameLocale.select(
+          ko: '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
+          en: 'This game starts with ${supportedCounts.join(' or ')} players. $currentPlayerCount are here now.',
+          zhHans:
+              '此游戏需要 ${supportedCounts.join(' 或 ')} 人才能开始。目前有 $currentPlayerCount 人。',
+          zhHant:
+              '此遊戲需要 ${supportedCounts.join(' 或 ')} 人才能開始。目前有 $currentPlayerCount 人。',
+        ),
       );
       return;
     }
@@ -105,8 +120,12 @@ class _TabletGameLauncher {
     if (supportedCounts == null && currentPlayerCount < minPlayers) {
       _showMessage(
         context,
-        '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. '
-        '현재 $currentPlayerCount명이 참여 중입니다.',
+        GameLocale.select(
+          ko: '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
+          en: 'This game needs at least $minPlayers players. $currentPlayerCount are here now.',
+          zhHans: '此游戏至少需要 $minPlayers 人。目前有 $currentPlayerCount 人。',
+          zhHant: '此遊戲至少需要 $minPlayers 人。目前有 $currentPlayerCount 人。',
+        ),
       );
       return;
     }
@@ -114,8 +133,12 @@ class _TabletGameLauncher {
     if (supportedCounts == null && currentPlayerCount > maxPlayers) {
       _showMessage(
         context,
-        '이 게임은 최대 $maxPlayers명까지 함께할 수 있어요. '
-        '현재 $currentPlayerCount명이 참여 중입니다.',
+        GameLocale.select(
+          ko: '이 게임은 최대 $maxPlayers명까지 함께할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
+          en: 'This game supports up to $maxPlayers players. $currentPlayerCount are here now.',
+          zhHans: '此游戏最多支持 $maxPlayers 人。目前有 $currentPlayerCount 人。',
+          zhHant: '此遊戲最多支援 $maxPlayers 人。目前有 $currentPlayerCount 人。',
+        ),
       );
       return;
     }
@@ -125,7 +148,15 @@ class _TabletGameLauncher {
     } catch (error, stack) {
       CrashReporting.recordError(error, stack, reason: '게임 에셋 준비');
       if (!context.mounted || !isCurrent()) return;
-      _showMessage(context, '게임 파일을 다운로드하지 못했습니다. 네트워크를 확인해 주세요.');
+      _showMessage(
+        context,
+        GameLocale.select(
+          ko: '게임 파일을 다운로드하지 못했습니다. 네트워크를 확인해 주세요.',
+          en: 'Could not download the game files. Check your network.',
+          zhHans: '无法下载游戏文件。请检查网络。',
+          zhHant: '無法下載遊戲檔案。請檢查網路。',
+        ),
+      );
       return;
     }
     if (!context.mounted || !isCurrent()) return;
@@ -136,7 +167,15 @@ class _TabletGameLauncher {
 
     final roomCode = provider.roomCode;
     if (roomCode == null || roomCode != initialRoom) {
-      _showMessage(context, '방 정보를 확인할 수 없습니다.');
+      _showMessage(
+        context,
+        GameLocale.select(
+          ko: '방 정보를 확인할 수 없습니다.',
+          en: 'Room information is unavailable.',
+          zhHans: '无法确认房间信息。',
+          zhHant: '無法確認房間資訊。',
+        ),
+      );
       return;
     }
 
@@ -144,7 +183,16 @@ class _TabletGameLauncher {
     // 빨리 눌렀다면 여기서만 잠깐 기다립니다.
     if (!await ensureSelection()) {
       if (!context.mounted || !isCurrent()) return;
-      _showMessage(context, provider.errorMessage ?? '게임을 선택하지 못했습니다.');
+      _showMessage(
+        context,
+        provider.errorMessage?.localized ??
+            GameLocale.select(
+              ko: '게임을 선택하지 못했습니다.',
+              en: 'Could not select the game.',
+              zhHans: '无法选择游戏。',
+              zhHant: '無法選擇遊戲。',
+            ),
+      );
       return;
     }
     if (!context.mounted || !isCurrent()) return;
@@ -152,7 +200,16 @@ class _TabletGameLauncher {
     final seatingStarted = await provider.beginPlayerSeating();
     if (!context.mounted || !isCurrent()) return;
     if (!seatingStarted) {
-      _showMessage(context, provider.errorMessage ?? '자리 배치를 시작하지 못했습니다.');
+      _showMessage(
+        context,
+        provider.errorMessage?.localized ??
+            GameLocale.select(
+              ko: '자리 배치를 시작하지 못했습니다.',
+              en: 'Could not start seat setup.',
+              zhHans: '无法开始座位设置。',
+              zhHant: '無法開始座位設定。',
+            ),
+      );
       return;
     }
     final lockedPlayers = provider.players
@@ -206,7 +263,12 @@ class _TabletGameLauncher {
         if (layoutContext.mounted) {
           _showMessage(
             layoutContext,
-            '게임 시작 요청의 결과를 먼저 확인해주세요. 설정 완료로 다시 확인할 수 있습니다.',
+            GameLocale.select(
+              ko: '게임 시작 요청의 결과를 먼저 확인해주세요. 설정 완료로 다시 확인할 수 있습니다.',
+              en: 'Check the previous start request first. Tap Finish Setup to check again.',
+              zhHans: '请先确认上一次开始请求的结果。可点击“完成设置”再次确认。',
+              zhHant: '請先確認上一次開始要求的結果。可點擊「完成設定」再次確認。',
+            ),
           );
         }
         return false;
@@ -216,7 +278,13 @@ class _TabletGameLauncher {
       if (!cleared) {
         _showMessage(
           layoutContext,
-          provider.errorMessage ?? '게임 선택을 해제하지 못했습니다.',
+          provider.errorMessage?.localized ??
+              GameLocale.select(
+                ko: '게임 선택을 해제하지 못했습니다.',
+                en: 'Could not clear the game selection.',
+                zhHans: '无法取消游戏选择。',
+                zhHant: '無法取消遊戲選擇。',
+              ),
         );
       }
       return cleared;
@@ -241,7 +309,13 @@ class _TabletGameLauncher {
           if (layoutContext.mounted && provider.roomCode == roomCode) {
             _showMessage(
               layoutContext,
-              provider.errorMessage ?? '플레이어 자리를 저장하지 못했습니다.',
+              provider.errorMessage?.localized ??
+                  GameLocale.select(
+                    ko: '플레이어 자리를 저장하지 못했습니다.',
+                    en: 'Could not save player seats.',
+                    zhHans: '无法保存玩家座位。',
+                    zhHant: '無法儲存玩家座位。',
+                  ),
             );
           }
           return false;
@@ -249,7 +323,15 @@ class _TabletGameLauncher {
         startedGame = true;
       } catch (error) {
         if (!layoutContext.mounted) return false;
-        _showMessage(layoutContext, '게임을 시작하지 못했습니다.\n$error');
+        _showMessage(
+          layoutContext,
+          GameLocale.select(
+            ko: '게임을 시작하지 못했습니다.\n$error',
+            en: 'Could not start the game.\n${error.toString().localized}',
+            zhHans: '无法开始游戏。\n${error.toString().localized}',
+            zhHant: '無法開始遊戲。\n${error.toString().localized}',
+          ),
+        );
         return false;
       }
       return layoutContext.mounted;
@@ -274,7 +356,7 @@ class _TabletGameLauncher {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text(GameFlowCopy.seatingRosterChanged)),
+          SnackBar(content: Text(GameFlowCopy.seatingRosterChanged.localized)),
         );
       if (!layoutContext.mounted) return;
       // maybePop은 위에 쌓인 다이얼로그만 닫아 자리 배치 화면에 갇힙니다.

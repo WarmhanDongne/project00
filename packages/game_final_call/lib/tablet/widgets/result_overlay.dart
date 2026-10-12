@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -131,7 +132,12 @@ class _ResultContent extends StatelessWidget {
               children: [
                 _AngledActionButton(
                   key: const Key('final-call-restart-button'),
-                  label: '다시하기',
+                  label: GameLocale.select(
+                    ko: '다시하기',
+                    en: 'Play Again',
+                    zhHans: '再玩一次',
+                    zhHant: '再玩一次',
+                  ),
                   onTap: onRestart,
                   colors: const [_ResultColors.red, _ResultColors.redDark],
                 ),
@@ -160,10 +166,15 @@ class _ResultTitle extends StatelessWidget {
         Transform(
           transform: Matrix4.skewX(-0.08),
           alignment: Alignment.center,
-          child: const Text(
-            '게임 종료',
+          child: Text(
+            GameLocale.select(
+              ko: '게임 종료',
+              en: 'End Game',
+              zhHans: '结束游戏',
+              zhHant: '結束遊戲',
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: _ResultColors.ink,
               fontSize: 118,
               height: 0.92,
@@ -221,11 +232,26 @@ class _WinnerPresentation extends StatelessWidget {
       _ => _ResultColors.red,
     };
     final victoryLabel = isDraw
-        ? '무승부'
+        ? GameLocale.select(ko: '무승부', en: 'Draw', zhHans: '平局', zhHant: '平局')
         : switch (winningTeam) {
-            FinalCallTeam.blue => '블루팀 승리',
-            FinalCallTeam.green => '그린팀 승리',
-            _ => '레드팀 승리',
+            FinalCallTeam.blue => GameLocale.select(
+              ko: '블루팀 승리',
+              en: 'Blue Team Wins',
+              zhHans: '蓝队获胜',
+              zhHant: '藍隊獲勝',
+            ),
+            FinalCallTeam.green => GameLocale.select(
+              ko: '그린팀 승리',
+              en: 'Green Team Wins',
+              zhHans: '绿队获胜',
+              zhHant: '綠隊獲勝',
+            ),
+            _ => GameLocale.select(
+              ko: '레드팀 승리',
+              en: 'Red Team Wins',
+              zhHans: '红队获胜',
+              zhHant: '紅隊獲勝',
+            ),
           };
     return Stack(
       clipBehavior: Clip.none,

@@ -9,6 +9,7 @@
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------

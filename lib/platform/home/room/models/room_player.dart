@@ -14,6 +14,8 @@ class RoomPlayer implements GameRoomPlayer {
     this.updatedAt,
     this.lastSeen,
     this.membershipId,
+    this.currentConnectionId,
+    this.connectionSeq,
     required this.penaltyAttemptCount,
   });
 
@@ -32,6 +34,8 @@ class RoomPlayer implements GameRoomPlayer {
       updatedAt: _dateTimeFromTimestamp(json['updatedAt']),
       lastSeen: _timestampMillis(json['lastSeen']),
       membershipId: json['membershipId'] as String?,
+      currentConnectionId: json['currentConnectionId'] as String?,
+      connectionSeq: (json['connectionSeq'] as num?)?.toInt(),
       penaltyAttemptCount: json['penaltyAttemptCount'] as int? ?? 0,
     );
   }
@@ -54,6 +58,8 @@ class RoomPlayer implements GameRoomPlayer {
   final DateTime? updatedAt;
   final int? lastSeen;
   final String? membershipId;
+  final String? currentConnectionId;
+  final int? connectionSeq;
   final int penaltyAttemptCount;
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +74,8 @@ class RoomPlayer implements GameRoomPlayer {
     if (updatedAt != null) 'updatedAt': updatedAt!.millisecondsSinceEpoch,
     if (lastSeen != null) 'lastSeen': lastSeen,
     'membershipId': ?membershipId,
+    'currentConnectionId': ?currentConnectionId,
+    'connectionSeq': ?connectionSeq,
     'penaltyAttemptCount': penaltyAttemptCount,
   };
 

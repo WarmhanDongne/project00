@@ -58,7 +58,7 @@ function setup(t) {
 
 test('cold RTDB cache keeps same creation operation live and finalizes its reservation and slot', async t => {
   const database = setup(t);
-  const request = {auth: {uid: 'test-controller'}, data: {operationId: 'create-operation'}};
+  const request = {auth: {uid: 'test-controller'}, data: {presenceProtocol:2, operationId: 'create-operation'}};
   const first = await createRealtimeRoom.run(request);
   assert.equal(first.success, true);
   assert.equal(database.values.get('roomCreateRequests/test-controller/create-operation').status, 'created');
@@ -71,18 +71,18 @@ test('cold RTDB cache keeps same creation operation live and finalizes its reser
 test('create-close-create succeeds immediately, and old requests/cleanup preserve the new room', async t => {
   const database = setup(t);
   const auth = {uid: 'test-controller'};
-  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  const first = await createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-first'}});
   const closeRequest = {auth, data: {...first, operationId: 'close-first'}};
   await closeRoom.run(closeRequest);
   const closed = structuredClone(database.values.get(`rooms/${first.roomCode}`));
   assert.equal(closed.status, 'closed');
-  const second = await createRealtimeRoom.run({auth, data: {operationId: 'create-second'}});
+  const second = await createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-second'}});
   assert.equal(second.success, true);
   assert.notEqual(second.roomInstanceId, first.roomInstanceId);
   assert.equal(database.values.get(`rooms/${first.roomCode}`).status, 'closed', 'retention is unchanged');
   const replacement = structuredClone(database.values.get('controllerRooms/test-controller'));
   await closeRoom.run(closeRequest);
-  await assert.rejects(createRealtimeRoom.run({auth, data: {operationId: 'create-first'}}),
+  await assert.rejects(createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-first'}}),
     error => error.code === 'failed-precondition');
   await reconcileTerminal(first.roomCode, {...closed, status: 'terminal'});
   assert.deepEqual(database.values.get('controllerRooms/test-controller'), replacement);
@@ -93,7 +93,7 @@ test('create-close-create succeeds immediately, and old requests/cleanup preserv
 test('closed-room proof cannot replace an unrelated pending slot or another generation', async t => {
   const database = setup(t);
   const auth = {uid: 'test-controller'};
-  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  const first = await createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-first'}});
   await closeRoom.run({auth, data: {...first, operationId: 'close-first'}});
   const original = structuredClone(database.values.get('roomCreateSlots/test-controller'));
   for (const slot of [
@@ -102,7 +102,7 @@ test('closed-room proof cannot replace an unrelated pending slot or another gene
     {...original, roomInstanceId: 'another-instance'},
   ]) {
     database.values.set('roomCreateSlots/test-controller', slot);
-    await assert.rejects(createRealtimeRoom.run({auth, data: {operationId: 'create-second'}}),
+    await assert.rejects(createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-second'}}),
       error => error.code === 'failed-precondition' && error.details?.reason === 'creationPending');
     assert.deepEqual(database.values.get('roomCreateSlots/test-controller'), slot);
   }
@@ -111,10 +111,10 @@ test('closed-room proof cannot replace an unrelated pending slot or another gene
 test('two concurrent replacements of a closed room allocate only one live room', async t => {
   const database = setup(t);
   const auth = {uid: 'test-controller'};
-  const first = await createRealtimeRoom.run({auth, data: {operationId: 'create-first'}});
+  const first = await createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId: 'create-first'}});
   await closeRoom.run({auth, data: {...first, operationId: 'close-first'}});
   const results = await Promise.allSettled(['create-next-a', 'create-next-b'].map(operationId =>
-    createRealtimeRoom.run({auth, data: {operationId}})));
+    createRealtimeRoom.run({auth, data: {presenceProtocol:2, operationId}})));
   assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
   const rooms = [...database.values.entries()].filter(([path, room]) => path.startsWith('rooms/') && room.status === 'waiting');
   assert.equal(rooms.length, 1);

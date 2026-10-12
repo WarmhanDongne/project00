@@ -22,6 +22,7 @@ import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/services/game_query_service.dart';
 import 'package:game_kit/recovery/services/game_interruption_command_service.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -362,21 +363,49 @@ class MafiaController extends GameSessionController<MafiaGameState> {
   /// 그림이 없는 승리(생존자 등)에서만 화면에 나옵니다.
   String get winnerLabel {
     final faction = winnerFaction;
-    if (faction == null) return '게임 종료';
-    if (faction != MafiaFaction.neutral) return '${faction.displayName} 승리';
+    if (faction == null) return '게임 종료'.localized;
+    if (faction != MafiaFaction.neutral) {
+      return GameLocale.select(
+        ko: '${faction.displayName} 승리',
+        en: '${faction.displayName} victory',
+        zhHans: '${faction.displayName}胜利',
+        zhHant: '${faction.displayName}勝利',
+      );
+    }
 
     final roles = winnerRoleIds
         .map(MafiaRoles.find)
         .whereType<MafiaRole>()
         .toList(growable: false);
-    if (roles.isEmpty) return '중립 승리';
+    if (roles.isEmpty) {
+      return GameLocale.select(
+        ko: '중립 승리',
+        en: 'Neutral victory',
+        zhHans: '中立胜利',
+        zhHant: '中立勝利',
+      );
+    }
     // 교주와 광신도는 한 세력이라 이름을 나열하지 않고 `교단`으로 묶습니다.
     if (roles.every(
       (role) => role.winCondition == MafiaWinCondition.factionDominance,
     )) {
-      return '교단 승리';
+      return GameLocale.select(
+        ko: '교단 승리',
+        en: 'Cult victory',
+        zhHans: '教团胜利',
+        zhHant: '教團勝利',
+      );
     }
-    return '${roles.map((role) => role.displayName).toSet().join('·')} 승리';
+    final names = roles
+        .map((role) => role.localizedDisplayName)
+        .toSet()
+        .join('·');
+    return GameLocale.select(
+      ko: '$names 승리',
+      en: '$names victory',
+      zhHans: '$names胜利',
+      zhHant: '$names勝利',
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -409,12 +438,47 @@ class MafiaController extends GameSessionController<MafiaGameState> {
 
   /// 본인 화면에서만 쓰는 대기 사유입니다. 태블릿에 역할별 진행을 공개하지 않습니다.
   String get nightWaitingMessage {
-    if (!privateDataReady) return '내 게임 정보를 불러오는 중입니다.';
-    if (hasSubmittedNight) return '다른 플레이어의 행동을 기다리는 중…';
-    if (!actsAtNight) return '밤이 지나기를 기다려 주세요.';
-    if (abilityExhausted) return '이번 게임의 능력을 모두 사용했습니다.';
-    if (nightTargets.isEmpty) return '이번 밤에는 선택 가능한 대상이 없습니다.';
-    if (actionDeadlinePassed && canActInNightStage) return '선택 시간이 종료되었습니다.';
+    if (!privateDataReady) {
+      return GameLocale.select(
+        ko: '내 게임 정보를 불러오는 중입니다.',
+        en: 'Loading your game information.',
+        zhHans: '正在加载你的游戏信息。',
+        zhHant: '正在載入你的遊戲資訊。',
+      );
+    }
+    if (hasSubmittedNight) return '다른 플레이어의 행동을 기다리는 중…'.localized;
+    if (!actsAtNight) {
+      return GameLocale.select(
+        ko: '밤이 지나기를 기다려 주세요.',
+        en: 'Wait for the night to pass.',
+        zhHans: '请等待夜晚结束。',
+        zhHant: '請等待夜晚結束。',
+      );
+    }
+    if (abilityExhausted) {
+      return GameLocale.select(
+        ko: '이번 게임의 능력을 모두 사용했습니다.',
+        en: 'You have used all charges for this game.',
+        zhHans: '本局的能力次数已用完。',
+        zhHant: '本局的能力次數已用完。',
+      );
+    }
+    if (nightTargets.isEmpty) {
+      return GameLocale.select(
+        ko: '이번 밤에는 선택 가능한 대상이 없습니다.',
+        en: 'There are no available targets tonight.',
+        zhHans: '今晚没有可选目标。',
+        zhHant: '今晚沒有可選目標。',
+      );
+    }
+    if (actionDeadlinePassed && canActInNightStage) {
+      return GameLocale.select(
+        ko: '선택 시간이 종료되었습니다.',
+        en: 'Selection time has ended.',
+        zhHans: '选择时间已结束。',
+        zhHant: '選擇時間已結束。',
+      );
+    }
     final order = myRole?.nightOrder ?? 0;
     final myWindow = order <= 4
         ? 0
@@ -427,15 +491,34 @@ class MafiaController extends GameSessionController<MafiaGameState> {
       'support': 2,
       'wrapUp': 3,
     }[nightStage];
-    if (window != null && window > myWindow) return '선택 시간이 종료되었습니다.';
-    if (nightStageClosed) return '내 행동 차례를 기다리고 있습니다.';
-    return '밤이 지나기를 기다려 주세요.';
+    if (window != null && window > myWindow) {
+      return GameLocale.select(
+        ko: '선택 시간이 종료되었습니다.',
+        en: 'Selection time has ended.',
+        zhHans: '选择时间已结束。',
+        zhHant: '選擇時間已結束。',
+      );
+    }
+    if (nightStageClosed) {
+      return GameLocale.select(
+        ko: '내 행동 차례를 기다리고 있습니다.',
+        en: 'Waiting for your action phase.',
+        zhHans: '正在等待你的行动阶段。',
+        zhHant: '正在等待你的行動階段。',
+      );
+    }
+    return GameLocale.select(
+      ko: '밤이 지나기를 기다려 주세요.',
+      en: 'Wait for the night to pass.',
+      zhHans: '请等待夜晚结束。',
+      zhHant: '請等待夜晚結束。',
+    );
   }
 
   String get actionErrorMessage =>
       errorMessage == null || errorMessage!.trim().isEmpty
-      ? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
-      : errorMessage!;
+      ? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'.localized
+      : errorMessage!.localized;
   @override
   void applyPublicValue(Object? value) {
     if (!ref.mounted || value is! Map) return;

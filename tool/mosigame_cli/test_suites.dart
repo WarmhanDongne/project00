@@ -34,6 +34,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/controller_room_lobby_recovery_test.dart',
     'test/table_background_transition_test.dart',
     'test/room_recovery_heartbeat_test.dart',
+    'test/b1_presence_observation_test.dart',
     'test/room_join_recovery_test.dart',
     'packages/game_kit/test/recovery/room_session_identity_store_test.dart',
     'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
@@ -70,6 +71,8 @@ const sessionTestSuite = TestSuiteDefinition(
     'functions/test/start-game-transaction.test.mjs',
     'functions/test/room-transaction-rerun.test.mjs',
     'functions/test/roulette-restart-integration.test.mjs',
+    'functions/test/b1-current-presence.test.mjs',
+    'functions/test/rtdb-retention.test.mjs',
   ],
 );
 
@@ -81,6 +84,8 @@ const authTestSuite = TestSuiteDefinition(
     'test/auth/auth_gate_stuck_loading_test.dart',
     'test/auth/email_link_error_message_test.dart',
     'test/auth/email_link_service_test.dart',
+    'test/auth/password_verification_test.dart',
+    'test/auth/guest_login_test.dart',
     'test/auth/google_login_button_test.dart',
     'test/auth/onboarding_parity_test.dart',
     'test/auth/register_loading_test.dart',
@@ -92,6 +97,7 @@ const authTestSuite = TestSuiteDefinition(
   functionsTests: <String>[
     'functions/test/auth-delete-account.test.mjs',
     'functions/test/auth-onboarding.test.mjs',
+    'functions/test/guest-onboarding.test.mjs',
   ],
 );
 

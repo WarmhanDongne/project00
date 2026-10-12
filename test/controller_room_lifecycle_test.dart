@@ -254,6 +254,8 @@ class _LifecycleRoomService implements RoomService {
   Future<void> reportStaleController({
     required String roomCode,
     required int observedLastSeen,
+    String? controllerConnectionId,
+    int? controllerConnectionSeq,
   }) async {
     staleControllerReports.add(observedLastSeen);
     if (staleControllerErrorsRemaining > 0) {
@@ -269,8 +271,11 @@ class _LifecycleRoomService implements RoomService {
   Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
 
   @override
-  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) =>
-      const Stream.empty();
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String roomCode, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) => const Stream.empty();
 
   Future<void> dispose() async {
     await Future.wait([

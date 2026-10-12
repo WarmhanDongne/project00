@@ -14,6 +14,7 @@ import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -71,10 +72,30 @@ class MafiaTabletResultView extends StatelessWidget {
   }
 
   String get _reason => switch (winner) {
-    MafiaFaction.mafia => '마피아 수가 남은 사람 수와 같아졌습니다',
-    MafiaFaction.citizen => '마피아가 모두 사라졌습니다',
-    MafiaFaction.neutral => '홀로 목표를 이뤘습니다',
-    null => '게임이 끝났습니다',
+    MafiaFaction.mafia => GameLocale.select(
+      ko: '마피아 수가 남은 사람 수와 같아졌습니다',
+      en: 'Mafia now equals the remaining players',
+      zhHans: '黑手党人数已等于其他存活者',
+      zhHant: '黑手黨人數已等於其他存活者',
+    ),
+    MafiaFaction.citizen => GameLocale.select(
+      ko: '마피아가 모두 사라졌습니다',
+      en: 'All Mafia are gone',
+      zhHans: '所有黑手党均已出局',
+      zhHant: '所有黑手黨均已出局',
+    ),
+    MafiaFaction.neutral => GameLocale.select(
+      ko: '홀로 목표를 이뤘습니다',
+      en: 'A solo objective was achieved',
+      zhHans: '独自达成了目标',
+      zhHant: '獨自達成了目標',
+    ),
+    null => GameLocale.select(
+      ko: '게임이 끝났습니다',
+      en: 'The game is over',
+      zhHans: '游戏已结束',
+      zhHant: '遊戲已結束',
+    ),
   };
 
   @override
@@ -157,7 +178,12 @@ class MafiaTabletResultView extends StatelessWidget {
         MafiaTabletBox(
           rect: const Rect.fromLTWH(640, 70, 500, 30),
           child: Text(
-            '모든 신분 공개',
+            GameLocale.select(
+              ko: '모든 신분 공개',
+              en: 'All roles revealed',
+              zhHans: '公开所有身份',
+              zhHant: '公開所有身分',
+            ),
             style: mafiaNoirBody(
               14,
               color: MafiaColors.noirBrass,
@@ -236,11 +262,16 @@ class _ResultRow extends StatelessWidget {
     final death = player.isAlive
         ? null
         : player.wasExecuted
-        ? '처형'
+        ? GameLocale.select(
+            ko: '처형',
+            en: 'Executed',
+            zhHans: '处决',
+            zhHant: '處決',
+          )
         : player.diedAtNight
-        ? '사망'
-        : '퇴장';
-    final roleText = role?.displayName ?? '알 수 없음';
+        ? GameLocale.select(ko: '사망', en: 'Died', zhHans: '死亡', zhHant: '死亡')
+        : GameLocale.select(ko: '퇴장', en: 'Left', zhHans: '离开', zhHant: '離開');
+    final roleText = role?.localizedDisplayName ?? '알 수 없음'.localized;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
@@ -288,7 +319,7 @@ class _ResultRow extends StatelessWidget {
               color: MafiaColors.noirBrass,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
               child: Text(
-                '승리',
+                '승리'.localized,
                 style: mafiaNoirBody(
                   13,
                   color: MafiaColors.noirInk,
@@ -315,36 +346,39 @@ class _ResultButton extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    enabled: onTap != null,
-    label: label,
-    excludeSemantics: true,
-    onTap: onTap,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
+  Widget build(BuildContext context) {
+    final localizedLabel = label.localized;
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: localizedLabel,
+      excludeSemantics: true,
       onTap: onTap,
-      child: AnimatedOpacity(
-        opacity: onTap == null ? 0.45 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: filled ? MafiaColors.noirPaper : Colors.transparent,
-            border: filled
-                ? null
-                : Border.all(color: MafiaColors.noirBrass, width: 2),
-          ),
-          child: Text(
-            label,
-            style: mafiaNoirDisplay(
-              22,
-              color: filled ? MafiaColors.noirInk : MafiaColors.noirBrass,
-              letterSpacing: 1.8,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedOpacity(
+          opacity: onTap == null ? 0.45 : 1,
+          duration: const Duration(milliseconds: 200),
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: filled ? MafiaColors.noirPaper : Colors.transparent,
+              border: filled
+                  ? null
+                  : Border.all(color: MafiaColors.noirBrass, width: 2),
+            ),
+            child: Text(
+              localizedLabel,
+              style: mafiaNoirDisplay(
+                22,
+                color: filled ? MafiaColors.noirInk : MafiaColors.noirBrass,
+                letterSpacing: 1.8,
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

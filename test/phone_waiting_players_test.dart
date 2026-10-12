@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 // ignore: depend_on_referenced_packages
+import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
+// ignore: depend_on_referenced_packages
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:project00/platform/home/phone/widgets/phone_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_participant_list.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -64,6 +67,21 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   TestFirebaseCoreHostApi.setUp(MockFirebaseApp());
   setUpAll(() async => Firebase.initializeApp());
+  setUp(() {
+    FirebaseAuthPlatform.instanceFor(
+      app: Firebase.app(),
+      pluginConstants: {
+        'APP_CURRENT_USER': [
+          InternalUserInfo(
+            uid: 'player-0',
+            isAnonymous: true,
+            isEmailVerified: false,
+          ).encode(),
+          <Map<Object?, Object?>>[],
+        ],
+      },
+    );
+  });
 
   for (final gameId in ['liars_poker', 'final_call', 'mafia', 'holdem']) {
     testWidgets('$gameId 자리 배치 대기는 테이블 면 색을 공유하고 자리 찾기·상단 프로필을 숨긴다', (
@@ -98,6 +116,66 @@ void main() {
       provider.dispose();
     });
   }
+
+  testWidgets('참여자 목록은 내 줄에만 나 표시를 붙인다', (tester) async {
+    RoomPlayer player(String uid, String name) => RoomPlayer(
+      uid: uid,
+      nickname: name,
+      characterId: 'frog',
+      isConnected: true,
+      seatIndex: 0,
+      role: 'player',
+      status: 'active',
+      penaltyAttemptCount: 0,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PhoneRoomParticipantList(
+            players: [player('me', '나의닉'), player('other', '친구')],
+            myUid: 'me',
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    final badge = find.byKey(const Key('participant-me-badge'));
+    expect(badge, findsOneWidget);
+    // 표시는 내 닉네임과 같은 줄에 있습니다.
+    expect(
+      (tester.getCenter(badge).dy - tester.getCenter(find.text('나의닉')).dy)
+          .abs(),
+      lessThan(4),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('태블릿에서 시작한 뒤에는 게임 규칙 대신 곧 시작한다는 안내를 보여 준다', (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = _provider()..roomStatus = 'seating';
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: PhoneRoomWaiting(provider: provider),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('태블릿에서\n자리를 맞추고 있어요'), findsOneWidget);
+
+    provider
+      ..roomStatus = 'playing'
+      ..notifyListeners();
+    await tester.pump();
+    expect(find.text('곧 게임이\n시작해요'), findsOneWidget);
+    expect(find.text('게임 규칙'), findsNothing);
+    expect(find.text('그룹 나가기'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
 
   testWidgets('선택 전후 대기실에서 상단 프로필만 제거하고 방 코드·나가기를 유지한다', (tester) async {
     final provider = _provider()
@@ -350,6 +428,30 @@ void main() {
     );
     expect(tester.getRect(footer), before);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+
+  testWidgets('phone player marker follows the selected game theme', (
+    tester,
+  ) async {
+    final provider = _provider()..players = [_player(0)];
+    await tester.pumpWidget(_app(provider));
+    await tester.pump();
+
+    MosiPill marker() => tester.widget<MosiPill>(
+      find.byKey(const Key('waiting-player-me-badge')),
+    );
+    expect(marker().background, MosiGameArt.holdem.shelfTheme.btnBg);
+    expect(marker().color, MosiGameArt.holdem.shelfTheme.btnFg);
+
+    provider
+      ..selectedGameId = 'mafia'
+      ..selectedGame = GameInfo.fromJson({'id': 'mafia', 'name': 'mafia'});
+    provider.notifyListeners();
+    await tester.pump();
+    expect(marker().background, MosiGameArt.mafia.shelfTheme.btnBg);
+    expect(marker().color, MosiGameArt.mafia.shelfTheme.btnFg);
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();
   });

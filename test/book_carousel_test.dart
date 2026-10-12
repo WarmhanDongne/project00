@@ -3,10 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:project00/generated/l10n/app_localizations.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
+import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_book_carousel.dart';
@@ -20,6 +24,82 @@ final _books = [
 ];
 
 void main() {
+  testWidgets('휴대폰 카드 소개는 현재 언어의 Firestore 값을 사용한다', (tester) async {
+    final game = GameInfo.fromJson({
+      'id': 'liars',
+      'name': '라이어스',
+      'localizedNames': {'en': 'Liars', 'zh-Hant': '騙子'},
+      'description': '한국어 소개',
+      'localizedDescriptions': {'en': 'English description', 'zh-Hant': '繁體介紹'},
+    });
+
+    Future<void> pump(Locale locale) => tester.pumpWidget(
+      MaterialApp(
+        locale: locale,
+        supportedLocales: const [
+          Locale('ko'),
+          Locale('en'),
+          Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+          Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        ],
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(body: PhoneGameCard(gameInfo: game)),
+      ),
+    );
+
+    await pump(const Locale('en'));
+    expect(find.text('English description'), findsOneWidget);
+    expect(find.text('한국어 소개'), findsNothing);
+
+    await pump(
+      const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    );
+    expect(find.text('繁體介紹'), findsOneWidget);
+    expect(find.text('English description'), findsNothing);
+  });
+
+  testWidgets('책 이름은 현재 언어의 Firestore 이름을 사용한다', (tester) async {
+    final game = GameInfo.fromJson({
+      'id': 'liars_poker',
+      'name': 'legacy',
+      'localizedNames': {
+        'ko': '라이어스',
+        'en': 'Liars',
+        'zh-Hans': '骗子',
+        'zh-Hant': '騙子',
+      },
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale.fromSubtags(
+          languageCode: 'zh',
+          scriptCode: 'Hans',
+        ),
+        supportedLocales: const [
+          Locale('ko'),
+          Locale('en'),
+          Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+          Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        ],
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(
+          body: TabletBookCarousel(
+            games: [game],
+            selected: game,
+            coverWidth: 200,
+            deep: Colors.black,
+            onSelect: (_) {},
+            onOpenDetail: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    final cover = tester.widget<MosiGameCover>(find.byType(MosiGameCover));
+    expect(cover.displayName, '骗子');
+    expect(cover.englishName, 'Liars');
+  });
+
   test('선택 가능한 캐릭터는 이전 서버의 ID를 유지하며 새 그림 파일이 존재한다', () {
     // 리디자인 이전에 배포된 room character 계약. 새 그림 이름을 보내면 안 됩니다.
     const serverIds = {
@@ -36,7 +116,6 @@ void main() {
       'octopus',
       'owl',
       'penguin',
-      'rabbit',
       'shark',
       'snake',
       'whale',
@@ -61,6 +140,15 @@ void main() {
     }
     expect(defaultRoomCharacterId, 'frog');
     expect(roomCharacterById('burger').id, roomCharacterById('frog').id);
+    // 티슈 상자는 선택지에서 뺐지만 이미 저장된 값은 같은 그림으로 읽습니다.
+    expect(roomCharacters, hasLength(16));
+    expect(
+      roomCharacters.any((character) => character.id == 'rabbit'),
+      isFalse,
+    );
+    expect(roomCharacterById('rabbit').id, 'rabbit');
+    expect(roomCharacterById('tissue').id, 'rabbit');
+    expect(roomCharacterAssetPath('rabbit'), endsWith('/tissue.webp'));
     for (final id in ['cone', 'catcher', 'bandage']) {
       expect(roomCharacterAssetPath(id), endsWith('/$id.webp'));
       expect(roomCharacters.any((character) => character.id == id), isFalse);
@@ -332,7 +420,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('shelf-spine-final_call')));
     await tester.pumpAndSettle();
     expect(selected.id, 'final_call');
-    await tester.tap(find.text('자세히 보기'));
+    await tester.tap(find.text('설명 보기'));
     expect(opened?.id, 'final_call');
     expect(provider.roomCode, isNull);
     expect(tester.takeException(), isNull);
@@ -438,6 +526,65 @@ void main() {
     final lpCover = tester.getRect(find.byKey(coverKey));
     expect(lpCover.width, greaterThan(0));
     expect(lpCover.height, greaterThan(0));
+  });
+  testWidgets('playable filter follows the selected game theme', (
+    tester,
+  ) async {
+    final provider =
+        RoomProvider(service: _RoomService(), gameService: _GameService())
+          ..roomCode = 'ABCDE'
+          ..players = const [
+            RoomPlayer(
+              uid: 'one',
+              nickname: 'one',
+              characterId: 'frog',
+              isConnected: true,
+              seatIndex: 0,
+              role: 'player',
+              status: 'active',
+              penaltyAttemptCount: 0,
+            ),
+          ]
+          ..groupGames = _books
+          ..groupGamesLoadStatus = RoomDataLoadStatus.loaded;
+    final games = GameProvider(service: _GameService());
+    addTearDown(provider.dispose);
+    addTearDown(games.dispose);
+
+    Future<void> pump(MosiShelfTheme theme) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 700,
+            height: 600,
+            child: TabletGameShelf(
+              gameProvider: games,
+              roomProvider: provider,
+              selectedGameId: _books.first.id,
+              theme: theme,
+              onlyPlayable: true,
+              onOnlyPlayableChanged: (_) {},
+              onSelect: (_) {},
+              onOpenDetail: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    Color? trackColor() =>
+        (tester
+                    .widget<AnimatedContainer>(
+                      find.byKey(const Key('playable-filter-track')),
+                    )
+                    .decoration
+                as BoxDecoration)
+            .color;
+
+    await pump(MosiGameArt.mafia.shelfTheme);
+    expect(trackColor(), MosiGameArt.mafia.shelfTheme.btnBg);
+    await pump(MosiGameArt.holdem.shelfTheme);
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(trackColor(), MosiGameArt.holdem.shelfTheme.btnBg);
   });
 }
 

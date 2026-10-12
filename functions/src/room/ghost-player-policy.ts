@@ -3,6 +3,8 @@
  * 게임 중단의 재접속 유예(60초, `GAME_INTERRUPTION_VOTE_MS`)보다 충분히 길어야
  * 합니다. 짧게 잡으면 재접속 유예 중인 정상 참가자를 지웁니다.
  */
+import {currentPresence} from "./current-presence.js";
+import type {SessionRoom} from "./session-contract.js";
 export const GHOST_PLAYER_GRACE_MS = 5 * 60 * 1000;
 
 type GhostPlayer = {
@@ -18,6 +20,7 @@ type GhostCleanupState = {
   players: Record<string, GhostPlayer>;
   now: number;
   graceMs?: number;
+  room?: SessionRoom;
 };
 
 /**
@@ -50,8 +53,12 @@ export function findGhostPlayers(state: GhostCleanupState): string[] {
     const player = rawPlayer as GhostPlayer;
     // 관전자·이미 비활성 처리된 노드는 이 정리의 대상이 아닙니다.
     if ((player.role ?? "player") !== "player") continue;
-    if (player.isConnected !== false) continue;
-    const lastSeen = player.lastSeen;
+    const current = state.room ?
+      currentPresence(state.room, uid, "player") : undefined;
+    if (state.room?.presenceProtocol === 2 && !current) continue;
+    if (current?.connected) continue;
+    if (!current && player.isConnected !== false) continue;
+    const lastSeen = current?.lastSeen ?? player.lastSeen;
     if (typeof lastSeen !== "number" || !Number.isFinite(lastSeen)) continue;
     if (state.now - lastSeen <= graceMs) continue;
     ghosts.push(uid);

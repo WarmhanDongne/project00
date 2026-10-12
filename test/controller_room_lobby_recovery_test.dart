@@ -232,7 +232,11 @@ class _Service implements RoomService {
   @override
   Stream<DatabaseEvent> watchRoom(String code) => const Stream.empty();
   @override
-  Stream<List<RoomPlayer>> watchRoomPlayers(String code) => players.stream;
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String code, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) => players.stream;
   @override
   Future<void> removePlayer(String code, String uid) async {
     players.add([]);

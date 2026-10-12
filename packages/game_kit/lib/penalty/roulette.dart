@@ -478,10 +478,14 @@ class _SuspenseDecelerationCurve extends Curve {
 // 룰렛 원판
 // ================================================================
 
-/// 금색 테두리 원판, 가운데 축, 위쪽 포인터와 오른쪽 위 레버입니다.
+/// 금색 테두리 원판, 가운데 축, 위쪽 포인터와 오른쪽 레버입니다.
 ///
 /// 1000 × 1000 캔버스 기준 좌표로 그립니다. 위쪽이 룰렛을 돌리는 사람
-/// 쪽이며, 레버는 그 사람이 손을 뻗기 쉬운 오른쪽 위에 있습니다.
+/// 쪽이며, 레버는 원판의 세로 중앙 높이에서 오른쪽에 놓입니다.
+///
+/// 레버는 이전 디자인처럼 받침 한가운데 축을 기준으로 위아래로 넘어갑니다.
+/// 손잡이가 위에 있을 때는 막대가 축에서 위로, 끝까지 내리면 아래로 뻗고,
+/// 그 사이 손잡이가 축 근처를 지날 때는 손잡이가 막대를 가립니다.
 class RouletteWheel extends StatelessWidget {
   const RouletteWheel({
     super.key,
@@ -495,15 +499,26 @@ class RouletteWheel extends StatelessWidget {
   static const double _rouletteSize = 700;
   static const double _canvas = 1000;
 
-  static const double leverLeft = 800;
+  static const double leverLeft = 840;
   static const double leverWidth = 120;
-  static const double leverHeadTop = 40;
-  static const double leverHeadSize = 84;
 
-  /// 손잡이가 끝까지 내려가는 거리입니다. 드래그 거리와 같습니다.
-  static const double leverTravel = 200;
+  /// 레버 축(받침 한가운데)의 세로 위치입니다. 원판의 세로 중앙입니다.
+  static const double leverPivotY = _canvas / 2;
+  static const double leverHeadSize = 104;
+
+  /// 손잡이가 맨 위에서 맨 아래까지 움직이는 전체 거리입니다. 드래그 거리와
+  /// 같고, 축을 중심으로 위아래로 절반씩(±200) 움직입니다.
+  static const double leverTravel = 400;
+
+  /// 손잡이가 맨 위에 있을 때의 위쪽 끝입니다(터치 영역 맨 위가 캔버스 맨 위).
+  static const double leverHeadTop =
+      leverPivotY - leverTravel / 2 - leverHeadSize / 2;
   static const double leverGestureWidth = leverWidth + 100;
-  static const double leverGestureHeight = 420;
+  static const double leverGestureHeight = leverPivotY + leverTravel / 2 + 100;
+
+  /// 손잡이가 축에서 이만큼 이상 떨어져 있으면 막대를 보여 줍니다.
+  /// 그보다 가까우면 손잡이가 축을 덮어 막대는 숨깁니다.
+  static const double leverStickShowDistance = 90;
 
   static const Color _gold = Color(0xFFC9A25B);
   static const Color _abyss = Color(0xFF0D0912);
@@ -526,6 +541,10 @@ class RouletteWheel extends StatelessWidget {
     const sectorSize = _rouletteSize - sectorInset * 2;
     const hub = _rouletteSize * 100 / 480;
     const knob = _rouletteSize * 40 / 480;
+    const pivotX = leverLeft + leverWidth / 2;
+    // 손잡이 중심: 맨 위(-200)에서 맨 아래(+200)까지 축을 지나갑니다.
+    final headOffset = -leverTravel / 2 + leverTravel * leverProgress;
+    final headCenterY = leverPivotY + headOffset;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -608,39 +627,60 @@ class RouletteWheel extends StatelessWidget {
             child: CustomPaint(painter: _PointerPainter(_ivory)),
           ),
         ),
-        // 레버: 받침 · 막대 · 빨간 손잡이 순서로 쌓습니다.
+        // 레버 받침: 세로로 긴 알약입니다. 축이 한가운데에 있습니다.
         Positioned(
-          left: leverLeft,
-          top: leverHeadTop + leverHeadSize / 2,
-          width: leverWidth,
-          height: leverTravel + 80,
+          left: pivotX - 44,
+          top: leverPivotY - 76,
+          width: 88,
+          height: 152,
           child: IgnorePointer(
-            child: Column(
-              children: [
-                Container(
-                  width: 18,
-                  height: leverTravel + 20,
-                  decoration: BoxDecoration(
-                    color: _gold,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                ),
-                Container(
-                  width: leverWidth,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: _plum,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _gold, width: 4),
-                  ),
-                ),
-              ],
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: _plum,
+                borderRadius: BorderRadius.circular(44),
+                border: Border.all(color: _gold, width: 4),
+              ),
             ),
           ),
         ),
+        // 막대: 손잡이가 위에 있으면 축에서 위로, 아래에 있으면 아래로 뻗습니다.
+        if (headOffset.abs() >= leverStickShowDistance)
+          Positioned(
+            left: pivotX - 9,
+            top: math.min(leverPivotY, headCenterY),
+            width: 18,
+            height: headOffset.abs(),
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _gold,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+            ),
+          ),
+        // 받침 한가운데 축입니다.
         Positioned(
-          left: leverLeft + (leverWidth - leverHeadSize) / 2,
-          top: leverHeadTop + leverTravel * leverProgress,
+          left: pivotX - 17,
+          top: leverPivotY - 17,
+          width: 34,
+          height: 34,
+          child: const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _abyss,
+                border: Border.fromBorderSide(
+                  BorderSide(color: _gold, width: 5),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 빨간 손잡이입니다.
+        Positioned(
+          left: pivotX - leverHeadSize / 2,
+          top: headCenterY - leverHeadSize / 2,
           width: leverHeadSize,
           height: leverHeadSize,
           child: const IgnorePointer(child: _LeverBall(color: _red)),

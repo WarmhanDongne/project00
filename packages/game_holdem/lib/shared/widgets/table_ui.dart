@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_holdem/game_theme.dart';
 
 /// 세라믹 중심과 밝은 에지 인서트가 있는 클래식 카지노 칩입니다.
@@ -229,7 +230,12 @@ class _HoldemPuckButtonState extends State<HoldemPuckButton> {
       button: true,
       enabled: enabled,
       label: widget.busy
-          ? '${widget.semanticLabel ?? widget.label} 선택됨'
+          ? GameLocale.select(
+              ko: '${widget.semanticLabel ?? widget.label} 선택됨',
+              en: '${widget.semanticLabel ?? widget.label} selected',
+              zhHans: '已选择 ${widget.semanticLabel ?? widget.label}',
+              zhHant: '已選擇 ${widget.semanticLabel ?? widget.label}',
+            )
           : widget.semanticLabel ?? [widget.label, ?widget.amount].join(' '),
       excludeSemantics: true,
       child: GestureDetector(

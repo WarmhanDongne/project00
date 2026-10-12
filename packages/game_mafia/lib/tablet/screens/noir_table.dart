@@ -17,6 +17,7 @@ import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -154,7 +155,7 @@ class MafiaTabletPlayerRow extends StatelessWidget {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 260),
                   child: Text(
-                    label.text,
+                    label.text.localized,
                     key: ValueKey(label.text),
                     maxLines: 1,
                     style: mafiaNoirBody(
@@ -186,7 +187,7 @@ class MafiaTabletPlayerRow extends StatelessWidget {
       );
     }
     final role = revealedRoles[player.uid];
-    final cause = player.wasExecuted ? '처형' : '사망';
+    final cause = (player.wasExecuted ? '처형' : '사망').localized;
     return MafiaNoirPortraitCard(
       player: player,
       width: width,

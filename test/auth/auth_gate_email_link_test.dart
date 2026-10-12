@@ -145,6 +145,10 @@ class _PendingEmailLinkService implements OnboardingService {
 
 class _User implements User {
   @override
+  bool get isAnonymous => false;
+  @override
+  bool get emailVerified => true;
+  @override
   String get uid => 'test';
   @override
   String? get email => 'tester@example.com';

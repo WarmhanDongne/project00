@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_kit/recovery/widgets/game_reconnect_screen.dart';
 import 'package:game_kit/recovery/widgets/network_unavailable_modal.dart';
 import 'package:game_kit/sound/providers/sound_provider.dart';
@@ -47,6 +48,17 @@ void main() {
                 surfaceColor: Colors.white,
                 foregroundColor: Colors.black,
               ),
+            ),
+          ),
+        );
+        await _settle(tester);
+        sweep.scanText(tester);
+        sweep.where = '휴대폰 $device 룰북 $game';
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: sweepTheme(),
+            home: Scaffold(
+              body: PhoneGameRulebookDialog(title: game, markdown: _rules),
             ),
           ),
         );

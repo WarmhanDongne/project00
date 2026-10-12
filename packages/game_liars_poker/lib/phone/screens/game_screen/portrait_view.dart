@@ -17,7 +17,6 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
         builder: (context, constraints) {
           final layout = _PortraitGameLayout.fromSize(
             Size(constraints.maxWidth, constraints.maxHeight),
-            topSafeArea: MediaQuery.paddingOf(context).top,
             bottomSafeArea: MediaQuery.paddingOf(context).bottom,
           );
           final isPersistent =
@@ -29,7 +28,7 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
               // 재사용되지 않도록 모든 레이어에 역할별 고유 key를 유지합니다.
               const Positioned.fill(
                 key: ValueKey('portrait-background-slot'),
-                child: _PhoneGameBackground(),
+                child: _PhoneGameBackground(isLandscape: false),
               ),
               if (showHeader)
                 Positioned(
@@ -37,37 +36,53 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
                   top: layout.headerTop,
                   left: layout.horizontalPadding,
                   right: layout.horizontalPadding,
-                  child: _buildHeader(
-                    controller,
+                  child: PhoneGameTopBar(
+                    isLandscape: false,
                     entryAnimation: controller?.recoverySession.canSend == false
                         ? null
                         : _controlsEntryController,
+                    leadingWidget: _tableAsset(controller?.table ?? 'K').image(
+                      height: layout.tableHeight,
+                      filterQuality: FilterQuality.high,
+                    ),
+                    onSettingPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const PhoneSettingsDialog(),
+                      );
+                    },
+                    onTipPressed: _showRules,
+                    onOutPressed: () => unawaited(_showExitModal()),
+                    onTipPressedAt: _showRules,
+                    onOutPressedAt: (origin) =>
+                        unawaited(_showExitModal(origin: origin)),
                   ),
                 ),
-              // 기준 카드와 남은 시간(다른 사람 차례에는 그 사람 얼굴)입니다.
               // 서버 deadline을 표시할 뿐 로컬에서 턴 결과를 판정하지 않습니다.
-              if (showHeader &&
-                  !showPenaltyHandOverlay &&
+              if (regions.showTimer &&
+                  showHeader &&
                   !widget.showSpectatorTopBar &&
                   controller != null &&
+                  controller.turnDeadlineAt != null &&
                   !controller.isInitialLoading &&
-                  controller.phase != 'dealing')
+                  controller.phase != 'dealing' &&
+                  controller.phase != 'penalty' &&
+                  controller.isMyTurn)
                 Positioned(
                   key: const ValueKey('portrait-timer-slot'),
                   top: layout.timerTop,
-                  left: layout.horizontalPadding,
-                  right: layout.horizontalPadding,
-                  height: layout.tableHeight,
-                  child: ControlEntryAnimation(
-                    animation: _controlsEntryController,
-                    style: ControlEntryStyle.header,
-                    begin: 0,
-                    end: 0.76,
-                    child: _buildInfoRow(
-                      controller,
-                      turnPlayer: turnPlayer,
-                      showTimer: regions.showTimer,
-                      height: layout.tableHeight,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: ControlEntryAnimation(
+                      animation: _controlsEntryController,
+                      style: ControlEntryStyle.header,
+                      begin: 0,
+                      end: 0.76,
+                      child: PhoneTimer(
+                        expiresAt: controller.turnDeadlineAt!,
+                        onTimeout: () => _handleTurnTimeout(controller),
+                      ),
                     ),
                   ),
                 ),
@@ -121,11 +136,6 @@ extension _PortraitGameView on _LiarsPokerPhoneGameScreenState {
                     verdictPending: controller.isLiarVerdictPending,
                     player: controller.penaltyStatusPlayer,
                     result: controller.visiblePenaltyResult,
-                    meUid: controller.uid,
-                    lieRevealed:
-                        controller.lastPlayDeclarationWasFalse == true &&
-                        !controller.isLiarVerdictPending,
-                    caller: controller.players[controller.liarCallerUid],
                   ),
                 ),
               // 잔여카드 보유 생존자가 정확히 한 명일 때만 손패를 잠그고

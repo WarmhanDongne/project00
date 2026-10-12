@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_liars_poker/game_copy.dart';
@@ -162,7 +163,13 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 240),
                         child: Text(
-                          widget.player?.nickname ?? '플레이어',
+                          widget.player?.nickname ??
+                              GameLocale.select(
+                                ko: '플레이어',
+                                en: 'Player',
+                                zhHans: '玩家',
+                                zhHant: '玩家',
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
@@ -196,8 +203,8 @@ class _PhonePenaltyStatusState extends State<PhonePenaltyStatus>
           sigmaX: 7 * progress,
           sigmaY: 7 * progress,
         ),
-        child: const FadeHoldFade(
-          duration: Duration(milliseconds: 2500),
+        child: FadeHoldFade(
+          duration: const Duration(milliseconds: 2500),
           child: Text(
             LiarsPokerCopy.penaltyTitle,
             style: _PenaltyTextStyle.title,

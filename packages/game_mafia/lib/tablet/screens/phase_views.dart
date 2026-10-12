@@ -21,6 +21,7 @@ import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/tablet/screens/noir_table.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -71,8 +72,8 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const MafiaTabletHeadline(
-          text: '신분 카드를 나눠드립니다',
+        MafiaTabletHeadline(
+          text: '신분 카드를 나눠드립니다'.localized,
           top: 40,
           fontSize: 52,
           color: MafiaColors.noirPaper,
@@ -81,7 +82,12 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
           rect: const Rect.fromLTWH(0, 106, 1194, 28),
           child: Center(
             child: Text(
-              '휴대폰에서 자신의 신분을 확인하세요 · 아무에게도 보여주지 마세요',
+              GameLocale.select(
+                ko: '휴대폰에서 자신의 신분을 확인하세요 · 아무에게도 보여주지 마세요',
+                en: 'Check your role on your phone · Do not show anyone',
+                zhHans: '请在手机上确认身份 · 不要给任何人看',
+                zhHant: '請在手機上確認身分 · 不要給任何人看',
+              ),
               style: mafiaNoirBody(18),
             ),
           ),
@@ -106,7 +112,7 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
             ),
             child: Center(
               child: MafiaNoirRuledLabel(
-                label: '확인 완료',
+                label: '확인 완료'.localized,
                 value: '${widget.confirmedCount} / ${players.length}',
                 lineColor: MafiaColors.noirBrass,
                 labelColor: MafiaColors.noirBrass,
@@ -135,7 +141,7 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
               : const {},
         ),
         if (widget.showsGameStartNotice && !widget.showsNightNotice)
-          const Positioned.fill(
+          Positioned.fill(
             child: MafiaAnnouncementReveal(
               child: MafiaTabletNotice.night(
                 text: MafiaCopy.gameStartNotice,
@@ -144,7 +150,7 @@ class _MafiaTabletRoleDealViewState extends State<MafiaTabletRoleDealView> {
             ),
           ),
         if (widget.showsNightNotice)
-          const Positioned.fill(
+          Positioned.fill(
             child: MafiaAnnouncementReveal(
               child: MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
             ),
@@ -185,8 +191,8 @@ class MafiaTabletNightView extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         const MafiaTabletMoon(),
-        const MafiaTabletHeadline(
-          text: '밤이 찾아왔다',
+        MafiaTabletHeadline(
+          text: '밤이 찾아왔다'.localized,
           top: 356,
           fontSize: 78,
           color: MafiaColors.noirPaper,
@@ -196,8 +202,18 @@ class MafiaTabletNightView extends StatelessWidget {
           child: Center(
             child: Text(
               round > 0
-                  ? '$round일째 밤 · 휴대폰을 보고 조용히 행동하세요'
-                  : '휴대폰을 보고 조용히 행동하세요',
+                  ? GameLocale.select(
+                      ko: '$round일째 밤 · 휴대폰을 보고 조용히 행동하세요',
+                      en: 'Night $round · Use your phone and act quietly',
+                      zhHans: '第 $round 夜 · 查看手机并安静行动',
+                      zhHant: '第 $round 夜 · 查看手機並安靜行動',
+                    )
+                  : GameLocale.select(
+                      ko: '휴대폰을 보고 조용히 행동하세요',
+                      en: 'Use your phone and act quietly',
+                      zhHans: '请查看手机并安静行动',
+                      zhHant: '請查看手機並安靜行動',
+                    ),
               style: mafiaNoirBody(19, letterSpacing: 1.1),
             ),
           ),
@@ -289,7 +305,7 @@ class _MafiaTabletNightWrapUpState extends State<_MafiaTabletNightWrapUp>
                 child: Transform.translate(
                   offset: Offset(0, 12 * (1 - textOpacity)),
                   child: Text(
-                    '밤이 지나가고 있습니다',
+                    '밤이 지나가고 있습니다'.localized,
                     key: const ValueKey('mafia-night-wrap-up-text'),
                     style: mafiaNoirDisplay(
                       30,
@@ -350,7 +366,12 @@ class MafiaTabletMorningView extends StatelessWidget {
             rect: const Rect.fromLTWH(0, 40, 1194, 24),
             child: Center(
               child: Text(
-                '$round일째 아침',
+                GameLocale.select(
+                  ko: '$round일째 아침',
+                  en: 'Morning · Day $round',
+                  zhHans: '第 $round 天早晨',
+                  zhHant: '第 $round 天早晨',
+                ),
                 style: mafiaNoirBody(
                   15,
                   color: MafiaColors.noirUmber,
@@ -359,7 +380,7 @@ class MafiaTabletMorningView extends StatelessWidget {
               ),
             ),
           ),
-        const MafiaTabletHeadline(text: '아침이 밝았다', top: 70, fontSize: 72),
+        MafiaTabletHeadline(text: '아침이 밝았다'.localized, top: 70, fontSize: 72),
         if (dead.isNotEmpty)
           MafiaTabletBox(
             rect: _poster,
@@ -368,8 +389,8 @@ class MafiaTabletMorningView extends StatelessWidget {
                 player: dead.first,
                 width: _poster.width,
                 height: _poster.height,
-                banner: const MafiaNoirBannerSpec(
-                  label: '어젯밤 사망',
+                banner: MafiaNoirBannerSpec(
+                  label: '어젯밤 사망'.localized,
                   top: 0.53,
                   angle: -14,
                 ),
@@ -383,14 +404,27 @@ class MafiaTabletMorningView extends StatelessWidget {
           ),
         MafiaTabletHeadline(
           text: dead.isEmpty
-              ? '어젯밤은 아무도 쓰러지지 않았다'
-              : '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+              ? GameLocale.select(
+                  ko: '어젯밤은 아무도 쓰러지지 않았다',
+                  en: 'Nobody fell last night',
+                  zhHans: '昨夜无人倒下',
+                  zhHant: '昨夜無人倒下',
+                )
+              : GameLocale.select(
+                  ko: '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+                  en: 'Last night, $names fell',
+                  zhHans: '昨夜，$names 倒下了',
+                  zhHant: '昨夜，$names 倒下了',
+                ),
           top: 664,
           fontSize: 34,
         ),
         MafiaTabletBox(
           rect: const Rect.fromLTWH(447, 728, 300, 40),
-          child: MafiaNoirProgress(duration: hold, label: '잠시 후 토론을 시작합니다'),
+          child: MafiaNoirProgress(
+            duration: hold,
+            label: '잠시 후 토론을 시작합니다'.localized,
+          ),
         ),
       ],
     );
@@ -471,7 +505,7 @@ class MafiaTabletMorningSequence extends StatelessWidget {
         // 1박자: 아침 안내가 떠올랐다 물러납니다.
         GamePresentationBeat(
           hold: openingHold,
-          child: const MafiaTabletNotice.day(text: MafiaCopy.morningNotice),
+          child: MafiaTabletNotice.day(text: MafiaCopy.morningNotice),
         ),
         // 2박자: 안내가 물러난 뒤 사망자 발표가 떠오르고, 다 읽으면 물러납니다.
         GamePresentationBeat(
@@ -497,7 +531,7 @@ class MafiaTabletMorningSequence extends StatelessWidget {
         if (!(result?.endsGame ?? false))
           GamePresentationBeat(
             hold: closingHold,
-            child: const MafiaTabletNotice.day(
+            child: MafiaTabletNotice.day(
               text: MafiaCopy.discussionNotice,
               // '지금부터 토론을 시작합니다' 음성(2.24초)이 2.5초 안내에 맞습니다.
               voice: MafiaSounds.voiceDiscussion,
@@ -533,8 +567,12 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
   /// 제목 아래 줄입니다. 예: `3일째 낮 · 5명 투표 · 누가 누구를 찍었는지는 비밀`.
   String get _subtitle {
     final voters = (result?.tally.values.fold<int>(0, (a, b) => a + b) ?? 0);
-    final day = round > 0 ? '$round일째 낮 · ' : '';
-    return '$day$voters표 · 누가 누구를 찍었는지는 비밀';
+    return GameLocale.select(
+      ko: '${round > 0 ? '$round일째 낮 · ' : ''}$voters표 · 누가 누구를 찍었는지는 비밀',
+      en: '${round > 0 ? 'Day $round · ' : ''}$voters votes · Ballots are secret',
+      zhHans: '${round > 0 ? '第 $round 天 · ' : ''}$voters 票 · 投票对象保密',
+      zhHant: '${round > 0 ? '第 $round 天 · ' : ''}$voters 票 · 投票對象保密',
+    );
   }
 
   final MafiaVoteResult? result;
@@ -604,7 +642,7 @@ class MafiaTabletVoteResultSequence extends StatelessWidget {
         if (!(result?.endsGame ?? false))
           GamePresentationBeat(
             hold: nightNoticeHold,
-            child: const MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
+            child: MafiaTabletNotice.night(text: MafiaCopy.nightNotice),
           ),
       ],
     );

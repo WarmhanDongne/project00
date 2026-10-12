@@ -6,6 +6,7 @@ import {onValueWritten} from "firebase-functions/v2/database";
 import {InterruptibleGameState} from "./types.js";
 import {runPrimedTransaction} from "../room/room-transaction.js";
 import {RecoveryRoom, registerRecoveryFailure} from "./recovery-state.js";
+import {currentPresence} from "../room/current-presence.js";
 
 // Realtime Database 트리거는 데이터베이스 인스턴스가 있는 리전에만 만들 수
 // 있습니다. 자세한 배경은 functions.ts 상단 주석을 보세요.
@@ -121,9 +122,11 @@ export const game_common_controller_presence_changed = onValueWritten(
       if (raw === null) return;
       const room = raw as RecoveryRoom;
       if (room.controllerPresence?.connected !== false || !room.controllerUid) return;
+      const current = currentPresence(room, room.controllerUid, "controller");
+      if (room.presenceProtocol === 2 && (!current || current.connected !== false)) return;
       registerRecoveryFailure(
         room, room.controllerUid, "controller", now, "disconnected",
-        typeof room.controllerPresence.lastSeen === "number" ? room.controllerPresence.lastSeen : now,
+        current?.lastSeen ?? (typeof room.controllerPresence.lastSeen === "number" ? room.controllerPresence.lastSeen : now),
       );
       return room;
     });

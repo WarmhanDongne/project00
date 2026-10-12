@@ -13,6 +13,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 
 // ============================================================
@@ -74,7 +75,7 @@ class MosiConnectionLayout extends StatelessWidget {
       value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Semantics(
         container: true,
-        label: semanticLabel,
+        label: semanticLabel?.localized,
         child: Material(
           color: background,
           child: LayoutBuilder(
@@ -212,11 +213,15 @@ class MosiConnectionLayout extends StatelessWidget {
     return [
       Align(
         alignment: Alignment.centerLeft,
-        child: MosiConnectionTag(label: tag, color: tagColor, large: wide),
+        child: MosiConnectionTag(
+          label: tag.localized,
+          color: tagColor,
+          large: wide,
+        ),
       ),
       SizedBox(height: wide ? 20 : 14),
       Text(
-        title,
+        title.localized,
         style: MosiFonts.sans(
           size: wide ? 38 : 24,
           weight: FontWeight.w700,
@@ -226,7 +231,7 @@ class MosiConnectionLayout extends StatelessWidget {
       ),
       SizedBox(height: wide ? 14 : 8),
       Text(
-        body,
+        body.localized,
         style: MosiFonts.sans(
           size: wide ? 18 : 15,
           color: MosiColors.ink2,
@@ -255,7 +260,7 @@ class MosiConnectionLayout extends StatelessWidget {
       if (footnote != null) ...[
         const SizedBox(height: 12),
         Text(
-          footnote!,
+          footnote!.localized,
           textAlign: TextAlign.center,
           style: MosiFonts.sans(size: wide ? 14 : 12, color: MosiColors.muted),
         ),
@@ -290,7 +295,7 @@ class MosiConnectionTag extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
-      label,
+      label.localized,
       style: MosiFonts.sans(
         size: large ? 14 : 12,
         weight: FontWeight.w700,
@@ -342,7 +347,7 @@ class MosiConnectionStatus extends StatelessWidget {
           if (icon != null || dots) const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
+              text.localized,
               style: MosiFonts.sans(
                 size: 14,
                 weight: FontWeight.w700,
@@ -1081,7 +1086,7 @@ class MosiReturnTableScene extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              seatLabel,
+              seatLabel.localized,
               textAlign: TextAlign.center,
               style: MosiFonts.sans(
                 size: 12,
@@ -1200,7 +1205,7 @@ class MosiPlayerWaitScene extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              badge,
+              badge.localized,
               textAlign: TextAlign.center,
               style: MosiFonts.sans(
                 size: 13,
@@ -1231,7 +1236,7 @@ class MosiPlayerWaitScene extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '초',
+                GameLocale.select(ko: '초', en: 'sec', zhHans: '秒', zhHant: '秒'),
                 style: MosiFonts.sans(
                   size: 18,
                   weight: FontWeight.w700,
@@ -1246,7 +1251,7 @@ class MosiPlayerWaitScene extends StatelessWidget {
           right: 0,
           top: 342,
           child: Text(
-            caption,
+            caption.localized,
             textAlign: TextAlign.center,
             style: MosiFonts.sans(size: 13, color: MosiColors.lilac),
           ),

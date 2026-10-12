@@ -9,6 +9,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/recovery/widgets/critical_network_guard.dart';
 import 'package:game_mafia/phone/phone_board.dart';
 import 'package:game_mafia/tablet/screens/role_setup_screen.dart';
@@ -33,7 +34,8 @@ class MafiaGame extends TemplateGame {
   String get id => 'mafia';
 
   @override
-  String get title => '마피아';
+  String get title =>
+      GameLocale.select(ko: '마피아', en: 'Mafia', zhHans: '黑手党', zhHant: '黑手黨');
 
   // 고정 인원이 아닙니다. 4~12인이며 실제 시작 가능 여부는 서버가 구성표로
   // 확인합니다(`mafiaCompositionFor`).
@@ -138,7 +140,7 @@ class MafiaGame extends TemplateGame {
     return Builder(
       builder: (context) => CriticalNetworkGuard(
         provider: provider,
-        exitLabel: '대기실로',
+        exitLabel: '대기실로'.localized,
         onExit: () => Navigator.of(context).maybePop(),
         child: MafiaTabletGame(
           roomCode: roomCode,

@@ -188,18 +188,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('繁體中文').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('display-region')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('대만').last);
-      await tester.pumpAndSettle();
+      // 지역은 더 고를 수 없고, 모달 제목도 언어만 보여 줍니다.
+      expect(find.byKey(const Key('display-region')), findsNothing);
+      expect(find.text('국가/지역 및 언어'), findsNothing);
+      expect(find.text('언어'), findsOneWidget);
       await tester.tap(find.widgetWithText(MosiButton, '저장'));
       await tester.pumpAndSettle();
       expect(settings.language, AppLanguage.traditionalChinese);
-      expect(settings.region, 'TW');
+      expect(settings.region, 'KR');
       final restored = LocaleSettings();
       await restored.load();
       expect(restored.language, AppLanguage.traditionalChinese);
-      expect(restored.region, 'TW');
+      expect(restored.region, 'KR');
       restored.dispose();
       expect(find.widgetWithText(MosiButton, '登入'), findsOneWidget);
       expect(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 손을 떼거나 앱이 비활성화되면 즉시 다시 가립니다. 숨긴 정보는 semantics에도 없습니다.
 class MafiaPrivatePeek extends StatefulWidget {
@@ -59,7 +60,12 @@ class _MafiaPrivatePeekState extends State<MafiaPrivatePeek>
                   ),
                   SizedBox(height: 16),
                   Text(
-                    '누르고 있는 동안 신분 보기',
+                    GameLocale.select(
+                      ko: '누르고 있는 동안 신분 보기',
+                      en: 'Hold to reveal your role',
+                      zhHans: '按住查看身份',
+                      zhHant: '按住查看身分',
+                    ),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: widget.foregroundColor,

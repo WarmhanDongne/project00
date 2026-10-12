@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -146,8 +148,18 @@ class _TabletGameShelfState extends State<TabletGameShelf> {
                 child: Center(
                   child: Text(
                     widget.onlyPlayable && canFilter
-                        ? '지금 $playerCount명이 할 수 있는 게임이 없어요'
-                        : '선반에 게임이 없어요',
+                        ? GameLocale.select(
+                            ko: '지금 $playerCount명이 할 수 있는 게임이 없어요',
+                            en: 'No games support $playerCount players right now',
+                            zhHans: '目前没有适合 $playerCount 人的游戏',
+                            zhHant: '目前沒有適合 $playerCount 人的遊戲',
+                          )
+                        : GameLocale.select(
+                            ko: '선반에 게임이 없어요',
+                            en: 'There are no games on the shelf',
+                            zhHans: '书架上没有游戏',
+                            zhHant: '書架上沒有遊戲',
+                          ),
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 16,
@@ -211,12 +223,42 @@ String gamePlayerRangeLabel(GameInfo game, RoomProvider roomProvider) {
   final supported = roomProvider.gameCatalog
       .find(game.id)
       ?.supportedPlayerCounts;
-  if (supported != null) return supported.map((n) => '$n명').join(' · ');
-  if (game.minPlayers > 0 && game.maxPlayers > 0) {
-    return '${game.minPlayers}–${game.maxPlayers}명';
+  if (supported != null) {
+    return supported
+        .map(
+          (n) => GameLocale.select(
+            ko: '$n명',
+            en: '$n players',
+            zhHans: '$n 人',
+            zhHant: '$n 人',
+          ),
+        )
+        .join(' · ');
   }
-  if (game.minPlayers > 0) return '${game.minPlayers}명부터';
-  if (game.maxPlayers > 0) return '최대 ${game.maxPlayers}명';
+  if (game.minPlayers > 0 && game.maxPlayers > 0) {
+    return GameLocale.select(
+      ko: '${game.minPlayers}–${game.maxPlayers}명',
+      en: '${game.minPlayers}–${game.maxPlayers} players',
+      zhHans: '${game.minPlayers}–${game.maxPlayers} 人',
+      zhHant: '${game.minPlayers}–${game.maxPlayers} 人',
+    );
+  }
+  if (game.minPlayers > 0) {
+    return GameLocale.select(
+      ko: '${game.minPlayers}명부터',
+      en: '${game.minPlayers}+ players',
+      zhHans: '${game.minPlayers} 人起',
+      zhHant: '${game.minPlayers} 人起',
+    );
+  }
+  if (game.maxPlayers > 0) {
+    return GameLocale.select(
+      ko: '최대 ${game.maxPlayers}명',
+      en: 'Up to ${game.maxPlayers}',
+      zhHans: '最多 ${game.maxPlayers} 人',
+      zhHant: '最多 ${game.maxPlayers} 人',
+    );
+  }
   return '';
 }
 
@@ -231,11 +273,28 @@ String? gameCannotStartMessage(
       .find(game.id)
       ?.supportedPlayerCounts;
   if (supported != null) {
-    return '${supported.join('명이나 ')}명이 모이면 시작할 수 있어요 · 지금 $count명';
+    return GameLocale.select(
+      ko: '${supported.join('명이나 ')}명이 모이면 시작할 수 있어요 · 지금 $count명',
+      en: 'Starts with ${supported.join(' or ')} players · $count now',
+      zhHans: '需要 ${supported.join(' 或 ')} 人开始 · 当前 $count 人',
+      zhHant: '需要 ${supported.join(' 或 ')} 人開始 · 目前 $count 人',
+    );
   }
   final min = game.minPlayers > 0 ? game.minPlayers : 2;
-  if (count < min) return '$min명부터 시작할 수 있어요 · 지금 $count명';
-  return '최대 ${game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명';
+  if (count < min) {
+    return GameLocale.select(
+      ko: '$min명부터 시작할 수 있어요 · 지금 $count명',
+      en: 'Needs at least $min players · $count now',
+      zhHans: '至少需要 $min 人 · 当前 $count 人',
+      zhHant: '至少需要 $min 人 · 目前 $count 人',
+    );
+  }
+  return GameLocale.select(
+    ko: '최대 ${game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명',
+    en: 'Supports up to ${game.maxPlayers} players · $count now',
+    zhHans: '最多支持 ${game.maxPlayers} 人 · 当前 $count 人',
+    zhHant: '最多支援 ${game.maxPlayers} 人 · 目前 $count 人',
+  );
 }
 
 class _PlayableToggle extends StatelessWidget {
@@ -258,8 +317,18 @@ class _PlayableToggle extends StatelessWidget {
       toggled: value,
       button: true,
       label: onChanged == null
-          ? '참가자가 입장하면 인원별로 볼 수 있어요'
-          : '지금 $playerCount명이 할 수 있는 게임만 보기',
+          ? GameLocale.select(
+              ko: '참가자가 입장하면 인원별로 볼 수 있어요',
+              en: 'Player filters appear after someone joins',
+              zhHans: '有玩家加入后可按人数筛选',
+              zhHant: '有玩家加入後可按人數篩選',
+            )
+          : GameLocale.select(
+              ko: '지금 $playerCount명이 할 수 있는 게임만 보기',
+              en: 'Show games for $playerCount players',
+              zhHans: '仅显示适合 $playerCount 人的游戏',
+              zhHant: '僅顯示適合 $playerCount 人的遊戲',
+            ),
       enabled: onChanged != null,
       excludeSemantics: true,
       onTap: onChanged == null ? null : () => onChanged!(!value),
@@ -276,13 +345,14 @@ class _PlayableToggle extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
+                key: const Key('playable-filter-track'),
                 duration: const Duration(milliseconds: 180),
                 width: 44,
                 height: 26,
                 padding: const EdgeInsets.all(3),
                 alignment: value ? Alignment.centerRight : Alignment.centerLeft,
                 decoration: BoxDecoration(
-                  color: value ? MosiColors.lime : Colors.transparent,
+                  color: value ? theme.btnBg : Colors.transparent,
                   borderRadius: BorderRadius.circular(13),
                   border: Border.all(color: fg, width: 2),
                 ),
@@ -290,7 +360,7 @@ class _PlayableToggle extends StatelessWidget {
                   width: 16,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: value ? MosiColors.navy : fg,
+                    color: value ? theme.btnFg : fg,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -300,16 +370,24 @@ class _PlayableToggle extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     children: [
-                      if (onChanged == null)
-                        const TextSpan(text: '참가자가 입장하면 인원별로 보기')
-                      else ...[
-                        const TextSpan(text: '지금 '),
-                        TextSpan(
-                          text: '$playerCount명',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const TextSpan(text: '이 할 수 있는 게임만'),
-                      ],
+                      TextSpan(
+                        text: onChanged == null
+                            ? GameLocale.select(
+                                ko: '참가자가 입장하면 인원별로 보기',
+                                en: 'Filter by players after someone joins',
+                                zhHans: '有玩家加入后按人数筛选',
+                                zhHant: '有玩家加入後按人數篩選',
+                              )
+                            : GameLocale.select(
+                                ko: '지금 $playerCount명이 할 수 있는 게임만',
+                                en: 'Games for $playerCount players',
+                                zhHans: '适合 $playerCount 人的游戏',
+                                zhHant: '適合 $playerCount 人的遊戲',
+                              ),
+                        style: onChanged == null
+                            ? null
+                            : const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ],
                   ),
                   style: MosiFonts.sans(
@@ -354,6 +432,8 @@ class _ShelfBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final art = MosiGameArt.of(selected.id, fallbackName: selected.name);
+    final displayName = selected.localizedName(Localizations.localeOf(context));
+    final englishName = selected.englishName;
     final hasRoom = roomProvider.roomCode != null;
     final cannotStart = hasRoom
         ? gameCannotStartMessage(selected, playerCount, roomProvider)
@@ -422,9 +502,7 @@ class _ShelfBody extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      art.koreanName == selected.id
-                          ? selected.name
-                          : art.koreanName,
+                      displayName,
                       style: MosiFonts.sans(
                         locale: Localizations.maybeLocaleOf(context),
                         size: compact ? 26 : 32,
@@ -434,23 +512,30 @@ class _ShelfBody extends StatelessWidget {
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      art.englishName,
-                      style: MosiFonts.grotesk(
-                        locale: Localizations.maybeLocaleOf(context),
-                        size: 12,
-                        color: art.id == 'liars_poker'
-                            ? theme.accA
-                            : theme.accB,
-                        letterSpacing: 3,
+                    if (englishName.toUpperCase() !=
+                        displayName.toUpperCase()) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        englishName,
+                        style: MosiFonts.grotesk(
+                          locale: Localizations.maybeLocaleOf(context),
+                          size: 12,
+                          color: art.id == 'liars_poker'
+                              ? theme.accA
+                              : theme.accB,
+                          letterSpacing: 3,
+                        ),
                       ),
-                    ),
-                    if (selected.description.isNotEmpty) ...[
+                    ],
+                    if (selected
+                        .localizedDescription(Localizations.localeOf(context))
+                        .isNotEmpty) ...[
                       const SizedBox(height: 6),
                       // 줄 수를 막지 않고 칸에 맞춰 함께 줄여 끝까지 보여 줍니다.
                       Text(
-                        selected.description,
+                        selected.localizedDescription(
+                          Localizations.localeOf(context),
+                        ),
                         textAlign: TextAlign.center,
                         style: MosiFonts.sans(
                           locale: Localizations.maybeLocaleOf(context),
@@ -459,19 +544,7 @@ class _ShelfBody extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (cannotStart != null) ...[
-                      const SizedBox(height: 8),
-                      MosiPill(
-                        label: cannotStart,
-                        background: MosiColors.sun,
-                        borderColor: MosiColors.ink,
-                        fontSize: 13,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                      ),
-                    ],
+                    GameStartHint(message: cannotStart),
                     const SizedBox(height: 12),
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -484,14 +557,19 @@ class _ShelfBody extends StatelessWidget {
                         ],
                         if (selected.playTime > 0) ...[
                           MosiPill(
-                            label: '${selected.playTime}분',
+                            label: GameLocale.select(
+                              ko: '${selected.playTime}분',
+                              en: '${selected.playTime} min',
+                              zhHans: '${selected.playTime} 分钟',
+                              zhHant: '${selected.playTime} 分鐘',
+                            ),
                             color: theme.fg,
                           ),
                           const SizedBox(width: 8),
                         ],
                         const SizedBox(width: 6),
                         MosiButton(
-                          label: context.l10n.details,
+                          label: context.l10n.viewDescription,
                           onPressed: () => onOpenDetail(selected),
                           background: theme.btnBg,
                           foreground: theme.btnFg,
@@ -511,4 +589,102 @@ class _ShelfBody extends StatelessWidget {
       },
     );
   }
+}
+
+/// '2명부터 시작할 수 있어요' 같은 시작 안내입니다.
+///
+/// 갑자기 나타나 아래 요소를 확 밀지 않도록, 먼저 자리가 부드럽게 열리며 아래
+/// 요소를 밀어낸 뒤 알약이 조금 늦게 아래에서 떠오르며 나타납니다. 사라질 때는
+/// 같은 움직임이 거꾸로 일어납니다(알약이 먼저 흐려지고 자리가 닫힘).
+class GameStartHint extends StatefulWidget {
+  const GameStartHint({super.key, required this.message});
+
+  final String? message;
+
+  @override
+  State<GameStartHint> createState() => _GameStartHintState();
+}
+
+class _GameStartHintState extends State<GameStartHint>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+
+  /// 사라지는 동안에도 마지막 문구를 그려야 해서 따로 기억합니다.
+  String? _shown;
+
+  @override
+  void initState() {
+    super.initState();
+    _shown = widget.message;
+    if (_shown != null) _controller.value = 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant GameStartHint oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final message = widget.message;
+    if (message != null) _shown = message;
+    final still = MediaQuery.disableAnimationsOf(context);
+    if (message == null) {
+      still ? _controller.value = 0 : unawaited(_controller.reverse());
+    } else {
+      still ? _controller.value = 1 : unawaited(_controller.forward());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (context, _) {
+      final shown = _shown;
+      if (shown == null || _controller.value == 0) {
+        return const SizedBox.shrink();
+      }
+      // 자리는 앞 60%에서 열리고, 알약은 35% 뒤부터 떠오릅니다.
+      final room = const Interval(
+        0,
+        .6,
+        curve: Curves.easeOutCubic,
+      ).transform(_controller.value);
+      final pill = const Interval(
+        .35,
+        1,
+        curve: Curves.easeOutCubic,
+      ).transform(_controller.value);
+      return ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: room,
+          child: Opacity(
+            opacity: pill,
+            child: Transform.translate(
+              offset: Offset(0, 12 * (1 - pill)),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: MosiPill(
+                  label: shown,
+                  background: MosiColors.sun,
+                  borderColor: MosiColors.ink,
+                  fontSize: 13,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }

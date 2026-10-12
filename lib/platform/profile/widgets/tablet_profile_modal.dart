@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/models/nickname_policy.dart';
@@ -80,7 +81,16 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
         _pickedImageType = image.mimeType;
       });
     } catch (_) {
-      if (mounted) _showMessage('앨범을 열지 못했습니다. 잠시 후 다시 시도해주세요.');
+      if (mounted) {
+        _showMessage(
+          GameLocale.select(
+            ko: '앨범을 열지 못했습니다. 잠시 후 다시 시도해주세요.',
+            en: 'Could not open the photo library. Try again shortly.',
+            zhHans: '无法打开相册。请稍后重试。',
+            zhHant: '無法開啟相簿。請稍後重試。',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
     }
@@ -92,7 +102,14 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
     final nickname = _nicknameController.text.trim();
     final nicknameChanged = nickname != profileDisplayName(_user);
     if (nicknameChanged && nickname.runes.length < nicknameMinLength) {
-      _showMessage('닉네임을 $nicknameMinLength자 이상 입력해주세요.');
+      _showMessage(
+        GameLocale.select(
+          ko: '닉네임을 $nicknameMinLength자 이상 입력해주세요.',
+          en: 'Enter at least $nicknameMinLength characters for your nickname.',
+          zhHans: '昵称至少需要 $nicknameMinLength 个字符。',
+          zhHant: '暱稱至少需要 $nicknameMinLength 個字元。',
+        ),
+      );
       return;
     }
     final image = _pickedImage;
@@ -137,7 +154,16 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
       // 상점 등에서 연 프로필도 로그인 위에 이전 route를 남기지 않습니다.
       if (navigator.mounted) navigator.popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (_) {
-      if (mounted) _showMessage('로그아웃하지 못했습니다. 잠시 후 다시 시도해주세요.');
+      if (mounted) {
+        _showMessage(
+          GameLocale.select(
+            ko: '로그아웃하지 못했습니다. 잠시 후 다시 시도해주세요.',
+            en: 'Could not log out. Try again shortly.',
+            zhHans: '无法退出登录。请稍后重试。',
+            zhHant: '無法登出。請稍後重試。',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoggingOut = false);
     }
@@ -184,8 +210,12 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
             ),
             const SizedBox(height: 10),
             Text(
-              '계정과 프로필, 보유 게임 정보가 모두 삭제되며 되돌릴 수 없습니다.\n'
-              '정말 탈퇴하시겠습니까?',
+              GameLocale.select(
+                ko: '계정과 프로필, 보유 게임 정보가 모두 삭제되며 되돌릴 수 없습니다.\n정말 탈퇴하시겠습니까?',
+                en: 'Your account, profile, and owned-game data will be permanently deleted.\nDelete your account?',
+                zhHans: '账号、个人资料和已拥有游戏信息将永久删除且无法恢复。\n确定注销吗？',
+                zhHant: '帳號、個人資料和已擁有遊戲資訊將永久刪除且無法復原。\n確定註銷嗎？',
+              ),
               style: MosiFonts.sans(
                 locale: Localizations.maybeLocaleOf(context),
                 size: 14,
@@ -211,7 +241,12 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: MosiButton(
-                    label: '탈퇴하기',
+                    label: GameLocale.select(
+                      ko: '탈퇴하기',
+                      en: 'Delete account',
+                      zhHans: '注销账号',
+                      zhHant: '註銷帳號',
+                    ),
                     background: const Color(0xFFC2283C),
                     foreground: MosiColors.white,
                     borderWidth: 2,
@@ -460,17 +495,12 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                 ),
               ),
               const SizedBox(height: 22),
-              Container(
+              Padding(
                 padding: EdgeInsets.fromLTRB(
                   horizontal,
                   18,
                   horizontal - 4,
                   20,
-                ),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: MosiColors.ink, width: 2),
-                  ),
                 ),
                 child: Row(
                   children: [

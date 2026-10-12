@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 좌석에서 테이블 중앙으로 이동하는 홀덤 행동 연출입니다.
 ///
 /// 베팅은 좌석 앞의 칩 더미가 중앙 방향으로 쓰러진 뒤 칩이 하나씩 미끄러져
-/// 테이블 중앙에 던져집니다. 폴드는 두 장의 카드가 중앙으로 미끄러져 사라지고,
-/// 체크는 같은 이동 곡선으로 전용 퍽을 보냅니다.
+/// 테이블 중앙에 던져집니다. 폴드는 두 장의 카드가 중앙으로 미끄러져 사라집니다.
+/// 체크는 중앙으로 아무것도 보내지 않고 좌석 프로필 옆 표시로만 알립니다.
+/// 올인은 칩 이동 위에 충격파·불꽃·'ALL IN' 띠를 더해 크게 보여 줍니다.
 class HoldemTableActionMotion extends StatelessWidget {
   const HoldemTableActionMotion({
     super.key,
@@ -40,7 +42,6 @@ class HoldemTableActionMotion extends StatelessWidget {
         animation: progress,
         builder: (_, _) {
           if (kind == 'fold') return _buildFold();
-          if (kind == 'check') return _buildCheck();
           if (_movesChips) return _buildChips();
           return const SizedBox.expand();
         },
@@ -52,15 +53,29 @@ class HoldemTableActionMotion extends StatelessWidget {
     final value = progress.value;
     final count = _chipCount(amount);
     return Semantics(
-      label: kind == 'blind' ? '블라인드 칩 이동' : '베팅 칩 이동',
+      label: kind == 'blind'
+          ? GameLocale.select(
+              ko: '블라인드 칩 이동',
+              en: 'Blind chips moving',
+              zhHans: '盲注筹码移动',
+              zhHant: '盲注籌碼移動',
+            )
+          : GameLocale.select(
+              ko: '베팅 칩 이동',
+              en: 'Bet chips moving',
+              zhHans: '下注筹码移动',
+              zhHant: '下注籌碼移動',
+            ),
       excludeSemantics: true,
       child: SizedBox.expand(
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            if (kind == 'allIn') ..._allInBurst(value),
             for (var index = 0; index < count; index++)
               _animatedChip(index, count, value),
             if (amount > 0) _animatedAmount(value),
+            if (kind == 'allIn') _allInBanner(value),
           ],
         ),
       ),
@@ -185,7 +200,12 @@ class HoldemTableActionMotion extends StatelessWidget {
   Widget _buildFold() {
     final value = progress.value;
     return Semantics(
-      label: '폴드 카드 이동',
+      label: GameLocale.select(
+        ko: '폴드 카드 이동',
+        en: 'Folded cards moving',
+        zhHans: '弃牌移动',
+        zhHant: '棄牌移動',
+      ),
       excludeSemantics: true,
       child: SizedBox.expand(
         child: Stack(
@@ -232,42 +252,133 @@ class HoldemTableActionMotion extends StatelessWidget {
     );
   }
 
-  Widget _buildCheck() {
-    final value = progress.value;
-    final travel = _interval(value, .02, .7, Curves.easeOutQuart);
-    final settle = _interval(value, .58, .79, Curves.easeOutBack);
-    final fade = _interval(value, .78, 1, Curves.easeIn);
-    final direction = tableCenter - source;
-    final distance = math.max(direction.distance, 1.0).toDouble();
-    final tangent = Offset(-direction.dy, direction.dx) / distance;
-    final control =
-        Offset.lerp(source, tableCenter, .5)! + tangent * 26 * scale;
-    final position = _quadratic(source, control, tableCenter, travel);
-    final size = 76 * scale;
+  /// 칩이 중앙에 닿을 때 퍼지는 금빛 충격파와 불꽃입니다.
+  List<Widget> _allInBurst(double value) {
+    final wave = _interval(value, .55, .95, Curves.easeOutCubic);
+    final glow =
+        _interval(value, .05, .5, Curves.easeOut) *
+        (1 - _interval(value, .8, 1, Curves.easeIn));
+    final ringSize = (80 + 340 * wave) * scale;
+    return [
+      // 테이블 전체가 잠깐 금빛으로 달아오릅니다.
+      Positioned(
+        left: tableCenter.dx - 320 * scale,
+        top: tableCenter.dy - 220 * scale,
+        width: 640 * scale,
+        height: 440 * scale,
+        child: Opacity(
+          opacity: (glow * .55).clamp(0.0, 1.0),
+          child: const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [Color(0xCCFFD45C), Color(0x00FFD45C)],
+              ),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: tableCenter.dx - ringSize / 2,
+        top: tableCenter.dy - ringSize / 2,
+        width: ringSize,
+        height: ringSize,
+        child: Opacity(
+          opacity: (wave > 0 ? 1.0 - wave : 0.0).clamp(0.0, 1.0),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFFFFD45C),
+                width: 10 * scale * (1 - wave) + 2,
+              ),
+            ),
+          ),
+        ),
+      ),
+      for (var i = 0; i < 14; i++) _spark(i, value),
+    ];
+  }
 
-    return Semantics(
-      label: '체크 이동',
-      excludeSemantics: true,
-      child: SizedBox.expand(
-        child: Stack(
-          children: [
-            Positioned(
-              left: position.dx - size / 2,
-              top: position.dy - size / 2,
-              width: size,
-              height: size,
-              child: Opacity(
-                opacity: (1 - fade).clamp(0.0, 1.0),
-                child: Transform.rotate(
-                  angle: math.sin(travel * math.pi) * .16,
-                  child: Transform.scale(
-                    scale: .76 + travel * .2 + settle * .08,
-                    child: const _CheckPuck(),
+  Widget _spark(int index, double value) {
+    final start = .58 + (index % 3) * .02;
+    final fly = _interval(value, start, start + .3, Curves.easeOutCubic);
+    if (fly <= 0) return const SizedBox.shrink();
+    final angle = index / 14 * 2 * math.pi + (index.isEven ? .12 : -.08);
+    final reach = (150 + (index % 4) * 38) * scale;
+    final position =
+        tableCenter + Offset(math.cos(angle), math.sin(angle)) * reach * fly;
+    final size = (index.isEven ? 12 : 8) * scale;
+    return Positioned(
+      left: position.dx - size / 2,
+      top: position.dy - size / 2,
+      width: size,
+      height: size,
+      child: Opacity(
+        opacity: (1 - fly).clamp(0.0, 1.0),
+        child: Transform.rotate(
+          angle: angle + fly * 3,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: index % 3 == 0 ? Colors.white : const Color(0xFFFFD45C),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: const [
+                BoxShadow(color: Color(0xAAFFD45C), blurRadius: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 테이블 위로 쾅 내려앉는 'ALL IN' 띠입니다.
+  Widget _allInBanner(double value) {
+    final slam = _interval(value, .04, .26, Curves.easeOutBack);
+    final exit = _interval(value, .86, 1, Curves.easeIn);
+    final shake = value > .24 && value < .4
+        ? math.sin((value - .24) * 90) * 8 * (1 - (value - .24) / .16)
+        : 0.0;
+    final width = 420 * scale;
+    final height = 110 * scale;
+    return Positioned(
+      left: tableCenter.dx - width / 2 + shake * scale,
+      top: tableCenter.dy - 210 * scale,
+      width: width,
+      height: height,
+      child: Opacity(
+        opacity: (slam.clamp(0.0, 1.0) * (1 - exit)).clamp(0.0, 1.0),
+        child: Transform.rotate(
+          angle: -.06,
+          child: Transform.scale(
+            scale: 2.2 - 1.2 * slam,
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFE08A), Color(0xFFFFB82E)],
+                ),
+                borderRadius: BorderRadius.circular(18 * scale),
+                border: Border.all(color: HoldemColors.ink, width: 4 * scale),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD45C).withValues(alpha: .8),
+                    blurRadius: 40 * scale,
+                    spreadRadius: 4 * scale,
+                  ),
+                ],
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'ALL IN',
+                  style: HoldemFonts.title(
+                    size: 72 * scale,
+                    color: HoldemColors.ink,
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -324,7 +435,12 @@ class HoldemPotAwardMotion extends StatelessWidget {
           final value = progress.value;
           if (value <= .19 || value >= 1) return const SizedBox.expand();
           return Semantics(
-            label: '승리 칩 이동 ${holdemChips(amount)}',
+            label: GameLocale.select(
+              ko: '승리 칩 이동 ${holdemChips(amount)}',
+              en: 'Winning chips moving ${holdemChips(amount)}',
+              zhHans: '获胜筹码移动 ${holdemChips(amount)}',
+              zhHant: '獲勝籌碼移動 ${holdemChips(amount)}',
+            ),
             excludeSemantics: true,
             child: SizedBox.expand(
               child: Stack(
@@ -467,7 +583,12 @@ class HoldemPotChipStack extends StatelessWidget {
     ];
     final size = 29 * scale;
     return Semantics(
-      label: '팟 칩 ${holdemChips(amount)}',
+      label: GameLocale.select(
+        ko: '팟 칩 ${holdemChips(amount)}',
+        en: 'Pot ${holdemChips(amount)} chips',
+        zhHans: '底池 ${holdemChips(amount)} 筹码',
+        zhHant: '底池 ${holdemChips(amount)} 籌碼',
+      ),
       child: TweenAnimationBuilder<double>(
         key: ValueKey(amount),
         tween: Tween(begin: .88, end: 1),
@@ -498,33 +619,4 @@ class HoldemPotChipStack extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CheckPuck extends StatelessWidget {
-  const _CheckPuck();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: const RadialGradient(
-        center: Alignment(-.2, -.35),
-        colors: [Colors.white, Color(0xFFEAF0EC), Color(0xFFC9D4CD)],
-      ),
-      border: Border.all(color: HoldemColors.ink, width: 2),
-      boxShadow: const [
-        BoxShadow(color: HoldemColors.puckEdge, offset: Offset(0, 5)),
-        BoxShadow(
-          color: Color(0x73000000),
-          blurRadius: 14,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Text(
-      'CHECK',
-      style: HoldemFonts.title(size: 15, color: HoldemColors.cardBlack),
-    ),
-  );
 }

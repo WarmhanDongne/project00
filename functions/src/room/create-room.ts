@@ -4,7 +4,7 @@ import {randomInt, randomUUID} from "node:crypto";
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {assertOnboardingComplete} from "../auth/require-complete-onboarding.js";
-import {allocateRoom, RoomAllocation, RoomReservation, terminalRoom} from "./room-allocation.js";
+import {allocateRoom, RoomAllocation, RoomReservation, TerminalRoomReservation, terminalRoom} from "./room-allocation.js";
 import {operationFingerprint, parseSessionId} from "./session-contract.js";
 import {reconcileTerminal, sameCleanupTarget} from "./room-cleanup.js";
 import {runPrimedTransaction} from "./room-transaction.js";
@@ -26,6 +26,9 @@ function newCode(): string {
 export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (request) => traceRoomAction("createRealtimeRoom", async (timing) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  if (request.data?.presenceProtocol !== 2) {
+    throw new HttpsError("failed-precondition", "앱 업데이트가 필요합니다.", {reason: "upgradeRequired"});
+  }
   await timing.measure("onboarding", () => assertOnboardingComplete(uid));
   const operationId = parseSessionId(request.data?.operationId, "생성 작업 ID");
   const database = getDatabase();
@@ -67,9 +70,10 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
       expectedAllocationGeneration: expected, allocationGeneration: expected + 1,
       controllerSessionId: randomUUID(), connectionId: randomUUID(), createdAt: now, status: "reserved"};
     const reserved = await timing.measure("reservation", () => runPrimedTransaction(reservationRef, (raw) => raw ?? candidate));
-    const reservation = reserved.snapshot.val() as RoomReservation;
+    const reservation = reserved.snapshot.val() as RoomReservation | TerminalRoomReservation;
     if (reservation.status === "terminal") return {status: "terminal"};
     const initial: RoomAllocation = {roomCode: reservation.roomCode,
+      presenceProtocol: 2,
       roomInstanceId: reservation.roomInstanceId, allocationGeneration: reservation.allocationGeneration,
       controllerUid: uid, controllerSessionId: reservation.controllerSessionId,
       creationOperationId: operationId, status: "waiting", membershipRevision: 0, maxPlayers: 12,
@@ -128,6 +132,7 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
           allocationGeneration: reservation.allocationGeneration} : undefined;
     }));
     return {success: true, roomCode: reservation.roomCode, roomInstanceId: reservation.roomInstanceId,
+      presenceProtocol: 2,
       controllerSessionId: reservation.controllerSessionId,
       connectionId: live.controllerCurrentConnectionId, connectionSeq: live.controllerConnectionSeq};
   }

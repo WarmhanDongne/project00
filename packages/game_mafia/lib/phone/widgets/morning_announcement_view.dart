@@ -15,6 +15,7 @@ import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -52,8 +53,18 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
     ];
     final names = dead.map((player) => player.nickname).join(' · ');
     final headline = dead.isEmpty
-        ? '어젯밤은 아무도 쓰러지지 않았다'
-        : '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다';
+        ? GameLocale.select(
+            ko: '어젯밤은 아무도 쓰러지지 않았다',
+            en: 'Nobody fell last night',
+            zhHans: '昨夜无人倒下',
+            zhHant: '昨夜無人倒下',
+          )
+        : GameLocale.select(
+            ko: '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+            en: 'Last night, $names fell',
+            zhHans: '昨夜，$names 倒下了',
+            zhHant: '昨夜，$names 倒下了',
+          );
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = MafiaPhoneDesign.resolve(constraints);
@@ -69,7 +80,12 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
               right: 0,
               top: MafiaPhoneDesign.top(size, 106),
               child: Text(
-                '아침이 밝았다',
+                GameLocale.select(
+                  ko: '아침이 밝았다',
+                  en: 'Morning has come',
+                  zhHans: '天亮了',
+                  zhHant: '天亮了',
+                ),
                 textAlign: TextAlign.center,
                 style: mafiaNoirDisplay(
                   50 * scale,
@@ -89,8 +105,8 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
                     player: dead.first,
                     width: posterWidth,
                     height: posterHeight,
-                    banner: const MafiaNoirBannerSpec(
-                      label: '어젯밤 사망',
+                    banner: MafiaNoirBannerSpec(
+                      label: '어젯밤 사망'.localized,
                       top: 0.53,
                       angle: -14,
                     ),
@@ -129,7 +145,10 @@ class MafiaMorningAnnouncementView extends StatelessWidget {
               left: MafiaPhoneDesign.left(size, 51),
               width: 300 * scale,
               top: MafiaPhoneDesign.top(size, 676),
-              child: MafiaNoirProgress(duration: hold, label: '잠시 후 토론을 시작합니다'),
+              child: MafiaNoirProgress(
+                duration: hold,
+                label: '잠시 후 토론을 시작합니다'.localized,
+              ),
             ),
             MafiaStoredRoleCard(role: role),
           ],

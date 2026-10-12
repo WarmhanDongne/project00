@@ -12,6 +12,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/errors/models/app_exception.dart';
 import 'package:game_kit/errors/models/room_command_exception.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -58,9 +59,9 @@ String? userErrorMessage(Object? error, {required UserErrorContext context}) {
   //    iOS 플러그인의 긴 unknown Stacktrace를 화면에 덮지 않습니다.
   if (_isTransientNativeNoise(error)) return null;
 
-  // 3. 우리 서버가 준 한국어 안내는 그대로 씁니다.
+  // 3. 우리 서버가 준 안내도 알려진 문구는 현재 표시 언어로 바꿉니다.
   final serverMessage = _koreanServerMessage(error);
-  if (serverMessage != null) return serverMessage;
+  if (serverMessage != null) return serverMessage.localized;
 
   // 4. 코드·타입별 매핑.
   if (_isNetworkError(error)) {
@@ -176,17 +177,70 @@ bool _isNetworkError(Object error) {
 ///
 /// 시험이 문자열 리터럴을 복사하지 않도록 여기 한곳에만 둡니다.
 abstract final class UserErrorCopy {
-  static const String noPermission = '이 방에 대한 권한이 없습니다. 방 상태를 다시 확인해주세요.';
-  static const String leaveRoomNetwork =
-      '네트워크 상태가 불안정해 방에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.';
-  static const String leaveGameNetwork =
-      '네트워크 상태가 불안정해 게임에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.';
-  static const String leaveRoomFailed = '방에서 나가지 못했습니다. 잠시 후 다시 시도해주세요.';
-  static const String leaveGameFailed = '게임에서 나가지 못했습니다. 잠시 후 다시 시도해주세요.';
-  static const String unstableConnection = '연결이 불안정합니다. 네트워크 상태를 확인해주세요.';
-  static const String serverUnreachable = '서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.';
-  static const String requestFailed = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.';
-  static const String roomNotFound = '방을 찾을 수 없습니다.';
-  static const String signInExpired = '로그인이 만료되었습니다. 앱을 다시 실행해주세요.';
-  static const String roomFull = '방 인원이 가득 찼습니다.';
+  static String get noPermission => GameLocale.select(
+    ko: '이 방에 대한 권한이 없습니다. 방 상태를 다시 확인해주세요.',
+    en: 'You do not have access to this room. Check the room status.',
+    zhHans: '你没有此房间的访问权限。请检查房间状态。',
+    zhHant: '你沒有此房間的存取權限。請檢查房間狀態。',
+  );
+  static String get leaveRoomNetwork => GameLocale.select(
+    ko: '네트워크 상태가 불안정해 방에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.',
+    en: 'Could not leave the room because the network is unstable. Check your connection and try again.',
+    zhHans: '网络不稳定，无法离开房间。请检查连接后重试。',
+    zhHant: '網路不穩定，無法離開房間。請檢查連線後重試。',
+  );
+  static String get leaveGameNetwork => GameLocale.select(
+    ko: '네트워크 상태가 불안정해 게임에서 나가지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.',
+    en: 'Could not leave the game because the network is unstable. Check your connection and try again.',
+    zhHans: '网络不稳定，无法离开游戏。请检查连接后重试。',
+    zhHant: '網路不穩定，無法離開遊戲。請檢查連線後重試。',
+  );
+  static String get leaveRoomFailed => GameLocale.select(
+    ko: '방에서 나가지 못했습니다. 잠시 후 다시 시도해주세요.',
+    en: 'Could not leave the room. Try again shortly.',
+    zhHans: '无法离开房间。请稍后重试。',
+    zhHant: '無法離開房間。請稍後重試。',
+  );
+  static String get leaveGameFailed => GameLocale.select(
+    ko: '게임에서 나가지 못했습니다. 잠시 후 다시 시도해주세요.',
+    en: 'Could not leave the game. Try again shortly.',
+    zhHans: '无法离开游戏。请稍后重试。',
+    zhHant: '無法離開遊戲。請稍後重試。',
+  );
+  static String get unstableConnection => GameLocale.select(
+    ko: '연결이 불안정합니다. 네트워크 상태를 확인해주세요.',
+    en: 'The connection is unstable. Check your network.',
+    zhHans: '连接不稳定。请检查网络。',
+    zhHant: '連線不穩定。請檢查網路。',
+  );
+  static String get serverUnreachable => GameLocale.select(
+    ko: '서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    en: 'Could not reach the server. Try again shortly.',
+    zhHans: '无法连接服务器。请稍后重试。',
+    zhHant: '無法連線伺服器。請稍後重試。',
+  );
+  static String get requestFailed => GameLocale.select(
+    ko: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    en: 'The request could not be completed. Try again shortly.',
+    zhHans: '无法处理请求。请稍后重试。',
+    zhHant: '無法處理要求。請稍後重試。',
+  );
+  static String get roomNotFound => GameLocale.select(
+    ko: '방을 찾을 수 없습니다.',
+    en: 'Room not found.',
+    zhHans: '找不到房间。',
+    zhHant: '找不到房間。',
+  );
+  static String get signInExpired => GameLocale.select(
+    ko: '로그인이 만료되었습니다. 앱을 다시 실행해주세요.',
+    en: 'Your sign-in expired. Restart the app.',
+    zhHans: '登录已过期。请重新启动应用。',
+    zhHant: '登入已過期。請重新啟動 App。',
+  );
+  static String get roomFull => GameLocale.select(
+    ko: '방 인원이 가득 찼습니다.',
+    en: 'The room is full.',
+    zhHans: '房间已满。',
+    zhHant: '房間已滿。',
+  );
 }

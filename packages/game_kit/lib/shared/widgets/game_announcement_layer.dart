@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/shared/animations/fade_hold_fade.dart';
 import 'package:game_kit/phone/animations/game_start_animation.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
@@ -135,18 +136,23 @@ class GameAnnouncementLayer extends StatelessWidget {
   Widget _buildAnnouncement(GameAnnouncement current) {
     final textStyle = style.textStyleFor(current);
     final duration = displayDuration ?? current.duration;
+    final localizedText = current.text.localized;
     if (!current.animate && current.kind != GameAnnouncementKind.persistent) {
       return _StaticTimedAnnouncement(
         key: ValueKey(current.id),
         duration: duration,
         onCompleted: () => onCompleted?.call(current),
-        child: Text(current.text, textAlign: style.textAlign, style: textStyle),
+        child: Text(
+          localizedText,
+          textAlign: style.textAlign,
+          style: textStyle,
+        ),
       );
     }
     return switch (current.kind) {
       GameAnnouncementKind.gameStart => GameStartAnimation(
         key: ValueKey(current.id),
-        text: current.text,
+        text: localizedText,
         textStyle: textStyle,
         duration: duration,
         onCompleted: () => onCompleted?.call(current),
@@ -158,10 +164,14 @@ class GameAnnouncementLayer extends StatelessWidget {
         beginScale: style.beginScale,
         endScale: style.endScale,
         onCompleted: () => onCompleted?.call(current),
-        child: Text(current.text, textAlign: style.textAlign, style: textStyle),
+        child: Text(
+          localizedText,
+          textAlign: style.textAlign,
+          style: textStyle,
+        ),
       ),
       GameAnnouncementKind.persistent => Text(
-        current.text,
+        localizedText,
         key: ValueKey(current.id),
         textAlign: style.textAlign,
         style: textStyle,

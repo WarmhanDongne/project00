@@ -13,6 +13,7 @@ import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_mafia/shared/widgets/profile_image.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -805,8 +806,8 @@ class _MafiaNoirButtonState extends State<MafiaNoirButton> {
           button: true,
           enabled: enabled,
           label: widget.trailing == null
-              ? widget.label
-              : '${widget.label} ${widget.trailing}',
+              ? widget.label.localized
+              : '${widget.label.localized} ${widget.trailing}',
           excludeSemantics: true,
           onTap: widget.onTap,
           child: GestureDetector(
@@ -837,7 +838,7 @@ class _MafiaNoirButtonState extends State<MafiaNoirButton> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            widget.label,
+                            widget.label.localized,
                             maxLines: 1,
                             style: mafiaNoirDisplay(
                               widget.fontSize * unit,
@@ -1206,7 +1207,7 @@ class MafiaNoirProgress extends StatelessWidget {
       ),
       if (label != null) ...[
         const SizedBox(height: 8),
-        Text(label!, style: mafiaNoirBody(13, color: labelColor)),
+        Text(label!.localized, style: mafiaNoirBody(13, color: labelColor)),
       ],
     ],
   );

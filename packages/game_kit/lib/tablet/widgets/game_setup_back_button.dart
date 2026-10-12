@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -40,7 +41,7 @@ class GameSetupBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton.filledTonal(
-      tooltip: '뒤로가기',
+      tooltip: '뒤로가기'.localized,
       onPressed: isBusy ? null : onPressed,
       icon: isBusy
           ? const SizedBox(

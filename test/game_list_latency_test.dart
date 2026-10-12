@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +9,167 @@ import 'package:project00/platform/home/gamelist/provider/game_list_provider.dar
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 
 void main() {
+  test('catalog text follows locale with legacy fallback', () {
+    final game = GameInfo.fromJson({
+      'id': 'liars',
+      'name': 'legacy',
+      'localizedNames': {
+        'ko': '라이어스',
+        'en': 'Liars',
+        'zh_Hans': '骗子',
+        'zh-Hant': '騙子',
+      },
+      'description': '기존 소개',
+      'localizedDescriptions': {
+        'ko': '한국어 소개',
+        'en': 'English description',
+        'zh_Hans': '简体介绍',
+        'zh-Hant': '繁體介紹',
+      },
+      'rules': '기존 규칙',
+      'localizedRules': {
+        'ko': '한국어 규칙',
+        'en': 'English rules',
+        'zh-Hans': '简体规则',
+        'zh-Hant': '繁體規則',
+      },
+      'genres': ['기존 장르'],
+      'localizedGenres': {
+        'ko': ['카드', '블러핑'],
+        'en': ['Cards', 'Bluffing'],
+        'zh-Hans': ['卡牌', '诈唬'],
+        'zh-Hant': ['卡牌', '詐唬'],
+      },
+    });
+
+    expect(game.id, 'liars_poker');
+    expect(game.localizedName(const Locale('ko')), '라이어스');
+    expect(game.localizedName(const Locale('en')), 'Liars');
+    expect(
+      game.localizedName(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      ),
+      '骗子',
+    );
+    expect(
+      game.localizedName(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+      ),
+      '騙子',
+    );
+    expect(game.localizedName(const Locale('ja')), 'Liars');
+    expect(game.englishName, 'Liars');
+    expect(
+      game.localizedDescription(const Locale('en')),
+      'English description',
+    );
+    expect(
+      game.localizedDescription(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+      ),
+      '繁體介紹',
+    );
+    expect(game.localizedRulesFor(const Locale('ja')), 'English rules');
+    expect(
+      game.localizedGenresFor(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      ),
+      ['卡牌', '诈唬'],
+    );
+    expect(
+      game.localizedGenresText(const Locale('en'), separator: ' · '),
+      'Cards · Bluffing',
+    );
+    expect(
+      GameInfo.fromJson({
+        'id': 'legacy',
+        'name': '기존 이름',
+      }).localizedName(const Locale('ko')),
+      '기존 이름',
+    );
+    final legacy = GameInfo.fromJson({
+      'id': 'legacy',
+      'name': '기존 이름',
+      'description': '기존 소개',
+      'rules': '기존 규칙',
+      'genres': ['기존 장르'],
+    });
+    expect(legacy.localizedDescription(const Locale('en')), '기존 소개');
+    expect(legacy.localizedRulesFor(const Locale('en')), '기존 규칙');
+    expect(legacy.localizedGenresFor(const Locale('en')), ['기존 장르']);
+  });
+
+  test(
+    'migrated catalog deduplicates aliases and preserves game routing',
+    () async {
+      final db = _Database();
+      final service = GameService(
+        firestore: db,
+        auth: _Auth(),
+        functions: _Functions(),
+      );
+      db.catalog.complete(
+        _Catalog([
+          _Document('liars_poker', {'name': 'old', 'enabled': true}),
+          _Document('liars', {'name': 'Liars', 'enabled': true}),
+        ]),
+      );
+      db.owner.complete(
+        _Document('user', {
+          'ownedGames': ['liars'],
+        }),
+      );
+      final games = await service.fetchGames();
+      expect(games, hasLength(1));
+      expect(games.single.id, 'liars_poker');
+      expect(games.single.name, 'Liars');
+      expect(games.single.isOwned, isTrue);
+      expect(await service.isGameOwned('liars_poker'), isTrue);
+    },
+  );
+
+  test(
+    'disabled canonical catalog cannot revive through the legacy alias',
+    () async {
+      final db = _Database();
+      final service = GameService(
+        firestore: db,
+        auth: _Auth(),
+        functions: _Functions(),
+      );
+      db.catalog.complete(
+        _Catalog([
+          _Document('liars', {'enabled': false}),
+          _Document('liars_poker', {'enabled': true}),
+        ]),
+      );
+      db.owner.complete(_Document('user', {}));
+      expect(await service.fetchGames(), isEmpty);
+    },
+  );
+
+  test(
+    'existing rooms read the renamed document; fallback only before migration',
+    () async {
+      final db = _Database();
+      final service = GameService(
+        firestore: db,
+        auth: _Auth(),
+        functions: _Functions(),
+      );
+      db.documents['games/liars'] = _Document('liars', {'name': 'Liars'});
+      expect((await service.getGame('liars_poker'))?.id, 'liars_poker');
+      expect(db.reads, ['games/liars']);
+      db.reads.clear();
+      db.documents['games/liars'] = _Document('liars', {}, exists: false);
+      db.documents['games/liars_poker'] = _Document('liars_poker', {
+        'name': 'old',
+      });
+      expect((await service.getGame('liars'))?.name, 'old');
+      expect(db.reads, ['games/liars', 'games/liars_poker']);
+    },
+  );
+
   test(
     'catalog and ownership start together; catalog is shared only in flight',
     () async {
@@ -147,6 +309,7 @@ class _User extends Fake implements User {
 
 class _Database extends Fake implements FirebaseFirestore {
   final reads = <String>[];
+  final documents = <String, DocumentSnapshot<Map<String, dynamic>>>{};
   Completer<QuerySnapshot<Map<String, dynamic>>> catalog = Completer();
   final owner = Completer<DocumentSnapshot<Map<String, dynamic>>>();
   @override
@@ -184,22 +347,30 @@ class _Reference extends Fake
   @override
   Future<DocumentSnapshot<Map<String, dynamic>>> get([GetOptions? options]) {
     db.reads.add(path);
-    return db.owner.future;
+    return db.documents.containsKey(path)
+        ? Future.value(db.documents[path])
+        : db.owner.future;
   }
 }
 
 class _Catalog extends Fake implements QuerySnapshot<Map<String, dynamic>> {
+  _Catalog([this.entries]);
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>>? entries;
   @override
-  List<QueryDocumentSnapshot<Map<String, dynamic>>> get docs => [
-    _Document('paid', {'accessType': 'paid', 'order': 2}),
-    _Document('free', {'accessType': 'free', 'order': 1}),
-  ];
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> get docs =>
+      entries ??
+      [
+        _Document('paid', {'accessType': 'paid', 'order': 2}),
+        _Document('free', {'accessType': 'free', 'order': 1}),
+      ];
 }
 
 // ignore: subtype_of_sealed_class
 class _Document extends Fake
     implements QueryDocumentSnapshot<Map<String, dynamic>> {
-  _Document(this.id, this.value);
+  _Document(this.id, this.value, {this.exists = true});
+  @override
+  final bool exists;
   @override
   final String id;
   final Map<String, dynamic> value;

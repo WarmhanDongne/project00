@@ -13,10 +13,12 @@ import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
 import 'package:game_kit/core/time/server_clock.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/shared/widgets/game_turn_countdown_face.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
 
-const _actionWindow = Duration(seconds: 20);
+const _actionWindow = Duration(minutes: 1);
 
 /// 휴대폰 진행 화면입니다. 내 차례·대기·판 결과를 서버 상태로 나눠 그립니다.
 class HoldemPhoneGameScreen extends StatefulWidget {
@@ -202,13 +204,13 @@ class _HoldemPhoneGameScreenState extends State<HoldemPhoneGameScreen>
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 44,
+                height: 56,
                 child: ControlEntryAnimation(
                   animation: _controlsEntry,
                   style: ControlEntryStyle.header,
                   begin: .12,
                   end: .55,
-                  child: Center(child: _MyChips(amount: me?.stack ?? 0)),
+                  child: Center(child: _MyProfile(player: me)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -449,7 +451,7 @@ class _WaitingHeadline extends StatelessWidget {
         ? HoldemCopy.dealing
         : current == null
         ? HoldemCopy.waiting
-        : '${current.nickname} 님이 고민 중';
+        : HoldemCopy.thinking(current.nickname);
     final last = game.lastAction;
     final String detail;
     if (me?.status == 'eliminated') {
@@ -460,9 +462,14 @@ class _WaitingHeadline extends StatelessWidget {
       final amount = last.amount > 0 && last.kind != 'check'
           ? ' ${holdemChips(last.amount)}'
           : '';
-      detail =
-          '나는 ${HoldemCopy.action(last.kind)}$amount 완료 · '
-          '${HoldemCopy.checkTablet}';
+      detail = GameLocale.select(
+        ko: '나는 ${HoldemCopy.action(last.kind)}$amount 완료 · ${HoldemCopy.checkTablet}',
+        en: 'You chose ${HoldemCopy.action(last.kind)}$amount · ${HoldemCopy.checkTablet}',
+        zhHans:
+            '你已选择 ${HoldemCopy.action(last.kind)}$amount · ${HoldemCopy.checkTablet}',
+        zhHant:
+            '你已選擇 ${HoldemCopy.action(last.kind)}$amount · ${HoldemCopy.checkTablet}',
+      );
     } else {
       detail = HoldemCopy.checkTablet;
     }
@@ -625,7 +632,12 @@ class _ActionPucks extends StatelessWidget {
                 label: 'Fold',
                 dark: true,
                 busy: submittingAction == 'fold',
-                semanticLabel: '폴드, 이번 판 포기',
+                semanticLabel: GameLocale.select(
+                  ko: '폴드, 이번 판 포기',
+                  en: 'Fold this hand',
+                  zhHans: '弃牌，放弃本手',
+                  zhHant: '棄牌，放棄本手',
+                ),
                 onPressed: enabled && legal.fold ? onFold : null,
               ),
               HoldemPuckButton(
@@ -633,7 +645,9 @@ class _ActionPucks extends StatelessWidget {
                 amount: canCheck ? null : holdemChips(callAmount),
                 size: 112 * scale,
                 busy: submittingAction == 'check' || submittingAction == 'call',
-                semanticLabel: canCheck ? '체크' : '콜 ${holdemChips(callAmount)}',
+                semanticLabel: canCheck
+                    ? HoldemCopy.action('check')
+                    : '${HoldemCopy.action('call')} ${holdemChips(callAmount)}',
                 onPressed: enabled && checkOrCallSynchronized
                     ? () => onCheckOrCall(checkOrCallAction)
                     : null,
@@ -645,7 +659,12 @@ class _ActionPucks extends StatelessWidget {
                     submittingAction == 'bet' ||
                     submittingAction == 'raise' ||
                     submittingAction == 'allIn',
-                semanticLabel: '$raiseLabel 금액 고르기',
+                semanticLabel: GameLocale.select(
+                  ko: '$raiseLabel 금액 고르기',
+                  en: 'Choose $raiseLabel amount',
+                  zhHans: '选择 $raiseLabel 金额',
+                  zhHant: '選擇 $raiseLabel 金額',
+                ),
                 onPressed: enabled && canRaise ? onRaise : null,
               ),
             ],
@@ -656,30 +675,61 @@ class _ActionPucks extends StatelessWidget {
   }
 }
 
-class _MyChips extends StatelessWidget {
-  const _MyChips({required this.amount});
-  final int amount;
+/// 내가 누구인지 보여 주는 프로필 줄입니다(캐릭터 · 닉네임 · 남은 칩).
+class _MyProfile extends StatelessWidget {
+  const _MyProfile({required this.player});
+  final HoldemPlayerModel? player;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: '내 칩 ${holdemChips(amount)}',
-    excludeSemantics: true,
-    // 칩 숫자가 커도 넘치지 않게 줄 전체를 폭에 맞춰 줄입니다.
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const HoldemChip(size: 18),
-          const SizedBox(width: 8),
-          Text(
-            '내 칩',
-            style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
-          ),
-          const SizedBox(width: 8),
-          Text(holdemChips(amount), style: HoldemFonts.numbers(size: 27)),
-        ],
+  Widget build(BuildContext context) {
+    final player = this.player;
+    final amount = player?.stack ?? 0;
+    return Semantics(
+      label: GameLocale.select(
+        ko: '내 칩 ${holdemChips(amount)}',
+        en: 'My chips ${holdemChips(amount)}',
+        zhHans: '我的筹码 ${holdemChips(amount)}',
+        zhHant: '我的籌碼 ${holdemChips(amount)}',
       ),
-    ),
-  );
+      excludeSemantics: true,
+      // 닉네임·칩 숫자가 길어도 넘치지 않게 줄 전체를 폭에 맞춰 줄입니다.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Container(
+          key: const Key('holdem-phone-my-profile'),
+          padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+          decoration: BoxDecoration(
+            color: HoldemColors.panel(.55),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: HoldemColors.line(.22)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MosiFace(characterId: player?.characterId, size: 42, ring: true),
+              const SizedBox(width: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(
+                  player?.nickname ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: HoldemFonts.text(size: 16, weight: FontWeight.w900),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 22,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: HoldemColors.line(.25),
+              ),
+              const HoldemChip(size: 18),
+              const SizedBox(width: 8),
+              Text(holdemChips(amount), style: HoldemFonts.numbers(size: 26)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

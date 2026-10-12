@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {initializeApp} from "firebase-admin/app";
+import {getAuth} from "firebase-admin/auth";
+import {getFirestore} from "firebase-admin/firestore";
+import {beginOnboarding, completeOnboardingProfile} from "../lib/auth/onboarding.js";
 
 import {
   ONBOARDING_PROVIDERS,
@@ -13,6 +17,96 @@ import {
   resolveSocialSyncStatus,
   resolveLegacyStatus,
 } from "../lib/auth/onboarding-types.js";
+
+initializeApp({projectId: "demo-password-verification"});
+
+function stubOnboarding(t, {verified = false, existing, provider = "password"} = {}) {
+  const writes = [];
+  t.mock.method(getAuth(), "getUser", async () => ({
+    uid: "test", email: "signup@example.com", emailVerified: verified,
+    providerData: [{providerId: provider}],
+  }));
+  t.mock.method(getAuth(), "updateUser", async () => ({}));
+  const db = getFirestore();
+  t.mock.method(db, "collection", (name) => ({doc: () => ({name})}));
+  t.mock.method(db, "runTransaction", async (fn) => fn({
+    get: async (ref) => ({
+      exists: ref.name === "userOnboarding" && Boolean(existing),
+      data: () => ref.name === "userOnboarding" ? existing : undefined,
+    }),
+    set: (ref, data) => writes.push({collection: ref.name, ...data}),
+  }));
+  return writes;
+}
+
+test("password-first registration prepares an incomplete profile before verification", async (t) => {
+  const writes = stubOnboarding(t);
+  const result = await beginOnboarding.run({
+    auth: {uid: "test"}, data: {provider: "legacyPassword"},
+  });
+  assert.equal(result.status, "settingProfile");
+  assert.equal(writes[0].provider, "legacyPassword");
+  assert.equal(writes[0].status, "settingProfile");
+  assert.equal(resolveProtectedAccess({status: writes[0].status,
+    hasOnboardingDocument: true, hasValidLegacyNickname: false}), "deny");
+});
+
+test("unverified password accounts cannot complete signup even with valid consents", async (t) => {
+  const writes = stubOnboarding(t, {existing: {
+    status: "settingProfile", provider: "legacyPassword",
+  }});
+  await assert.rejects(completeOnboardingProfile.run({
+    auth: {uid: "test"}, data: {nickname: "테스트", consents: {
+      version: SIGNUP_TERMS_VERSION, age14: true, terms: true, privacy: true,
+    }},
+  }), (error) => error.code === "failed-precondition");
+  assert.equal(writes.length, 0);
+});
+
+test("verified password accounts complete signup and keep consent validation", async (t) => {
+  const writes = stubOnboarding(t, {verified: true, existing: {
+    status: "settingProfile", provider: "legacyPassword",
+  }});
+  await assert.rejects(completeOnboardingProfile.run({
+    auth: {uid: "test"}, data: {nickname: "테스트"},
+  }), (error) => error.code === "failed-precondition");
+  const result = await completeOnboardingProfile.run({
+    auth: {uid: "test"}, data: {nickname: "테스트", consents: {
+      version: SIGNUP_TERMS_VERSION, age14: true, terms: true, privacy: true,
+    }},
+  });
+  assert.equal(result.status, "complete");
+  assert.equal(writes.find((entry) => entry.collection === "userOnboarding").status, "complete");
+});
+
+test("existing email-link verification still requires verification and a password step", async (t) => {
+  stubOnboarding(t);
+  await assert.rejects(beginOnboarding.run({auth: {uid: "test"}, data: {}}),
+    (error) => error.code === "failed-precondition");
+});
+
+test("verified email-link registration keeps its original password step", async (t) => {
+  const writes = stubOnboarding(t, {verified: true});
+  const result = await beginOnboarding.run({auth: {uid: "test"}, data: {}});
+  assert.equal(result.status, "settingPassword");
+  assert.equal(writes[0].provider, "emailLink");
+});
+
+test("password-first preparation preserves existing onboarding and rejects social-only accounts", async (t) => {
+  const writes = stubOnboarding(t, {verified: true, existing: {
+    status: "complete", provider: "emailLink",
+  }});
+  assert.equal((await beginOnboarding.run({auth: {uid: "test"},
+    data: {provider: "legacyPassword"}})).status, "complete");
+  assert.equal(writes.length, 0);
+});
+
+test("social-only accounts cannot use password-first preparation", async (t) => {
+  const writes = stubOnboarding(t, {provider: "google.com", verified: true});
+  await assert.rejects(beginOnboarding.run({auth: {uid: "test"},
+    data: {provider: "legacyPassword"}}), (error) => error.code === "failed-precondition");
+  assert.equal(writes.length, 0);
+});
 
 test("onboarding status only accepts known server states", () => {
   assert.equal(parseOnboardingStatus("settingPassword"), "settingPassword");
@@ -179,6 +273,7 @@ test("legacy recovery treats Apple accounts as credentialed", () => {
 test("apple is a stored onboarding provider", () => {
   assert.ok(ONBOARDING_PROVIDERS.includes("apple"));
   assert.ok(ONBOARDING_PROVIDERS.includes("google"));
+  assert.ok(ONBOARDING_PROVIDERS.includes("anonymous"));
 });
 
 test("signup consents require every mandatory agreement at the current version", () => {

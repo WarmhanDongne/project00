@@ -167,7 +167,7 @@ void main() {
       await service.heartbeatPlayer('ABCDE');
       expect(
         database.writes.single,
-        'rooms/ABCDE/connections/${identity.uid}/current',
+        'rooms/ABCDE/connections/${identity.uid}/current/lastSeen',
       );
     },
   );
@@ -219,7 +219,7 @@ void main() {
       await service.heartbeatPlayer('ABCDE');
       expect(
         database.writes.single,
-        'rooms/ABCDE/connections/${identity.uid}/new-connection',
+        'rooms/ABCDE/connections/${identity.uid}/new-connection/lastSeen',
       );
     },
   );
@@ -268,7 +268,7 @@ void main() {
       await service.heartbeatPlayer('ABCDE');
       expect(
         database.writes.single,
-        'rooms/ABCDE/connections/${identity.uid}/new-connection',
+        'rooms/ABCDE/connections/${identity.uid}/new-connection/lastSeen',
       );
     },
   );
@@ -467,6 +467,23 @@ class _Reference extends Fake implements DatabaseReference {
 
   @override
   Future<void> update(Map<String, Object?> value) async {
+    if (database.denied) {
+      throw FirebaseException(
+        plugin: 'firebase_database',
+        code: 'permission-denied',
+      );
+    }
+    database.writes.add(path);
+  }
+
+  @override
+  DatabaseReference child(String childPath) =>
+      _Reference(database, '$path/$childPath');
+
+  @override
+  Future<void> set(Object? value) async {
+    expect(value, ServerValue.timestamp);
+    expect(path.endsWith('/lastSeen'), true);
     if (database.denied) {
       throw FirebaseException(
         plugin: 'firebase_database',

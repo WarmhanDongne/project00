@@ -3,6 +3,7 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_kit/errors/services/user_error_message.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 import 'package:game_kit/core/time/server_clock.dart';
@@ -19,8 +20,6 @@ import 'package:game_kit/penalty/roulette.dart';
 import 'package:game_kit/game_flow/game_finish.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:game_liars_poker/game_assets.dart';
 import 'package:game_kit/recovery/providers/game_session_controller.dart';
 import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/services/game_query_service.dart';
@@ -218,7 +217,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
   Map<String, PhoneGamePlayer> get players => state.players;
   List<PublicLastPlay> get roundPlays => state.roundPlays;
   List<PhoneHandCard> get handCards => state.handCards;
-  List<GameImage> get handCardAssets => state.handCardAssets;
+  List<LiarsCardFace> get handCardAssets => state.handCardAssets;
   bool get commandInFlight => state.commandInFlight;
   bool get isMenuCommandInFlight => state.isMenuCommandInFlight;
   bool get isResolvingPenalty => state.isResolvingPenalty;
@@ -1042,15 +1041,8 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     }
   }
 
-  GameImage _cardAssetForValue(String cardValue) {
-    return switch (cardValue.toUpperCase()) {
-      'A' => Assets.games.liarsPoker.images.cards.whiteA.game,
-      'K' => Assets.games.liarsPoker.images.cards.whiteK.game,
-      'Q' => Assets.games.liarsPoker.images.cards.whiteQ.game,
-      'JOKER' => Assets.games.liarsPoker.images.cards.whiteJoker.game,
-      _ => Assets.games.liarsPoker.images.cards.whiteBack.game,
-    };
-  }
+  LiarsCardFace _cardAssetForValue(String cardValue) =>
+      LiarsCardFace.fromValue(cardValue);
 }
 
 bool _sameInterruption(GameInterruption? left, GameInterruption? right) {

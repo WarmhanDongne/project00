@@ -7,11 +7,13 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
+
 // ============================================================
 
 // ---------------------------------------------------------------------------
@@ -123,8 +125,19 @@ abstract final class MafiaResultArt {
   };
 
   /// 승리 문구입니다. 포스터가 없을 때 대신 보여 줍니다.
-  static String label(MafiaFaction? winner) =>
-      winner == null ? '게임 종료' : '${winner.displayName} 승리';
+  static String label(MafiaFaction? winner) => winner == null
+      ? GameLocale.select(
+          ko: '게임 종료',
+          en: 'Game over',
+          zhHans: '游戏结束',
+          zhHant: '遊戲結束',
+        )
+      : GameLocale.select(
+          ko: '${winner.displayName} 승리',
+          en: '${winner.displayName} wins',
+          zhHans: '${winner.displayName}获胜',
+          zhHant: '${winner.displayName}獲勝',
+        );
 
   /// 승리 문구 색입니다.
   static Color color(MafiaFaction? winner) => winner?.color ?? MafiaColors.ink;

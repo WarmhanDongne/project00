@@ -10,8 +10,7 @@ import 'package:game_kit/shared/animations/curve_intervals.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_kit/shared/widgets/game_card_face.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
 
 // ============================================================
@@ -21,7 +20,6 @@ class CardPlayAnimation extends StatefulWidget {
   const CardPlayAnimation({
     super.key,
     required this.frontCardAssets,
-    this.backCardAsset,
     this.playerCount = 5,
     this.playerSeatIndexes,
     this.fromPlayerIndex = 0,
@@ -35,8 +33,6 @@ class CardPlayAnimation extends StatefulWidget {
     this.revealCards = false,
     this.onCardsPlayed,
     this.onRevealed,
-    this.highlighted = false,
-    this.dimmed = false,
   }) : assert(frontCardAssets.length > 0),
        assert(playerCount > 0),
        assert(
@@ -49,9 +45,8 @@ class CardPlayAnimation extends StatefulWidget {
        assert(throwStagger >= Duration.zero),
        assert(revealDuration > Duration.zero);
 
-  /// 실제로 낸 카드의 앞면입니다. 던질 때는 [backCardAsset]만 보입니다.
-  final List<GameImage> frontCardAssets;
-  final GameImage? backCardAsset;
+  /// 실제로 낸 카드의 앞면입니다. 던질 때는 뒷면만 보입니다.
+  final List<LiarsCardFace> frontCardAssets;
 
   /// 공통 플레이어 배치에서 패를 던지는 플레이어입니다.
   final int playerCount;
@@ -73,12 +68,6 @@ class CardPlayAnimation extends StatefulWidget {
 
   final VoidCallback? onCardsPlayed;
   final VoidCallback? onRevealed;
-
-  /// 방금 낸 카드처럼 금색 테두리로 강조합니다.
-  final bool highlighted;
-
-  /// 더미 아래에 깔린 예전 카드처럼 어둡게 그립니다.
-  final bool dimmed;
 
   @override
   CardPlayAnimationState createState() => CardPlayAnimationState();
@@ -340,9 +329,6 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
         math.atan2(sourceDirection.dy, sourceDirection.dx) + math.pi / 2;
     final curveOffset =
         tangentDirection * math.min(18, size.shortestSide * 0.035) * curveSide;
-    final backCardAsset =
-        widget.backCardAsset ??
-        Assets.games.liarsPoker.images.cards.whiteBack.game;
 
     return List<Widget>.generate(cardCount, (cardIndex) {
       final centeredIndex = cardIndex - (cardCount - 1) / 2;
@@ -426,7 +412,9 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
                   ..setEntry(3, 2, 0.0015)
                   ..rotateY(yRotation),
                 child: _buildCard(
-                  isFrontVisible ? frontCardAssets[cardIndex] : backCardAsset,
+                  isFrontVisible
+                      ? frontCardAssets[cardIndex]
+                      : LiarsCardFace.back,
                   lift: visualLift,
                 ),
               ),
@@ -437,38 +425,16 @@ class CardPlayAnimationState extends State<CardPlayAnimation>
     }, growable: false);
   }
 
-  Widget _buildCard(GameImage asset, {required double lift}) {
-    Widget card = GameCardFace(
-      asset: asset,
-      radius: 12,
+  Widget _buildCard(LiarsCardFace face, {required double lift}) {
+    return GameCardFace(
+      radius: 9,
       // 공중에 떠 있는 만큼 그림자를 넓고 멀게 만듭니다.
       shadow: BoxShadow(
         color: GameShadowColors.strong,
-        blurRadius: 16 + lift * 14,
-        offset: Offset(0, 8 + lift * 10),
+        blurRadius: 7 + lift * 9,
+        offset: Offset(0, 5 + lift * 7),
       ),
-    );
-    if (widget.highlighted) {
-      card = DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(color: Color(0xFFC9A25B), spreadRadius: 4),
-          ],
-        ),
-        child: card,
-      );
-    }
-    return ColorFiltered(
-      colorFilter: widget.dimmed
-          ? const ColorFilter.matrix([
-              .5, 0, 0, 0, 0, //
-              0, .5, 0, 0, 0, //
-              0, 0, .5, 0, 0, //
-              0, 0, 0, 1, 0,
-            ])
-          : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
-      child: card,
+      child: LiarsPokerCardView(face: face),
     );
   }
 

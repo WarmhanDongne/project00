@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:game_holdem/game_assets.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 카드 앞면의 배치 방식입니다.
 enum HoldemCardLayout {
@@ -51,7 +52,12 @@ class HoldemCardView extends StatelessWidget {
       return Semantics(
         image: true,
         excludeSemantics: true,
-        label: '뒷면 카드',
+        label: GameLocale.select(
+          ko: '뒷면 카드',
+          en: 'Face-down card',
+          zhHans: '背面朝上的牌',
+          zhHant: '背面朝上的牌',
+        ),
         child: Container(
           width: width,
           height: height,
@@ -117,7 +123,7 @@ class HoldemCardView extends StatelessWidget {
     return Semantics(
       image: true,
       excludeSemantics: true,
-      label: '${suit.label} $rank',
+      label: '${suit.localizedLabel} $rank',
       child: emphasis == HoldemCardEmphasis.lose
           ? Opacity(opacity: .35, child: cardFace)
           : cardFace,
@@ -340,6 +346,33 @@ enum HoldemSuit {
   const HoldemSuit(this.label, this.red);
   final String label;
   final bool red;
+
+  String get localizedLabel => switch (this) {
+    spades => GameLocale.select(
+      ko: '스페이드',
+      en: 'Spade',
+      zhHans: '黑桃',
+      zhHant: '黑桃',
+    ),
+    hearts => GameLocale.select(
+      ko: '하트',
+      en: 'Heart',
+      zhHans: '红桃',
+      zhHant: '紅心',
+    ),
+    diamonds => GameLocale.select(
+      ko: '다이아몬드',
+      en: 'Diamond',
+      zhHans: '方块',
+      zhHant: '方塊',
+    ),
+    clubs => GameLocale.select(
+      ko: '클로버',
+      en: 'Club',
+      zhHans: '梅花',
+      zhHant: '梅花',
+    ),
+  };
 
   static HoldemSuit from(String value) => switch (value) {
     'hearts' => hearts,

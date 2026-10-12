@@ -13,6 +13,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -86,10 +87,25 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
           state == AppLifecycleState.paused || state == AppLifecycleState.hidden
           ? GameCommunicationLevel.warning
           : GameCommunicationLevel.info,
-      title: '앱 상태 ${state.name}',
+      title: GameLocale.select(
+        ko: '앱 상태 ${state.name}',
+        en: 'App state: ${state.name}',
+        zhHans: '应用状态：${state.name}',
+        zhHant: 'App 狀態：${state.name}',
+      ),
       detail: state == AppLifecycleState.resumed
-          ? '앱이 다시 화면에 보입니다.'
-          : '통신·타이머 지연 여부를 확인합니다.',
+          ? GameLocale.select(
+              ko: '앱이 다시 화면에 보입니다.',
+              en: 'The app is visible again.',
+              zhHans: '应用已再次显示。',
+              zhHant: 'App 已再次顯示。',
+            )
+          : GameLocale.select(
+              ko: '통신·타이머 지연 여부를 확인합니다.',
+              en: 'Checking for communication and timer delays.',
+              zhHans: '正在检查通信和计时器延迟。',
+              zhHant: '正在檢查通訊與計時器延遲。',
+            ),
       operation: 'app_lifecycle',
     );
   }
@@ -118,7 +134,12 @@ class _DevErrorOverlayState extends State<DevErrorOverlay>
                   padding: const EdgeInsets.all(12),
                   child: Semantics(
                     button: true,
-                    label: '게임 통신 진단 열기',
+                    label: GameLocale.select(
+                      ko: '게임 통신 진단 열기',
+                      en: 'Open game communication diagnostics',
+                      zhHans: '打开游戏通信诊断',
+                      zhHant: '開啟遊戲通訊診斷',
+                    ),
                     child: Material(
                       color: const Color(0xE6222222),
                       elevation: 6,
@@ -246,7 +267,12 @@ class _GameCommunicationSheet extends StatelessWidget {
                     _DiagnosticsHeader(log: log, onClose: onClose),
                     if (log.droppedEntries > 0)
                       Text(
-                        "이전 이벤트 ${log.droppedEntries}개 생략 · 복구 요약은 별도 보존",
+                        GameLocale.select(
+                          ko: '이전 이벤트 ${log.droppedEntries}개 생략 · 복구 요약은 별도 보존',
+                          en: '${log.droppedEntries} earlier events omitted · recovery summaries retained separately',
+                          zhHans: '已省略 ${log.droppedEntries} 个较早事件 · 恢复摘要单独保留',
+                          zhHant: '已省略 ${log.droppedEntries} 個較早事件 · 復原摘要另行保留',
+                        ),
                         style: const TextStyle(color: Colors.white70),
                       ),
                     if (RecoveryMetrics.instance.summaries.isNotEmpty)
@@ -263,7 +289,10 @@ class _GameCommunicationSheet extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 child: Text(
-                                  '복구 ${summary.episode} · 시도 ${summary.batch} · ${summary.success ? "완료" : "미완료"} · ${summary.elapsed.inMilliseconds}ms\n'
+                                  '${GameLocale.select(ko: '복구', en: 'Recovery', zhHans: '恢复', zhHant: '復原')} ${summary.episode} · '
+                                  '${GameLocale.select(ko: '시도', en: 'Attempt', zhHans: '尝试', zhHant: '嘗試')} ${summary.batch} · '
+                                  '${summary.success ? GameLocale.select(ko: '완료', en: 'Complete', zhHans: '完成', zhHant: '完成') : GameLocale.select(ko: '미완료', en: 'Incomplete', zhHans: '未完成', zhHant: '未完成')} · '
+                                  '${summary.elapsed.inMilliseconds}ms\n'
                                   '${RecoveryStage.values.map((stage) => "${stage.name}: ${summary.stageText(stage)}").join(" · ")}',
                                   style: const TextStyle(fontSize: 11),
                                 ),
@@ -274,10 +303,15 @@ class _GameCommunicationSheet extends StatelessWidget {
                     const Divider(height: 1),
                     Expanded(
                       child: entries.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Text(
-                                '아직 기록된 게임 통신이 없습니다.',
-                                style: TextStyle(color: Colors.black54),
+                                GameLocale.select(
+                                  ko: '아직 기록된 게임 통신이 없습니다.',
+                                  en: 'No game communication has been recorded yet.',
+                                  zhHans: '尚未记录游戏通信。',
+                                  zhHant: '尚未記錄遊戲通訊。',
+                                ),
+                                style: const TextStyle(color: Colors.black54),
                               ),
                             )
                           : ListView.separated(
@@ -318,9 +352,24 @@ class _DiagnosticsHeader extends StatelessWidget {
       null => const Color(0xFF757575),
     };
     final connectionText = switch (connected) {
-      true => 'RTDB 연결됨',
-      false => 'RTDB 연결 끊김',
-      null => 'RTDB 상태 대기',
+      true => GameLocale.select(
+        ko: 'RTDB 연결됨',
+        en: 'RTDB connected',
+        zhHans: 'RTDB 已连接',
+        zhHant: 'RTDB 已連線',
+      ),
+      false => GameLocale.select(
+        ko: 'RTDB 연결 끊김',
+        en: 'RTDB disconnected',
+        zhHans: 'RTDB 已断开',
+        zhHant: 'RTDB 已斷線',
+      ),
+      null => GameLocale.select(
+        ko: 'RTDB 상태 대기',
+        en: 'Waiting for RTDB status',
+        zhHans: '等待 RTDB 状态',
+        zhHant: '等待 RTDB 狀態',
+      ),
     };
     final lastReceived = log.lastRealtimeEventAt;
 
@@ -332,9 +381,17 @@ class _DiagnosticsHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '게임 통신 진단',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                Text(
+                  GameLocale.select(
+                    ko: '게임 통신 진단',
+                    en: 'Game communication diagnostics',
+                    zhHans: '游戏通信诊断',
+                    zhHant: '遊戲通訊診斷',
+                  ),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Wrap(
@@ -361,8 +418,18 @@ class _DiagnosticsHeader extends StatelessWidget {
                     ),
                     Text(
                       lastReceived == null
-                          ? '상태 수신 없음'
-                          : '마지막 수신 ${_displayTime(lastReceived)}',
+                          ? GameLocale.select(
+                              ko: '상태 수신 없음',
+                              en: 'No state received',
+                              zhHans: '未收到状态',
+                              zhHant: '未收到狀態',
+                            )
+                          : GameLocale.select(
+                              ko: '마지막 수신 ${_displayTime(lastReceived)}',
+                              en: 'Last received ${_displayTime(lastReceived)}',
+                              zhHans: '最后接收 ${_displayTime(lastReceived)}',
+                              zhHant: '最後接收 ${_displayTime(lastReceived)}',
+                            ),
                       style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 12,
@@ -374,7 +441,12 @@ class _DiagnosticsHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: '기록 복사',
+            tooltip: GameLocale.select(
+              ko: '기록 복사',
+              en: 'Copy log',
+              zhHans: '复制记录',
+              zhHant: '複製記錄',
+            ),
             onPressed: entries.isEmpty
                 ? null
                 : () async {
@@ -384,18 +456,37 @@ class _DiagnosticsHeader extends StatelessWidget {
                     await Clipboard.setData(ClipboardData(text: text));
                     if (!context.mounted) return;
                     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                      const SnackBar(content: Text('통신 기록을 복사했습니다.')),
+                      SnackBar(
+                        content: Text(
+                          GameLocale.select(
+                            ko: '통신 기록을 복사했습니다.',
+                            en: 'Communication log copied.',
+                            zhHans: '已复制通信记录。',
+                            zhHant: '已複製通訊記錄。',
+                          ),
+                        ),
+                      ),
                     );
                   },
             icon: const Icon(Icons.copy_outlined),
           ),
           IconButton(
-            tooltip: '기록 지우기',
+            tooltip: GameLocale.select(
+              ko: '기록 지우기',
+              en: 'Clear log',
+              zhHans: '清除记录',
+              zhHant: '清除記錄',
+            ),
             onPressed: entries.isEmpty ? null : log.clearEntries,
             icon: const Icon(Icons.delete_outline),
           ),
           IconButton(
-            tooltip: '닫기',
+            tooltip: GameLocale.select(
+              ko: '닫기',
+              en: 'Close',
+              zhHans: '关闭',
+              zhHant: '關閉',
+            ),
             onPressed: onClose,
             icon: const Icon(Icons.close),
           ),
@@ -443,9 +534,26 @@ class _CommunicationEntryTile extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: SelectableText(
             [
-              if (entry.operation != null) '요청: ${entry.operation}',
-              if (entry.traceId != null) '추적 ID: ${entry.traceId}',
-              '상세: ${entry.detail}',
+              if (entry.operation != null)
+                GameLocale.select(
+                  ko: '요청: ${entry.operation}',
+                  en: 'Operation: ${entry.operation}',
+                  zhHans: '请求：${entry.operation}',
+                  zhHant: '請求：${entry.operation}',
+                ),
+              if (entry.traceId != null)
+                GameLocale.select(
+                  ko: '추적 ID: ${entry.traceId}',
+                  en: 'Trace ID: ${entry.traceId}',
+                  zhHans: '追踪 ID：${entry.traceId}',
+                  zhHant: '追蹤 ID：${entry.traceId}',
+                ),
+              GameLocale.select(
+                ko: '상세: ${entry.detail}',
+                en: 'Details: ${entry.detail}',
+                zhHans: '详情：${entry.detail}',
+                zhHant: '詳細資料：${entry.detail}',
+              ),
             ].join('\n'),
             style: const TextStyle(fontSize: 12, height: 1.45),
           ),

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {gameRules} from "../scripts/update-game-rules.mjs";
+import {
+  gameRules,
+  localizedGameRules,
+} from "../scripts/update-game-rules.mjs";
+import {gameCatalogLocales} from "../scripts/game-catalog-translations.mjs";
 
 test("game rules catalog contains the four Firestore game ids", () => {
   assert.deepEqual(Object.keys(gameRules).sort(), [
@@ -19,5 +23,16 @@ test("game rules preserve headings and multiline copy", () => {
   for (const rules of Object.values(gameRules)) {
     assert.ok(rules.includes("\n"));
     assert.equal(rules.trim(), rules);
+  }
+});
+
+test("every game rule has every supported catalog locale", () => {
+  for (const [gameId, rules] of Object.entries(localizedGameRules)) {
+    assert.deepEqual(Object.keys(rules), gameCatalogLocales, gameId);
+    assert.equal(rules.ko, gameRules[gameId]);
+    for (const [locale, text] of Object.entries(rules)) {
+      assert.ok(text.includes("\n"), `${gameId}/${locale}`);
+      assert.equal(text.trim(), text, `${gameId}/${locale}`);
+    }
   }
 });

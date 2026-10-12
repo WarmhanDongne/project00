@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -28,13 +29,11 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
   Widget build(BuildContext context) {
     final art = MosiGameArt.of(widget.game.id, fallbackName: widget.game.name);
     final theme = art.shelfTheme;
-    final title = MosiGameArt.isKnown(widget.game.id)
-        ? art.koreanName
-        : widget.game.name;
+    final title = widget.game.localizedName(Localizations.localeOf(context));
+    final locale = Localizations.localeOf(context);
+    final englishName = widget.game.englishName;
     final range = gamePlayerRangeLabel(widget.game, widget.roomProvider);
-    final description = widget.game.effectiveTabletDescription.isNotEmpty
-        ? widget.game.effectiveTabletDescription
-        : widget.game.description;
+    final description = widget.game.effectiveTabletDescriptionFor(locale);
 
     return DefaultTextStyle(
       style: MosiFonts.sans(color: theme.fg),
@@ -55,15 +54,21 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(
-                art.englishName,
-                style: MosiFonts.grotesk(size: 13, color: art.accent),
-              ),
+              if (englishName.toUpperCase() != title.toUpperCase())
+                Text(
+                  englishName,
+                  style: MosiFonts.grotesk(size: 13, color: art.accent),
+                ),
               if (range.isNotEmpty)
                 MosiPill(label: range, color: theme.fg, fontSize: 13),
               if (widget.game.playTime > 0)
                 MosiPill(
-                  label: '${widget.game.playTime}분',
+                  label: GameLocale.select(
+                    ko: '${widget.game.playTime}분',
+                    en: '${widget.game.playTime} min',
+                    zhHans: '${widget.game.playTime} 分钟',
+                    zhHant: '${widget.game.playTime} 分鐘',
+                  ),
                   color: theme.fg,
                   fontSize: 13,
                 ),
@@ -101,7 +106,12 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
                 duration: const Duration(milliseconds: 220),
                 child: KeyedSubtree(
                   key: ValueKey(_tab),
-                  child: _buildPreview(),
+                  // 구성품은 지금 방 인원에 맞춘 칸을 표시하므로 참가자가 바뀌면
+                  // 다시 그립니다.
+                  child: ListenableBuilder(
+                    listenable: widget.roomProvider,
+                    builder: (context, _) => _buildPreview(),
+                  ),
                 ),
               ),
             ),
@@ -111,10 +121,20 @@ class _TabletGameDetailContentState extends State<TabletGameDetailContent> {
     );
   }
 
+  /// 방에서 게임에 참여하는 사람 수입니다. 방이 없으면 null입니다.
+  int? _playerCount() {
+    final provider = widget.roomProvider;
+    if (provider.roomCode == null) return null;
+    final count = provider.players
+        .where((player) => player.isActive && player.isPlayer)
+        .length;
+    return count == 0 ? null : count;
+  }
+
   Widget _buildPreview() {
     final scene = _tab == _DetailTab.play
         ? buildGamePlayPreview(widget.game.id)
-        : buildGameParts(widget.game.id);
+        : buildGameParts(widget.game.id, playerCount: _playerCount());
     if (scene != null) {
       // 미리보기·구성품은 상자에 맞춰 통째로 줄이는 그림이라 기기 글자 크기를
       // 따르지 않습니다. 따르면 정해진 칸을 넘어 글자가 잘립니다.
@@ -192,8 +212,25 @@ class _DetailTabs extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          item(_DetailTab.play, '플레이 미리보기'),
-          item(_DetailTab.parts, '구성품', divider: true),
+          item(
+            _DetailTab.play,
+            GameLocale.select(
+              ko: '플레이 미리보기',
+              en: 'Preview',
+              zhHans: '玩法预览',
+              zhHant: '玩法預覽',
+            ),
+          ),
+          item(
+            _DetailTab.parts,
+            GameLocale.select(
+              ko: '구성품',
+              en: 'Components',
+              zhHans: '组件',
+              zhHant: '配件',
+            ),
+            divider: true,
+          ),
         ],
       ),
     );
@@ -217,7 +254,12 @@ class _PreviewUnavailable extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '게임 미리보기를 준비 중입니다.',
+            GameLocale.select(
+              ko: '게임 미리보기를 준비 중입니다.',
+              en: 'The game preview is being prepared.',
+              zhHans: '游戏预览正在准备中。',
+              zhHant: '遊戲預覽正在準備中。',
+            ),
             style: MosiFonts.sans(size: 13, color: const Color(0xCCFFFFFF)),
           ),
         ],

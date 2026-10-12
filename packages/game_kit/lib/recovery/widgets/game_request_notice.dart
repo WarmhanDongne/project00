@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 마지막 정상 게임 화면을 유지하면서 요청의 진행/실패를 알리는 공용 표시입니다.
 /// 재시도 버튼은 현재 단계에서 여전히 유효한 명령일 때만 호출부가 제공합니다.
@@ -51,7 +52,7 @@ class GameRequestNotice extends StatelessWidget {
                     ],
                     Flexible(
                       child: Text(
-                        busy ? busyMessage : message!,
+                        (busy ? busyMessage : message!).localized,
                         style: const TextStyle(color: Colors.white),
                         textAlign: TextAlign.center,
                       ),
@@ -59,9 +60,14 @@ class GameRequestNotice extends StatelessWidget {
                     if (!busy && onRetry != null)
                       TextButton(
                         onPressed: onRetry,
-                        child: const Text(
-                          '재시도',
-                          style: TextStyle(color: Colors.white),
+                        child: Text(
+                          GameLocale.select(
+                            ko: '재시도',
+                            en: 'Retry',
+                            zhHans: '重试',
+                            zhHant: '重試',
+                          ),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                   ],

@@ -31,6 +31,7 @@ import 'package:game_mafia/phone/widgets/vote_view.dart';
 import 'package:game_mafia/phone/widgets/phase_notice.dart';
 import 'package:game_mafia/shared/models/presentation_timing.dart';
 import 'package:game_kit/game_flow/game_presentation_sequence.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -165,7 +166,19 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
             child: SizedBox(
               height: 40,
               child: MafiaNoirButton(
-                label: game.roleChangedThisRound ? '신분 변경 확인' : '내 조사 기록',
+                label: game.roleChangedThisRound
+                    ? GameLocale.select(
+                        ko: '신분 변경 확인',
+                        en: 'View role change',
+                        zhHans: '查看身份变更',
+                        zhHant: '查看身分變更',
+                      )
+                    : GameLocale.select(
+                        ko: '내 조사 기록',
+                        en: 'My investigation',
+                        zhHans: '我的调查记录',
+                        zhHant: '我的調查記錄',
+                      ),
                 onTap: () => _showPrivateRecord(game),
                 color: MafiaColors.noirSlab,
                 textColor: MafiaColors.noirPaper,
@@ -193,12 +206,38 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   static String? _roleNotice(MafiaController game) {
     final lines = <String>[];
     final target = game.executionerTarget;
-    if (target != null) lines.add('목표 · ${target.nickname}');
+    if (target != null) {
+      lines.add(
+        GameLocale.select(
+          ko: '목표 · ${target.nickname}',
+          en: 'Target · ${target.nickname}',
+          zhHans: '目标 · ${target.nickname}',
+          zhHant: '目標 · ${target.nickname}',
+        ),
+      );
+    }
     final allies = game.allyPlayers;
     if (allies.isNotEmpty) {
-      lines.add('동료 · ${allies.map((player) => player.nickname).join(', ')}');
+      final names = allies.map((player) => player.nickname).join(', ');
+      lines.add(
+        GameLocale.select(
+          ko: '동료 · $names',
+          en: 'Allies · $names',
+          zhHans: '同伴 · $names',
+          zhHant: '同伴 · $names',
+        ),
+      );
     }
-    if (game.roleChangedThisRound) lines.add('지난밤 신분이 바뀌었습니다');
+    if (game.roleChangedThisRound) {
+      lines.add(
+        GameLocale.select(
+          ko: '지난밤 신분이 바뀌었습니다',
+          en: 'Your role changed last night',
+          zhHans: '你的身份昨夜发生了变化',
+          zhHant: '你的身分昨夜發生了變化',
+        ),
+      );
+    }
     // 자리는 한 줄입니다. 여러 개면 가운뎃점으로 이어 붙입니다(넘치면 줄어듭니다).
     return lines.isEmpty ? null : lines.join('  ·  ');
   }
@@ -318,10 +357,10 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
 
     return MafiaNightActionView(
       waitingMessage: game.nightStage == 'wrapUp'
-          ? '밤이 지나가고 있습니다'
+          ? '밤이 지나가고 있습니다'.localized
           : pendingTarget == null
           ? game.nightWaitingMessage
-          : '다른 플레이어의 행동을 기다리는 중…',
+          : '다른 플레이어의 행동을 기다리는 중…'.localized,
       isWrappingUp: game.nightStage == 'wrapUp',
       role: game.myRole,
       actionWindowClosed: actionWindowClosed,
@@ -371,7 +410,14 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
   /// 밤 결과 화면의 제목입니다. 예: `조사 결과`·`교신 결과`.
   static String _investigationTitle(MafiaRole? role) {
     final verb = role?.nightPromptVerb ?? '';
-    return verb.isEmpty ? '조사 결과' : '$verb 결과';
+    return verb.isEmpty
+        ? '조사 결과'.localized
+        : GameLocale.select(
+            ko: '$verb 결과',
+            en: '$verb result',
+            zhHans: '$verb结果',
+            zhHant: '$verb結果',
+          );
   }
 
   Widget _buildVoting(MafiaController game, Duration? remaining) {
@@ -379,7 +425,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     if (trial.trialStage != null) {
       final pendingTrialVote = _pendingTrialValue(game);
       return MafiaTrialView(
-        candidate: game.players[trial.candidateUid]?.nickname ?? '후보',
+        candidate: game.players[trial.candidateUid]?.nickname ?? '후보'.localized,
         defending: trial.trialStage == 'defense',
         isCandidate: trial.candidateUid == game.uid,
         remainingSeconds: remaining?.inSeconds,
@@ -631,10 +677,19 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
               MafiaPresentationTiming.morningOpening +
               MafiaPresentationTiming.morningDeaths,
           child: game.isSpectating
-              ? const MafiaPhonePhaseNotice(
-                  message: '당신은 밤사이 사망했습니다.',
-                  detail:
-                      '발표가 끝나면 관전할 수 있습니다.\n알게 된 신분은 게임이 끝날 때까지 비밀로 유지해 주세요.',
+              ? MafiaPhonePhaseNotice(
+                  message: GameLocale.select(
+                    ko: '당신은 밤사이 사망했습니다.',
+                    en: 'You died during the night.',
+                    zhHans: '你在夜间死亡。',
+                    zhHant: '你在夜間死亡。',
+                  ),
+                  detail: GameLocale.select(
+                    ko: '발표가 끝나면 관전할 수 있습니다.\n알게 된 신분은 게임이 끝날 때까지 비밀로 유지해 주세요.',
+                    en: 'You can spectate after the announcement.\nKeep every role you learn secret until the game ends.',
+                    zhHans: '公布结束后可以观战。\n游戏结束前请对所知身份保密。',
+                    zhHant: '公布結束後可以觀戰。\n遊戲結束前請對所知身分保密。',
+                  ),
                 )
               : MafiaMorningAnnouncementView(
                   role: game.myRole,
@@ -655,7 +710,12 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
                       GamePresentationBeat(
                         hold: MafiaPresentationTiming.executionName,
                         child: MafiaPhonePhaseNotice(
-                          message: '${exposed.nickname}님의 신분이 공개됩니다.',
+                          message: GameLocale.select(
+                            ko: '${exposed.nickname}님의 신분이 공개됩니다.',
+                            en: '${exposed.nickname}’s role is revealed.',
+                            zhHans: '公开 ${exposed.nickname} 的身份。',
+                            zhHant: '公開 ${exposed.nickname} 的身分。',
+                          ),
                         ),
                       ),
                       GamePresentationBeat(
@@ -698,22 +758,37 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('나만 볼 수 있는 정보'),
+        title: Text('나만 볼 수 있는 정보'.localized),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (game.roleChangedThisRound) ...[
-                Text('현재 신분: ${game.myRole?.displayName ?? '확인 중'}'),
+                Text(
+                  GameLocale.select(
+                    ko: '현재 신분: ${game.myRole?.localizedDisplayName ?? '확인 중'}',
+                    en: 'Current role: ${game.myRole?.localizedDisplayName ?? 'Checking'}',
+                    zhHans:
+                        '当前身份：${game.myRole?.localizedDisplayName ?? '确认中'}',
+                    zhHant:
+                        '目前身分：${game.myRole?.localizedDisplayName ?? '確認中'}',
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(game.myRole?.description ?? ''),
+                Text(game.myRole?.localizedDescription ?? ''),
                 const SizedBox(height: 16),
               ],
               if (investigation != null)
                 Text(
-                  '${game.round}라운드 조사 기록\n'
-                  '${game.players[investigation.targetUid]?.nickname ?? '플레이어'}: ${investigation.verdict}',
+                  GameLocale.select(
+                    ko: '${game.round}라운드 조사 기록\n${game.players[investigation.targetUid]?.nickname ?? '플레이어'}: ${investigation.verdict}',
+                    en: 'Round ${game.round} investigation\n${game.players[investigation.targetUid]?.nickname ?? 'Player'}: ${investigation.verdict}',
+                    zhHans:
+                        '第 ${game.round} 轮调查记录\n${game.players[investigation.targetUid]?.nickname ?? '玩家'}：${investigation.verdict}',
+                    zhHant:
+                        '第 ${game.round} 輪調查記錄\n${game.players[investigation.targetUid]?.nickname ?? '玩家'}：${investigation.verdict}',
+                  ),
                 ),
             ],
           ),
@@ -721,7 +796,7 @@ class _MafiaPhoneGameScreenState extends State<MafiaPhoneGameScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('닫기'),
+            child: Text('닫기'.localized),
           ),
         ],
       ),

@@ -63,7 +63,7 @@ test("승인된 홀덤 MVP 인원·칩·시간·블라인드 표를 유지한다
   assert.equal(HOLDEM_MIN_PLAYERS, 2);
   assert.equal(HOLDEM_MAX_PLAYERS, 8);
   assert.equal(HOLDEM_STARTING_CHIPS, 1000);
-  assert.equal(HOLDEM_ACTION_MS, 20_000);
+  assert.equal(HOLDEM_ACTION_MS, 60_000);
   assert.deepEqual(holdemBlindsForHand(1), {smallBlind: 10, bigBlind: 20});
   assert.deepEqual(holdemBlindsForHand(5), {smallBlind: 10, bigBlind: 20});
   assert.deepEqual(holdemBlindsForHand(6), {smallBlind: 20, bigBlind: 40});
@@ -122,8 +122,9 @@ test("시간 초과는 체크 가능하면 체크하고 콜이 필요하면 폴�
     {uid: "b", nickname: "B", characterId: "cat", seatIndex: 1},
   ], 1000, () => createHoldemDeck(() => 0));
   completeHoldemDealing(game, 2000);
-  assert.equal(timeoutHoldemTurn(game, 2100).success, false);
-  const timeout = timeoutHoldemTurn(game, 22_000);
+  assert.equal(game.public.turnDeadlineAt, 62_000);
+  assert.equal(timeoutHoldemTurn(game, 61_999).success, false);
+  const timeout = timeoutHoldemTurn(game, 62_000);
   assert.equal(timeout.success, true);
   assert.equal(game.public.phase, "handResult");
   assert.equal(game.public.result?.reason, "fold");

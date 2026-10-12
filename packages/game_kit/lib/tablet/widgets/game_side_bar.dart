@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -63,7 +64,7 @@ class TabletGameSideBar extends StatelessWidget {
       children: [
         //=======================룰북 버튼==============================
         _SideBarButton(
-          label: '게임 규칙 열기',
+          label: '게임 규칙 열기'.localized,
           size: effectiveIconSize,
           icon: roleIcon,
           onPressed: () => _showGameDialog(context, roleDialogBuilder),
@@ -71,7 +72,7 @@ class TabletGameSideBar extends StatelessWidget {
         SizedBox(width: effectiveSpacing),
         //=======================설정 버튼==============================
         _SideBarButton(
-          label: '게임 설정 열기',
+          label: '게임 설정 열기'.localized,
           size: effectiveIconSize,
           icon: settingIcon,
           onPressed: () => _showGameDialog(context, settingDialogBuilder),

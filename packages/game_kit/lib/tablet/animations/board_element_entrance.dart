@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
+
 // ============================================================
 
 /// 탑뷰 보드 위의 물체가 바닥에서 카메라 쪽으로 솟아오르는 공통 등장 곡선입니다.

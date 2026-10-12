@@ -3,6 +3,8 @@
 import {getApps, initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import {pathToFileURL} from "node:url";
+import {resolveCatalogDocument} from "./catalog-document.mjs";
+import {translatedGameRules} from "./game-catalog-translations.mjs";
 
 export const gameRules = Object.freeze({
   holdem: `🃏 게임 기본 규칙
@@ -85,6 +87,13 @@ export const gameRules = Object.freeze({
 - 팀이 탈락해도 남은 팀끼리 계속 진행하고 마지막까지 살아남은 팀이 승리합니다. 남은 팀이 동시에 모두 탈락하면 무승부입니다.`,
 });
 
+export const localizedGameRules = Object.freeze(Object.fromEntries(
+  Object.entries(gameRules).map(([gameId, koreanRules]) => [
+    gameId,
+    Object.freeze({ko: koreanRules, ...translatedGameRules[gameId]}),
+  ]),
+));
+
 export async function updateGameRules({dryRun = false} = {}) {
   if (dryRun) {
     for (const [gameId, rules] of Object.entries(gameRules)) {
@@ -101,9 +110,10 @@ export async function updateGameRules({dryRun = false} = {}) {
   const batch = firestore.batch();
   for (const [gameId, rules] of Object.entries(gameRules)) {
     batch.set(
-      firestore.collection("games").doc(gameId),
+      await resolveCatalogDocument(firestore, gameId),
       {
         rules,
+        localizedRules: localizedGameRules[gameId],
         // 마피아의 공개/판매 결정은 보류합니다. 규칙 갱신으로 접근 정책을
         // 암묵적으로 무료로 바꾸지 않습니다.
         ...(["liars_poker", "final_call", "holdem"].includes(gameId) ?

@@ -214,3 +214,48 @@ callable568ms/accepted·준비957ms를 확인했다. 두 휴대폰은 ‘게임 
 미확정이다. 승인된 횟수 이상 재시험·방 초기화·서버 배포·commit/push는 하지 않았다.
 후속 복귀 오류 계측/안내와 추가 재시험 필요. 전체 게임 복구 완료로 표시하지 않는다.
 상세 시간·증거·한계는 NETWORK_LATENCY_IMPROVEMENTS.md에 추가했다.
+
+## 2026-10-12 — 방 생성·그룹 탈퇴·초기화 지연 재조사와 설계
+
+사용자 요청에 따라 현재 코드·테스트·canonical 문서·배포 기록·기존 정제 기록을 병행 검토하고
+[실행 계획](../ROOM_ACTION_LATENCY_PLAN_20261012.md)을 작성했다. 정상 최초 생성의 resume과
+탈퇴/초기화의 status 생략은 이미 구현되어 있어 신규 개선으로 중복 계산하지 않는다.
+
+사용자가 2026-10-11 15:00~17:00 KST와 조회 전용 계정의 두 허용 역할 확인·조회 진행을
+승인했다. project0000-ec01e의 관련 서울 callable metadata/고정 단계만 probe1+본조회99건
+상한으로 읽었다. 반환1/9건, 고유9건이며 두 조회 PASS/exit0다. 원문·개인정보 없이 ignored
+`build/device-test/room-action-plan-20261012/`에 정제 저장했다. SDK 최초 sandbox 실행은
+접근 거부(exit1), 승인된 escalation 실행은 성공했다. 운영 데이터 쓰기는 하지 않았다.
+
+leaveRealtimeRoom HTTP200 6건은 동일 revision에서 3건170~184ms, 3건2.82~3.27초였다.
+resume은 HTTP200 441/3274ms와 HTTP403 149ms. 생성·초기화·단계 timing은 이 범위에서
+미발견이다. metadata는 앱 전체 완료·신규/재생·cold start를 확정하지 않는다.
+
+첫 변경은 leave/transaction 계측과 버전 일치 확인이다. 서버 실행 준비가 긴 군을 설명하면
+핵심 함수 minInstances/비용 제한 실험을 우선 선택한다. DB 대기가 크면 close 사전 읽기와
+priming 통합 및 create 독립 onboarding/mapping 병행, 앱 cancel이 명령을 막으면 durable
+저장을 앞세운 접속 예약 coordinator/만료 continuation 차단을 선택한다.
+cleanup 경합/이력 크기·지역 배치도 계측 후 별도 판단한다.
+
+제품 구현·테스트/FULL·배포·실기기 재시험은 하지 않았다. 다른 작업의 Functions 정리·계정
+삭제·회귀 변경을 보존했으며 해당 변경을 이번 계획의 검증 결과로 취급하지 않는다.
+현재 준비/재참여 미해결과 실기기 검증 상태는 유지한다.
+
+## 2026-10-12 — 정리 Functions 안정성 검토에 따른 계획 보완
+
+사용자가 LP 실기기 검증 채팅의 변경을 재검토하도록 요청했다. 현재 정리 후보에서
+connection leaf만 정상으로 돌아오고 player 요약 trigger가 지연된 두 경합을 로컬에서
+재현했다. 정리가 최신 room snapshot을 읽어도 leaf를 판정에 사용하지 않아 정상 membership을
+제거한다. 현재 controller leaf는 최근 heartbeat인데 요약은 3분 초과인 대기 방 전체가
+종료되는 기존 경합도 재현했다. 기존 요약 갱신 reconnect 회귀와 다른 구간이며 운영 발생은 미확인이다.
+
+[성능 계획의 후속 검토](../ROOM_ACTION_LATENCY_PLAN_20261012.md#7-2026-10-12-functions-안정성-검토와-계획-수정)에
+참가자·controller 현재 connection의 신원/heartbeat 확인과 callback 재실행 회귀를 정리 후보
+배포의 선행 조건으로 반영했다. 정상 create의 DB 호출 수는 바뀌지 않고 deleteAccount는
+그룹 탈퇴와 다른 작업이다. 정리 실행 구간의 callable 시간·재실행·처리량을 함께 비교한 뒤
+기존 실행 준비/읽기 통합/독립 읽기 병행/앱 취소 대기 후보를 선택한다. TTL 보류는 유지한다.
+
+다른 채팅의 FULL은 최종 PASS(exit0, 12단계)이며 결과 파일을 확인했다. 새 leaf-only 경합은
+그 테스트에 없다. 이번 probe 3개는 결함 재현 PASS(exit0)이지 수정 성공이 아니다.
+제품 수정·새 FULL·운영 접근·배포는 하지 않았다. 상세 실행 근거는 위 계획과
+[월별 검토 기록](../logs/2026-10.md#room-action-function-review-20261012)에 남겼다.

@@ -4,10 +4,12 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -78,26 +80,17 @@ class _ResultContent extends StatelessWidget {
         Positioned(
           top: _ResultLayout.cardTop - 30,
           left: _ResultLayout.cardLeft - 120,
-          child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteA.game,
-            angle: -0.24,
-          ),
+          child: _ResultCard(face: LiarsCardFace.ace, angle: -0.24),
         ),
         Positioned(
           top: _ResultLayout.cardTop - 80,
           left: _ResultLayout.cardLeft - 80,
-          child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteK.game,
-            angle: -0.1,
-          ),
+          child: _ResultCard(face: LiarsCardFace.king, angle: -0.1),
         ),
         Positioned(
           top: _ResultLayout.cardTop - 30,
           left: _ResultLayout.cardLeft + 120,
-          child: _ResultCard(
-            asset: Assets.games.liarsPoker.images.cards.whiteJoker.game,
-            angle: 0.24,
-          ),
+          child: _ResultCard(face: LiarsCardFace.joker, angle: 0.24),
         ),
         Positioned(
           top: _ResultLayout.cardTop,
@@ -199,12 +192,22 @@ class _ResultActions extends StatelessWidget {
       children: [
         _ResultActionButton(
           action: onRestartGame,
-          label: '다시하기',
+          label: GameLocale.select(
+            ko: '다시하기',
+            en: 'Play Again',
+            zhHans: '再玩一次',
+            zhHant: '再玩一次',
+          ),
           asset: Assets.games.liarsPoker.images.button.buttonRetry.game,
         ),
         _ResultActionButton(
           action: onExitToLobby,
-          label: '나가기',
+          label: GameLocale.select(
+            ko: '나가기',
+            en: 'Exit',
+            zhHans: '退出',
+            zhHant: '退出',
+          ),
           asset: Assets.games.liarsPoker.images.button.buttonHome.game,
         ),
       ],
@@ -237,9 +240,14 @@ class _ResultActionButton extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.asset, this.angle = 0});
+  const _ResultCard({this.asset, this.face, this.angle = 0})
+    : assert(asset != null || face != null);
 
-  final GameImage asset;
+  /// 카드 그림 파일이 있는 카드입니다(마지막 한 장).
+  final GameImage? asset;
+
+  /// 코드로 그리는 카드입니다.
+  final LiarsCardFace? face;
   final double angle;
 
   @override
@@ -249,10 +257,12 @@ class _ResultCard extends StatelessWidget {
       height: _ResultLayout.cardHeight,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: asset.image(
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
+        child: face != null
+            ? LiarsPokerCardView(face: face!)
+            : asset!.image(
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+              ),
       ),
     );
 

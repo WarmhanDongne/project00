@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -35,7 +36,19 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                snapshot.hasError ? '게임 목록을 불러오지 못했습니다.' : '등록된 게임이 없습니다.',
+                snapshot.hasError
+                    ? GameLocale.select(
+                        ko: '게임 목록을 불러오지 못했습니다.',
+                        en: 'Could not load the game list.',
+                        zhHans: '无法加载游戏列表。',
+                        zhHant: '無法載入遊戲列表。',
+                      )
+                    : GameLocale.select(
+                        ko: '등록된 게임이 없습니다.',
+                        en: 'No games are registered.',
+                        zhHans: '没有已登记的游戏。',
+                        zhHant: '沒有已登記的遊戲。',
+                      ),
                 textAlign: TextAlign.center,
                 style: MosiFonts.sans(color: MosiColors.white),
               ),
@@ -44,7 +57,9 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
         }
         final index = _index.clamp(0, games.length - 1);
         final game = games[index];
-        final art = MosiGameArt.of(game.id, fallbackName: game.name);
+        final locale = Localizations.localeOf(context);
+        final displayName = game.localizedName(locale);
+        final englishName = game.englishName;
         void select(int next) {
           if (next >= 0 && next < games.length) setState(() => _index = next);
         }
@@ -126,6 +141,10 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                                     child: MosiGameSpine(
                                       gameId: games[index + offset].id,
                                       fallbackName: games[index + offset].name,
+                                      displayName: games[index + offset]
+                                          .localizedName(locale),
+                                      englishName:
+                                          games[index + offset].englishName,
                                       onTap: () => select(index + offset),
                                     ),
                                   ),
@@ -141,6 +160,8 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                               width: coverWidth,
                               fallbackName: game.name,
                               fallbackImageUrl: game.imageUrl,
+                              displayName: displayName,
+                              englishName: englishName,
                               shadow: 5,
                             ),
                           ),
@@ -156,7 +177,7 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: Text(
-                      MosiGameArt.isKnown(game.id) ? art.koreanName : game.name,
+                      displayName,
                       textAlign: TextAlign.center,
                       style: MosiFonts.sans(
                         size: 25,
@@ -165,16 +186,17 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                       ),
                     ),
                   ),
-                  Text(
-                    art.englishName,
-                    textAlign: TextAlign.center,
-                    style: MosiFonts.grotesk(
-                      size: 10,
-                      weight: FontWeight.w700,
-                      color: MosiColors.white,
-                      letterSpacing: 3,
+                  if (englishName.toUpperCase() != displayName.toUpperCase())
+                    Text(
+                      englishName,
+                      textAlign: TextAlign.center,
+                      style: MosiFonts.grotesk(
+                        size: 10,
+                        weight: FontWeight.w700,
+                        color: MosiColors.white,
+                        letterSpacing: 3,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -182,8 +204,23 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                     alignment: WrapAlignment.center,
                     children: [
                       if (game.minPlayers > 0)
-                        _BookTag('${game.minPlayers}–${game.maxPlayers}명'),
-                      if (game.playTime > 0) _BookTag('${game.playTime}분'),
+                        _BookTag(
+                          GameLocale.select(
+                            ko: '${game.minPlayers}–${game.maxPlayers}명',
+                            en: '${game.minPlayers}–${game.maxPlayers} players',
+                            zhHans: '${game.minPlayers}–${game.maxPlayers} 人',
+                            zhHant: '${game.minPlayers}–${game.maxPlayers} 人',
+                          ),
+                        ),
+                      if (game.playTime > 0)
+                        _BookTag(
+                          GameLocale.select(
+                            ko: '${game.playTime}분',
+                            en: '${game.playTime} min',
+                            zhHans: '${game.playTime} 分钟',
+                            zhHant: '${game.playTime} 分鐘',
+                          ),
+                        ),
                     ],
                   ),
                   Wrap(
@@ -191,7 +228,12 @@ class _PhoneOwnGameListState extends State<PhoneOwnGameList> {
                     children: [
                       for (var i = 0; i < games.length; i++)
                         Semantics(
-                          label: '${games[i].name} 선택',
+                          label: GameLocale.select(
+                            ko: '${games[i].localizedName(locale)} 선택',
+                            en: 'Select ${games[i].localizedName(locale)}',
+                            zhHans: '选择 ${games[i].localizedName(locale)}',
+                            zhHant: '選擇 ${games[i].localizedName(locale)}',
+                          ),
                           selected: i == index,
                           button: true,
                           child: GestureDetector(

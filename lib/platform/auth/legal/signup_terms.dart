@@ -1,12 +1,13 @@
 // [signup_terms.dart] 는 회원가입 약관 동의의 버전·동의 내용·문서 본문을 모아 둔 파일이다.
 //
-// - [Platform] : 회원가입(이메일·Google·Apple 공통)
+// - [Platform] : 회원가입(이메일·Google·Apple·게스트 공통)
 // - [Legal] : 이용약관·개인정보 처리방침과 동의 기록
 //
 // 즉, 약관을 고칠 때 버전과 본문을 한곳에서 바꾸기 위해 필요한 파일이다.
 
 import 'dart:convert';
 
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 회원가입 때 보여 주는 약관 묶음의 버전입니다.
@@ -68,8 +69,9 @@ class SignupConsents {
 
 /// 가입을 마칠 때까지 동의 내용을 기기에 잠시 보관합니다.
 ///
-/// 이메일 가입은 약관 동의 → 메일 링크(앱 밖) → 비밀번호 → 프로필 순서라
-/// 그 사이 앱이 다시 시작될 수 있습니다. 서버에는 가입을 마칠 때 함께
+/// 새 이메일 가입은 약관 동의 → 이메일·비밀번호 계정 생성 → 메일 인증 → 프로필
+/// 순서이며, 이전 링크 가입도 이어갈 수 있습니다. 그 사이 앱이 다시 시작될 수
+/// 있으므로 서버에는 가입을 마칠 때 함께
 /// 보내 기록하고, 그 뒤 지웁니다. 약관 버전이 바뀌면 다시 동의받습니다.
 class SignupConsentStore {
   static const _key = 'auth.signupConsents';
@@ -131,7 +133,7 @@ class LegalDocument {
 /// ⚠️ 법률 검토 전 초안입니다. 검토를 마치면 [LegalDocument.isDraft]를
 /// false로 바꾸고, 본문이 바뀌었다면 [SignupTermsVersion.current]와 서버 버전을
 /// 함께 올립니다.
-const termsOfService = LegalDocument(
+const _termsOfServiceKo = LegalDocument(
   title: '모시겜 이용약관',
   effectiveDate: '2026-10-12',
   isDraft: true,
@@ -215,7 +217,7 @@ const termsOfService = LegalDocument(
 ///
 /// 홈페이지 공개본(`public/privacy/index.html`)과 같은 내용이어야 합니다.
 /// 한쪽을 고치면 다른 쪽도 함께 고칩니다.
-const privacyPolicy = LegalDocument(
+const _privacyPolicyKo = LegalDocument(
   title: '모시겜 개인정보 처리방침',
   effectiveDate: '2026-08-31',
   intro:
@@ -301,5 +303,290 @@ const privacyPolicy = LegalDocument(
       '방침이 바뀌면 시행 7일 전부터 홈페이지에 알립니다. 이용자에게 불리한 중요한 변경은 '
           '시행 30일 전에 알립니다.',
     ),
+  ],
+);
+
+/// 현재 앱 언어로 표시하는 이용약관입니다.
+LegalDocument get termsOfService => switch (_legalLanguage) {
+  'ko' => _termsOfServiceKo,
+  'zh-Hant' => _termsOfServiceZhHant,
+  'zh-Hans' => _termsOfServiceZhHans,
+  _ => _termsOfServiceEn,
+};
+
+/// 현재 앱 언어로 표시하는 개인정보 처리방침입니다.
+LegalDocument get privacyPolicy => switch (_legalLanguage) {
+  'ko' => _privacyPolicyKo,
+  'zh-Hant' => _privacyPolicyZhHant,
+  'zh-Hans' => _privacyPolicyZhHans,
+  _ => _privacyPolicyEn,
+};
+
+String get _legalLanguage {
+  if (GameLocale.isKorean) return 'ko';
+  if (GameLocale.isEnglish) return 'en';
+  if (GameLocale.current.languageCode == 'zh') {
+    return GameLocale.isTraditionalChinese ? 'zh-Hant' : 'zh-Hans';
+  }
+  return 'en';
+}
+
+const _termsOfServiceEn = LegalDocument(
+  title: 'Mosigame Terms of Service',
+  effectiveDate: '2026-10-12',
+  isDraft: true,
+  intro:
+      'These terms govern your use of Mosigame, a mobile application provided by Warm Neighborhood (the “Operator”).',
+  sections: [
+    (
+      '1. Purpose',
+      'These terms define the conditions and procedures for using the service and the rights, obligations, and responsibilities of the Operator and users.',
+    ),
+    (
+      '2. Definitions',
+      '• Service: Mosigame and related features for party games played together with tablets and phones\n• User: a person who accepts these terms and registers for the service\n• Room: a space created on a tablet that players join by phone',
+    ),
+    (
+      '3. Effect and changes',
+      'These terms take effect when you accept them during sign-up. The Operator may change them within applicable law and will announce changes at least 7 days in advance, or 30 days for changes unfavorable to users. You may close your account if you do not agree.',
+    ),
+    (
+      '4. Registration',
+      'Anyone age 14 or older may register using email, Google, or Apple. Use may be restricted if another person’s information or false information is used.',
+    ),
+    (
+      '5. Account management',
+      'You are responsible for your account and password and may not lend or transfer them. Notify the Operator promptly if you discover unauthorized use.',
+    ),
+    (
+      '6. Service',
+      'The Operator provides room creation and joining, game play, and profile display. Maintenance, outages, or network conditions may temporarily interrupt the service. Planned interruptions will be announced when possible.',
+    ),
+    (
+      '7. User obligations',
+      'You must not use abusive, hateful, or discriminatory names or images; disrupt normal operation or exploit bugs; copy, modify, distribute, or reverse engineer the app without permission; or violate law or public order.',
+    ),
+    (
+      '8. Restrictions',
+      'If you violate Section 7, the Operator may warn, suspend, or close your account. You may appeal through the contact address.',
+    ),
+    (
+      '9. Paid services',
+      'Prices, payment, and refund terms for paid games or items will be shown at purchase. Payments and refunds follow App Store or Google Play policies.',
+    ),
+    (
+      '10. Account closure',
+      'You may close your account from the profile screen at any time. Account and profile data will be deleted under the Privacy Policy.',
+    ),
+    (
+      '11. Limitation of liability',
+      'The Operator is not responsible for damage caused by events outside its control, including natural disasters, device or network conditions, or user fault. This does not apply to intentional misconduct or gross negligence by the Operator.',
+    ),
+    (
+      '12. Disputes',
+      'The Operator and user will first seek an amicable resolution. Any lawsuit will follow the court jurisdiction provided by Korean civil procedure law.\nContact: warmhandongne@gmail.com',
+    ),
+  ],
+);
+
+const _termsOfServiceZhHans = LegalDocument(
+  title: 'Mosigame 使用条款',
+  effectiveDate: '2026-10-12',
+  isDraft: true,
+  intro: '本条款规定用户使用“温暖社区”（以下简称“运营方”）提供的移动应用 Mosigame（以下简称“服务”）时应遵守的基本约定。',
+  sections: [
+    ('第1条 目的', '本条款规定运营方与用户之间的服务使用条件、程序、权利、义务及责任。'),
+    (
+      '第2条 定义',
+      '• 服务：使用平板和手机供多人共同游玩的派对游戏应用 Mosigame 及相关功能\n• 用户：同意本条款并注册服务的人\n• 房间：在平板上创建、由手机加入以共同游戏的空间',
+    ),
+    (
+      '第3条 生效与变更',
+      '本条款自用户在注册页面同意时生效。运营方可在法律允许范围内修改条款，并至少提前7天公告；对用户不利的重要变更将提前30天公告。不同意时可注销账号。',
+    ),
+    ('第4条 注册', '年满14周岁者可使用电子邮箱、Google 或 Apple 账号注册。冒用他人信息或提交虚假信息时，使用可能受到限制。'),
+    ('第5条 账号管理', '用户应自行管理账号和密码，不得出借或转让。发现账号被盗用时请立即通知运营方。'),
+    ('第6条 服务提供', '运营方提供创建与加入房间、游戏进行、个人资料显示等功能。维护、故障或通信状况可能导致服务暂时中断；可预告时将提前通知。'),
+    (
+      '第7条 用户义务',
+      '不得使用辱骂、仇恨或歧视性昵称和图片；不得妨碍服务运行或利用漏洞；不得擅自复制、修改、分发或逆向工程应用；不得违反法律或公共秩序。',
+    ),
+    ('第8条 使用限制', '违反第7条时，运营方可采取警告、暂停或注销等措施。用户可通过联系邮箱提出异议。'),
+    (
+      '第9条 付费服务',
+      '付费游戏或道具的价格、支付与退款条件将在购买页面另行说明，并遵循 App Store 或 Google Play 的政策。',
+    ),
+    ('第10条 注销', '用户可随时在个人资料页面注销账号。账号和个人资料将依据隐私政策删除。'),
+    (
+      '第11条 责任限制',
+      '对于自然灾害、用户设备或网络环境、用户过错等非运营方原因造成的损失，运营方不承担责任；运营方故意或重大过失造成的损失除外。',
+    ),
+    (
+      '第12条 争议解决',
+      '运营方与用户将先通过诚信协商解决争议。需要诉讼时，依韩国民事诉讼法确定管辖法院。\n联系邮箱：warmhandongne@gmail.com',
+    ),
+  ],
+);
+
+const _termsOfServiceZhHant = LegalDocument(
+  title: 'Mosigame 使用條款',
+  effectiveDate: '2026-10-12',
+  isDraft: true,
+  intro: '本條款規定使用者使用「溫暖社區」（以下稱「營運方」）提供的行動應用程式 Mosigame（以下稱「服務」）時應遵守的基本約定。',
+  sections: [
+    ('第1條 目的', '本條款規定營運方與使用者之間的服務使用條件、程序、權利、義務及責任。'),
+    (
+      '第2條 定義',
+      '• 服務：使用平板與手機供多人共同遊玩的派對遊戲 App Mosigame 及相關功能\n• 使用者：同意本條款並註冊服務的人\n• 房間：在平板上建立、由手機加入以共同遊戲的空間',
+    ),
+    (
+      '第3條 生效與變更',
+      '本條款自使用者在註冊頁面同意時生效。營運方可在法律允許範圍內修改條款，並至少提前7天公告；對使用者不利的重要變更將提前30天公告。不同意時可註銷帳號。',
+    ),
+    ('第4條 註冊', '年滿14歲者可使用電子郵件、Google 或 Apple 帳號註冊。冒用他人資訊或提交虛假資訊時，使用可能受到限制。'),
+    ('第5條 帳號管理', '使用者應自行管理帳號和密碼，不得出借或轉讓。發現帳號遭盜用時請立即通知營運方。'),
+    ('第6條 服務提供', '營運方提供建立與加入房間、遊戲進行、個人資料顯示等功能。維護、故障或通訊狀況可能導致服務暫時中斷；可預告時將提前通知。'),
+    (
+      '第7條 使用者義務',
+      '不得使用辱罵、仇恨或歧視性暱稱和圖片；不得妨礙服務運作或利用漏洞；不得擅自複製、修改、散布或逆向工程 App；不得違反法律或公共秩序。',
+    ),
+    ('第8條 使用限制', '違反第7條時，營運方可採取警告、暫停或註銷等措施。使用者可透過聯絡信箱提出異議。'),
+    (
+      '第9條 付費服務',
+      '付費遊戲或道具的價格、付款與退款條件將在購買頁面另行說明，並遵循 App Store 或 Google Play 的政策。',
+    ),
+    ('第10條 註銷', '使用者可隨時在個人資料頁面註銷帳號。帳號和個人資料將依據隱私權政策刪除。'),
+    (
+      '第11條 責任限制',
+      '對於天然災害、使用者裝置或網路環境、使用者過錯等非營運方原因造成的損失，營運方不承擔責任；營運方故意或重大過失造成的損失除外。',
+    ),
+    (
+      '第12條 爭議解決',
+      '營運方與使用者將先透過誠信協商解決爭議。需要訴訟時，依韓國民事訴訟法確定管轄法院。\n聯絡信箱：warmhandongne@gmail.com',
+    ),
+  ],
+);
+
+const _privacyPolicyEn = LegalDocument(
+  title: 'Mosigame Privacy Policy',
+  effectiveDate: '2026-08-31',
+  intro:
+      'Warm Neighborhood (the “Operator”) values your personal information and complies with applicable privacy laws when providing Mosigame.',
+  sections: [
+    (
+      '1. Data collected and how',
+      'We collect only data needed for registration and play.\n• Required at registration: email address, nickname, and UID, entered directly or provided by Google or Apple\n• Legacy registration: phone number and marketing consent where previously used\n• Optional profile: a photo selected from your library\n• Game use: room participation and game state such as roles, scores, and turn order, generated during use\n• Diagnostics: crash records, device model, OS and app version, and UID, collected by Firebase Crashlytics\nThe camera is used only to scan a room QR code; images are not stored or sent. Photo access is limited to the image you select. Denying either permission only disables that feature.',
+    ),
+    (
+      '2. Purposes',
+      'Data is used for account identification and management, room and game operation, profile display, support, error analysis, and quality improvement. It is not used for advertising or behavioral tracking.',
+    ),
+    (
+      '3. Retention and deletion',
+      'Personal data is deleted promptly when the account is closed. Nicknames and game state in an active room may remain until that room is automatically cleaned up for recovery. Records required by law are retained separately. Crash records linked to a UID may be kept for up to 90 days under Firebase Crashlytics retention.',
+    ),
+    (
+      '4. Processors',
+      'We do not sell personal data. Processing is entrusted to: Google LLC (Firebase) for authentication, databases, storage, server functions, and crash reporting; Apple Inc. for Apple sign-in; and Shorebird for checking and delivering app code updates.',
+    ),
+    (
+      '5. International transfer',
+      'Google LLC receives required service data in Singapore (game-state database) and the United States (authentication, file storage, and crash reporting) to provide the service until account closure. You may refuse, but core service features cannot then be provided.',
+    ),
+    (
+      '6. Your rights',
+      'View or edit nickname and profile photo in the profile screen; request deletion through account closure or the account deletion page; and request suspension of processing through the contact address. A legal representative may act with proof of authority.',
+    ),
+    (
+      '7. Children under 14',
+      'We do not accept registrations from children under 14. If such data is found, it will be deleted promptly.',
+    ),
+    (
+      '8. Security',
+      'Traffic is encrypted with HTTPS/TLS. The Operator does not store passwords; Google, Apple, and Firebase Authentication handle authentication. Database rules limit access, and game-state changes are performed only by the server.',
+    ),
+    (
+      '9. Privacy contact',
+      'Privacy officer: Planner Yoon Yuwon\nEmail: warmhandongne@gmail.com\nKorean privacy authorities may also receive reports or consultation requests.',
+    ),
+    (
+      '10. Policy changes',
+      'Changes are announced on the website at least 7 days before taking effect, or 30 days for significant changes unfavorable to users.',
+    ),
+  ],
+);
+
+const _privacyPolicyZhHans = LegalDocument(
+  title: 'Mosigame 隐私政策',
+  effectiveDate: '2026-08-31',
+  intro: '“温暖社区”（以下简称“运营方”）在提供 Mosigame 时重视用户个人信息并遵守适用的隐私法律。',
+  sections: [
+    (
+      '1. 收集项目与方式',
+      '仅收集注册和游戏所需的最少信息。\n• 注册必填：电子邮箱、昵称、UID，由用户输入或由 Google、Apple 提供\n• 旧版注册：曾使用的手机号和营销接收同意\n• 可选资料：用户从相册选择的头像\n• 游戏使用：房间参与记录及角色、分数、顺序等游戏状态\n• 错误诊断：崩溃记录、设备型号、系统和应用版本、UID（Firebase Crashlytics）\n相机仅用于扫描房间二维码，不保存或传输画面；相册仅访问用户选择的图片。拒绝权限只会限制对应功能。',
+    ),
+    ('2. 处理目的', '用于账号识别与管理、房间和游戏运行、资料显示、咨询回复、错误分析与质量改善。不用于广告或行为追踪。'),
+    (
+      '3. 保存与删除',
+      '注销时立即删除个人信息。进行中房间的昵称和游戏状态可能为恢复游戏保留至房间自动清理。法律要求的信息将另行保存。关联 UID 的崩溃记录最长保存90天。',
+    ),
+    (
+      '4. 委托处理',
+      '不出售个人信息。Google LLC（Firebase）处理认证、数据库、文件、服务器功能和错误收集；Apple Inc. 处理 Apple 登录；Shorebird 检查并传送应用代码更新。',
+    ),
+    (
+      '5. 境外传输',
+      '为提供服务，Google LLC 在新加坡处理游戏状态数据库，在美国处理认证、文件和错误信息，保存至注销。用户可拒绝，但将无法使用依赖该基础设施的核心功能。',
+    ),
+    (
+      '6. 用户权利',
+      '可在个人资料页查看或修改昵称和头像；可通过注销或账号删除页面要求删除；可通过联系邮箱要求停止处理。法定代理人可凭授权证明代为行使。',
+    ),
+    ('7. 未满14周岁儿童', '不接受未满14周岁儿童注册。发现相关信息时将立即删除。'),
+    (
+      '8. 安全措施',
+      '通信使用 HTTPS/TLS 加密。运营方不保存密码，认证由 Google、Apple 和 Firebase Authentication 处理。数据库规则限制访问，游戏状态仅由服务器修改。',
+    ),
+    (
+      '9. 隐私负责人',
+      '负责人：策划人 尹裕元\n邮箱：warmhandongne@gmail.com\n也可向韩国相关隐私保护机构举报或咨询。',
+    ),
+    ('10. 政策变更', '变更至少提前7天在网站公告；对用户不利的重要变更提前30天公告。'),
+  ],
+);
+
+const _privacyPolicyZhHant = LegalDocument(
+  title: 'Mosigame 隱私權政策',
+  effectiveDate: '2026-08-31',
+  intro: '「溫暖社區」（以下稱「營運方」）在提供 Mosigame 時重視使用者個人資訊並遵守適用的隱私法律。',
+  sections: [
+    (
+      '1. 蒐集項目與方式',
+      '僅蒐集註冊和遊戲所需的最少資訊。\n• 註冊必填：電子郵件、暱稱、UID，由使用者輸入或由 Google、Apple 提供\n• 舊版註冊：曾使用的手機號碼和行銷接收同意\n• 選填資料：使用者從相簿選擇的頭像\n• 遊戲使用：房間參與記錄及角色、分數、順序等遊戲狀態\n• 錯誤診斷：當機記錄、裝置型號、系統和 App 版本、UID（Firebase Crashlytics）\n相機僅用於掃描房間 QR Code，不儲存或傳輸畫面；相簿僅存取使用者選擇的圖片。拒絕權限只會限制對應功能。',
+    ),
+    ('2. 處理目的', '用於帳號識別與管理、房間和遊戲運作、資料顯示、諮詢回覆、錯誤分析與品質改善。不用於廣告或行為追蹤。'),
+    (
+      '3. 保存與刪除',
+      '註銷時立即刪除個人資訊。進行中房間的暱稱和遊戲狀態可能為恢復遊戲保留至房間自動清理。法律要求的資訊將另行保存。關聯 UID 的當機記錄最長保存90天。',
+    ),
+    (
+      '4. 委託處理',
+      '不出售個人資訊。Google LLC（Firebase）處理認證、資料庫、檔案、伺服器功能和錯誤蒐集；Apple Inc. 處理 Apple 登入；Shorebird 檢查並傳送 App 程式碼更新。',
+    ),
+    (
+      '5. 境外傳輸',
+      '為提供服務，Google LLC 在新加坡處理遊戲狀態資料庫，在美國處理認證、檔案和錯誤資訊，保存至註銷。使用者可拒絕，但將無法使用依賴該基礎設施的核心功能。',
+    ),
+    (
+      '6. 使用者權利',
+      '可在個人資料頁查看或修改暱稱和頭像；可透過註銷或帳號刪除頁面要求刪除；可透過聯絡信箱要求停止處理。法定代理人可憑授權證明代為行使。',
+    ),
+    ('7. 未滿14歲兒童', '不接受未滿14歲兒童註冊。發現相關資訊時將立即刪除。'),
+    (
+      '8. 安全措施',
+      '通訊使用 HTTPS/TLS 加密。營運方不保存密碼，認證由 Google、Apple 和 Firebase Authentication 處理。資料庫規則限制存取，遊戲狀態僅由伺服器修改。',
+    ),
+    ('9. 隱私負責人', '負責人：企劃 尹裕元\n信箱：warmhandongne@gmail.com\n也可向韓國相關隱私保護機構檢舉或諮詢。'),
+    ('10. 政策變更', '變更至少提前7天在網站公告；對使用者不利的重要變更提前30天公告。'),
   ],
 );

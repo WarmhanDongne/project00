@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_modal.dart';
 
@@ -72,7 +73,7 @@ class PhoneGameRuleDialog extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '게임 규칙',
+                    '게임 규칙'.localized,
                     style: MosiFonts.sans(
                       size: 24,
                       weight: FontWeight.w700,
@@ -163,7 +164,7 @@ class PhoneGameRuleDialog extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               MosiButton(
-                label: '알겠어요',
+                label: '알겠어요'.localized,
                 background: theme.accent,
                 foreground: theme.accentFg,
                 shadowOffset: 0,

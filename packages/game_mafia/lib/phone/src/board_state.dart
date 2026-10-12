@@ -106,10 +106,13 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(error, style: const TextStyle(color: Colors.white)),
+              Text(
+                error.localized,
+                style: const TextStyle(color: Colors.white),
+              ),
               TextButton(
                 onPressed: () => exitGameRoute(context),
-                child: const Text('돌아가기'),
+                child: Text('돌아가기'.localized),
               ),
             ],
           ),
@@ -166,7 +169,12 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           connection: GameConnectionRecovery(
             isWaiting: stage == MafiaPhoneStage.connecting,
             exitDelay: const Duration(seconds: 10),
-            message: '게임 정보를 불러오고 있습니다.\n연결이 복구되면 현재 게임으로 돌아갑니다.',
+            message: GameLocale.select(
+              ko: '게임 정보를 불러오고 있습니다.\n연결이 복구되면 현재 게임으로 돌아갑니다.',
+              en: 'Loading game information.\nYou will return to the current game when the connection recovers.',
+              zhHans: '正在加载游戏信息。\n连接恢复后会返回当前游戏。',
+              zhHant: '正在載入遊戲資訊。\n連線恢復後會返回目前遊戲。',
+            ),
             onExit: () => unawaited(_leaveRoom()),
             onRetry: () => unawaited(_retryConnection()),
           ),

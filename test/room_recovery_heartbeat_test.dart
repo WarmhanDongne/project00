@@ -20,6 +20,68 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  for (final paused in [false, true]) {
+    test(
+      'own connection false recovers only in foreground: paused=$paused',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        await ControllerRoomSessionStore.instance.clear();
+        final identity = RoomSessionIdentity(
+          uid: 'own-loss-$paused',
+          role: 'player',
+          roomCode: 'ABCDE',
+          roomInstanceId: 'room',
+          membershipId: 'member',
+          connectionId: 'current',
+          connectionSeq: 1,
+        );
+        await RoomSessionIdentityStore.instance.save(identity);
+        final service = _RecoveryService(identity, _Database());
+        final provider =
+            RoomProvider(
+                service: service,
+                gameService: _UnusedGameService(),
+                currentUidReader: () => identity.uid,
+              )
+              ..roomCode = identity.roomCode
+              ..listenRoom();
+        addTearDown(() async {
+          provider.dispose();
+          await service.connected.close();
+          await service.peerPlayers.close();
+          await RoomSessionIdentityStore.instance.clear(
+            identity.uid,
+            'player',
+            identity.roomCode,
+          );
+        });
+        service.connected.add(true);
+        await Future<void>.delayed(Duration.zero);
+        if (paused) {
+          provider.didChangeAppLifecycleState(AppLifecycleState.paused);
+        }
+        service.peerPlayers.add([
+          RoomPlayer.fromJson({
+            'isConnected': false,
+            'lastSeen': 1,
+            'membershipId': 'member',
+            'currentConnectionId': 'current',
+            'connectionSeq': 1,
+          }, key: identity.uid),
+        ]);
+        for (var i = 0; i < 6; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(service.playerRestores, paused ? 0 : 1);
+        if (paused) {
+          provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+          await provider.retryConnectionRecovery();
+          expect(service.playerRestores, 1);
+        }
+      },
+    );
+  }
+
   test(
     'route retries and resumed lifecycle share a completed connection episode',
     () async {
@@ -234,7 +296,7 @@ void main() {
         expect(
           service.database.paths,
           everyElement(
-            'rooms/${service.identity.roomCode}/connections/${service.identity.uid}/${service.identity.connectionId}',
+            'rooms/${service.identity.roomCode}/connections/${service.identity.uid}/${service.identity.connectionId}/lastSeen',
           ),
         );
       }
@@ -306,6 +368,7 @@ class _RecoveryService extends RoomService {
   final RoomSessionIdentity identity;
   final _Database database;
   final connected = StreamController<bool>.broadcast();
+  final peerPlayers = StreamController<List<RoomPlayer>>.broadcast();
   RoomRecoveryBatch? recoveryOwner;
   bool controllerClosed = false;
   Future<void> Function()? afterControllerRestore;
@@ -342,8 +405,11 @@ class _RecoveryService extends RoomService {
   @override
   Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
   @override
-  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) =>
-      const Stream.empty();
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String roomCode, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) => peerPlayers.stream;
 }
 
 class _Database extends Fake implements FirebaseDatabase {
@@ -362,8 +428,17 @@ class _Reference extends Fake implements DatabaseReference {
   final String path;
   @override
   Future<void> update(Map<String, Object?> value) async {
-    expect(value['connected'], true);
+    expect(value['connected'], false);
     expect(value['lastSeen'], ServerValue.timestamp);
+  }
+
+  @override
+  DatabaseReference child(String childPath) =>
+      _Reference(database, '$path/$childPath');
+  @override
+  Future<void> set(Object? value) async {
+    expect(value, ServerValue.timestamp);
+    expect(path.endsWith('/lastSeen'), true);
     database.paths.add(path);
     database.ownersAtWrite.add(RoomRecoveryBatch.inherited);
     if ((database.recoveryOwner?.remaining ?? const Duration(seconds: 30)) <=

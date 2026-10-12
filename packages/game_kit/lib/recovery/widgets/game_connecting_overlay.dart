@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -116,7 +117,13 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
                       children: [
                         if (_showExit) ...[
                           Text(
-                            widget.message ?? '게임 데이터를 다시 준비하고 있습니다.',
+                            widget.message ??
+                                GameLocale.select(
+                                  ko: '게임 데이터를 다시 준비하고 있습니다.',
+                                  en: 'Preparing game data again.',
+                                  zhHans: '正在重新准备游戏数据。',
+                                  zhHant: '正在重新準備遊戲資料。',
+                                ),
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white),
                           ),
@@ -125,7 +132,7 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
                         if (_showExit && widget.onRetry != null)
                           TextButton(
                             onPressed: widget.onRetry,
-                            child: const Text('다시 연결하기'),
+                            child: Text('다시 연결하기'.localized),
                           ),
                         if (widget.onExit != null)
                           OutlinedButton(
@@ -138,7 +145,7 @@ class _GameConnectingOverlayState extends State<GameConnectingOverlay> {
                                 vertical: 10,
                               ),
                             ),
-                            child: const Text(GameFlowCopy.leaveGame),
+                            child: Text(GameFlowCopy.leaveGame.localized),
                           ),
                       ],
                     ),

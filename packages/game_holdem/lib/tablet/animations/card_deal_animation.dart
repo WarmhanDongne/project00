@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:game_holdem/game_sounds.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 
@@ -96,7 +97,12 @@ class _HoldemCardDealAnimationState extends State<HoldemCardDealAnimation>
           final cardHeight = cardWidth * HoldemCardView.aspectRatio;
           final center = size.center(Offset.zero);
           return Semantics(
-            label: '홀덤 카드 분배',
+            label: GameLocale.select(
+              ko: '홀덤 카드 분배',
+              en: 'Dealing Holdem cards',
+              zhHans: '正在发德州扑克牌',
+              zhHant: '正在發德州撲克牌',
+            ),
             child: AnimatedBuilder(
               animation: _controller,
               builder: (_, _) {

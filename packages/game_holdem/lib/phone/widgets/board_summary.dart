@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:game_holdem/game_theme.dart';
+import 'package:game_holdem/game_copy.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
@@ -59,7 +60,10 @@ class HoldemBoardSummary extends StatelessWidget {
             Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: _BoardChipCount(label: '내 칩', amount: myStack),
+                child: _BoardChipCount(
+                  label: HoldemCopy.myChips,
+                  amount: myStack,
+                ),
               ),
             ),
           ],

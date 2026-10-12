@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project00/platform/auth/screens/guest_setup_screen.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/auth/models/onboarding_state.dart';
 import 'package:project00/platform/auth/screens/login_screen.dart';
+import 'package:project00/platform/auth/screens/email_verification_screen.dart';
 import 'package:project00/platform/auth/screens/profile_setup_screen.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
@@ -161,10 +164,27 @@ class _AuthGateState extends State<AuthGate> {
       return const _AppInitializingView(step: '이메일 링크 처리');
     }
 
+    if (!user.emailVerified &&
+        user.providerData.any(
+          (provider) => provider.providerId == 'password',
+        )) {
+      _clearOnboardingWatch();
+      return EmailVerificationScreen(
+        key: ValueKey('verify-${user.uid}'),
+        email: user.email ?? '',
+        service: _onboardingService,
+      );
+    }
+
     _ensureOnboardingWatch(user.uid);
     if (_onboardingFailed) {
       return _GateErrorView(
-        message: '회원가입 상태를 불러오지 못했습니다.',
+        message: GameLocale.select(
+          ko: '회원가입 상태를 불러오지 못했습니다.',
+          en: 'Could not load your sign-up status.',
+          zhHans: '无法加载注册状态。',
+          zhHant: '無法載入註冊狀態。',
+        ),
         onRetry: _retryOnboardingWatch,
       );
     }
@@ -188,6 +208,12 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
     final onboarding = _onboarding;
+    if (user.isAnonymous && onboarding?.status != OnboardingStatus.complete) {
+      return GuestSetupScreen(
+        key: ValueKey('guest-${user.uid}'),
+        service: _onboardingService,
+      );
+    }
     if (onboarding == null) {
       return _LegacyRecoveryView(service: _onboardingService);
     }
@@ -200,7 +226,9 @@ class _AuthGateState extends State<AuthGate> {
         },
         onboardingService: _onboardingService,
       ),
-      OnboardingStatus.settingProfile => const ProfileSetupScreen(),
+      OnboardingStatus.settingProfile => ProfileSetupScreen(
+        passwordFirst: onboarding.provider == OnboardingProvider.legacyPassword,
+      ),
       OnboardingStatus.complete => Home(gameCatalog: widget.gameCatalog),
     };
   }
@@ -423,10 +451,20 @@ class _LegacyRecoveryViewState extends State<_LegacyRecoveryView> {
     }
     final message = _error is AuthServiceException
         ? (_error! as AuthServiceException).message
-        : '계정 진행 상태를 복구하지 못했습니다.';
+        : GameLocale.select(
+            ko: '계정 진행 상태를 복구하지 못했습니다.',
+            en: 'Could not restore your account status.',
+            zhHans: '无法恢复账号状态。',
+            zhHant: '無法恢復帳號狀態。',
+          );
     return _GateErrorView(
       message: _timedOut && _error == null
-          ? '계정 진행 상태를 확인하지 못했습니다. 다시 시도하거나 로그아웃해 주세요.'
+          ? GameLocale.select(
+              ko: '계정 진행 상태를 확인하지 못했습니다. 다시 시도하거나 로그아웃해 주세요.',
+              en: 'Could not verify your account status. Try again or log out.',
+              zhHans: '无法确认账号状态，请重试或退出登录。',
+              zhHant: '無法確認帳號狀態，請重試或登出。',
+            )
           : message,
       onRetry: () {
         setState(() {
@@ -452,13 +490,13 @@ class _GateErrorView extends StatelessWidget {
       children: [
         PlatformNotice(message: message, style: PlatformNoticeStyle.danger),
         const SizedBox(height: 12),
-        PlatformButton(label: '다시 시도', onPressed: onRetry),
+        PlatformButton(label: '다시 시도'.localized, onPressed: onRetry),
         const SizedBox(height: 8),
         TextButton(
           // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
           // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
           onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
-          child: const Text('로그아웃'),
+          child: Text('로그아웃'.localized),
         ),
       ],
     );
@@ -549,7 +587,12 @@ class _AppInitializingViewState extends State<_AppInitializingView> {
           if (_isSlow) ...[
             const SizedBox(height: 16),
             Text(
-              '${widget.step} 중…',
+              GameLocale.select(
+                ko: '${widget.step} 중…',
+                en: '${widget.step.localized}…',
+                zhHans: '${widget.step.localized}…',
+                zhHant: '${widget.step.localized}…',
+              ),
               style: MosiFonts.sans(size: 15, color: MosiColors.navy),
             ),
           ],

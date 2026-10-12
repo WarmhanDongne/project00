@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  calculateFinalCallScore,
   createFinalCallPlayers,
   createInitialFinalCallGame,
   finalCallTeamForSeat,
@@ -10,6 +11,7 @@ import {
   prepareFinalCallRound,
   removeFinalTurnPendingPlayer,
   resolveFinalCallRound,
+  selectBestFinalCallCombination,
 } from "../lib/final-call/game.js";
 
 import {excludeFinalCallPlayer} from "../lib/final-call/exclude-player.js";
@@ -106,6 +108,38 @@ test("Final Call 결과에는 각 플레이어가 제출한 카드만 공개된�
   );
   assert.equal(game.public.roundResult.revealedHands.uid1.length, 2);
   assert.equal(game.public.roundResult.revealedHands.uid2.length, 2);
+});
+
+test("혼합 제출도 서버는 같은 색 또는 같은 숫자 조합만 남긴다", () => {
+  const numberCards = [
+    card("red7", "red", 7),
+    card("red3", "red", 3),
+    card("blue7", "blue", 7),
+    card("yellow2", "yellow", 2),
+  ];
+  assert.deepEqual(
+    selectBestFinalCallCombination(numberCards).map((value) => value.id),
+    ["red7", "blue7"],
+  );
+  assert.equal(
+    calculateFinalCallScore(selectBestFinalCallCombination(numberCards)),
+    calculateFinalCallScore(numberCards),
+  );
+
+  const colorCards = [
+    card("red10", "red", 10),
+    card("red7", "red", 7),
+    card("blue7", "blue", 7),
+    card("yellow2", "yellow", 2),
+  ];
+  assert.deepEqual(
+    selectBestFinalCallCombination(colorCards).map((value) => value.id),
+    ["red10", "red7"],
+  );
+  assert.equal(
+    calculateFinalCallScore(selectBestFinalCallCombination(colorCards)),
+    calculateFinalCallScore(colorCards),
+  );
 });
 
 test("마주 보는 좌석은 같은 팀으로 자동 지정된다", () => {
