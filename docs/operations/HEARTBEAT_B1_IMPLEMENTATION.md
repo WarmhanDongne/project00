@@ -162,3 +162,42 @@ last-normal 타이머, 재접속·동시 제외·퇴장 재생·정리 세대/cu
 제외해 blob/삭제 상태가 일치했다. 겹친 lifecycle에는 B1 CAS/capability와 catalog 호환 reader가
 함께 남았고 session/auth manifest와 exact-order 기대값도 양쪽 테스트를 유지한다.
 보존 audit 불일치0, 원래 B1 브랜치 SHA 불변이다. 검사 중 예상하지 못한 source mutation은 없다.
+
+## 2026-10-13 — 운영 배포·FULL 검증
+
+사용자가 기존 게임 모두 종료, B1 앱 APK 준비, RTDB Rules 동시 배포와 배포 후 FULL을
+승인했다. 첫 비대화형 Functions 배포는 retry 정책 확인에서 exit1로 중단됐다. `--force`
+재시도는 자동 승인 검토에서 거부되어 우회하지 않았다. 이후 사용자가 retry 정책·재시도
+과금 가능성을 수락하고 정확한81개 함수의 `--force` 배포를 명시 승인했다.
+
+기준은 `codex/b1-develop1-integration`, HEAD `4e9df2ec09ba67d238a8d915ce21734847fe403f`,
+시작 working-tree clean이다. 소스 수정 없이 아래 순서로 실행했다.
+
+| 실행 | 결과 |
+| --- | --- |
+| Firebase deploy --project project0000-ec01e --only database --non-interactive --json | PASS/exit0. 02:52 KST 완료 |
+| Firebase deploy --project project0000-ec01e --only functions:<명시81개> --non-interactive --force --json | PASS/exit0. 03:12~03:16 KST, 배포 JSON status=success |
+| 배포 후 functions:list 메타데이터 |81개 모두 ACTIVE/Node22, 이름·리전 일치. connected/cleanupSignal 좁은 경로와 retry=true 일치 |
+| 예약 보안 설정 /.settings/rules 조회 | 로컬 Rules JSON과 일치. 사용자/게임 경로 조회 없음 |
+| .\tool\invoke_mosigame.ps1 validate --full --json | FAIL/exit1. 03:18~03:19 KST, 약53초. preflight·포맷·mutation PASS, flutter-analyze FAIL |
+
+Rules 조회 전 설치 CLI의 experimental rules:list/get 명령이 노출되지 않은 두 시도는
+실패했다. 이후 기존 CLI의 database:get으로 **예약 설정 API /.settings/rules만** 읽었다.
+운영 RTDB root/rooms/사용자/게임 payload와 Auth 사용자 데이터, 실행 로그는 조회하지 않았다.
+Rules 내용 SHA-256(JSON 정규 직렬화)은
+`c2ee38aa2d2c7233d55639f75b1531fb65f5d872ad3467aecd19f28546261bf4`다.
+
+FULL은 game_final_call/game_holdem/game_kit/game_liars_poker의
+`test/support/overflow_sweep.dart:211,275` 각각2개, 합계8개
+`curly_braces_in_flow_control_structures` INFO 때문에 분석에서 멈췄다. 문법/타입 오류가 아니지만
+canonical FULL의 실패이며 이후 루트/패키지/Functions 전체 테스트를 실행한 것으로 표시하지 않는다.
+배포·FULL을 위해 코드를 수정하거나 검사를 생략하지 않았다. 현재 배포 기능 변경의 전체
+검증 완료/출시 완료는 아니다. 중괄호 보완 및 관련 분석 후 새 최종 후보 FULL 승인이 후속이다.
+
+ignored `build/b1-deploy/{rules-result,functions-result,rules-verification,verification,full-result}.json`
+및 stdout/stderr에 명령/시간/exit/status를 남겼다. 배포와 FULL의 source/Git 비교는 모두
+unchanged=true, FULL 직전·직후 SHA-256은
+`43d4841db0684480b5ad677a661081df8f36367f8e5d5cd2d681b58c8f4d6de8`다.
+이 기록과 작업 목록은 FULL 종료 뒤 갱신했다. HEAD/브랜치와 제품·테스트 코드, Rules 소스는
+그대로이며 추가 commit/push는 하지 않았다. 실기기 검증·실제 운영 heartbeat 호출/과금 측정은
+이번 배포 메타데이터 확인에 포함되지 않는다.

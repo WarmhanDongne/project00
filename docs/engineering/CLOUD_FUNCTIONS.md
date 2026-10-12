@@ -182,3 +182,22 @@ game_common_operation_status의 CLI 업데이트 모두 성공(exit0). predeploy
 위 과거 기록의 game_common_operation_status timing 미배포는 이 배포로 갱신되며 closeRoom의
 운영 일치는 이번 배포 범위에 포함하지 않았다. 새 APK와 실기기36/37의 통과는 별도 판정한다.
 [배포 근거·남은 검증](../planning/tasks/NETWORK_SESSION_20261011_IMPLEMENTATION.md)을 따른다.
+
+## 2026-10-13 — B1·디벨럽1 통합 Functions/Rules 배포
+
+사용자가 기존 게임 종료·B1 APK 준비와 Rules 동시 배포를 확인하고, 새 retry 정책의
+재시도 과금 가능성 및 정확한81개 함수의 `--force` 배포를 명시 승인했다.
+`codex/b1-develop1-integration`의 `4e9df2e`에서 project0000-ec01e에 Rules와81개 Functions를
+배포했다. 두 배포 exit0, 배포 전후 소스·Git 상태 동일이다. stable Rules의 예약 설정 경로만
+읽어 로컬 JSON과 일치를 확인했고 방·사용자·게임 데이터는 조회하지 않았다.
+
+운영 함수81개는 모두 ACTIVE/Node22, 소스 리전과 일치한다. syncRealtimeRoomConnection은
+`rooms/{roomCode}/connections/{uid}/{connectionId}/connected`, syncRoomCleanupQueue는
+`rooms/{roomCode}/cleanupSignal`로 갱신됐으며 둘 다 retry=true를 확인했다. 신규 이름이나
+소스에 없는 함수 삭제는 없다. 초기에 CLI retry 확인에서 중단됐고 강제 옵션 자동 승인이
+거부됐으나, 사용자 명시 승인 후 동일 소스로 배포 성공했다.
+
+배포 후 승인 FULL은 flutter-analyze의 기존 테스트 보조 코드 중괄호 INFO8개로 FAIL/exit1이다.
+포맷·preflight·mutation은 PASS, 이후 전체 테스트 단계는 미실행이다. 제품/테스트 코드는
+자동 수정하지 않았고 FULL PASS/출시 완료로 판정하지 않는다. 실기기와 실제 비용 측정은
+별도 후속이다. [배포·검증 기록](../operations/HEARTBEAT_B1_IMPLEMENTATION.md#2026-10-13--운영-배포full-검증)을 따른다.
