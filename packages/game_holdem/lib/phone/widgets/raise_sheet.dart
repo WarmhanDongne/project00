@@ -3,6 +3,7 @@ import 'package:game_holdem/game_copy.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 벳·레이즈 금액을 고르는 하단 시트입니다.
 ///
@@ -50,12 +51,6 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
 
   int _clamp(int value) => value.clamp(_min, _max);
 
-  /// 팟 비율 레이즈 목표액입니다. 콜한 뒤의 팟 크기를 기준으로 계산합니다.
-  int _potTarget(double ratio) {
-    final afterCall = widget.potTotal + widget.legal.toCall;
-    return _clamp(widget.currentBet + (afterCall * ratio).round());
-  }
-
   @override
   Widget build(BuildContext context) {
     final target = _clamp(_target);
@@ -66,12 +61,6 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
         ? 'Bet'
         : 'Raise';
     final left = widget.stack - (target - widget.streetContribution);
-    final quick = <(String, int)>[
-      ('최소', _min),
-      ('½ 팟', _potTarget(.5)),
-      ('팟', _potTarget(1)),
-      ('올인', _max),
-    ];
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
       decoration: BoxDecoration(
@@ -110,7 +99,7 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                 ),
                 HoldemCircleIconButton(
                   icon: Icons.close_rounded,
-                  label: '닫기',
+                  label: HoldemCopy.close,
                   size: 44,
                   onPressed: widget.onClose,
                 ),
@@ -121,7 +110,12 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
               children: [
                 _StepButton(
                   icon: Icons.remove_rounded,
-                  label: '${widget.step} 내리기',
+                  label: GameLocale.select(
+                    ko: '${widget.step} 내리기',
+                    en: 'Decrease by ${widget.step}',
+                    zhHans: '减少 ${widget.step}',
+                    zhHant: '減少 ${widget.step}',
+                  ),
                   onPressed: _canChoose && target > _min
                       ? () => setState(
                           () => _target = _clamp(target - widget.step),
@@ -139,7 +133,12 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '베팅 후 남는 칩 ${holdemChips(left)}',
+                        GameLocale.select(
+                          ko: '베팅 후 남는 칩 ${holdemChips(left)}',
+                          en: 'Chips left ${holdemChips(left)}',
+                          zhHans: '下注后剩余 ${holdemChips(left)}',
+                          zhHant: '下注後剩餘 ${holdemChips(left)}',
+                        ),
                         style: HoldemFonts.text(
                           size: 13,
                           color: HoldemColors.muted,
@@ -150,7 +149,12 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                 ),
                 _StepButton(
                   icon: Icons.add_rounded,
-                  label: '${widget.step} 올리기',
+                  label: GameLocale.select(
+                    ko: '${widget.step} 올리기',
+                    en: 'Increase by ${widget.step}',
+                    zhHans: '增加 ${widget.step}',
+                    zhHant: '增加 ${widget.step}',
+                  ),
                   onPressed: _canChoose && target < _max
                       ? () => setState(
                           () => _target = _clamp(target + widget.step),
@@ -178,8 +182,12 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                 value: target.toDouble(),
                 min: _min.toDouble(),
                 max: _canChoose ? _max.toDouble() : _min.toDouble() + 1,
-                semanticFormatterCallback: (value) =>
-                    '레이즈 금액 ${holdemChips(value.round())}',
+                semanticFormatterCallback: (value) => GameLocale.select(
+                  ko: '레이즈 금액 ${holdemChips(value.round())}',
+                  en: 'Raise to ${holdemChips(value.round())}',
+                  zhHans: '加注至 ${holdemChips(value.round())}',
+                  zhHant: '加注至 ${holdemChips(value.round())}',
+                ),
                 onChanged: _canChoose
                     ? (value) => setState(() => _target = _snap(value))
                     : null,
@@ -191,14 +199,19 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '최소 ${holdemChips(_min)}',
+                    GameLocale.select(
+                      ko: '최소 ${holdemChips(_min)}',
+                      en: 'Min ${holdemChips(_min)}',
+                      zhHans: '最低 ${holdemChips(_min)}',
+                      zhHant: '最低 ${holdemChips(_min)}',
+                    ),
                     style: HoldemFonts.text(
                       size: 12,
                       color: HoldemColors.muted,
                     ),
                   ),
                   Text(
-                    '올인 ${holdemChips(_max)}',
+                    '${HoldemCopy.action('allIn')} ${holdemChips(_max)}',
                     style: HoldemFonts.text(
                       size: 12,
                       color: HoldemColors.muted,
@@ -206,23 +219,6 @@ class _HoldemRaiseSheetState extends State<HoldemRaiseSheet> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                for (final (index, (label, value)) in quick.indexed) ...[
-                  if (index > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _QuickButton(
-                      label: label,
-                      selected: value == target,
-                      onPressed: _canChoose || value == _max
-                          ? () => setState(() => _target = value)
-                          : null,
-                    ),
-                  ),
-                ],
-              ],
             ),
             const SizedBox(height: 28),
             HoldemPuckButton(
@@ -283,39 +279,6 @@ class _StepButton extends StatelessWidget {
           ),
         ),
       ),
-    ),
-  );
-}
-
-class _QuickButton extends StatelessWidget {
-  const _QuickButton({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 44,
-    child: TextButton(
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        backgroundColor: selected ? HoldemColors.ivory : Colors.transparent,
-        foregroundColor: selected ? HoldemColors.ink : HoldemColors.ivory,
-        disabledForegroundColor: HoldemColors.line(.35),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? HoldemColors.ivory : HoldemColors.line(.28),
-          ),
-        ),
-        textStyle: HoldemFonts.text(size: 14, weight: FontWeight.w700),
-      ),
-      onPressed: onPressed,
-      child: Text(label),
     ),
   );
 }

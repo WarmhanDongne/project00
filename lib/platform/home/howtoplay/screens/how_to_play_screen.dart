@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/howtoplay/models/how_to_play_step.dart';
 import 'package:project00/platform/home/howtoplay/widgets/how_to_play_scenes.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -130,7 +131,7 @@ class _HowToPlayScreenState extends State<HowToPlayScreen>
           Icon(Icons.play_circle_outline, color: colors.primary, size: 22),
           const SizedBox(width: 8),
           Text(
-            '이렇게 플레이해요',
+            '이렇게 플레이해요'.localized,
             style: TextStyle(
               color: colors.text,
               fontSize: 20,
@@ -139,7 +140,7 @@ class _HowToPlayScreenState extends State<HowToPlayScreen>
           ),
           const Spacer(),
           IconButton.filledTonal(
-            tooltip: '닫기',
+            tooltip: '닫기'.localized,
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.close, size: 20),
           ),
@@ -193,7 +194,7 @@ class _HowToPlayScreenState extends State<HowToPlayScreen>
                 : TextButton(
                     onPressed: () => _goTo(_index - 1, byUser: true),
                     child: Text(
-                      '이전',
+                      '이전'.localized,
                       style: TextStyle(
                         color: colors.textMuted,
                         fontWeight: FontWeight.w800,
@@ -215,7 +216,7 @@ class _HowToPlayScreenState extends State<HowToPlayScreen>
           SizedBox(
             width: 140,
             child: PlatformButton(
-              label: isLast ? '알겠어요' : '다음',
+              label: isLast ? '알겠어요'.localized : '다음'.localized,
               height: 48,
               onPressed: isLast
                   ? () => Navigator.of(context).maybePop()

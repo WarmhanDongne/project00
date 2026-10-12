@@ -53,7 +53,7 @@ void showHoldemRules(BuildContext context, [Offset? origin]) {
   showPhoneRippleDialog<void>(
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
-    builder: (_) => const PhoneGameRuleDialog(
+    builder: (_) => PhoneGameRuleDialog(
       title: 'TEXAS HOLD’EM',
       rules: HoldemCopy.phoneRules,
       surfaceColor: HoldemColors.sheet,

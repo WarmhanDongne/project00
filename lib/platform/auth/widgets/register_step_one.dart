@@ -1,5 +1,6 @@
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/auth/models/password_policy.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
@@ -42,6 +43,7 @@ class RegisterStepOne extends StatelessWidget {
   final VoidCallback onSetPassword;
 
   bool get _emailEditable =>
+      step == RegisterStep.passwordAccount ||
       step == RegisterStep.emailInput ||
       (step == RegisterStep.emailLinkFailed &&
           emailController.text.trim().isEmpty);
@@ -60,7 +62,12 @@ class RegisterStepOne extends StatelessWidget {
           MosiNotice(
             message:
                 errorMessage ??
-                (email.isEmpty ? '이메일 인증이 완료되었어요' : '$email 인증이 완료되었어요'),
+                GameLocale.select(
+                  ko: email.isEmpty ? '이메일 인증이 완료되었어요' : '$email 인증이 완료되었어요',
+                  en: email.isEmpty ? 'Email verified' : '$email verified',
+                  zhHans: email.isEmpty ? '邮箱验证完成' : '$email 验证完成',
+                  zhHant: email.isEmpty ? '電子郵件驗證完成' : '$email 驗證完成',
+                ),
             tone: errorMessage != null
                 ? MosiNoticeTone.error
                 : MosiNoticeTone.success,
@@ -91,38 +98,80 @@ class RegisterStepOne extends StatelessWidget {
             const SizedBox(height: 14),
             _MailSentBox(
               email: email,
-              cooldownText: '메일이 오지 않았다면 다시 보내 주세요',
+              cooldownText: GameLocale.select(
+                ko: '메일이 오지 않았다면 다시 보내 주세요',
+                en: 'Resend if the email does not arrive',
+                zhHans: '若未收到邮件，请重新发送',
+                zhHant: '若未收到郵件，請重新傳送',
+              ),
               completing: action == RegisterAction.completeLink,
             ),
           ],
           if (_isFailed && errorMessage == null) ...[
             const SizedBox(height: 14),
-            const MosiNotice(message: '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.'),
+            MosiNotice(
+              message: GameLocale.select(
+                ko: '인증에 실패했습니다. 메일 주소와 링크를 확인해 주세요.',
+                en: 'Verification failed. Check the email address and link.',
+                zhHans: '验证失败。请检查邮箱地址和链接。',
+                zhHant: '驗證失敗。請檢查電子郵件地址和連結。',
+              ),
+            ),
           ],
           if (errorMessage != null) ...[
             const SizedBox(height: 14),
             MosiNotice(message: errorMessage!),
           ],
           const SizedBox(height: 14),
-          MosiButton(
-            key: const Key('register-send-email-button'),
-            label: _emailEditable && !_isFailed
-                ? '인증 메일 보내기'
-                : action == RegisterAction.resendEmail
-                ? '다시 보내는 중…'
-                : '인증 메일 다시 보내기',
-            background: _emailEditable && !_isFailed
-                ? MosiColors.lime
-                : MosiColors.white,
-            height: 54,
-            expand: true,
-            loading: action == RegisterAction.sendEmail,
-            onPressed: isBusy
-                ? null
-                : step == RegisterStep.emailInput
-                ? onSendEmail
-                : onResendEmail,
-          ),
+          if (step == RegisterStep.passwordAccount)
+            _PasswordFields(
+              passwordController: passwordController,
+              controller: confirmPasswordController,
+              isBusy: isBusy,
+              isSaving: action == RegisterAction.setPassword,
+              onSetPassword: onSetPassword,
+              buttonLabel: GameLocale.select(
+                ko: '계정 만들고 인증하기',
+                en: 'Create account and verify',
+                zhHans: '创建账号并验证',
+                zhHant: '建立帳號並驗證',
+              ),
+            )
+          else
+            MosiButton(
+              key: const Key('register-send-email-button'),
+              label: _emailEditable && !_isFailed
+                  ? GameLocale.select(
+                      ko: '인증 메일 보내기',
+                      en: 'Send verification email',
+                      zhHans: '发送验证邮件',
+                      zhHant: '傳送驗證郵件',
+                    )
+                  : action == RegisterAction.resendEmail
+                  ? GameLocale.select(
+                      ko: '다시 보내는 중…',
+                      en: 'Resending…',
+                      zhHans: '正在重新发送…',
+                      zhHant: '正在重新傳送…',
+                    )
+                  : GameLocale.select(
+                      ko: '인증 메일 다시 보내기',
+                      en: 'Resend verification email',
+                      zhHans: '重新发送验证邮件',
+                      zhHant: '重新傳送驗證郵件',
+                    ),
+              background: _emailEditable && !_isFailed
+                  ? MosiColors.lime
+                  : MosiColors.white,
+              height: 54,
+              expand: true,
+              loading: action == RegisterAction.sendEmail,
+              onPressed: isBusy
+                  ? null
+                  : step == RegisterStep.emailInput
+                  ? onSendEmail
+                  : onResendEmail,
+            ),
         ],
       ],
     );
@@ -136,6 +185,7 @@ class _PasswordFields extends StatefulWidget {
     required this.isBusy,
     required this.isSaving,
     required this.onSetPassword,
+    this.buttonLabel,
   });
 
   final TextEditingController passwordController;
@@ -143,6 +193,7 @@ class _PasswordFields extends StatefulWidget {
   final bool isBusy;
   final bool isSaving;
   final VoidCallback onSetPassword;
+  final String? buttonLabel;
 
   @override
   State<_PasswordFields> createState() => _PasswordFieldsState();
@@ -198,8 +249,18 @@ class _PasswordFieldsState extends State<_PasswordFields> {
                   hintText: context.l10n.password,
                   suffix: eye(
                     _obscurePassword,
-                    '비밀번호 보기',
-                    '비밀번호 숨기기',
+                    GameLocale.select(
+                      ko: '비밀번호 보기',
+                      en: 'Show password',
+                      zhHans: '显示密码',
+                      zhHant: '顯示密碼',
+                    ),
+                    GameLocale.select(
+                      ko: '비밀번호 숨기기',
+                      en: 'Hide password',
+                      zhHans: '隐藏密码',
+                      zhHant: '隱藏密碼',
+                    ),
                     () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
@@ -210,10 +271,42 @@ class _PasswordFieldsState extends State<_PasswordFields> {
               runSpacing: 6,
               children: [
                 for (final (label, met) in [
-                  ('6자 이상', PasswordPolicy.hasMinimumLength(password)),
-                  ('영문 1개 이상', PasswordPolicy.hasLetter(password)),
-                  ('숫자 1개 이상', PasswordPolicy.hasNumber(password)),
-                  ('특수문자 1개 이상', PasswordPolicy.hasSpecialCharacter(password)),
+                  (
+                    GameLocale.select(
+                      ko: '6자 이상',
+                      en: '6+ characters',
+                      zhHans: '至少 6 个字符',
+                      zhHant: '至少 6 個字元',
+                    ),
+                    PasswordPolicy.hasMinimumLength(password),
+                  ),
+                  (
+                    GameLocale.select(
+                      ko: '영문 1개 이상',
+                      en: 'At least 1 letter',
+                      zhHans: '至少 1 个英文字母',
+                      zhHant: '至少 1 個英文字母',
+                    ),
+                    PasswordPolicy.hasLetter(password),
+                  ),
+                  (
+                    GameLocale.select(
+                      ko: '숫자 1개 이상',
+                      en: 'At least 1 number',
+                      zhHans: '至少 1 个数字',
+                      zhHant: '至少 1 個數字',
+                    ),
+                    PasswordPolicy.hasNumber(password),
+                  ),
+                  (
+                    GameLocale.select(
+                      ko: '특수문자 1개 이상',
+                      en: 'At least 1 symbol',
+                      zhHans: '至少 1 个特殊字符',
+                      zhHant: '至少 1 個特殊字元',
+                    ),
+                    PasswordPolicy.hasSpecialCharacter(password),
+                  ),
                 ])
                   FractionallySizedBox(
                     widthFactor: 0.5,
@@ -241,8 +334,18 @@ class _PasswordFieldsState extends State<_PasswordFields> {
                   hintText: context.l10n.passwordAgain,
                   suffix: eye(
                     _obscureConfirmation,
-                    '비밀번호 확인 보기',
-                    '비밀번호 확인 숨기기',
+                    GameLocale.select(
+                      ko: '비밀번호 확인 보기',
+                      en: 'Show password confirmation',
+                      zhHans: '显示确认密码',
+                      zhHant: '顯示確認密碼',
+                    ),
+                    GameLocale.select(
+                      ko: '비밀번호 확인 숨기기',
+                      en: 'Hide password confirmation',
+                      zhHans: '隐藏确认密码',
+                      zhHant: '隱藏確認密碼',
+                    ),
                     () => setState(
                       () => _obscureConfirmation = !_obscureConfirmation,
                     ),
@@ -255,8 +358,18 @@ class _PasswordFieldsState extends State<_PasswordFields> {
               !confirmationStarted
                   ? ' '
                   : passwordsMatch
-                  ? '비밀번호가 일치합니다.'
-                  : '비밀번호가 일치해야 합니다.',
+                  ? GameLocale.select(
+                      ko: '비밀번호가 일치합니다.',
+                      en: 'Passwords match.',
+                      zhHans: '密码一致。',
+                      zhHant: '密碼一致。',
+                    )
+                  : GameLocale.select(
+                      ko: '비밀번호가 일치해야 합니다.',
+                      en: 'Passwords must match.',
+                      zhHans: '两次密码必须一致。',
+                      zhHant: '兩次密碼必須一致。',
+                    ),
               style: MosiFonts.sans(
                 locale: Localizations.maybeLocaleOf(context),
                 size: 12,
@@ -268,7 +381,7 @@ class _PasswordFieldsState extends State<_PasswordFields> {
             ),
             const SizedBox(height: 12),
             MosiButton(
-              label: context.l10n.next,
+              label: widget.buttonLabel ?? context.l10n.next,
               height: 54,
               expand: true,
               loading: widget.isSaving,
@@ -328,7 +441,19 @@ class _MailSentBox extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    completing ? '인증을 확인하는 중이에요' : '인증 메일을 보냈어요',
+                    completing
+                        ? GameLocale.select(
+                            ko: '인증을 확인하는 중이에요',
+                            en: 'Checking verification',
+                            zhHans: '正在确认验证',
+                            zhHant: '正在確認驗證',
+                          )
+                        : GameLocale.select(
+                            ko: '인증 메일을 보냈어요',
+                            en: 'Verification email sent',
+                            zhHans: '验证邮件已发送',
+                            zhHant: '驗證郵件已傳送',
+                          ),
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 14,
@@ -338,7 +463,12 @@ class _MailSentBox extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$email 메일함에서 링크를 눌러 주세요.',
+                    GameLocale.select(
+                      ko: '$email 메일함에서 링크를 눌러 주세요.',
+                      en: 'Open the link in the email sent to $email.',
+                      zhHans: '请打开发送到 $email 的邮件链接。',
+                      zhHant: '請開啟傳送到 $email 的郵件連結。',
+                    ),
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 13,

@@ -8,7 +8,10 @@
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/localization/game_locale.dart';
+import 'package:game_final_call/game_assets.dart';
 import 'package:game_final_call/game_theme.dart';
+import 'package:game_final_call/gen/assets.gen.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_final_call/phone/phone_board.dart';
 import 'package:game_final_call/tablet/tablet_board.dart';
@@ -25,7 +28,12 @@ class FinalCallGame extends TemplateGame {
   @override
   String get id => 'final_call';
   @override
-  String get title => 'Final Call';
+  String get title => GameLocale.select(
+    ko: '파이널 콜',
+    en: 'Final Call',
+    zhHans: '最终召集',
+    zhHant: '最終召集',
+  );
   @override
   List<int> get supportedPlayerCounts => const [4, 6];
   @override
@@ -33,12 +41,18 @@ class FinalCallGame extends TemplateGame {
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.landscapeOnly;
-  // 자리 배치 화면은 Party Pop 게임 바탕색으로 테이블과 의자를 그립니다.
-  // 게임 화면이 그림 대신 코드로 그리는 배경이라 별도 이미지가 없습니다.
+  // 게임 화면은 그림 대신 코드로 그리는 배경이라 배경 이미지가 없습니다.
   @override
   Color get tableColor => FinalCallColors.night;
   @override
   ImageProvider? get tableBackgroundImage => null;
+  // 자리 배치 화면의 테이블과 의자는 Party Pop 시안으로 그린 그림을 씁니다.
+  @override
+  ImageProvider get layoutTableImage =>
+      Assets.games.finalCall.images.layout.table.game.provider();
+  @override
+  ImageProvider get layoutChairImage =>
+      Assets.games.finalCall.images.layout.chair.game.provider();
 
   @override
   Future<void> startGame(String roomCode, {Map<String, Object?>? options}) =>
@@ -79,7 +93,7 @@ class FinalCallGame extends TemplateGame {
     return Builder(
       builder: (context) => CriticalNetworkGuard(
         provider: provider,
-        exitLabel: '대기실로',
+        exitLabel: '대기실로'.localized,
         onExit: () => Navigator.of(context).maybePop(),
         child: FinalCallTabletGame(
           roomCode: roomCode,

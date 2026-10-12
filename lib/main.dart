@@ -5,6 +5,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -127,6 +128,7 @@ class _StartupFailureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = View.of(context).platformDispatcher.locale;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
@@ -136,24 +138,35 @@ class _StartupFailureApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.cloud_off, color: Color(0xFF8A8A8A), size: 48),
-                SizedBox(height: 20),
+              children: [
+                const Icon(Icons.cloud_off, color: Color(0xFF8A8A8A), size: 48),
+                const SizedBox(height: 20),
                 Text(
-                  '앱을 시작할 수 없습니다',
+                  GameLocale.selectFor(
+                    locale,
+                    ko: '앱을 시작할 수 없습니다',
+                    en: 'Unable to start the app',
+                    zhHans: '无法启动应用',
+                    zhHant: '無法啟動 App',
+                  ),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xFFECECEC),
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
-                  '네트워크 상태를 확인한 뒤 앱을 다시 실행해 주세요.\n'
-                  '문제가 계속되면 앱을 최신 버전으로 업데이트해 주세요.',
+                  GameLocale.selectFor(
+                    locale,
+                    ko: '네트워크 상태를 확인한 뒤 앱을 다시 실행해 주세요.\n문제가 계속되면 앱을 최신 버전으로 업데이트해 주세요.',
+                    en: 'Check your network, then restart the app.\nIf the problem continues, update to the latest version.',
+                    zhHans: '请检查网络后重新启动应用。\n如果问题持续，请更新到最新版本。',
+                    zhHant: '請檢查網路後重新啟動 App。\n如果問題持續，請更新到最新版本。',
+                  ),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFFA8A8A8), height: 1.6),
+                  style: const TextStyle(color: Color(0xFFA8A8A8), height: 1.6),
                 ),
               ],
             ),

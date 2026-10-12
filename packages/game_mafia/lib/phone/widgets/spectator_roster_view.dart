@@ -15,6 +15,7 @@ import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -66,9 +67,9 @@ class MafiaSpectatorRosterView extends StatelessWidget {
   static const double listTop = 206;
   static const double _listBottom = 780;
 
-  static const String spectatingTitle = '관전 중';
-  static const String finishedTitle = '신분 정보';
-  static const String _warning = '살아 있는 사람에게 화면을 보여주지 마세요';
+  static String get spectatingTitle => '관전 중'.localized;
+  static String get finishedTitle => '신분 정보'.localized;
+  static String get _warning => '살아 있는 사람에게 화면을 보여주지 마세요'.localized;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +97,7 @@ class MafiaSpectatorRosterView extends StatelessWidget {
               right: 0,
               top: MafiaPhoneDesign.top(size, _labelTop),
               child: Text(
-                '모든 신분',
+                '모든 신분'.localized,
                 textAlign: TextAlign.center,
                 style: mafiaNoirBody(
                   13 * scale,
@@ -197,9 +198,23 @@ class _MafiaRosterRow extends StatelessWidget {
   /// 사망 사유를 신분 뒤에 붙입니다(예: `경찰 · 처형`).
   static String? deathLabel(MafiaPlayer player) {
     if (player.isAlive) return null;
-    if (player.wasExecuted) return '처형';
-    if (player.diedAtNight) return '사망';
-    return '퇴장';
+    if (player.wasExecuted) {
+      return GameLocale.select(
+        ko: '처형',
+        en: 'Executed',
+        zhHans: '处决',
+        zhHant: '處決',
+      );
+    }
+    if (player.diedAtNight) {
+      return GameLocale.select(
+        ko: '사망',
+        en: 'Died',
+        zhHans: '死亡',
+        zhHant: '死亡',
+      );
+    }
+    return GameLocale.select(ko: '퇴장', en: 'Left', zhHans: '离开', zhHant: '離開');
   }
 
   @override
@@ -208,7 +223,7 @@ class _MafiaRosterRow extends StatelessWidget {
     final role = entry.role;
     final alive = player.isAlive;
     final death = deathLabel(player);
-    final roleName = role?.displayName ?? '알 수 없음';
+    final roleName = role?.localizedDisplayName ?? '알 수 없음'.localized;
     final roleColor = !alive
         ? MafiaColors.noirPaper
         : role == null
@@ -257,7 +272,14 @@ class _MafiaRosterRow extends StatelessWidget {
               SizedBox(width: 12 * scale),
               Expanded(
                 child: Text(
-                  isMe ? '${player.nickname} (나)' : player.nickname,
+                  isMe
+                      ? GameLocale.select(
+                          ko: '${player.nickname} (나)',
+                          en: '${player.nickname} (Me)',
+                          zhHans: '${player.nickname}（我）',
+                          zhHant: '${player.nickname}（我）',
+                        )
+                      : player.nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: mafiaNoirDisplay(20 * scale),

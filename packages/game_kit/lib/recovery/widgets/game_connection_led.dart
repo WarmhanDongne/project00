@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/recovery/widgets/connection_notice_host.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 export 'package:game_kit/recovery/widgets/connection_notice_host.dart'
     show ConnectionNoticePhase;
@@ -121,17 +122,20 @@ class GameConnectionLed extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final (code, codeColor, label) = switch (phase) {
-      ConnectionNoticePhase.lost ||
-      ConnectionNoticePhase.hidden => ('oFF', style.offColor, style.lostLabel),
+      ConnectionNoticePhase.lost || ConnectionNoticePhase.hidden => (
+        'oFF',
+        style.offColor,
+        style.lostLabel.localized,
+      ),
       ConnectionNoticePhase.reconnecting => (
         '$step-$maxSteps',
         style.retryColor,
-        style.reconnectingLabel,
+        style.reconnectingLabel.localized,
       ),
       ConnectionNoticePhase.restored => (
         'on',
         style.onColor,
-        style.restoredLabel,
+        style.restoredLabel.localized,
       ),
     };
     return Semantics(

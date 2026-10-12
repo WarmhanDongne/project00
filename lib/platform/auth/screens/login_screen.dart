@@ -1,7 +1,7 @@
 import 'package:project00/platform/localization/platform_localizations.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/gen/assets.gen.dart';
 import 'package:project00/platform/auth/providers/auth_provider.dart';
@@ -9,10 +9,12 @@ import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 
-enum _LoginAction { password, google, apple }
+enum _LoginAction { password, google, apple, guest }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.authService});
+
+  final FirebaseAuthService? authService;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,7 +22,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _authProvider = AuthProvider();
-  final _authService = FirebaseAuthService();
+  late final _authService = widget.authService ?? FirebaseAuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _customDomainController = TextEditingController();
@@ -60,14 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: password,
       );
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null && !user.emailVerified) {
-        await FirebaseAuth.instance.signOut();
-        throw const AuthServiceException(
-          'email-not-verified',
-          '이메일 링크 인증을 완료한 뒤 다시 로그인해주세요.',
-        );
-      }
+      // 미인증 계정도 AuthGate의 이메일 확인 화면에서 가입을 이어갑니다.
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       setState(
@@ -83,7 +78,23 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // _sign()에서 사용
+  Future<void> _signInAsGuest() async {
+    if (_action != null) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _action = _LoginAction.guest;
+      _errorMessage = null;
+    });
+    try {
+      await _authService.signInAsGuest();
+    } on AuthServiceException catch (error) {
+      if (mounted) setState(() => _errorMessage = error.message);
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  // _signIn에서 사용
   String _email() {
     final input = _emailController.text.trim().toLowerCase();
     if (input.contains('@')) return input;
@@ -104,7 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() {
       if (credential == null) {
-        _errorMessage = _authProvider.errorMessage ?? '구글 로그인을 완료하지 못했습니다.';
+        _errorMessage =
+            _authProvider.errorMessage?.localized ??
+            GameLocale.select(
+              ko: '구글 로그인을 완료하지 못했습니다.',
+              en: 'Google sign-in could not be completed.',
+              zhHans: '无法完成 Google 登录。',
+              zhHant: '無法完成 Google 登入。',
+            );
       }
       _action = null;
     });
@@ -244,6 +262,16 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 18),
         const MosiOrDivider(),
         const SizedBox(height: 14),
+        MosiButton(
+          key: const Key('login-guest-button'),
+          label: context.l10n.guestLogin,
+          background: MosiColors.white,
+          height: 50,
+          expand: true,
+          loading: _action == _LoginAction.guest,
+          onPressed: isBusy ? null : _signInAsGuest,
+        ),
+        const SizedBox(height: 10),
         SocialLoginButton(
           key: const Key('login-google-button'),
           label: context.l10n.googleLogin,

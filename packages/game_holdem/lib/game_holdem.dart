@@ -5,6 +5,7 @@ import 'package:game_holdem/phone/phone_board.dart';
 import 'package:game_holdem/shared/services/game_service.dart';
 import 'package:game_holdem/tablet/tablet_board.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/recovery/widgets/critical_network_guard.dart';
@@ -16,7 +17,12 @@ class HoldemGame extends TemplateGame {
   @override
   String get id => 'holdem';
   @override
-  String get title => "Texas Hold'em";
+  String get title => GameLocale.select(
+    ko: '텍사스 홀덤',
+    en: "Texas Hold'em",
+    zhHans: '德州扑克',
+    zhHant: '德州撲克',
+  );
   @override
   List<int> get supportedPlayerCounts => const [2, 3, 4, 5, 6, 7, 8];
   @override
@@ -71,7 +77,7 @@ class HoldemGame extends TemplateGame {
   }) => Builder(
     builder: (context) => CriticalNetworkGuard(
       provider: provider,
-      exitLabel: '대기실로',
+      exitLabel: '대기실로'.localized,
       onExit: () => Navigator.of(context).maybePop(),
       child: HoldemTabletGame(
         playerLayout: playerLayout,

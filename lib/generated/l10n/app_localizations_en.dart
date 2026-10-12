@@ -26,7 +26,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get translationScope =>
-      'Applies to main menus. Game descriptions, rules, images and some messages are still in Korean.';
+      'Applies to main menus and game names, descriptions, rules, and genres. Text in images and some messages is still in Korean.';
 
   @override
   String get save => 'Save';
@@ -65,6 +65,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get details => 'Details';
 
   @override
+  String get viewDescription => 'How to play';
+
+  @override
   String get login => 'Log in';
 
   @override
@@ -81,6 +84,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appleLogin => 'Continue with Apple';
+
+  @override
+  String get guestLogin => 'Continue as guest';
 
   @override
   String get checkCredentials => 'Check your email and password.';

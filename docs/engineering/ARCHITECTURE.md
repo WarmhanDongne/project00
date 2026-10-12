@@ -136,3 +136,41 @@ game/server          클라이언트에 노출하지 않는 서버 상태
 외부 개인 notes, 날짜별 결과, 로컬 장비 절차는 이 architecture의 source of truth가
 아니다. 필요한 제품 계약이 코드와 tracked 문서에서 확인되지 않으면 추측하지 않고
 승인을 요청한다.
+
+
+## 라이어스 카탈로그 ID 호환 (2026-10-12 후보)
+
+Firestore 게임 메타데이터는 games/liars를 우선 조회하고, 해당 문서 부재 시에만
+기존 games/liars_poker로 fallback한다. 앱 GameInfo.id는 기존 runtime ID liars_poker로
+정규화해 방·게임 registry·asset 계약을 보존한다. 두 문서가 함께 있으면 canonical 우선으로
+목록을 한 번만 표시하고, canonical 비활성 상태는 legacy로 우회하지 않는다.
+운영 문서 이전은 새 앱/서버 반영 이후이며 [이전 절차](../planning/tasks/LIARS-CATALOG-01.md)를 따른다.
+
+## 게임 카탈로그 다국어 표시 정보
+
+Firestore `games/{catalogId}` 문서는 이전 앱용 한국어 `name`, `description`, `rules`,
+`genres`와 현재 앱용 `localizedNames`, `localizedDescriptions`, `localizedRules`,
+`localizedGenres` map을 함께 가진다. 다국어 map의 지원 키는 `ko`, `en`, `zh-Hans`,
+`zh-Hant`다. 앱은 현재 locale의 정확한 중국어 script, language code, 영어, 기존
+한국어 필드 순서로 값을 선택한다. 따라서 다국어 필드가 없는 문서와 이전 앱도 계속
+동작한다.
+
+홈의 책 표지·책등, 게임 목록·상세·대기 화면과 상점은 `GameInfo`의 locale-aware
+이름·소개·규칙·장르 선택기를 사용한다. 관리 스크립트
+`functions/scripts/update-game-localized-names.mjs`는 기본 dry-run이고 `--apply`에서
+네 게임의 표시 정보를 한 batch로 갱신한다. 라이어스는 canonical `games/liars`를
+우선하고, ID 이전 전에는 `games/liars_poker`를 갱신한다.
+
+Firestore 카탈로그 밖의 앱·게임 화면 문구는 `game_kit`의 `GameLocale` bridge를
+사용한다. 앱 셸은 locale 설정이 바뀔 때 `GameLocale.current`를 갱신하고, 각 게임
+패키지의 copy getter와 공용 위젯은 그 시점의 `ko`, `en`, `zh-Hans`, `zh-Hant` 값을
+선택한다. 따라서 게임 패키지가 루트 앱의 생성 ARB 클래스를 직접 의존하지 않아도
+같은 언어 변경을 따른다. 서버 상태·오류 원문은 데이터로 유지하고 사용자 화면에
+그리는 마지막 경계에서 번역한다.
+
+운영 카탈로그를 정리할 때는 `functions/scripts/rebuild-game-catalog.mjs`를 사용한다.
+이 스크립트는 기존 `games` 문서를 로컬 `build/` JSON으로 백업하고, 하위 컬렉션이
+없을 때만 한 batch에서 canonical 네 문서를 완전 교체한다. 문서에는 이름·다국어 이름,
+짧은 소개, 휴대폰 규칙, 장르, 인원, 시간, 순서, 활성·접근·상점 상태와 Hold'em의 최소
+앱 버전만 저장한다. 알려진 네 게임의 이미지·구성품·표지와 상세 연출은 앱 패키지가
+소유하므로 URL·별도 태블릿 소개·timestamp 필드는 만들지 않는다.

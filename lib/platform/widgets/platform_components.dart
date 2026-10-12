@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
 
@@ -230,7 +231,7 @@ class PlatformAuthShell extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: MosiIconButton(
                     icon: Icons.chevron_left_rounded,
-                    tooltip: '뒤로',
+                    tooltip: '뒤로'.localized,
                     onPressed:
                         onBackPressed ?? () => Navigator.of(context).maybePop(),
                   ),
@@ -274,7 +275,7 @@ class PlatformPhoneFlowScaffold extends StatelessWidget {
         automaticallyImplyLeading: false,
         leading: showBack
             ? IconButton(
-                tooltip: '뒤로',
+                tooltip: '뒤로'.localized,
                 onPressed: onBack ?? () => Navigator.of(context).maybePop(),
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
               )

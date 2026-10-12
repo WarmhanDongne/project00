@@ -24,7 +24,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get regionHint => '仅用于此设备的显示设置，不会更改账号或账单地区。';
 
   @override
-  String get translationScope => '适用于主要菜单。游戏介绍、规则、图片及部分提示仍显示韩语。';
+  String get translationScope => '适用于主要菜单以及游戏名称、介绍、规则和类型。图片中的文字及部分提示仍显示韩语。';
 
   @override
   String get save => '保存';
@@ -63,6 +63,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get details => '查看详情';
 
   @override
+  String get viewDescription => '查看说明';
+
+  @override
   String get login => '登录';
 
   @override
@@ -79,6 +82,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appleLogin => '使用 Apple 登录';
+
+  @override
+  String get guestLogin => '以访客身份开始';
 
   @override
   String get checkCredentials => '请检查邮箱和密码。';
@@ -444,7 +450,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get regionHint => '仅用于此设备的显示设置，不会更改账号或账单地区。';
 
   @override
-  String get translationScope => '适用于主要菜单。游戏介绍、规则、图片及部分提示仍显示韩语。';
+  String get translationScope => '适用于主要菜单以及游戏名称、介绍、规则和类型。图片中的文字及部分提示仍显示韩语。';
 
   @override
   String get save => '保存';
@@ -483,6 +489,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get details => '查看详情';
 
   @override
+  String get viewDescription => '查看说明';
+
+  @override
   String get login => '登录';
 
   @override
@@ -499,6 +508,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get appleLogin => '使用 Apple 登录';
+
+  @override
+  String get guestLogin => '以访客身份开始';
 
   @override
   String get checkCredentials => '请检查邮箱和密码。';
@@ -864,7 +876,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get regionHint => '僅用於此裝置的顯示設定，不會變更帳號或帳單地區。';
 
   @override
-  String get translationScope => '適用於主要選單。遊戲介紹、規則、圖片及部分提示仍顯示韓語。';
+  String get translationScope => '適用於主要選單以及遊戲名稱、介紹、規則和類型。圖片中的文字及部分提示仍顯示韓語。';
 
   @override
   String get save => '儲存';
@@ -903,6 +915,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get details => '查看詳情';
 
   @override
+  String get viewDescription => '查看說明';
+
+  @override
   String get login => '登入';
 
   @override
@@ -919,6 +934,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get appleLogin => '使用 Apple 登入';
+
+  @override
+  String get guestLogin => '以訪客身分開始';
 
   @override
   String get checkCredentials => '請檢查電子郵件和密碼。';

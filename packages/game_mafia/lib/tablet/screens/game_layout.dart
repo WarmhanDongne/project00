@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_mafia/shared/animations/ejection_text.dart';
 import 'package:game_mafia/game_sounds.dart';
@@ -537,7 +538,7 @@ class MafiaTabletHeadline extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    text,
+                    text.localized,
                     maxLines: 1,
                     textAlign: TextAlign.center,
                     style: mafiaNoirDisplay(fontSize * scale, color: color),

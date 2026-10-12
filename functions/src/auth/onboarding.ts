@@ -71,13 +71,19 @@ function incompleteFields(uid: string, provider: OnboardingProvider) {
   };
 }
 
-/** Starts or resumes the post-email-link password step. */
+/** Starts email-link onboarding or password-first email verification. */
 export const beginOnboarding = onCall(
   {region: REGION, invoker: "public"},
   async (request) => {
     const uid = requireUid(request.auth);
     const authUser = await getAuth().getUser(uid);
-    if (!authUser.emailVerified) {
+    const passwordFirst = request.data?.provider === "legacyPassword";
+    if (passwordFirst && !authUser.providerData.some(
+      (item) => item.providerId === "password",
+    )) {
+      throw new HttpsError("failed-precondition", "이메일 계정이 필요합니다.");
+    }
+    if (!passwordFirst && !authUser.emailVerified) {
       throw new HttpsError(
         "failed-precondition",
         "이메일 링크 인증을 먼저 완료해주세요.",
@@ -91,11 +97,13 @@ export const beginOnboarding = onCall(
       if (existingStatus) return existingStatus;
 
       transaction.set(ref, {
-        ...incompleteFields(uid, "emailLink"),
-        status: "settingPassword",
+        ...incompleteFields(
+          uid, passwordFirst ? "legacyPassword" : "emailLink",
+        ),
+        status: passwordFirst ? "settingProfile" : "settingPassword",
         startedAt: FieldValue.serverTimestamp(),
       });
-      return "settingPassword";
+      return passwordFirst ? "settingProfile" : "settingPassword";
     });
 
     return {status};
@@ -161,6 +169,12 @@ export const completeOnboardingProfile = onCall<ProfileData>(
         transaction.get(userRef),
       ]);
       const status = parseOnboardingStatus(onboarding.data()?.status);
+      if (onboarding.data()?.provider === "legacyPassword" &&
+          !authUser.emailVerified) {
+        throw new HttpsError(
+          "failed-precondition", "이메일 인증을 완료한 뒤 가입해주세요.",
+        );
+      }
       if (status !== "settingProfile" && status !== "complete") {
         throw new HttpsError(
           "failed-precondition",

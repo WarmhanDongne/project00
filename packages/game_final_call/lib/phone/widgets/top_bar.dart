@@ -10,11 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/game_copy.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
-import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/phone/widgets/turn_timer.dart';
 import 'package:game_final_call/shared/widgets/party_pop.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -69,7 +70,12 @@ class FinalCallPhoneTopBar extends StatelessWidget {
             const SizedBox(width: 12),
             Builder(
               builder: (buttonContext) => FinalCallPopIconButton(
-                semanticLabel: '게임 규칙 열기',
+                semanticLabel: GameLocale.select(
+                  ko: '게임 규칙 열기',
+                  en: 'Open game rules',
+                  zhHans: '打开游戏规则',
+                  zhHant: '開啟遊戲規則',
+                ),
                 onPressed: () {
                   final box = buttonContext.findRenderObject() as RenderBox?;
                   onRulesPressed(
@@ -81,7 +87,12 @@ class FinalCallPhoneTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             FinalCallPopIconButton(
-              semanticLabel: '게임과 그룹 나가기',
+              semanticLabel: GameLocale.select(
+                ko: '게임과 그룹 나가기',
+                en: 'Leave game and group',
+                zhHans: '离开游戏和群组',
+                zhHant: '離開遊戲和群組',
+              ),
               onPressed: onExitRoom,
               child: const FinalCallExitGlyph(),
             ),
@@ -236,6 +247,9 @@ class _StatusPill extends StatelessWidget {
   }
 
   Widget _pill({required Color color, required List<Widget> children}) {
+    // 태블릿이 카드를 공개하는 동안처럼 알릴 내용이 없으면 빈 흰 상자를
+    // 그리지 않습니다.
+    if (children.isEmpty) return const SizedBox.shrink();
     return FinalCallPopBox(
       color: color,
       radius: 14,
@@ -256,18 +270,16 @@ class _StatusPill extends StatelessWidget {
 }
 
 /// Final Call 규칙 다이얼로그를 엽니다.
+///
+/// 태블릿 룰북과 같은 규칙을 항목별로 나눠, 왼쪽에서 고르고 오른쪽에서 읽습니다.
 void showFinalCallRules(BuildContext context, [Offset? origin]) {
   final screenSize = MediaQuery.sizeOf(context);
   showPhoneRippleDialog<void>(
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
-    builder: (_) => const PhoneGameRuleDialog(
+    builder: (_) => PhoneGameRulebookDialog(
       title: 'FINAL CALL',
-      rules: FinalCallCopy.phoneRules,
-      surfaceColor: Color.fromARGB(255, 0, 0, 0),
-      foregroundColor: Color.fromARGB(255, 255, 255, 255),
-      showSurface: false,
-      dismissOnAnyTap: true,
+      markdown: FinalCallCopy.tabletRules,
     ),
   );
 }

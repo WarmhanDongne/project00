@@ -1,5 +1,21 @@
 # LOBBY-DESIGN-01
 
+## 2026-10-12 — Selected-game theme propagation
+
+The selected book now supplies the primary action colors to the empty-room
+invite/retry action, the enabled player-count filter, and the phone waiting-room
+`me` badge. The existing start, detail, phone background, and room-code accents
+already used the same game theme. Error, warning, and neutral reset colors keep
+their semantic roles. Relevant GUI tests passed; FULL validation was not run.
+See [validation log](../logs/2026-10.md#lobby-theme-propagation-20261012).
+
+## 2026-10-12 — Liar's Poker right-phone preview layout
+
+Moved Minjun's cards above the `Liar` button while preserving the existing phone,
+button pulse, and ring animations. A widget-position regression test now keeps the
+card center above the button center. Preview and localization tests passed; FULL
+validation was not run. See [validation log](../logs/2026-10.md#liar-preview-phone-layout-20261012).
+
 로비 전체 디자인 개선
 
 [작업 목록으로 돌아가기](../TASKS.md) · [관리 방법](../TASK_MANAGEMENT.md)
@@ -63,3 +79,60 @@ production 접근·배포가 승인되지 않는다.
   production 조회·메일 발송·deploy는 수행하지 않았다. FULL 명시적 승인 대기.
 - 명령별 결과와 working-tree 보존 증거:
   [10월 기록](../logs/2026-10.md#auth-mail-logout-20261010).
+
+## 2026-10-11 — 내 프로필 하단 구분선 제거
+
+취소·저장 버튼 바로 위 2px 선을 제거했다. 해당 Container를 Padding으로 바꿔
+기존 여백과 버튼 배치를 유지한다. 기존 프로필·상점 GUI 테스트 17개 PASS/exit0.
+FULL은 미실행이며 명시적 승인 대기다.
+[검증·보존 기록](../logs/2026-10.md#profile-divider-20261011).
+
+## 2026-10-11 — 게임 상점 진입 버튼 임시 숨김
+
+사용자 요청으로 로비의 게임 상점 버튼을 숨겼다. `_HomeHeader._showGameStore`를
+true로 바꾸면 다시 표시된다. 상점 코드·진입 연출과 게임 상세의 책장 복귀 버튼은
+유지한다. 기존 로비·상점 GUI 테스트 34개 PASS/exit0. FULL은 승인 대기다.
+[검증·보존 기록](../logs/2026-10.md#hide-game-store-20261011).
+
+## 2026-10-12 — 비밀번호 계정 우선 이메일 인증 복원 후보
+
+- 사용자 요청에 따라 새 가입을 약관 → 이메일·비밀번호 계정 생성 → 일반 웹 인증
+  메일 → 프로필로 변경했다. Firebase `createUserWithEmailAndPassword`와
+  `sendEmailVerification`을 사용하며 현재 GUI·비밀번호 정책·약관은 유지한다.
+- `EmailVerificationScreen`은 재전송·확인 버튼·앱 복귀 확인·가입 나중에 하기를
+  제공한다. 미인증 비밀번호 로그인/앱 재시작도 이 화면으로 복원한다.
+- 기존 발송된 이메일 로그인 링크와 `settingPassword` 상태는 계속 처리한다.
+  기존 계정/온보딩 상태를 덮어쓰지 않는다.
+- 서버 계약: `beginOnboarding`의 선택 인자 `{provider: "legacyPassword"}`는
+  비밀번호 provider를 확인하고 기존 enum `legacyPassword/settingProfile`로 미완료
+  가입을 준비한다. `completeOnboardingProfile`은 이 계정의 Firebase 이메일 인증을
+  서버에서 다시 검사한다. 새 상태/collection/callable은 추가하지 않았다.
+- **미배포 후보:** 위 두 인증 함수를 함께 배포한 뒤 새 앱을 적용해야 한다.
+  기존 서버만으로 새 앱 가입이 된다고 판단하지 않는다. FULL, production 배포와
+  실제 메일 수신·인증 후 앱 복귀는 아직 확인하지 않았다.
+- auth suite 60 Flutter + 20 Functions, 관련 GUI 20개 PASS/exit0. 정적 분석 통과.
+  [검증·보존 기록](../logs/2026-10.md#password-email-verification-20261012).
+
+## 2026-10-12 — 태블릿 입력 도구막대에 따른 인증 화면 이동 방지
+
+태블릿 인증 scaffold는 키보드 inset으로 전체 화면을 축소하지 않고 기존 safe area와
+중앙 배치 높이를 유지한다. 입력 폼의 스크롤 영역만 키보드와 겹치는 만큼 줄여,
+작은 도구막대에는 배치가 유지되고 큰 키보드에서는 가려진 입력란·하단 버튼으로
+스크롤할 수 있다. 휴대폰 분기와 OS 자동완성 기능은 유지한다.
+auth suite 63 Flutter + 20 Functions PASS/exit0. iPad 실기기 및 FULL 승인 대기.
+[검증·보존 기록](../logs/2026-10.md#auth-keyboard-toolbar-20261012).
+
+## 2026-10-12 — Firebase 게스트 로그인·방 권한 연결 후보
+
+로그인 화면의 Google·Apple 위에 게스트 버튼을 추가했다. 익명 로그인 뒤 필수 약관에
+동의하면 서버가 `anonymous/complete` 온보딩과 자동 닉네임을 저장하고 Firebase
+displayName도 맞춘다. 단순 익명 인증만으로는 방 생성·코드 검증·참가가 모두 차단되며,
+준비가 완료된 게스트만 기존 `assertOnboardingComplete`를 통과한다. 기본 무료 게임은
+이용할 수 있고 유료 게임은 기존 그룹 보유 검사 대상이다. 일반 계정이 게스트 함수를
+사용해 회원가입을 건너뛰거나, 재시도가 닉네임·보유 게임·동의를 덮어쓰지 못하게 했다.
+한국어·영어·중국어 간체·번체 버튼 문구를 제공한다.
+
+로컬 인증/방 검증 후 2026-10-13 운영 Firebase에서 Anonymous provider의 활성 상태를
+확인하고 `completeGuestOnboarding` 단일 함수를 배포했다. FULL·실기기 전체 흐름 확인은
+남아 있다.
+[검증·보존 기록](../logs/2026-10.md#guest-auth-20261012).

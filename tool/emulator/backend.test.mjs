@@ -179,7 +179,8 @@ after(async () => {
 });
 
 scenario('V21: production export manifest and isolated emulator region adapter', async () => {
-  assert.equal(Object.keys(functions).length, 80);
+  assert.equal(Object.keys(functions).length, 81);
+  assert.equal(typeof functions.completeGuestOnboarding, 'function');
   const triggers = Object.values(functions).filter(fn => fn.__endpoint?.eventTrigger?.eventType?.includes('database'));
   assert.equal(triggers.length, 5);
   for (const fn of triggers) assert.deepEqual(fn.__endpoint.region, ['asia-southeast1']);

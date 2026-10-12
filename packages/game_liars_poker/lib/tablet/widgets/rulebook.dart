@@ -4,9 +4,8 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/tablet/widgets/game_rulebook_dialog.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/models/game_room_context.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_liars_poker/game_copy.dart';
 
 // ============================================================
@@ -26,11 +25,11 @@ class LiarsPokerTabletRulebook extends StatelessWidget {
       title: provider.selectedGame?.name ?? "Liar's Poker",
       markdown: LiarsPokerCopy.tabletRules,
       videoUrl: provider.selectedGame?.ruleVideoUrl,
-      cardImages: [
-        Assets.games.liarsPoker.images.cards.whiteA.game,
-        Assets.games.liarsPoker.images.cards.whiteK.game,
-        Assets.games.liarsPoker.images.cards.whiteQ.game,
-        Assets.games.liarsPoker.images.cards.whiteJoker.game,
+      cards: const [
+        LiarsPokerCardView(face: LiarsCardFace.ace, rounded: true, width: 60),
+        LiarsPokerCardView(face: LiarsCardFace.king, rounded: true, width: 60),
+        LiarsPokerCardView(face: LiarsCardFace.queen, rounded: true, width: 60),
+        LiarsPokerCardView(face: LiarsCardFace.joker, rounded: true, width: 60),
       ],
     );
   }

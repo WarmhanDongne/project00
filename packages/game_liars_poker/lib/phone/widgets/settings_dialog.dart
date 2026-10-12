@@ -4,6 +4,8 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
+import 'package:game_kit/localization/game_locale.dart';
+
 // ============================================================
 
 class PhoneSettingsDialog extends StatefulWidget {
@@ -55,9 +57,14 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '설정',
-            style: TextStyle(
+          Text(
+            GameLocale.select(
+              ko: '설정',
+              en: 'Settings',
+              zhHans: '设置',
+              zhHant: '設定',
+            ),
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.black,
@@ -101,9 +108,14 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
                 height: 120,
                 padding: const EdgeInsets.only(right: 24, left: 8),
                 alignment: Alignment.center,
-                child: const Text(
-                  '설정',
-                  style: TextStyle(
+                child: Text(
+                  GameLocale.select(
+                    ko: '설정',
+                    en: 'Settings',
+                    zhHans: '设置',
+                    zhHant: '設定',
+                  ),
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -148,17 +160,40 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          '화면',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Text(
+          GameLocale.select(
+            ko: '화면',
+            en: 'Display',
+            zhHans: '显示',
+            zhHant: '顯示',
+          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
-        _buildCheckbox('가로모드 고정', _lockLandscape, (val) {
-          setState(() => _lockLandscape = val ?? false);
-        }),
-        _buildCheckbox('전체화면', _fullScreen, (val) {
-          setState(() => _fullScreen = val ?? false);
-        }),
+        _buildCheckbox(
+          GameLocale.select(
+            ko: '가로모드 고정',
+            en: 'Lock landscape',
+            zhHans: '锁定横屏',
+            zhHant: '鎖定橫屏',
+          ),
+          _lockLandscape,
+          (val) {
+            setState(() => _lockLandscape = val ?? false);
+          },
+        ),
+        _buildCheckbox(
+          GameLocale.select(
+            ko: '전체화면',
+            en: 'Full screen',
+            zhHans: '全屏',
+            zhHant: '全螢幕',
+          ),
+          _fullScreen,
+          (val) {
+            setState(() => _fullScreen = val ?? false);
+          },
+        ),
       ],
     );
   }
@@ -168,17 +203,26 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          '소리',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Text(
+          GameLocale.select(ko: '소리', en: 'Sound', zhHans: '声音', zhHant: '聲音'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
         _buildVolumeSlider('BGM', _bgmVolume, (val) {
           setState(() => _bgmVolume = val);
         }),
-        _buildVolumeSlider('효과음', _sfxVolume, (val) {
-          setState(() => _sfxVolume = val);
-        }),
+        _buildVolumeSlider(
+          GameLocale.select(
+            ko: '효과음',
+            en: 'Sound effects',
+            zhHans: '音效',
+            zhHant: '音效',
+          ),
+          _sfxVolume,
+          (val) {
+            setState(() => _sfxVolume = val);
+          },
+        ),
       ],
     );
   }
@@ -269,9 +313,9 @@ class _PhoneSettingsDialogState extends State<PhoneSettingsDialog> {
           ),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        child: const Text(
-          '닫기',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        child: Text(
+          GameLocale.select(ko: '닫기', en: 'Close', zhHans: '关闭', zhHant: '關閉'),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );

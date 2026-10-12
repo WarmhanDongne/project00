@@ -26,6 +26,19 @@ class FirebaseAuthService {
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
 
+  Future<void> signInAsGuest() async {
+    try {
+      await _auth.signInAnonymously();
+    } on FirebaseAuthException catch (error) {
+      throw AuthServiceException(error.code, switch (error.code) {
+        'operation-not-allowed' => '게스트 로그인이 아직 활성화되지 않았습니다.',
+        'network-request-failed' => '네트워크 연결을 확인하고 다시 시도해주세요.',
+        'too-many-requests' => '요청이 많습니다. 잠시 후 다시 시도해주세요.',
+        _ => '게스트 로그인에 실패했습니다. 다시 시도해주세요.',
+      });
+    }
+  }
+
   //이메일 중복확인
   Future<bool> isEmailDuplicate(String email) async {
     try {
@@ -211,6 +224,17 @@ class FirebaseAuthService {
       throw const AuthServiceException('user-not-found', '로그인된 사용자가 없습니다.');
     }
 
+    if (user.isAnonymous) {
+      try {
+        await _functions.httpsCallable('completeOnboardingProfile').call({
+          'nickname': user.displayName,
+          'profileImageUrl': user.photoURL,
+        });
+      } on FirebaseFunctionsException catch (error) {
+        throw AuthServiceException(error.code, '게스트 프로필을 저장하지 못했습니다.');
+      }
+      return;
+    }
     await syncGoogleUserProfile(user);
   }
 

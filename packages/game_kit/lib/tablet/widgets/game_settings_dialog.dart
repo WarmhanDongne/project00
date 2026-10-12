@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:game_kit/mosi_ui/mosi_game_modal.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/sound/providers/sound_provider.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:provider/provider.dart';
@@ -42,14 +43,14 @@ class TabletGameSettingsDialog extends StatelessWidget {
     final code = provider.roomCode ?? '';
     return MosiGameModalFrame(
       theme: theme,
-      semanticLabel: '설정',
+      semanticLabel: '설정'.localized,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Text(
-                '설정',
+                '설정'.localized,
                 style: MosiFonts.sans(
                   size: 38,
                   weight: FontWeight.w700,
@@ -71,7 +72,12 @@ class TabletGameSettingsDialog extends StatelessWidget {
                     child: Row(
                       children: [
                         Text(
-                          '방 코드',
+                          GameLocale.select(
+                            ko: '방 코드',
+                            en: 'Room code',
+                            zhHans: '房间码',
+                            zhHant: '房間碼',
+                          ),
                           style: MosiFonts.sans(
                             size: 13,
                             weight: FontWeight.w700,
@@ -135,7 +141,7 @@ class TabletGameSettingsDialog extends StatelessWidget {
           Row(
             children: [
               MosiButton(
-                label: '게임 재시작',
+                label: '게임 재시작'.localized,
                 leading: const Icon(Icons.refresh_rounded),
                 background: MosiColors.sky,
                 foreground: MosiColors.white,
@@ -149,7 +155,7 @@ class TabletGameSettingsDialog extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               MosiButton(
-                label: '게임 종료',
+                label: '게임 종료'.localized,
                 leading: const Icon(Icons.stop_rounded),
                 background: MosiColors.red,
                 foreground: MosiColors.white,
@@ -165,7 +171,7 @@ class TabletGameSettingsDialog extends StatelessWidget {
               SizedBox(
                 width: 220,
                 child: MosiButton(
-                  label: '계속하기',
+                  label: '계속하기'.localized,
                   background: theme.accent,
                   foreground: theme.accentFg,
                   shadowColor: MosiColors.ink,
@@ -200,7 +206,12 @@ class _GameInfo extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '게임',
+              GameLocale.select(
+                ko: '게임',
+                en: 'Game',
+                zhHans: '游戏',
+                zhHant: '遊戲',
+              ),
               style: MosiFonts.sans(
                 size: 14,
                 weight: FontWeight.w700,
@@ -219,7 +230,13 @@ class _GameInfo extends StatelessWidget {
           Text(
             gameId != null
                 ? MosiGameArt.of(gameId).koreanName
-                : game?.name ?? '게임 정보 불러오는 중',
+                : game?.name ??
+                      GameLocale.select(
+                        ko: '게임 정보 불러오는 중',
+                        en: 'Loading game details',
+                        zhHans: '正在加载游戏信息',
+                        zhHant: '正在載入遊戲資訊',
+                      ),
             maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
@@ -231,7 +248,12 @@ class _GameInfo extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           MosiPill(
-            label: '$players명',
+            label: GameLocale.select(
+              ko: '$players명',
+              en: '$players players',
+              zhHans: '$players 人',
+              zhHant: '$players 人',
+            ),
             background: MosiColors.white,
             borderColor: MosiColors.ink,
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -269,7 +291,12 @@ class _RoomInfo extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '현재 방 정보 · 플레이어',
+                  GameLocale.select(
+                    ko: '현재 방 정보 · 플레이어',
+                    en: 'Current room · Players',
+                    zhHans: '当前房间 · 玩家',
+                    zhHant: '目前房間 · 玩家',
+                  ),
                   style: MosiFonts.sans(
                     size: 14,
                     weight: FontWeight.w700,
@@ -278,7 +305,12 @@ class _RoomInfo extends StatelessWidget {
                 ),
               ),
               Text(
-                '$online / ${players.length} 연결',
+                GameLocale.select(
+                  ko: '$online / ${players.length} 연결',
+                  en: '$online / ${players.length} connected',
+                  zhHans: '$online / ${players.length} 已连接',
+                  zhHant: '$online / ${players.length} 已連線',
+                ),
                 style: MosiFonts.grotesk(size: 14, color: MosiColors.navy),
               ),
             ],
@@ -289,7 +321,12 @@ class _RoomInfo extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '연결이 끊긴 사람은 30초 동안 자리를 지켜 둬요.',
+            GameLocale.select(
+              ko: '연결이 끊긴 사람은 30초 동안 자리를 지켜 둬요.',
+              en: 'A disconnected player keeps their seat for 30 seconds.',
+              zhHans: '断线玩家的座位会保留 30 秒。',
+              zhHant: '斷線玩家的座位會保留 30 秒。',
+            ),
             style: MosiFonts.sans(size: 12, color: MosiColors.muted),
           ),
         ],
@@ -339,7 +376,7 @@ class _GamePlayerList extends StatelessWidget {
                   ),
                 ),
                 Semantics(
-                  label: connected ? '연결됨' : '연결 끊김',
+                  label: connected ? '연결됨'.localized : '연결 끊김'.localized,
                   excludeSemantics: true,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -367,7 +404,7 @@ class _GamePlayerList extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          connected ? '연결됨' : '연결 끊김',
+                          connected ? '연결됨'.localized : '연결 끊김'.localized,
                           style: MosiFonts.sans(
                             size: 12,
                             weight: FontWeight.w700,
@@ -382,10 +419,15 @@ class _GamePlayerList extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: '강퇴',
+                  message: '강퇴'.localized,
                   child: Semantics(
                     button: true,
-                    label: '${player.nickname} 강퇴',
+                    label: GameLocale.select(
+                      ko: '${player.nickname} 강퇴',
+                      en: 'Remove ${player.nickname}',
+                      zhHans: '移除 ${player.nickname}',
+                      zhHant: '移除 ${player.nickname}',
+                    ),
                     excludeSemantics: true,
                     child: GestureDetector(
                       onTap: () => unawaited(provider.removePlayer(player.uid)),
@@ -399,7 +441,7 @@ class _GamePlayerList extends StatelessWidget {
                           border: Border.all(color: MosiColors.ink, width: 2),
                         ),
                         child: Text(
-                          '강퇴',
+                          '강퇴'.localized,
                           style: MosiFonts.sans(
                             size: 12,
                             weight: FontWeight.w700,
@@ -442,7 +484,12 @@ class _SoundSettingsState extends State<_SoundSettings> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '소리',
+            GameLocale.select(
+              ko: '소리',
+              en: 'Sound',
+              zhHans: '声音',
+              zhHant: '聲音',
+            ),
             style: MosiFonts.sans(
               size: 14,
               weight: FontWeight.w700,
@@ -451,7 +498,7 @@ class _SoundSettingsState extends State<_SoundSettings> {
           ),
           const SizedBox(height: 14),
           _SoundSlider(
-            title: '전체',
+            title: '전체'.localized,
             icon: Icons.volume_up_rounded,
             iconBackground: MosiColors.sun,
             value: sound.masterVolume,
@@ -459,7 +506,7 @@ class _SoundSettingsState extends State<_SoundSettings> {
             accent: widget.theme.deep,
           ),
           _SoundSlider(
-            title: '효과',
+            title: '효과'.localized,
             icon: Icons.auto_awesome_rounded,
             iconBackground: MosiColors.lime,
             value: sound.effectVolume,
@@ -467,7 +514,7 @@ class _SoundSettingsState extends State<_SoundSettings> {
             accent: widget.theme.deep,
           ),
           _SoundSlider(
-            title: '배경',
+            title: '배경'.localized,
             icon: Icons.music_note_rounded,
             iconBackground: const Color(0xFF9CC3FF),
             value: sound.bgmVolume,
@@ -476,7 +523,7 @@ class _SoundSettingsState extends State<_SoundSettings> {
           ),
           const Spacer(),
           MosiButton(
-            label: muted ? '소리 다시 켜기' : '모두 음소거',
+            label: muted ? '소리 다시 켜기'.localized : '모두 음소거'.localized,
             leading: Icon(
               muted ? Icons.volume_up_rounded : Icons.volume_off_rounded,
             ),
@@ -568,7 +615,12 @@ class _SoundSlider extends StatelessWidget {
               max: 100,
               divisions: 100,
               label: '$title ${value.round()}',
-              semanticFormatterCallback: (v) => '$title 소리 ${v.round()}',
+              semanticFormatterCallback: (v) => GameLocale.select(
+                ko: '$title 소리 ${v.round()}',
+                en: '$title volume ${v.round()}',
+                zhHans: '$title 音量 ${v.round()}',
+                zhHant: '$title 音量 ${v.round()}',
+              ),
               onChanged: onChanged,
             ),
           ),

@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:game_kit/services/game_query_service.dart';
+
 // ============================================================
 
 /// 마피아 Realtime Database 읽기·구독 전용 서비스입니다.

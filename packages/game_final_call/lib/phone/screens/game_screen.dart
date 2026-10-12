@@ -19,6 +19,7 @@ import 'package:game_final_call/shared/widgets/party_pop.dart';
 import 'package:game_final_call/phone/widgets/game_actions.dart';
 import 'package:game_final_call/phone/widgets/hand_card_stack.dart';
 import 'package:game_kit/phone/animations/control_entry_animation.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -391,7 +392,12 @@ class _FinalCallActionSeal extends StatelessWidget {
         Transform.scale(scale: scale, child: child),
     child: Semantics(
       liveRegion: true,
-      label: '$label 선택됨',
+      label: GameLocale.select(
+        ko: '$label 선택됨',
+        en: '$label selected',
+        zhHans: '已选择 $label',
+        zhHant: '已選擇 $label',
+      ),
       excludeSemantics: true,
       child: FinalCallPopBox(
         color: FinalCallColors.violet,
@@ -442,7 +448,11 @@ class _FinalSubmitActionState extends State<_FinalSubmitAction> {
     if (_submittedRevision != null || !widget.controller.canSubmitFinalHand) {
       return;
     }
-    final cards = widget.selectedCardIds.toList(growable: false);
+    // 지금 손패에 있는 카드만 보냅니다(늦게 도착한 손패 갱신 대비).
+    final handIds = {for (final card in widget.controller.hand) card.id};
+    final cards = widget.selectedCardIds
+        .where(handIds.contains)
+        .toList(growable: false);
     if (cards.isEmpty) return;
     setState(() => _submittedRevision = widget.controller.revision);
     final completed = await widget.controller.submitFinalHand(cards);
@@ -531,7 +541,14 @@ class _FinalSubmitActionState extends State<_FinalSubmitAction> {
         ],
         const Spacer(),
         FinalCallPopButton(
-          semanticLabel: submitted ? '최종 조합 선택됨' : label,
+          semanticLabel: submitted
+              ? GameLocale.select(
+                  ko: '최종 조합 선택됨',
+                  en: 'Final set selected',
+                  zhHans: '已选择最终组合',
+                  zhHant: '已選擇最終組合',
+                )
+              : label,
           onPressed: canSubmit ? () => unawaited(_submit()) : null,
           color: FinalCallColors.green,
           height: 52,

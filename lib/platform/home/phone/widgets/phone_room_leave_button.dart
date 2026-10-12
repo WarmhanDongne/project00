@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
@@ -27,7 +28,7 @@ class PhoneRoomLeaveButton extends StatelessWidget {
       builder: (context, _) {
         // 고정 폭을 두면 글자 배율이 큰 기기에서 문구가 잘립니다.
         return PlatformButton(
-          label: '그룹 나가기',
+          label: '그룹 나가기'.localized,
           height: 44,
           expand: false,
           style: PlatformButtonStyle.secondary,

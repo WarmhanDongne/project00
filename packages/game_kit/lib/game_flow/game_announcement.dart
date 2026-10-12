@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+
 // ============================================================
 
 /// 화면 중앙 또는 고정 안내 슬롯에 표시할 문구의 의미입니다.

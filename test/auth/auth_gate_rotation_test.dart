@@ -23,6 +23,10 @@ import 'package:project00/platform/auth/widgets/auth_gate.dart';
 
 class _FakeUser implements User {
   @override
+  bool get isAnonymous => false;
+  @override
+  bool get emailVerified => true;
+  @override
   String get uid => 'tester';
 
   @override

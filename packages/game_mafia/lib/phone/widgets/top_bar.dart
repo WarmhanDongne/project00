@@ -13,6 +13,7 @@ import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/game_theme.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -56,13 +57,40 @@ class MafiaPhoneTopBar extends StatelessWidget {
   static String? subtitleFor({required String phase, required int round}) {
     if (round <= 0) return null;
     final part = switch (phase) {
-      'night' => '밤',
-      'morning' => '아침',
-      'day' => '낮',
-      'voting' || 'voteResult' => '낮 · 투표',
+      'night' => GameLocale.select(
+        ko: '밤',
+        en: 'Night',
+        zhHans: '夜晚',
+        zhHant: '夜晚',
+      ),
+      'morning' => GameLocale.select(
+        ko: '아침',
+        en: 'Morning',
+        zhHans: '早晨',
+        zhHant: '早晨',
+      ),
+      'day' => GameLocale.select(
+        ko: '낮',
+        en: 'Day',
+        zhHans: '白天',
+        zhHant: '白天',
+      ),
+      'voting' || 'voteResult' => GameLocale.select(
+        ko: '낮 · 투표',
+        en: 'Day · Vote',
+        zhHans: '白天 · 投票',
+        zhHant: '白天 · 投票',
+      ),
       _ => null,
     };
-    return part == null ? null : '$round일째 $part';
+    return part == null
+        ? null
+        : GameLocale.select(
+            ko: '$round일째 $part',
+            en: 'Day $round · $part',
+            zhHans: '第 $round 天 · $part',
+            zhHant: '第 $round 天 · $part',
+          );
   }
 
   @override
@@ -103,7 +131,12 @@ class MafiaPhoneTopBar extends StatelessWidget {
                           children: [
                             if (spectating)
                               TextSpan(
-                                text: '  관전',
+                                text: GameLocale.select(
+                                  ko: '  관전',
+                                  en: '  Spectating',
+                                  zhHans: '  观战',
+                                  zhHant: '  觀戰',
+                                ),
                                 style: mafiaNoirBody(
                                   12,
                                   color: MafiaColors.noirBlood,
@@ -121,7 +154,14 @@ class MafiaPhoneTopBar extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          spectating ? '$subtitle 진행 중' : subtitle!,
+                          spectating
+                              ? GameLocale.select(
+                                  ko: '$subtitle 진행 중',
+                                  en: '$subtitle in progress',
+                                  zhHans: '$subtitle进行中',
+                                  zhHant: '$subtitle進行中',
+                                )
+                              : subtitle!,
                           maxLines: 1,
                           style: mafiaNoirBody(
                             12,
@@ -140,7 +180,7 @@ class MafiaPhoneTopBar extends StatelessWidget {
               const Spacer(),
             Builder(
               builder: (buttonContext) => MafiaNoirIconButton(
-                semanticLabel: '게임 규칙 열기',
+                semanticLabel: '게임 규칙 열기'.localized,
                 color: dark ? MafiaColors.noirSlab : MafiaColors.noirInk,
                 onTap: () {
                   final box = buttonContext.findRenderObject() as RenderBox?;
@@ -156,7 +196,7 @@ class MafiaPhoneTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             MafiaNoirIconButton(
-              semanticLabel: '게임과 그룹 나가기',
+              semanticLabel: '게임과 그룹 나가기'.localized,
               color: dark ? MafiaColors.noirSlab : MafiaColors.noirInk,
               onTap: onExitRoom,
               child: const MafiaNoirExitGlyph(),
@@ -177,7 +217,7 @@ void showMafiaRules(BuildContext context, [Offset? origin, String? rules]) {
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
     builder: (_) => PhoneGameRuleDialog(
-      title: '마피아',
+      title: '마피아'.localized,
       rules: rules ?? MafiaCopy.phoneRules,
       surfaceColor: MafiaColors.noirInk,
       foregroundColor: MafiaColors.noirPaper,

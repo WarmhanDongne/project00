@@ -5,6 +5,7 @@ import {assertRoomGroupMember, RoomAllocation} from "./room-allocation.js";
 
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
+import {getGameCatalog} from "./game-catalog.js";
 import {leaveSessionRequest} from "../game-interruption/leave-request.js";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
@@ -219,7 +220,7 @@ async function assertGameAccessible(
   gameId: string,
 ): Promise<void> {
   const firestore = getFirestore();
-  const game = await firestore.collection("games").doc(gameId).get();
+  const game = await getGameCatalog(gameId);
   if (!game.exists || game.data()?.enabled === false) {
     throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
   }
@@ -449,10 +450,7 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
       throw new HttpsError("failed-precondition", "선택된 게임이 없습니다.");
     }
 
-    const gameSnapshot = await getFirestore()
-      .collection("games")
-      .doc(selectedGame)
-      .get();
+    const gameSnapshot = await getGameCatalog(selectedGame);
     if (!gameSnapshot.exists || gameSnapshot.data()?.enabled === false) {
       throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
     }

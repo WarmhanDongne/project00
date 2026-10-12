@@ -1,5 +1,6 @@
 // 신분 선택 화면의 세로 스트립과 2열 목록에서 함께 쓰는 카드.
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_mafia/shared/models/role.dart';
 
 class MafiaSetupRoleCard extends StatelessWidget {
@@ -22,7 +23,14 @@ class MafiaSetupRoleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       image: true,
-      label: '${role.displayName}${count == null ? '' : ' $count명'}',
+      label: count == null
+          ? role.localizedDisplayName
+          : GameLocale.select(
+              ko: '${role.localizedDisplayName} $count명',
+              en: '${role.localizedDisplayName}: $count',
+              zhHans: '${role.localizedDisplayName}：$count人',
+              zhHant: '${role.localizedDisplayName}：$count人',
+            ),
       child: _buildFace(),
     );
   }
@@ -103,7 +111,7 @@ class MafiaSetupRoleCard extends StatelessWidget {
                       const SizedBox(height: 6),
                     ],
                     Text(
-                      role.displayName,
+                      role.localizedDisplayName,
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,

@@ -135,7 +135,7 @@ abstract class AppLocalizations {
   /// No description provided for @translationScope.
   ///
   /// In ko, this message translates to:
-  /// **'주요 메뉴에 적용돼요. 게임 설명·규칙·이미지와 일부 안내는 아직 한국어로 표시돼요.'**
+  /// **'주요 메뉴와 게임 이름·소개·규칙·장르에 적용돼요. 이미지 속 글자와 일부 안내는 아직 한국어로 표시돼요.'**
   String get translationScope;
 
   /// No description provided for @save.
@@ -210,6 +210,12 @@ abstract class AppLocalizations {
   /// **'자세히 보기'**
   String get details;
 
+  /// No description provided for @viewDescription.
+  ///
+  /// In ko, this message translates to:
+  /// **'설명 보기'**
+  String get viewDescription;
+
   /// No description provided for @login.
   ///
   /// In ko, this message translates to:
@@ -245,6 +251,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'Apple로 로그인'**
   String get appleLogin;
+
+  /// No description provided for @guestLogin.
+  ///
+  /// In ko, this message translates to:
+  /// **'게스트로 시작하기'**
+  String get guestLogin;
 
   /// No description provided for @checkCredentials.
   ///

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -345,6 +346,7 @@ class _TurningBook extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = game.localizedName(Localizations.localeOf(context));
     final angle = (1 - face) * math.pi / 2;
     final spineProjection = 46 * math.sin(angle);
     final projectedWidth = spineProjection + coverWidth * math.cos(angle);
@@ -353,7 +355,12 @@ class _TurningBook extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '${game.name} ${selected ? '자세히 보기' : '선택'}',
+      label: GameLocale.select(
+        ko: '$displayName ${selected ? '자세히 보기' : '선택'}',
+        en: '$displayName ${selected ? 'View details' : 'Select'}',
+        zhHans: '$displayName ${selected ? '查看详情' : '选择'}',
+        zhHant: '$displayName ${selected ? '查看詳情' : '選擇'}',
+      ),
       excludeSemantics: true,
       onTap: onTap,
       child: GestureDetector(
@@ -386,6 +393,8 @@ class _TurningBook extends StatelessWidget {
                           child: MosiGameSpine(
                             gameId: game.id,
                             fallbackName: game.name,
+                            displayName: displayName,
+                            englishName: game.englishName,
                             deep: deep,
                             height: height,
                             onTap: onTap,
@@ -408,6 +417,8 @@ class _TurningBook extends StatelessWidget {
                               child: MosiGameCover(
                                 gameId: game.id,
                                 fallbackName: game.name,
+                                displayName: displayName,
+                                englishName: game.englishName,
                                 fallbackImageUrl: game.imageUrl,
                                 width: coverWidth,
                                 shadowColor: deep,

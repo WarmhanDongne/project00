@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -188,7 +189,7 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
                         _buildIllustration(unit: unit, isWide: isWide),
                         SizedBox(height: unit * (isWide ? 0.05 : 0.07)),
                         Text(
-                          widget.title,
+                          widget.title.localized,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: GameReconnectScreen.titleColor,
@@ -199,7 +200,7 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
                         ),
                         SizedBox(height: unit * 0.022),
                         Text(
-                          widget.message,
+                          widget.message.localized,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: GameReconnectScreen.messageColor,
@@ -305,7 +306,7 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
   Widget _buildHomeButton({required double unit}) {
     return Semantics(
       button: true,
-      label: widget.homeLabel,
+      label: widget.homeLabel.localized,
       child: GestureDetector(
         onTap: widget.onHome,
         child: Container(
@@ -324,7 +325,7 @@ class _GameReconnectScreenState extends State<GameReconnectScreen>
             ],
           ),
           child: Text(
-            widget.homeLabel,
+            widget.homeLabel.localized,
             style: TextStyle(
               color: Colors.white,
               fontSize: unit * (unit > 700 ? 0.028 : 0.038),

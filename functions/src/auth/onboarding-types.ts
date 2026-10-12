@@ -7,6 +7,7 @@ export const ONBOARDING_STATUSES = [
 export type OnboardingStatus = typeof ONBOARDING_STATUSES[number];
 
 export const ONBOARDING_PROVIDERS = [
+  "anonymous",
   "emailLink",
   "google",
   "apple",

@@ -3,6 +3,7 @@
 import {getApps, initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import {pathToFileURL} from "node:url";
+import {resolveCatalogDocument} from "./catalog-document.mjs";
 
 export const gamePreviewDescriptions = Object.freeze({
   liars_poker: "정해진 키 카드에 맞춰 패를 내되, 원하는 카드를 숨겨 블러핑할 수 있습니다. 상대의 거짓말을 정확히 간파해 라이어를 선언하세요. 판정에서 패배하면 점점 위험해지는 룰렛을 돌리며, 마지막까지 살아남은 플레이어가 승리합니다.",
@@ -28,7 +29,7 @@ export async function updateGamePreviewDescriptions({dryRun = false} = {}) {
   for (const [gameId, tabletDescription] of
     Object.entries(gamePreviewDescriptions)) {
     batch.set(
-      firestore.collection("games").doc(gameId),
+      await resolveCatalogDocument(firestore, gameId),
       {tabletDescription},
       {merge: true},
     );

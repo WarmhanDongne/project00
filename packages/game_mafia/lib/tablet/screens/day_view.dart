@@ -14,6 +14,7 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/tablet/screens/game_layout.dart';
 import 'package:game_mafia/tablet/screens/noir_table.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -169,8 +170,18 @@ class _DiscussionLayer extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               first == null
-                  ? '어젯밤은 조용히 지나갔다'
-                  : '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+                  ? GameLocale.select(
+                      ko: '어젯밤은 조용히 지나갔다',
+                      en: 'Last night passed quietly',
+                      zhHans: '昨夜平安无事',
+                      zhHant: '昨夜平安無事',
+                    )
+                  : GameLocale.select(
+                      ko: '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+                      en: 'Last night, $names fell',
+                      zhHans: '昨夜，$names 倒下了',
+                      zhHant: '昨夜，$names 倒下了',
+                    ),
               style: mafiaNoirDisplay(44, height: 1),
             ),
           ),
@@ -178,7 +189,12 @@ class _DiscussionLayer extends StatelessWidget {
         MafiaTabletBox(
           rect: const Rect.fromLTWH(92, 462, 520, 26),
           child: Text(
-            '범인은 아직 이 테이블에 있다 · 생존 $aliveCount명',
+            GameLocale.select(
+              ko: '범인은 아직 이 테이블에 있다 · 생존 $aliveCount명',
+              en: 'The culprit is still at this table · $aliveCount alive',
+              zhHans: '凶手仍在桌边 · 存活 $aliveCount 人',
+              zhHant: '兇手仍在桌邊 · 存活 $aliveCount 人',
+            ),
             style: mafiaNoirBody(17, color: const Color(0xFF3B3A33)),
           ),
         ),
@@ -191,7 +207,19 @@ class _DiscussionLayer extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  round > 0 ? '$round일째 낮 · 토론' : '토론',
+                  round > 0
+                      ? GameLocale.select(
+                          ko: '$round일째 낮 · 토론',
+                          en: 'Day $round · Discussion',
+                          zhHans: '第 $round 天 · 讨论',
+                          zhHant: '第 $round 天 · 討論',
+                        )
+                      : GameLocale.select(
+                          ko: '토론',
+                          en: 'Discussion',
+                          zhHans: '讨论',
+                          zhHant: '討論',
+                        ),
                   style: mafiaNoirBody(
                     20,
                     color: MafiaColors.noirBrass,
@@ -213,7 +241,12 @@ class _DiscussionLayer extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '토론 끝내기 동의',
+                      GameLocale.select(
+                        ko: '토론 끝내기 동의',
+                        en: 'End discussion votes',
+                        zhHans: '结束讨论同意票',
+                        zhHant: '結束討論同意票',
+                      ),
                       style: mafiaNoirBody(18, color: MafiaColors.noirPaper),
                     ),
                     const SizedBox(width: 12),
@@ -318,7 +351,19 @@ class _VotingLayerState extends State<_VotingLayer> {
           rect: const Rect.fromLTWH(0, 36, 1194, 24),
           child: Center(
             child: Text(
-              widget.round > 0 ? '${widget.round}일째 낮 · 비밀 투표' : '비밀 투표',
+              widget.round > 0
+                  ? GameLocale.select(
+                      ko: '${widget.round}일째 낮 · 비밀 투표',
+                      en: 'Day ${widget.round} · Secret vote',
+                      zhHans: '第 ${widget.round} 天 · 秘密投票',
+                      zhHant: '第 ${widget.round} 天 · 秘密投票',
+                    )
+                  : GameLocale.select(
+                      ko: '비밀 투표',
+                      en: 'Secret vote',
+                      zhHans: '秘密投票',
+                      zhHant: '秘密投票',
+                    ),
               style: mafiaNoirBody(
                 15,
                 color: MafiaColors.noirUmber,
@@ -335,7 +380,7 @@ class _VotingLayerState extends State<_VotingLayer> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '투표 중',
+                '투표 중'.localized,
                 style: mafiaNoirDisplay(
                   66,
                   color: MafiaColors.noirInk,
@@ -393,7 +438,7 @@ class _VotingLayerState extends State<_VotingLayer> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '투표 완료',
+                        '투표 완료'.localized,
                         style: mafiaNoirBody(
                           14,
                           color: MafiaColors.noirBrass,

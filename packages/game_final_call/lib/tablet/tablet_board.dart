@@ -37,6 +37,7 @@ import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_auto_complete.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';

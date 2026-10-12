@@ -17,6 +17,7 @@ import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/game_flow/game_announcement.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/game_flow/phone_game_shell.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';

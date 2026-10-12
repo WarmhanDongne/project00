@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
@@ -81,10 +82,25 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
           SnackBar(
             content: Text(
               wasKicked
-                  ? '방에서 추방되었습니다.'
+                  ? GameLocale.select(
+                      ko: '방에서 추방되었습니다.',
+                      en: 'You were removed from the room.',
+                      zhHans: '你已被移出房间。',
+                      zhHant: '你已被移出房間。',
+                    )
                   : terminationReason == RoomTerminationReason.closed
-                  ? '방장이 방을 종료했습니다.'
-                  : '방을 찾을 수 없습니다',
+                  ? GameLocale.select(
+                      ko: '방장이 방을 종료했습니다.',
+                      en: 'The host closed the room.',
+                      zhHans: '房主已关闭房间。',
+                      zhHant: '房主已關閉房間。',
+                    )
+                  : GameLocale.select(
+                      ko: '방을 찾을 수 없습니다',
+                      en: 'Room not found',
+                      zhHans: '找不到房间',
+                      zhHant: '找不到房間',
+                    ),
             ),
             duration: const Duration(seconds: 2),
           ),
@@ -119,7 +135,10 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     _gameStatusSubscription = widget.provider.watchGameStatus(roomCode).listen((
       status,
     ) {
+      final changed = _latestGameStatus != status;
       _latestGameStatus = status;
+      // 게임 시작 안내 화면으로 바꾸려면 상태가 바뀔 때 다시 그립니다.
+      if (changed && mounted) setState(() {});
       _openGameIfReady(roomCode);
     }, onError: _showStatusError);
   }
@@ -169,7 +188,9 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('게임 파일을 다운로드하지 못했습니다.')));
+        ..showSnackBar(
+          SnackBar(content: Text('게임 파일을 다운로드하지 못했습니다.'.localized)),
+        );
       return;
     }
     if (!mounted) {
@@ -185,7 +206,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     final gameRoute = GameExitMaterialPageRoute<bool>(
       builder: (gameContext) => CriticalNetworkGuard(
         provider: widget.provider,
-        exitLabel: '게임과 그룹 나가기',
+        exitLabel: '게임과 그룹 나가기'.localized,
         onExit: () => unawaited(
           _leaveGameFromReconnect(gameContext: gameContext, game: game),
         ),
@@ -248,9 +269,16 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(
-              content: Text('그룹에서 나가려면 화면 위쪽의 나가기를 눌러주세요.'),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(
+                GameLocale.select(
+                  ko: '그룹에서 나가려면 화면 위쪽의 나가기를 눌러주세요.',
+                  en: 'Use the leave button at the top to exit the room.',
+                  zhHans: '如需离开房间，请点击上方的离开按钮。',
+                  zhHant: '如需離開房間，請點擊上方的離開按鈕。',
+                ),
+              ),
+              duration: const Duration(seconds: 2),
             ),
           );
       },
@@ -302,8 +330,16 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
             // 보여 줍니다. 헤더(나가기)는 그대로 둡니다.
             final isSeating =
                 hasSelectedGame && widget.provider.roomStatus == 'seating';
-            if (isSeating) {
+            // 태블릿에서 시작한 뒤 게임 화면이 열릴 때까지는 게임 규칙 대신
+            // 곧 시작한다는 안내를 보여 줍니다.
+            final isStarting =
+                hasSelectedGame &&
+                (widget.provider.roomStatus == 'playing' ||
+                    _latestGameStatus == 'playing');
+            if (isSeating || isStarting) {
               return _PhoneSeatingView(
+                key: ValueKey(isStarting ? 'phone-starting' : 'phone-seating'),
+                starting: isStarting,
                 provider: widget.provider,
                 header:
                     widget.headerForTesting ??
@@ -366,6 +402,8 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                                   ),
                                   _WaitingPlayersBar(
                                     gameId: selectedGameId,
+                                    myUid:
+                                        FirebaseAuth.instance.currentUser?.uid,
                                     players: players
                                         .where((player) => player.isPlayer)
                                         .toList(growable: false),
@@ -452,7 +490,12 @@ class _PhoneRoomCode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '방 코드 ${code.split('').join(' ')}',
+      label: GameLocale.select(
+        ko: '방 코드 ${code.split('').join(' ')}',
+        en: 'Room code ${code.split('').join(' ')}',
+        zhHans: '房间码 ${code.split('').join(' ')}',
+        zhHant: '房間碼 ${code.split('').join(' ')}',
+      ),
       excludeSemantics: true,
       child: AnimatedContainer(
         duration: MediaQuery.disableAnimationsOf(context)
@@ -518,8 +561,12 @@ class _GroupWaitingContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _WaitingHero(
-          title: finished ? '게임이 끝났어요' : '태블릿에서 게임을\n고르는 중이에요',
-          message: finished ? '태블릿에서 다음 게임을 고르는 중입니다' : '고르면 이 화면이 바로 바뀌어요',
+          title: finished
+              ? '게임이 끝났어요'.localized
+              : '태블릿에서 게임을\n고르는 중이에요'.localized,
+          message: finished
+              ? '태블릿에서 다음 게임을 고르는 중입니다'.localized
+              : '고르면 이 화면이 바로 바뀌어요'.localized,
           characterIds: [for (final player in players) player.characterId],
         ),
         Expanded(
@@ -540,14 +587,22 @@ class _GroupWaitingContent extends StatelessWidget {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(20, 26, 24, 28 + bottomInset),
                     children: [
-                      PhoneRoomParticipantList(players: players),
+                      PhoneRoomParticipantList(
+                        players: players,
+                        myUid: FirebaseAuth.instance.currentUser?.uid,
+                      ),
                       const SizedBox(height: 28),
                       _SheetSectionTitle(
-                        title: '그룹이 보유 중인 게임',
+                        title: '그룹이 보유 중인 게임'.localized,
                         count:
                             provider.groupGamesLoadStatus ==
                                 RoomDataLoadStatus.loaded
-                            ? '${provider.groupGames.length}개'
+                            ? GameLocale.select(
+                                ko: '${provider.groupGames.length}개',
+                                en: '${provider.groupGames.length}',
+                                zhHans: '${provider.groupGames.length} 款',
+                                zhHant: '${provider.groupGames.length} 款',
+                              )
                             : null,
                       ),
                       const SizedBox(height: 12),
@@ -640,7 +695,7 @@ class _WaitingHero extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '대기실',
+                    '대기실'.localized,
                     style: MosiFonts.sans(
                       size: 12,
                       weight: FontWeight.w700,
@@ -743,13 +798,19 @@ class _GroupGamesContent extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              provider.groupGamesError ?? '게임 목록을 불러오지 못했습니다.',
+              provider.groupGamesError ??
+                  GameLocale.select(
+                    ko: '게임 목록을 불러오지 못했습니다.',
+                    en: 'Could not load the game list.',
+                    zhHans: '无法加载游戏列表。',
+                    zhHant: '無法載入遊戲列表。',
+                  ),
               textAlign: TextAlign.center,
               style: TextStyle(color: colors.textMuted),
             ),
             const SizedBox(height: 12),
             MosiButton(
-              label: '다시 시도',
+              label: '다시 시도'.localized,
               expand: false,
               background: MosiColors.lime,
               foreground: MosiColors.ink,
@@ -765,7 +826,12 @@ class _GroupGamesContent extends StatelessWidget {
     if (provider.groupGames.isEmpty) {
       return _SheetPaper(
         child: Text(
-          '그룹이 보유한 게임이 없습니다.',
+          GameLocale.select(
+            ko: '그룹이 보유한 게임이 없습니다.',
+            en: 'This room has no games.',
+            zhHans: '该房间没有游戏。',
+            zhHant: '該房間沒有遊戲。',
+          ),
           style: TextStyle(color: colors.textMuted),
         ),
       );
@@ -882,12 +948,18 @@ class _SelectedGameContent extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  provider.selectedGameError ?? '게임 정보를 불러오지 못했습니다.',
+                  provider.selectedGameError ??
+                      GameLocale.select(
+                        ko: '게임 정보를 불러오지 못했습니다.',
+                        en: 'Could not load game details.',
+                        zhHans: '无法加载游戏信息。',
+                        zhHant: '無法載入遊戲資訊。',
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 PlatformButton(
-                  label: '다시 시도',
+                  label: '다시 시도'.localized,
                   expand: false,
                   style: PlatformButtonStyle.secondary,
                   onPressed: provider.retrySelectedGame,
@@ -915,9 +987,16 @@ class _SelectedGameDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _WaitingGameColors.of(gameInfo.id);
-    final rules = gameInfo.rules.trim().isEmpty
-        ? '게임 규칙을 준비 중입니다.'
-        : gameInfo.rules;
+    final locale = Localizations.localeOf(context);
+    final localizedRules = gameInfo.localizedRulesFor(locale);
+    final rules = localizedRules.trim().isEmpty
+        ? GameLocale.select(
+            ko: '게임 규칙을 준비 중입니다.',
+            en: 'Game rules are being prepared.',
+            zhHans: '游戏规则准备中。',
+            zhHant: '遊戲規則準備中。',
+          )
+        : localizedRules;
     return CustomScrollView(
       slivers: [
         // 게임 색 바탕 위: 표지와 소개
@@ -938,7 +1017,12 @@ class _SelectedGameDetails extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '그룹이 선택한 게임',
+                    GameLocale.select(
+                      ko: '그룹이 선택한 게임',
+                      en: 'Selected by the room',
+                      zhHans: '房间选择的游戏',
+                      zhHant: '房間選擇的遊戲',
+                    ),
                     style: MosiFonts.sans(
                       size: 12,
                       weight: FontWeight.w700,
@@ -960,6 +1044,10 @@ class _SelectedGameDetails extends StatelessWidget {
                       width: coverWidth,
                       fallbackName: gameInfo.name,
                       fallbackImageUrl: gameInfo.imageUrl,
+                      displayName: gameInfo.localizedName(
+                        Localizations.localeOf(context),
+                      ),
+                      englishName: gameInfo.englishName,
                       shadowColor: MosiColors.ink,
                     );
                     if (constraints.maxWidth < 330) {
@@ -1007,7 +1095,7 @@ class _SelectedGameDetails extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '게임 규칙',
+                      '게임 규칙'.localized,
                       style: MosiFonts.sans(
                         size: 18,
                         weight: FontWeight.w700,
@@ -1049,14 +1137,15 @@ class _SelectedGameSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final art = MosiGameArt.of(gameInfo.id, fallbackName: gameInfo.name);
-    final known = MosiGameArt.isKnown(gameInfo.id);
+    final locale = Localizations.localeOf(context);
+    final displayName = gameInfo.localizedName(locale);
+    final englishName = gameInfo.englishName;
     final colors = _WaitingGameColors.of(gameInfo.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          known ? art.koreanName : gameInfo.name,
+          displayName,
           style: MosiFonts.sans(
             size: 26,
             height: 1.15,
@@ -1064,11 +1153,11 @@ class _SelectedGameSummary extends StatelessWidget {
             color: colors.fg,
           ),
         ),
-        if (known)
+        if (englishName.toUpperCase() != displayName.toUpperCase())
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              art.englishName,
+              englishName,
               style: MosiFonts.grotesk(
                 size: 11,
                 weight: FontWeight.w700,
@@ -1084,14 +1173,24 @@ class _SelectedGameSummary extends StatelessWidget {
           children: [
             if (gameInfo.playTime > 0)
               MosiPill(
-                label: '${gameInfo.playTime}분',
+                label: GameLocale.select(
+                  ko: '${gameInfo.playTime}분',
+                  en: '${gameInfo.playTime} min',
+                  zhHans: '${gameInfo.playTime} 分钟',
+                  zhHant: '${gameInfo.playTime} 分鐘',
+                ),
                 fontSize: 13,
                 color: colors.fg,
                 borderColor: colors.fg,
               ),
             if (gameInfo.minPlayers > 0)
               MosiPill(
-                label: '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+                label: GameLocale.select(
+                  ko: '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+                  en: '${gameInfo.minPlayers}–${gameInfo.maxPlayers} players',
+                  zhHans: '${gameInfo.minPlayers}–${gameInfo.maxPlayers} 人',
+                  zhHant: '${gameInfo.minPlayers}–${gameInfo.maxPlayers} 人',
+                ),
                 fontSize: 13,
                 color: colors.fg,
                 borderColor: colors.fg,
@@ -1100,7 +1199,7 @@ class _SelectedGameSummary extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          gameInfo.description,
+          gameInfo.localizedDescription(locale),
           style: MosiFonts.sans(
             color: colors.fg.withValues(alpha: .82),
             size: 13,
@@ -1113,10 +1212,17 @@ class _SelectedGameSummary extends StatelessWidget {
 }
 
 class _WaitingPlayersBar extends StatelessWidget {
-  const _WaitingPlayersBar({required this.gameId, required this.players});
+  const _WaitingPlayersBar({
+    required this.gameId,
+    required this.players,
+    this.myUid,
+  });
 
   final String gameId;
   final List<RoomPlayer> players;
+
+  /// 이 휴대폰 사용자의 UID입니다. 내 얼굴 아래에 '나' 표시를 붙입니다.
+  final String? myUid;
 
   @override
   Widget build(BuildContext context) {
@@ -1145,7 +1251,12 @@ class _WaitingPlayersBar extends StatelessWidget {
               Expanded(
                 child: Text.rich(
                   TextSpan(
-                    text: '함께하는 사람 ',
+                    text: GameLocale.select(
+                      ko: '함께하는 사람 ',
+                      en: 'Players ',
+                      zhHans: '参与者 ',
+                      zhHant: '參與者 ',
+                    ),
                     children: [
                       TextSpan(
                         text: '${players.length}',
@@ -1163,7 +1274,12 @@ class _WaitingPlayersBar extends StatelessWidget {
               if (reconnecting > 0) ...[
                 const SizedBox(width: 8),
                 Text(
-                  '$reconnecting명 재연결 중',
+                  GameLocale.select(
+                    ko: '$reconnecting명 재연결 중',
+                    en: '$reconnecting reconnecting',
+                    zhHans: '$reconnecting 人正在重连',
+                    zhHant: '$reconnecting 人正在重新連線',
+                  ),
                   style: MosiFonts.sans(size: 11, color: colors.muted),
                 ),
               ],
@@ -1172,7 +1288,7 @@ class _WaitingPlayersBar extends StatelessWidget {
           const SizedBox(height: 10),
           if (players.isEmpty)
             Text(
-              '아직 참가자가 없습니다.',
+              '아직 참가자가 없습니다.'.localized,
               style: MosiFonts.sans(size: 12, color: colors.muted),
             )
           else
@@ -1187,32 +1303,59 @@ class _WaitingPlayersBar extends StatelessWidget {
                   final player = players[index];
                   return Semantics(
                     key: ValueKey('waiting-player-${player.uid}'),
-                    label:
-                        '${player.nickname}, ${player.isConnected ? '연결됨' : '재연결 중'}',
+                    label: GameLocale.select(
+                      ko: '${player.uid == myUid ? '나, ' : ''}${player.nickname}, ${player.isConnected ? '연결됨' : '재연결 중'}',
+                      en: '${player.uid == myUid ? 'Me, ' : ''}${player.nickname}, ${player.isConnected ? 'connected' : 'reconnecting'}',
+                      zhHans:
+                          '${player.uid == myUid ? '我，' : ''}${player.nickname}，${player.isConnected ? '已连接' : '正在重连'}',
+                      zhHant:
+                          '${player.uid == myUid ? '我，' : ''}${player.nickname}，${player.isConnected ? '已連線' : '正在重新連線'}',
+                    ),
                     excludeSemantics: true,
                     child: SizedBox(
                       width: 60,
                       child: Column(
                         children: [
-                          Opacity(
-                            opacity: player.isConnected ? 1 : .45,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: player.isConnected
-                                      ? colors.button
-                                      : MosiColors.navyFaint,
-                                  width: 2,
+                          Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              Opacity(
+                                opacity: player.isConnected ? 1 : .45,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: player.isConnected
+                                          ? colors.button
+                                          : MosiColors.navyFaint,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: MosiFace(
+                                    characterId: player.characterId,
+                                    size: 42,
+                                    ring: true,
+                                  ),
                                 ),
                               ),
-                              child: MosiFace(
-                                characterId: player.characterId,
-                                size: 42,
-                                ring: true,
-                              ),
-                            ),
+                              if (player.uid == myUid)
+                                Positioned(
+                                  bottom: -6,
+                                  child: MosiPill(
+                                    key: const Key('waiting-player-me-badge'),
+                                    label: '나'.localized,
+                                    color: colors.buttonFg,
+                                    background: colors.button,
+                                    fontSize: 10,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 0,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -1242,10 +1385,18 @@ class _WaitingPlayersBar extends StatelessWidget {
 
 //=======================자리 정하는 동안 (휴대폰)==============================
 class _PhoneSeatingView extends StatefulWidget {
-  const _PhoneSeatingView({required this.provider, required this.header});
+  const _PhoneSeatingView({
+    super.key,
+    required this.provider,
+    required this.header,
+    this.starting = false,
+  });
 
   final RoomProvider provider;
   final Widget header;
+
+  /// 자리 배치가 끝나고 게임 화면을 여는 중인지입니다.
+  final bool starting;
 
   @override
   State<_PhoneSeatingView> createState() => _PhoneSeatingViewState();
@@ -1273,10 +1424,9 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
     final foreground = darkTable ? MosiColors.white : MosiColors.navy;
     final soft = Color.lerp(foreground, theme.table, .25)!;
     final game = provider.selectedGame;
-    final art = MosiGameArt.of(gameId ?? '', fallbackName: game?.name);
-    final gameName = gameId != null && MosiGameArt.isKnown(gameId)
-        ? art.koreanName
-        : game?.name ?? '게임';
+    final gameName =
+        game?.localizedName(Localizations.localeOf(context)) ??
+        GameLocale.select(ko: '게임', en: 'Game', zhHans: '游戏', zhHant: '遊戲');
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final me = provider.players
         .where((player) => player.uid == uid)
@@ -1298,12 +1448,24 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                     child: Column(
                       children: [
                         Text(
-                          '$gameName · 대기실',
+                          '$gameName · ${'대기실'.localized}',
                           style: MosiFonts.sans(size: 14, color: soft),
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          '태블릿에서\n자리를 맞추고 있어요',
+                          widget.starting
+                              ? GameLocale.select(
+                                  ko: '곧 게임이\n시작해요',
+                                  en: 'The game starts\nsoon',
+                                  zhHans: '游戏即将\n开始',
+                                  zhHant: '遊戲即將\n開始',
+                                )
+                              : GameLocale.select(
+                                  ko: '태블릿에서\n자리를 맞추고 있어요',
+                                  en: 'Arranging seats\non the tablet',
+                                  zhHans: '正在平板上\n调整座位',
+                                  zhHant: '正在平板上\n調整座位',
+                                ),
                           textAlign: TextAlign.center,
                           style: MosiFonts.sans(
                             size: 24,
@@ -1350,7 +1512,19 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          '내 이름 카드가 내가 앉은 쪽에\n오면 돼요',
+                          widget.starting
+                              ? GameLocale.select(
+                                  ko: '휴대폰을 들고\n태블릿 앞에서 기다려 주세요',
+                                  en: 'Keep your phone with you\nand wait by the tablet',
+                                  zhHans: '请拿好手机，\n在平板前等待',
+                                  zhHant: '請拿好手機，\n在平板前等待',
+                                )
+                              : GameLocale.select(
+                                  ko: '내 이름 카드가 내가 앉은 쪽에\n오면 돼요',
+                                  en: 'Move your name card\nto the side where you are sitting',
+                                  zhHans: '将自己的姓名卡\n移到所坐的一侧',
+                                  zhHant: '將自己的姓名卡\n移到所坐的一側',
+                                ),
                           textAlign: TextAlign.center,
                           style: MosiFonts.sans(
                             size: 14,
@@ -1371,7 +1545,21 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
                       return Text.rich(
                         TextSpan(
                           children: [
-                            const TextSpan(text: '방장이 완료를 누르면 시작해요 '),
+                            TextSpan(
+                              text: widget.starting
+                                  ? GameLocale.select(
+                                      ko: '게임 화면을 여는 중이에요 ',
+                                      en: 'Opening the game ',
+                                      zhHans: '正在打开游戏 ',
+                                      zhHant: '正在開啟遊戲 ',
+                                    )
+                                  : GameLocale.select(
+                                      ko: '방장이 완료를 누르면 시작해요 ',
+                                      en: 'The game starts when the host finishes setup ',
+                                      zhHans: '房主完成设置后开始 ',
+                                      zhHant: '房主完成設定後開始 ',
+                                    ),
+                            ),
                             for (var i = 0; i < 3; i++)
                               TextSpan(
                                 text: '·',

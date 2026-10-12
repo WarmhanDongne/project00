@@ -1,6 +1,6 @@
 # Cloud Functions 정리
 
-2026-10-13 로컬 후보 index.ts export 80개: onCall 70, RTDB trigger 5, onSchedule 4, HTTP 1.
+2026-10-13 B1·디벨럽1 통합 후보 index.ts export 81개: onCall 71, RTDB trigger 5, onSchedule 4, HTTP 1.
 production 배포 상태를 조회한 수치가 아니다. 게임 규칙·승패·턴·방 수명은 서버가 결정한다.
 [현재 네트워크·세션 계약](NETWORK_SESSION_CONTRACT.md)을 함께 따른다.
 
@@ -19,14 +19,32 @@ fetchRealtimeRoomGroupEntitlements, resumeRealtimeControllerRoom, removeRealtime
 leaveRealtimeRoom, closeRoom, fetchRealtimeRoomSession.
 같은 operation 재생, room/member/current connection와 sequence CAS, 요청 방의 구매 자격을 검증한다.
 
-auth/ callable 8개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
-recoverLegacyOnboarding, checkEmailDuplicate, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount.
+auth/ callable 9개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
+recoverLegacyOnboarding, checkEmailDuplicate, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount,
+completeGuestOnboarding.
+추가로 `completeGuestOnboarding`은 Firebase 익명 토큰과 provider 없는 Auth 계정을
+함께 검증하고, 현재 약관 동의·자동 닉네임·`anonymous/complete` 온보딩을 한 transaction에
+저장한다. 이 완료 문서가 생기기 전에는 기존 방 생성·검증·참가 가드가 게스트를 거절한다.
+기본 무료 게임은 기존 그룹 접근 규칙을 따르고, 유료 게임은 기존 `ownedGames` 검사를
+그대로 받는다. 2026-10-13 운영 Firebase Authentication의 Anonymous provider가
+활성 상태임을 확인하고 `completeGuestOnboarding`을 `asia-northeast3`의 Node.js 22
+2nd Gen callable로 배포했다. 인증 없는 요청은 HTTP 401 `UNAUTHENTICATED`로 거절된다.
 registerProfile은 별도 HTTP다.
 completeOnboardingProfile은 처음 가입을 마칠 때 현재 `SIGNUP_TERMS_VERSION`의 필수 동의
 (`consents`: age14·terms·privacy, 선택 marketing)가 없으면 `failed-precondition`으로 거절하고,
 `users/{uid}.consents`(동의 항목·`agreedAt`·`marketingUpdatedAt`)와
 `userOnboarding/{uid}.consentVersion`을 저장한다. 이 검사는 동의를 보내지 않는 이전 앱의
 가입 완료를 막으므로 Functions와 앱을 함께 배포한다.
+
+2026-10-12 비밀번호 우선 이메일 인증 복원 후보(미배포): `beginOnboarding`에
+`{provider: "legacyPassword"}`를 보내면 password provider를 확인하고 미인증 계정도
+`settingProfile`로 준비한다. 이는 서비스 이용 허용이 아닌 미완료 가입 상태다.
+Firebase `emailVerified`가 true가 될 때까지 앱은 인증 대기 화면을 표시하며,
+`completeOnboardingProfile`도 legacyPassword 계정의 이메일 인증 여부를 확인한다.
+기존 인자 없는 링크 가입은 `emailLink/settingPassword`로 유지하고, 기존 문서 상태는
+덮어쓰지 않는다. 새 앱 배포 전에 위 두 함수를 함께 배포해야 한다. 한쪽만 반영하면
+미인증 가입 준비 실패 또는 이메일 인증 검증 누락이 생긴다. production 조회·배포는
+별도 승인이 필요하며, 이 후보에서 수행하지 않았다.
 
 ## 3. 네 게임
 

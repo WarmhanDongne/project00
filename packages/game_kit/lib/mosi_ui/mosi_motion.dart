@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -480,7 +481,7 @@ class _MosiLoadingDotsState extends State<MosiLoadingDots>
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: '진행 중',
+    label: '진행 중'.localized,
     child: AnimatedBuilder(
       animation: _controller,
       builder: (context, _) => Row(

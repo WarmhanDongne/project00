@@ -122,6 +122,10 @@ class _SilentOnboardingService implements OnboardingService {
 
 class _FakeUser implements User {
   @override
+  bool get isAnonymous => false;
+  @override
+  bool get emailVerified => true;
+  @override
   String get uid => 'u1';
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 짧은 네트워크 흔들림은 숨기고, 연결이 오래 끊겼을 때만 보여 주는 안내입니다.
 ///
@@ -115,18 +116,18 @@ class _MafiaDelayedConnectionHintState
                     ),
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.wifi_find_rounded,
                       color: Color(0xFFB08A4A),
                       size: 18,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      '연결 확인 중…',
-                      style: TextStyle(
+                      '연결 확인 중…'.localized,
+                      style: const TextStyle(
                         color: Color(0xFFD9C2A2),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

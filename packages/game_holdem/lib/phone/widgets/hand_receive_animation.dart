@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/widgets/card_view.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 라이어스 포커와 같은 순서로 손패가 위에서 내려온 뒤 탭으로 펼쳐집니다.
 class HoldemHandReceiveAnimation extends StatefulWidget {
@@ -134,7 +135,7 @@ class _HoldemHandReceiveAnimationState extends State<HoldemHandReceiveAnimation>
                     height: height + 8,
                     child: Semantics(
                       button: true,
-                      label: '카드 확인',
+                      label: '카드 확인'.localized,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _revealCards,

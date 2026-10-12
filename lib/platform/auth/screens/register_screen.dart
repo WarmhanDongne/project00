@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:project00/platform/auth/models/email_link_error_message.dart';
 import 'package:project00/platform/auth/models/password_policy.dart';
@@ -17,6 +18,7 @@ import 'package:project00/platform/auth/widgets/auth_design.dart';
 enum RegisterStep {
   /// 약관 동의입니다. 새로 가입을 시작할 때 이메일 입력 전에 한 번 거칩니다.
   terms,
+  passwordAccount,
   emailInput,
   awaitingEmailLink,
   emailLinkFailed,
@@ -28,7 +30,7 @@ enum RegisterAction { sendEmail, resendEmail, completeLink, setPassword }
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({
     super.key,
-    this.initialStep = RegisterStep.emailInput,
+    this.initialStep = RegisterStep.passwordAccount,
     this.initialEmail,
     this.initialEmailLink,
     this.initialError,
@@ -103,7 +105,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     _step = widget.initialStep;
     // 새로 가입을 시작하면 약관 동의부터 받습니다. 이미 동의하고 메일 단계로
     // 넘어갔다가 돌아온 경우에는 다시 묻지 않습니다.
-    if (_step == RegisterStep.emailInput && widget.initialEmailLink == null) {
+    if ((_step == RegisterStep.emailInput ||
+            _step == RegisterStep.passwordAccount) &&
+        widget.initialEmailLink == null) {
       _checkingConsent = true;
       unawaited(_checkConsent());
     }
@@ -139,7 +143,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (!mounted) return;
     setState(() {
       _checkingConsent = false;
-      if (consents == null && _step == RegisterStep.emailInput) {
+      if (consents == null &&
+          (_step == RegisterStep.emailInput ||
+              _step == RegisterStep.passwordAccount)) {
         _step = RegisterStep.terms;
       }
     });
@@ -149,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     await _consentStore.save(consents);
     if (!mounted) return;
     setState(() {
-      _step = RegisterStep.emailInput;
+      _step = widget.initialStep;
       _errorMessage = null;
     });
   }
@@ -277,9 +283,14 @@ class _RegisterScreenState extends State<RegisterScreen>
     try {
       final pending = await _pendingEmailStore.read();
       if (pending == null) {
-        throw const AuthServiceException(
+        throw AuthServiceException(
           'missing-email',
-          '인증을 요청한 기기에서 다시 시도해주세요.',
+          GameLocale.select(
+            ko: '인증을 요청한 기기에서 다시 시도해주세요.',
+            en: 'Try again on the device that requested verification.',
+            zhHans: '请在请求验证的设备上重试。',
+            zhHant: '請在要求驗證的裝置上重試。',
+          ),
         );
       }
       _emailController.text = pending.email;
@@ -313,7 +324,19 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
     if (password != _confirmPasswordController.text) {
-      setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
+      setState(
+        () => _errorMessage = GameLocale.select(
+          ko: '비밀번호가 일치하지 않습니다.',
+          en: 'Passwords do not match.',
+          zhHans: '两次密码不一致。',
+          zhHant: '兩次密碼不一致。',
+        ),
+      );
+      return;
+    }
+    final email = _normalizedEmail()!;
+    if (_step == RegisterStep.passwordAccount && !_isValidEmail(email)) {
+      setState(() => _errorMessage = context.l10n.invalidEmail);
       return;
     }
 
@@ -322,7 +345,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       _errorMessage = null;
     });
     try {
-      await _onboardingService.setPasswordAndAdvance(password);
+      if (_step == RegisterStep.passwordAccount) {
+        await _onboardingService.createPasswordAccount(email, password);
+      } else {
+        await _onboardingService.setPasswordAndAdvance(password);
+      }
       // AuthGate가 서버 온보딩 상태에 따라 카드 내용만 교체합니다.
     } on AuthServiceException catch (error) {
       if (error.code == 'requires-recent-login') {
@@ -356,7 +383,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     } on AuthServiceException catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = '보안을 위해 이메일 인증이 다시 필요합니다. ${error.message}';
+          _errorMessage = GameLocale.select(
+            ko: '보안을 위해 이메일 인증이 다시 필요합니다. ${error.message}',
+            en: 'Email verification is required again for security. ${error.message}',
+            zhHans: '为确保安全，需要再次验证邮箱。${error.message}',
+            zhHant: '為確保安全，需要再次驗證電子郵件。${error.message}',
+          );
         });
       }
     }
@@ -384,17 +416,37 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (_action != null || _isLeaving) return;
     final shouldLeave = await showMosiLeaveDialog(
       context,
-      title: '회원가입을 중단할까요?',
-      message: _step == RegisterStep.emailInput || _step == RegisterStep.terms
-          ? '입력한 이메일은 저장되지 않아요.'
-          : '다음에 로그인하면 여기서부터 이어서 할 수 있어요.',
+      title: GameLocale.select(
+        ko: '회원가입을 중단할까요?',
+        en: 'Stop signing up?',
+        zhHans: '要暂停注册吗？',
+        zhHant: '要暫停註冊嗎？',
+      ),
+      message:
+          _step == RegisterStep.emailInput ||
+              _step == RegisterStep.terms ||
+              _step == RegisterStep.passwordAccount
+          ? GameLocale.select(
+              ko: '입력한 이메일은 저장되지 않아요.',
+              en: 'The email you entered will not be saved.',
+              zhHans: '已输入的邮箱不会保存。',
+              zhHant: '已輸入的電子郵件不會儲存。',
+            )
+          : GameLocale.select(
+              ko: '다음에 로그인하면 여기서부터 이어서 할 수 있어요.',
+              en: 'You can continue from here the next time you sign in.',
+              zhHans: '下次登录时可从这里继续。',
+              zhHant: '下次登入時可從這裡繼續。',
+            ),
     );
     if (shouldLeave != true || !mounted) return;
     _isLeaving = true;
     // 가입을 그만두면 이 기기에 남긴 약관 동의도 지웁니다. 다음에 같은 기기로
     // 다른 사람이 가입할 때 동의 없이 넘어가지 않게 합니다.
     await _consentStore.clear();
-    if (_step != RegisterStep.emailInput && _step != RegisterStep.terms) {
+    if (_step != RegisterStep.emailInput &&
+        _step != RegisterStep.terms &&
+        _step != RegisterStep.passwordAccount) {
       await _pendingEmailStore.clear();
       await FirebaseAuth.instance.signOut();
     }
@@ -425,9 +477,14 @@ class _RegisterScreenState extends State<RegisterScreen>
             MosiAuthHeader(
               title: context.l10n.signUp,
               onBack: () => unawaited(_requestBack()),
-              steps: signupSteps,
+              steps:
+                  _step == RegisterStep.passwordAccount ||
+                      _step == RegisterStep.terms
+                  ? passwordSignupSteps
+                  : signupSteps,
               stepIndex: switch (_step) {
                 RegisterStep.terms => 0,
+                RegisterStep.passwordAccount => 1,
                 RegisterStep.settingPassword => 2,
                 _ => 1,
               },

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 //=======================로그인·회원가입 시안 부품==============================
 // 시안(로그인 · 회원가입): 태블릿은 왼쪽 보라 그림 + 오른쪽 흰 카드, 휴대폰은
@@ -45,9 +46,15 @@ class MosiAuthScaffold extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, Widget card) {
     if (isTabletLayout(context)) {
+      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+      final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
       return Scaffold(
         backgroundColor: MosiColors.violet,
+        // Keep the hero and card anchored when iPad's input accessory appears.
+        // Only the form's scroll viewport yields to an overlapping keyboard.
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
+          maintainBottomViewPadding: true,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final showHero = constraints.maxWidth >= 900;
@@ -65,16 +72,36 @@ class MosiAuthScaffold extends StatelessWidget {
                       const Spacer(),
                     SizedBox(
                       width: 440,
-                      child: Center(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(right: 12, bottom: 12),
-                          child: MosiBox(
-                            padding: const EdgeInsets.all(32),
-                            radius: 12,
-                            shadowOffset: 12,
-                            child: card,
-                          ),
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, formConstraints) {
+                          final overlap = (keyboardInset - safeBottom - 32)
+                              .clamp(0.0, formConstraints.maxHeight);
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: overlap),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.only(
+                                right: 12,
+                                bottom: 12,
+                              ),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: math.max(
+                                    0,
+                                    formConstraints.maxHeight - 12,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: MosiBox(
+                                    padding: const EdgeInsets.all(32),
+                                    radius: 12,
+                                    shadowOffset: 12,
+                                    child: card,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     if (!showHero) const Spacer(),
@@ -100,7 +127,12 @@ class MosiAuthScaffold extends StatelessWidget {
                   if (showTagline) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '모이면 시작하는 게임',
+                      GameLocale.select(
+                        ko: '모이면 시작하는 게임',
+                        en: 'Games begin when everyone gathers',
+                        zhHans: '人齐即开玩的游戏',
+                        zhHant: '人齊即開玩的遊戲',
+                      ),
                       style: MosiFonts.sans(
                         size: 14,
                         weight: FontWeight.w600,
@@ -232,7 +264,12 @@ class _TabletHeroState extends State<_TabletHero>
         const MosiLogo(markSize: 72, titleSize: 52),
         const SizedBox(height: 16),
         Text(
-          '모이면 시작하는 게임',
+          GameLocale.select(
+            ko: '모이면 시작하는 게임',
+            en: 'Games begin when everyone gathers',
+            zhHans: '人齐即开玩的游戏',
+            zhHant: '人齊即開玩的遊戲',
+          ),
           style: MosiFonts.sans(
             size: 20,
             weight: FontWeight.w600,
@@ -588,6 +625,7 @@ class _Pips extends StatelessWidget {
 //=======================제목 + 단계==============================
 /// 회원가입 진행 단계 이름입니다(약관 동의 → 이메일 인증 → 비밀번호 → 프로필).
 const signupSteps = ['약관 동의', '이메일 인증', '비밀번호', '프로필'];
+const passwordSignupSteps = ['약관 동의', '계정 만들기', '이메일 인증', '프로필'];
 
 /// 회원가입 머리: 뒤로 버튼 + 제목 + 단계 진행 막대.
 class MosiAuthHeader extends StatelessWidget {
@@ -616,10 +654,10 @@ class MosiAuthHeader extends StatelessWidget {
           children: [
             if (onBack != null) ...[
               Tooltip(
-                message: '뒤로',
+                message: '뒤로'.localized,
                 child: Semantics(
                   button: true,
-                  label: '뒤로',
+                  label: '뒤로'.localized,
                   excludeSemantics: true,
                   child: GestureDetector(
                     onTap: onBack,
@@ -680,7 +718,7 @@ class MosiAuthHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        label,
+                        label.localized,
                         style: MosiFonts.sans(
                           size: 12,
                           weight: i == stepIndex
@@ -802,7 +840,7 @@ class MosiEmailField extends StatelessWidget {
                   autocorrect: false,
                   textAlignVertical: TextAlignVertical.center,
                   style: mosiFieldTextStyle(),
-                  decoration: mosiInputDecoration(hintText: '이메일'),
+                  decoration: mosiInputDecoration(hintText: '이메일'.localized),
                 ),
               ),
               if (hasDomain) ...[
@@ -812,7 +850,7 @@ class MosiEmailField extends StatelessWidget {
                   width: domainWidth,
                   child: PopupMenuButton<String>(
                     key: const Key('email-domain-menu'),
-                    tooltip: '도메인 목록',
+                    tooltip: '도메인 목록'.localized,
                     enabled: enabled,
                     position: PopupMenuPosition.under,
                     offset: const Offset(0, 6),
@@ -828,7 +866,7 @@ class MosiEmailField extends StatelessWidget {
                         PopupMenuItem(
                           value: domain,
                           child: Text(
-                            domain == 'custom' ? '직접 입력' : '@$domain',
+                            domain == 'custom' ? '직접 입력'.localized : '@$domain',
                             style: MosiFonts.sans(
                               size: 14,
                               weight:
@@ -855,9 +893,9 @@ class MosiEmailField extends StatelessWidget {
                               style: mosiFieldTextStyle(),
                               decoration:
                                   mosiInputDecoration(
-                                    hintText: '직접 입력',
+                                    hintText: '직접 입력'.localized,
                                     suffix: IconButton(
-                                      tooltip: '도메인 목록',
+                                      tooltip: '도메인 목록'.localized,
                                       onPressed: enabled
                                           ? () => buttonContext
                                                 .findAncestorStateOfType<
@@ -1012,7 +1050,7 @@ class MosiOrDivider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            '또는',
+            '또는'.localized,
             style: MosiFonts.sans(size: 13, color: const Color(0xFF8C8AA8)),
           ),
         ),
@@ -1062,7 +1100,7 @@ Future<bool?> showMosiLeaveDialog(
             children: [
               Expanded(
                 child: MosiButton(
-                  label: '계속하기',
+                  label: '계속하기'.localized,
                   height: 46,
                   fontSize: 14,
                   borderWidth: 2,
@@ -1074,7 +1112,7 @@ Future<bool?> showMosiLeaveDialog(
               const SizedBox(width: 8),
               Expanded(
                 child: MosiButton(
-                  label: '중단하기',
+                  label: '중단하기'.localized,
                   background: MosiColors.white,
                   foreground: const Color(0xFFA82E40),
                   height: 46,

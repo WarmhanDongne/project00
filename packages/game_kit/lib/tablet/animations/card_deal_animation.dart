@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/sound/app_sounds.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
@@ -339,7 +340,12 @@ class CardDealAnimationState extends State<CardDealAnimation>
       height: cardHeight + 8,
       child: Semantics(
         button: true,
-        label: '카드 분배 시작',
+        label: GameLocale.select(
+          ko: '카드 분배 시작',
+          en: 'Card deal begins',
+          zhHans: '开始发牌',
+          zhHant: '開始發牌',
+        ),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(

@@ -52,12 +52,13 @@ abstract final class LiarsPokerColors {
   static const Color pink = Color(0xFFFF6B7A);
   static const Color pinkLight = Color(0xFFFF8A96);
 
-  // 이전 화면이 쓰던 이름입니다. 새 팔레트의 같은 역할 색을 가리킵니다.
-  static const Color primary = gold;
-  static const Color surface = night;
-  static const Color title = ivory;
-  static const Color description = muted;
-  static const Color spectatorSurface = night;
+  // 복원한 게임 화면의 기존 색을 유지합니다. 위의 디자인 토큰은 로비
+  // 미리보기에서도 사용하므로 그대로 남겨 둡니다.
+  static const Color primary = Color(0xFF6E2A82);
+  static const Color surface = Color(0xFF1B1022);
+  static const Color title = Color(0xFFF8F4FA);
+  static const Color description = Color(0xFFC7B8CC);
+  static const Color spectatorSurface = Color(0xFF142119);
 }
 
 // ---------------------------------------------------------------------------

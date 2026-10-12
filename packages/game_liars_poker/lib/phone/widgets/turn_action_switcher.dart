@@ -5,8 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_liars_poker/shared/providers/game_controller.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -225,10 +225,7 @@ class _TurnActionSwitcherState extends State<TurnActionSwitcher>
   }
 }
 
-/// 다른 사람 차례에 행동 자리에 보여 주는 안내입니다.
-///
-/// 얼굴은 위쪽 기준 카드 옆에 이미 크게 보이므로 여기서는 이름과 상태만
-/// 퍽 버튼과 같은 무게의 글자로 보여 줍니다.
+/// 현재 턴 플레이어의 프로필과 닉네임을 표시합니다.
 class TurnPlayerIndicator extends StatelessWidget {
   const TurnPlayerIndicator({
     super.key,
@@ -246,35 +243,96 @@ class TurnPlayerIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isLandscape ? 220 : 250.w.clamp(210.0, 300.0),
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: player.nickname,
-                    style: const TextStyle(color: LiarsPokerColors.goldLight),
-                  ),
-                  const TextSpan(text: ' 차례'),
-                ],
-              ),
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: LiarsPokerFonts.headline(size: isLandscape ? 26 : 30),
+    // ---------------------------------------------------------------------------
+    // 가로 턴 정보
+    // ---------------------------------------------------------------------------
+    if (isLandscape) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PhonePlayerProfile(player: player, size: profileSize),
+          SizedBox(width: spacing),
+          Expanded(
+            child: _TurnPlayerText(
+              nickname: player.nickname,
+              fontSize: nicknameFontSize,
+              textAlign: TextAlign.left,
             ),
           ),
+        ],
+      );
+    }
+
+    // ---------------------------------------------------------------------------
+    // 세로 턴 정보
+    // ---------------------------------------------------------------------------
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        PhonePlayerProfile(player: player, size: profileSize),
+        SizedBox(height: spacing),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 250.w.clamp(210.0, 280.0)),
+          child: _TurnPlayerText(
+            nickname: player.nickname,
+            fontSize: nicknameFontSize,
+            textAlign: TextAlign.center,
+          ),
         ),
-        SizedBox(height: spacing + 4),
-        Text(
-          '카드를 고르는 중이에요',
-          style: LiarsPokerFonts.text(size: 13, color: LiarsPokerColors.muted),
+      ],
+    );
+  }
+}
+
+/// 좁은 가로 화면에서는 닉네임과 안내 문구를 줄여 온전히 표시합니다.
+class _TurnPlayerText extends StatelessWidget {
+  const _TurnPlayerText({
+    required this.nickname,
+    required this.fontSize,
+    required this.textAlign,
+  });
+
+  final String nickname;
+  final double fontSize;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final alignment = textAlign == TextAlign.center
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
+    final fittedAlignment = textAlign == TextAlign.center
+        ? Alignment.center
+        : Alignment.centerLeft;
+    final style = TextStyle(
+      fontSize: fontSize,
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: alignment,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: fittedAlignment,
+          child: Text(nickname, maxLines: 1, style: style),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: fittedAlignment,
+          child: Text(
+            GameLocale.select(
+              ko: '님 차례입니다',
+              en: "'s turn",
+              zhHans: '的回合',
+              zhHant: '的回合',
+            ),
+            maxLines: 1,
+            style: style,
+          ),
         ),
       ],
     );

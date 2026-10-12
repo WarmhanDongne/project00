@@ -11,6 +11,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -122,6 +123,8 @@ class MosiGameCover extends StatelessWidget {
     this.shadowColor = MosiColors.navy,
     this.fallbackName,
     this.fallbackImageUrl,
+    this.displayName,
+    this.englishName,
   });
 
   final String gameId;
@@ -131,6 +134,8 @@ class MosiGameCover extends StatelessWidget {
   final double? shadow;
   final Color shadowColor;
   final String? fallbackName;
+  final String? displayName;
+  final String? englishName;
 
   /// 그림이 등록되지 않은 게임은 서버 이미지를 표지로 씁니다.
   final String? fallbackImageUrl;
@@ -140,6 +145,13 @@ class MosiGameCover extends StatelessWidget {
     final height = width * 4 / 3;
     final s = shadow ?? (width * 0.047).roundToDouble();
     final known = MosiGameArt.isKnown(gameId);
+    final artInfo = MosiGameArt.of(gameId, fallbackName: fallbackName);
+    final localizedTitle = displayName?.trim().isNotEmpty == true
+        ? displayName!.trim()
+        : artInfo.koreanName;
+    final englishTitle = englishName?.trim().isNotEmpty == true
+        ? englishName!.trim()
+        : artInfo.englishName;
     final imageUrl = fallbackImageUrl;
     Widget art;
     if (gameId == 'holdem') {
@@ -167,10 +179,28 @@ class MosiGameCover extends StatelessWidget {
           ),
         ),
       );
+    } else if (gameId == 'final_call') {
+      // 코드로 그린 새 표지입니다. 300×400 판을 상자 크기에 맞춰 줄입니다.
+      art = SizedBox(
+        width: width,
+        height: height,
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(
+            width: 300,
+            height: 400,
+            child: _FinalCallCover(title: englishTitle),
+          ),
+        ),
+      );
     } else if (known) {
       art = CustomPaint(
         size: Size(width, height),
-        painter: _CoverPainter(gameId: gameId),
+        painter: _CoverPainter(
+          gameId: gameId,
+          displayName: localizedTitle,
+          englishName: englishTitle,
+        ),
       );
     } else if (imageUrl != null && imageUrl.isNotEmpty) {
       art = Image.network(
@@ -184,10 +214,14 @@ class MosiGameCover extends StatelessWidget {
     } else {
       art = _GenericCover(name: fallbackName ?? gameId, width: width);
     }
-    final name = MosiGameArt.of(gameId, fallbackName: fallbackName).koreanName;
     return Semantics(
       image: true,
-      label: '$name 상자 표지',
+      label: GameLocale.select(
+        ko: '$localizedTitle 상자 표지',
+        en: '$localizedTitle box cover',
+        zhHans: '$localizedTitle 游戏盒封面',
+        zhHant: '$localizedTitle 遊戲盒封面',
+      ),
       excludeSemantics: true,
       child: Container(
         width: width,
@@ -235,9 +269,15 @@ class _GenericCover extends StatelessWidget {
 }
 
 class _CoverPainter extends CustomPainter {
-  const _CoverPainter({required this.gameId});
+  const _CoverPainter({
+    required this.gameId,
+    required this.displayName,
+    required this.englishName,
+  });
 
   final String gameId;
+  final String displayName;
+  final String englishName;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -245,11 +285,11 @@ class _CoverPainter extends CustomPainter {
     canvas.scale(size.width / 300, size.height / 400);
     switch (gameId) {
       case 'liars_poker':
-        _paintLiar(canvas);
+        _paintLiar(canvas, displayName, englishName);
       case 'final_call':
-        _paintFinal(canvas);
+        _paintFinal(canvas, displayName, englishName);
       case 'mafia':
-        _paintMafia(canvas);
+        _paintMafia(canvas, displayName, englishName);
       case 'holdem':
         _paintHoldem(canvas);
     }
@@ -258,7 +298,9 @@ class _CoverPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CoverPainter oldDelegate) =>
-      oldDelegate.gameId != gameId;
+      oldDelegate.gameId != gameId ||
+      oldDelegate.displayName != displayName ||
+      oldDelegate.englishName != englishName;
 }
 
 //=======================캔버스 도우미==============================
@@ -334,7 +376,7 @@ void _withTransform(
 }
 
 //=======================라이어스 포커 · 세 장의 거짓말==============================
-void _paintLiar(Canvas canvas) {
+void _paintLiar(Canvas canvas, String displayName, String englishName) {
   canvas.drawRect(
     const Rect.fromLTWH(0, 0, 300, 400),
     _fill(MosiGameArt.liarsPoker.spineColor),
@@ -344,9 +386,16 @@ void _paintLiar(Canvas canvas) {
     190,
     _fill(const Color(0xFF5A2272)),
   );
-  _text(canvas, "LIAR'S", 24, 62, _playfair(44, const Color(0xFFF8F4FA)));
-  _text(canvas, 'POKER', 24, 106, _playfair(44, const Color(0xFFF8F4FA)));
-  _text(canvas, '라이어스 포커', 26, 132, _plex(14, const Color(0xFFC7B8CC)));
+  _text(
+    canvas,
+    englishName.toUpperCase(),
+    24,
+    88,
+    _playfair(44, const Color(0xFFF8F4FA)),
+  );
+  if (displayName.toUpperCase() != englishName.toUpperCase()) {
+    _text(canvas, displayName, 26, 118, _plex(14, const Color(0xFFC7B8CC)));
+  }
   canvas.drawOval(
     Rect.fromCenter(center: const Offset(150, 352), width: 236, height: 24),
     _fill(const Color(0xFF1B1022)),
@@ -433,7 +482,7 @@ void _paintLiar(Canvas canvas) {
 }
 
 //=======================파이널콜 · 네 장의 손패==============================
-void _paintFinal(Canvas canvas) {
+void _paintFinal(Canvas canvas, String displayName, String englishName) {
   canvas.drawRect(
     const Rect.fromLTWH(0, 0, 300, 400),
     _fill(MosiGameArt.finalCall.spineColor),
@@ -448,13 +497,20 @@ void _paintFinal(Canvas canvas) {
     110,
     _stroke(const Color(0xFFDCD8CF), 1.5),
   );
-  _text(canvas, 'FINAL', 24, 62, _playfair(46, const Color(0xFF141414)));
+  _text(
+    canvas,
+    englishName.toUpperCase(),
+    24,
+    84,
+    _playfair(40, const Color(0xFF141414)),
+  );
   canvas.drawRect(
-    const Rect.fromLTWH(22, 76, 134, 30),
+    const Rect.fromLTWH(22, 94, 134, 12),
     _fill(const Color(0xFFE5DB00)),
   );
-  _text(canvas, 'CALL', 24, 104, _playfair(46, const Color(0xFF141414)));
-  _text(canvas, '파이널콜', 26, 132, _plex(14, const Color(0xFF141414)));
+  if (displayName.toUpperCase() != englishName.toUpperCase()) {
+    _text(canvas, displayName, 26, 128, _plex(14, const Color(0xFF141414)));
+  }
   canvas.drawOval(
     Rect.fromCenter(center: const Offset(150, 356), width: 240, height: 22),
     _fill(const Color(0xFFD2CEC5)),
@@ -531,7 +587,7 @@ void _paintFinal(Canvas canvas) {
 }
 
 //=======================마피아==============================
-void _paintMafia(Canvas canvas) {
+void _paintMafia(Canvas canvas, String displayName, String englishName) {
   final night = MosiGameArt.mafia.spineColor;
   const gold = Color(0xFFFFC400);
   canvas.drawRect(const Rect.fromLTWH(0, 0, 300, 400), _fill(night));
@@ -593,7 +649,7 @@ void _paintMafia(Canvas canvas) {
   );
   _text(
     canvas,
-    '마피아',
+    displayName,
     150,
     352,
     MosiFonts.sans(
@@ -605,14 +661,16 @@ void _paintMafia(Canvas canvas) {
     ),
     align: TextAlign.center,
   );
-  _text(
-    canvas,
-    'MAFIA',
-    150,
-    382,
-    _grotesk(16, night, 8),
-    align: TextAlign.center,
-  );
+  if (displayName.toUpperCase() != englishName.toUpperCase()) {
+    _text(
+      canvas,
+      englishName.toUpperCase(),
+      150,
+      382,
+      _grotesk(16, night, 8),
+      align: TextAlign.center,
+    );
+  }
 }
 
 void _paintHoldem(Canvas canvas) {
@@ -663,6 +721,8 @@ class MosiGameSpine extends StatelessWidget {
     required this.gameId,
     required this.onTap,
     this.fallbackName,
+    this.displayName,
+    this.englishName,
     this.deep = MosiColors.navy,
     this.width = 46,
     this.height = 288,
@@ -671,6 +731,8 @@ class MosiGameSpine extends StatelessWidget {
   final String gameId;
   final VoidCallback onTap;
   final String? fallbackName;
+  final String? displayName;
+  final String? englishName;
   final Color deep;
   final double width;
   final double height;
@@ -678,8 +740,14 @@ class MosiGameSpine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final art = MosiGameArt.of(gameId, fallbackName: fallbackName);
+    final localizedTitle = displayName?.trim().isNotEmpty == true
+        ? displayName!.trim()
+        : art.koreanName;
+    final englishTitleValue = englishName?.trim().isNotEmpty == true
+        ? englishName!.trim()
+        : art.englishName;
     final englishTitle = Text(
-      art.englishName,
+      englishTitleValue,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: gameId == 'mafia'
@@ -690,9 +758,35 @@ class MosiGameSpine extends StatelessWidget {
               letterSpacing: 1,
             ),
     );
+    if (gameId == 'final_call') {
+      return Semantics(
+        button: true,
+        label: GameLocale.select(
+          ko: '$localizedTitle 선택',
+          en: 'Select $localizedTitle',
+          zhHans: '选择 $localizedTitle',
+          zhHant: '選擇 $localizedTitle',
+        ),
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: _FinalCallSpine(
+            title: englishTitleValue,
+            deep: deep,
+            width: width,
+            height: height,
+          ),
+        ),
+      );
+    }
     return Semantics(
       button: true,
-      label: '${art.koreanName} 선택',
+      label: GameLocale.select(
+        ko: '$localizedTitle 선택',
+        en: 'Select $localizedTitle',
+        zhHans: '选择 $localizedTitle',
+        zhHant: '選擇 $localizedTitle',
+      ),
       excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
@@ -739,7 +833,7 @@ class MosiGameSpine extends StatelessWidget {
                 _ => RotatedBox(
                   quarterTurns: 1,
                   child: Text(
-                    art.koreanName,
+                    localizedTitle,
                     style: MosiFonts.sans(
                       size: 11,
                       weight: FontWeight.w700,
@@ -800,7 +894,7 @@ class MosiEmptySpine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '곧 나올 게임',
+      label: '곧 나올 게임'.localized,
       excludeSemantics: true,
       child: MosiDashedBorder(
         color: color,
@@ -945,4 +1039,265 @@ class MosiSeatTheme {
     'holdem' => holdem,
     _ => fallback,
   };
+}
+
+//=======================파이널콜 표지·책등 (코드로 그림)==============================
+const Color _fcRed = Color(0xFFFF5A5F);
+const Color _fcBlue = Color(0xFF3D7BFF);
+const Color _fcYellow = Color(0xFFFFC93C);
+const Color _fcInk = Color(0xFF1B1530);
+
+/// 외곽선과 아래 그림자를 가진 굵은 흰 글자입니다.
+Widget _fcTitleText(String text, double size, {double stroke = 10}) {
+  TextStyle style({Color? color, Paint? foreground}) => TextStyle(
+    fontFamily: MosiFonts.body,
+    package: MosiFonts.package,
+    fontSize: size,
+    fontWeight: FontWeight.w700,
+    height: 1,
+    color: foreground == null ? color : null,
+    foreground: foreground,
+  );
+  Paint pen(double width) => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = width
+    ..strokeJoin = StrokeJoin.round
+    ..color = _fcInk;
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Transform.translate(
+        offset: Offset(0, size * .09),
+        child: Text(text, style: style(foreground: pen(stroke + 2))),
+      ),
+      Text(text, style: style(foreground: pen(stroke))),
+      Text(text, style: style(color: Colors.white)),
+    ],
+  );
+}
+
+class _FcDots extends CustomPainter {
+  const _FcDots();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0x2EFFFFFF);
+    for (var y = 12.0; y < size.height; y += 24) {
+      for (var x = 12.0; x < size.width; x += 24) {
+        canvas.drawCircle(Offset(x, y), 2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FcBurst extends CustomPainter {
+  const _FcBurst();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final path = Path();
+    const points = 10;
+    for (var i = 0; i < points * 2; i++) {
+      final angle = -math.pi / 2 + i * math.pi / points;
+      final radius = size.width / 2 * (i.isEven ? 1 : .68);
+      final point = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      i == 0
+          ? path.moveTo(point.dx, point.dy)
+          : path.lineTo(point.dx, point.dy);
+    }
+    path.close();
+    canvas.drawPath(path.shift(const Offset(0, 5)), Paint()..color = _fcInk);
+    canvas.drawPath(path, Paint()..color = _fcYellow);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = _fcInk
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// 숫자 카드 한 장입니다(게임의 색 카드와 같은 모양).
+class _FcCard extends StatelessWidget {
+  const _FcCard({
+    required this.color,
+    required this.value,
+    required this.angle,
+  });
+
+  final Color color;
+  final int value;
+  final double angle;
+
+  @override
+  Widget build(BuildContext context) => Transform.rotate(
+    angle: angle * math.pi / 180,
+    child: Container(
+      width: 78,
+      height: 110,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _fcInk, width: 3),
+        boxShadow: const [BoxShadow(color: _fcInk, offset: Offset(0, 4))],
+      ),
+      child: Text(
+        '$value',
+        style: TextStyle(
+          fontFamily: MosiFonts.body,
+          package: MosiFonts.package,
+          fontSize: 54,
+          fontWeight: FontWeight.w700,
+          height: 1,
+          color: Colors.white,
+          shadows: const [Shadow(color: _fcInk, offset: Offset(3, 3))],
+        ),
+      ),
+    ),
+  );
+}
+
+/// 파이널콜 표지: 위 파랑 팀과 아래 빨강 팀이 마주 보는 정면 대치입니다.
+class _FinalCallCover extends StatelessWidget {
+  const _FinalCallCover({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final words = title.trim().toUpperCase().split(RegExp(r'\s+'));
+    final first = words.first;
+    final second = words.length > 1 ? words.skip(1).join(' ') : null;
+    Widget half(Color color) => Expanded(
+      child: CustomPaint(
+        painter: const _FcDots(),
+        child: ColoredBox(color: color, child: const SizedBox.expand()),
+      ),
+    );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Column(
+            children: [
+              half(_fcBlue),
+              Container(height: 6, color: _fcInk),
+              half(_fcRed),
+            ],
+          ),
+        ),
+        const Positioned(
+          left: 40,
+          top: 20,
+          child: _FcCard(color: _fcBlue, value: 7, angle: 188),
+        ),
+        const Positioned(
+          left: 118,
+          top: 14,
+          child: _FcCard(color: _fcBlue, value: 2, angle: 172),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: second == null ? 168 : 134,
+          child: Center(child: _fcTitleText(first, 56)),
+        ),
+        if (second != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 206,
+            child: Center(child: _fcTitleText(second, 56)),
+          ),
+        Positioned(
+          right: 4,
+          top: 170,
+          width: 54,
+          height: 54,
+          child: CustomPaint(
+            painter: const _FcBurst(),
+            child: Center(
+              child: Text(
+                'VS',
+                style: TextStyle(
+                  fontFamily: MosiFonts.body,
+                  package: MosiFonts.package,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                  color: _fcInk,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const Positioned(
+          left: 56,
+          bottom: 18,
+          child: _FcCard(color: _fcRed, value: 7, angle: -8),
+        ),
+        const Positioned(
+          left: 134,
+          bottom: 24,
+          child: _FcCard(color: _fcRed, value: 3, angle: 8),
+        ),
+      ],
+    );
+  }
+}
+
+/// 파이널콜 책등: 위 파랑·아래 빨강 반반에 흰 제목을 세로로 씁니다.
+class _FinalCallSpine extends StatelessWidget {
+  const _FinalCallSpine({
+    required this.title,
+    required this.deep,
+    required this.width,
+    required this.height,
+  });
+
+  final String title;
+  final Color deep;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: MosiColors.ink, width: 3),
+      boxShadow: [BoxShadow(color: deep, offset: const Offset(5, 5))],
+    ),
+    child: Stack(
+      children: [
+        Positioned.fill(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Expanded(child: ColoredBox(color: _fcBlue)),
+              Container(height: 4, color: _fcInk),
+              const Expanded(child: ColoredBox(color: _fcRed)),
+            ],
+          ),
+        ),
+        Center(
+          child: RotatedBox(
+            quarterTurns: 1,
+            child: _fcTitleText(title.toUpperCase(), 17, stroke: 5),
+          ),
+        ),
+      ],
+    ),
+  );
 }

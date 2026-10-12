@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/auth/legal/signup_terms.dart';
 
 /// 약관 동의 단계입니다(시안 '회원가입 약관 동의').
@@ -85,7 +86,12 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         ),
         const SizedBox(height: 6),
         Text(
-          '모시겜을 시작하기 전에\n약관을 확인해 주세요',
+          GameLocale.select(
+            ko: '모시겜을 시작하기 전에\n약관을 확인해 주세요',
+            en: 'Review the terms before\nyou start Mosigame',
+            zhHans: '开始 Mosigame 前\n请确认条款',
+            zhHant: '開始 Mosigame 前\n請確認條款',
+          ),
           style: MosiFonts.sans(
             locale: locale,
             size: 22,
@@ -107,8 +113,18 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         _TermsRow(
           key: const ValueKey('terms-age14'),
           required: true,
-          title: '만 14세 이상이에요',
-          sub: '만 14세 미만은 가입할 수 없어요',
+          title: GameLocale.select(
+            ko: '만 14세 이상이에요',
+            en: 'I am at least 14',
+            zhHans: '我已满 14 周岁',
+            zhHant: '我已滿 14 歲',
+          ),
+          sub: GameLocale.select(
+            ko: '만 14세 미만은 가입할 수 없어요',
+            en: 'Children under 14 cannot sign up',
+            zhHans: '未满 14 周岁无法注册',
+            zhHant: '未滿 14 歲無法註冊',
+          ),
           checked: _isOn(_TermsItem.age14),
           onToggle: widget.busy
               ? null
@@ -117,8 +133,18 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         _TermsRow(
           key: const ValueKey('terms-terms'),
           required: true,
-          title: '이용약관 동의',
-          sub: '앱 이용 규칙과 금지 행위',
+          title: GameLocale.select(
+            ko: '이용약관 동의',
+            en: 'Agree to Terms of Service',
+            zhHans: '同意服务条款',
+            zhHant: '同意服務條款',
+          ),
+          sub: GameLocale.select(
+            ko: '앱 이용 규칙과 금지 행위',
+            en: 'App rules and prohibited conduct',
+            zhHans: '应用规则与禁止行为',
+            zhHant: 'App 規則與禁止行為',
+          ),
           checked: _isOn(_TermsItem.terms),
           onToggle: widget.busy
               ? null
@@ -128,8 +154,18 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         _TermsRow(
           key: const ValueKey('terms-privacy'),
           required: true,
-          title: '개인정보 수집·이용 동의',
-          sub: '이메일, 닉네임, 계정 식별자, 프로필 사진(선택)',
+          title: GameLocale.select(
+            ko: '개인정보 수집·이용 동의',
+            en: 'Agree to privacy policy',
+            zhHans: '同意隐私政策',
+            zhHant: '同意隱私權政策',
+          ),
+          sub: GameLocale.select(
+            ko: '이메일, 닉네임, 계정 식별자, 프로필 사진(선택)',
+            en: 'Email, nickname, account ID, optional profile photo',
+            zhHans: '邮箱、昵称、账号标识、可选头像',
+            zhHant: '電子郵件、暱稱、帳號識別碼、選填頭像',
+          ),
           checked: _isOn(_TermsItem.privacy),
           onToggle: widget.busy
               ? null
@@ -139,8 +175,18 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         _TermsRow(
           key: const ValueKey('terms-marketing'),
           required: false,
-          title: '새 게임·이벤트 소식 받기',
-          sub: '원할 때 언제든 끌 수 있어요',
+          title: GameLocale.select(
+            ko: '새 게임·이벤트 소식 받기',
+            en: 'Receive game and event news',
+            zhHans: '接收新游戏与活动消息',
+            zhHant: '接收新遊戲與活動消息',
+          ),
+          sub: GameLocale.select(
+            ko: '원할 때 언제든 끌 수 있어요',
+            en: 'You can turn this off anytime',
+            zhHans: '可随时关闭',
+            zhHant: '可隨時關閉',
+          ),
           checked: _isOn(_TermsItem.marketing),
           onToggle: widget.busy
               ? null
@@ -150,7 +196,12 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         if (left == 0)
           MosiButton(
             key: const ValueKey('terms-continue'),
-            label: '동의하고 계속하기',
+            label: GameLocale.select(
+              ko: '동의하고 계속하기',
+              en: 'Agree and continue',
+              zhHans: '同意并继续',
+              zhHant: '同意並繼續',
+            ),
             height: 54,
             expand: true,
             loading: widget.busy,
@@ -170,7 +221,12 @@ class _SignupTermsViewState extends State<SignupTermsView> {
                 border: Border.all(color: const Color(0xFFA9A4C8), width: 2),
               ),
               child: Text(
-                '필수 항목 $left개에 동의해 주세요',
+                GameLocale.select(
+                  ko: '필수 항목 $left개에 동의해 주세요',
+                  en: 'Agree to $left more required items',
+                  zhHans: '请再同意 $left 个必选项目',
+                  zhHant: '請再同意 $left 個必選項目',
+                ),
                 style: MosiFonts.sans(
                   locale: locale,
                   size: 15,
@@ -223,7 +279,12 @@ class _AllAgreeCard extends StatelessWidget {
       key: const ValueKey('terms-all'),
       checked: checked,
       button: true,
-      label: '전체 동의',
+      label: GameLocale.select(
+        ko: '전체 동의',
+        en: 'Agree to all',
+        zhHans: '全部同意',
+        zhHant: '全部同意',
+      ),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -248,7 +309,7 @@ class _AllAgreeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '전체 동의',
+                      '전체 동의'.localized,
                       style: MosiFonts.sans(
                         locale: locale,
                         size: 17,
@@ -258,7 +319,12 @@ class _AllAgreeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '선택 항목까지 한 번에 동의해요',
+                      GameLocale.select(
+                        ko: '선택 항목까지 한 번에 동의해요',
+                        en: 'Includes optional items',
+                        zhHans: '同时同意可选项目',
+                        zhHant: '同時同意選填項目',
+                      ),
                       style: MosiFonts.sans(
                         locale: locale,
                         size: 12,
@@ -297,7 +363,7 @@ class _TermsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.maybeLocaleOf(context);
-    final tag = required ? '필수' : '선택';
+    final tag = (required ? '필수' : '선택').localized;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 60),
       child: Row(
@@ -388,7 +454,12 @@ class _TermsRow extends StatelessWidget {
           ),
           if (onView != null)
             IconButton(
-              tooltip: '$title 전문 보기',
+              tooltip: GameLocale.select(
+                ko: '$title 전문 보기',
+                en: 'View full $title',
+                zhHans: '查看$title全文',
+                zhHant: '查看$title全文',
+              ),
               onPressed: onView,
               icon: const Icon(
                 Icons.chevron_right_rounded,
@@ -468,7 +539,7 @@ class _LegalDocumentSheet extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: '닫기',
+                        tooltip: '닫기'.localized,
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(
                           Icons.close_rounded,
@@ -483,7 +554,12 @@ class _LegalDocumentSheet extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        '시행일 ${document.effectiveDate}',
+                        GameLocale.select(
+                          ko: '시행일 ${document.effectiveDate}',
+                          en: 'Effective ${document.effectiveDate}',
+                          zhHans: '生效日期 ${document.effectiveDate}',
+                          zhHant: '生效日期 ${document.effectiveDate}',
+                        ),
                         style: MosiFonts.sans(
                           locale: locale,
                           size: 12,
@@ -492,12 +568,17 @@ class _LegalDocumentSheet extends StatelessWidget {
                       ),
                       if (document.isDraft) ...[
                         const SizedBox(width: 8),
-                        const MosiPill(
-                          label: '검토 전 초안',
+                        MosiPill(
+                          label: GameLocale.select(
+                            ko: '검토 전 초안',
+                            en: 'Draft pending review',
+                            zhHans: '待审核草案',
+                            zhHant: '待審核草案',
+                          ),
                           background: MosiColors.sun,
                           borderColor: MosiColors.ink,
                           fontSize: 11,
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 2,
                           ),
@@ -563,7 +644,12 @@ class _LegalDocumentSheet extends StatelessWidget {
                   ),
                   child: MosiButton(
                     key: const ValueKey('legal-document-agree'),
-                    label: '확인하고 동의하기',
+                    label: GameLocale.select(
+                      ko: '확인하고 동의하기',
+                      en: 'Review and agree',
+                      zhHans: '确认并同意',
+                      zhHant: '確認並同意',
+                    ),
                     height: 54,
                     expand: true,
                     onPressed: () => Navigator.of(context).pop(true),

@@ -10,6 +10,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 
 // ============================================================
@@ -161,10 +162,10 @@ class MosiSquareCloseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: '닫기',
+      message: '닫기'.localized,
       child: Semantics(
         button: true,
-        label: '닫기',
+        label: '닫기'.localized,
         excludeSemantics: true,
         child: GestureDetector(
           onTap: onPressed,

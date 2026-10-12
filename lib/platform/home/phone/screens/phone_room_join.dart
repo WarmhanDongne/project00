@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/models/room_join_feedback.dart';
@@ -169,7 +170,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: '뒤로',
+                        tooltip: '뒤로'.localized,
                         onPressed: _isOpeningNameInput
                             ? null
                             : () {
@@ -197,7 +198,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                       ),
                       Expanded(
                         child: Text(
-                          '그룹 참여하기',
+                          '그룹 참여하기'.localized,
                           textAlign: TextAlign.center,
                           style: MosiFonts.sans(
                             size: 17,
@@ -219,7 +220,9 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                         child: Column(
                           children: [
                             Text(
-                              _codeMode ? '방 코드 입력' : '어느 방에 들어갈까요?',
+                              _codeMode
+                                  ? '방 코드 입력'.localized
+                                  : '어느 방에 들어갈까요?'.localized,
                               textAlign: TextAlign.center,
                               style: MosiFonts.sans(
                                 size: 23,
@@ -230,8 +233,8 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                             const SizedBox(height: 6),
                             Text(
                               _codeMode
-                                  ? '태블릿 화면에 보이는 다섯 글자예요'
-                                  : '태블릿에 뜬 QR을 네모 안에 비춰 주세요',
+                                  ? '태블릿 화면에 보이는 다섯 글자예요'.localized
+                                  : '태블릿에 뜬 QR을 네모 안에 비춰 주세요'.localized,
                               textAlign: TextAlign.center,
                               style: MosiFonts.sans(
                                 size: 12,
@@ -252,7 +255,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                       horizontal: 12,
                                     ),
                                     child: Text(
-                                      '또는 방 코드 입력',
+                                      '또는 방 코드 입력'.localized,
                                       style: MosiFonts.sans(
                                         size: 12,
                                         color: MosiColors.white,
@@ -290,7 +293,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        'QR 옆 ROOM 아래 글자',
+                                        'QR 옆 ROOM 아래 글자'.localized,
                                         style: MosiFonts.sans(
                                           size: 11,
                                           weight: FontWeight.w700,
@@ -337,7 +340,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                   size: 16,
                                 ),
                                 label: Text(
-                                  'QR로 찍기',
+                                  'QR로 찍기'.localized,
                                   style: MosiFonts.sans(
                                     size: 12,
                                     weight: FontWeight.w700,
@@ -350,7 +353,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                             else ...[
                               const SizedBox(height: 10),
                               Text(
-                                '칸을 누르면 키보드가 올라와요',
+                                '칸을 누르면 키보드가 올라와요'.localized,
                                 style: MosiFonts.sans(
                                   size: 11,
                                   color: const Color(0xBBFFFFFF),
@@ -382,7 +385,14 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                 ),
                               ),
                               child: Text(
-                                '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                GameLocale.select(
+                                  ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                  en: 'Enter ${5 - _roomCodeController.text.length} more characters',
+                                  zhHans:
+                                      '还需输入 ${5 - _roomCodeController.text.length} 个字符',
+                                  zhHant:
+                                      '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
+                                ),
                                 style: MosiFonts.sans(
                                   size: 15,
                                   weight: FontWeight.w700,
@@ -393,8 +403,15 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                           )
                         : MosiButton(
                             label: canSubmit
-                                ? '입력 완료'
-                                : '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                ? '입력 완료'.localized
+                                : GameLocale.select(
+                                    ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                    en: 'Enter ${5 - _roomCodeController.text.length} more characters',
+                                    zhHans:
+                                        '还需输入 ${5 - _roomCodeController.text.length} 个字符',
+                                    zhHant:
+                                        '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
+                                  ),
                             height: 52,
                             expand: true,
                             fontSize: 16,
@@ -474,7 +491,12 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                 child: Padding(
                   padding: const EdgeInsets.all(36),
                   child: Text(
-                    '카메라를 사용할 수 없어요.\n아래에 방 코드를 입력해 주세요.',
+                    GameLocale.select(
+                      ko: '카메라를 사용할 수 없어요.\n아래에 방 코드를 입력해 주세요.',
+                      en: 'Camera unavailable.\nEnter the room code below.',
+                      zhHans: '无法使用相机。\n请在下方输入房间码。',
+                      zhHant: '無法使用相機。\n請在下方輸入房間碼。',
+                    ),
                     textAlign: TextAlign.center,
                     style: MosiFonts.sans(size: 13, color: MosiColors.white),
                   ),
@@ -604,9 +626,14 @@ class _RoomCodeBoxes extends StatelessWidget {
                         newValue.copyWith(text: newValue.text.toUpperCase()),
                   ),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   counterText: '',
-                  labelText: '방 코드, 영문과 숫자 다섯 자리',
+                  labelText: GameLocale.select(
+                    ko: '방 코드, 영문과 숫자 다섯 자리',
+                    en: 'Room code, five letters or numbers',
+                    zhHans: '房间码，五位字母或数字',
+                    zhHant: '房間碼，五位字母或數字',
+                  ),
                 ),
                 onSubmitted: (_) => onSubmitted(),
               ),
@@ -673,7 +700,12 @@ class _RoomCodeKeyboard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '영문 · 숫자만 입력돼요',
+                        GameLocale.select(
+                          ko: '영문 · 숫자만 입력돼요',
+                          en: 'Letters and numbers only',
+                          zhHans: '仅限字母和数字',
+                          zhHant: '僅限字母和數字',
+                        ),
                         style: MosiFonts.sans(
                           size: 11,
                           color: const Color(0x99FFFFFF),
@@ -705,7 +737,12 @@ class _RoomCodeKeyboard extends StatelessWidget {
                   if (index == _rows.length - 1)
                     _CodeKey(
                       width: keyWidth * 2 + _gap,
-                      semanticLabel: '지우기',
+                      semanticLabel: GameLocale.select(
+                        ko: '지우기',
+                        en: 'Delete',
+                        zhHans: '删除',
+                        zhHant: '刪除',
+                      ),
                       onPressed: enabled && length > 0 ? onBackspace : null,
                     ),
                 ]),

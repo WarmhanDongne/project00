@@ -6,6 +6,7 @@ import 'package:game_holdem/phone/screens/game_screen.dart';
 import 'package:game_holdem/phone/widgets/hand_receive_animation.dart';
 import 'package:game_holdem/shared/models/game_models.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
+import 'package:game_holdem/shared/models/presentation_timing.dart';
 import 'package:game_kit/core/assets/game_asset_store.dart';
 import 'package:game_kit/shared/widgets/game_turn_countdown_face.dart';
 
@@ -235,16 +236,19 @@ void main() {
     expect(actions, isEmpty);
   });
 
-  testWidgets('레이즈 시트는 빠른 금액과 올인을 목표액으로 보낸다', (tester) async {
+  testWidgets('레이즈 시트는 빠른 금액 없이 최소액과 올인을 목표액으로 보낸다', (tester) async {
     final actions = await pump(tester, playingState(legalActions: callOrRaise));
 
     await tester.tap(find.bySemanticsLabel('Raise 금액 고르기'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('얼마나 올릴까요?'), findsOneWidget);
     expect(find.text('최소 800'), findsOneWidget);
+    // 삥·쿼터·하프·올인 같은 빠른 금액 단추는 두지 않습니다.
+    for (final quick in ['최소', '½ 팟', '팟', '올인']) {
+      expect(find.text(quick), findsNothing);
+    }
 
-    await tester.tap(find.text('최소'));
-    await tester.pump();
+    // 처음 목표액은 최소 레이즈입니다.
     await tester.tap(find.bySemanticsLabel('Raise 800'));
     await tester.pump();
     expect(actions.last, ('raise', 800));
@@ -262,7 +266,8 @@ void main() {
     );
     await tester.tap(find.bySemanticsLabel('Raise 금액 고르기'));
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('올인'));
+    // 슬라이더를 끝까지 밀면 올인입니다.
+    await tester.drag(find.byType(Slider), const Offset(2000, 0));
     await tester.pump();
     await tester.tap(find.bySemanticsLabel('All-in 4,900'));
     await tester.pump();
@@ -399,6 +404,7 @@ void main() {
       ),
     );
 
+    await passShowdownReveal(tester, 1);
     expect(find.text('WIN'), findsOneWidget);
     expect(find.text('+1,800'), findsOneWidget);
     expect(find.textContaining('원 페어'), findsNothing);
@@ -444,9 +450,20 @@ void main() {
       ),
       size: small,
     );
+    expect(tester.takeException(), isNull);
+    await passShowdownReveal(tester, 1);
     expect(find.text('LOSE'), findsOneWidget);
     expect(find.text('하준 카드'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
+}
+
+/// 쇼다운은 태블릿이 카드를 다 뒤집을 때까지 승패를 숨깁니다. 그 시간을 넘깁니다.
+Future<void> passShowdownReveal(WidgetTester tester, int revealCount) async {
+  expect(find.byKey(const Key('holdem-result-waiting')), findsOneWidget);
+  expect(find.text('WIN'), findsNothing);
+  expect(find.text('LOSE'), findsNothing);
+  await tester.pump(HoldemTiming.showdownWinnerAt(revealCount));
+  await tester.pump(const Duration(milliseconds: 300));
 }

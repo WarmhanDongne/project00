@@ -14,6 +14,7 @@ import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
 import 'package:game_final_call/shared/widgets/party_pop.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -105,7 +106,12 @@ class _TurnStartAction extends StatelessWidget {
             Expanded(
               child: _SourceButton(
                 label: FinalCallCopy.deck,
-                semanticLabel: '덱에서 새 카드 가져오기',
+                semanticLabel: GameLocale.select(
+                  ko: '덱에서 새 카드 가져오기',
+                  en: 'Draw a new card from the deck',
+                  zhHans: '从牌堆抽一张新牌',
+                  zhHant: '從牌堆抽一張新牌',
+                ),
                 onPressed: canDraw && controller.deckRemainingCount > 0
                     ? () => onDraw('deck')
                     : null,
@@ -116,7 +122,12 @@ class _TurnStartAction extends StatelessWidget {
             Expanded(
               child: _SourceButton(
                 label: FinalCallCopy.publicCard,
-                semanticLabel: '공개 카드 가져오기',
+                semanticLabel: GameLocale.select(
+                  ko: '공개 카드 가져오기',
+                  en: 'Take the face-up card',
+                  zhHans: '拿取明牌',
+                  zhHant: '拿取明牌',
+                ),
                 onPressed: canDraw && discard != null
                     ? () => onDraw('discard')
                     : null,
@@ -234,7 +245,12 @@ class _FinalCallHoldToCallButtonState extends State<FinalCallHoldToCallButton>
     return Semantics(
       button: true,
       enabled: enabled,
-      label: 'CALL 선언',
+      label: GameLocale.select(
+        ko: 'CALL 선언',
+        en: 'Declare CALL',
+        zhHans: '宣布 CALL',
+        zhHant: '宣布 CALL',
+      ),
       excludeSemantics: true,
       onTap: enabled ? widget.onCall : null,
       child: GestureDetector(
@@ -355,12 +371,19 @@ class _PendingCardAction extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
+                  // 긴 안내가 칸 폭에 따라 엉뚱한 곳에서 줄바뀌지 않도록 정해 둔
+                  // 줄바꿈만 쓰고, 좁으면 글자를 줄입니다.
                   child: after == null
-                      ? Text(
-                          FinalCallCopy.pickToPreview,
-                          style: finalCallPopText(
-                            13,
-                            color: FinalCallColors.muted,
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            FinalCallCopy.pickToPreview,
+                            softWrap: false,
+                            style: finalCallPopText(
+                              13,
+                              color: FinalCallColors.muted,
+                            ),
                           ),
                         )
                       : _ScorePreview(before: current.score, after: after),
@@ -385,17 +408,23 @@ class _PendingCardAction extends StatelessWidget {
               radius: 18,
               borderWidth: 4,
               shadowDepth: 5,
-              child: Text(
-                selected == null
-                    ? FinalCallCopy.pickCardToReplace
-                    : FinalCallCopy.replaceWith(
-                        finalCallCardColorLabel(selected.color),
-                        selected.value,
-                      ),
-                style: finalCallPopText(
-                  18,
-                  color: Colors.white,
-                  shadows: finalCallPopOutline(),
+              // 버튼 문구는 한 줄로 두고, 좁으면 줄여서 맞춥니다.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  selected == null
+                      ? FinalCallCopy.pickCardToReplace
+                      : FinalCallCopy.replaceWith(
+                          finalCallCardColorLabel(selected.color),
+                          selected.value,
+                        ),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: finalCallPopText(
+                    18,
+                    color: Colors.white,
+                    shadows: finalCallPopOutline(),
+                  ),
                 ),
               ),
             ),
@@ -646,10 +675,11 @@ class FinalCallWaitingPanel extends StatelessWidget {
                       player: order[index],
                       isCurrent:
                           index == 0 && order[index].uid == controller.turnUid,
+                      // 내 줄은 '나'로 충분해 몇 번째 뒤인지는 적지 않습니다.
                       note: order[index].uid == controller.turnUid
                           ? FinalCallCopy.now
                           : order[index].uid == controller.uid
-                          ? FinalCallCopy.turnsLater(index)
+                          ? null
                           : order[index].team == myTeam
                           ? FinalCallCopy.partner
                           : null,

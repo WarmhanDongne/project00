@@ -110,3 +110,55 @@ RTDB/Functions 전체 무과금이나 서비스 최대 인원을 보장하지 �
 
 **쉽게 말하면:** 각 기기는 생존 시각 하나만 보낸다. 정상 Ping마다 방 전체를 읽고 정리 큐를
 돌리던 연결을 끊었다. 실제 장애·복구·게임·정리에서만 서버의 기존 CAS·timer·ready 판정을 사용한다.
+
+## 2026-10-13 — 디벨럽1 통합 후보
+
+사용자가 푸시된 B1에서 통합 브랜치 생성, 최신 디벨럽1 병합, 문서 충돌·함수 수 검사 수정 및
+회귀 재실행을 승인했다. 시작 작업 트리는 clean이었다. `codex/e01-validation-wiring`의
+`fbd2f35dc9015f87c55e760f549393ed50efa6c4`에서 `codex/b1-develop1-integration`을 만들고,
+실제 원격 조회/fetch로 확인한 디벨럽1 `7b127da100aaaec0b9a50c29a9cdd0e7f85f727f`을 병합했다.
+원래 B1 브랜치는 같은 커밋에 유지한다. 이 통합 작업에서는 push·운영 접근·배포를 하지 않는다.
+
+코드 텍스트 충돌은 없었다. `CLOUD_FUNCTIONS.md`의 날짜/함수 개수와 10월 로그의 목차/본문
+충돌은 양쪽 기록을 보존했다. 게스트 함수 추가로 통합 소스의 export는 **81개**이며 실제
+compiled endpoint 분류도 callable71/RTDB5/schedule4/HTTP1이다. 위 최초 B1 검증의80개는
+그 당시 후보 수치다. Emulator manifest는81개와 게스트 함수 존재를 검사하며 기존 RTDB
+trigger·Rules·정상 HB zero-call·단절/종료 positive control 검사를 유지한다.
+
+첫 auth 회귀는 Flutter72 PASS, Functions37 PASS/1 FAIL(exit1)이었다. 게스트 테스트가
+capability 없는 요청으로 create의 온보딩 가드까지 통과할 것으로 기대한 원인을 확인했다.
+전·후 요청에 `presenceProtocol:2`를 추가해 실제 온보딩 거절과 완료 후 invalid payload를
+검사한다. 서버의 버전/권한 보호와 기대 오류는 바꾸지 않았다. 해당6개 재검사 후 auth 전체가
+통과했다. GUI 보조 실행의 잘못된 Dart VM 옵션(exit255)은 정상 Flutter launcher로 바로잡았다.
+
+| 통합 후보 명령·검증 | 결과 |
+| --- | --- |
+| `.\tool\invoke_mosigame.ps1 test session --json` | PASS/exit0, Flutter218·Functions155, manifest/preflight/mutation PASS |
+| `.\tool\invoke_mosigame.ps1 test auth --json` | 최종 PASS/exit0, Flutter72·Functions38, manifest/preflight/mutation PASS |
+| `npm --prefix functions run lint` | PASS/exit0 |
+| `node --test functions/test/*.test.mjs` | 494 PASS/exit0, skip0；원래 suite build 및 Emulator build도 tsc PASS |
+| `flutter test --no-pub` 선택10경로 | 90 PASS/exit0: 로비 패널·음악·책·목록·locale·시작 안내·폰 대기·FC 제출·LP 카드 |
+| `dart format --output=none --set-exit-if-changed bin lib test tool/mosigame_cli` | PASS/exit0, 수정 없음 |
+| `dart analyze --format machine` | exit0, 오류/경고0. 디벨럽1의4개 패키지 overflow_sweep 보조 코드에 중괄호 스타일 INFO8개；이번 변경 범위 밖으로 유지 |
+| `node tool/emulator/run.mjs` | 13 PASS/exit0, 포트 해제/source·Git snapshot PASS |
+| `git diff --check` / `git diff --cached --check` | PASS/exit0 |
+| `validate --full` | 미실행；최종 통합 후보에 대한 명시 승인 필요 |
+
+선택 GUI 경로와 명령·exit/시간/hash는 ignored `build/b1-integration/`의 로그/run JSON에 남겼다.
+첫 session guard의 진단/테스트 출력은 작업 실행 결과로 확인했으며 이후 실행은 외부 stdout/
+stderr를 각각 저장했다. 기존 B1 및 디벨럽1 각각의 과거 FULL을 통합 후보 PASS로 사용하지 않는다.
+
+Emulator는 `demo-mosigame-e13`의 loopback만 사용했다. 작은/64KiB 이력 방 각각40회 정상
+heartbeat(합계80회)에 **sync0/queue0**을 재확인했다. 실제 false/close는 필요한 handler를 실행했다.
+실제 SDK root CAS 재실행, 놓친 false 보완, 이전 접속/onDisconnect, 네 게임 ready barrier,
+last-normal 타이머, 재접속·동시 제외·퇴장 재생·정리 세대/cursor/terminal도 통과했다.
+`build/e13/{backend-result,run-result,b1-measurement}.json`이 통합본의 결과로 갱신됐다.
+
+한 폰의 JS SDK leaf 관찰 수신은3,674B/3,680B(작은/큰 방), 작은 방 송신3,034B였다.
+전체 기기·FlutterFire·TLS·운영 과금이나 동일 조건 before/after 감소율은 측정하지 않았다.
+비용 감소 추정과 실기기/native 단절·재연결·배포 검증의 기존 한계는 유지한다.
+
+공통 조상 대비 B1 단독 변경64경로와 디벨럽1 단독 변경331경로는 승인된 문서·테스트 수정을
+제외해 blob/삭제 상태가 일치했다. 겹친 lifecycle에는 B1 CAS/capability와 catalog 호환 reader가
+함께 남았고 session/auth manifest와 exact-order 기대값도 양쪽 테스트를 유지한다.
+보존 audit 불일치0, 원래 B1 브랜치 SHA 불변이다. 검사 중 예상하지 못한 source mutation은 없다.
