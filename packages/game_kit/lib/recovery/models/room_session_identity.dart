@@ -57,6 +57,7 @@ class RoomSessionIdentity {
   };
 
   Map<String, dynamic> get envelope => {
+    'presenceProtocol': 2,
     'role': role,
     'roomCode': roomCode,
     'roomInstanceId': roomInstanceId,

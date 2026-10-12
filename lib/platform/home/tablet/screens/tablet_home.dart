@@ -407,7 +407,9 @@ class _TabletHomeState extends State<TabletHome>
             listenable: roomProvider,
             builder: (context, body) => LobbyConnectionBand(
               // An idle lobby can let RTDB sleep; only an adopted room requires it.
-              connectionChanges: roomProvider.isInRoom ? _serverConnection : null,
+              connectionChanges: roomProvider.isInRoom
+                  ? _serverConnection
+                  : null,
               child: body!,
             ),
             child: Scaffold(backgroundColor: ground, body: child),

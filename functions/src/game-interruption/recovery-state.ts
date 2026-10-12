@@ -160,6 +160,7 @@ export function registerRecoveryFailure(
 
 export function reportStaleController(
   room: RecoveryRoom, observedLastSeen: unknown, now: number,
+  observedConnectionId?: unknown, observedConnectionSeq?: unknown,
 ): Record<string, unknown> {
   if (!Number.isSafeInteger(observedLastSeen) || (observedLastSeen as number) < 0) {
     throw new HttpsError("invalid-argument", "올바른 진행 기기 heartbeat 시각이 필요합니다.");
@@ -170,12 +171,13 @@ export function reportStaleController(
   const connection = uid && connectionId ? room.connections?.[uid]?.[connectionId] : undefined;
   if (!uid || !connectionId || !Number.isSafeInteger(connectionSeq) || !connection ||
       connection.connectionSeq !== connectionSeq ||
-      room.controllerPresence?.lastSeen !== observedLastSeen ||
+      (room.presenceProtocol === 2 && (connectionId !== observedConnectionId || connectionSeq !== observedConnectionSeq)) ||
+      connection.roomInstanceId !== room.roomInstanceId ||
       connection.lastSeen !== observedLastSeen) {
     return {status: "staleContext"};
   }
-  if (connection.connected !== true || room.controllerPresence?.connected === false ||
-      room.controllerConnected === false) {
+  if (connection.connected !== true || (room.presenceProtocol !== 2 &&
+      (room.controllerPresence?.connected === false || room.controllerConnected === false))) {
     return {status: "alreadyDisconnected"};
   }
   if (now - (observedLastSeen as number) <= 20000) return {status: "notStale"};
@@ -195,6 +197,7 @@ export function clearFinishedRecovery(game: RecoveryGame): void {
 }
 
 export interface RecoveryReportInput extends Partial<GameContext> {
+  presenceProtocol?: unknown;
   uid: string;
   role: "player" | "controller";
   roomInstanceId: string;
@@ -228,7 +231,7 @@ export function assertRecoveryConnection(room: RecoveryRoom, input: {
 
 /** Failed reports deliberately do not require current public/private data. */
 export function applyRecoveryReport(room: RecoveryRoom, input: RecoveryReportInput, now: number): Record<string, unknown> {
-  assertRoomTarget(room, input.roomInstanceId);
+  assertRoomTarget(room, input.roomInstanceId, input.presenceProtocol);
   assertRecoveryConnection(room, input);
   const game = room.game;
   if (!game || game.public.status !== "playing") return {status: "stale"};

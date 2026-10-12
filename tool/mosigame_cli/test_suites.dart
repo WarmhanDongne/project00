@@ -34,6 +34,7 @@ const sessionTestSuite = TestSuiteDefinition(
     'test/controller_room_lobby_recovery_test.dart',
     'test/table_background_transition_test.dart',
     'test/room_recovery_heartbeat_test.dart',
+    'test/b1_presence_observation_test.dart',
     'test/room_join_recovery_test.dart',
     'packages/game_kit/test/recovery/room_session_identity_store_test.dart',
     'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
@@ -70,6 +71,8 @@ const sessionTestSuite = TestSuiteDefinition(
     'functions/test/start-game-transaction.test.mjs',
     'functions/test/room-transaction-rerun.test.mjs',
     'functions/test/roulette-restart-integration.test.mjs',
+    'functions/test/b1-current-presence.test.mjs',
+    'functions/test/rtdb-retention.test.mjs',
   ],
 );
 

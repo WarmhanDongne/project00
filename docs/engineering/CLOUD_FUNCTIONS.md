@@ -1,6 +1,6 @@
 # Cloud Functions 정리
 
-2026-10-09 로컬 후보 index.ts export 79개: onCall 69, RTDB trigger 5, onSchedule 4, HTTP 1.
+2026-10-13 로컬 후보 index.ts export 80개: onCall 70, RTDB trigger 5, onSchedule 4, HTTP 1.
 production 배포 상태를 조회한 수치가 아니다. 게임 규칙·승패·턴·방 수명은 서버가 결정한다.
 [현재 네트워크·세션 계약](NETWORK_SESSION_CONTRACT.md)을 함께 따른다.
 
@@ -61,18 +61,24 @@ vote_to_continue/finish_now는 현재 index export와 소비자에서 제거했�
 
 | RTDB 함수 (싱가포르) | 경로·역할 |
 | --- | --- |
-| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}, 현재 접속만 요약하고 controller/player 단절 cause를 같은 transaction에 반영 |
+| syncRealtimeRoomConnection | rooms/{room}/connections/{uid}/{connectionId}/connected, false 상태 전환만 현재 root CAS로 요약·중단 반영(retry). 시각-only heartbeat는 호출하지 않음 |
 | game_common_interruption_on_connection_changed | players/{uid}/isConnected, 현재 phone 단절 cause의 멱등 안전망 |
 | game_common_controller_presence_changed | controllerPresence/connected, controller 단절 cause의 멱등 안전망 |
 | syncRealtimeRoomGameStatus | game/public/status, 현재 game 상태를 방에 반영 |
-| syncRoomCleanupQueue | rooms/{room}, 현재 allocation 재조회 후 due queue 갱신 |
+| syncRoomCleanupQueue | rooms/{room}/cleanupSignal, 소형 현재 signal만 재조회 후 세대·revision을 확인해 due queue 갱신 |
 
 | schedule 함수 (서울·Asia/Seoul) | 주기·역할 |
 | --- | --- |
 | cleanupExpiredGameInterruptions | 1분, 만료를 결정 대기로 표시 |
-| cleanupGhostRoomPlayers | 5분, 대기/종료 방의 오래 끊긴 참가자 정리 |
+| cleanupGhostRoomPlayers | 5분, 별도 cursor로 회당 500방 순회·최대 10개 transaction, 현재 상태 재검증 후 유령 참가자 정리 |
 | cleanupStaleRealtimeRooms | 5분, due index + 지속 cursor, generation 조건부 방/예약/매핑 정리 |
 | cleanupIncompleteAccounts | 매일 03:30, 현재 삭제 비활성·보고만 수행 |
+
+2026-10-12 정리 후보는 확정 종료된 생성 요청의 transport 정보를 축약하고 terminal
+재생 표시와 방 할당 세대를 유지한다. 계정 탈퇴는 객체/문자열 매핑의 같은 소유 방만
+조건부로 닫고 해당 요청·슬롯 정리 후 매핑을 제거한다. UID 전체 생성 요청 삭제는 하지 않는다.
+고아 예약 자동 해제와 접속/작업 결과 TTL은 보류다. 운영 관찰·검증·미배포 현황은
+[RTDB 정리 검토](../operations/RTDB_RETENTION_REVIEW.md)를 따른다.
 
 아래 기존 정리 제안은 현재 작업의 구현·승인이 아니다.
 

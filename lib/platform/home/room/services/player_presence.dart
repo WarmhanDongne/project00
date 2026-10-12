@@ -25,31 +25,39 @@ bool isStalePlayerHeartbeatCandidate(
 /// 같은 참가자의 같은 heartbeat 관측값을 제한된 횟수만 서버에 보고하게 합니다.
 class PlayerStaleReportTracker {
   static const maxAttemptsPerObservation = 2;
-  final Map<String, ({int lastSeen, int attempts})> _attempts =
-      <String, ({int lastSeen, int attempts})>{};
+  final Map<String, ({int lastSeen, int attempts, String? binding})> _attempts =
+      <String, ({int lastSeen, int attempts, String? binding})>{};
 
   /// 같은 heartbeat 관측값은 최초 보고와 복구 완료 뒤 재확인 한 번만 허용합니다.
-  bool tryStartAttempt(String uid, int lastSeen) {
+  bool tryStartAttempt(String uid, int lastSeen, {String? binding}) {
     final current = _attempts[uid];
-    if (current == null || current.lastSeen != lastSeen) {
-      _attempts[uid] = (lastSeen: lastSeen, attempts: 1);
+    if (current == null ||
+        current.lastSeen != lastSeen ||
+        current.binding != binding) {
+      _attempts[uid] = (lastSeen: lastSeen, attempts: 1, binding: binding);
       return true;
     }
     if (current.attempts >= maxAttemptsPerObservation) return false;
     _attempts[uid] = (
       lastSeen: current.lastSeen,
       attempts: current.attempts + 1,
+      binding: current.binding,
     );
     return true;
   }
 
   /// 서버가 관측값을 처리했다면 같은 값은 더 이상 보고하지 않습니다.
-  void markSucceeded(String uid, int lastSeen) {
+  void markSucceeded(String uid, int lastSeen, {String? binding}) {
     final current = _attempts[uid];
-    if (current == null || current.lastSeen != lastSeen) return;
+    if (current == null ||
+        current.lastSeen != lastSeen ||
+        current.binding != binding) {
+      return;
+    }
     _attempts[uid] = (
       lastSeen: current.lastSeen,
       attempts: maxAttemptsPerObservation,
+      binding: current.binding,
     );
   }
 
@@ -57,8 +65,13 @@ class PlayerStaleReportTracker {
     final currentLastSeen = <String, int?>{
       for (final player in players) player.uid: player.lastSeen,
     };
+    final bindings = {
+      for (final player in players) player.uid: playerPresenceBinding(player),
+    };
     _attempts.removeWhere(
-      (uid, observation) => currentLastSeen[uid] != observation.lastSeen,
+      (uid, observation) =>
+          currentLastSeen[uid] != observation.lastSeen ||
+          (observation.binding != null && observation.binding != bindings[uid]),
     );
   }
 
@@ -66,3 +79,6 @@ class PlayerStaleReportTracker {
 
   void clear() => _attempts.clear();
 }
+
+String playerPresenceBinding(RoomPlayer player) =>
+    '${player.membershipId}/${player.currentConnectionId}/${player.connectionSeq}';

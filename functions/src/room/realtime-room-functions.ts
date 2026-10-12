@@ -55,6 +55,7 @@ const ROOM_CHARACTER_IDS = new Set([
 ]);
 
 type SaveSeatIndexesData = {
+  presenceProtocol?: unknown;
   roomInstanceId?: unknown;
   roomCode?: unknown;
   seatIndexesByUid?: unknown;
@@ -62,6 +63,7 @@ type SaveSeatIndexesData = {
 };
 
 type JoinRealtimeRoomData = {
+  presenceProtocol?: unknown;
   roomCode?: unknown;
   nickname?: unknown;
   characterId?: unknown;
@@ -222,7 +224,8 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           game?: {public?: {status?: unknown}};
         };
         const sessionRoom = currentRoom as SessionRoom;
-        assertRoomTarget(sessionRoom, expectedRoomId);
+        assertRoomTarget(sessionRoom, expectedRoomId,
+          request.data?.presenceProtocol);
         const saved = roomOperationResult(
           sessionRoom, uid, operationId, "connect", operationPayload,
         );
@@ -301,6 +304,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
             expectedConnectionSeq:
               request.data?.expectedConnectionSeq as number,
             connectionId, now, operationPayload,
+            presenceProtocol: request.data?.presenceProtocol,
           });
           registerRecoveryFailure(
             currentRoom as RecoveryRoom, uid, "player", now,
@@ -343,6 +347,7 @@ export const joinRealtimeRoom = onCall<JoinRealtimeRoomData>(
           uid, role: "player", operationId, roomInstanceId: expectedRoomId,
           membershipId: newMembershipId, expectedConnectionSeq: 0,
           connectionId, now, operationPayload,
+          presenceProtocol: request.data?.presenceProtocol,
         });
         Object.assign(connectionResult, {nickname, reconnected: false});
         return currentRoom;
@@ -447,6 +452,7 @@ export const saveRealtimePlayerSeatIndexes =
         );
         assertRoomTarget(
           room as unknown as SessionRoom, request.data?.roomInstanceId,
+          request.data?.presenceProtocol,
         );
         const players = room.players;
         const playerIds = players ? Object.keys(players) : [];

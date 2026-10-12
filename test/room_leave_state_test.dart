@@ -460,7 +460,11 @@ class _LeaveRoomService implements RoomService {
   Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
 
   @override
-  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) => players.stream;
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String roomCode, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) => players.stream;
 
   Future<void> dispose() async {
     await Future.wait([

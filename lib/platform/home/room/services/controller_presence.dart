@@ -2,13 +2,18 @@ import 'package:flutter/foundation.dart';
 
 /// 태블릿 진행 기기의 접속 표시입니다.
 ///
-/// `rooms/{roomCode}/controllerPresence`를 그대로 옮긴 값입니다. 두 필드를
+/// 서버가 선택한 현재 connection의 scalar leaf를 합성한 값입니다. 두 필드를
 /// **함께** 읽는 것이 요점입니다. `connected`만 보면 태블릿이 강제 종료·크래시·
 /// 전원 차단으로 `markControllerDisconnected`를 보낼 기회조차 없었던 경우를
 /// 영원히 알 수 없습니다(값이 `true`로 굳습니다).
 @immutable
 class ControllerPresence {
-  const ControllerPresence({required this.connected, required this.lastSeen});
+  const ControllerPresence({
+    required this.connected,
+    required this.lastSeen,
+    this.connectionId,
+    this.connectionSeq,
+  });
 
   /// 아직 아무 값도 받지 못한 상태입니다.
   ///
@@ -27,6 +32,8 @@ class ControllerPresence {
   }
 
   final bool? connected;
+  final String? connectionId;
+  final int? connectionSeq;
 
   /// 태블릿이 마지막으로 heartbeat를 보낸 **서버 시각**입니다.
   ///
@@ -41,10 +48,13 @@ class ControllerPresence {
       identical(this, other) ||
       other is ControllerPresence &&
           connected == other.connected &&
-          lastSeen == other.lastSeen;
+          lastSeen == other.lastSeen &&
+          connectionId == other.connectionId &&
+          connectionSeq == other.connectionSeq;
 
   @override
-  int get hashCode => Object.hash(connected, lastSeen);
+  int get hashCode =>
+      Object.hash(connected, lastSeen, connectionId, connectionSeq);
 }
 
 /// 태블릿 장애 판정 결과입니다.

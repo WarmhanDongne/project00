@@ -60,12 +60,14 @@ export const game_common_operation_status = onCall({region: "asia-northeast3"}, 
 
 /** Only the server-selected current connection can update presence summaries. */
 export const syncRealtimeRoomConnection = onValueWritten({
-  ref: "/rooms/{roomCode}/connections/{uid}/{connectionId}", region: "asia-southeast1",
+  ref: "/rooms/{roomCode}/connections/{uid}/{connectionId}/connected", region: "asia-southeast1", retry: true,
 }, async (event) => {
+  if (event.data.after.val() !== false) return;
   const now = Date.now();
   await runPrimedTransaction(getDatabase().ref(`rooms/${event.params.roomCode}`), (raw) => {
     if (!raw) return;
     const room = raw as SessionRoom;
+    if (room.connections?.[event.params.uid]?.[event.params.connectionId]?.connected !== false) return;
     if (!applyRoomPresence(room, event.params.uid, event.params.connectionId, (role, observedAt) => {
       registerRecoveryFailure(
         room as unknown as RecoveryRoom,

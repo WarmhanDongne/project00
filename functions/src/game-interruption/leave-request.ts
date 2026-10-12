@@ -29,7 +29,7 @@ export async function leaveSessionRequest(request: CallableRequest<Record<string
       outcome = {status: "stale"}; return;
     }
     const before = room.game ? structuredClone(room.game) : undefined;
-    outcome = leaveRoomMembership(room, {uid, roomInstanceId, membershipId, operationId, now}, () => {
+    outcome = leaveRoomMembership(room, {uid, roomInstanceId, membershipId, operationId, now, presenceProtocol: data.presenceProtocol}, () => {
       if (room.game?.public.status === "playing") withTransactionRandom(seed, () => excludeRecoveryPlayer(room, uid, now));
       if (room.game?.public.recovery) delete room.game.public.recovery.causes?.[`player:${uid}`];
     });

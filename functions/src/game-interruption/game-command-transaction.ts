@@ -9,7 +9,7 @@ import {transactionRandomSeed, withTransactionRandom} from "../common/transactio
 import {assertRecoveryConnection, RecoveryRoom} from "./recovery-state.js";
 import {finalizeGameMutation} from "./game-mutation.js";
 
-const TRANSPORT_FIELDS = new Set(["controllerSessionId", "connectionId", "connectionSeq"]);
+const TRANSPORT_FIELDS = new Set(["controllerSessionId", "connectionId", "connectionSeq", "presenceProtocol"]);
 
 export async function replayGameCommand(ref: Reference, request: CallableRequest<unknown>, kind: string): Promise<Record<string, unknown> | null> {
   const uid = request.auth?.uid;
@@ -18,7 +18,7 @@ export async function replayGameCommand(ref: Reference, request: CallableRequest
   const commandId = parseSessionId(data.commandId ?? data.operationId, "명령 ID");
   const room = (await ref.get()).val() as RecoveryRoom | null;
   if (!room) return null;
-  assertRoomTarget(room, data.roomInstanceId);
+  assertRoomTarget(room, data.roomInstanceId, data.presenceProtocol);
   const payload = Object.fromEntries(Object.entries(data).filter(([key]) => !TRANSPORT_FIELDS.has(key)));
   const saved = roomOperationResult(room, uid, commandId, kind, payload);
   return saved ? saved.response as Record<string, unknown> ?? {success: true} : null;
@@ -43,7 +43,7 @@ export async function runGameCommandTransaction(
     operationResult = null;
     if (!raw) return;
     const room = raw as RecoveryRoom;
-    assertRoomTarget(room, data.roomInstanceId);
+    assertRoomTarget(room, data.roomInstanceId, data.presenceProtocol);
     const saved = roomOperationResult(room, uid, commandId, kind, payload);
     if (saved) {
       operationResult = saved.response as Record<string, unknown> ?? {success: true};

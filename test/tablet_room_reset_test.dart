@@ -383,8 +383,11 @@ class _FakeRoomService implements RoomService {
   Stream<DatabaseEvent> watchRoom(String roomCode) => const Stream.empty();
 
   @override
-  Stream<List<RoomPlayer>> watchRoomPlayers(String roomCode) =>
-      const Stream.empty();
+  Stream<List<RoomPlayer>> watchRoomPlayers(
+    String roomCode, {
+    bool observeCurrent = false,
+    String? ownUid,
+  }) => const Stream.empty();
 
   @override
   Stream<String?> watchRoomStatus(String roomCode) => const Stream.empty();

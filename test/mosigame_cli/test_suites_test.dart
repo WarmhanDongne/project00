@@ -15,10 +15,14 @@ void main() {
         'test/controller_room_lifecycle_test.dart',
         'test/controller_room_recovery_test.dart',
         'test/controller_room_lobby_recovery_test.dart',
+        'test/table_background_transition_test.dart',
         'test/room_recovery_heartbeat_test.dart',
+        'test/b1_presence_observation_test.dart',
         'test/room_join_recovery_test.dart',
+        'packages/game_kit/test/recovery/room_session_identity_store_test.dart',
         'packages/game_liars_poker/test/shared/providers/roulette_recovery_test.dart',
         'test/game_command_response_loss_test.dart',
+        'test/final_call_dealing_readiness_test.dart',
         'packages/game_kit/test/recovery/pending_game_start_test.dart',
         'test/dev_error_overlay_refresh_test.dart',
         'packages/game_kit/test/recovery/providers/game_readiness_contract_test.dart',
@@ -40,6 +44,7 @@ void main() {
         'functions/test/controller-presence-timer.test.mjs',
         'functions/test/room-lifecycle.test.mjs',
         'functions/test/room-session-contract.test.mjs',
+        'functions/test/room-session-context.test.mjs',
         'functions/test/room-allocation-sdk-cache.test.mjs',
         'functions/test/game-recovery-state.test.mjs',
         'functions/test/game-command-contract.test.mjs',
@@ -49,6 +54,8 @@ void main() {
         'functions/test/start-game-transaction.test.mjs',
         'functions/test/room-transaction-rerun.test.mjs',
         'functions/test/roulette-restart-integration.test.mjs',
+        'functions/test/b1-current-presence.test.mjs',
+        'functions/test/rtdb-retention.test.mjs',
       ]);
     });
 
