@@ -94,8 +94,8 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
 - 실제 스토어 바이너리는 일반 `flutter build`가 아니라 아래 release에서 생성한다.
 
 ```text
-shorebird release android --build-name=1.0.0 --build-number=4 --flutter-version=3.44.4
-shorebird release ios --build-name=1.0.0 --build-number=4 --flutter-version=3.44.4 --export-method=app-store
+shorebird release android --build-name=1.0.0 --build-number=4 --flutter-version=3.47.5
+shorebird release ios --build-name=1.0.0 --build-number=4 --flutter-version=3.47.5 --export-method=app-store
 ```
 
 Android 운영 릴리스 기록(2026-08-31 17:06 KST):
