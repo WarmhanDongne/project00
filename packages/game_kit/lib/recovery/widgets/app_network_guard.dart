@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/recovery/widgets/network_unavailable_modal.dart';
 
 // ============================================================
@@ -304,7 +305,7 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
             ),
           ),
           if (active && _isNoticeVisible && !_isModalVisible)
-            const Positioned(
+            Positioned(
               top: 12,
               left: 16,
               right: 16,
@@ -315,13 +316,16 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
                       color: Color(0xDD252535),
                       borderRadius: BorderRadius.all(Radius.circular(20)),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 18,
                           vertical: 10,
                         ),
                         child: Text(
-                          '연결 확인 중…',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
+                          '연결 확인 중…'.localized,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -336,9 +340,14 @@ class _AppNetworkGuardState extends State<AppNetworkGuard>
                 retryEnabled: _isConnected,
                 onRetry: () => unawaited(_retry()),
                 onExit: widget.onExit,
-                exitLabel: widget.exitLabel,
-                title: '인터넷 연결이 끊겼어요',
-                description: '게임 화면은 그대로 있어요.\n와이파이나 모바일 데이터를 확인해 주세요.',
+                exitLabel: widget.exitLabel.localized,
+                title: '인터넷 연결이 끊겼어요'.localized,
+                description: GameLocale.select(
+                  ko: '게임 화면은 그대로 있어요.\n와이파이나 모바일 데이터를 확인해 주세요.',
+                  en: 'Your game screen is still here.\nCheck Wi-Fi or mobile data.',
+                  zhHans: '游戏画面会保持不变。\n请检查 Wi-Fi 或移动数据。',
+                  zhHant: '遊戲畫面會保持不變。\n請檢查 Wi-Fi 或行動數據。',
+                ),
               ),
             ),
         ],

@@ -544,8 +544,18 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
                     child: Center(
                       child: Text(
                         game.finishReason == 'insufficientPlayers'
-                            ? '계속 진행할 인원이 부족해 게임이 종료되었습니다.\n대기실로 이동합니다.'
-                            : '게임이 종료되었습니다.\n대기실로 이동합니다.',
+                            ? GameLocale.select(
+                                ko: '계속 진행할 인원이 부족해 게임이 종료되었습니다.\n대기실로 이동합니다.',
+                                en: 'The game ended because too few players remain.\nReturning to the lobby.',
+                                zhHans: '剩余玩家不足，游戏已结束。\n正在返回大厅。',
+                                zhHant: '剩餘玩家不足，遊戲已結束。\n正在返回大廳。',
+                              )
+                            : GameLocale.select(
+                                ko: '게임이 종료되었습니다.\n대기실로 이동합니다.',
+                                en: 'The game has ended.\nReturning to the lobby.',
+                                zhHans: '游戏已结束。\n正在返回大厅。',
+                                zhHant: '遊戲已結束。\n正在返回大廳。',
+                              ),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
@@ -582,7 +592,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     showDialog<void>(
       context: context,
       builder: (_) => TabletGameRulebookDialog(
-        title: '마피아',
+        title: '마피아'.localized,
         markdown: _controller == null
             ? MafiaCopy.tabletRulebook
             : MafiaCopy.rulesFor(_controller!.ruleState),

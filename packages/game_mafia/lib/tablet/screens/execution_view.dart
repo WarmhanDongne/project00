@@ -19,6 +19,7 @@ import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -162,7 +163,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
         const ColoredBox(color: MafiaColors.noirInk),
         const Positioned.fill(child: CustomPaint(painter: _SpotlightPainter())),
         MafiaTabletHeadline(
-          text: headline == null ? '오늘의 처형' : headline.join(' '),
+          text: headline == null ? '오늘의 처형'.localized : headline.join(' '),
           top: 36,
           fontSize: headline == null ? 56 : 44,
           color: MafiaColors.noirPaper,
@@ -179,9 +180,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
           ),
         if (executed == null)
           MafiaTabletAnnouncement(
-            beats: widget.isTie
-                ? MafiaCopy.tieBeats
-                : const [MafiaCopy.noExecution],
+            beats: widget.isTie ? MafiaCopy.tieBeats : [MafiaCopy.noExecution],
             top: _nameTop,
             color: MafiaColors.noirPaper,
           )
@@ -197,12 +196,17 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
                 borderColor: MafiaColors.noirBrass,
                 circleColor: MafiaColors.noirBlood,
                 subtitle: headline != null
-                    ? '신분 공개'
+                    ? '신분 공개'.localized
                     : votes == null
-                    ? '처형 확정'
-                    : '$votes표 · 처형 확정',
+                    ? '처형 확정'.localized
+                    : GameLocale.select(
+                        ko: '$votes표 · 처형 확정',
+                        en: '$votes votes · Execution confirmed',
+                        zhHans: '$votes 票 · 确认处决',
+                        zhHant: '$votes 票 · 確認處決',
+                      ),
                 banner: MafiaNoirBannerSpec(
-                  label: headline == null ? '처 형' : '공 개',
+                  label: (headline == null ? '처 형' : '공 개').localized,
                   top: 0.5,
                   angle: -14,
                   letterSpacing: 0.3,
@@ -234,7 +238,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
         rect: const Rect.fromLTWH(830, 220, 300, 24),
         child: Center(
           child: Text(
-            _showsSentence ? '신분 공개' : '신분 공개까지',
+            (_showsSentence ? '신분 공개' : '신분 공개까지').localized,
             style: mafiaNoirBody(16, letterSpacing: 3.2),
           ),
         ),
@@ -263,7 +267,7 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      role?.displayName ?? '알 수 없음',
+                      role?.localizedDisplayName ?? '알 수 없음'.localized,
                       style: mafiaNoirDisplay(
                         44,
                         color: role?.faction.isMafia ?? false
@@ -272,7 +276,15 @@ class _MafiaTabletExecutionViewState extends State<MafiaTabletExecutionView>
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text('${executed.nickname}님의 신분', style: mafiaNoirBody(15)),
+                    Text(
+                      GameLocale.select(
+                        ko: '${executed.nickname}님의 신분',
+                        en: '${executed.nickname}’s role',
+                        zhHans: '${executed.nickname} 的身份',
+                        zhHant: '${executed.nickname} 的身分',
+                      ),
+                      style: mafiaNoirBody(15),
+                    ),
                   ],
                 )
               : TweenAnimationBuilder<double>(
@@ -352,7 +364,7 @@ class _TallyList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('득표', style: mafiaNoirBody(16, letterSpacing: 3.2)),
+        Text('득표'.localized, style: mafiaNoirBody(16, letterSpacing: 3.2)),
         const SizedBox(height: 16),
         for (var index = 0; index < rows.length && index < maxRows; index++)
           _row(
@@ -364,7 +376,7 @@ class _TallyList extends StatelessWidget {
                     height: 56,
                     child: MafiaNoirFace(player: players[rows[index].key]!),
                   ),
-            name: players[rows[index].key]?.nickname ?? '플레이어',
+            name: players[rows[index].key]?.nickname ?? '플레이어'.localized,
             count: rows[index].value,
             filled: true,
             top: index == 0,
@@ -380,7 +392,7 @@ class _TallyList extends StatelessWidget {
                 border: Border.all(color: MafiaColors.noirFaded, width: 2),
               ),
             ),
-            name: '기권',
+            name: '기권'.localized,
             count: abstainCount,
             filled: false,
             top: false,
@@ -492,8 +504,8 @@ class MafiaTabletCountingView extends StatelessWidget {
       children: [
         const ColoredBox(color: MafiaColors.noirInk),
         const Positioned.fill(child: CustomPaint(painter: _SpotlightPainter())),
-        const MafiaTabletHeadline(
-          text: '개표',
+        MafiaTabletHeadline(
+          text: '개표'.localized,
           top: 36,
           fontSize: 56,
           color: MafiaColors.noirPaper,
@@ -513,7 +525,14 @@ class MafiaTabletCountingView extends StatelessWidget {
           rect: const Rect.fromLTWH(447, 236, 300, 230),
           child: MafiaNoirFrame(
             child: Text(
-              '${tally.values.fold<int>(0, (sum, value) => sum + value)}표',
+              GameLocale.select(
+                ko: '${tally.values.fold<int>(0, (sum, value) => sum + value)}표',
+                en: '${tally.values.fold<int>(0, (sum, value) => sum + value)} votes',
+                zhHans:
+                    '${tally.values.fold<int>(0, (sum, value) => sum + value)} 票',
+                zhHant:
+                    '${tally.values.fold<int>(0, (sum, value) => sum + value)} 票',
+              ),
               style: mafiaNoirDisplay(70, height: 1),
             ),
           ),

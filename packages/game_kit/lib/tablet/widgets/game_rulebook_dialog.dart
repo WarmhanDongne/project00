@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_modal.dart';
@@ -58,7 +59,7 @@ List<_RulePage> _splitPages(String markdown) {
   void flush() {
     final text = body.toString().trim();
     if (title != null || text.isNotEmpty) {
-      pages.add(_RulePage(title ?? '규칙', text));
+      pages.add(_RulePage((title ?? '규칙').localized, text));
     }
     body.clear();
   }
@@ -72,7 +73,7 @@ List<_RulePage> _splitPages(String markdown) {
     }
   }
   flush();
-  return pages.isEmpty ? const [_RulePage('규칙', '')] : pages;
+  return pages.isEmpty ? [_RulePage('규칙'.localized, '')] : pages;
 }
 
 class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
@@ -99,7 +100,7 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
     return MosiGameModalFrame(
       theme: theme,
       padding: const EdgeInsets.fromLTRB(32, 28, 32, 28),
-      semanticLabel: '게임 규칙',
+      semanticLabel: '게임 규칙'.localized,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -111,7 +112,7 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                 Row(
                   children: [
                     Text(
-                      '게임 규칙',
+                      '게임 규칙'.localized,
                       style: MosiFonts.sans(
                         size: 34,
                         weight: FontWeight.w700,
@@ -149,7 +150,7 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                 const SizedBox(height: 16),
                 if (widget.cards.isNotEmpty) ...[
                   Text(
-                    '카드',
+                    '카드'.localized,
                     style: MosiFonts.sans(
                       size: 15,
                       weight: FontWeight.w700,
@@ -175,7 +176,7 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                   ),
                 ] else if (widget.cardImages.isNotEmpty) ...[
                   Text(
-                    '카드',
+                    '카드'.localized,
                     style: MosiFonts.sans(
                       size: 15,
                       weight: FontWeight.w700,
@@ -332,7 +333,7 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                     Opacity(
                       opacity: _page == 0 ? 0.4 : 1,
                       child: MosiButton(
-                        label: '‹ 이전',
+                        label: '${'이전'.localized} ‹',
                         background: MosiColors.white,
                         shadowOffset: 0,
                         height: 56,
@@ -364,7 +365,9 @@ class _TabletGameRulebookDialogState extends State<TabletGameRulebookDialog> {
                     SizedBox(
                       width: 160,
                       child: MosiButton(
-                        label: isLast ? '다 읽었어요' : '다음 ›',
+                        label: isLast
+                            ? '다 읽었어요'.localized
+                            : '${'다음'.localized} ›',
                         background: theme.accent,
                         foreground: theme.accentFg,
                         shadowColor: MosiColors.ink,
@@ -512,15 +515,47 @@ class _RuleVideoState extends State<_RuleVideo> {
         ? controller.value.position.inMilliseconds / duration.inMilliseconds
         : 0.0;
     final label = !hasUrl
-        ? '규칙 영상 준비 중'
+        ? GameLocale.select(
+            ko: '규칙 영상 준비 중',
+            en: 'Rules video coming soon',
+            zhHans: '规则视频准备中',
+            zhHant: '規則影片準備中',
+          )
         : !ready
-        ? '영상을 불러오는 중'
+        ? GameLocale.select(
+            ko: '영상을 불러오는 중',
+            en: 'Loading video',
+            zhHans: '正在加载视频',
+            zhHant: '正在載入影片',
+          )
         : playing
-        ? '재생 중 · 누르면 멈춰요'
-        : '규칙 영상 · 누르면 재생';
+        ? GameLocale.select(
+            ko: '재생 중 · 누르면 멈춰요',
+            en: 'Playing · tap to stop',
+            zhHans: '播放中 · 点击停止',
+            zhHant: '播放中 · 點擊停止',
+          )
+        : GameLocale.select(
+            ko: '규칙 영상 · 누르면 재생',
+            en: 'Rules video · tap to play',
+            zhHans: '规则视频 · 点击播放',
+            zhHant: '規則影片 · 點擊播放',
+          );
     return Semantics(
       button: ready,
-      label: playing ? '규칙 영상 멈추기' : '규칙 영상 재생',
+      label: playing
+          ? GameLocale.select(
+              ko: '규칙 영상 멈추기',
+              en: 'Stop rules video',
+              zhHans: '停止规则视频',
+              zhHant: '停止規則影片',
+            )
+          : GameLocale.select(
+              ko: '규칙 영상 재생',
+              en: 'Play rules video',
+              zhHans: '播放规则视频',
+              zhHant: '播放規則影片',
+            ),
       excludeSemantics: true,
       child: GestureDetector(
         onTap: ready ? _toggle : null,

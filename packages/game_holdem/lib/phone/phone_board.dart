@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_holdem/game_assets.dart';
 import 'package:game_holdem/game_theme.dart';
+import 'package:game_holdem/game_copy.dart';
 import 'package:game_holdem/phone/screens/game_screen.dart';
 import 'package:game_holdem/phone/widgets/top_bar.dart';
 import 'package:game_holdem/shared/widgets/table_ui.dart';
@@ -14,6 +15,7 @@ import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_holdem/shared/providers/session_provider.dart';
 import 'package:game_holdem/shared/services/game_service.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/game_flow/game_screen_phase.dart';
 import 'package:game_kit/game_flow/phone_game_flow_config.dart';
 import 'package:game_kit/game_flow/phone_game_shell.dart';
@@ -80,8 +82,17 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
   Widget build(BuildContext context) {
     final args = _args;
     if (args == null) {
-      return const Scaffold(
-        body: Center(child: Text('게임 참가자 인증을 확인할 수 없습니다.')),
+      return Scaffold(
+        body: Center(
+          child: Text(
+            GameLocale.select(
+              ko: '게임 참가자 인증을 확인할 수 없습니다.',
+              en: 'The game participant could not be verified.',
+              zhHans: '无法验证游戏参与者。',
+              zhHant: '無法驗證遊戲參與者。',
+            ),
+          ),
+        ),
       );
     }
     final game = ref.watch(holdemSessionProvider(args));
@@ -301,7 +312,19 @@ class _TournamentResult extends StatelessWidget {
               ),
               const SizedBox(height: 34),
               Text(
-                won ? '토너먼트 우승!' : '${winner?.nickname ?? '승자'} 님 우승',
+                won
+                    ? GameLocale.select(
+                        ko: '토너먼트 우승!',
+                        en: 'Tournament champion!',
+                        zhHans: '锦标赛冠军！',
+                        zhHant: '錦標賽冠軍！',
+                      )
+                    : GameLocale.select(
+                        ko: '${winner?.nickname ?? HoldemCopy.player} 님 우승',
+                        en: '${winner?.nickname ?? HoldemCopy.player} wins',
+                        zhHans: '${winner?.nickname ?? HoldemCopy.player} 获胜',
+                        zhHant: '${winner?.nickname ?? HoldemCopy.player} 獲勝',
+                      ),
                 textAlign: TextAlign.center,
                 style: HoldemFonts.text(size: 22, weight: FontWeight.w900),
               ),
@@ -316,13 +339,23 @@ class _TournamentResult extends StatelessWidget {
               if (rank != null && !won) ...[
                 const SizedBox(height: 18),
                 Text(
-                  '내 순위 $rank위',
+                  GameLocale.select(
+                    ko: '내 순위 $rank위',
+                    en: 'My rank: $rank',
+                    zhHans: '我的排名：第 $rank 名',
+                    zhHant: '我的排名：第 $rank 名',
+                  ),
                   style: HoldemFonts.text(size: 15, color: HoldemColors.muted),
                 ),
               ],
               const SizedBox(height: 24),
               Text(
-                '태블릿에서 다시 하기를 고를 수 있어요',
+                GameLocale.select(
+                  ko: '태블릿에서 다시 하기를 고를 수 있어요',
+                  en: 'Choose Play Again on the tablet',
+                  zhHans: '可在平板上选择再玩一次',
+                  zhHant: '可在平板上選擇再玩一次',
+                ),
                 style: HoldemFonts.text(size: 13, color: HoldemColors.muted),
               ),
             ],

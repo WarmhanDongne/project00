@@ -14,6 +14,7 @@ import 'package:game_holdem/shared/widgets/table_ui.dart';
 import 'package:game_holdem/tablet/animations/action_motion.dart';
 import 'package:game_holdem/tablet/animations/card_deal_animation.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_kit/shared/animations/progress_sound_cue.dart';
@@ -23,7 +24,7 @@ import 'package:game_kit/sound/game_background_music.dart';
 
 /// 시안 기준 태블릿 크기입니다. 실제 화면은 짧은 쪽 비율로 맞춥니다.
 const _designSize = Size(1366, 1024);
-const _actionWindow = Duration(seconds: 20);
+const _actionWindow = Duration(minutes: 1);
 
 /// 모두가 함께 보는 공용 홀덤 테이블입니다.
 ///
@@ -249,7 +250,9 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
     _actionController.duration = switch (_activeAction!.kind) {
       'blind' => const Duration(milliseconds: 1150),
       'fold' => const Duration(milliseconds: 1050),
-      'check' => const Duration(milliseconds: 1100),
+      // 체크는 좌석 표시만 띄우므로 짧게 지나갑니다.
+      'check' => const Duration(milliseconds: 600),
+      'allIn' => const Duration(milliseconds: 2100),
       _ => const Duration(milliseconds: 1450),
     };
     _actionController.forward(from: 0);
@@ -272,7 +275,6 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
   void _playActionSounds() {
     if (!mounted || _activeAction == null) return;
     final kind = _activeAction!.kind;
-    final duration = _actionController.duration!.inMilliseconds;
     final asset = switch (kind) {
       'check' => HoldemSounds.check,
       'fold' => HoldemSounds.cardTable,
@@ -280,11 +282,11 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
       _ => null,
     };
     if (asset != null) {
-      // 폴드는 라이어스 포커처럼 착지 시점에, 체크는 퍽 도착에 맞춥니다.
-      // 올인은 행동 연출 시작과 함께 강조하고 칩 착지음은 별도로 유지합니다.
+      // 폴드는 라이어스 포커처럼 착지 시점에 맞춥니다. 체크는 좌석 표시가
+      // 뜨는 순간, 올인은 행동 연출 시작과 함께 강조하고 칩 착지음은 별도로
+      // 유지합니다.
       final threshold = switch (kind) {
         'fold' => .73,
-        'check' => .7 - ProgressSoundCue.lead.inMilliseconds / duration,
         _ => 0.0,
       };
       _actionCue.maybePlay(
@@ -365,6 +367,18 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
             .toList(growable: false);
         final seatSize = const Size(240, 170) * scale;
         final showdown = game.phase == 'handResult' ? game.result : null;
+        // 쇼다운 카드는 자리 순서대로 한 사람씩 뒤집고, 다 뒤집은 뒤 승자를
+        // 알립니다. 폴드 승리는 기다리지 않고 바로 알립니다.
+        final revealOrder = showdown?.reason == 'showdown'
+            ? [
+                for (final player in [
+                  ...widget.playerLayout.players,
+                ]..sort((a, b) => a.seatIndex.compareTo(b.seatIndex)))
+                  if (showdown!.revealedHands[player.uid]?.length == 2)
+                    player.uid,
+              ]
+            : const <String>[];
+        final winnerAt = HoldemTiming.showdownWinnerAt(revealOrder.length);
         final tableCenter = size.center(Offset.zero);
         // 칩은 커뮤니티 카드의 정중앙에 먼저 떨어진 뒤, 카드 아래쪽의 중앙
         // 팟으로 짧게 흘러 모입니다. 좌우 어느 자리에서도 같은 중앙을 봅니다.
@@ -403,6 +417,8 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
                     game: game,
                     result: showdown,
                     scale: scale,
+                    clock: _resultHoldController,
+                    winnerAt: winnerAt,
                   ),
                 ),
               ),
@@ -442,7 +458,7 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
                   width: seatSize.width,
                   height: seatSize.height,
                   child: Transform.rotate(
-                    angle: _seatRotation(centers[layoutPlayer.seatIndex]),
+                    angle: _seatRotation(centers[layoutPlayer.seatIndex], size),
                     child: FittedBox(
                       child: SizedBox(
                         width: 240,
@@ -457,6 +473,14 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
                           showCards:
                               game.phase != 'dealing' ||
                               _dealCompletedHand == game.handNumber,
+                          clock: _resultHoldController,
+                          revealAt: revealOrder.contains(layoutPlayer.uid)
+                              ? HoldemTiming.showdownRevealAt(
+                                  revealOrder.indexOf(layoutPlayer.uid),
+                                  revealOrder.length,
+                                )
+                              : null,
+                          winnerAt: winnerAt,
                         ),
                       ),
                     ),
@@ -518,7 +542,12 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
                       );
                       return HoldemPill(
                         key: const Key('holdem-showdown-countdown'),
-                        label: '공개 카드 확인 · $seconds초',
+                        label: GameLocale.select(
+                          ko: '공개 카드 확인 · $seconds초',
+                          en: 'Check community cards · ${seconds}s',
+                          zhHans: '查看公共牌 · $seconds秒',
+                          zhHant: '查看公共牌 · $seconds秒',
+                        ),
                         fontSize: 16 * scale,
                       );
                     },
@@ -543,13 +572,15 @@ class _HoldemTableScreenState extends State<HoldemTableScreen>
     );
   }
 
-  /// 좌석이 테이블 중심을 기준으로 어느 변에 있는지에 따라 글자를 돌립니다.
-  double _seatRotation(Offset normalizedCenter) {
-    final direction = normalizedCenter - const Offset(.5, .5);
-    if (direction.dy.abs() >= direction.dx.abs() * .9) {
-      return direction.dy < 0 ? math.pi : 0;
-    }
-    return direction.dx < 0 ? math.pi / 2 : -math.pi / 2;
+  /// 모든 좌석이 테이블 중심을 바라보도록 돌립니다.
+  ///
+  /// 화면 픽셀 기준으로 계산해야 가로로 긴 화면에서도 정확히 중심을 향합니다.
+  /// 아래쪽 좌석은 0, 왼쪽 좌석은 시계 방향 90도입니다.
+  double _seatRotation(Offset normalizedCenter, Size boardSize) {
+    final dx = (normalizedCenter.dx - .5) * boardSize.width;
+    final dy = (normalizedCenter.dy - .5) * boardSize.height;
+    if (dx == 0 && dy == 0) return 0;
+    return math.atan2(-dx, dy);
   }
 
   Offset _actionSource({
@@ -595,17 +626,31 @@ class _TableCenter extends StatelessWidget {
     required this.game,
     required this.result,
     required this.scale,
+    required this.clock,
+    required this.winnerAt,
   });
   final HoldemGameState game;
   final HoldemHandResultModel? result;
   final double scale;
 
+  /// 판 결과를 보여 주는 동안 흐르는 시계입니다.
+  final AnimationController clock;
+
+  /// 승자를 알리는 시점입니다. 그 전에는 팟만 보여 긴장감을 남깁니다.
+  final Duration winnerAt;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: clock,
+    builder: (context, _) => _build(_elapsed(clock) >= winnerAt),
+  );
+
+  Widget _build(bool announced) {
+    final result = announced ? this.result : null;
     final winning = _winningCardIds(result);
     final block = result == null
         ? _PotBlock(game: game, scale: scale)
-        : _ResultBlock(game: game, result: result!, scale: scale);
+        : _ResultBlock(game: game, result: result, scale: scale);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -614,7 +659,7 @@ class _TableCenter extends StatelessWidget {
         TweenAnimationBuilder<double>(
           tween: Tween(
             begin: 128 * scale,
-            end: result?.reason == 'showdown' ? 142 * scale : 128 * scale,
+            end: this.result?.reason == 'showdown' ? 142 * scale : 128 * scale,
           ),
           duration: const Duration(milliseconds: 580),
           curve: Curves.easeOutBack,
@@ -763,6 +808,13 @@ class _CommunityCardsState extends State<_CommunityCards>
   }
 }
 
+/// 판 결과 시계가 지금까지 흐른 시간입니다.
+Duration _elapsed(AnimationController clock) {
+  final total = clock.duration;
+  if (total == null) return Duration.zero;
+  return total * clock.value;
+}
+
 /// 쇼다운 승자의 최종 5장에 든 카드 id입니다. 쇼다운이 아니면 null입니다.
 Set<String>? _winningCardIds(HoldemHandResultModel? result) {
   if (result == null || result.reason != 'showdown') return null;
@@ -831,7 +883,7 @@ class _ResultBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final names = result.winnerUids
-        .map((uid) => game.players[uid]?.nickname ?? '플레이어')
+        .map((uid) => game.players[uid]?.nickname ?? HoldemCopy.player)
         .join(', ');
     final total = result.winnerUids.fold<int>(
       0,
@@ -844,7 +896,15 @@ class _ResultBlock extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (result.reason == 'fold') ...[
-            HoldemPill(label: '상대가 모두 폴드했어요', fontSize: 14 * scale),
+            HoldemPill(
+              label: GameLocale.select(
+                ko: '상대가 모두 폴드했어요',
+                en: 'Everyone else folded',
+                zhHans: '其他玩家都已弃牌',
+                zhHant: '其他玩家都已棄牌',
+              ),
+              fontSize: 14 * scale,
+            ),
             SizedBox(height: 8 * scale),
           ],
           // 이긴 사람 이름이 길거나 여럿이어도 자르지 않고 줄 전체를 줄입니다.
@@ -855,7 +915,19 @@ class _ResultBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  split ? '$names 나눠 가짐' : '$names 승리',
+                  split
+                      ? GameLocale.select(
+                          ko: '$names 나눠 가짐',
+                          en: '$names split the pot',
+                          zhHans: '$names 平分底池',
+                          zhHant: '$names 平分底池',
+                        )
+                      : GameLocale.select(
+                          ko: '$names 승리',
+                          en: '$names win',
+                          zhHans: '$names 获胜',
+                          zhHant: '$names 獲勝',
+                        ),
                   maxLines: 1,
                   style: HoldemFonts.text(
                     size: 36 * scale,
@@ -886,6 +958,9 @@ class _Seat extends StatelessWidget {
     required this.stackStart,
     required this.stackAnimation,
     required this.showCards,
+    required this.clock,
+    required this.revealAt,
+    required this.winnerAt,
   });
   final HoldemGameState game;
   final String uid;
@@ -895,12 +970,33 @@ class _Seat extends StatelessWidget {
   final Animation<double> stackAnimation;
   final bool showCards;
 
+  /// 판 결과를 보여 주는 동안 흐르는 시계입니다.
+  final AnimationController clock;
+
+  /// 쇼다운에서 이 자리의 카드를 뒤집기 시작하는 시점입니다.
+  final Duration? revealAt;
+
+  /// 승자를 알리는 시점입니다.
+  final Duration winnerAt;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      AnimatedBuilder(animation: clock, builder: (context, _) => _build());
+
+  Widget _build() {
     final player = game.players[uid];
     if (player == null) return const SizedBox.shrink();
+    final elapsed = _elapsed(clock);
+    final announced = elapsed >= winnerAt;
+    final revealAt = this.revealAt;
+    // 0이면 아직 뒷면, 1이면 앞면입니다.
+    final flip = revealAt == null
+        ? 1.0
+        : ((elapsed - revealAt).inMilliseconds /
+                  HoldemTiming.showdownFlip.inMilliseconds)
+              .clamp(0.0, 1.0);
     final turn = game.turnUid == uid && result == null;
-    final winner = result?.winnerUids.contains(uid) ?? false;
+    final winner = announced && (result?.winnerUids.contains(uid) ?? false);
     final highlighted = turn || winner;
     final folded = player.handStatus == 'folded';
     final eliminated = player.status == 'eliminated';
@@ -1043,6 +1139,20 @@ class _Seat extends StatelessWidget {
                     ),
                   ),
                 ),
+                // 체크는 중앙으로 날아가는 표시 대신 프로필 옆에 붙습니다.
+                if (result == null &&
+                    !turn &&
+                    streetAction == 'check' &&
+                    !folded &&
+                    !eliminated)
+                  Positioned(
+                    left: 6,
+                    top: 66,
+                    child: _CheckBadge(
+                      key: Key('holdem-check-$uid'),
+                      street: '${game.handNumber}-${game.phase}',
+                    ),
+                  ),
                 if (showLargeHand)
                   Positioned(
                     key: Key('holdem-showdown-hand-$uid'),
@@ -1066,10 +1176,14 @@ class _Seat extends StatelessWidget {
                         children: [
                           for (final (index, card) in revealed.indexed) ...[
                             if (index > 0) const SizedBox(width: 10),
-                            HoldemCardView(
+                            _ShowdownCard(
                               key: Key('holdem-showdown-card-$uid-$index'),
                               card: card,
-                              width: 126,
+                              // 두 장이 살짝 차이를 두고 뒤집힙니다.
+                              flip: ((flip - index * .18) / .82).clamp(
+                                0.0,
+                                1.0,
+                              ),
                               emphasis: winningCards == null
                                   ? HoldemCardEmphasis.none
                                   : winningCards.contains(card.id)
@@ -1103,27 +1217,36 @@ class _Seat extends StatelessWidget {
   List<Widget> _statusRow(HoldemPlayerModel player, bool turn) {
     if (result != null) return const [];
     if (player.status == 'eliminated') {
-      return [_note('탈락')];
+      return [
+        _note(
+          GameLocale.select(ko: '탈락', en: 'Out', zhHans: '淘汰', zhHant: '淘汰'),
+        ),
+      ];
     }
-    if (player.handStatus == 'folded') return [_note('폴드')];
+    if (player.handStatus == 'folded') {
+      return [_note(HoldemCopy.action('fold'))];
+    }
     if (turn) {
       return [
         GameTurnCountdownFace(
           expiresAt: game.turnDeadlineAt,
-          builder: (_, remaining) =>
-              _note('고민 중 · ${remaining?.inSeconds ?? 0}초', strong: true),
+          builder: (_, remaining) => _note(
+            HoldemCopy.thinkingSeconds(remaining?.inSeconds ?? 0),
+            strong: true,
+          ),
         ),
       ];
     }
     final bet = player.streetContribution;
     if (bet > 0) {
       final label = player.handStatus == 'allIn'
-          ? '올인'
+          ? HoldemCopy.action('allIn')
           : HoldemCopy.action(streetAction ?? '');
       return [_BetPill(label: label, amount: bet)];
     }
-    if (player.handStatus == 'allIn') return [_note('올인', strong: true)];
-    if (streetAction == 'check') return [_note('체크')];
+    if (player.handStatus == 'allIn') {
+      return [_note(HoldemCopy.action('allIn'), strong: true)];
+    }
     return const [];
   }
 
@@ -1133,6 +1256,99 @@ class _Seat extends StatelessWidget {
       size: 14,
       weight: FontWeight.w700,
       color: strong ? HoldemColors.ivory : HoldemColors.muted,
+    ),
+  );
+}
+
+/// 쇼다운 카드 한 장입니다. [flip]이 0이면 뒷면, 1이면 앞면입니다.
+class _ShowdownCard extends StatelessWidget {
+  const _ShowdownCard({
+    super.key,
+    required this.card,
+    required this.flip,
+    required this.emphasis,
+  });
+  final HoldemCardModel card;
+  final double flip;
+  final HoldemCardEmphasis emphasis;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = Curves.easeInOutCubic.transform(flip);
+    final front = progress >= .5;
+    final lift = math.sin(progress * math.pi);
+    return Transform.translate(
+      offset: Offset(0, -18 * lift),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, .001)
+          ..rotateY(math.pi * (front ? 1 - progress : progress)),
+        child: HoldemCardView(
+          card: card,
+          width: 126,
+          faceDown: !front,
+          emphasis: front ? emphasis : HoldemCardEmphasis.none,
+        ),
+      ),
+    );
+  }
+}
+
+/// 프로필 오른쪽 아래에 톡 튀어나오는 체크 표시입니다.
+class _CheckBadge extends StatelessWidget {
+  const _CheckBadge({super.key, required this.street});
+
+  /// 같은 스트리트에서는 다시 튀어나오지 않도록 연출을 묶는 값입니다.
+  final String street;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    key: ValueKey(street),
+    tween: Tween(begin: 0, end: 1),
+    duration: const Duration(milliseconds: 420),
+    curve: Curves.easeOutBack,
+    builder: (_, value, child) => Opacity(
+      opacity: value.clamp(0.0, 1.0),
+      child: Transform.scale(
+        scale: .4 + .6 * value,
+        alignment: Alignment.centerLeft,
+        child: child,
+      ),
+    ),
+    child: Semantics(
+      label: HoldemCopy.action('check'),
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
+        decoration: BoxDecoration(
+          color: HoldemColors.ivory,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: HoldemColors.ink, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_rounded, size: 16, color: HoldemColors.ink),
+            const SizedBox(width: 3),
+            Text(
+              HoldemCopy.action('check'),
+              style: HoldemFonts.text(
+                size: 13,
+                weight: FontWeight.w900,
+                color: HoldemColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -1163,7 +1379,7 @@ class _AnimatedStackAmount extends StatelessWidget {
         final progress = Curves.easeOutCubic.transform(raw);
         final amount = (initial + (end - initial) * progress).round();
         return Semantics(
-          label: '보유 칩 ${holdemChips(amount)}',
+          label: HoldemCopy.chipsOwned(holdemChips(amount)),
           excludeSemantics: true,
           child: HoldemChipAmount(amount: amount, color: color),
         );
@@ -1277,7 +1493,12 @@ class _DealerPuck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: '딜러',
+    label: GameLocale.select(
+      ko: '딜러',
+      en: 'Dealer',
+      zhHans: '庄家',
+      zhHant: '莊家',
+    ),
     child: Container(
       width: 34,
       height: 34,

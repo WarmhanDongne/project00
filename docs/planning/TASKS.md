@@ -18,16 +18,18 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | 분류 | 개수 |
 | --- | ---: |
-| 구현 검증 대기 | 3 |
+| 구현 검증 대기 | 5 |
 | 출시 전 필수 | 11 |
 | 출시 전 권장 | 11 |
 | 출시 후 작업 | 7 |
-| 합계 | 32 |
+| 합계 | 34 |
 
 ## 구현 검증 대기
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
+| [GAME-CATALOG-I18N-01](tasks/GAME-CATALOG-I18N-01.md#game-catalog-i18n-01) | Firestore 게임 이름 다국어화 | 검증 대기 — 앱·Functions targeted PASS | 운영 문서 갱신·확인, 사용자 승인 FULL |
+| [LIARS-CATALOG-01](tasks/LIARS-CATALOG-01.md#liars-catalog-01) | 라이어스 Firebase 문서 ID 이전 | 검증 대기 — 호환 reader·이전 스크립트 회귀/session PASS | 사용자 승인 FULL, 사용 앱 배포 범위 확인 → 서버 두 함수/앱 반영 → 문서 원자 이전 및 실제 게임 확인 |
 | [MAFIA-RULES-03](tasks/MAFIA-RULES-03.md#mafia-rules-03) | 마피아 규칙·역할·룰북 개선 | 검증 대기 | 사용자 명시 승인 후 FULL, 양 기기 실제 게임 흐름 확인 |
 | [MAFIA-ROLE-SETUP-02](tasks/MAFIA-ROLE-SETUP-02.md#mafia-role-setup-02) | 마피아 신분카드 구성 화면 개선 | 검증 대기 | 사용자 승인 후 FULL, 실제 태블릿 터치·전환 확인 |
 | [GAME-DEVICE-BOARD-01](tasks/GAME-DEVICE-BOARD-01.md#game-device-board-01) | 게임 패키지 기기별 화면·흐름 구조 정리 | 검증 대기 | 사용자 승인 후 FULL, 회귀 테스트는 TEST-REGRESSION-01에서 관리 |
@@ -68,7 +70,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/10 메일 인증 중복 처리 수정·로그아웃 전환 후보의 FULL 승인 및 실기기 메일 확인, 세션 연동 회귀는 NEWGUI-RECOVERY-01과 연결 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/12 이메일 인증·게스트 로그인·태블릿 입력 도구막대 후보 FULL 및 실기기 확인, Anonymous provider 활성화·인증 함수 3개 배포 승인 대기, 세션 회귀는 NEWGUI-RECOVERY-01과 연결 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
 | [GAME-TUTORIAL-01](tasks/GAME-TUTORIAL-01.md#game-tutorial-01) | 게임 첫 플레이 튜토리얼 | 요구사항 확인 | 게임별 안내 범위 결정 |

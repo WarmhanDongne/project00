@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/game_flow/game_flow_copy.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/models/game_room_context.dart';
 
 // ============================================================
@@ -23,5 +24,5 @@ void showLeaveFailureNotice(BuildContext context, GameRoomContext? provider) {
   if (provider != null && provider.isLeaving) return;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(content: Text(GameFlowCopy.leaveFailed)));
+    ..showSnackBar(SnackBar(content: Text(GameFlowCopy.leaveFailed.localized)));
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:project00/platform/home/store/store_motion.dart';
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
@@ -167,7 +168,7 @@ class _TabletHomeState extends State<TabletHome>
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('진행 중인 게임을 열려면 앱을 업데이트해 주세요.')),
+          SnackBar(content: Text('진행 중인 게임을 열려면 앱을 업데이트해 주세요.'.localized)),
         );
       return;
     }
@@ -194,7 +195,9 @@ class _TabletHomeState extends State<TabletHome>
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('게임 파일을 다운로드하지 못했습니다.')));
+        ..showSnackBar(
+          SnackBar(content: Text('게임 파일을 다운로드하지 못했습니다.'.localized)),
+        );
       return;
     }
     if (!mounted || roomProvider.roomCode != roomCode) {
@@ -302,7 +305,15 @@ class _TabletHomeState extends State<TabletHome>
     if (!mounted || cleared) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(roomProvider.errorMessage ?? '게임 선택을 해제하지 못했습니다.'),
+        content: Text(
+          roomProvider.errorMessage ??
+              GameLocale.select(
+                ko: '게임 선택을 해제하지 못했습니다.',
+                en: 'Could not clear the game selection.',
+                zhHans: '无法取消游戏选择。',
+                zhHant: '無法取消遊戲選擇。',
+              ),
+        ),
       ),
     );
   }
@@ -407,7 +418,9 @@ class _TabletHomeState extends State<TabletHome>
             listenable: roomProvider,
             builder: (context, body) => LobbyConnectionBand(
               // An idle lobby can let RTDB sleep; only an adopted room requires it.
-              connectionChanges: roomProvider.isInRoom ? _serverConnection : null,
+              connectionChanges: roomProvider.isInRoom
+                  ? _serverConnection
+                  : null,
               child: body!,
             ),
             child: Scaffold(backgroundColor: ground, body: child),
@@ -465,6 +478,10 @@ class _TabletHomeState extends State<TabletHome>
                     key: const ValueKey('lobby-room-panel'),
                     provider: roomProvider,
                     deep: theme.deep,
+                    // 흰 덮개 위 마름모는 게임 색입니다(바탕이 어두운 게임은 버튼 색).
+                    coverGemColor: theme.ground == MosiColors.navy
+                        ? theme.btnBg
+                        : theme.ground,
                     startBackground: theme.btnBg,
                     startForeground: theme.btnFg,
                     maxSlots: detail == null ? null : _maxSlots(detail),
@@ -482,6 +499,9 @@ class _TabletHomeState extends State<TabletHome>
 }
 
 class _HomeHeader extends StatelessWidget {
+  // 상점 재공개 시 true로 바꾸면 기존 진입 버튼과 연출을 다시 사용합니다.
+  static const _showGameStore = false;
+
   const _HomeHeader({
     required this.theme,
     required this.onOpenStore,
@@ -503,22 +523,25 @@ class _HomeHeader extends StatelessWidget {
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
-              child: MosiButton(
-                label: onBack == null
-                    ? context.l10n.gameStore
-                    : context.l10n.shelf,
-                variant: MosiButtonVariant.outline,
-                foreground: theme.fg,
-                height: 44,
-                fontSize: 15,
-                radius: 6,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                leading: Icon(
-                  onBack == null
-                      ? Icons.shopping_bag_outlined
-                      : Icons.chevron_left_rounded,
+              child: Visibility(
+                visible: _showGameStore || onBack != null,
+                child: MosiButton(
+                  label: onBack == null
+                      ? context.l10n.gameStore
+                      : context.l10n.shelf,
+                  variant: MosiButtonVariant.outline,
+                  foreground: theme.fg,
+                  height: 44,
+                  fontSize: 15,
+                  radius: 6,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  leading: Icon(
+                    onBack == null
+                        ? Icons.shopping_bag_outlined
+                        : Icons.chevron_left_rounded,
+                  ),
+                  onPressed: busy ? null : onBack ?? onOpenStore,
                 ),
-                onPressed: busy ? null : onBack ?? onOpenStore,
               ),
             ),
           ),

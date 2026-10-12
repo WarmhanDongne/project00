@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart' as liar;
 import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_liars_poker/game_theme.dart';
-import 'package:game_liars_poker/shared/widgets/noir_ui.dart';
 import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/widgets/card_view.dart';
@@ -20,6 +21,8 @@ import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/localization/platform_localizations.dart';
 
+part 'game_detail_parts.dart';
+
 //=======================게임 상세 · 플레이 미리보기와 구성품==============================
 // 시안(게임 상세)의 CSS 키프레임을 그대로 옮긴 반복 연출입니다. 모든 장면은
 // 시안 크기(694×560)로 그린 뒤 상자 크기에 맞춰 줄입니다.
@@ -34,15 +37,6 @@ Widget? buildGamePlayPreview(String gameId) => switch (gameId) {
   'final_call' => const _FinalPlayScene(),
   'mafia' => const _MafiaPlayScene(),
   'holdem' => const _HoldemPlayScene(),
-  _ => null,
-};
-
-/// 등록된 게임이면 구성품 판을, 아니면 null을 돌려줍니다.
-Widget? buildGameParts(String gameId) => switch (gameId) {
-  'liars_poker' => const _LiarParts(),
-  'final_call' => const _FinalParts(),
-  'mafia' => const _MafiaParts(),
-  'holdem' => const _HoldemParts(),
   _ => null,
 };
 
@@ -294,6 +288,35 @@ Widget _nameTag(
   ),
 );
 
+Widget _miniCard({
+  required double width,
+  required double height,
+  required Color background,
+  required Color border,
+  double borderWidth = 2,
+  double radius = 3,
+  String? label,
+  Color labelColor = MosiColors.white,
+  double labelSize = 18,
+}) => Container(
+  width: width,
+  height: height,
+  alignment: Alignment.center,
+  decoration: BoxDecoration(
+    color: background,
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: border, width: borderWidth),
+  ),
+  child: label == null
+      ? null
+      : Text(
+          label,
+          style: MosiFonts.playfair(size: labelSize, color: labelColor),
+        ),
+);
+
+/// 말풍선입니다. [tail]은 꼬리가 붙는 모서리입니다.
+
 /// 말풍선입니다. [tail]은 꼬리가 붙는 모서리입니다.
 Widget _speech(
   String text, {
@@ -372,10 +395,7 @@ Widget _teamBubble(String text, {required Color tint, required Color team}) =>
 class _LiarPlayScene extends StatelessWidget {
   const _LiarPlayScene();
 
-  // 게임과 같은 보랏빛 카지노·금색입니다.
-  static const _night = LiarsPokerColors.night;
-  static const _gold = LiarsPokerColors.gold;
-  static const _ivory = LiarsPokerColors.ivory;
+  static const _violet = Color(0xFF4A1A5E);
 
   @override
   Widget build(BuildContext context) {
@@ -451,191 +471,39 @@ class _LiarPlayScene extends StatelessWidget {
         final callScale = _kf(p, [(45, 0.6), (48, 1)]);
         final stampOpacity = _kf(p, [(63, 0), (67, 1), (90, 1), (94, 0)]);
         final stampScale = _kf(p, [(63, 2.4), (67, 0.95), (70, 1)]);
-        // 사라 차례의 남은 시간 고리가 줄어듭니다.
-        final timeLeft = _kf(p, [(0, 1), (20, 0.55)]);
 
-        // 게임 휴대폰과 같은 배치: 위 상단바, 그 아래 기준 카드·남은 시간,
-        // 가운데 부채꼴 손패, 맨 아래 큰 둥근 버튼.
-        Widget phoneScreen({
-          required String name,
-          required String characterId,
-          required String status,
-          required List<String> hand,
-          bool showTimer = false,
-          Widget? puck,
+        Widget hand(
+          List<double> rotations, {
+          double gap = 20,
+          double base = 14,
         }) => Stack(
-          clipBehavior: Clip.none,
           children: [
-            Positioned(
-              left: 6,
-              right: 6,
-              top: 6,
-              child: Row(
-                children: [
-                  NoirAvatar(
-                    characterId: characterId,
-                    size: 16,
-                    ringColor: _gold,
-                    ringWidth: 1,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: LiarsPokerFonts.text(
-                        size: 8.5,
-                        weight: FontWeight.w700,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                  for (var i = 0; i < 2; i++)
-                    Container(
-                      width: 12,
-                      height: 12,
-                      margin: const EdgeInsets.only(left: 3),
-                      decoration: BoxDecoration(
-                        color: LiarsPokerColors.panel,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: _gold.withValues(alpha: .55),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 8,
-              top: 28,
-              child: _rotated(
-                -6,
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: _gold, width: 1.5),
-                  ),
-                  child: _partsImage(
-                    _liarCard('A'),
-                    'A',
-                    width: 16,
-                    height: 23,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 30,
-              top: 33,
-              right: showTimer ? 30 : 6,
-              child: Text(
-                status,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: LiarsPokerFonts.text(
-                  size: 7.5,
-                  weight: FontWeight.w600,
-                  color: LiarsPokerColors.mutedLight,
-                  height: 1.2,
-                ),
-              ),
-            ),
-            if (showTimer)
+            for (var i = 0; i < rotations.length; i++)
               Positioned(
-                right: 7,
-                top: 27,
-                width: 22,
-                height: 22,
-                child: NoirProgressRing(
-                  fraction: timeLeft,
-                  color: LiarsPokerColors.red,
-                  track: LiarsPokerColors.panelEdge,
-                  child: Center(
-                    child: Text(
-                      '${(timeLeft * 30).round()}',
-                      style: LiarsPokerFonts.text(
-                        size: 7,
-                        weight: FontWeight.w700,
-                        height: 1,
-                      ),
-                    ),
+                left: base + i * gap,
+                bottom: rotations[i] == 0 && rotations.length == 3 ? 16 : 12,
+                child: _rotated(
+                  rotations[i],
+                  _miniCard(
+                    width: rotations.length == 3 ? 24 : 22,
+                    height: rotations.length == 3 ? 34 : 30,
+                    background: MosiColors.white,
+                    border: MosiColors.ink,
                   ),
                 ),
-              ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 56,
-              height: 64,
-              child: Center(
-                child: SizedBox(
-                  width: 34 + (hand.length - 1) * 14,
-                  height: 64,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      for (final (index, face) in hand.indexed)
-                        Positioned(
-                          left: index * 14.0,
-                          top: (index - (hand.length - 1) / 2).abs() * 2,
-                          child: _rotated(
-                            (index - (hand.length - 1) / 2) * 7,
-                            DecoratedBox(
-                              decoration: const BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0x66000000),
-                                    blurRadius: 3,
-                                    offset: Offset(1, 2),
-                                  ),
-                                ],
-                              ),
-                              child: _partsImage(
-                                _liarCard(face),
-                                face,
-                                width: 34,
-                                height: 48,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (puck != null)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 12,
-                child: Center(child: puck),
               ),
           ],
         );
 
         return _SceneBackdrop(
-          band: LiarsPokerColors.felt,
+          band: MosiColors.violet,
           stage: [
             _at(
               190 + shake,
               30,
               _TabletFrame(
-                screen: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: RadialGradient(
-                      radius: 0.9,
-                      colors: [
-                        LiarsPokerColors.felt,
-                        LiarsPokerColors.felt,
-                        Color(0xFF241034),
-                      ],
-                      stops: [0, .55, 1],
-                    ),
-                  ),
+                screen: ColoredBox(
+                  color: _violet,
                   child: Stack(
                     children: [
                       Positioned(
@@ -647,16 +515,16 @@ class _LiarPlayScene extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: _night,
+                            color: MosiColors.white,
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: _gold, width: 1.5),
                           ),
                           child: Text(
                             context.l10n.previewTableAce,
-                            style: LiarsPokerFonts.text(
+                            style: MosiFonts.sans(
+                              locale: Localizations.maybeLocaleOf(context),
                               size: 11,
                               weight: FontWeight.w700,
-                              color: LiarsPokerColors.goldLight,
+                              color: const Color(0xFF1B1022),
                             ),
                           ),
                         ),
@@ -665,10 +533,12 @@ class _LiarPlayScene extends StatelessWidget {
                         right: 10,
                         top: 12,
                         child: Text(
-                          "ACE'S TABLE",
-                          style: LiarsPokerFonts.western(
-                            size: 11,
-                            color: LiarsPokerColors.goldLight,
+                          'TABLE',
+                          style: MosiFonts.grotesk(
+                            locale: Localizations.maybeLocaleOf(context),
+                            size: 10,
+                            color: const Color(0xFFC7B8CC),
+                            letterSpacing: 2,
                           ),
                         ),
                       ),
@@ -676,7 +546,7 @@ class _LiarPlayScene extends StatelessWidget {
                         child: Transform.translate(
                           offset: const Offset(0, 5),
                           child: MosiDashedBorder(
-                            color: _gold.withValues(alpha: .45),
+                            color: const Color(0x47FFFFFF),
                             radius: 55,
                             child: const SizedBox(width: 110, height: 110),
                           ),
@@ -687,10 +557,11 @@ class _LiarPlayScene extends StatelessWidget {
                         bottom: 9,
                         child: Text(
                           context.l10n.previewNextMinjun,
-                          style: LiarsPokerFonts.text(
+                          style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
                             size: 11,
                             weight: FontWeight.w600,
-                            color: LiarsPokerColors.mutedLight,
+                            color: const Color(0xFFE2D2E8),
                           ),
                         ),
                       ),
@@ -722,10 +593,14 @@ class _LiarPlayScene extends StatelessWidget {
                 start: 7,
                 visible: 9,
                 land: 21,
-                front: const _LiarCardFace(label: 'K'),
+                front: const _LiarCardFace(
+                  label: 'K',
+                  background: Color(0xFFFFE3E7),
+                  color: Color(0xFFC0283C),
+                ),
               ),
             ),
-            // 휴대폰 1: 사라(내 차례 · 두 장을 내고 제출)
+            // 휴대폰 1: 사라
             _at(
               40,
               262,
@@ -738,26 +613,40 @@ class _LiarPlayScene extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       _PhoneFrame(
-                        screenColor: _night,
+                        screenColor: _violet,
                         glow: glowA,
-                        glowColor: _gold,
-                        child: phoneScreen(
-                          name: context.l10n.previewSara,
-                          characterId: 'rabbit',
-                          status: context.l10n.previewYourTurn,
-                          hand: const ['K', 'Q', 'A'],
-                          showTimer: true,
-                          // 게임처럼 한글은 굵은 제목체, 그 밖의 언어는 간판체입니다.
-                          puck: NoirPuck(
-                            label: context.l10n.previewSubmit,
-                            ringColor: LiarsPokerColors.gold,
-                            size: 40,
-                            western:
-                                Localizations.maybeLocaleOf(
-                                  context,
-                                )?.languageCode !=
-                                'ko',
-                          ),
+                        glowColor: MosiColors.lime,
+                        child: Stack(
+                          children: [
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Column(
+                                  children: [
+                                    _nameTag(
+                                      context.l10n.previewSara,
+                                      MosiColors.lime,
+                                      MosiColors.navy,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      context.l10n.previewYourTurn,
+                                      style: MosiFonts.sans(
+                                        locale: Localizations.maybeLocaleOf(
+                                          context,
+                                        ),
+                                        size: 10,
+                                        weight: FontWeight.w600,
+                                        color: const Color(0xFFE2D2E8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Positioned.fill(child: hand([-12, 0, 12])),
+                          ],
                         ),
                       ),
                       Positioned(
@@ -770,7 +659,7 @@ class _LiarPlayScene extends StatelessWidget {
                             alignment: const Alignment(-0.8, 1),
                             child: _speech(
                               context.l10n.previewTwoAces,
-                              background: LiarsPokerColors.goldLight,
+                              background: MosiColors.lime,
                             ),
                           ),
                         ),
@@ -795,7 +684,7 @@ class _LiarPlayScene extends StatelessWidget {
                 ),
               ),
             ),
-            // 휴대폰 2: 민준(아래 Liar 버튼을 누름)
+            // 휴대폰 2: 민준
             _at(
               530,
               262,
@@ -808,53 +697,104 @@ class _LiarPlayScene extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       _PhoneFrame(
-                        screenColor: _night,
+                        screenColor: _violet,
                         glow: glowB,
-                        glowColor: LiarsPokerColors.red,
-                        child: phoneScreen(
-                          name: context.l10n.previewMinjun,
-                          characterId: 'bear',
-                          status: context.l10n.previewWatching,
-                          hand: const ['A', 'K'],
-                          puck: SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.center,
-                              children: [
-                                Positioned(
-                                  left: -6,
-                                  top: -6,
-                                  right: -6,
-                                  bottom: -6,
-                                  child: _fade(
-                                    ringOpacity,
-                                    Transform.scale(
-                                      scale: ringScale,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: LiarsPokerColors.red,
-                                            width: 3,
+                        glowColor: MosiColors.coral,
+                        child: Stack(
+                          children: [
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Column(
+                                  children: [
+                                    _nameTag(
+                                      context.l10n.previewMinjun,
+                                      MosiColors.sky,
+                                      MosiColors.navy,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    SizedBox(
+                                      key: const Key(
+                                        'liar-preview-minjun-cards',
+                                      ),
+                                      width: 110,
+                                      height: 48,
+                                      child: hand([-8, 8], gap: 22, base: 22),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 34),
+                                child: SizedBox(
+                                  key: const Key('liar-preview-minjun-button'),
+                                  width: 58,
+                                  height: 58,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Positioned(
+                                        left: -7,
+                                        top: -7,
+                                        right: -7,
+                                        bottom: -7,
+                                        child: _fade(
+                                          ringOpacity,
+                                          Transform.scale(
+                                            scale: ringScale,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: MosiColors.coral,
+                                                  width: 3,
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
+                                      Transform.scale(
+                                        scale: btnScale,
+                                        child: Container(
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: MosiColors.white,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: MosiColors.ink,
+                                              width: 3,
+                                            ),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Color(0xFFCFC9D4),
+                                                offset: Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Text(
+                                            'Liar',
+                                            style: MosiFonts.playfair(
+                                              locale:
+                                                  Localizations.maybeLocaleOf(
+                                                    context,
+                                                  ),
+                                              size: 17,
+                                              color: MosiColors.ink,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Transform.scale(
-                                  scale: btnScale,
-                                  child: const NoirPuck(
-                                    label: 'Liar',
-                                    ringColor: LiarsPokerColors.red,
-                                    size: 40,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       Positioned(
@@ -867,7 +807,7 @@ class _LiarPlayScene extends StatelessWidget {
                             alignment: const Alignment(0.8, 1),
                             child: _speech(
                               context.l10n.previewLiarClaim,
-                              background: LiarsPokerColors.pinkLight,
+                              background: MosiColors.coral,
                               tailRight: true,
                             ),
                           ),
@@ -878,17 +818,41 @@ class _LiarPlayScene extends StatelessWidget {
                 ),
               ),
             ),
-            // 휴대폰 3: 하린(지켜보는 중)
+            // 휴대폰 3: 하린
             _at(
               285,
               300,
               _PhoneFrame(
-                screenColor: _night,
-                child: phoneScreen(
-                  name: context.l10n.previewHarin,
-                  characterId: 'cat',
-                  status: context.l10n.previewWatching,
-                  hand: const ['Q', 'Joker', 'K'],
+                screenColor: _violet,
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Column(
+                          children: [
+                            _nameTag(
+                              context.l10n.previewHarin,
+                              MosiColors.sun,
+                              MosiColors.navy,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              context.l10n.previewWatching,
+                              style: MosiFonts.sans(
+                                locale: Localizations.maybeLocaleOf(context),
+                                size: 10,
+                                weight: FontWeight.w600,
+                                color: const Color(0xFFE2D2E8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(child: hand([-8, 8], gap: 22, base: 22)),
+                  ],
                 ),
               ),
             ),
@@ -906,19 +870,18 @@ class _LiarPlayScene extends StatelessWidget {
                       height: 62,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: LiarsPokerColors.red,
+                        color: MosiColors.red,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _ivory, width: 4),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: LiarsPokerColors.redShadow,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
+                        border: Border.all(color: MosiColors.ink, width: 4),
                       ),
                       child: Text(
                         'LIAR!',
-                        style: LiarsPokerFonts.western(size: 34, color: _ivory),
+                        style: MosiFonts.playfair(
+                          locale: Localizations.maybeLocaleOf(context),
+                          size: 34,
+                          color: MosiColors.white,
+                          letterSpacing: 1,
+                        ),
                       ),
                     ),
                   ),
@@ -932,31 +895,73 @@ class _LiarPlayScene extends StatelessWidget {
   }
 }
 
-/// 게임 카드 뒷면 그림입니다.
 class _LiarCardBack extends StatelessWidget {
   const _LiarCardBack();
 
   @override
-  Widget build(BuildContext context) => liar
-      .Assets
-      .games
-      .liarsPoker
-      .images
-      .cards
-      .whiteBack
-      .game
-      .image(width: 44, height: 62, fit: BoxFit.contain);
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 62,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: MosiColors.white,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: MosiColors.ink, width: 2.5),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: MosiColors.ink, width: 1),
+        ),
+        alignment: Alignment.center,
+        child: _rotated(
+          45,
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              border: Border.all(color: MosiColors.ink, width: 1.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// 게임 카드 앞면 그림입니다.
 class _LiarCardFace extends StatelessWidget {
-  const _LiarCardFace({required this.label});
+  const _LiarCardFace({
+    required this.label,
+    this.background = MosiColors.white,
+    this.color = MosiColors.ink,
+  });
 
   final String label;
+  final Color background;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) =>
-      _partsImage(_liarCard(label), label, width: 44, height: 62);
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 62,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: MosiColors.ink, width: 2.5),
+      ),
+      child: Text(
+        label,
+        style: MosiFonts.playfair(
+          locale: Localizations.maybeLocaleOf(context),
+          size: 30,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 //=======================파이널콜 미리보기 (14.66초)==============================
@@ -1706,7 +1711,7 @@ class _FinalPlayScene extends StatelessWidget {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const FinalCallPopAvatar(
-                                            characterId: 'rabbit',
+                                            characterId: 'penguin',
                                             color: _red,
                                             size: 20,
                                             borderWidth: 2,
@@ -2466,7 +2471,7 @@ class _MafiaPlayScene extends StatelessWidget {
                         children: [
                           topBar(
                             context.l10n.previewSara,
-                            'rabbit',
+                            'penguin',
                             nameColor: Color.lerp(_paper, _ink, dayO)!,
                           ),
                           const SizedBox(height: 10),
@@ -2586,7 +2591,7 @@ class _MafiaPlayScene extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       cardRow([
-                        portrait(context.l10n.previewSara, 'rabbit'),
+                        portrait(context.l10n.previewSara, 'penguin'),
                         portrait(
                           context.l10n.previewJiwoo,
                           'owl',
@@ -2637,7 +2642,7 @@ class _MafiaPlayScene extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     cardRow([
-                      portrait(context.l10n.previewSara, 'rabbit'),
+                      portrait(context.l10n.previewSara, 'penguin'),
                       portrait(
                         context.l10n.previewJiwoo,
                         'owl',
@@ -2773,16 +2778,6 @@ Widget _partsImage(
   semanticLabel: label,
 );
 
-GameImage _liarCard(String face) {
-  final cards = liar.Assets.games.liarsPoker.images.cards;
-  return switch (face) {
-    'A' => cards.whiteA.game,
-    'K' => cards.whiteK.game,
-    'Q' => cards.whiteQ.game,
-    _ => cards.whiteJoker.game,
-  };
-}
-
 /// 게임과 같은 Party Pop 카드 앞면입니다.
 Widget _finalCardFace(String color, int value, double width) =>
     FinalCallCardFace(
@@ -2848,12 +2843,6 @@ Widget _partsCard({
   ),
 );
 
-TextStyle _partsTitle() =>
-    MosiFonts.sans(size: 15, weight: FontWeight.w700, color: MosiColors.navy);
-
-TextStyle _partsMuted({double size = 12}) =>
-    MosiFonts.sans(size: size, color: MosiColors.muted, height: 1.5);
-
 /// 3초 주기로 위아래로 떠다닙니다(mg-float).
 class _Float extends StatelessWidget {
   const _Float({required this.child, this.delay = 0});
@@ -2874,1233 +2863,6 @@ class _Float extends StatelessWidget {
   }
 }
 
-//=======================구성품 · 라이어스 포커==============================
-class _LiarParts extends StatelessWidget {
-  const _LiarParts();
-
-  @override
-  Widget build(BuildContext context) {
-    const cards = [
-      ('A', '에이스', 6, MosiColors.white, Color(0xFFE0302E), 34.0, 0.0),
-      ('K', '킹', 6, MosiColors.white, MosiColors.ink, 34.0, 0.3),
-      ('Q', '퀸', 6, MosiColors.white, Color(0xFFE0302E), 34.0, 0.6),
-      ('JOKER', '조커', 2, MosiColors.sun, MosiColors.ink, 13.0, 0.9),
-    ];
-    const decks = [(2, 10), (3, 17), (4, 20), (5, 27), (6, 30)];
-    const wheels = [(16, 4, '첫 번째'), (15, 5, '두 번째'), (12, 11, '세 번째')];
-
-    Widget fanCard(
-      String label,
-      Color bg,
-      Color fg,
-      double size,
-      double dy,
-      double rot,
-    ) => Transform.translate(
-      offset: Offset(0, dy),
-      child: _rotated(
-        rot,
-        _partsImage(_liarCard(label), '$label 카드', width: 34, height: 48),
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 125,
-            child: _partsCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text('카드 덱', style: _partsTitle()),
-                      const Spacer(),
-                      Text(
-                        '4명이면 20장',
-                        style: MosiFonts.grotesk(
-                          size: 13,
-                          color: const Color(0xFF6E2A82),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        for (final (face, name, n, _, _, _, delay) in cards)
-                          Column(
-                            children: [
-                              _Float(
-                                delay: delay,
-                                child: SizedBox(
-                                  width: 72,
-                                  height: 98,
-                                  child: Stack(
-                                    children: [
-                                      for (final (dx, dy, _) in const [
-                                        (8.0, 0.0, Color(0xFF4A1A5E)),
-                                        (4.0, 4.0, Color(0xFF6E2A82)),
-                                      ])
-                                        Positioned(
-                                          left: dx,
-                                          top: dy,
-                                          child: _partsImage(
-                                            liar
-                                                .Assets
-                                                .games
-                                                .liarsPoker
-                                                .images
-                                                .cards
-                                                .whiteBack
-                                                .game,
-                                            '카드 뒷면',
-                                            width: 64,
-                                            height: 90,
-                                          ),
-                                        ),
-                                      Positioned(
-                                        left: 0,
-                                        top: 8,
-                                        child: _partsImage(
-                                          _liarCard(face),
-                                          '$name 카드',
-                                          width: 64,
-                                          height: 90,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                name,
-                                style: MosiFonts.sans(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: MosiColors.navy,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: MosiColors.cream,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: MosiColors.ink,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Text(
-                                  '× $n',
-                                  style: MosiFonts.grotesk(
-                                    size: 13,
-                                    color: MosiColors.navy,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: MosiColors.cream,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 88,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1B1022),
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            alignment: Alignment.center,
-                            child: SizedBox(
-                              width: 34 * 5 - 8 * 4,
-                              height: 56,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  for (final (i, (l, bg, fg, s, dy, r))
-                                      in const [
-                                        (
-                                          'A',
-                                          MosiColors.white,
-                                          Color(0xFFE0302E),
-                                          20.0,
-                                          4.0,
-                                          -14.0,
-                                        ),
-                                        (
-                                          'K',
-                                          MosiColors.white,
-                                          MosiColors.ink,
-                                          20.0,
-                                          0.0,
-                                          -7.0,
-                                        ),
-                                        (
-                                          'JOKER',
-                                          MosiColors.sun,
-                                          MosiColors.ink,
-                                          7.0,
-                                          -3.0,
-                                          0.0,
-                                        ),
-                                        (
-                                          'Q',
-                                          MosiColors.white,
-                                          Color(0xFFE0302E),
-                                          20.0,
-                                          0.0,
-                                          7.0,
-                                        ),
-                                        (
-                                          'A',
-                                          MosiColors.white,
-                                          Color(0xFFE0302E),
-                                          20.0,
-                                          4.0,
-                                          14.0,
-                                        ),
-                                      ].indexed)
-                                    Positioned(
-                                      left: i * 26.0,
-                                      top: 4,
-                                      child: fanCard(l, bg, fg, s, dy, r),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text.rich(
-                            const TextSpan(
-                              children: [
-                                TextSpan(text: '시작할 때 '),
-                                TextSpan(
-                                  text: '각자 5장씩',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: MosiColors.navy,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' 받아요. 조커는 A·K·Q 어디에나 쓸 수 있는 만능 카드예요.',
-                                ),
-                              ],
-                            ),
-                            style: _partsMuted(size: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  const MosiDashedDivider(color: Color(0xFFD4CFE6)),
-                  const SizedBox(height: 12),
-                  Text(
-                    '인원에 따라 덱이 달라져요',
-                    style: MosiFonts.sans(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: MosiColors.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      for (final (i, (players, count)) in decks.indexed) ...[
-                        if (i > 0) const SizedBox(width: 6),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(
-                              color: players == 4
-                                  ? MosiColors.sun
-                                  : MosiColors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: MosiColors.ink,
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '$players명',
-                                  style: MosiFonts.sans(
-                                    size: 11,
-                                    weight: FontWeight.w700,
-                                    color: MosiColors.navy,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                Text(
-                                  '$count장',
-                                  style: MosiFonts.grotesk(
-                                    size: 15,
-                                    color: MosiColors.navy,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _partsCard(
-                    delay: const Duration(milliseconds: 80),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text('벌칙 룰렛 · 갈수록 불리해요', style: _partsTitle()),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            for (final (all, bad, label) in wheels)
-                              Column(
-                                children: [
-                                  CustomPaint(
-                                    size: const Size(68, 68),
-                                    painter: _WheelPainter(all: all, bad: bad),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    label,
-                                    style: MosiFonts.sans(
-                                      size: 12,
-                                      weight: FontWeight.w700,
-                                      color: MosiColors.navy,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '$all칸 중 $bad칸',
-                                    style: MosiFonts.sans(
-                                      size: 11,
-                                      weight: FontWeight.w700,
-                                      color: const Color(0xFFA82E40),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 160),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('내 휴대폰 버튼', style: _partsTitle()),
-                      const SizedBox(height: 10),
-                      // 게임과 같은 상아색 퍽 버튼입니다(Liar · 제출 · Fold).
-                      Semantics(
-                        image: true,
-                        label: 'Liar, 제출, Fold 버튼',
-                        excludeSemantics: true,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: LiarsPokerColors.night,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              NoirPuck(
-                                label: 'Liar',
-                                ringColor: LiarsPokerColors.red,
-                                size: 54,
-                              ),
-                              NoirPuck(
-                                label: '제출',
-                                western: false,
-                                ringColor: LiarsPokerColors.gold,
-                                size: 54,
-                              ),
-                              NoirPuck(
-                                label: 'Fold',
-                                ringColor: LiarsPokerColors.dim,
-                                size: 54,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'FOLD는 카드가 남은 사람이 나 혼자일 때만 고를 수 있어요',
-                        style: _partsMuted(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 240),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 102,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: LiarsPokerColors.night,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          children: [
-                            FittedBox(
-                              child: Text(
-                                "ACE'S TABLE",
-                                style: LiarsPokerFonts.western(
-                                  size: 14,
-                                  color: LiarsPokerColors.goldLight,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '기준 카드 · A',
-                              style: MosiFonts.sans(
-                                size: 11,
-                                color: MosiColors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '라운드마다 태블릿이 A, K, Q 중 하나를 정해요',
-                          style: MosiFonts.sans(
-                            size: 13,
-                            color: MosiColors.navy,
-                            height: 1.45,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WheelPainter extends CustomPainter {
-  const _WheelPainter({required this.all, required this.bad});
-
-  final int all;
-  final int bad;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.scale(size.width / 100);
-    const center = Offset(50, 50);
-    final rect = Rect.fromCircle(center: center, radius: 46);
-    final sweep = 2 * math.pi / all;
-    final stroke = Paint()
-      ..color = MosiColors.ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    for (var i = 0; i < all; i++) {
-      final start = i * sweep - math.pi / 2;
-      final path = Path()
-        ..moveTo(50, 50)
-        ..arcTo(rect, start, sweep, false)
-        ..close();
-      canvas.drawPath(
-        path,
-        Paint()..color = i < bad ? const Color(0xFFE0302E) : MosiColors.cream,
-      );
-      canvas.drawPath(path, stroke);
-    }
-    canvas.drawCircle(
-      center,
-      46,
-      Paint()
-        ..color = MosiColors.ink
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4,
-    );
-    canvas.drawCircle(center, 9, Paint()..color = MosiColors.ink);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WheelPainter oldDelegate) =>
-      oldDelegate.all != all || oldDelegate.bad != bad;
-}
-
-//=======================구성품 · 파이널콜==============================
-class _FinalParts extends StatelessWidget {
-  const _FinalParts();
-
-  @override
-  Widget build(BuildContext context) {
-    const rows = [
-      ('빨강', 'red'),
-      ('파랑', 'blue'),
-      ('노랑', 'yellow'),
-      ('초록', 'green'),
-    ];
-    const fan = [
-      (7, 'red', -10.0),
-      (3, 'red', -3.0),
-      (7, 'blue', 4.0),
-      (2, 'yellow', 10.0),
-    ];
-
-    Widget team(String label, Color bg, Color fg, {bool dashed = false}) =>
-        Expanded(
-          child: dashed
-              ? MosiDashedBorder(
-                  color: FinalCallColors.green,
-                  radius: 8,
-                  strokeWidth: 2.5,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    alignment: Alignment.center,
-                    child: Text(
-                      label,
-                      style: MosiFonts.sans(
-                        size: 14,
-                        weight: FontWeight.w700,
-                        color: fg,
-                      ),
-                    ),
-                  ),
-                )
-              : Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: MosiColors.ink, width: 2.5),
-                  ),
-                  child: Text(
-                    label,
-                    style: MosiFonts.sans(
-                      size: 14,
-                      weight: FontWeight.w700,
-                      color: fg,
-                    ),
-                  ),
-                ),
-        );
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 130,
-            child: _partsCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text('숫자 카드 40장', style: _partsTitle()),
-                      const Spacer(),
-                      Text(
-                        '4색 × 1~10',
-                        style: MosiFonts.grotesk(
-                          size: 13,
-                          color: MosiColors.navy,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  for (final (name, color) in rows) ...[
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 34,
-                          child: Text(
-                            name,
-                            style: MosiFonts.sans(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: MosiColors.navy,
-                            ),
-                          ),
-                        ),
-                        for (var n = 1; n <= 10; n++) ...[
-                          if (n > 1) const SizedBox(width: 4),
-                          Expanded(
-                            child: Center(
-                              child: LayoutBuilder(
-                                builder: (context, constraints) =>
-                                    _finalCardFace(
-                                      color,
-                                      n,
-                                      math.min(
-                                        constraints.maxWidth,
-                                        40 / finalCallCardHeightRatio,
-                                      ),
-                                    ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: MosiColors.cream,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 86,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: FinalCallColors.ink,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: FinalCallColors.night,
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (final (i, (n, color, r)) in fan.indexed)
-                                  Transform.translate(
-                                    offset: Offset(-6.0 * i, 0),
-                                    child: _rotated(
-                                      r,
-                                      _finalCardFace(color, n, 31),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text.rich(
-                            const TextSpan(
-                              children: [
-                                TextSpan(text: '처음에 '),
-                                TextSpan(
-                                  text: '각자 4장씩',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: MosiColors.navy,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' 받고, 내 차례마다 더미나 버린 카드에서 한 장 가져와 바꿔요.',
-                                ),
-                              ],
-                            ),
-                            style: _partsMuted(size: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  const MosiDashedDivider(color: Color(0xFFD4CFE6)),
-                  const SizedBox(height: 12),
-                  Text(
-                    '점수 = 같은 색 합과 같은 숫자 합 중 큰 쪽',
-                    style: MosiFonts.sans(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: MosiColors.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE3E1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: FinalCallColors.red,
-                            width: 2,
-                          ),
-                        ),
-                        child: Text(
-                          '7+3 = 10',
-                          style: MosiFonts.grotesk(
-                            size: 13,
-                            color: MosiColors.navy,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'vs',
-                        style: MosiFonts.grotesk(
-                          size: 13,
-                          color: MosiColors.navy,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: FinalCallColors.yellow,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: MosiColors.ink, width: 2),
-                        ),
-                        child: Text(
-                          '7+7 = 14',
-                          style: MosiFonts.grotesk(
-                            size: 13,
-                            color: MosiColors.navy,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text.rich(
-                        const TextSpan(
-                          children: [
-                            TextSpan(text: '→ 내 점수 '),
-                            TextSpan(
-                              text: '14',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        style: MosiFonts.sans(
-                          size: 13,
-                          weight: FontWeight.w700,
-                          color: MosiColors.navy,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _partsCard(
-                  delay: const Duration(milliseconds: 80),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('팀 · 마주 앉은 사람이 내 편', style: _partsTitle()),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          team('레드팀', FinalCallColors.red, MosiColors.white),
-                          const SizedBox(width: 8),
-                          team('블루팀', FinalCallColors.blue, MosiColors.white),
-                          const SizedBox(width: 8),
-                          team(
-                            '그린팀',
-                            MosiColors.white,
-                            FinalCallColors.green,
-                            dashed: true,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '4명은 2대2, 6명이면 그린팀이 더해져 2대2대2',
-                        style: _partsMuted(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 160),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('팀마다 하트 3개', style: _partsTitle()),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          const FinalCallPopHeart(
-                            color: FinalCallColors.red,
-                            size: 30,
-                          ),
-                          const SizedBox(width: 8),
-                          const FinalCallPopHeart(
-                            color: FinalCallColors.red,
-                            size: 30,
-                          ),
-                          const SizedBox(width: 8),
-                          _Float(
-                            child: const FinalCallPopHeart(
-                              color: FinalCallColors.red,
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '꼴찌면 1개, CALL한 사람이 꼴찌면 2개를 잃어요',
-                              style: _partsMuted(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _partsCard(
-                    delay: const Duration(milliseconds: 240),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Semantics(
-                          image: true,
-                          excludeSemantics: true,
-                          label: 'CALL 버튼',
-                          child: FinalCallPopBox(
-                            color: FinalCallColors.red,
-                            radius: 14,
-                            borderWidth: 3,
-                            shadowDepth: 4,
-                            width: 110,
-                            height: 50,
-                            child: Center(
-                              child: Text(
-                                'CALL!',
-                                style: finalCallPopText(
-                                  20,
-                                  color: Colors.white,
-                                  shadows: finalCallPopOutline(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '이길 것 같을 때 누르면, 나머지는 마지막으로 한 번 바꾸고 모두 공개해요. '
-                          '같은 숫자 4장이면 상대 팀 전원이 하트를 잃어요.',
-                          style: _partsMuted(size: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-//=======================구성품 · 마피아==============================
-class _MafiaParts extends StatelessWidget {
-  const _MafiaParts();
-
-  @override
-  Widget build(BuildContext context) {
-    const groups = [
-      (
-        '시민 팀',
-        19,
-        MosiColors.sky,
-        ['citizen', 'police', 'doctor', 'bodyguard'],
-        '외 15종',
-      ),
-      (
-        '마피아 팀',
-        15,
-        Color(0xFFFF0000),
-        ['mafia', 'mafia_boss', 'spy', 'madam'],
-        '외 11종',
-      ),
-      (
-        '중립',
-        9,
-        MosiColors.sun,
-        ['jester', 'survivor', 'cult_leader', 'vampire'],
-        '외 5종',
-      ),
-    ];
-    // 게임의 누아르 포스터 색으로 하루를 나눕니다.
-    const flow = [
-      ('밤', MafiaColors.noirInk, MafiaColors.noirPaper),
-      ('아침', MafiaColors.noirPaper, MafiaColors.noirInk),
-      ('토론', MafiaColors.noirBrass, MafiaColors.noirInk),
-      ('비밀 투표', MafiaColors.noirSlab, MafiaColors.noirPaper),
-      ('처형 발표', MafiaColors.noirScarlet, MafiaColors.noirPaper),
-    ];
-
-    Widget roleCard(String id) {
-      final role = MafiaRoles.find(id)!;
-      return _partsImage(
-        role.card!,
-        '${role.displayName} 역할 카드',
-        width: 58,
-        height: 85,
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 135,
-            child: _partsCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text('역할 카드 43종', style: _partsTitle()),
-                      const Spacer(),
-                      Text(
-                        '방장이 골라 넣어요',
-                        style: MosiFonts.grotesk(
-                          size: 13,
-                          color: const Color(0xFFA82E40),
-                        ),
-                      ),
-                    ],
-                  ),
-                  for (final (title, count, color, roles, rest) in groups) ...[
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(3),
-                            border: Border.all(color: MosiColors.ink, width: 2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          title,
-                          style: MosiFonts.sans(
-                            size: 14,
-                            weight: FontWeight.w700,
-                            color: MosiColors.navy,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '$count종',
-                          style: MosiFonts.grotesk(
-                            size: 13,
-                            color: MosiColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (final role in roles) ...[
-                          roleCard(role),
-                          const SizedBox(width: 6),
-                        ],
-                        const SizedBox(width: 4),
-                        Text(
-                          rest,
-                          style: MosiFonts.sans(
-                            size: 12,
-                            weight: FontWeight.w700,
-                            color: MosiColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const Spacer(),
-                  Text(
-                    '내 역할 카드는 내 휴대폰에만 보여요. 다른 사람 역할은 끝날 때까지 비밀이에요.',
-                    style: _partsMuted(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _partsCard(
-                  delay: const Duration(milliseconds: 80),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('하루의 흐름', style: _partsTitle()),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          for (final (i, (label, bg, fg)) in flow.indexed) ...[
-                            if (i > 0)
-                              Text(
-                                '→',
-                                style: MosiFonts.sans(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: const Color(0xFF8C8AA8),
-                                ),
-                              ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: bg,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: MosiColors.ink,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                label,
-                                style: MosiFonts.sans(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: fg,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '밤에는 휴대폰으로 몰래 능력을 쓰고, 낮에는 토론 뒤 비밀 투표로 한 명을 처형해요.',
-                        style: _partsMuted(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 160),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 62,
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF111111),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        // 게임 태블릿의 밤 화면처럼 먹색 하늘과 도시 실루엣입니다.
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: ColoredBox(
-                            color: MafiaColors.noirInk,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  child: MafiaNoirCityscape(
-                                    width: 80,
-                                    height: 26,
-                                    moonSize: 0,
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 9,
-                                  child: Text(
-                                    '밤이 되었습니다',
-                                    style: mafiaNoirDisplay(10),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              const TextSpan(
-                                text: '태블릿이 사회자예요.\n',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              TextSpan(
-                                text: '밤낮을 알리고, 결과를 발표하고, 시간을 재요.',
-                                style: _partsMuted(size: 13),
-                              ),
-                            ],
-                          ),
-                          style: MosiFonts.sans(
-                            size: 13,
-                            color: MosiColors.navy,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _partsCard(
-                    delay: const Duration(milliseconds: 240),
-                    child: Row(
-                      children: [
-                        Text(
-                          '4–12',
-                          style: MosiFonts.grotesk(
-                            size: 34,
-                            color: MosiColors.navy,
-                            height: 1,
-                          ),
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(
-                                  text: '명이 함께해요.\n',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                TextSpan(
-                                  text: '인원에 맞춰 역할 구성을 바꿀 수 있어요.',
-                                  style: _partsMuted(size: 13),
-                                ),
-                              ],
-                            ),
-                            style: MosiFonts.sans(
-                              size: 13,
-                              color: MosiColors.navy,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 //=======================홀덤 미리보기 (10초)==============================
 // 플랍 공개 → 사라 레이즈 → 민준 콜(하린 폴드) → 턴·리버 → 쇼다운 WIN 순서로
 // 한 판을 보여 줍니다. 카드 앞면은 게임과 같은 `HoldemCardView`로 그립니다.
@@ -4115,7 +2877,7 @@ Widget _holdemBackCard(double width) {
   final inset = width * .08;
   return Semantics(
     image: true,
-    label: '카드 뒷면',
+    label: '카드 뒷면'.localized,
     child: Container(
       width: width,
       height: height,
@@ -4693,424 +3455,6 @@ class _HoldemPlayScene extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-//=======================구성품 · 홀덤==============================
-class _HoldemParts extends StatelessWidget {
-  const _HoldemParts();
-
-  @override
-  Widget build(BuildContext context) {
-    final suits = [
-      (_holdemCard('a', 'spades'), '스페이드', 0.0),
-      (_holdemCard('k', 'hearts'), '하트', 0.3),
-      (_holdemCard('q', 'diamonds'), '다이아', 0.6),
-      (_holdemCard('j', 'clubs'), '클로버', 0.9),
-    ];
-    const ranks = [
-      '스트레이트 플러시',
-      '포카드',
-      '풀하우스',
-      '플러시',
-      '스트레이트',
-      '트리플',
-      '투 페어',
-      '원 페어',
-      '하이 카드',
-    ];
-    const blinds = ['10/20', '20/40', '40/80', '80/160', '160/320'];
-
-    Widget heading(String title, String trailing) => Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Text(title, style: _partsTitle()),
-        const Spacer(),
-        Text(
-          trailing,
-          style: MosiFonts.grotesk(size: 13, color: MosiColors.green),
-        ),
-      ],
-    );
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 125,
-            child: _partsCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  heading('카드 덱', '52장 표준 덱'),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final (card, name, delay) in suits)
-                        Column(
-                          children: [
-                            _Float(
-                              delay: delay,
-                              child: SizedBox(
-                                width: 72,
-                                height: 100,
-                                child: Stack(
-                                  children: [
-                                    Positioned(
-                                      left: 8,
-                                      top: 0,
-                                      child: _holdemBackCard(62),
-                                    ),
-                                    Positioned(
-                                      left: 0,
-                                      top: 8,
-                                      child: HoldemCardView(
-                                        card: card,
-                                        width: 62,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              name,
-                              style: MosiFonts.sans(
-                                size: 13,
-                                weight: FontWeight.w700,
-                                color: MosiColors.navy,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: MosiColors.cream,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: MosiColors.ink,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                '× 13',
-                                style: MosiFonts.grotesk(
-                                  size: 13,
-                                  color: MosiColors.navy,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: MosiColors.cream,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 176,
-                          height: 74,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: HoldemColors.felt,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: MosiColors.ink, width: 2),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (final card in [
-                                _holdemCard('a', 'spades'),
-                                _holdemCard('7', 'spades'),
-                              ]) ...[
-                                HoldemCardView(
-                                  card: card,
-                                  width: 19,
-                                  layout: HoldemCardLayout.mini,
-                                ),
-                                const SizedBox(width: 2),
-                              ],
-                              const SizedBox(width: 8),
-                              for (final card in _HoldemPlayScene._board) ...[
-                                HoldemCardView(
-                                  card: card,
-                                  width: 19,
-                                  layout: HoldemCardLayout.mini,
-                                ),
-                                const SizedBox(width: 2),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text.rich(
-                            const TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '내 카드 2장',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: MosiColors.navy,
-                                  ),
-                                ),
-                                TextSpan(text: '과 테이블의 '),
-                                TextSpan(
-                                  text: '공용 카드 5장',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: MosiColors.navy,
-                                  ),
-                                ),
-                                TextSpan(text: ' 중 가장 강한 5장으로 겨뤄요.'),
-                              ],
-                            ),
-                            style: _partsMuted(size: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  const MosiDashedDivider(color: Color(0xFFD4CFE6)),
-                  const SizedBox(height: 12),
-                  Text(
-                    '족보 · 왼쪽일수록 강해요',
-                    style: MosiFonts.sans(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: MosiColors.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 5,
-                    children: [
-                      for (final (i, name) in ranks.indexed)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: i == 0 ? MosiColors.sun : MosiColors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: MosiColors.ink, width: 2),
-                          ),
-                          child: Text(
-                            '${i + 1} $name',
-                            style: MosiFonts.sans(
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: MosiColors.navy,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _partsCard(
-                    delay: const Duration(milliseconds: 80),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        heading('칩 · 블라인드', '시작 1,000칩'),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            for (var i = 0; i < 3; i++)
-                              Transform.translate(
-                                offset: Offset(-6.0 * i, -3.0 * i),
-                                child: const HoldemChip(size: 30),
-                              ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '가상 칩이라 방이 끝나면 사라져요. 칩이 0이면 탈락이에요.',
-                                style: _partsMuted(),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Text(
-                          '5판마다 블라인드가 두 배',
-                          style: MosiFonts.sans(
-                            size: 12,
-                            weight: FontWeight.w700,
-                            color: MosiColors.navy,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            for (final (i, blind) in blinds.indexed) ...[
-                              if (i > 0) const SizedBox(width: 4),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 5,
-                                  ),
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: i == 0
-                                        ? MosiColors.sun
-                                        : MosiColors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: MosiColors.ink,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: FittedBox(
-                                    child: Text(
-                                      blind,
-                                      style: MosiFonts.grotesk(
-                                        size: 12,
-                                        color: MosiColors.navy,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 160),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('내 휴대폰 버튼', style: _partsTitle()),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
-                        decoration: BoxDecoration(
-                          color: HoldemColors.felt,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Semantics(
-                          image: true,
-                          label: 'Fold, Call, Raise 버튼',
-                          child: ExcludeSemantics(
-                            child: IgnorePointer(
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  HoldemPuckButton(
-                                    label: 'Fold',
-                                    dark: true,
-                                    size: 56,
-                                    onPressed: () {},
-                                  ),
-                                  HoldemPuckButton(
-                                    label: 'Call',
-                                    amount: '400',
-                                    size: 62,
-                                    onPressed: () {},
-                                  ),
-                                  HoldemPuckButton(
-                                    label: 'Raise',
-                                    size: 56,
-                                    onPressed: () {},
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '내 차례에는 카드가 보이고, 기다릴 땐 눌러야만 보여요',
-                        style: _partsMuted(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _partsCard(
-                  delay: const Duration(milliseconds: 240),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        '2–8',
-                        style: MosiFonts.grotesk(
-                          size: 34,
-                          color: MosiColors.navy,
-                          height: 1,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              const TextSpan(
-                                text: '명이 함께해요.\n',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              TextSpan(
-                                text: '딜러 D와 블라인드 SB·BB가 판마다 돌아가요.',
-                                style: _partsMuted(size: 12),
-                              ),
-                            ],
-                          ),
-                          style: MosiFonts.sans(
-                            size: 13,
-                            color: MosiColors.navy,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -10,7 +10,7 @@ enum OnboardingStatus { settingPassword, settingProfile, complete }
 /// 스피너를 오가며 멈춥니다. 실제로 `apple`이 빠져 애플 로그인 뒤 앱이 무한
 /// 로딩에 갇혔습니다(2026-08-22). `auth/onboarding_parity_test.dart`가 두 목록을
 /// 대조합니다.
-enum OnboardingProvider { emailLink, google, apple, legacyPassword }
+enum OnboardingProvider { emailLink, google, apple, legacyPassword, anonymous }
 
 class UserOnboarding {
   const UserOnboarding({

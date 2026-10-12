@@ -63,10 +63,7 @@ class _Game extends Fake implements FinalCallController {
 Widget _panel(Widget child) => MaterialApp(
   home: Scaffold(
     body: Center(
-      child: SizedBox(
-        height: 318,
-        child: FinalCallPhonePanel(child: child),
-      ),
+      child: SizedBox(height: 318, child: FinalCallPhonePanel(child: child)),
     ),
   ),
 );
@@ -91,10 +88,7 @@ void main() {
     ]);
     expect(triple.score, 21);
     expect(FinalCallCopy.combinationEquation(triple), '7 × 3 = 21점');
-    expect(
-      FinalCallCopy.combinationName(triple, (_) => ''),
-      '같은 숫자 7 × 3',
-    );
+    expect(FinalCallCopy.combinationName(triple, (_) => ''), '같은 숫자 7 × 3');
 
     final color = finalCallBestCombination([
       _card('red', 9),
@@ -109,9 +103,7 @@ void main() {
     expect(FinalCallCopy.replaceWith('파랑', 7), '파랑 7이랑 바꾸기');
   });
 
-  testWidgets('턴 시작 패널은 덱·공개 카드를 바로 가져오고 CALL은 꾹 눌러야 선언된다', (
-    tester,
-  ) async {
+  testWidgets('턴 시작 패널은 덱·공개 카드를 바로 가져오고 CALL은 꾹 눌러야 선언된다', (tester) async {
     final sources = <String>[];
     var calls = 0;
     await tester.pumpWidget(
@@ -191,8 +183,8 @@ void main() {
     expect(find.text('14'), findsOneWidget);
     expect(find.text(FinalCallCopy.now), findsOneWidget);
     expect(find.text(FinalCallCopy.partner), findsOneWidget);
-    // b(지금) → partner → d → 나: 나는 3번째 뒤입니다.
-    expect(find.text('3번째 뒤'), findsOneWidget);
+    // b(지금) → partner → d → 나: 내 줄에는 몇 번째 뒤인지 적지 않습니다.
+    expect(find.textContaining('번째 뒤'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

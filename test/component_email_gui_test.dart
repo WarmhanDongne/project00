@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
@@ -200,8 +201,13 @@ void main() {
         names.add(asset.assetName);
       }
       if (game == 'liars_poker') {
+        // 카드 앞면과 뒷면은 이미지 파일 없이 코드로 그립니다.
         for (final face in ['A', 'K', 'Q', 'Joker', 'back']) {
-          expect(names.any((p) => p.endsWith('white $face.webp')), isTrue);
+          expect(names.any((p) => p.endsWith('white $face.webp')), isFalse);
+        }
+        expect(find.bySemanticsLabel('카드 뒷면'), findsWidgets);
+        for (final label in ['에이스', '킹', '퀸', '조커']) {
+          expect(find.bySemanticsLabel('$label 카드'), findsWidgets);
         }
         // 휴대폰 버튼은 게임과 같은 퍽 위젯으로 그립니다.
         expect(find.bySemanticsLabel('Liar, 제출, Fold 버튼'), findsOneWidget);
@@ -211,7 +217,8 @@ void main() {
             expect(find.bySemanticsLabel('$color $n'), findsWidgets);
           }
         }
-        expect(find.byType(FinalCallCardFace), findsNWidgets(44));
+        // 구성품에는 덱 40장만 보여 줍니다.
+        expect(find.byType(FinalCallCardFace), findsNWidgets(40));
         expect(find.byType(FinalCallPopHeart), findsNWidgets(3));
         expect(find.bySemanticsLabel('CALL 버튼'), findsOneWidget);
       } else if (game == 'holdem') {
@@ -229,6 +236,58 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('라이어스 포커 구성품은 지금 방 인원의 카드 수만 노란색으로 표시한다', (tester) async {
+    Color? barColor(int players) {
+      final bar = find.descendant(
+        of: find.byKey(ValueKey('liar-deck-$players')),
+        matching: find.byType(AnimatedContainer),
+      );
+      final box = tester.widget<AnimatedContainer>(bar).decoration;
+      return (box! as BoxDecoration).color;
+    }
+
+    Future<void> pump(int? players) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 694,
+                height: 560,
+                child: GameDetailStage(
+                  child: buildGameParts('liars_poker', playerCount: players)!,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    await pump(4);
+    expect(barColor(4), MosiColors.sun);
+    for (final other in [2, 3, 5, 6]) {
+      expect(barColor(other), MosiColors.white);
+    }
+    expect(find.text('4명 20장'), findsOneWidget);
+
+    await pump(6);
+    expect(barColor(6), MosiColors.sun);
+    expect(barColor(4), MosiColors.white);
+    expect(find.text('6명 30장'), findsOneWidget);
+
+    // 방이 없거나 인원이 덱 범위 밖이면 어느 칸도 강조하지 않습니다.
+    for (final players in [null, 7]) {
+      await pump(players);
+      for (final count in [2, 3, 4, 5, 6]) {
+        expect(barColor(count), MosiColors.white);
+      }
+    }
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('홀덤 플레이 미리보기는 한 판을 반복하며 쇼다운까지 보여 준다', (tester) async {
     await tester.pumpWidget(
@@ -253,6 +312,35 @@ void main() {
     // 10초 주기로 처음 장면으로 돌아옵니다.
     await tester.pump(const Duration(milliseconds: 2800));
     expect(find.text('POT 30'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('liars poker right phone keeps cards above the action button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 694,
+              height: 560,
+              child: buildGamePlayPreview('liars_poker')!,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+
+    final cards = tester.getRect(
+      find.byKey(const Key('liar-preview-minjun-cards')),
+    );
+    final button = tester.getRect(
+      find.byKey(const Key('liar-preview-minjun-button')),
+    );
+    expect(cards.center.dy, lessThan(button.center.dy));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

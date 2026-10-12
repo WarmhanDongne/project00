@@ -4,6 +4,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/widgets.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:game_liars_poker/phone/phone_board.dart';
@@ -35,18 +36,18 @@ class LiarsPokerGame extends TemplateGame {
   @override
   String get id => 'liars_poker';
   @override
-  String get title => "Liar's Poker";
+  String get title =>
+      GameLocale.select(ko: '라이어스', en: 'Liars', zhHans: '说谎者', zhHant: '說謊者');
   @override
   String get leaveFunctionName => 'game_liars_poker_leave_game';
   @override
   PhoneGameOrientation get phoneOrientation =>
       PhoneGameOrientation.portraitAndLandscape;
-  // 자리 배치 화면의 테이블이 확대되며 게임 화면의 보랏빛 펠트로 이어집니다.
-  // 게임 화면 배경을 코드로 그리므로 별도 배경 이미지는 없습니다.
   @override
-  Color get tableColor => LiarsPokerColors.felt;
+  Color get tableColor => LiarsPokerColors.primary;
   @override
-  ImageProvider? get tableBackgroundImage => null;
+  ImageProvider get tableBackgroundImage =>
+      Assets.games.liarsPoker.images.background.background.game.provider();
   @override
   ImageProvider get layoutTableImage =>
       Assets.games.liarsPoker.images.layout.layoutTable.game.provider();
@@ -102,7 +103,7 @@ class LiarsPokerGame extends TemplateGame {
     return Builder(
       builder: (context) => CriticalNetworkGuard(
         provider: provider,
-        exitLabel: '대기실로',
+        exitLabel: '대기실로'.localized,
         onExit: () => Navigator.of(context).maybePop(),
         child: LiarsPokerTabletGame(
           playerLayout: playerLayout,

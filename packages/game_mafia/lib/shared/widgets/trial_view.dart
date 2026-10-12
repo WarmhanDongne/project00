@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/models/state_models.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 서버가 확정한 후보·단계를 두 기기에 똑같이 표시합니다.
 class MafiaTrialView extends StatelessWidget {
@@ -32,7 +33,7 @@ class MafiaTrialView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              defending ? '최후 변론' : '처형 찬반 투표',
+              (defending ? '최후 변론' : '처형 찬반 투표').localized,
               style: mafiaNoirBody(
                 16,
                 color: MafiaColors.noirBrass,
@@ -48,8 +49,8 @@ class MafiaTrialView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               defending
-                  ? (isCandidate ? '마지막으로 변론해 주세요' : '변론을 들어 주세요')
-                  : '투표권자 과반수가 찬성하면 처형됩니다',
+                  ? (isCandidate ? '마지막으로 변론해 주세요' : '변론을 들어 주세요').localized
+                  : '투표권자 과반수가 찬성하면 처형됩니다'.localized,
               textAlign: TextAlign.center,
               style: mafiaNoirBody(20),
             ),
@@ -62,9 +63,9 @@ class MafiaTrialView extends StatelessWidget {
             if (!defending && !isTablet) ...[
               const SizedBox(height: 24),
               if (hasVoted)
-                Text('투표 완료', style: mafiaNoirDisplay(28))
+                Text('투표 완료'.localized, style: mafiaNoirDisplay(28))
               else if (onVote == null)
-                Text('투표를 기다리고 있습니다', style: mafiaNoirBody(20))
+                Text('투표를 기다리고 있습니다'.localized, style: mafiaNoirBody(20))
               else
                 Wrap(
                   spacing: 16,
@@ -120,15 +121,48 @@ class MafiaLimitedDisclosure extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '$nickname님이 처형되었습니다',
+              GameLocale.select(
+                ko: '$nickname님이 처형되었습니다',
+                en: '$nickname was executed',
+                zhHans: '$nickname 被处决',
+                zhHant: '$nickname 被處決',
+              ),
               textAlign: TextAlign.center,
               style: mafiaNoirDisplay(34),
             ),
             const SizedBox(height: 24),
             Text(
               faction == null
-                  ? '신분은 공개하지 않습니다'
-                  : '${{'citizen': '시민 진영', 'mafia': '마피아 진영', 'neutral': '중립'}[faction] ?? '진영 비공개'}입니다',
+                  ? GameLocale.select(
+                      ko: '신분은 공개하지 않습니다',
+                      en: 'The role remains hidden',
+                      zhHans: '身份不公开',
+                      zhHant: '身分不公開',
+                    )
+                  : GameLocale.select(
+                      ko: '${{'citizen': '시민 진영', 'mafia': '마피아 진영', 'neutral': '중립'}[faction] ?? '진영 비공개'}입니다',
+                      en:
+                          {
+                            'citizen': 'Citizen faction',
+                            'mafia': 'Mafia faction',
+                            'neutral': 'Neutral',
+                          }[faction] ??
+                          'Faction hidden',
+                      zhHans:
+                          {
+                            'citizen': '市民阵营',
+                            'mafia': '黑手党阵营',
+                            'neutral': '中立',
+                          }[faction] ??
+                          '阵营不公开',
+                      zhHant:
+                          {
+                            'citizen': '市民陣營',
+                            'mafia': '黑手黨陣營',
+                            'neutral': '中立',
+                          }[faction] ??
+                          '陣營不公開',
+                    ),
               textAlign: TextAlign.center,
               style: mafiaNoirBody(24, color: MafiaColors.noirBrass),
             ),
@@ -152,12 +186,19 @@ class MafiaVerdictSummary extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              result.executedUid == null ? '처형 부결' : '처형 가결',
+              (result.executedUid == null ? '처형 부결' : '처형 가결').localized,
               style: mafiaNoirDisplay(48),
             ),
             const SizedBox(height: 24),
             Text(
-              '찬성 ${result.verdictYes} · 반대 ${result.verdictNo}\n기권 ${result.abstainCount}',
+              GameLocale.select(
+                ko: '찬성 ${result.verdictYes} · 반대 ${result.verdictNo}\n기권 ${result.abstainCount}',
+                en: 'Approve ${result.verdictYes} · Reject ${result.verdictNo}\nAbstain ${result.abstainCount}',
+                zhHans:
+                    '赞成 ${result.verdictYes} · 反对 ${result.verdictNo}\n弃权 ${result.abstainCount}',
+                zhHant:
+                    '贊成 ${result.verdictYes} · 反對 ${result.verdictNo}\n棄權 ${result.abstainCount}',
+              ),
               textAlign: TextAlign.center,
               style: mafiaNoirBody(
                 24,

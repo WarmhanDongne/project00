@@ -5,7 +5,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:game_liars_poker/shared/models/game_models.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_kit/recovery/models/game_session_state.dart';
 
 // ============================================================
@@ -77,7 +77,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
     players: <String, PhoneGamePlayer>{},
     roundPlays: <PublicLastPlay>[],
     handCards: <PhoneHandCard>[],
-    handCardAssets: <GameImage>[],
+    handCardAssets: <LiarsCardFace>[],
     commandInFlight: false,
     isMenuCommandInFlight: false,
     isResolvingPenalty: false,
@@ -132,7 +132,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
   final List<PhoneHandCard> handCards;
 
   // 손패를 화면에 표시할 때 사용하는 카드 이미지
-  final List<GameImage> handCardAssets;
+  final List<LiarsCardFace> handCardAssets;
 
   // 손패가 공개되었는지 여부
   final bool hasRevealedHand;
@@ -195,7 +195,7 @@ class LiarsPokerGameState implements GameSessionState<LiarsPokerGameState> {
     Map<String, PhoneGamePlayer>? players,
     List<PublicLastPlay>? roundPlays,
     List<PhoneHandCard>? handCards,
-    List<GameImage>? handCardAssets,
+    List<LiarsCardFace>? handCardAssets,
     bool? commandInFlight,
     bool? isMenuCommandInFlight,
     bool? isResolvingPenalty,

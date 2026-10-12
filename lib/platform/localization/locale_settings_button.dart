@@ -11,7 +11,7 @@ class LocaleSettingsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = LocaleSettingsScope.maybeOf(context);
     return IconButton(
-      tooltip: context.l10n.regionLanguage,
+      tooltip: context.l10n.language,
       constraints: const BoxConstraints.tightFor(width: 44, height: 44),
       padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
@@ -41,7 +41,6 @@ class LocaleSettingsDialog extends StatefulWidget {
 
 class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
   late AppLanguage _language = widget.settings.language;
-  late String _region = widget.settings.region;
   bool _saving = false;
   bool _failed = false;
 
@@ -51,7 +50,11 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
       _saving = true;
       _failed = false;
     });
-    final saved = await widget.settings.save(_language, _region);
+    final saved = await widget.settings.save(
+      _language,
+      // 지역은 더 고르지 않습니다. 예전에 저장한 값만 그대로 둡니다.
+      widget.settings.region,
+    );
     if (!mounted) return;
     if (saved) {
       Navigator.of(context).pop();
@@ -66,13 +69,6 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final t = context.l10n;
-    final regionLabels = {
-      'KR': t.regionKR,
-      'US': t.regionUS,
-      'CN': t.regionCN,
-      'TW': t.regionTW,
-      'HK': t.regionHK,
-    };
     final style = MosiFonts.sans(
       locale: Localizations.localeOf(context),
       color: MosiColors.navy,
@@ -92,7 +88,7 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
           child: MosiDialogFrame(
             width: null,
             padding: const EdgeInsets.all(20),
-            semanticLabel: t.regionLanguage,
+            semanticLabel: t.language,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -102,7 +98,7 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
                     children: [
                       Expanded(
                         child: Text(
-                          t.regionLanguage,
+                          t.language,
                           style: style.copyWith(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
@@ -124,9 +120,7 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
                     initialValue: _language,
                     isExpanded: true,
                     style: style,
-                    decoration: mosiInputDecoration().copyWith(
-                      labelText: t.language,
-                    ),
+                    decoration: mosiInputDecoration(),
                     items: AppLanguage.values
                         .map(
                           (language) => DropdownMenuItem(
@@ -145,33 +139,7 @@ class _LocaleSettingsDialogState extends State<LocaleSettingsDialog> {
                         ? null
                         : (value) => setState(() => _language = value!),
                   ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    key: const Key('display-region'),
-                    initialValue: _region,
-                    isExpanded: true,
-                    style: style,
-                    decoration: mosiInputDecoration().copyWith(
-                      labelText: t.region,
-                    ),
-                    items: regionLabels.entries
-                        .map(
-                          (entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _saving
-                        ? null
-                        : (value) => setState(() => _region = value!),
-                  ),
                   const SizedBox(height: 16),
-                  Text(
-                    t.regionHint,
-                    style: style.copyWith(fontSize: 13, height: 1.5),
-                  ),
-                  const SizedBox(height: 8),
                   Text(
                     t.translationScope,
                     style: style.copyWith(fontSize: 13, height: 1.5),

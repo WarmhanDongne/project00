@@ -20,6 +20,7 @@ import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/sound/sound_effects.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/recovery/services/game_progress_command.dart';
 import 'package:game_kit/game_flow/game_presentation_clock.dart';
 import 'package:game_kit/recovery/widgets/game_recovery_layer.dart';
@@ -286,7 +287,8 @@ class MafiaTabletStageView extends StatelessWidget {
     final trial = controller.ruleState;
     if (stage == MafiaTabletStage.voting && trial.trialStage != null) {
       return MafiaTrialView(
-        candidate: controller.players[trial.candidateUid]?.nickname ?? '후보',
+        candidate:
+            controller.players[trial.candidateUid]?.nickname ?? '후보'.localized,
         defending: trial.trialStage == 'defense',
         isTablet: true,
         remainingSeconds: remainingSeconds,
@@ -326,7 +328,7 @@ class MafiaTabletStageView extends StatelessWidget {
       // 확정(2026-08): 과반수 투표로 토론이 끝나면 안내를 띄운 뒤 투표로
       // 넘어갑니다(서버가 낮 마감을 안내 길이만큼으로 줄여 둡니다).
       MafiaTabletStage.day when controller.isDayEndedByVote =>
-        const MafiaAnnouncementReveal(
+        MafiaAnnouncementReveal(
           child: MafiaTabletNotice.day(text: MafiaCopy.discussionSkippedNotice),
         ),
       MafiaTabletStage.day => _buildDay(showBallotBox: false),

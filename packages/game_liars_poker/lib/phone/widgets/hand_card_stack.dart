@@ -7,15 +7,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:game_liars_poker/game_copy.dart';
-import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
 import 'package:game_kit/game_flow/game_flow_config.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
 import 'package:game_kit/shared/widgets/game_card_face.dart';
-import 'package:game_liars_poker/gen/assets.gen.dart';
-import 'package:game_liars_poker/game_assets.dart';
+import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
 import 'package:game_kit/core/theme/game_shadow_colors.dart';
 import 'package:game_liars_poker/phone/providers/game_stage.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -134,7 +133,7 @@ class PhoneHandCardStack extends StatefulWidget {
   }) : assert(maxSelection > 0);
 
   final bool isLandscape;
-  final List<GameImage>? cards;
+  final List<LiarsCardFace>? cards;
   final PhoneHandCardStackController? controller;
   final bool enabled;
   final bool submissionEnabled;
@@ -191,7 +190,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   bool _showMaxSelectionMessage = false;
   int? _draggingCardId;
   double _dragOffsetY = 0;
-  List<GameImage>? _pendingCards;
+  List<LiarsCardFace>? _pendingCards;
   Timer? _maxSelectionMessageTimer;
 
   @override
@@ -222,7 +221,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       // 제출 중 서버 손패가 먼저 갱신되어도 화면을 즉시 바꾸지 않습니다.
       // 카드가 화면 밖으로 이동한 다음 새 손패를 반영해야 중간 끊김이 없습니다.
       if (_isSubmitting) {
-        _pendingCards = List<GameImage>.of(widget.cards!);
+        _pendingCards = List<LiarsCardFace>.of(widget.cards!);
       } else if (_sameCardAssets(_renderCardAssets, widget.cards!)) {
         // 낙관적으로 먼저 제거한 손패와 서버 손패가 같으면 카드 State와
         // 재배치 애니메이션을 유지합니다.
@@ -266,15 +265,15 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     super.dispose();
   }
 
-  List<GameImage> get _defaultCards => [
-    Assets.games.liarsPoker.images.cards.whiteK.game,
-    Assets.games.liarsPoker.images.cards.whiteQ.game,
-    Assets.games.liarsPoker.images.cards.whiteA.game,
-    Assets.games.liarsPoker.images.cards.whiteA.game,
-    Assets.games.liarsPoker.images.cards.whiteJoker.game,
+  List<LiarsCardFace> get _defaultCards => const [
+    LiarsCardFace.king,
+    LiarsCardFace.queen,
+    LiarsCardFace.ace,
+    LiarsCardFace.ace,
+    LiarsCardFace.joker,
   ];
 
-  void _replaceCards(List<GameImage> cards) {
+  void _replaceCards(List<LiarsCardFace> cards) {
     _renderCards = [
       for (final card in cards) _HandCardEntry(id: _nextCardId++, asset: card),
     ];
@@ -284,17 +283,17 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _dragOffsetY = 0;
   }
 
-  bool _sameCardAssets(List<GameImage>? left, List<GameImage> right) {
+  bool _sameCardAssets(List<LiarsCardFace>? left, List<LiarsCardFace> right) {
     if (identical(left, right)) return true;
     if (left == null || left.length != right.length) return false;
 
     for (var index = 0; index < left.length; index++) {
-      if (left[index].path != right[index].path) return false;
+      if (left[index] != right[index]) return false;
     }
     return true;
   }
 
-  List<GameImage> get _renderCardAssets =>
+  List<LiarsCardFace> get _renderCardAssets =>
       _renderCards.map((card) => card.asset).toList(growable: false);
 
   List<int> get _selectedIndexes => [
@@ -530,11 +529,20 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
             children: [
               if (announcement == null)
                 CardReceiveAnimation(
-                  frontCardAssets: _renderCards
-                      .map((card) => card.asset)
-                      .toList(growable: false),
-                  backCardAsset:
-                      Assets.games.liarsPoker.images.cards.whiteBack.game,
+                  cardCount: _renderCards.length,
+                  cardBuilder: (context, index, front) => GameCardFace(
+                    radius: 8,
+                    shadow: const BoxShadow(
+                      color: Color(0x66000000),
+                      blurRadius: 7,
+                      offset: Offset(0, 5),
+                    ),
+                    child: LiarsPokerCardView(
+                      face: front
+                          ? _renderCards[index].asset
+                          : LiarsCardFace.back,
+                    ),
+                  ),
                   cardWidth: layout.cardWidth,
                   spreadStepX: layout.spreadStepX,
                   spreadStepY: layout.spreadStepY,
@@ -705,13 +713,24 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
               : null,
           child: Semantics(
             selected: isSelected,
-            label: isSelected ? '선택된 카드' : '선택하지 않은 카드',
+            label: isSelected
+                ? GameLocale.select(
+                    ko: '선택된 카드',
+                    en: 'Selected card',
+                    zhHans: '已选卡牌',
+                    zhHant: '已選卡牌',
+                  )
+                : GameLocale.select(
+                    ko: '선택하지 않은 카드',
+                    en: 'Unselected card',
+                    zhHans: '未选卡牌',
+                    zhHant: '未選卡牌',
+                  ),
             child: _StaticCardFace(
               asset: card.asset,
               cardWidth: cardWidth,
               cardHeight: cardHeight,
               isSelected: isSelected,
-              badgeOnLeft: widget.isLandscape,
             ),
           ),
         ),
@@ -842,7 +861,7 @@ class _HandCardEntry {
   const _HandCardEntry({required this.id, required this.asset});
 
   final int id;
-  final GameImage asset;
+  final LiarsCardFace asset;
 }
 
 class _StaticCardFace extends StatelessWidget {
@@ -851,74 +870,38 @@ class _StaticCardFace extends StatelessWidget {
     required this.cardWidth,
     required this.cardHeight,
     required this.isSelected,
-    this.badgeOnLeft = false,
   });
 
-  final GameImage asset;
+  static const Color _selectedBorderColor = Color(0xFF8CA695);
+  static const Color _selectedShadowColor = Color(0x66394F42);
+
+  final LiarsCardFace asset;
   final double cardWidth;
   final double cardHeight;
   final bool isSelected;
 
-  /// 가로 손패는 오른쪽 카드가 겹쳐 덮으므로 선택 표시를 왼쪽 위에 둡니다.
-  final bool badgeOnLeft;
-
   @override
   Widget build(BuildContext context) {
-    final badge = cardWidth * .2;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isSelected
-                ? const [
-                    BoxShadow(color: LiarsPokerColors.gold, spreadRadius: 4),
-                    BoxShadow(
-                      color: Color(0x8C000000),
-                      blurRadius: 26,
-                      spreadRadius: 4,
-                      offset: Offset(0, 14),
-                    ),
-                  ]
-                : const [
-                    BoxShadow(
-                      color: GameShadowColors.strong,
-                      blurRadius: 14,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-          ),
-          child: GameCardFace(
-            asset: asset,
-            width: cardWidth,
-            height: cardHeight,
-            radius: 8,
-            shadow: const BoxShadow(color: Colors.transparent),
-          ),
-        ),
-        if (isSelected)
-          Positioned(
-            top: -badge * .3,
-            left: badgeOnLeft ? -badge * .3 : null,
-            right: badgeOnLeft ? null : -badge * .3,
-            child: Container(
-              width: badge,
-              height: badge,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: LiarsPokerColors.gold,
-                border: Border.all(color: LiarsPokerColors.night, width: 3),
-              ),
-              child: Icon(
-                Icons.check_rounded,
-                size: badge * .62,
-                color: LiarsPokerColors.night,
-              ),
+    return GameCardFace(
+      width: cardWidth,
+      height: cardHeight,
+      radius: 8,
+      shadow: isSelected
+          ? const BoxShadow(
+              color: _selectedShadowColor,
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: Offset(0, 8),
+            )
+          : const BoxShadow(
+              color: GameShadowColors.strong,
+              blurRadius: 7,
+              offset: Offset(0, 5),
             ),
-          ),
-      ],
+      border: isSelected
+          ? Border.all(color: _selectedBorderColor, width: 2.4)
+          : null,
+      child: LiarsPokerCardView(face: asset),
     );
   }
 }

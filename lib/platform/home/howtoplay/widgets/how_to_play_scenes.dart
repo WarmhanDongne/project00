@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:game_kit/player_layouts/player_slot_positions.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/howtoplay/models/how_to_play_step.dart';
 import 'package:project00/platform/home/howtoplay/widgets/how_to_play_pieces.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -12,7 +13,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 // 달라도 같은 그림이 나오도록 4:3 판 안에서 정규화 좌표로 배치합니다.
 
 /// 안내 예시에 등장하는 참여자 캐릭터입니다.
-const _characterIds = <String>['burger', 'tissue', 'bucket', 'milk', 'popcorn'];
+const _characterIds = <String>['burger', 'parcel', 'bucket', 'milk', 'popcorn'];
 
 /// 안내에 보여 주는 예시 참여 코드입니다.
 const _sampleRoomCode = 'QRTEQ';
@@ -149,7 +150,12 @@ class _PlaceTabletScene extends StatelessWidget {
                 child: Transform.translate(
                   offset: Offset(0, unit * 0.04 * (1 - labelIn)),
                   child: GuideCallout(
-                    label: '가로로 눕혀 테이블 한가운데에',
+                    label: GameLocale.select(
+                      ko: '가로로 눕혀 테이블 한가운데에',
+                      en: 'Place it horizontally in the middle',
+                      zhHans: '横放在桌面中央',
+                      zhHant: '橫放在桌面中央',
+                    ),
                     fontSize: unit * 0.038,
                     icon: Icons.tablet_mac,
                     emphasized: true,
@@ -252,7 +258,12 @@ class _JoinRoomScene extends StatelessWidget {
             placeLabel(
               center: const Offset(0.5, 0.93),
               child: GuideCallout(
-                label: '참여 코드 입력 · QR 스캔도 가능',
+                label: GameLocale.select(
+                  ko: '참여 코드 입력 · QR 스캔도 가능',
+                  en: 'Enter the join code · QR also works',
+                  zhHans: '输入加入码 · 也可扫描二维码',
+                  zhHant: '輸入加入碼 · 也可掃描 QR Code',
+                ),
                 fontSize: unit * 0.036,
                 icon: Icons.qr_code_2,
                 emphasized: true,
@@ -261,7 +272,12 @@ class _JoinRoomScene extends StatelessWidget {
             placeLabel(
               center: const Offset(0.5, 0.07),
               child: Text(
-                '휴대폰은 각자 손에',
+                GameLocale.select(
+                  ko: '휴대폰은 각자 손에',
+                  en: 'Each player holds a phone',
+                  zhHans: '每位玩家拿着自己的手机',
+                  zhHant: '每位玩家拿著自己的手機',
+                ),
                 style: TextStyle(
                   color: colors.textMuted,
                   fontSize: unit * 0.036,
@@ -370,7 +386,12 @@ class _TabletCodeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '참여 코드',
+                  GameLocale.select(
+                    ko: '참여 코드',
+                    en: 'JOIN CODE',
+                    zhHans: '加入码',
+                    zhHant: '加入碼',
+                  ),
                   style: TextStyle(
                     color: colors.textMuted,
                     fontSize: unit * 0.026,
@@ -542,7 +563,12 @@ class _TakeSeatsScene extends StatelessWidget {
               child: Opacity(
                 opacity: segment(t, 0.78, 0.9),
                 child: GuideCallout(
-                  label: '앉은 순서 그대로 자리를 맞춰요',
+                  label: GameLocale.select(
+                    ko: '앉은 순서 그대로 자리를 맞춰요',
+                    en: 'Match the seats to where everyone sits',
+                    zhHans: '按实际座位顺序调整位置',
+                    zhHant: '按實際座位順序調整位置',
+                  ),
                   fontSize: unit * 0.036,
                   icon: Icons.event_seat,
                   emphasized: true,
@@ -552,7 +578,12 @@ class _TakeSeatsScene extends StatelessWidget {
             placeLabel(
               center: const Offset(0.5, 0.05),
               child: Text(
-                '태블릿을 가운데 두고 둥글게',
+                GameLocale.select(
+                  ko: '태블릿을 가운데 두고 둥글게',
+                  en: 'Sit around the tablet',
+                  zhHans: '围坐在平板周围',
+                  zhHant: '圍坐在平板周圍',
+                ),
                 style: TextStyle(
                   color: colors.textMuted,
                   fontSize: unit * 0.036,
@@ -627,7 +658,12 @@ class _TabletSeatingScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '자리 배치',
+            GameLocale.select(
+              ko: '자리 배치',
+              en: 'SEAT SETUP',
+              zhHans: '座位设置',
+              zhHant: '座位設定',
+            ),
             style: TextStyle(
               color: colors.text,
               fontSize: unit * 0.032,
@@ -723,7 +759,12 @@ class _PlayScene extends StatelessWidget {
             placeLabel(
               center: const Offset(0.5, 0.03),
               child: Text(
-                '태블릿 = 모두가 함께 보는 게임판',
+                GameLocale.select(
+                  ko: '태블릿 = 모두가 함께 보는 게임판',
+                  en: 'Tablet = the shared game board',
+                  zhHans: '平板 = 所有人共享的游戏板',
+                  zhHant: '平板 = 所有人共享的遊戲板',
+                ),
                 style: TextStyle(
                   color: colors.textMuted,
                   fontSize: unit * 0.036,
@@ -734,7 +775,12 @@ class _PlayScene extends StatelessWidget {
             placeLabel(
               center: const Offset(0.5, 0.97),
               child: GuideCallout(
-                label: '휴대폰 = 나만 보는 카드와 선택',
+                label: GameLocale.select(
+                  ko: '휴대폰 = 나만 보는 카드와 선택',
+                  en: 'Phone = your private cards and choices',
+                  zhHans: '手机 = 只有自己看到的牌与选择',
+                  zhHant: '手機 = 只有自己看到的牌與選擇',
+                ),
                 fontSize: unit * 0.036,
                 icon: Icons.smartphone,
                 emphasized: true,

@@ -48,6 +48,10 @@ class $AssetsGamesFinalCallAnimationsGen {
 class $AssetsGamesFinalCallImagesGen {
   const $AssetsGamesFinalCallImagesGen();
 
+  /// Directory path: assets/games/final_call/images/layout
+  $AssetsGamesFinalCallImagesLayoutGen get layout =>
+      const $AssetsGamesFinalCallImagesLayoutGen();
+
   /// Directory path: assets/games/final_call/images/modal
   $AssetsGamesFinalCallImagesModalGen get modal =>
       const $AssetsGamesFinalCallImagesModalGen();
@@ -94,6 +98,21 @@ class $AssetsGamesFinalCallSoundsGen {
     voiceWinRed,
     win,
   ];
+}
+
+class $AssetsGamesFinalCallImagesLayoutGen {
+  const $AssetsGamesFinalCallImagesLayoutGen();
+
+  /// File path: assets/games/final_call/images/layout/chair.png
+  AssetGenImage get chair =>
+      const AssetGenImage('assets/games/final_call/images/layout/chair.png');
+
+  /// File path: assets/games/final_call/images/layout/table.png
+  AssetGenImage get table =>
+      const AssetGenImage('assets/games/final_call/images/layout/table.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [chair, table];
 }
 
 class $AssetsGamesFinalCallImagesModalGen {

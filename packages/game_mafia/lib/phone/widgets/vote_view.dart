@@ -15,6 +15,7 @@ import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -94,7 +95,12 @@ class MafiaVoteView extends StatefulWidget {
   static const Color selectionColor = MafiaColors.noirBrass;
 
   /// 투표 화면 제목입니다(시안).
-  static const String prompt = '처형할 사람을 지목하라';
+  static String get prompt => GameLocale.select(
+    ko: '처형할 사람을 지목하라',
+    en: 'Choose someone to execute',
+    zhHans: '指定要处决的人',
+    zhHant: '指定要處決的人',
+  );
 
   // ---------------------------------------------------------------------------
   // 제출 연출
@@ -262,8 +268,8 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
           selectionColor: MafiaVoteView.selectionColor,
           selectionBorderWidth: 4,
           idleBorderColor: MafiaColors.noirInk,
-          selectedBanner: const MafiaNoirBannerSpec(
-            label: '지목',
+          selectedBanner: MafiaNoirBannerSpec(
+            label: '지목'.localized,
             color: MafiaColors.noirBrass,
             textColor: MafiaColors.noirInk,
           ),
@@ -277,14 +283,21 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         top: MafiaPhoneDesign.top(size, gridBottom + 4),
         child: IgnorePointer(
           child: Text(
-            '누구를 지목했는지는 공개되지 않습니다',
+            '누구를 지목했는지는 공개되지 않습니다'.localized,
             textAlign: TextAlign.center,
             style: mafiaNoirBody(13 * scale, color: MafiaColors.noirUmber),
           ),
         ),
       ),
       MafiaPhoneActionButton(
-        label: selected == null ? '선택 완료' : '${selected.nickname}에게 투표',
+        label: selected == null
+            ? '선택 완료'.localized
+            : GameLocale.select(
+                ko: '${selected.nickname}에게 투표',
+                en: 'Vote for ${selected.nickname}',
+                zhHans: '投票给 ${selected.nickname}',
+                zhHant: '投票給 ${selected.nickname}',
+              ),
         onTap: _handleConfirm,
         enabled: widget.selectedUid != null && widget.onConfirm != null,
         hiddenWhenDisabled: true,
@@ -370,7 +383,12 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '이번 낮에는\n투표할 수 없습니다',
+            GameLocale.select(
+              ko: '이번 낮에는\n투표할 수 없습니다',
+              en: 'You cannot vote\nthis day',
+              zhHans: '今天白天\n无法投票',
+              zhHant: '今天白天\n無法投票',
+            ),
             textAlign: TextAlign.center,
             style: mafiaNoirDisplay(
               MafiaPhoneStatusText.waitingFontSize * scale,
@@ -399,8 +417,18 @@ class _MafiaVoteViewState extends State<MafiaVoteView>
             // 보내는 중에도 이미 넣은 것처럼 보여 줍니다. 서버가 거절할 때만
             // 화면이 선택으로 돌아갑니다(로딩 문구를 띄우지 않습니다).
             widget.timeExpired && !widget.isSubmitted && !widget.requestInFlight
-                ? '투표 시간이 끝났습니다\n곧 개표합니다'
-                : '투표함에 넣었습니다\n개표를 기다려 주세요',
+                ? GameLocale.select(
+                    ko: '투표 시간이 끝났습니다\n곧 개표합니다',
+                    en: 'Voting has ended\nCounting begins shortly',
+                    zhHans: '投票时间已结束\n即将计票',
+                    zhHant: '投票時間已結束\n即將計票',
+                  )
+                : GameLocale.select(
+                    ko: '투표함에 넣었습니다\n개표를 기다려 주세요',
+                    en: 'Your ballot is in\nWait for the count',
+                    zhHans: '选票已投入\n请等待计票',
+                    zhHant: '選票已投入\n請等待計票',
+                  ),
             textAlign: TextAlign.center,
             style: mafiaNoirDisplay(
               MafiaPhoneStatusText.waitingFontSize * scale,

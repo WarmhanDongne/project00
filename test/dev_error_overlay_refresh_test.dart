@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/core/diagnostics/dev_error_overlay.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 void main() {
   testWidgets('Navigator 위에서도 진단 창 열기·복사·지우기·닫기가 동작한다', (tester) async {
@@ -71,5 +72,29 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     log.clear();
+  });
+
+  testWidgets('진단 화면 문구도 현재 앱 언어를 따른다', (tester) async {
+    final original = GameLocale.current;
+    addTearDown(() => GameLocale.current = original);
+    GameLocale.current = const Locale('en');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => DevErrorOverlay(child: child!),
+        home: const SizedBox.expand(),
+      ),
+    );
+    await tester.tap(find.byKey(DevErrorOverlay.diagnosticsButtonKey));
+    await tester.pump();
+
+    expect(find.text('Game communication diagnostics'), findsOneWidget);
+    expect(
+      find.text('No game communication has been recorded yet.'),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Copy log'), findsOneWidget);
+    expect(find.byTooltip('Clear log'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
   });
 }

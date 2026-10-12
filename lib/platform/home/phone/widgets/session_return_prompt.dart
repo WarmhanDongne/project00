@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_connection.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 
 /// 앱을 다시 켰을 때 기존 방·게임으로 돌아갈지 묻습니다.
@@ -39,23 +40,30 @@ class SessionReturnPrompt extends StatelessWidget {
     // 시안 '앱을 다시 켰을 때': 둥근 테이블과 비워 둔 내 자리를 보여 줍니다.
     return Scaffold(
       body: MosiConnectionLayout(
-        semanticLabel: _isGame ? '진행 중인 게임' : '참여 중인 그룹',
+        semanticLabel: _isGame ? '진행 중인 게임'.localized : '참여 중인 그룹'.localized,
         background: MosiColors.sun,
         scene: const MosiReturnTableScene(),
-        tag: _isGame ? '게임 진행 중' : '그룹 참여 중',
+        tag: _isGame ? '게임 진행 중'.localized : '그룹 참여 중'.localized,
         tagColor: MosiColors.lime,
-        title: _isGame ? '진행 중인 게임이 있어요' : '참여 중인 그룹이 있어요',
-        body: _isGame ? '이어서 하시겠어요?\n자리와 손패는 그대로예요.' : '그룹으로 돌아가시겠어요?',
+        title: _isGame ? '진행 중인 게임이 있어요'.localized : '참여 중인 그룹이 있어요'.localized,
+        body: _isGame
+            ? GameLocale.select(
+                ko: '이어서 하시겠어요?\n자리와 손패는 그대로예요.',
+                en: 'Continue playing?\nYour seat and hand are unchanged.',
+                zhHans: '要继续游戏吗？\n座位和手牌都保持不变。',
+                zhHant: '要繼續遊戲嗎？\n座位和手牌都保持不變。',
+              )
+            : '그룹으로 돌아가시겠어요?'.localized,
         actionFlex: const [10, 17],
         actions: [
           MosiConnectionButton(
             key: const ValueKey('session-return-decline'),
-            label: '나중에',
+            label: '나중에'.localized,
             onPressed: isBusy ? null : onDecline,
           ),
           MosiConnectionButton(
             key: const ValueKey('session-return-accept'),
-            label: _isGame ? '게임 다시 참여' : '그룹 다시 참여',
+            label: _isGame ? '게임 다시 참여'.localized : '그룹 다시 참여'.localized,
             primary: true,
             loading: isBusy,
             onPressed: isBusy ? null : onReturn,

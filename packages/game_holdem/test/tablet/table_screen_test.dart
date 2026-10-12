@@ -114,7 +114,7 @@ void main() {
     expect(nextHandCard.top, lessThan(0));
   });
 
-  testWidgets('쇼다운은 승자와 공개 손패를 강조하고 족보 안내를 숨긴다', (tester) async {
+  testWidgets('쇼다운은 손패를 한 사람씩 뒤집은 뒤 승자를 알리고 족보 안내를 숨긴다', (tester) async {
     await pump(
       tester,
       playingState(
@@ -142,24 +142,51 @@ void main() {
       ),
     );
 
+    HoldemCardView shown(String uid, int index) =>
+        tester.widget<HoldemCardView>(
+          find.descendant(
+            of: find.byKey(Key('holdem-showdown-card-$uid-$index')),
+            matching: find.byType(HoldemCardView),
+          ),
+        );
+
+    // 처음에는 모두 뒷면이고 승자도 알리지 않습니다.
+    expect(find.byKey(const Key('holdem-showdown-countdown')), findsOneWidget);
+    expect(HoldemTiming.handResult('showdown'), const Duration(seconds: 12));
+    expect(find.text('하준 승리'), findsNothing);
+    expect(find.text('WIN'), findsNothing);
+    for (final uid in ['me', 'rival']) {
+      expect(shown(uid, 0).faceDown, isTrue);
+    }
+
+    // 자리 순서대로 한 사람씩 뒤집습니다.
+    final firstDone =
+        HoldemTiming.showdownRevealAt(0, 2) + HoldemTiming.showdownFlip;
+    await tester.pump(firstDone + const Duration(milliseconds: 100));
+    expect(shown('me', 1).faceDown, isFalse);
+    expect(shown('rival', 0).faceDown, isTrue);
+    expect(find.text('WIN'), findsNothing);
+
+    // 다 뒤집고 잠깐 뒤에 승자를 알립니다.
+    await tester.pump(HoldemTiming.showdownWinnerAt(2) - firstDone);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(shown('rival', 1).faceDown, isFalse);
     expect(find.text('하준 승리'), findsNWidgets(2));
     expect(find.text('+1,800'), findsNWidgets(2));
     expect(find.textContaining('트리플'), findsNothing);
-    expect(find.byKey(const Key('holdem-showdown-countdown')), findsOneWidget);
-    expect(HoldemTiming.handResult('showdown'), const Duration(seconds: 12));
     expect(find.text('WIN'), findsOneWidget);
     expect(find.bySemanticsLabel('하트 K'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 600));
+    expect(
+      HoldemTiming.showdownWinnerAt(2),
+      lessThan(const Duration(seconds: 8)),
+    );
     for (final uid in ['me', 'rival']) {
       final hand = tester.widget<Positioned>(
         find.byKey(Key('holdem-showdown-hand-$uid')),
       );
       expect(hand.top, -105);
       for (var index = 0; index < 2; index++) {
-        final card = tester.widget<HoldemCardView>(
-          find.byKey(Key('holdem-showdown-card-$uid-$index')),
-        );
-        expect(card.width, 126);
+        expect(shown(uid, index).width, 126);
       }
     }
     final publicKing = tester
@@ -336,6 +363,8 @@ void main() {
       tester,
       initial.copyWith(
         revision: 11,
+        // 체크한 뒤에는 차례가 다음 사람에게 넘어갑니다.
+        turnUid: 'rival',
         lastAction: const HoldemLastActionModel(
           uid: 'me',
           kind: 'check',
@@ -356,11 +385,14 @@ void main() {
           .kind,
       'check',
     );
-    expect(find.bySemanticsLabel('체크 이동'), findsOneWidget);
-
-    await tester.pump(const Duration(milliseconds: 1));
-    await tester.pump(const Duration(milliseconds: 1200));
+    // 체크는 중앙으로 퍽을 보내지 않고 내 프로필 옆에 표시만 붙입니다.
     expect(find.bySemanticsLabel('체크 이동'), findsNothing);
+    final badge = find.byKey(const Key('holdem-check-me'));
+    expect(badge, findsOneWidget);
+    final face = tester.getRect(find.byKey(const Key('holdem-profile-me')));
+    final badgeRect = tester.getRect(badge);
+    expect(badgeRect.left, lessThan(face.right));
+    expect(badgeRect.center.dy, greaterThan(face.center.dy));
   });
 
   testWidgets('폴드 승리 시 팟 칩이 승자에게 이동하며 보유 칩 숫자가 증가한다', (tester) async {

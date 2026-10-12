@@ -16,6 +16,7 @@ import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -142,7 +143,7 @@ class MafiaResultView extends StatelessWidget {
                         if (won != null)
                           MafiaNoirBanner(
                             spec: MafiaNoirBannerSpec(
-                              label: won ? '승리' : '패배',
+                              label: (won ? '승리' : '패배').localized,
                               color: won
                                   ? MafiaColors.noirBrass
                                   : MafiaColors.noirBlood,
@@ -168,7 +169,12 @@ class MafiaResultView extends StatelessWidget {
                 right: 0,
                 top: MafiaPhoneDesign.top(size, 588),
                 child: Text(
-                  won ? '당신의 팀이 이겼습니다' : '당신의 팀이 졌습니다',
+                  GameLocale.select(
+                    ko: won ? '당신의 팀이 이겼습니다' : '당신의 팀이 졌습니다',
+                    en: won ? 'Your team won' : 'Your team lost',
+                    zhHans: won ? '你的队伍获胜' : '你的队伍落败',
+                    zhHant: won ? '你的隊伍獲勝' : '你的隊伍落敗',
+                  ),
                   textAlign: TextAlign.center,
                   style: mafiaNoirDisplay(24 * scale),
                 ),
@@ -182,7 +188,12 @@ class MafiaResultView extends StatelessWidget {
                   child: Transform.scale(
                     scale: scale,
                     child: MafiaNoirRuledLabel(
-                      label: '함께한 동료',
+                      label: GameLocale.select(
+                        ko: '함께한 동료',
+                        en: 'Allies',
+                        zhHans: '同伴',
+                        zhHant: '同伴',
+                      ),
                       value: '',
                       labelColor: MafiaColors.noirRose,
                       lineColor: const Color(0xFF3A3F3C),
@@ -206,7 +217,7 @@ class MafiaResultView extends StatelessWidget {
                 ),
               ),
             MafiaPhoneActionButton(
-              label: '확인',
+              label: '확인'.localized,
               onTap: onConfirm,
               enabled: onConfirm != null,
             ),
@@ -215,7 +226,12 @@ class MafiaResultView extends StatelessWidget {
               right: 0,
               top: MafiaPhoneDesign.top(size, 784),
               child: Text(
-                '다음 판은 태블릿에서 시작해요',
+                GameLocale.select(
+                  ko: '다음 판은 태블릿에서 시작해요',
+                  en: 'Start the next game on the tablet',
+                  zhHans: '下一局请在平板上开始',
+                  zhHant: '下一局請在平板上開始',
+                ),
                 textAlign: TextAlign.center,
                 style: mafiaNoirBody(
                   13 * scale,

@@ -24,6 +24,19 @@ class OnboardingService {
   final FirebaseFunctions _functions;
   final EmailLinkConfig _emailLinkConfig;
 
+  Future<void> completeGuest(SignupConsents consents) async {
+    try {
+      await _callAuthenticated('completeGuestOnboarding', {
+        'consents': consents.toJson(),
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw AuthServiceException(
+        error.code,
+        '게스트 이용 준비를 완료하지 못했습니다. 다시 시도해주세요.',
+      );
+    }
+  }
+
   Stream<UserOnboarding?> watch(String uid) async* {
     final reference = _firestore.collection('userOnboarding').doc(uid);
     const retryDelays = [
@@ -51,6 +64,71 @@ class OnboardingService {
   }
 
   bool isEmailSignInLink(String link) => _auth.isSignInWithEmailLink(link);
+
+  /// 새 가입은 비밀번호 계정을 먼저 만듭니다. 인증 메일은 AuthGate의
+  /// 대기 화면에서 서버 가입 준비가 끝난 뒤 보내므로 실패 시 재시도할 수 있습니다.
+  Future<void> createPasswordAccount(String email, String password) async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (error) {
+      throw AuthServiceException(error.code, switch (error.code) {
+        'email-already-in-use' => '이미 가입된 이메일입니다. 로그인해주세요.',
+        'weak-password' => '더 안전한 비밀번호를 입력해주세요.',
+        'network-request-failed' => '네트워크 연결을 확인해주세요.',
+        _ => '계정을 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
+    }
+  }
+
+  Future<void> preparePasswordVerification() async {
+    try {
+      await _callAuthenticated('beginOnboarding', {
+        'provider': 'legacyPassword',
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw AuthServiceException(error.code, '가입 준비를 완료하지 못했습니다. 다시 시도해주세요.');
+    }
+  }
+
+  Future<void> sendPasswordVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthServiceException('unauthenticated', '다시 로그인해주세요.');
+    }
+    try {
+      // 기본 웹 인증 링크입니다. 앱 딥링크로 로그인하는 메일을 보내지 않습니다.
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (error) {
+      throw AuthServiceException(
+        error.code,
+        error.code == 'too-many-requests'
+            ? '메일 요청이 많습니다. 잠시 후 다시 보내주세요.'
+            : '인증 메일을 보내지 못했습니다. 연결을 확인하고 다시 시도해주세요.',
+      );
+    }
+  }
+
+  Future<bool> refreshEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthServiceException('unauthenticated', '다시 로그인해주세요.');
+    }
+    try {
+      await user.reload();
+      final refreshed = _auth.currentUser;
+      if (refreshed == null || refreshed.uid != user.uid) {
+        throw const AuthServiceException('unauthenticated', '로그인 상태가 변경되었습니다.');
+      }
+      if (!refreshed.emailVerified) return false;
+      await refreshed.getIdToken(true);
+      return true;
+    } on FirebaseAuthException catch (error) {
+      throw AuthServiceException(error.code, '인증 상태를 확인하지 못했습니다. 다시 시도해주세요.');
+    }
+  }
 
   Future<void> sendEmailLink(String email) async {
     try {

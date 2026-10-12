@@ -10,6 +10,7 @@ import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
 import {
   nextFinalCallPlayer,
   resolveFinalCallRound,
+  selectBestFinalCallCombination,
   startTurn,
 } from "./game.js";
 import {FinalCallRoom} from "./types.js";
@@ -60,8 +61,11 @@ export const game_final_call_submit_hand = onCall<Data>(
       const now = transactionNow;
       const privateHand = game.private[uid]?.hand ?? {};
       game.server.finalSubmissions ??= {};
-      game.server.finalSubmissions[uid] = submittedIds
-        .map((cardId) => privateHand[cardId]);
+      // 구버전 클라이언트가 서로 다른 색·숫자를 함께 보내도 점수에 쓰는
+      // 한 조합만 공개합니다. 점수는 기존 최고 조합 계산과 같습니다.
+      game.server.finalSubmissions[uid] = selectBestFinalCallCombination(
+        submittedIds.map((cardId) => privateHand[cardId]),
+      );
 
       if (isFinalTurnSubmission) {
         game.public.finalTurnPendingUids = game.public.finalTurnPendingUids

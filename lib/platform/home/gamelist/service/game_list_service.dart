@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/gamelist/models/game_catalog_id.dart';
 
 class GameService {
   GameService({
@@ -48,11 +49,12 @@ class GameService {
       throw StateError('계정이 변경되었습니다. 다시 조회해주세요.');
     }
 
-    final games = gameSnapshot.docs
+    final games = preferredCatalogEntries(gameSnapshot.docs, (doc) => doc.id)
+        .values
         .map(
           (doc) => GameInfo.fromSnapshot(
             doc,
-            isOwned: ownedGameIds.contains(doc.id),
+            isOwned: ownedGameIds.contains(runtimeGameId(doc.id)),
           ),
         )
         .where((game) => game.enabled && game.isAccessible)
@@ -101,11 +103,12 @@ class GameService {
     );
 
     // 그룹이 가진 게임만 필터링하여 GameInfo 객체로 반환
-    final games = gameSnapshot.docs
+    final games = preferredCatalogEntries(gameSnapshot.docs, (doc) => doc.id)
+        .values
         .map(
           (doc) => GameInfo.fromSnapshot(
             doc,
-            isOwned: groupOwnedGameIds.contains(doc.id),
+            isOwned: groupOwnedGameIds.contains(runtimeGameId(doc.id)),
           ),
         )
         .where((game) => game.enabled && game.isAccessible)
@@ -131,11 +134,16 @@ class GameService {
 
     if (ownedGames is! List) return false;
 
-    return ownedGames.whereType<String>().contains(gameId);
+    return _ownedGameIds(ownedGames).contains(runtimeGameId(gameId));
   }
 
   Future<GameInfo?> getGame(String gameId) async {
-    final snapshot = await _firestore.collection('games').doc(gameId).get();
+    final canonicalId = catalogDocumentId(gameId);
+    var snapshot = await _firestore.collection('games').doc(canonicalId).get();
+    final legacyId = runtimeGameId(gameId);
+    if (!snapshot.exists && canonicalId != legacyId) {
+      snapshot = await _firestore.collection('games').doc(legacyId).get();
+    }
 
     if (!snapshot.exists) {
       return null;
@@ -143,6 +151,7 @@ class GameService {
     return GameInfo.fromSnapshot(snapshot);
   }
 
-  Set<String> _ownedGameIds(Object? value) =>
-      value is List ? value.whereType<String>().toSet() : const <String>{};
+  Set<String> _ownedGameIds(Object? value) => value is List
+      ? value.whereType<String>().map(runtimeGameId).toSet()
+      : const <String>{};
 }

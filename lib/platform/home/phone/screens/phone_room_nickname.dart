@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/auth/models/nickname_policy.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:flutter/services.dart';
@@ -44,7 +45,13 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     final user = FirebaseAuth.instance.currentUser;
     final accountNickname = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
-        : user?.email?.split('@').first ?? '사용자';
+        : user?.email?.split('@').first ??
+              GameLocale.select(
+                ko: '사용자',
+                en: 'Player',
+                zhHans: '玩家',
+                zhHant: '玩家',
+              );
     final initialNickname = accountNickname.length <= nicknameMaxLength
         ? accountNickname
         : accountNickname.substring(0, nicknameMaxLength);
@@ -101,17 +108,32 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     final nickname = _nicknameController.text.trim();
     final characterId = _selectedCharacterId;
     if (nickname.isEmpty) {
-      _roomProvider.errorMessage = '닉네임을 입력해주세요.';
+      _roomProvider.errorMessage = GameLocale.select(
+        ko: '닉네임을 입력해주세요.',
+        en: 'Enter a nickname.',
+        zhHans: '请输入昵称。',
+        zhHant: '請輸入暱稱。',
+      );
       setState(() => _nicknameShake++);
       return;
     }
     if (nickname.length > nicknameMaxLength) {
-      _roomProvider.errorMessage = '닉네임은 $nicknameMaxLength자 이하로 입력해주세요.';
+      _roomProvider.errorMessage = GameLocale.select(
+        ko: '닉네임은 $nicknameMaxLength자 이하로 입력해주세요.',
+        en: 'Use no more than $nicknameMaxLength characters.',
+        zhHans: '昵称不得超过 $nicknameMaxLength 个字符。',
+        zhHant: '暱稱不得超過 $nicknameMaxLength 個字元。',
+      );
       setState(() => _nicknameShake++);
       return;
     }
     if (characterId == null) {
-      _roomProvider.errorMessage = '사용할 수 있는 캐릭터가 없습니다.';
+      _roomProvider.errorMessage = GameLocale.select(
+        ko: '사용할 수 있는 캐릭터가 없습니다.',
+        en: 'No characters are available.',
+        zhHans: '没有可用角色。',
+        zhHant: '沒有可用角色。',
+      );
       setState(() {});
       return;
     }
@@ -121,12 +143,22 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       (player) => player.uid != currentUid && player.nickname == nickname,
     );
     if (duplicateNickname) {
-      _roomProvider.errorMessage = '이미 사용 중인 닉네임입니다.';
+      _roomProvider.errorMessage = GameLocale.select(
+        ko: '이미 사용 중인 닉네임입니다.',
+        en: 'That nickname is already in use.',
+        zhHans: '该昵称已被使用。',
+        zhHant: '該暱稱已被使用。',
+      );
       setState(() => _nicknameShake++);
       return;
     }
     if (_occupiedCharacterIds.contains(characterId)) {
-      _roomProvider.errorMessage = '이미 선택된 캐릭터입니다.';
+      _roomProvider.errorMessage = GameLocale.select(
+        ko: '이미 선택된 캐릭터입니다.',
+        en: 'That character is already selected.',
+        zhHans: '该角色已被选择。',
+        zhHant: '該角色已被選擇。',
+      );
       _selectRandomAvailableCharacter();
       return;
     }
@@ -175,7 +207,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
     return AnimatedBuilder(
       animation: _roomProvider,
       builder: (context, _) => PlatformPhoneFlowScaffold(
-        title: '그룹 참여하기',
+        title: '그룹 참여하기'.localized,
         onBack: _cancelSetup,
         bottom: Column(
           mainAxisSize: MainAxisSize.min,
@@ -185,7 +217,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  '입장하는 중…',
+                  '입장하는 중…'.localized,
                   textAlign: TextAlign.center,
                   style: MosiFonts.sans(size: 14, color: MosiColors.navy),
                 ),
@@ -204,7 +236,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
               ),
             ),
             PlatformButton(
-              label: '입장하기',
+              label: '입장하기'.localized,
               onPressed: _selectedCharacterId == null || _isOpeningWaitingRoom
                   ? null
                   : _saveProfileAndContinue,
@@ -222,8 +254,12 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                 _ParticipantPreview(players: _roomProvider.players),
                 const SizedBox(height: 22),
                 Text(
-                  '이 그룹에서 쓸 닉네임과 캐릭터를 정해 주세요.\n'
-                  '다른 사람과 겹치지 않아야 해요.',
+                  GameLocale.select(
+                    ko: '이 그룹에서 쓸 닉네임과 캐릭터를 정해 주세요.\n다른 사람과 겹치지 않아야 해요.',
+                    en: 'Choose a nickname and character for this room.\nThey must be different from everyone else’s.',
+                    zhHans: '选择在此房间使用的昵称和角色。\n不能与其他人重复。',
+                    zhHant: '選擇在此房間使用的暱稱和角色。\n不能與其他人重複。',
+                  ),
                   style: MosiFonts.sans(
                     color: MosiColors.muted,
                     size: 13,
@@ -244,7 +280,12 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                           ],
                           style: mosiFieldTextStyle(),
                           decoration: mosiInputDecoration(
-                            hintText: '닉네임 · 최대 $nicknameMaxLength자',
+                            hintText: GameLocale.select(
+                              ko: '닉네임 · 최대 $nicknameMaxLength자',
+                              en: 'Nickname · up to $nicknameMaxLength characters',
+                              zhHans: '昵称 · 最多 $nicknameMaxLength 个字符',
+                              zhHant: '暱稱 · 最多 $nicknameMaxLength 個字元',
+                            ),
                           ).copyWith(counterText: ''),
                           onChanged: (_) {
                             if (_roomProvider.errorMessage != null) {
@@ -257,7 +298,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                     ),
                     const SizedBox(width: 8),
                     PlatformButton(
-                      label: '수정',
+                      label: '수정'.localized,
                       expand: false,
                       style: PlatformButtonStyle.secondary,
                       onPressed: () => FocusScope.of(context).unfocus(),
@@ -269,7 +310,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                   children: [
                     Expanded(
                       child: Text(
-                        '캐릭터 선택',
+                        '캐릭터 선택'.localized,
                         style: MosiFonts.sans(
                           size: 16,
                           weight: FontWeight.w700,
@@ -278,7 +319,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
                       ),
                     ),
                     PlatformButton(
-                      label: '랜덤 선택',
+                      label: '랜덤 선택'.localized,
                       expand: false,
                       height: 38,
                       style: PlatformButtonStyle.secondary,
@@ -331,7 +372,7 @@ class _ParticipantPreview extends StatelessWidget {
         Row(
           children: [
             Text(
-              '참여자',
+              '참여자'.localized,
               style: MosiFonts.sans(
                 size: 16,
                 weight: FontWeight.w700,
@@ -340,7 +381,12 @@ class _ParticipantPreview extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${players.length}명',
+              GameLocale.select(
+                ko: '${players.length}명',
+                en: '${players.length} players',
+                zhHans: '${players.length} 人',
+                zhHant: '${players.length} 人',
+              ),
               style: MosiFonts.grotesk(size: 15, color: MosiColors.violet),
             ),
           ],
@@ -348,7 +394,7 @@ class _ParticipantPreview extends StatelessWidget {
         const SizedBox(height: 10),
         if (players.isEmpty)
           Text(
-            '아직 참여자가 없습니다.',
+            '아직 참여자가 없습니다.'.localized,
             style: MosiFonts.sans(size: 13, color: MosiColors.muted),
           )
         else
@@ -411,7 +457,14 @@ class _CharacterChoice extends StatelessWidget {
       button: true,
       selected: selected,
       enabled: !disabled,
-      label: disabled ? '${character.label}, 다른 사람이 사용 중' : character.label,
+      label: disabled
+          ? GameLocale.select(
+              ko: '${character.localizedLabel}, 다른 사람이 사용 중',
+              en: '${character.localizedLabel}, already in use',
+              zhHans: '${character.localizedLabel}，已被其他人使用',
+              zhHant: '${character.localizedLabel}，已被其他人使用',
+            )
+          : character.localizedLabel,
       excludeSemantics: true,
       child: GestureDetector(
         onTap: disabled ? null : onTap,
@@ -506,7 +559,7 @@ class _CharacterChoice extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                character.label,
+                character.localizedLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: MosiFonts.sans(

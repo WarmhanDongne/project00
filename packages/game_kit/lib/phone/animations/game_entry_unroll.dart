@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/mat_unroll_animation.dart';
 import 'package:game_kit/shared/animations/one_shot_timeline.dart';
+
 // ============================================================
 
 /// 게임 화면이 열릴 때 매트가 위에서 풀려 내려오며 배경을 드러냅니다.

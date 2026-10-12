@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_connection.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/widgets/game_route_exit.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 
@@ -126,18 +127,45 @@ class _TabletLostSheetState extends State<_TabletLostSheet> {
   @override
   Widget build(BuildContext context) {
     return MosiConnectionLayout(
-      semanticLabel: '태블릿 연결 끊김',
+      semanticLabel: '태블릿 연결 끊김'.localized,
       background: MosiColors.violet,
       scene: MosiTabletLostScene(characterId: widget.characterId),
-      tag: '게임 중 · 태블릿',
+      tag: GameLocale.select(
+        ko: '게임 중 · 태블릿',
+        en: 'In game · Tablet',
+        zhHans: '游戏中 · 平板',
+        zhHant: '遊戲中 · 平板',
+      ),
       tagColor: mosiConnectionLavender,
-      title: '태블릿에 다시 연결하는 중',
-      body: '태블릿 연결이 잠깐 끊겼어요.\n기다리면 이 화면에서 자동으로 이어져요.',
-      status: const MosiConnectionStatus(text: '내 자리와 손패는 그대로예요'),
+      title: '태블릿에 다시 연결하는 중'.localized,
+      body: GameLocale.select(
+        ko: '태블릿 연결이 잠깐 끊겼어요.\n기다리면 이 화면에서 자동으로 이어져요.',
+        en: 'The tablet disconnected briefly.\nThis screen will resume automatically.',
+        zhHans: '平板暂时断开连接。\n请稍候，此画面会自动恢复。',
+        zhHant: '平板暫時中斷連線。\n請稍候，此畫面會自動恢復。',
+      ),
+      status: MosiConnectionStatus(
+        text: GameLocale.select(
+          ko: '내 자리와 손패는 그대로예요',
+          en: 'Your seat and hand are safe',
+          zhHans: '座位和手牌都会保留',
+          zhHant: '座位和手牌都會保留',
+        ),
+      ),
       actions: [
-        MosiConnectionButton(label: '게임과 그룹 나가기', onPressed: widget.onExit),
+        MosiConnectionButton(
+          label: '게임과 그룹 나가기'.localized,
+          onPressed: widget.onExit,
+        ),
       ],
-      footnote: _showsExit ? '나가면 이번 게임에서 빠지게 돼요' : null,
+      footnote: _showsExit
+          ? GameLocale.select(
+              ko: '나가면 이번 게임에서 빠지게 돼요',
+              en: 'Leaving removes you from this game',
+              zhHans: '离开后将退出本局游戏',
+              zhHant: '離開後將退出本局遊戲',
+            )
+          : null,
     );
   }
 }

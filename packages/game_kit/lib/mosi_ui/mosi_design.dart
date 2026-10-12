@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 export 'package:game_kit/mosi_ui/mosi_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/core/constants/room_character.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -398,7 +399,7 @@ class _MosiButtonState extends State<MosiButton> {
               if (widget.successLabel != null) ...[
                 const SizedBox(width: 6),
                 Text(
-                  widget.successLabel!,
+                  widget.successLabel!.localized,
                   maxLines: 1,
                   style: MosiFonts.sans(
                     locale: Localizations.maybeLocaleOf(context),
@@ -437,7 +438,7 @@ class _MosiButtonState extends State<MosiButton> {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    widget.label,
+                    widget.label.localized,
                     maxLines: 1,
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
@@ -461,7 +462,7 @@ class _MosiButtonState extends State<MosiButton> {
     return Semantics(
       button: true,
       enabled: _enabled,
-      label: widget.semanticLabel ?? widget.label,
+      label: (widget.semanticLabel ?? widget.label).localized,
       excludeSemantics: true,
       onTap: _enabled ? widget.onPressed : null,
       child: MouseRegion(
@@ -633,7 +634,7 @@ class MosiPill extends StatelessWidget {
         children: [
           if (leading != null) ...[leading!, const SizedBox(width: 6)],
           Text(
-            label,
+            label.localized,
             style: MosiFonts.sans(
               locale: Localizations.maybeLocaleOf(context),
               size: fontSize,
@@ -672,7 +673,7 @@ class MosiFace extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      semanticLabel: character.label,
+      semanticLabel: character.localizedLabel,
       gaplessPlayback: true,
     );
     if (!ring) return image;
@@ -865,7 +866,7 @@ class MosiDialogHeader extends StatelessWidget {
         if (onClose != null)
           MosiIconButton(
             icon: Icons.close_rounded,
-            tooltip: '닫기',
+            tooltip: '닫기'.localized,
             onPressed: onClose,
           ),
       ],

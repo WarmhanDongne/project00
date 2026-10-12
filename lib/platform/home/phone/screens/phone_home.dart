@@ -15,6 +15,7 @@ import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:game_kit/template_game.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 class PhoneHome extends StatefulWidget {
   const PhoneHome({super.key, required this.gameCatalog});
@@ -127,7 +128,16 @@ class _PhoneHomeState extends State<PhoneHome> {
       if (!mounted) return;
       setState(() => _declined = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('퇴장 결과를 확인하지 못했습니다. 연결 복구 후 다시 확인합니다.')),
+        SnackBar(
+          content: Text(
+            GameLocale.select(
+              ko: '퇴장 결과를 확인하지 못했습니다. 연결 복구 후 다시 확인합니다.',
+              en: 'Could not confirm that you left. It will be checked after reconnecting.',
+              zhHans: '无法确认退出结果。恢复连接后将再次确认。',
+              zhHant: '無法確認退出結果。恢復連線後將再次確認。',
+            ),
+          ),
+        ),
       );
     }
   }

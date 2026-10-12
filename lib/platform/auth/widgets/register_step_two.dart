@@ -2,6 +2,7 @@ import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/auth/models/nickname_policy.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
@@ -44,7 +45,12 @@ class RegisterStepTwo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '계정에서 사용할 사진과 닉네임을 정해 주세요.',
+          GameLocale.select(
+            ko: '계정에서 사용할 사진과 닉네임을 정해 주세요.',
+            en: 'Choose a profile photo and nickname.',
+            zhHans: '请选择账号头像和昵称。',
+            zhHant: '請選擇帳號頭像和暱稱。',
+          ),
           style: MosiFonts.sans(
             locale: Localizations.maybeLocaleOf(context),
             size: 14,
@@ -168,7 +174,12 @@ class RegisterStepTwo extends StatelessWidget {
         const SizedBox(height: 16),
         MosiLabeledField(
           label: context.l10n.nickname,
-          hint: '최대 $nicknameMaxLength자',
+          hint: GameLocale.select(
+            ko: '최대 $nicknameMaxLength자',
+            en: 'Up to $nicknameMaxLength characters',
+            zhHans: '最多 $nicknameMaxLength 个字符',
+            zhHant: '最多 $nicknameMaxLength 個字元',
+          ),
           child: TextField(
             controller: nicknameController,
             enabled: !isLoading,
@@ -176,13 +187,23 @@ class RegisterStepTwo extends StatelessWidget {
             onSubmitted: isLoading ? null : (_) => onCheckNickname(),
             style: mosiFieldTextStyle(),
             decoration: mosiInputDecoration(
-              hintText: '방장님',
+              hintText: GameLocale.select(
+                ko: '방장님',
+                en: 'Host',
+                zhHans: '房主',
+                zhHant: '房主',
+              ),
             ).copyWith(counterText: ''),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          '사진은 나중에 프로필에서 언제든 바꿀 수 있어요.',
+          GameLocale.select(
+            ko: '사진은 나중에 프로필에서 언제든 바꿀 수 있어요.',
+            en: 'You can change your photo anytime in Profile.',
+            zhHans: '之后可随时在个人资料中更换头像。',
+            zhHant: '之後可隨時在個人資料中更換頭像。',
+          ),
           style: MosiFonts.sans(
             locale: Localizations.maybeLocaleOf(context),
             size: 12,

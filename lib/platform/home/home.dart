@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
 import 'package:game_kit/widgets/game_reconnect_screen.dart';
 import 'package:game_kit/template_game.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/phone/screens/phone_home.dart';
 import 'package:project00/platform/home/tablet/screens/tablet_home.dart';
 
@@ -58,8 +59,22 @@ class Home extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.wifi_tethering),
-              title: const Text('게임 재접속 화면'),
-              subtitle: const Text('디자인 확인용 — 아직 배선하지 않았습니다'),
+              title: Text(
+                GameLocale.select(
+                  ko: '게임 재접속 화면',
+                  en: 'Game reconnect screen',
+                  zhHans: '游戏重连画面',
+                  zhHant: '遊戲重連畫面',
+                ),
+              ),
+              subtitle: Text(
+                GameLocale.select(
+                  ko: '디자인 확인용 — 아직 배선하지 않았습니다',
+                  en: 'Design preview — not connected yet',
+                  zhHans: '设计预览 — 尚未连接',
+                  zhHant: '設計預覽 — 尚未連接',
+                ),
+              ),
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 Navigator.of(context).push(

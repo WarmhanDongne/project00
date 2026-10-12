@@ -1,10 +1,12 @@
 import 'package:project00/platform/localization/platform_localizations.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/widgets/game_exit_route.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/home/room/services/room_common.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -19,6 +21,13 @@ const _playerMotionDuration = Duration(milliseconds: 260);
 /// 카드가 그 자리로 부드럽게 감속하며 들어옵니다.
 const _playerEntranceDuration = Duration(milliseconds: 560);
 
+/// 초대하기·초기화를 누르면 무늬 덮개가 방 목록 블록을 덮는 시간입니다.
+const _roomCoverDuration = Duration(milliseconds: 300);
+
+/// 서버 응답이 오면 덮개가 걷히는 시간입니다. 게임 퇴장 연출의 걷히는 반쪽
+/// (전체 960ms의 절반)과 같습니다.
+const _roomRevealDuration = Duration(milliseconds: 480);
+
 /// 자리 벌어짐은 들어오기보다 짧게 끝내 카드가 빈자리로 미끄러져 들어가게 합니다.
 const _playerSlotOpenDuration = Duration(milliseconds: 300);
 
@@ -27,6 +36,7 @@ class TabletRoomPanel extends StatefulWidget {
     super.key,
     required this.provider,
     this.deep = MosiColors.navy,
+    this.coverGemColor = MosiColors.navy,
     this.startBackground = MosiColors.lime,
     this.startForeground = MosiColors.navy,
     this.maxSlots,
@@ -39,6 +49,9 @@ class TabletRoomPanel extends StatefulWidget {
 
   /// 카드 그림자 색입니다(선반 테마의 deep).
   final Color deep;
+
+  /// 서버 응답을 기다리는 동안 흰 덮개 위에 놓이는 마름모의 색입니다(선택한 게임의 색).
+  final Color coverGemColor;
   final Color startBackground;
   final Color startForeground;
 
@@ -54,7 +67,10 @@ class TabletRoomPanel extends StatefulWidget {
   State<TabletRoomPanel> createState() => _TabletRoomPanelState();
 }
 
-class _TabletRoomPanelState extends State<TabletRoomPanel> {
+class _TabletRoomPanelState extends State<TabletRoomPanel>
+    with SingleTickerProviderStateMixin {
+  /// 0이면 걷힌 상태, 1이면 방 목록 블록 전체가 덮인 상태입니다.
+  late final AnimationController _cover = AnimationController(vsync: this);
   Timer? _lastPlayerExitTimer;
   late bool _hadPlayers;
   late bool _showActiveRoom;
@@ -80,6 +96,24 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     _hadPlayers = provider.players.isNotEmpty;
     _showActiveRoom = _hadPlayers;
     provider.addListener(_handleRoomChange);
+  }
+
+  /// 초대하기·초기화처럼 서버 응답을 기다리는 동작입니다.
+  ///
+  /// 누르는 즉시 덮개가 블록 전체를 덮고, 서버가 응답할 때까지 그대로 둡니다.
+  /// 응답이 오면(성공이든 실패든) 덮개를 걷습니다.
+  Future<void> _runCovered(Future<void> Function() action) async {
+    if (!mounted || MediaQuery.disableAnimationsOf(context)) return action();
+    final covering = _cover.animateTo(1, duration: _roomCoverDuration);
+    try {
+      await action();
+    } finally {
+      // 응답이 아주 빨라도 완전히 덮인 뒤에 걷습니다.
+      await covering.orCancel.catchError((_) {});
+      if (mounted) {
+        unawaited(_cover.animateTo(0, duration: _roomRevealDuration));
+      }
+    }
   }
 
   void _handleRoomChange() {
@@ -123,6 +157,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
   void dispose() {
     _lastPlayerExitTimer?.cancel();
     provider.removeListener(_handleRoomChange);
+    _cover.dispose();
     super.dispose();
   }
 
@@ -131,7 +166,13 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
     final code = provider.roomCode;
     final Widget body;
     if (code == null) {
-      body = _EmptyRoom(provider: provider);
+      body = _EmptyRoom(
+        provider: provider,
+        runCovered: _runCovered,
+        primaryBackground: widget.startBackground,
+        primaryForeground: widget.startForeground,
+        primaryShadow: widget.deep,
+      );
     } else {
       final players = _showActiveRoom
           ? List<RoomPlayer>.unmodifiable(provider.players)
@@ -141,6 +182,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
           .length;
       body = _RoomBody(
         provider: provider,
+        runCovered: _runCovered,
         roomCode: code,
         players: players,
         showActiveRoom: _showActiveRoom,
@@ -171,25 +213,75 @@ class _TabletRoomPanelState extends State<TabletRoomPanel> {
               ),
       );
     }
-    return MosiBox(
-      padding: const EdgeInsets.all(20),
-      shadowColor: widget.deep,
-      child: DefaultTextStyle(
-        style: MosiFonts.sans(
-          locale: Localizations.maybeLocaleOf(context),
-          color: MosiColors.navy,
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        MosiBox(
+          padding: const EdgeInsets.all(20),
+          shadowColor: widget.deep,
+          child: DefaultTextStyle(
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              color: MosiColors.navy,
+            ),
+            child: body,
+          ),
         ),
-        child: body,
-      ),
+        // 방 목록 블록(테두리 안쪽 전체)을 덮는 무늬 덮개입니다.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _cover,
+              builder: (context, _) {
+                if (_cover.value == 0) return const SizedBox.shrink();
+                return ClipRRect(
+                  key: const Key('room-panel-reveal'),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      GameExitPatternLayer(
+                        coverage: Curves.easeInOutCubic.transform(_cover.value),
+                        color: Colors.white,
+                        diamondColor: widget.coverGemColor,
+                        dotColor: Colors.transparent,
+                        spacing: 34,
+                        diamondRadius: 7,
+                      ),
+                      // 덮였을 때도 방 카드 테두리처럼 보이게 잉크색 테두리를 둡니다.
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: MosiColors.ink, width: 3),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 //=======================방이 없을 때==============================
 class _EmptyRoom extends StatelessWidget {
-  const _EmptyRoom({required this.provider});
+  const _EmptyRoom({
+    required this.provider,
+    required this.runCovered,
+    required this.primaryBackground,
+    required this.primaryForeground,
+    required this.primaryShadow,
+  });
 
   final RoomProvider provider;
+  final Future<void> Function(Future<void> Function()) runCovered;
+  final Color primaryBackground;
+  final Color primaryForeground;
+  final Color primaryShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -285,6 +377,7 @@ class _EmptyRoom extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         MosiButton(
+          key: const Key('room-invite-button'),
           label: provider.isLoading
               ? restoring
                     ? context.l10n.checkingProgress
@@ -292,10 +385,15 @@ class _EmptyRoom extends StatelessWidget {
               : restoring
               ? context.l10n.retry
               : context.l10n.invite,
-          onPressed: provider.isLoading ? null : provider.createRoom,
+          onPressed: provider.isLoading
+              ? null
+              : () => unawaited(runCovered(provider.createRoom)),
           height: 56,
           fontSize: 18,
           shadowOffset: 5,
+          background: primaryBackground,
+          foreground: primaryForeground,
+          shadowColor: primaryShadow,
           expand: true,
         ),
         if (restoring && provider.errorMessage != null) ...[
@@ -303,7 +401,12 @@ class _EmptyRoom extends StatelessWidget {
           MosiButton(
             key: const Key('close-unrestored-room'),
             label: context.l10n.reset,
-            onPressed: provider.isLoading ? null : provider.closeRoom,
+            onPressed: provider.isLoading
+                ? null
+                : () => unawaited(runCovered(provider.closeRoom)),
+            background: primaryBackground,
+            foreground: primaryForeground,
+            shadowColor: primaryShadow,
             height: 48,
             expand: true,
           ),
@@ -317,6 +420,7 @@ class _EmptyRoom extends StatelessWidget {
 class _RoomBody extends StatelessWidget {
   const _RoomBody({
     required this.provider,
+    required this.runCovered,
     required this.roomCode,
     required this.players,
     required this.showActiveRoom,
@@ -328,6 +432,7 @@ class _RoomBody extends StatelessWidget {
 
   final Set<String> staticUids;
   final RoomProvider provider;
+  final Future<void> Function(Future<void> Function()) runCovered;
   final String roomCode;
   final List<RoomPlayer> players;
   final bool showActiveRoom;
@@ -347,10 +452,20 @@ class _RoomBody extends StatelessWidget {
         Row(
           children: [
             Tooltip(
-              message: 'QR 코드 확대',
+              message: GameLocale.select(
+                ko: 'QR 코드 확대',
+                en: 'Enlarge QR code',
+                zhHans: '放大二维码',
+                zhHant: '放大 QR Code',
+              ),
               child: Semantics(
                 button: true,
-                label: 'QR 코드 확대',
+                label: GameLocale.select(
+                  ko: 'QR 코드 확대',
+                  en: 'Enlarge QR code',
+                  zhHans: '放大二维码',
+                  zhHant: '放大 QR Code',
+                ),
                 child: GestureDetector(
                   key: showActiveRoom
                       ? const Key('active-room-qr-expand')
@@ -391,7 +506,12 @@ class _RoomBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '휴대폰 카메라로 찍으면 바로 들어와요',
+                    GameLocale.select(
+                      ko: '휴대폰 카메라로 찍으면 바로 들어와요',
+                      en: 'Scan with a phone camera to join instantly',
+                      zhHans: '用手机相机扫描即可加入',
+                      zhHant: '用手機相機掃描即可加入',
+                    ),
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 14,
@@ -402,7 +522,12 @@ class _RoomBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '방 코드',
+                    GameLocale.select(
+                      ko: '방 코드',
+                      en: 'Room code',
+                      zhHans: '房间码',
+                      zhHant: '房間碼',
+                    ),
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 12,
@@ -434,7 +559,12 @@ class _RoomBody extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '플레이어',
+                  GameLocale.select(
+                    ko: '플레이어',
+                    en: 'Players',
+                    zhHans: '玩家',
+                    zhHant: '玩家',
+                  ),
                   style: MosiFonts.sans(
                     locale: Localizations.maybeLocaleOf(context),
                     size: 17,
@@ -467,7 +597,7 @@ class _RoomBody extends StatelessWidget {
                   ? null
                   : () {
                       if (!provider.isRemovingAnyPlayer) {
-                        unawaited(provider.closeRoom());
+                        unawaited(runCovered(provider.closeRoom));
                       }
                     },
             ),
@@ -491,7 +621,12 @@ class _RoomBody extends StatelessWidget {
               ? Center(
                   key: const Key('room-waiting-for-players'),
                   child: Text(
-                    '친구들이 QR을 찍으면\n여기에 이름이 떠요',
+                    GameLocale.select(
+                      ko: '친구들이 QR을 찍으면\n여기에 이름이 떠요',
+                      en: 'Names appear here\nwhen friends scan the QR code',
+                      zhHans: '朋友扫描二维码后\n姓名会显示在这里',
+                      zhHant: '朋友掃描 QR Code 後\n姓名會顯示在這裡',
+                    ),
                     textAlign: TextAlign.center,
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
@@ -649,7 +784,12 @@ class _EmptySeatRow extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Text(
-          '빈 자리',
+          GameLocale.select(
+            ko: '빈 자리',
+            en: 'Empty seat',
+            zhHans: '空位',
+            zhHant: '空位',
+          ),
           style: MosiFonts.sans(
             locale: Localizations.maybeLocaleOf(context),
             size: 14,
@@ -805,7 +945,12 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
       child: MosiDialogFrame(
         width: null,
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-        semanticLabel: '방 QR',
+        semanticLabel: GameLocale.select(
+          ko: '방 QR',
+          en: 'Room QR code',
+          zhHans: '房间二维码',
+          zhHant: '房間 QR Code',
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -824,7 +969,12 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
                   const Spacer(),
                   MosiIconButton(
                     icon: Icons.close_rounded,
-                    tooltip: 'QR 확대 닫기',
+                    tooltip: GameLocale.select(
+                      ko: 'QR 확대 닫기',
+                      en: 'Close enlarged QR code',
+                      zhHans: '关闭放大的二维码',
+                      zhHant: '關閉放大的 QR Code',
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -837,7 +987,12 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                '방 코드',
+                GameLocale.select(
+                  ko: '방 코드',
+                  en: 'Room code',
+                  zhHans: '房间码',
+                  zhHant: '房間碼',
+                ),
                 style: MosiFonts.sans(
                   locale: Localizations.maybeLocaleOf(context),
                   size: 14,
@@ -853,7 +1008,12 @@ class _ExpandedRoomQrDialog extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'QR을 스캔하거나 방 코드를 눌러 복사하세요.',
+                GameLocale.select(
+                  ko: 'QR을 스캔하거나 방 코드를 눌러 복사하세요.',
+                  en: 'Scan the QR code or tap the room code to copy it.',
+                  zhHans: '扫描二维码，或点击房间码复制。',
+                  zhHant: '掃描 QR Code，或點擊房間碼複製。',
+                ),
                 textAlign: TextAlign.center,
                 style: MosiFonts.sans(
                   locale: Localizations.maybeLocaleOf(context),
@@ -959,32 +1119,25 @@ class _PlayerTileState extends State<_PlayerTile> {
               ],
             ),
           ),
-          const SizedBox(width: 6),
-          // 좁은 카드에서는 상태 알약을 줄여 내보내기 단추가 밀려나지 않게 합니다.
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: player.isConnected
-                  ? MosiPill(
-                      label: context.l10n.ready,
-                      background: MosiColors.lime,
-                      borderColor: MosiColors.ink,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                    )
-                  : MosiPill(
-                      key: ValueKey('disconnected-player-${player.uid}'),
-                      label: context.l10n.connectionLost,
-                      color: MosiColors.red,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                    ),
+          // 정상 연결은 따로 표시하지 않고, 끊긴 참가자에게만 상태 알약을 붙입니다.
+          // 좁은 카드에서는 알약을 줄여 내보내기 단추가 밀려나지 않게 합니다.
+          if (!player.isConnected) ...[
+            const SizedBox(width: 6),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: MosiPill(
+                  key: ValueKey('disconnected-player-${player.uid}'),
+                  label: context.l10n.connectionLost,
+                  color: MosiColors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
           const SizedBox(width: 6),
           SizedBox(
             width: 36,
@@ -995,7 +1148,12 @@ class _PlayerTileState extends State<_PlayerTile> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : IconButton(
-                    tooltip: '내보내기',
+                    tooltip: GameLocale.select(
+                      ko: '내보내기',
+                      en: 'Remove player',
+                      zhHans: '移出玩家',
+                      zhHant: '移出玩家',
+                    ),
                     padding: EdgeInsets.zero,
                     onPressed: widget.onRemove,
                     icon: const Icon(
@@ -1105,14 +1263,30 @@ class _CopyableRoomCode extends StatelessWidget {
     );
     return Semantics(
       button: true,
-      label: '방 코드 $roomCode 복사',
+      label: GameLocale.select(
+        ko: '방 코드 $roomCode 복사',
+        en: 'Copy room code $roomCode',
+        zhHans: '复制房间码 $roomCode',
+        zhHant: '複製房間碼 $roomCode',
+      ),
       child: GestureDetector(
         onTap: () async {
           await Clipboard.setData(ClipboardData(text: roomCode));
           if (!context.mounted) return;
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(const SnackBar(content: Text('방 코드가 복사되었습니다.')));
+            ..showSnackBar(
+              SnackBar(
+                content: Text(
+                  GameLocale.select(
+                    ko: '방 코드가 복사되었습니다.',
+                    en: 'Room code copied.',
+                    zhHans: '房间码已复制。',
+                    zhHant: '房間碼已複製。',
+                  ),
+                ),
+              ),
+            );
         },
         child: FittedBox(
           fit: BoxFit.scaleDown,

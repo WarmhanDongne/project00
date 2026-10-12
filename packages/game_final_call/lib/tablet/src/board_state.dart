@@ -66,7 +66,12 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     );
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      initializationError = '게임 진행 기기 인증을 확인할 수 없습니다.';
+      initializationError = GameLocale.select(
+        ko: '게임 진행 기기 인증을 확인할 수 없습니다.',
+        en: 'Could not verify the game host device.',
+        zhHans: '无法验证游戏主持设备。',
+        zhHant: '無法驗證遊戲主持裝置。',
+      );
       return;
     }
     final args = FinalCallSessionArgs(
@@ -375,7 +380,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
       final message = controller?.actionErrorMessage;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message ?? '게임을 종료하지 못했습니다.')));
+        ..showSnackBar(
+          SnackBar(content: Text(message ?? '게임을 종료하지 못했습니다.'.localized)),
+        );
       return;
     }
     Navigator.of(context).maybePop();
@@ -453,7 +460,9 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     controller = game;
     if (game == null) {
       return Scaffold(
-        body: Center(child: Text(initializationError ?? '게임을 열 수 없습니다.')),
+        body: Center(
+          child: Text(initializationError ?? '게임을 열 수 없습니다.'.localized),
+        ),
       );
     }
     final stage = _resolveStage(game);

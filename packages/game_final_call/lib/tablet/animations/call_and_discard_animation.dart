@@ -52,23 +52,190 @@ class FinalCallTabletCallAnimation extends StatelessWidget {
         final burstCenter =
             boardSize.center(Offset.zero) +
             Offset(0, -cardHeight / 2 - 20 * scale - burstSize.height / 2);
+        final teamColor = finalCallTeamColor(player.team);
+        // 선언 순간에는 화면 가득 CALL!이 내려앉고(약 2.2초), 그 뒤에는
+        // 가운데 카드 위의 작은 별 배지로 줄어들어 최종 교체 동안 남습니다.
+        return TweenAnimationBuilder<double>(
+          key: ValueKey('final-call-intro-$uid-${controller.round}'),
+          tween: Tween(begin: 0, end: 1),
+          duration: _callIntroDuration,
+          builder: (context, t, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              if (t < 1)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _CallIntro(
+                      progress: t,
+                      callerName: player.nickname,
+                      characterId: player.characterId,
+                      teamColor: teamColor,
+                      scale: scale,
+                      badgeCenter: burstCenter,
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: burstCenter.dx - burstSize.width / 2,
+                top: burstCenter.dy - burstSize.height / 2,
+                width: burstSize.width,
+                height: burstSize.height,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: _span(t, .82, .92),
+                    child: Transform.scale(
+                      scale:
+                          .4 +
+                          .6 * Curves.easeOutBack.transform(_span(t, .82, 1)),
+                      child: _CallBurst(
+                        callerName: player.nickname,
+                        scale: scale,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+const _callIntroDuration = Duration(milliseconds: 2200);
+
+/// [value]가 [begin]~[end] 구간에서 0→1로 가는 진행도입니다.
+double _span(double value, double begin, double end) =>
+    ((value - begin) / (end - begin)).clamp(0.0, 1.0);
+
+/// CALL을 선언한 순간 화면 가득 펼쳐지는 연출입니다.
+///
+/// 어두워진 테이블 뒤로 빨강·노랑 햇살이 돌고, 선언자 얼굴이 튀어나온 뒤
+/// 큰 CALL!이 쾅 내려앉아 흔들립니다. 끝에는 가운데 배지 자리로 빨려 들어갑니다.
+class _CallIntro extends StatelessWidget {
+  const _CallIntro({
+    required this.progress,
+    required this.callerName,
+    required this.characterId,
+    required this.teamColor,
+    required this.scale,
+    required this.badgeCenter,
+  });
+
+  final double progress;
+  final String callerName;
+  final String characterId;
+  final Color teamColor;
+  final double scale;
+  final Offset badgeCenter;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = progress;
+    final fadeIn = Curves.easeOut.transform(_span(t, 0, .12));
+    final leave = Curves.easeInCubic.transform(_span(t, .78, 1));
+    final face = Curves.easeOutBack.transform(_span(t, .04, .24));
+    final slam = Curves.easeOutBack.transform(_span(t, .14, .32));
+    final shake = t > .3 && t < .46
+        ? math.sin((t - .3) * 120) * 10 * scale * (1 - (t - .3) / .16)
+        : 0.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        final center = size.center(Offset.zero);
+        final focus = Offset.lerp(center, badgeCenter, leave)!;
+        final shrink = 1 - .65 * leave;
         return Stack(
           fit: StackFit.expand,
           children: [
+            Opacity(
+              opacity: (fadeIn * (1 - leave) * .62).clamp(0.0, 1.0),
+              child: const ColoredBox(color: FinalCallColors.ink),
+            ),
             Positioned(
-              left: burstCenter.dx - burstSize.width / 2,
-              top: burstCenter.dy - burstSize.height / 2,
-              width: burstSize.width,
-              height: burstSize.height,
-              child: IgnorePointer(
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey('final-call-burst-$uid'),
-                  tween: Tween(begin: 0.4, end: 1),
-                  duration: const Duration(milliseconds: 520),
-                  curve: Curves.easeOutBack,
-                  builder: (context, value, child) =>
-                      Transform.scale(scale: value, child: child),
-                  child: _CallBurst(callerName: player.nickname, scale: scale),
+              left: focus.dx - 380 * scale * shrink,
+              top: focus.dy - 380 * scale * shrink,
+              width: 760 * scale * shrink,
+              height: 760 * scale * shrink,
+              child: Opacity(
+                opacity: (fadeIn * (1 - leave)).clamp(0.0, 1.0),
+                child: Transform.rotate(
+                  angle: t * math.pi * .6,
+                  child: Transform.scale(
+                    scale: .6 + .4 * fadeIn,
+                    child: const CustomPaint(painter: _RaysPainter()),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: focus.dx - 260 * scale + shake,
+              top: focus.dy - 190 * scale,
+              width: 520 * scale,
+              height: 380 * scale,
+              child: Opacity(
+                opacity: (1 - leave).clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: shrink,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Transform.scale(
+                        scale: face,
+                        child: FinalCallPopAvatar(
+                          characterId: characterId,
+                          color: teamColor,
+                          size: 112 * scale,
+                          borderWidth: 5 * scale,
+                        ),
+                      ),
+                      SizedBox(height: 10 * scale),
+                      Opacity(
+                        opacity: face.clamp(0.0, 1.0),
+                        child: FinalCallPopBox(
+                          color: Colors.white,
+                          radius: 12 * scale,
+                          borderWidth: 3 * scale,
+                          shadowDepth: 3 * scale,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 14 * scale,
+                            vertical: 4 * scale,
+                          ),
+                          child: Text(
+                            callerName,
+                            maxLines: 1,
+                            style: finalCallPopText(24 * scale),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 6 * scale),
+                      Opacity(
+                        opacity: _span(t, .14, .2),
+                        child: Transform.rotate(
+                          angle: -.08,
+                          child: Transform.scale(
+                            scale: 2.6 - 1.6 * slam,
+                            child: Text(
+                              'CALL!',
+                              style: finalCallPopText(
+                                120 * scale,
+                                color: FinalCallColors.red,
+                                height: 1,
+                                shadows: [
+                                  ...finalCallPopOutline(6 * scale),
+                                  Shadow(
+                                    color: FinalCallColors.yellow,
+                                    blurRadius: 24 * scale,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -77,6 +244,46 @@ class FinalCallTabletCallAnimation extends StatelessWidget {
       },
     );
   }
+}
+
+/// 가운데에서 바깥으로 뻗는 빨강·노랑 햇살입니다.
+class _RaysPainter extends CustomPainter {
+  const _RaysPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    const rays = 16;
+    for (var i = 0; i < rays; i++) {
+      final start = i * 2 * math.pi / rays;
+      final sweep = math.pi / rays;
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..arcTo(
+          Rect.fromCircle(center: center, radius: radius),
+          start,
+          sweep,
+          false,
+        )
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              (i.isEven ? FinalCallColors.yellow : FinalCallColors.red)
+                  .withValues(alpha: .9),
+              (i.isEven ? FinalCallColors.yellow : FinalCallColors.red)
+                  .withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromCircle(center: center, radius: radius)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RaysPainter oldDelegate) => false;
 }
 
 /// 시안의 노란 별 폭발 모양입니다.

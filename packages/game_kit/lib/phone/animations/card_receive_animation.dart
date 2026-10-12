@@ -9,6 +9,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
 import 'package:game_kit/shared/widgets/game_card_face.dart';
 import 'package:game_kit/game_assets.dart';
@@ -225,7 +226,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
       height: frame.cardHeight,
       child: Semantics(
         button: true,
-        label: '카드 확인',
+        label: '카드 확인'.localized,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(

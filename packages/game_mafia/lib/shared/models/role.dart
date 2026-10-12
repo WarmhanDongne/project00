@@ -9,6 +9,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:game_mafia/game_assets.dart';
 import 'package:game_mafia/game_theme.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -57,9 +58,24 @@ enum MafiaFaction {
 
   /// 결과 화면에 쓰는 이름입니다. 예: `마피아 승리`.
   String get displayName => switch (this) {
-    MafiaFaction.citizen => '시민',
-    MafiaFaction.mafia => '마피아',
-    MafiaFaction.neutral => '중립',
+    MafiaFaction.citizen => GameLocale.select(
+      ko: '시민',
+      en: 'Citizen',
+      zhHans: '市民',
+      zhHant: '市民',
+    ),
+    MafiaFaction.mafia => GameLocale.select(
+      ko: '마피아',
+      en: 'Mafia',
+      zhHans: '黑手党',
+      zhHant: '黑手黨',
+    ),
+    MafiaFaction.neutral => GameLocale.select(
+      ko: '중립',
+      en: 'Neutral',
+      zhHans: '中立',
+      zhHant: '中立',
+    ),
   };
 }
 
@@ -309,6 +325,18 @@ class MafiaRole {
   /// 화면에 보여줄 이름입니다. 예: `마피아`.
   final String displayName;
 
+  /// 현재 앱 언어로 표시하는 역할 이름입니다.
+  String get localizedDisplayName {
+    final names = _localizedRoleNames[id];
+    if (names == null) return displayName;
+    return GameLocale.select(
+      ko: displayName,
+      en: names.$1,
+      zhHans: names.$2,
+      zhHant: names.$3,
+    );
+  }
+
   final MafiaFaction faction;
   final MafiaRoleTier tier;
   final MafiaAbilityTiming abilityTiming;
@@ -378,11 +406,94 @@ class MafiaRole {
   /// 그대로 동작합니다.
   final String nightPromptVerb;
 
+  String get localizedNightPromptVerb => switch (nightPromptVerb) {
+    '조사' => GameLocale.select(
+      ko: '조사',
+      en: 'investigate',
+      zhHans: '调查',
+      zhHant: '調查',
+    ),
+    '치료' => GameLocale.select(ko: '치료', en: 'heal', zhHans: '治疗', zhHant: '治療'),
+    '보호' => GameLocale.select(
+      ko: '보호',
+      en: 'protect',
+      zhHans: '保护',
+      zhHant: '保護',
+    ),
+    '교신' => GameLocale.select(
+      ko: '교신',
+      en: 'contact',
+      zhHans: '通灵',
+      zhHant: '通靈',
+    ),
+    '협박' => GameLocale.select(
+      ko: '협박',
+      en: 'threaten',
+      zhHans: '威胁',
+      zhHant: '威脅',
+    ),
+    '처형' => GameLocale.select(
+      ko: '처형',
+      en: 'eliminate',
+      zhHans: '处决',
+      zhHant: '處決',
+    ),
+    '추적' => GameLocale.select(
+      ko: '추적',
+      en: 'track',
+      zhHans: '追踪',
+      zhHant: '追蹤',
+    ),
+    '취재' => GameLocale.select(
+      ko: '취재',
+      en: 'report on',
+      zhHans: '采访',
+      zhHant: '採訪',
+    ),
+    '제거' => GameLocale.select(
+      ko: '제거',
+      en: 'eliminate',
+      zhHans: '淘汰',
+      zhHant: '淘汰',
+    ),
+    '유혹' => GameLocale.select(
+      ko: '유혹',
+      en: 'distract',
+      zhHans: '魅惑',
+      zhHant: '魅惑',
+    ),
+    '훔치기' => GameLocale.select(
+      ko: '훔치기',
+      en: 'steal',
+      zhHans: '窃取',
+      zhHant: '竊取',
+    ),
+    '전향' => GameLocale.select(
+      ko: '전향',
+      en: 'convert',
+      zhHans: '转化',
+      zhHant: '轉化',
+    ),
+    _ => nightPromptVerb,
+  };
+
   /// 같은 편이 누구인지 서로 알고 시작하는지입니다(마피아·메이슨).
   final bool knowsAllies;
 
   /// 역할 카드 화면에 표시하는 설명입니다. 비어 있으면 그 영역을 그리지 않습니다.
   final String description;
+
+  /// 역할 카드 설명입니다. 설명이 없는 역할은 기존처럼 빈 문자열을 유지합니다.
+  String get localizedDescription {
+    if (description.isEmpty || GameLocale.isKorean) return description;
+    final values = _localizedRoleDescriptions[id];
+    if (values == null) return description;
+    return GameLocale.isEnglish
+        ? values.$1
+        : GameLocale.isTraditionalChinese
+        ? values.$3
+        : values.$2;
+  }
 
   /// 역할 카드 앞면입니다. 세로로 긴 카드(286 : 419)입니다.
   ///
@@ -425,3 +536,127 @@ class MafiaRole {
   /// 밤에 **사망자**를 골라야 하는 역할인지입니다(영매·도둑).
   bool get targetsDead => nightTargetScope == MafiaNightTargetScope.dead;
 }
+
+const _localizedRoleNames = <String, (String, String, String)>{
+  'citizen': ('Citizen', '市民', '市民'),
+  'police': ('Detective', '警察', '警察'),
+  'doctor': ('Doctor', '医生', '醫生'),
+  'bodyguard': ('Bodyguard', '保镖', '保鑣'),
+  'soldier': ('Soldier', '士兵', '士兵'),
+  'politician': ('Politician', '政治家', '政治家'),
+  'medium': ('Medium', '灵媒', '靈媒'),
+  'gangster': ('Gangster', '恶霸', '惡霸'),
+  'vigilante': ('Vigilante', '义警', '義警'),
+  'hunter': ('Hunter', '猎人', '獵人'),
+  'mayor': ('Mayor', '市长', '市長'),
+  'sheriff': ('Sheriff', '治安官', '治安官'),
+  'mason': ('Mason', '共济会成员', '共濟會成員'),
+  'watcher': ('Watcher', '监视者', '監視者'),
+  'detective': ('Private Investigator', '私家侦探', '私家偵探'),
+  'miller': ('Miller', '磨坊主', '磨坊主'),
+  'witness': ('Witness', '证人', '證人'),
+  'roleblocker': ('Role Blocker', '能力封锁者', '能力封鎖者'),
+  'reporter': ('Reporter', '记者', '記者'),
+  'mafia': ('Mafia', '黑手党', '黑手黨'),
+  'mafia_boss': ('Mafia Boss', '黑手党老大', '黑手黨老大'),
+  'spy': ('Spy', '间谍', '間諜'),
+  'beast': ('Werebeast', '兽人', '獸人'),
+  'madam': ('Madam', '夫人', '夫人'),
+  'thief': ('Thief', '盗贼', '盜賊'),
+  'member': ('Member', '组织成员', '組織成員'),
+  'traitor': ('Traitor', '叛徒', '叛徒'),
+  'framer': ('Framer', '栽赃者', '栽贓者'),
+  'silencer': ('Silencer', '沉默者', '沉默者'),
+  'information': ('Informant', '情报员', '情報員'),
+  'mafia_roleblocker': ('Mafia Role Blocker', '黑手党封锁者', '黑手黨封鎖者'),
+  'disguiser': ('Disguiser', '伪装者', '偽裝者'),
+  'recruiter': ('Recruiter', '招募者', '招募者'),
+  'yakuza': ('Yakuza', '极道', '極道'),
+  'serial_killer': ('Serial Killer', '连环杀手', '連環殺手'),
+  'arsonist': ('Arsonist', '纵火犯', '縱火犯'),
+  'jester': ('Jester', '小丑', '小丑'),
+  'executioner': ('Executioner', '处刑者', '處刑者'),
+  'survivor': ('Survivor', '生存者', '生存者'),
+  'cult_leader': ('Cult Leader', '教主', '教主'),
+  'cultist': ('Cultist', '狂信徒', '狂信徒'),
+  'pied_piper': ('Pied Piper', '花衣魔笛手', '花衣魔笛手'),
+  'vampire': ('Vampire', '吸血鬼', '吸血鬼'),
+};
+
+const _localizedRoleDescriptions = <String, (String, String, String)>{
+  'soldier': (
+    'You can block one attack at night.\nA second attack will eliminate you.',
+    '夜间受到攻击时可自行抵挡一次。\n第二次攻击会被淘汰。',
+    '夜間受到攻擊時可自行抵擋一次。\n第二次攻擊會被淘汰。',
+  ),
+  'politician': (
+    'Your daytime vote counts as two.\nYou do nothing at night.',
+    '白天投票计为两票。\n夜间没有行动。',
+    '白天投票計為兩票。\n夜間沒有行動。',
+  ),
+  'medium': (
+    'Contact one dead player each night\nto learn their role.',
+    '每晚与一名死者通灵，\n得知其身份。',
+    '每晚與一名死者通靈，\n得知其身分。',
+  ),
+  'gangster': (
+    'Threaten one player each night\nto block their next daytime vote.',
+    '每晚威胁一名玩家，\n使其次日无法投票。',
+    '每晚威脅一名玩家，\n使其次日無法投票。',
+  ),
+  'vigilante': (
+    'Eliminate one player at night, once per game.\nIf the target is a citizen, you also die.',
+    '每局可在夜间处决一人。\n若目标是市民，你也会死亡。',
+    '每局可在夜間處決一人。\n若目標是市民，你也會死亡。',
+  ),
+  'mafia': (
+    'Choose one player to eliminate each night.\nHide among the citizens and survive.',
+    '每晚选择一名玩家淘汰。\n隐藏在市民中存活到最后。',
+    '每晚選擇一名玩家淘汰。\n隱藏在市民中存活到最後。',
+  ),
+  'spy': (
+    'You know the Mafia. Investigations show you as a citizen.\nYou take no action at night.',
+    '你知道黑手党成员，调查时显示为市民。\n夜间没有行动。',
+    '你知道黑手黨成員，調查時顯示為市民。\n夜間沒有行動。',
+  ),
+  'beast': (
+    'Hunt one player alone each night.\nYou side with the Mafia, but do not know each other.',
+    '每晚独自猎杀一人。\n与黑手党同阵营，但彼此身份不明。',
+    '每晚獨自獵殺一人。\n與黑手黨同陣營，但彼此身分不明。',
+  ),
+  'madam': (
+    'Distract one player each night, blocking both their ability and next vote.',
+    '每晚魅惑一人，封锁其能力与次日投票。',
+    '每晚魅惑一人，封鎖其能力與次日投票。',
+  ),
+  'thief': (
+    'Steal a dead player’s role at night.\nYou also change factions.',
+    '夜间窃取一名死者的身份，\n阵营也随之改变。',
+    '夜間竊取一名死者的身分，\n陣營也隨之改變。',
+  ),
+  'serial_killer': (
+    'Eliminate one player alone each night.\nBe the last survivor to win alone.',
+    '每晚独自淘汰一人。\n成为最后的生存者即可单独获胜。',
+    '每晚獨自淘汰一人。\n成為最後的生存者即可單獨獲勝。',
+  ),
+  'jester': (
+    'Win alone if the daytime vote executes you.',
+    '若在白天投票中被处决，即单独获胜。',
+    '若在白天投票中被處決，即單獨獲勝。',
+  ),
+  'executioner': (
+    'Win alone if your assigned target is executed by daytime vote.',
+    '若指定目标在白天投票中被处决，即单独获胜。',
+    '若指定目標在白天投票中被處決，即單獨獲勝。',
+  ),
+  'cult_leader': (
+    'Convert one player into a Cultist each night.\nThe Cult wins when all survivors belong to it.',
+    '每晚将一名玩家转化为狂信徒。\n所有生存者都属于教团时获胜。',
+    '每晚將一名玩家轉化為狂信徒。\n所有生存者都屬於教團時獲勝。',
+  ),
+  'cultist': (
+    'You answered the Cult Leader’s call.\nThe Cult wins when all survivors belong to it.',
+    '你响应了教主的召唤。\n所有生存者都属于教团时获胜。',
+    '你回應了教主的召喚。\n所有生存者都屬於教團時獲勝。',
+  ),
+};

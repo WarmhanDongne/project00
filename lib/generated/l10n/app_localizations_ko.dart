@@ -25,7 +25,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationScope =>
-      '주요 메뉴에 적용돼요. 게임 설명·규칙·이미지와 일부 안내는 아직 한국어로 표시돼요.';
+      '주요 메뉴와 게임 이름·소개·규칙·장르에 적용돼요. 이미지 속 글자와 일부 안내는 아직 한국어로 표시돼요.';
 
   @override
   String get save => '저장';
@@ -64,6 +64,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get details => '자세히 보기';
 
   @override
+  String get viewDescription => '설명 보기';
+
+  @override
   String get login => '로그인';
 
   @override
@@ -80,6 +83,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appleLogin => 'Apple로 로그인';
+
+  @override
+  String get guestLogin => '게스트로 시작하기';
 
   @override
   String get checkCredentials => '이메일과 비밀번호를 확인해주세요.';

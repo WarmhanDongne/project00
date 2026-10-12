@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -13,8 +14,10 @@ class PhoneGameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final known = MosiGameArt.isKnown(gameInfo.id);
-    final art = MosiGameArt.of(gameInfo.id, fallbackName: gameInfo.name);
+    final locale = Localizations.localeOf(context);
+    final displayName = gameInfo.localizedName(locale);
+    final description = gameInfo.localizedDescription(locale);
+    final englishName = gameInfo.englishName;
     return Padding(
       padding: EdgeInsets.fromLTRB(inset ? 20 : 0, 0, inset ? 26 : 6, 16),
       child: MosiBox(
@@ -29,6 +32,8 @@ class PhoneGameCard extends StatelessWidget {
               shadow: 0,
               fallbackName: gameInfo.name,
               fallbackImageUrl: gameInfo.imageUrl,
+              displayName: displayName,
+              englishName: englishName,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -36,7 +41,7 @@ class PhoneGameCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    known ? art.koreanName : gameInfo.name,
+                    displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: MosiFonts.sans(
@@ -45,9 +50,9 @@ class PhoneGameCard extends StatelessWidget {
                       color: MosiColors.navy,
                     ),
                   ),
-                  if (known)
+                  if (englishName.toUpperCase() != displayName.toUpperCase())
                     Text(
-                      art.englishName,
+                      englishName,
                       style: MosiFonts.grotesk(
                         size: 10,
                         color: MosiColors.violet,
@@ -60,17 +65,30 @@ class PhoneGameCard extends StatelessWidget {
                     runSpacing: 5,
                     children: [
                       if (gameInfo.playTime > 0)
-                        PlatformTag(label: '${gameInfo.playTime}분'),
+                        PlatformTag(
+                          label: GameLocale.select(
+                            ko: '${gameInfo.playTime}분',
+                            en: '${gameInfo.playTime} min',
+                            zhHans: '${gameInfo.playTime} 分钟',
+                            zhHant: '${gameInfo.playTime} 分鐘',
+                          ),
+                        ),
                       if (gameInfo.minPlayers > 0)
                         PlatformTag(
-                          label:
-                              '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+                          label: GameLocale.select(
+                            ko: '${gameInfo.minPlayers}–${gameInfo.maxPlayers}명',
+                            en: '${gameInfo.minPlayers}–${gameInfo.maxPlayers} players',
+                            zhHans:
+                                '${gameInfo.minPlayers}–${gameInfo.maxPlayers} 人',
+                            zhHant:
+                                '${gameInfo.minPlayers}–${gameInfo.maxPlayers} 人',
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    gameInfo.description,
+                    description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: MosiFonts.sans(

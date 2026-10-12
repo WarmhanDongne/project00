@@ -13,6 +13,7 @@ import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/game_theme.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -116,7 +117,14 @@ class MafiaDayDiscussionView extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        endedByVote ? '토론 종료' : title,
+                        endedByVote
+                            ? GameLocale.select(
+                                ko: '토론 종료',
+                                en: 'Discussion ended',
+                                zhHans: '讨论结束',
+                                zhHant: '討論結束',
+                              )
+                            : title.localized,
                         style: mafiaNoirBody(
                           14 * scale,
                           color: MafiaColors.noirBrass,
@@ -150,7 +158,12 @@ class MafiaDayDiscussionView extends StatelessWidget {
                 right: 0,
                 top: MafiaPhoneDesign.top(size, _aliveLabelTop),
                 child: Text(
-                  '생존 ${alivePlayers.length}',
+                  GameLocale.select(
+                    ko: '생존 ${alivePlayers.length}',
+                    en: '${alivePlayers.length} alive',
+                    zhHans: '存活 ${alivePlayers.length}',
+                    zhHant: '存活 ${alivePlayers.length}',
+                  ),
                   textAlign: TextAlign.center,
                   style: mafiaNoirBody(
                     13 * scale,
@@ -181,7 +194,14 @@ class MafiaDayDiscussionView extends StatelessWidget {
             ],
             if (!endedByVote)
               MafiaPhoneActionButton(
-                label: hasVotedToSkip ? '동의했습니다' : endLabel,
+                label: hasVotedToSkip
+                    ? GameLocale.select(
+                        ko: '동의했습니다',
+                        en: 'Agreed',
+                        zhHans: '已同意',
+                        zhHant: '已同意',
+                      )
+                    : endLabel.localized,
                 trailing: '$skipVoteCount / $aliveCount',
                 backgroundColor: hasVotedToSkip
                     ? MafiaColors.noirBrass
@@ -214,9 +234,20 @@ class _LastNightNews extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final first = dead.firstOrNull;
+    final names = dead.map((player) => player.nickname).join(' · ');
     final headline = first == null
-        ? '어젯밤은 조용히 지나갔다'
-        : '어젯밤, ${mafiaJosa(dead.map((player) => player.nickname).join(' · '), '이', '가')} 쓰러졌다';
+        ? GameLocale.select(
+            ko: '어젯밤은 조용히 지나갔다',
+            en: 'Last night passed quietly',
+            zhHans: '昨夜平安无事',
+            zhHant: '昨夜平安無事',
+          )
+        : GameLocale.select(
+            ko: '어젯밤, ${mafiaJosa(names, '이', '가')} 쓰러졌다',
+            en: 'Last night, $names fell',
+            zhHans: '昨夜，$names 倒下了',
+            zhHant: '昨夜，$names 倒下了',
+          );
     return Stack(
       children: [
         Positioned(

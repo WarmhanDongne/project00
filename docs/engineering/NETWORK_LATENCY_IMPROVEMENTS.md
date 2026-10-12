@@ -321,3 +321,23 @@ ready 규칙을 제거하지 않는다. 새 최종 소스 후보의 FULL은 별�
 사본에만 적용되며 이후 외부 변경까지 포함한 현재 전체 working tree의 PASS가 아니다.**
 차이 목록은 `build/game-ready-fix/final-state.json`에 기록했다. branch 디벨럽1,
 HEAD `7bb2b1e249c8305ad62458b001bff5057e02e5fd`, staged0, packages.zip/design_exports 보존.
+
+
+## 2026-10-12 라이어스 카탈로그 문서 ID 이전 후보
+
+표시 이름은 앞선 요청으로 Firebase에 ‘라이어스 (Liars) 거짓말쟁이들’로 저장했다.
+후속 요청은 games/liars_poker → games/liars 문서 ID 이전이다. 앱·서버 reader가 liars를
+우선 읽고 없을 때만 legacy 문서를 읽도록 수정했다. 목록은 runtime ID 기준으로
+중복을 제거하며 구매 키 liars/liars_poker도 같은 게임으로 판정한다. 문서가 비활성화되거나
+조회가 실패한 경우 legacy로 우회하지 않는다.
+
+이 변경은 Firebase 카탈로그 ID의 변경이다. 실행 중인 방의 selectedGame/gameType,
+기존 구매 배열, 서버 callable명·패키지명·Storage 경로는 유지한다. 따라서 사용자/방 전체
+DB를 읽거나 바꾸는 작업은 필요하지 않다. 규칙·설명 관리 스크립트도 새 문서에 반영한다.
+운영 이전 스크립트는 전체 필드를 보존하는 create/delete transaction을 사용하고 목적지
+충돌·하위 컬렉션이 있으면 중단한다. 역방향 롤백도 제공한다.
+
+직접 Flutter11·Functions10, build/lint 및 Project CLI session(54초) PASS/exit0.
+FULL과 운영 이전은 미실행이다. 기존 앱은 새 문서 ID를 인식하지 못하므로 사용 기기에
+새 앱과 서버 selectRealtimeRoomGame/beginRealtimeRoomSeating을 반영한 다음 이전한다.
+[상세 절차](../planning/tasks/LIARS-CATALOG-01.md)에 배포·마이그레이션·롤백 조건을 기록했다.

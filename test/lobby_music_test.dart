@@ -52,9 +52,7 @@ void main() {
 
     sound.calls.clear();
     navigator.currentState!.push(
-      MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: Text('게임')),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('게임'))),
     );
     await tester.pumpAndSettle();
     expect(sound.calls, ['stop']);

@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_connection.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -48,33 +49,38 @@ class NetworkUnavailableModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = isRetrying
-        ? '다시 연결하는 중'
+        ? '다시 연결하는 중'.localized
         : retryEnabled
-        ? '자동으로 다시 연결하는 중'
-        : '인터넷 연결을 기다리는 중';
+        ? '자동으로 다시 연결하는 중'.localized
+        : '인터넷 연결을 기다리는 중'.localized;
     return MosiConnectionLayout(
       key: cardKey,
-      semanticLabel: '인터넷 연결 끊김',
+      semanticLabel: '인터넷 연결 끊김'.localized,
       background: MosiColors.navy,
       scene: MosiWifiLostScene(characterId: characterId),
-      tag: '내 기기',
-      title: title,
-      body: description,
+      tag: GameLocale.select(
+        ko: '내 기기',
+        en: 'This device',
+        zhHans: '本设备',
+        zhHant: '本裝置',
+      ),
+      title: title.localized,
+      body: description.localized,
       status: MosiConnectionStatus(text: status),
       actions: [
         // 인터넷은 돌아왔는데 서버 복구가 늦을 때만 직접 재시도를 내줍니다.
         if (retryEnabled)
           MosiConnectionButton(
             key: retryButtonKey,
-            label: '다시 시도',
+            label: '다시 시도'.localized,
             primary: true,
             loading: isRetrying,
-            semanticLabel: '네트워크 연결 재시도',
+            semanticLabel: '네트워크 연결 재시도'.localized,
             onPressed: isRetrying ? null : onRetry,
           ),
         if (onExit != null)
           MosiConnectionButton(
-            label: exitLabel,
+            label: exitLabel.localized,
             onPressed: isRetrying ? null : onExit,
           ),
       ],

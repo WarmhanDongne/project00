@@ -17,6 +17,7 @@ import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -455,7 +456,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
                     onTap: _handleCardTap,
                     child: Semantics(
                       button: true,
-                      label: _isOpen ? '내 신분 카드' : '내 신분 확인하기',
+                      label: (_isOpen ? '내 신분 카드' : '내 신분 확인하기').localized,
                       child: MafiaFlipCard(
                         progress: Curves.easeInOutCubic.transform(_flip.value),
                         front: widget.role?.card,
@@ -482,7 +483,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
                           color: MafiaColors.noirPaper,
                           padding: EdgeInsets.symmetric(horizontal: 8 * scale),
                           child: Text(
-                            '눌러서 내 신분 보기',
+                            '눌러서 내 신분 보기'.localized,
                             style: mafiaNoirBody(
                               13 * scale,
                               color: MafiaColors.noirInk,
@@ -512,7 +513,7 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
         opacity: _stage == _CardStage.returning ? 0 : 1,
         duration: const Duration(milliseconds: 260),
         child: Text(
-          '당신의 신분',
+          '당신의 신분'.localized,
           textAlign: TextAlign.center,
           style: mafiaNoirBody(
             14 * scale,
@@ -596,20 +597,20 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            role.displayName,
+            role.localizedDisplayName,
             maxLines: 1,
             textAlign: TextAlign.center,
             style: mafiaNoirDisplay(54 * scale, height: 1),
           ),
         ),
       ),
-      if (role.description.trim().isNotEmpty)
+      if (role.localizedDescription.trim().isNotEmpty)
         _buildFadingText(
           size: size,
           designTop: _descriptionTop,
           horizontalMargin: 51,
           child: Text(
-            role.description,
+            role.localizedDescription,
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -661,14 +662,14 @@ class _MafiaPhoneRoleCardLayerState extends State<MafiaPhoneRoleCardLayer>
               child: child,
             ),
           ),
-          child: MafiaNoirButton(label: '확인했습니다', onTap: _close),
+          child: MafiaNoirButton(label: '확인했습니다'.localized, onTap: _close),
         ),
       ),
       _buildFadingText(
         size: size,
         designTop: _footerTop,
         child: Text(
-          '다른 사람에게 보여주지 마세요',
+          '다른 사람에게 보여주지 마세요'.localized,
           textAlign: TextAlign.center,
           style: mafiaNoirBody(13 * scale, color: const Color(0xFF6E6A5D)),
         ),

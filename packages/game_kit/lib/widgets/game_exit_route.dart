@@ -42,6 +42,54 @@ class GameExitInstantPageRoute<T> extends PageRouteBuilder<T> {
       );
 }
 
+/// 게임 퇴장 때 쓰는 마름모 무늬 대각선 덮개를 [coverage](0~1)만큼 그립니다.
+///
+/// 0이면 아무것도 그리지 않고 1이면 전체를 덮습니다. 전체 화면 전환이 아니라
+/// 일부 영역만 같은 연출로 가릴 때 씁니다.
+class GameExitPatternLayer extends StatelessWidget {
+  const GameExitPatternLayer({
+    super.key,
+    required this.coverage,
+    this.color = _gameExitCoverColor,
+    this.diamondColor = _gameExitDiamondColor,
+    this.dotColor = _gameExitDotColor,
+    this.spacing = _gameExitSpacing,
+    this.diamondRadius = _gameExitDiamondRadius,
+  });
+
+  final double coverage;
+
+  /// 무늬 사이 간격과 마름모 크기입니다. 기본값은 게임 퇴장 연출의 값입니다.
+  final double spacing;
+  final double diamondRadius;
+
+  /// 덮개 바탕색입니다. 기본값은 게임 퇴장 연출의 남색입니다.
+  final Color color;
+
+  /// 마름모와 점의 색입니다. 기본값은 게임 퇴장 연출의 색입니다.
+  final Color diamondColor;
+  final Color dotColor;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _GameExitPatternPainter(
+      coverage,
+      color: color,
+      diamondColor: diamondColor,
+      dotColor: dotColor,
+      spacing: spacing,
+      diamondRadius: diamondRadius,
+    ),
+    child: const SizedBox.expand(),
+  );
+}
+
+const Color _gameExitCoverColor = Color(0xFF0E0A3D);
+const Color _gameExitDiamondColor = Color(0x66F7F4EC);
+const Color _gameExitDotColor = Color(0x888A78F8);
+const double _gameExitSpacing = 42;
+const double _gameExitDiamondRadius = 6;
+
 class _GameExitTransition extends StatelessWidget {
   const _GameExitTransition({
     required this.animation,
@@ -92,36 +140,48 @@ class _GameExitTransition extends StatelessWidget {
 }
 
 class _GameExitPatternPainter extends CustomPainter {
-  const _GameExitPatternPainter(this.coverage);
+  const _GameExitPatternPainter(
+    this.coverage, {
+    this.color = _gameExitCoverColor,
+    this.diamondColor = _gameExitDiamondColor,
+    this.dotColor = _gameExitDotColor,
+    this.spacing = _gameExitSpacing,
+    this.diamondRadius = _gameExitDiamondRadius,
+  });
 
   final double coverage;
+  final double spacing;
+  final double diamondRadius;
+  final Color color;
+  final Color diamondColor;
+  final Color dotColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (coverage <= 0 || size.isEmpty) return;
     canvas.save();
     canvas.clipPath(_coveragePath(size, coverage));
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFF0E0A3D),
-    );
+    canvas.drawRect(Offset.zero & size, Paint()..color = color);
 
-    const spacing = 42.0;
-    final diamond = Paint()..color = const Color(0x66F7F4EC);
-    final dot = Paint()..color = const Color(0x888A78F8);
+    final diamond = Paint()..color = diamondColor;
+    final dot = Paint()..color = dotColor;
     var row = 0;
     for (var y = 0.0; y < size.height + spacing; y += spacing) {
       final shift = row.isEven ? 0.0 : spacing / 2;
       for (var x = -spacing + shift; x < size.width + spacing; x += spacing) {
         final center = Offset(x, y);
         final tile = Path()
-          ..moveTo(center.dx, center.dy - 6)
-          ..lineTo(center.dx + 6, center.dy)
-          ..lineTo(center.dx, center.dy + 6)
-          ..lineTo(center.dx - 6, center.dy)
+          ..moveTo(center.dx, center.dy - diamondRadius)
+          ..lineTo(center.dx + diamondRadius, center.dy)
+          ..lineTo(center.dx, center.dy + diamondRadius)
+          ..lineTo(center.dx - diamondRadius, center.dy)
           ..close();
         canvas.drawPath(tile, diamond);
-        canvas.drawCircle(center + const Offset(16, 16), 1.5, dot);
+        canvas.drawCircle(
+          center + Offset(spacing * .38, spacing * .38),
+          1.5,
+          dot,
+        );
       }
       row += 1;
     }
@@ -156,5 +216,10 @@ class _GameExitPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GameExitPatternPainter oldDelegate) =>
-      oldDelegate.coverage != coverage;
+      oldDelegate.coverage != coverage ||
+      oldDelegate.color != color ||
+      oldDelegate.diamondColor != diamondColor ||
+      oldDelegate.dotColor != dotColor ||
+      oldDelegate.spacing != spacing ||
+      oldDelegate.diamondRadius != diamondRadius;
 }

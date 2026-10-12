@@ -137,20 +137,13 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
       selectedCardId = null;
     }
     if (game.isFinalSubmitPhase) selectedCardId = null;
-    if (!game.isFinalSubmitPhase && selectedFinalCardIds.isNotEmpty) {
-      selectedFinalCardIds.clear();
-    }
-    // 최종 제출이 열리면 가장 높은 조합을 미리 골라 둡니다.
-    if (game.isFinalSubmitPhase &&
-        _presetFinalSelectionRound != game.round &&
-        game.hand.isNotEmpty) {
-      _presetFinalSelectionRound = game.round;
-      if (selectedFinalCardIds.isEmpty) {
-        selectedFinalCardIds.addAll(
-          finalCallBestCombination(game.hand).cardIds,
-        );
-      }
-    }
+    _presetFinalSelectionRound = syncFinalCallSelection(
+      selected: selectedFinalCardIds,
+      hand: game.hand,
+      submitPhase: game.isFinalSubmitPhase,
+      round: game.round,
+      presetRound: _presetFinalSelectionRound,
+    );
     if (game.callerUid == null) {
       observedCallerUid = null;
       visibleCallerUid = null;
@@ -293,7 +286,9 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     if (game == null) {
       return Scaffold(
         body: Center(
-          child: Text(initializationError ?? GameFlowCopy.gameOpenFailed),
+          child: Text(
+            (initializationError ?? GameFlowCopy.gameOpenFailed).localized,
+          ),
         ),
       );
     }
@@ -315,7 +310,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     );
     final winners = game.winners;
     final resultNickname = game.finishReason == 'draw'
-        ? '무승부'
+        ? GameLocale.select(ko: '무승부', en: 'Draw', zhHans: '平局', zhHant: '平局')
         : winners.map((winner) => winner.nickname).join(' · ');
     final resultProfile = winners.isEmpty ? null : winners.first;
     final resultLabel = game.finishReason == 'draw'
@@ -391,9 +386,11 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
                     onSelectedCardChanged: (id) =>
                         setState(() => selectedCardId = id),
                     onFinalCardSelected: (id) => setState(() {
-                      if (!selectedFinalCardIds.remove(id)) {
-                        selectedFinalCardIds.add(id);
-                      }
+                      toggleFinalCallSelection(
+                        selected: selectedFinalCardIds,
+                        hand: game.hand,
+                        cardId: id,
+                      );
                     }),
                     onCompleteTurn: _completeTurn,
                     replacingCardId: replacingCardId,

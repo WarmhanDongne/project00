@@ -19,6 +19,7 @@ import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/shared/animations/announcement_reveal.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/gen/assets.gen.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -64,7 +65,7 @@ class MafiaExecutionResultView extends StatelessWidget {
               ),
             ),
             if (target == null)
-              const MafiaPhoneAnnouncement(
+              MafiaPhoneAnnouncement(
                 beats: [MafiaCopy.noExecution],
                 top: MafiaPhoneStatusText.announcementTop,
                 fontSize: 30,
@@ -119,7 +120,7 @@ class MafiaExecutionResultView extends StatelessWidget {
           right: 0,
           top: MafiaPhoneDesign.top(size, 106),
           child: Text(
-            '당신은\n처형 당했습니다',
+            MafiaCopy.executedSelfTitle.replaceFirst(' ', '\n'),
             textAlign: TextAlign.center,
             style: mafiaNoirDisplay(34 * scale, height: 1.15),
           ),
@@ -149,8 +150,13 @@ class MafiaExecutionResultView extends StatelessWidget {
                       child: card.image(fit: BoxFit.cover),
                     ),
                     MafiaNoirBanner(
-                      spec: const MafiaNoirBannerSpec(
-                        label: '처형',
+                      spec: MafiaNoirBannerSpec(
+                        label: GameLocale.select(
+                          ko: '처형',
+                          en: 'EXECUTED',
+                          zhHans: '处决',
+                          zhHant: '處決',
+                        ),
                         angle: -16,
                         letterSpacing: 0.4,
                       ),
@@ -168,24 +174,12 @@ class MafiaExecutionResultView extends StatelessWidget {
             left: 0,
             right: 0,
             top: MafiaPhoneDesign.top(size, 590),
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: '당신의 신분은 '),
-                  TextSpan(
-                    text: role!.displayName,
-                    style: const TextStyle(
-                      color: MafiaColors.noirPaper,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  TextSpan(
-                    text: MafiaCopy.hasFinalConsonant(role!.displayName)
-                        ? '이었습니다.\n'
-                        : '였습니다.\n',
-                  ),
-                  const TextSpan(text: '이제 모든 사람의 신분을 볼 수 있어요.'),
-                ],
+            child: Text(
+              GameLocale.select(
+                ko: '당신의 신분은 ${role!.localizedDisplayName}${MafiaCopy.hasFinalConsonant(role!.localizedDisplayName) ? '이었습니다' : '였습니다'}.\n이제 모든 사람의 신분을 볼 수 있어요.',
+                en: 'Your role was ${role!.localizedDisplayName}.\nYou can now see every player’s role.',
+                zhHans: '你的身份是${role!.localizedDisplayName}。\n现在可以查看所有人的身份。',
+                zhHant: '你的身分是${role!.localizedDisplayName}。\n現在可以查看所有人的身分。',
               ),
               textAlign: TextAlign.center,
               style: mafiaNoirBody(
@@ -200,7 +194,7 @@ class MafiaExecutionResultView extends StatelessWidget {
           right: 0,
           top: MafiaPhoneDesign.top(size, 690),
           child: Text(
-            '살아 있는 사람에게 화면을 보여주지 마세요',
+            '살아 있는 사람에게 화면을 보여주지 마세요'.localized,
             textAlign: TextAlign.center,
             style: mafiaNoirBody(13 * scale, color: const Color(0xFF6E6A5D)),
           ),
@@ -409,7 +403,10 @@ class _MafiaExecutionRevealViewState extends State<MafiaExecutionRevealView>
     return MafiaPhoneAnnouncement(
       beats: role == null
           ? MafiaCopy.unknownRoleBeats(widget.executed.nickname)
-          : MafiaCopy.wasRoleBeats(widget.executed.nickname, role.displayName),
+          : MafiaCopy.wasRoleBeats(
+              widget.executed.nickname,
+              role.localizedDisplayName,
+            ),
       top: _sentenceTop,
       sideMargin: 0,
       // 다음 단계로 넘어가기 전에 두 박자가 다 들어가게 줄였습니다.

@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_kit/shared/animations/curve_intervals.dart';
+
 // ============================================================
 
 /// 게임 화면 진입 시 GAME START를 부드럽게 등장·퇴장시킵니다.

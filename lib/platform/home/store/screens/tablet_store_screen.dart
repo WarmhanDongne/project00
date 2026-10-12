@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 //=======================게임 상점 (UI만)==============================
 // 시안 '모시 서점(신간 매대)'입니다. 매대에는 Firestore `games`에서
@@ -52,9 +53,9 @@ class _DesignCanvas extends StatelessWidget {
 /// 매대 쪽지와 계산대 카드 문구입니다.
 class _StoreCopy {
   const _StoreCopy({
-    required this.note,
-    required this.sub,
-    required this.meta,
+    this.note = '',
+    this.sub = '',
+    this.meta = '',
     this.description = '',
     this.tilt = 0,
     this.spineShade = .2,
@@ -64,7 +65,7 @@ class _StoreCopy {
   final String sub;
   final String meta;
 
-  /// 비어 있으면 Firestore 소개(`tabletDescription`·`description`)를 씁니다.
+  /// 게임 문서는 항상 Firestore 소개를 쓰고, 곧 나올 게임만 이 값을 씁니다.
   final String description;
 
   /// 손글씨 쪽지가 기울어진 각도(도)입니다.
@@ -72,47 +73,35 @@ class _StoreCopy {
   final double spineShade;
 }
 
-/// 시안에서 다듬은 게임별 문구입니다. 여기에 없는 새 게임은 Firestore 값으로 채웁니다.
+/// 쪽지 문구와 책 기울기는 시각 연출입니다. 게임 소개는 Firestore에서 읽습니다.
 const _knownCopy = {
-  'liars_poker': _StoreCopy(
-    note: '거짓말도 실력이에요!',
-    sub: '카드 · 블러핑',
-    meta: '카드 · 블러핑 · 2026',
-    description: '카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.',
-    tilt: -2,
-    spineShade: .22,
-  ),
-  'mafia': _StoreCopy(
-    note: '태블릿이 사회자가 돼요',
-    sub: '역할 추리 · 점원 추천',
-    meta: '역할 추리 · 2026',
-    description: '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 되고, 내 역할은 내 휴대폰에만 보여요.',
-    tilt: 1.5,
-    spineShade: .3,
-  ),
-  'final_call': _StoreCopy(
-    note: '둘이 한 팀, 끝까지!',
-    sub: '팀전 카드',
-    meta: '팀전 카드 · 2026',
-    description: '4명은 2대2, 6명은 2대2대2 팀전이에요.',
-    tilt: -1,
-    spineShade: .1,
-  ),
-  'holdem': _StoreCopy(
-    note: '칩을 걸고 한 판 승부!',
-    sub: '카드 · 베팅',
-    meta: '카드 · 베팅 · 2026',
-    tilt: 1,
-    spineShade: .18,
-  ),
+  'liars_poker': _StoreCopy(tilt: -2, spineShade: .22),
+  'mafia': _StoreCopy(tilt: 1.5, spineShade: .3),
+  'final_call': _StoreCopy(tilt: -1, spineShade: .1),
+  'holdem': _StoreCopy(tilt: 1, spineShade: .18),
 };
 
 /// 매대 맨 끝 '곧 나올 게임' 자리 문구입니다.
-const _comingSoonCopy = _StoreCopy(
-  note: '새 게임이 곧 진열돼요',
-  sub: '다음 신간',
-  meta: '다음 신간',
-  description: '곧 새로운 게임이 이 매대에 진열될 거예요. 조금만 기다려 주세요!',
+_StoreCopy get _comingSoonCopy => _StoreCopy(
+  note: GameLocale.select(
+    ko: '새 게임이 곧 진열돼요',
+    en: 'A new game is coming',
+    zhHans: '新游戏即将上架',
+    zhHant: '新遊戲即將上架',
+  ),
+  sub: '곧 나올 게임'.localized,
+  meta: GameLocale.select(
+    ko: '다음 신간',
+    en: 'Next release',
+    zhHans: '下款新作',
+    zhHant: '下款新作',
+  ),
+  description: GameLocale.select(
+    ko: '곧 새로운 게임이 이 매대에 진열될 거예요. 조금만 기다려 주세요!',
+    en: 'A new game will arrive on this shelf soon. Stay tuned!',
+    zhHans: '新游戏即将上架，敬请期待！',
+    zhHant: '新遊戲即將上架，敬請期待！',
+  ),
   tilt: 2,
   spineShade: .12,
 );
@@ -126,18 +115,35 @@ class _StoreEntry {
   final GameInfo? game;
   final _StoreCopy copy;
 
-  String get name {
+  String name(Locale? locale) {
     final game = this.game;
-    if (game == null) return '곧 나올 게임';
-    return MosiGameArt.isKnown(game.id)
-        ? MosiGameArt.of(game.id).koreanName
-        : game.name;
+    if (game == null) return '곧 나올 게임'.localized;
+    return game.localizedName(locale ?? const Locale('ko'));
   }
 
-  String get description {
+  String description(Locale locale) {
     final game = this.game;
-    if (copy.description.isNotEmpty || game == null) return copy.description;
-    return game.effectiveTabletDescription;
+    if (game == null) return copy.description;
+    return game.effectiveTabletDescriptionFor(locale);
+  }
+
+  String meta(Locale locale) {
+    final game = this.game;
+    if (game == null) return copy.meta;
+    return game.localizedGenresText(locale, separator: ' · ');
+  }
+
+  String note(Locale locale) {
+    final game = this.game;
+    if (game == null) return copy.note;
+    final genres = game.localizedGenresFor(locale);
+    return genres.isEmpty ? '' : genres.first;
+  }
+
+  String sub(Locale locale) {
+    final game = this.game;
+    if (game == null) return copy.sub;
+    return game.localizedGenresFor(locale).skip(1).join(' · ');
   }
 
   bool get canPlay {
@@ -147,13 +153,7 @@ class _StoreEntry {
 }
 
 _StoreCopy _copyFor(GameInfo game, int index) =>
-    _knownCopy[game.id] ??
-    _StoreCopy(
-      note: game.name,
-      sub: game.genres.isEmpty ? '새 게임' : game.genres.take(2).join(' · '),
-      meta: game.genres.join(' · '),
-      tilt: index.isEven ? -1.5 : 1.5,
-    );
+    _knownCopy[game.id] ?? _StoreCopy(tilt: index.isEven ? -1.5 : 1.5);
 
 class TabletStoreScreen extends StatefulWidget {
   const TabletStoreScreen({super.key, required this.gameProvider});
@@ -194,7 +194,7 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     return [
       for (final (index, game) in games.indexed)
         _StoreEntry(id: game.id, game: game, copy: _copyFor(game, index)),
-      const _StoreEntry(id: 'soon', game: null, copy: _comingSoonCopy),
+      _StoreEntry(id: 'soon', game: null, copy: _comingSoonCopy),
     ];
   }
 
@@ -231,14 +231,14 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     _notReady(
       context,
       entry.game == null
-          ? '새 게임 소식은 상점에서 확인해 주세요. 알림 신청은 준비 중이에요.'
+          ? '새 게임 소식은 상점에서 확인해 주세요. 알림 신청은 준비 중이에요.'.localized
           : context.l10n.purchaseNotice,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final locale = Localizations.maybeLocaleOf(context);
+    final locale = Localizations.localeOf(context);
     final entries = _entries;
     final current = _current(entries);
     final chip = _status(current);
@@ -417,10 +417,10 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                       start: .45,
                       offset: const Offset(0, 80),
                       child: _CounterCard(
-                        name: current.name,
+                        name: current.name(locale),
                         status: chip,
-                        meta: current.copy.meta,
-                        description: current.description,
+                        meta: current.meta(locale),
+                        description: current.description(locale),
                         hint: width >= 1100,
                         compact: compact,
                         buttonLabel: buttonLabel,
@@ -714,6 +714,8 @@ class _StoreBook extends StatelessWidget {
                   shadow: 0,
                   fallbackName: game.name,
                   fallbackImageUrl: game.imageUrl,
+                  displayName: game.localizedName(locale ?? const Locale('ko')),
+                  englishName: game.englishName,
                 ),
               ),
             Positioned(
@@ -789,7 +791,7 @@ class _StoreBook extends StatelessWidget {
       child: Semantics(
         button: true,
         selected: selected,
-        label: entry.name,
+        label: entry.name(locale),
         onTap: onTap,
         excludeSemantics: true,
         child: GestureDetector(
@@ -803,8 +805,8 @@ class _StoreBook extends StatelessWidget {
                 bookBody,
                 const SizedBox(height: 18),
                 _TapedNote(
-                  note: book.note,
-                  sub: book.sub,
+                  note: entry.note(locale ?? const Locale('ko')),
+                  sub: entry.sub(locale ?? const Locale('ko')),
                   tilt: book.tilt,
                   dashed: game == null,
                   locale: locale,
@@ -912,7 +914,7 @@ class _ComingSoonCover extends StatelessWidget {
                 border: Border.all(color: MosiColors.ink, width: 2.5),
               ),
               child: Text(
-                '입고\n예정',
+                '입고\n예정'.localized,
                 textAlign: TextAlign.center,
                 style: MosiFonts.sans(
                   locale: locale,
@@ -1345,12 +1347,17 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                   child: Row(
                     children: [
                       _LetterboxButton(
-                        label: '‹ 상점',
+                        label: '‹ ${context.l10n.gameStore}',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const Spacer(),
                       Text(
-                        'NOW SHOWING · 예고편',
+                        GameLocale.select(
+                          ko: 'NOW SHOWING · 예고편',
+                          en: 'NOW SHOWING · TRAILER',
+                          zhHans: '正在播放 · 预告片',
+                          zhHant: '正在播放 · 預告片',
+                        ),
                         style: const TextStyle(
                           fontFamily: 'BebasNeue',
                           fontSize: 22,
@@ -1387,7 +1394,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '마피아',
+                    '마피아'.localized,
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 70,
@@ -1399,7 +1406,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '오늘 밤, 이 테이블 누군가는\n거짓말을 하고 있다.',
+                    '오늘 밤, 이 테이블 누군가는\n거짓말을 하고 있다.'.localized,
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 19,
@@ -1410,8 +1417,8 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '밤에는 휴대폰으로 몰래 능력을 쓰고, 낮에는 토론한 뒤 비밀 투표로 '
-                    '한 명을 골라요. 사회는 태블릿이 봐요.',
+                    '밤에는 휴대폰으로 몰래 능력을 쓰고, 낮에는 토론한 뒤 비밀 투표로 한 명을 골라요. 사회는 태블릿이 봐요.'
+                        .localized,
                     style: MosiFonts.sans(
                       locale: Localizations.maybeLocaleOf(context),
                       size: 14,
@@ -1438,7 +1445,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                             ),
                           ),
                           child: Text(
-                            tag,
+                            tag.localized,
                             style: MosiFonts.sans(
                               locale: Localizations.maybeLocaleOf(context),
                               size: 13,
@@ -1460,7 +1467,8 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
               child: _BgmCard(
                 playing: false,
                 animation: _loop,
-                onToggle: () => _notReady(context, '예고편 음악은 준비 중이에요.'),
+                onToggle: () =>
+                    _notReady(context, '예고편 음악은 준비 중이에요.'.localized),
               ),
             ),
             Positioned(
@@ -1526,7 +1534,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                                 Row(
                                   children: [
                                     Text(
-                                      '마피아',
+                                      '마피아'.localized,
                                       style: MosiFonts.sans(
                                         locale: Localizations.maybeLocaleOf(
                                           context,
@@ -1552,7 +1560,8 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 돼요.',
+                                  '밤에는 마피아가, 낮에는 시민이 움직여요. 태블릿이 사회자가 돼요.'
+                                      .localized,
                                   style: MosiFonts.sans(
                                     locale: Localizations.maybeLocaleOf(
                                       context,
@@ -1585,7 +1594,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '구성품 · 역할 카드 43종',
+                              '구성품 · 역할 카드 43종'.localized,
                               style: MosiFonts.sans(
                                 locale: Localizations.maybeLocaleOf(context),
                                 size: 14,
@@ -1604,7 +1613,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                                   ('스파이', Color(0xFFFF0000)),
                                   ('광대', MosiColors.sun),
                                 ]) ...[
-                                  _RoleChip(name: role, color: color),
+                                  _RoleChip(name: role.localized, color: color),
                                   const SizedBox(width: 8),
                                 ],
                                 Text(
@@ -1621,7 +1630,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              '시민 19 · 마피아 15 · 중립 9 · 비밀 투표 · 밤낮 진행',
+                              '시민 19 · 마피아 15 · 중립 9 · 비밀 투표 · 밤낮 진행'.localized,
                               style: MosiFonts.sans(
                                 locale: Localizations.maybeLocaleOf(context),
                                 size: 12,
@@ -1669,7 +1678,7 @@ class _TabletStoreMafiaDetailState extends State<TabletStoreMafiaDetail>
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            '구매·복원 기능은 준비 중이에요',
+                            '구매·복원 기능은 준비 중이에요'.localized,
                             style: MosiFonts.sans(
                               locale: Localizations.maybeLocaleOf(context),
                               size: 11,
@@ -1812,7 +1821,7 @@ class _BgmCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          playing ? '배경 음악 · 재생 중' : '배경 음악 · 준비 중',
+                          (playing ? '배경 음악 · 재생 중' : '배경 음악 · 준비 중').localized,
                           style: MosiFonts.sans(
                             locale: Localizations.maybeLocaleOf(context),
                             size: 11,
@@ -1866,7 +1875,7 @@ class _BgmCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '밤의 골목 · 마피아 테마',
+                      '밤의 골목 · 마피아 테마'.localized,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: MosiFonts.sans(
@@ -1882,7 +1891,19 @@ class _BgmCard extends StatelessWidget {
               Semantics(
                 button: true,
                 toggled: playing,
-                label: playing ? '배경 음악 멈추기' : '배경 음악 켜기',
+                label: playing
+                    ? GameLocale.select(
+                        ko: '배경 음악 멈추기',
+                        en: 'Pause background music',
+                        zhHans: '暂停背景音乐',
+                        zhHant: '暫停背景音樂',
+                      )
+                    : GameLocale.select(
+                        ko: '배경 음악 켜기',
+                        en: 'Play background music',
+                        zhHans: '播放背景音乐',
+                        zhHant: '播放背景音樂',
+                      ),
                 excludeSemantics: true,
                 child: GestureDetector(
                   onTap: onToggle,
@@ -2012,7 +2033,7 @@ class _Trailer extends StatelessWidget {
                         const _Moon(size: 44),
                         const SizedBox(height: 8),
                         Text(
-                          '밤이 되었습니다',
+                          '밤이 되었습니다'.localized,
                           style: MosiFonts.sans(
                             locale: Localizations.maybeLocaleOf(context),
                             size: 22,
@@ -2025,7 +2046,7 @@ class _Trailer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                _caption(context, '"모두 고개를 숙여 주세요."'),
+                _caption(context, '"모두 고개를 숙여 주세요."'.localized),
               ],
             ),
           ),
@@ -2067,7 +2088,7 @@ class _Trailer extends StatelessWidget {
                             Column(
                               children: [
                                 Text(
-                                  '마피아 · 나만 보여요',
+                                  '마피아 · 나만 보여요'.localized,
                                   style: MosiFonts.sans(
                                     locale: Localizations.maybeLocaleOf(
                                       context,
@@ -2079,7 +2100,7 @@ class _Trailer extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '누구를 고를까요?',
+                                  '누구를 고를까요?'.localized,
                                   style: MosiFonts.sans(
                                     locale: Localizations.maybeLocaleOf(
                                       context,
@@ -2180,7 +2201,7 @@ class _Trailer extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                _caption(context, '"내 역할은 내 휴대폰에만."'),
+                _caption(context, '"내 역할은 내 휴대폰에만."'.localized),
               ],
             ),
           ),
@@ -2204,7 +2225,7 @@ class _Trailer extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '아침이 밝았어요',
+                  '아침이 밝았어요'.localized,
                   style: MosiFonts.sans(
                     locale: Localizations.maybeLocaleOf(context),
                     size: 34,
@@ -2255,7 +2276,12 @@ class _Trailer extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        '민준 님이 밤사이 사라졌어요',
+                        GameLocale.select(
+                          ko: '민준 님이 밤사이 사라졌어요',
+                          en: 'Minjun disappeared during the night',
+                          zhHans: '敏俊在夜里消失了',
+                          zhHant: '敏俊在夜裡消失了',
+                        ),
                         style: MosiFonts.sans(
                           locale: Localizations.maybeLocaleOf(context),
                           size: 16,
@@ -2267,7 +2293,7 @@ class _Trailer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _caption(context, '"자, 누가 거짓말을 하고 있죠?"', dark: true),
+                _caption(context, '"자, 누가 거짓말을 하고 있죠?"'.localized, dark: true),
               ],
             ),
           ),
@@ -2323,7 +2349,7 @@ class _Trailer extends StatelessWidget {
                             MosiFace(characterId: face(who), size: 52),
                             const SizedBox(height: 8),
                             Text(
-                              name,
+                              name.localized,
                               style: MosiFonts.sans(
                                 locale: Localizations.maybeLocaleOf(context),
                                 size: 14,
@@ -2335,7 +2361,12 @@ class _Trailer extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '$votes표',
+                              GameLocale.select(
+                                ko: '$votes표',
+                                en: '$votes votes',
+                                zhHans: '$votes票',
+                                zhHant: '$votes票',
+                              ),
                               style: MosiFonts.grotesk(
                                 locale: Localizations.maybeLocaleOf(context),
                                 size: 18,
@@ -2351,7 +2382,7 @@ class _Trailer extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 22),
-                _caption(context, '"과연, 하린은 마피아였을까요?"'),
+                _caption(context, '"과연, 하린은 마피아였을까요?"'.localized),
               ],
             ),
           ),

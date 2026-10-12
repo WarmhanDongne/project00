@@ -13,6 +13,7 @@ import 'package:game_mafia/game_copy.dart';
 import 'package:game_mafia/shared/models/role.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_mafia/tablet/widgets/role_setup_card.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 신분 한 종류를 세로 카드 한 장으로 표시합니다. 추천 인원수는 보존하고,
 /// 시민을 선택한 동안에는 남은 자리를 시민으로 채웁니다.
@@ -42,6 +43,15 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   static const _page = MafiaColors.noirInk;
   static const _ink = MafiaColors.noirPaper;
   static const _motion = Duration(milliseconds: 280);
+
+  String _t(String ko, String en, String zhHans, String zhHant) =>
+      GameLocale.select(ko: ko, en: en, zhHans: zhHans, zhHant: zhHant);
+
+  String _presetLabel(String preset) => switch (preset) {
+    '기본' => _t('기본', 'Basic', '基础', '基礎'),
+    '확장' => _t('확장', 'Expanded', '扩展', '擴充'),
+    _ => _t('자유', 'Custom', '自由', '自訂'),
+  };
 
   // 기존 설정 화면에서 선택 가능했던 19종만 제공합니다.
   static const _roleIds = [
@@ -178,7 +188,12 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
       },
       child: Semantics(
         excludeSemantics: true,
-        label: '${MafiaRoles.find(id)!.displayName} 인원',
+        label: GameLocale.select(
+          ko: '${MafiaRoles.find(id)!.localizedDisplayName} 인원',
+          en: '${MafiaRoles.find(id)!.localizedDisplayName} count',
+          zhHans: '${MafiaRoles.find(id)!.localizedDisplayName}人数',
+          zhHant: '${MafiaRoles.find(id)!.localizedDisplayName}人數',
+        ),
         value: '$count',
         increasedValue: editable && count < _maximumCount(id)
             ? '${count + 1}'
@@ -264,24 +279,55 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
 
   String? get _compositionError {
     if (!MafiaComposition.recommended.containsKey(widget.playerCount)) {
-      return '마피아는 4~12명이 함께할 수 있어요.';
+      return _t(
+        '마피아는 4~12명이 함께할 수 있어요.',
+        'Mafia supports 4–12 players.',
+        '黑手党支持 4–12 人。',
+        '黑手黨支援 4–12 人。',
+      );
     }
     final composition = _composition;
     final total = composition.values.fold(0, (sum, count) => sum + count);
-    if (total > widget.playerCount) return '참여 인원보다 신분이 많아요. 카드를 삭제해 주세요.';
-    if (total < widget.playerCount) return '신분이 부족해요. 시민이나 다른 신분을 추가해 주세요.';
+    if (total > widget.playerCount) {
+      return _t(
+        '참여 인원보다 신분이 많아요. 카드를 삭제해 주세요.',
+        'There are more roles than players. Remove a card.',
+        '身份数超过玩家数。请移除卡牌。',
+        '身分數超過玩家數。請移除卡牌。',
+      );
+    }
+    if (total < widget.playerCount) {
+      return _t(
+        '신분이 부족해요. 시민이나 다른 신분을 추가해 주세요.',
+        'There are not enough roles. Add Citizens or another role.',
+        '身份不足。请添加市民或其他身份。',
+        '身分不足。請新增市民或其他身分。',
+      );
+    }
     final mafiaCount = composition.entries
         .where(
           (entry) => MafiaRoles.find(entry.key)?.faction == MafiaFaction.mafia,
         )
         .fold(0, (sum, entry) => sum + entry.value);
-    if (mafiaCount == 0) return '마피아팀 신분을 하나 이상 추가해 주세요.';
+    if (mafiaCount == 0) {
+      return _t(
+        '마피아팀 신분을 하나 이상 추가해 주세요.',
+        'Add at least one Mafia role.',
+        '请至少添加一个黑手党身份。',
+        '請至少新增一個黑手黨身分。',
+      );
+    }
     final competingNeutral = composition.keys.any(
       (id) => ['serial_killer', 'cult_leader', 'cultist'].contains(id),
     );
     if (mafiaCount >= widget.playerCount ||
         (!competingNeutral && mafiaCount * 2 >= widget.playerCount)) {
-      return '시작부터 마피아 승리 조건입니다. 인원을 줄여 주세요.';
+      return _t(
+        '시작부터 마피아 승리 조건입니다. 인원을 줄여 주세요.',
+        'This setup gives Mafia an immediate win. Reduce Mafia roles.',
+        '此配置会让黑手党开局即获胜。请减少黑手党身份。',
+        '此配置會讓黑手黨開局即獲勝。請減少黑手黨身分。',
+      );
     }
     return null;
   }
@@ -316,12 +362,30 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
   String? get _balanceWarning {
     if (_compositionError != null) return null;
     if (_factionCount(MafiaFaction.mafia) * 3 > widget.playerCount) {
-      return '마피아 진영 비중이 높습니다';
+      return _t(
+        '마피아 진영 비중이 높습니다',
+        'The Mafia faction is heavily represented',
+        '黑手党阵营占比较高',
+        '黑手黨陣營占比較高',
+      );
     }
-    if (_composition.keys.length > 6) return '특수 역할이 많은 숙련자 구성입니다';
+    if (_composition.keys.length > 6) {
+      return _t(
+        '특수 역할이 많은 숙련자 구성입니다',
+        'Advanced setup with many special roles',
+        '特殊身份较多，适合熟练玩家',
+        '特殊身分較多，適合熟練玩家',
+      );
+    }
     for (final id in ['police', 'doctor', 'reporter', 'detective']) {
       if ((_selected[id] ?? 0) > 1) {
-        return '${MafiaRoles.find(id)!.displayName}은 1명을 권장합니다';
+        final name = MafiaRoles.find(id)!.localizedDisplayName;
+        return _t(
+          '$name은 1명을 권장합니다',
+          'One $name is recommended',
+          '建议只使用 1 个$name',
+          '建議只使用 1 個$name',
+        );
       }
     }
     return null;
@@ -350,7 +414,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
         var draft = _rules;
         return StatefulBuilder(
           builder: (context, update) => AlertDialog(
-            title: const Text('이번 판 규칙'),
+            title: Text(_t('이번 판 규칙', 'Game rules', '本局规则', '本局規則')),
             content: SizedBox(
               width: 560,
               child: SingleChildScrollView(
@@ -359,8 +423,22 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SwitchListTile(
-                      title: const Text('최후 변론과 찬반 투표'),
-                      subtitle: const Text('30초 변론 후 1인 1표 · 투표권자 과반수 찬성 시 처형'),
+                      title: Text(
+                        _t(
+                          '최후 변론과 찬반 투표',
+                          'Final defense and execution vote',
+                          '最终辩护与处决表决',
+                          '最終辯護與處決表決',
+                        ),
+                      ),
+                      subtitle: Text(
+                        _t(
+                          '30초 변론 후 1인 1표 · 투표권자 과반수 찬성 시 처형',
+                          '30-second defense, one vote each · majority approval executes',
+                          '辩护30秒后每人一票 · 过半赞成则处决',
+                          '辯護30秒後每人一票 · 過半贊成則處決',
+                        ),
+                      ),
                       value: draft.trial,
                       onChanged: (value) => update(
                         () => draft = MafiaRules(
@@ -370,13 +448,30 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('처형된 사람의 신분 공개', style: TextStyle(fontSize: 20)),
+                    Text(
+                      _t(
+                        '처형된 사람의 신분 공개',
+                        'Reveal executed player',
+                        '公开被处决者身份',
+                        '公開被處決者身分',
+                      ),
+                      style: const TextStyle(fontSize: 20),
+                    ),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'role', label: Text('직업')),
-                        ButtonSegment(value: 'faction', label: Text('진영만')),
-                        ButtonSegment(value: 'hidden', label: Text('비공개')),
+                      segments: [
+                        ButtonSegment(
+                          value: 'role',
+                          label: Text(_t('직업', 'Role', '身份', '身分')),
+                        ),
+                        ButtonSegment(
+                          value: 'faction',
+                          label: Text(_t('진영만', 'Faction only', '仅阵营', '僅陣營')),
+                        ),
+                        ButtonSegment(
+                          value: 'hidden',
+                          label: Text(_t('비공개', 'Hidden', '不公开', '不公開')),
+                        ),
                       ],
                       selected: {draft.executionReveal},
                       onSelectionChanged: (value) => update(
@@ -387,9 +482,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      '이번 판 역할',
-                      style: TextStyle(
+                    Text(
+                      _t('이번 판 역할', 'Roles this game', '本局身份', '本局身分'),
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -398,7 +493,12 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(
-                          '${MafiaRoles.find(entry.key)!.displayName} ${entry.value}명 — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                          _t(
+                            '${MafiaRoles.find(entry.key)!.localizedDisplayName} ${entry.value}명 — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                            '${MafiaRoles.find(entry.key)!.localizedDisplayName} × ${entry.value} — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                            '${MafiaRoles.find(entry.key)!.localizedDisplayName} × ${entry.value} — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                            '${MafiaRoles.find(entry.key)!.localizedDisplayName} × ${entry.value} — ${MafiaCopy.roleRules(MafiaRoles.find(entry.key)!)}',
+                          ),
                           style: const TextStyle(fontSize: 17),
                         ),
                       ),
@@ -409,11 +509,11 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('취소'),
+                child: Text('취소'.localized),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, draft),
-                child: const Text('적용'),
+                child: Text('적용'.localized),
               ),
             ],
           ),
@@ -440,10 +540,10 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
       if (canLeave) {
         Navigator.of(context).pop();
       } else {
-        _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.';
+        _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.'.localized;
       }
     } catch (_) {
-      _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.';
+      _requestError = '나가기를 처리하지 못했습니다. 다시 눌러 주세요.'.localized;
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }
@@ -460,9 +560,11 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
     try {
       widget.onRulesChanged?.call(_rules);
       started = await widget.onConfirm(_composition);
-      if (!started) _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
+      if (!started) {
+        _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.'.localized;
+      }
     } catch (_) {
-      _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.';
+      _requestError = '게임을 시작하지 못했습니다. 연결을 확인하고 다시 눌러 주세요.'.localized;
     } finally {
       if (mounted && !started) setState(() => _isSubmitting = false);
     }
@@ -510,7 +612,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '직업 구성',
+                                  _t('직업 구성', 'Role setup', '身份配置', '身分配置'),
                                   textAlign: TextAlign.center,
                                   style: mafiaNoirDisplay(40, color: _ink),
                                 ),
@@ -518,8 +620,18 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                             ),
                           ),
                           Text(
-                            '${widget.playerCount}명',
-                            semanticsLabel: '참여 인원 ${widget.playerCount}명',
+                            _t(
+                              '${widget.playerCount}명',
+                              '${widget.playerCount} players',
+                              '${widget.playerCount} 人',
+                              '${widget.playerCount} 人',
+                            ),
+                            semanticsLabel: _t(
+                              '참여 인원 ${widget.playerCount}명',
+                              '${widget.playerCount} players participating',
+                              '${widget.playerCount} 名参与者',
+                              '${widget.playerCount} 名參與者',
+                            ),
                             style: mafiaNoirDisplay(24, color: _ink),
                           ),
                         ],
@@ -538,7 +650,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                                   label: SizedBox(
                                     width: 44,
                                     child: Text(
-                                      preset,
+                                      _presetLabel(preset),
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 18,
@@ -575,9 +687,9 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                                 Icons.tune,
                                 color: MafiaColors.noirBrass,
                               ),
-                              label: const Text(
-                                '이번 판 규칙',
-                                style: TextStyle(
+                              label: Text(
+                                _t('이번 판 규칙', 'Game rules', '本局规则', '本局規則'),
+                                style: const TextStyle(
                                   fontSize: 18,
                                   color: MafiaColors.noirBrass,
                                 ),
@@ -627,7 +739,14 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
                             child: Text(
-                              _isSubmitting ? '카드를 섞는 중' : '게임 시작',
+                              _isSubmitting
+                                  ? _t(
+                                      '카드를 섞는 중',
+                                      'Shuffling cards',
+                                      '正在洗牌',
+                                      '正在洗牌',
+                                    )
+                                  : _t('게임 시작', 'Start game', '开始游戏', '開始遊戲'),
                               key: ValueKey(_isSubmitting),
                             ),
                           ),
@@ -690,7 +809,15 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
               width: gridWidth,
               height: height,
               child: Center(
-                child: Text('오른쪽 +에서 신분을 추가해 주세요.', style: mafiaNoirBody(18)),
+                child: Text(
+                  _t(
+                    '오른쪽 +에서 신분을 추가해 주세요.',
+                    'Add a role with the + button on the right.',
+                    '请使用右侧的 + 添加身份。',
+                    '請使用右側的 + 新增身分。',
+                  ),
+                  style: mafiaNoirBody(18),
+                ),
               ),
             ),
           for (var index = 0; index < ids.length; index++)
@@ -709,7 +836,12 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                     height: removeHeight,
                     child: IconButton(
                       key: ValueKey('remove-role-${ids[index]}'),
-                      tooltip: '${MafiaRoles.find(ids[index])!.displayName} 삭제',
+                      tooltip: _t(
+                        '${MafiaRoles.find(ids[index])!.localizedDisplayName} 삭제',
+                        'Remove ${MafiaRoles.find(ids[index])!.localizedDisplayName}',
+                        '移除 ${MafiaRoles.find(ids[index])!.localizedDisplayName}',
+                        '移除 ${MafiaRoles.find(ids[index])!.localizedDisplayName}',
+                      ),
                       onPressed: _busy ? null : () => _remove(ids[index]),
                       icon: const Icon(
                         Icons.cancel_outlined,
@@ -759,7 +891,7 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
           color: _busy || !_canAddAnyRole
               ? MafiaColors.noirFaded
               : MafiaColors.noirDust,
-          semanticLabel: '신분 추가',
+          semanticLabel: _t('신분 추가', 'Add role', '添加身份', '新增身分'),
         ),
       ),
     ),
@@ -781,10 +913,10 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
             padding: const EdgeInsets.only(left: 12),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '신분 추가',
-                    style: TextStyle(
+                    _t('신분 추가', 'Add role', '添加身份', '新增身分'),
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: MafiaColors.noirPaper,
@@ -793,7 +925,12 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                 ),
                 IconButton(
                   key: const ValueKey('close-role-picker'),
-                  tooltip: '신분 목록 닫기',
+                  tooltip: _t(
+                    '신분 목록 닫기',
+                    'Close role list',
+                    '关闭身份列表',
+                    '關閉身分列表',
+                  ),
                   onPressed: _busy
                       ? null
                       : () => setState(() => _pickerOpen = false),
@@ -808,9 +945,14 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
           ),
           Expanded(
             child: available.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      '모든 신분을 추가했어요.',
+                      _t(
+                        '모든 신분을 추가했어요.',
+                        'All roles have been added.',
+                        '所有身份均已添加。',
+                        '所有身分均已新增。',
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 18,
@@ -834,7 +976,12 @@ class _MafiaRoleSetupScreenState extends State<MafiaRoleSetupScreen> {
                       return Semantics(
                         button: true,
                         enabled: !_busy && _canAddRole(role.id),
-                        label: '${role.displayName} 추가',
+                        label: _t(
+                          '${role.localizedDisplayName} 추가',
+                          'Add ${role.localizedDisplayName}',
+                          '添加 ${role.localizedDisplayName}',
+                          '新增 ${role.localizedDisplayName}',
+                        ),
                         child: GestureDetector(
                           key: ValueKey('pick-role-${role.id}'),
                           onTap: _busy || !_canAddRole(role.id)
@@ -901,7 +1048,12 @@ class _FactionBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '마피아 팀 $mafia',
+          GameLocale.select(
+            ko: '마피아 팀 $mafia',
+            en: 'Mafia $mafia',
+            zhHans: '黑手党 $mafia',
+            zhHant: '黑手黨 $mafia',
+          ),
           style: mafiaNoirBody(
             16,
             color: MafiaColors.noirScarlet,
@@ -922,7 +1074,12 @@ class _FactionBar extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Text(
-          '시민 팀 $citizen${neutral > 0 ? ' · 중립 $neutral' : ''}',
+          GameLocale.select(
+            ko: '시민 팀 $citizen${neutral > 0 ? ' · 중립 $neutral' : ''}',
+            en: 'Citizens $citizen${neutral > 0 ? ' · Neutral $neutral' : ''}',
+            zhHans: '市民 $citizen${neutral > 0 ? ' · 中立 $neutral' : ''}',
+            zhHant: '市民 $citizen${neutral > 0 ? ' · 中立 $neutral' : ''}',
+          ),
           style: mafiaNoirBody(
             16,
             color: MafiaColors.noirCitizen,

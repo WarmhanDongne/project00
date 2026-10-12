@@ -3,6 +3,7 @@ import 'package:game_kit/recovery/models/game_interruption.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/recovery/widgets/game_interruption_layer.dart';
 import 'package:game_kit/recovery/widgets/game_request_notice.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 export 'package:game_kit/recovery/widgets/game_interruption_layer.dart'
     show GameInterruptionPresentation;
@@ -76,7 +77,7 @@ class GameRecoveryLayer extends StatelessWidget {
             message:
                 interruption?.failureMessage ??
                 request?.message ??
-                '게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.',
+                '게임을 잠시 멈췄어요. 연결과 화면 준비를 기다리고 있어요.'.localized,
             onRetry:
                 session != null &&
                     (!session!.localUsable || !session!.serverConfirmed) &&

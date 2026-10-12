@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/legal/signup_terms.dart';
@@ -20,6 +21,7 @@ class ProfileSetupScreen extends StatefulWidget {
     this.onboardingService,
     this.imagePicker,
     this.consentStore,
+    this.passwordFirst = false,
   });
 
   final FirebaseAuthService? authService;
@@ -29,6 +31,7 @@ class ProfileSetupScreen extends StatefulWidget {
   /// 약관 동의를 보관하는 곳입니다. 이메일 가입은 첫 단계에서 이미 동의해
   /// 여기 남아 있고, Google·Apple 가입은 이 화면에서 처음 동의합니다.
   final SignupConsentStore? consentStore;
+  final bool passwordFirst;
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -108,8 +111,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (!mounted) return;
       setState(() {
         _errorMessage = error.code == 'already_active'
-            ? '앨범이 이미 열려 있습니다.'
-            : '앨범을 열지 못했습니다. 잠시 후 다시 시도해주세요.';
+            ? GameLocale.select(
+                ko: '앨범이 이미 열려 있습니다.',
+                en: 'The photo picker is already open.',
+                zhHans: '相册已打开。',
+                zhHant: '相簿已開啟。',
+              )
+            : GameLocale.select(
+                ko: '앨범을 열지 못했습니다. 잠시 후 다시 시도해주세요.',
+                en: 'Could not open your photos. Try again shortly.',
+                zhHans: '无法打开相册，请稍后重试。',
+                zhHant: '無法開啟相簿，請稍後重試。',
+              );
       });
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
@@ -122,8 +135,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final length = nickname.runes.length;
     if (length < nicknameMinLength || length > nicknameMaxLength) {
       setState(
-        () => _errorMessage =
-            '닉네임은 $nicknameMinLength자 이상 $nicknameMaxLength자 이하로 입력해주세요.',
+        () => _errorMessage = GameLocale.select(
+          ko: '닉네임은 $nicknameMinLength자 이상 $nicknameMaxLength자 이하로 입력해주세요.',
+          en: 'Use $nicknameMinLength–$nicknameMaxLength characters for your nickname.',
+          zhHans: '昵称需为 $nicknameMinLength–$nicknameMaxLength 个字符。',
+          zhHant: '暱稱需為 $nicknameMinLength–$nicknameMaxLength 個字元。',
+        ),
       );
       return;
     }
@@ -159,8 +176,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (_isSaving || _isPickingImage) return;
     final shouldLeave = await showMosiLeaveDialog(
       context,
-      title: '프로필 설정을 중단할까요?',
-      message: '다음에 로그인하면 프로필 설정부터 이어서 할 수 있어요.',
+      title: GameLocale.select(
+        ko: '프로필 설정을 중단할까요?',
+        en: 'Stop setting up your profile?',
+        zhHans: '要暂停设置个人资料吗？',
+        zhHant: '要暫停設定個人資料嗎？',
+      ),
+      message: GameLocale.select(
+        ko: '다음에 로그인하면 프로필 설정부터 이어서 할 수 있어요.',
+        en: 'You can continue profile setup the next time you sign in.',
+        zhHans: '下次登录时可继续设置个人资料。',
+        zhHant: '下次登入時可繼續設定個人資料。',
+      ),
     );
     if (shouldLeave != true) return;
     await _consentStore.clear();
@@ -181,9 +208,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             MosiAuthHeader(
-              title: '회원가입',
+              title: GameLocale.select(
+                ko: '회원가입',
+                en: 'Sign up',
+                zhHans: '注册',
+                zhHant: '註冊',
+              ),
               onBack: () => unawaited(_requestBack()),
-              steps: signupSteps,
+              steps: widget.passwordFirst ? passwordSignupSteps : signupSteps,
               stepIndex: _consents == null ? 0 : 3,
             ),
             const SizedBox(height: 16),
@@ -214,7 +246,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ],
               const SizedBox(height: 16),
               MosiButton(
-                label: '가입 완료',
+                label: GameLocale.select(
+                  ko: '가입 완료',
+                  en: 'Finish sign-up',
+                  zhHans: '完成注册',
+                  zhHant: '完成註冊',
+                ),
                 height: 54,
                 expand: true,
                 loading: _isSaving,

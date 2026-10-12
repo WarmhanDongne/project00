@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_final_call/game_theme.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_kit/core/constants/room_character.dart';
@@ -53,10 +54,41 @@ Color finalCallCardColor(String color) => switch (color) {
 
 /// 카드 색의 한글 이름입니다.
 String finalCallCardColorLabel(String color) => switch (color) {
-  'blue' => '파랑',
-  'green' => '초록',
-  'yellow' => '노랑',
-  _ => '빨강',
+  'blue' => GameLocale.select(ko: '파랑', en: 'Blue', zhHans: '蓝色', zhHant: '藍色'),
+  'green' => GameLocale.select(
+    ko: '초록',
+    en: 'Green',
+    zhHans: '绿色',
+    zhHant: '綠色',
+  ),
+  'yellow' => GameLocale.select(
+    ko: '노랑',
+    en: 'Yellow',
+    zhHans: '黄色',
+    zhHant: '黃色',
+  ),
+  _ => GameLocale.select(ko: '빨강', en: 'Red', zhHans: '红色', zhHant: '紅色'),
+};
+
+String finalCallTeamLabel(FinalCallTeam team) => switch (team) {
+  FinalCallTeam.red => GameLocale.select(
+    ko: '레드팀',
+    en: 'Red Team',
+    zhHans: '红队',
+    zhHant: '紅隊',
+  ),
+  FinalCallTeam.blue => GameLocale.select(
+    ko: '블루팀',
+    en: 'Blue Team',
+    zhHans: '蓝队',
+    zhHant: '藍隊',
+  ),
+  FinalCallTeam.green => GameLocale.select(
+    ko: '그린팀',
+    en: 'Green Team',
+    zhHans: '绿队',
+    zhHant: '綠隊',
+  ),
 };
 
 // ---------------------------------------------------------------------------

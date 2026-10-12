@@ -279,6 +279,26 @@ void main() {
     });
   }
 
+  testWidgets('상점의 알려진 게임 소개도 Firestore 값을 사용한다', (tester) async {
+    final games = GameProvider(service: _Games())
+      ..games = [
+        GameInfo.fromJson({
+          'id': 'liars_poker',
+          'name': '라이어스',
+          'description': 'Firestore에서 읽은 짧은 소개',
+          'storeVisible': true,
+        }),
+      ];
+    addTearDown(games.dispose);
+    await tester.pumpWidget(
+      MaterialApp(home: TabletStoreScreen(gameProvider: games)),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Firestore에서 읽은 짧은 소개'), findsOneWidget);
+    expect(find.text('카드를 내고, 거짓말이다 싶으면 LIAR를 외치세요.'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('상점은 결제·알림 신청·음악 재생을 완료한 것처럼 표시하지 않는다', (tester) async {
     final games = GameProvider(service: _Games())
       ..games = [
@@ -343,7 +363,12 @@ void main() {
         }),
         GameInfo.fromJson({
           'id': 'holdem',
-          'name': '텍사스 홀덤',
+          'name': '홀덤',
+          'genres': ['카드', '베팅'],
+          'localizedGenres': {
+            'ko': ['카드', '베팅'],
+            'en': ['Cards', 'Betting'],
+          },
           'order': 1,
           'storeVisible': true,
         }),
@@ -357,7 +382,10 @@ void main() {
       ];
     addTearDown(games.dispose);
     await tester.pumpWidget(
-      MaterialApp(home: TabletStoreScreen(gameProvider: games)),
+      MaterialApp(
+        locale: const Locale('en'),
+        home: TabletStoreScreen(gameProvider: games),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 800));
     final books = find.byWidgetPredicate(
@@ -383,7 +411,8 @@ void main() {
     ]);
     // 처음에는 맨 앞 책(홀덤)을 고르고 계산대에 그 게임을 보여 줍니다.
     expect(find.text('홀덤'), findsOneWidget);
-    expect(find.text('칩을 걸고 한 판 승부!'), findsOneWidget);
+    expect(find.text('Cards'), findsOneWidget);
+    expect(find.text('Betting'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

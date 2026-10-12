@@ -19,6 +19,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
 import 'package:game_kit/core/network/app_network_guard.dart';
 import 'package:game_kit/core/update/shorebird_patch_gate.dart';
+import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/auth/widgets/auth_gate.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
@@ -52,30 +53,33 @@ class App extends StatelessWidget {
     return ScreenUtilInit(
       designSize: currentDesignSize,
       child: LocaleSettingsHost(
-        builder: (context, settings) => MaterialApp(
-          locale: settings.language.locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLanguage.values.map(
-            (language) => language.locale,
-          ),
-          debugShowCheckedModeBanner: false,
-          title: 'Project 00',
-          theme: PlatformTheme.light(locale: settings.language.locale),
-          darkTheme: PlatformTheme.dark(locale: settings.language.locale),
-          themeMode: ThemeMode.light,
-          builder: (context, child) =>
-              AppNetworkGuard(child: child ?? const SizedBox.shrink()),
-          // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
-          // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
-          home: ShorebirdPatchGate(
-            child: AuthGate(
-              gameCatalog: const GameRegistry(),
-              userChanges: userChanges,
-              emailLinks: emailLinks,
-              initialEmailLink: initialEmailLink,
+        builder: (context, settings) {
+          GameLocale.current = settings.language.locale;
+          return MaterialApp(
+            locale: settings.language.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLanguage.values.map(
+              (language) => language.locale,
             ),
-          ),
-        ),
+            debugShowCheckedModeBanner: false,
+            title: 'Project 00',
+            theme: PlatformTheme.light(locale: settings.language.locale),
+            darkTheme: PlatformTheme.dark(locale: settings.language.locale),
+            themeMode: ThemeMode.light,
+            builder: (context, child) =>
+                AppNetworkGuard(child: child ?? const SizedBox.shrink()),
+            // 새 패치가 있으면 받는 동안만 패치 화면을 덮습니다. 확인 중에는
+            // 화면을 막지 않고, 패치가 없거나 실패하면 그대로 통과합니다.
+            home: ShorebirdPatchGate(
+              child: AuthGate(
+                gameCatalog: const GameRegistry(),
+                userChanges: userChanges,
+                emailLinks: emailLinks,
+                initialEmailLink: initialEmailLink,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

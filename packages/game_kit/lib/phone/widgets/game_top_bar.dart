@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -129,7 +130,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
         _wrapItem(
           3,
           _TopBarIconButton(
-            label: bookSemanticLabel,
+            label: bookSemanticLabel.localized,
             visualSize: bookSize,
             icon: bookIcon,
             onPressed: onBookPressed,
@@ -140,7 +141,7 @@ class PhoneGameTopBarMenu extends StatelessWidget {
         _wrapItem(
           4,
           _TopBarIconButton(
-            label: outSemanticLabel,
+            label: outSemanticLabel.localized,
             visualSize: outSize,
             icon: outIcon,
             onPressed: onOutPressed,

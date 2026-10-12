@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 /// 중간 단계 안내. 배경과 상단바는 board에 남기고 내용만 바꿉니다.
 ///
@@ -40,7 +41,7 @@ class MafiaPhonePhaseNotice extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                message,
+                message.localized,
                 textAlign: TextAlign.center,
                 style: mafiaNoirDisplay(34, color: color),
               ),
@@ -49,7 +50,7 @@ class MafiaPhonePhaseNotice extends StatelessWidget {
               if (detail != null) ...[
                 const SizedBox(height: 16),
                 Text(
-                  detail!,
+                  detail!.localized,
                   textAlign: TextAlign.center,
                   style: mafiaNoirBody(
                     15,

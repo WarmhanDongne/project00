@@ -66,8 +66,8 @@ class _RoundDealLayerState extends State<_RoundDealLayer> {
                   boardSeatCount: widget.boardSeatCount,
                   playerSeatIndexes: widget.playerSeatIndexes,
                   cardsPerPlayer: widget.cardsPerPlayer,
-                  cardAsset:
-                      Assets.games.liarsPoker.images.cards.whiteBack.game,
+                  cardBuilder: (context, playerIndex, cardIndex) =>
+                      const LiarsPokerCardView(face: LiarsCardFace.back),
                   duration: widget.flowStep.animation.duration,
                   beforeDelay: widget.flowStep.beforeDelay,
                   afterDelay: widget.flowStep.afterDelay,

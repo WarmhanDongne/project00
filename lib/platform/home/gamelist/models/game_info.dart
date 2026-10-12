@@ -1,6 +1,9 @@
+import 'dart:ui' show Locale;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:game_kit/firebase/utils/firestore_value.dart';
 import 'package:game_kit/models/game_room_context.dart';
+import 'game_catalog_id.dart';
 
 enum GameAccessType {
   free,
@@ -17,13 +20,17 @@ class GameInfo implements GameRoomMetadata {
   const GameInfo({
     required this.id,
     required this.name,
+    this.localizedNames = const {},
     required this.description,
+    this.localizedDescriptions = const {},
     this.tabletDescription = '',
     this.rules = '',
+    this.localizedRules = const {},
     required this.imageUrl,
     this.componentImageUrl = '',
     required this.enabled,
     required this.genres,
+    this.localizedGenres = const {},
     required this.minPlayers,
     required this.maxPlayers,
     required this.playTime,
@@ -50,15 +57,19 @@ class GameInfo implements GameRoomMetadata {
 
   factory GameInfo.fromJson(Map<String, dynamic> json) {
     return GameInfo(
-      id: firestoreString(json['id']),
+      id: runtimeGameId(firestoreString(json['id'])),
       name: firestoreString(json['name'], fallback: '이름 없음'),
+      localizedNames: _localizedStrings(json['localizedNames']),
       description: firestoreString(json['description']),
+      localizedDescriptions: _localizedStrings(json['localizedDescriptions']),
       tabletDescription: firestoreString(json['tabletDescription']),
       rules: firestoreString(json['rules']),
+      localizedRules: _localizedStrings(json['localizedRules']),
       imageUrl: firestoreString(json['imageUrl']),
       componentImageUrl: firestoreString(json['componentImageUrl']),
       enabled: json['enabled'] as bool? ?? true,
       genres: firestoreStringList(json['genres']),
+      localizedGenres: _localizedStringLists(json['localizedGenres']),
       minPlayers: firestoreInt(json['minPlayers']),
       maxPlayers: firestoreInt(json['maxPlayers']),
       playTime: firestoreInt(json['playTime']),
@@ -76,9 +87,12 @@ class GameInfo implements GameRoomMetadata {
   final String id;
   @override
   final String name;
+  final Map<String, String> localizedNames;
   final String description;
+  final Map<String, String> localizedDescriptions;
   final String tabletDescription;
   final String rules;
+  final Map<String, String> localizedRules;
   @override
   final String imageUrl;
 
@@ -91,6 +105,7 @@ class GameInfo implements GameRoomMetadata {
 
   final bool enabled;
   final List<String> genres;
+  final Map<String, List<String>> localizedGenres;
   final int minPlayers;
   final int maxPlayers;
   final int playTime;
@@ -121,8 +136,80 @@ class GameInfo implements GameRoomMetadata {
 
   String get genresText => genres.join(', ');
 
+  /// Firestore의 다국어 이름 중 현재 앱 언어에 맞는 값을 반환합니다.
+  ///
+  /// 기존 문서는 [name]만 가지고 있으므로 exact locale, language, English,
+  /// legacy name 순으로 안전하게 대체합니다.
+  String localizedName(Locale locale) {
+    return _localizedValue(localizedNames, locale) ?? name;
+  }
+
+  String get englishName => localizedNames['en'] ?? name;
+
+  String localizedDescription(Locale locale) {
+    return _localizedValue(localizedDescriptions, locale) ?? description;
+  }
+
+  String localizedRulesFor(Locale locale) {
+    return _localizedValue(localizedRules, locale) ?? rules;
+  }
+
+  List<String> localizedGenresFor(Locale locale) {
+    return _localizedValue(localizedGenres, locale) ?? genres;
+  }
+
+  String localizedGenresText(Locale locale, {String separator = ', '}) {
+    return localizedGenresFor(locale).join(separator);
+  }
+
+  String effectiveTabletDescriptionFor(Locale locale) {
+    final localizedText = _localizedValue(localizedDescriptions, locale);
+    if (localizedText != null) return localizedText;
+    final tabletText = tabletDescription.trim();
+    return tabletText.isEmpty ? description : tabletText;
+  }
+
+  /// Locale-aware callers should use [effectiveTabletDescriptionFor].
   String get effectiveTabletDescription {
     final tabletText = tabletDescription.trim();
     return tabletText.isEmpty ? description : tabletText;
   }
+}
+
+String _localeKey(Locale locale) => switch (locale.languageCode) {
+  'zh' when locale.scriptCode == 'Hant' => 'zh-Hant',
+  'zh' when locale.scriptCode == 'Hans' => 'zh-Hans',
+  'zh' when const {'TW', 'HK', 'MO'}.contains(locale.countryCode) => 'zh-Hant',
+  'zh' => 'zh-Hans',
+  final language => language,
+};
+
+T? _localizedValue<T>(Map<String, T> values, Locale locale) {
+  return values[_localeKey(locale)] ??
+      values[locale.languageCode] ??
+      values['en'];
+}
+
+Map<String, String> _localizedStrings(Object? value) {
+  if (value is! Map) return const {};
+  final strings = <String, String>{};
+  for (final entry in value.entries) {
+    final key = entry.key.toString().replaceAll('_', '-').trim();
+    final text = entry.value?.toString().trim() ?? '';
+    if (key.isNotEmpty && text.isNotEmpty) strings[key] = text;
+  }
+  return Map.unmodifiable(strings);
+}
+
+Map<String, List<String>> _localizedStringLists(Object? value) {
+  if (value is! Map) return const {};
+  final lists = <String, List<String>>{};
+  for (final entry in value.entries) {
+    final key = entry.key.toString().replaceAll('_', '-').trim();
+    final items = firestoreStringList(entry.value);
+    if (key.isNotEmpty && items.isNotEmpty) {
+      lists[key] = List.unmodifiable(items);
+    }
+  }
+  return Map.unmodifiable(lists);
 }

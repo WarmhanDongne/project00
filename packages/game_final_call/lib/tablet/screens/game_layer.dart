@@ -631,7 +631,7 @@ class _SeatPlate extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         FinalCallCopy.teamWithPartner(
-                          player.team.label,
+                          finalCallTeamLabel(player.team),
                           partner.nickname,
                         ),
                         maxLines: 1,
@@ -686,7 +686,12 @@ class _FinalCallLifeRow extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '${player.team.label} 탈락',
+            GameLocale.select(
+              ko: '${finalCallTeamLabel(player.team)} 탈락',
+              en: '${finalCallTeamLabel(player.team)} eliminated',
+              zhHans: '${finalCallTeamLabel(player.team)}淘汰',
+              zhHant: '${finalCallTeamLabel(player.team)}淘汰',
+            ),
             key: ValueKey('final-call-eliminated-${player.uid}'),
             style: finalCallPopText(16, color: FinalCallColors.muted),
           ),

@@ -15,6 +15,7 @@ import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -539,8 +540,18 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   Widget _buildTopBar(MosiSeatTheme theme) {
     final hint = _selectedSlotIndex != null
-        ? '바꿀 상대 자리를 눌러 주세요.'
-        : '실제로 앉은 자리에 맞게 이름 카드를 옮겨 주세요.';
+        ? GameLocale.select(
+            ko: '바꿀 상대 자리를 눌러 주세요.',
+            en: 'Tap the seat to swap with.',
+            zhHans: '请选择要交换的座位。',
+            zhHant: '請選擇要交換的座位。',
+          )
+        : GameLocale.select(
+            ko: '실제로 앉은 자리에 맞게 이름 카드를 옮겨 주세요.',
+            en: 'Move each name card to the matching real seat.',
+            zhHans: '请将姓名卡移到实际座位。',
+            zhHant: '請將姓名卡移到實際座位。',
+          );
     return Padding(
       padding: GameSetupBackButton.rowPadding,
       child: SizedBox(
@@ -581,7 +592,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
             Align(
               alignment: Alignment.centerLeft,
               child: MosiButton(
-                label: '대기실',
+                label: '대기실'.localized,
                 variant: MosiButtonVariant.outline,
                 foreground: MosiColors.white,
                 height: 44,
@@ -595,7 +606,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
             Align(
               alignment: Alignment.centerRight,
               child: MosiButton(
-                label: '섞기',
+                label: '섞기'.localized,
                 variant: MosiButtonVariant.outline,
                 foreground: MosiColors.white,
                 height: 44,
@@ -690,7 +701,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                 child: SizedBox(
                   width: 208,
                   child: MosiButton(
-                    label: '설정 완료',
+                    label: '설정 완료'.localized,
                     background: theme.button,
                     foreground: theme.buttonFg,
                     shadowColor: theme.deep,
@@ -902,7 +913,12 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '태블릿',
+                          GameLocale.select(
+                            ko: '태블릿',
+                            en: 'TABLET',
+                            zhHans: '平板',
+                            zhHant: '平板',
+                          ),
                           style: MosiFonts.sans(
                             color: MosiColors.muted,
                             size: 15,
@@ -911,7 +927,12 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '테이블 중앙',
+                          GameLocale.select(
+                            ko: '테이블 중앙',
+                            en: 'TABLE CENTER',
+                            zhHans: '桌面中央',
+                            zhHant: '桌面中央',
+                          ),
                           style: MosiFonts.sans(
                             color: MosiColors.muted,
                             size: 12,
@@ -1173,7 +1194,12 @@ class _SeatCardState extends State<_SeatCard> with TickerProviderStateMixin {
     return Semantics(
       button: true,
       selected: widget.isSelected,
-      label: '${widget.seatNumber}번 자리 ${widget.player.nickname}',
+      label: GameLocale.select(
+        ko: '${widget.seatNumber}번 자리 ${widget.player.nickname}',
+        en: 'Seat ${widget.seatNumber}, ${widget.player.nickname}',
+        zhHans: '${widget.seatNumber} 号座位，${widget.player.nickname}',
+        zhHant: '${widget.seatNumber} 號座位，${widget.player.nickname}',
+      ),
       excludeSemantics: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.grab,

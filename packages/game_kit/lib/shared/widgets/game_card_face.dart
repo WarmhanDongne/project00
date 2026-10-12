@@ -24,7 +24,7 @@ const double kCardAspectRatio = 512 / 350;
 class GameCardFace extends StatelessWidget {
   const GameCardFace({
     super.key,
-    required this.asset,
+    this.asset,
     required this.radius,
     required this.shadow,
     this.backgroundColor = Colors.white,
@@ -32,9 +32,10 @@ class GameCardFace extends StatelessWidget {
     this.width,
     this.height,
     this.child,
-  });
+  }) : assert(asset != null || child != null, 'asset 또는 child가 필요합니다.');
 
-  final GameImage asset;
+  /// [child]가 없을 때 그릴 카드 그림입니다. [child]를 쓰면 생략합니다.
+  final GameImage? asset;
   final double radius;
   final BoxShadow shadow;
 
@@ -67,7 +68,7 @@ class GameCardFace extends StatelessWidget {
         borderRadius: borderRadius,
         child:
             child ??
-            asset.image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
+            asset!.image(fit: BoxFit.cover, filterQuality: FilterQuality.high),
       ),
     );
   }

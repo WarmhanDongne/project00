@@ -14,6 +14,7 @@ import 'package:game_mafia/phone/widgets/game_layout.dart';
 import 'package:game_mafia/phone/widgets/player_select_grid.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
 import 'package:game_mafia/game_theme.dart';
+import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
 
@@ -60,7 +61,7 @@ class MafiaNightInvestigationResult {
     if (text.isEmpty) return false;
     if (text == MafiaFaction.mafia.displayName) return true;
     return MafiaRoles.all.any(
-      (role) => role.displayName == text && role.faction.isMafia,
+      (role) => role.localizedDisplayName == text && role.faction.isMafia,
     );
   }
 
@@ -69,9 +70,36 @@ class MafiaNightInvestigationResult {
   /// 진영 조사는 문장으로, 직업을 알아내는 조사(영매·도둑)는 서버가 보낸 직업
   /// 이름을 그대로 씁니다.
   String get displayText {
-    if (!asFactionSentence) return verdict;
+    final localizedVerdict = _localizedVerdict(verdict);
+    if (!asFactionSentence) return localizedVerdict;
     final name = target.nickname;
-    return showsMafia ? '$name님은 마피아입니다' : '$name님은 마피아가 아닙니다';
+    return showsMafia
+        ? GameLocale.select(
+            ko: '$name님은 마피아입니다',
+            en: '$name is Mafia',
+            zhHans: '$name 是黑手党',
+            zhHant: '$name 是黑手黨',
+          )
+        : GameLocale.select(
+            ko: '$name님은 마피아가 아닙니다',
+            en: '$name is not Mafia',
+            zhHans: '$name 不是黑手党',
+            zhHant: '$name 不是黑手黨',
+          );
+  }
+
+  static String _localizedVerdict(String value) {
+    for (final role in MafiaRoles.all) {
+      if (value == role.displayName || value == role.id) {
+        return role.localizedDisplayName;
+      }
+    }
+    return switch (value) {
+      '시민' => MafiaFaction.citizen.displayName,
+      '마피아' => MafiaFaction.mafia.displayName,
+      '중립' => MafiaFaction.neutral.displayName,
+      _ => value,
+    };
   }
 }
 
@@ -264,24 +292,61 @@ class MafiaNightActionView extends StatelessWidget {
 
   /// 밤 제목입니다. 제거는 `오늘 밤의 표적`, 치료는 `오늘 밤 살릴 사람`.
   static String nightTitle(MafiaRole role) => switch (role.nightAction) {
-    MafiaNightAction.eliminate => '오늘 밤의 표적',
-    MafiaNightAction.protect => '오늘 밤 살릴 사람',
-    _ => '오늘 밤 ${role.nightPromptVerb}할 사람',
+    MafiaNightAction.eliminate => GameLocale.select(
+      ko: '오늘 밤의 표적',
+      en: 'Tonight’s target',
+      zhHans: '今晚的目标',
+      zhHant: '今晚的目標',
+    ),
+    MafiaNightAction.protect => GameLocale.select(
+      ko: '오늘 밤 살릴 사람',
+      en: 'Protect someone tonight',
+      zhHans: '今晚要保护的人',
+      zhHant: '今晚要保護的人',
+    ),
+    _ => GameLocale.select(
+      ko: '오늘 밤 ${role.nightPromptVerb}할 사람',
+      en: 'Choose someone to ${role.localizedNightPromptVerb}',
+      zhHans: '选择要${role.localizedNightPromptVerb}的人',
+      zhHant: '選擇要${role.localizedNightPromptVerb}的人',
+    ),
   };
 
   /// 고른 카드에 두르는 띠 문구입니다.
   static String bannerLabel(MafiaRole role) => switch (role.nightAction) {
-    MafiaNightAction.eliminate => '표적',
-    _ => role.nightPromptVerb,
+    MafiaNightAction.eliminate => GameLocale.select(
+      ko: '표적',
+      en: 'Target',
+      zhHans: '目标',
+      zhHant: '目標',
+    ),
+    _ => role.localizedNightPromptVerb,
   };
 
   /// 격자 아래 한 줄 안내입니다.
   String? _caption(MafiaRole role) {
-    if (allySelectedUids.isNotEmpty) return '빨간 모서리는 동료가 고른 사람입니다';
+    if (allySelectedUids.isNotEmpty) {
+      return GameLocale.select(
+        ko: '빨간 모서리는 동료가 고른 사람입니다',
+        en: 'A red corner marks an ally’s choice',
+        zhHans: '红色角标表示同伴选择的人',
+        zhHant: '紅色角標表示同伴選擇的人',
+      );
+    }
     return switch (role.nightAction) {
-      MafiaNightAction.protect => '마피아가 고른 사람을 맞히면 그 사람은 살아납니다',
+      MafiaNightAction.protect => GameLocale.select(
+        ko: '마피아가 고른 사람을 맞히면 그 사람은 살아납니다',
+        en: 'Choose the Mafia target to save them',
+        zhHans: '选中黑手党的目标即可救下对方',
+        zhHant: '選中黑手黨的目標即可救下對方',
+      ),
       MafiaNightAction.investigate ||
-      MafiaNightAction.investigateRole => '조사 결과는 나만 볼 수 있어요',
+      MafiaNightAction.investigateRole => GameLocale.select(
+        ko: '조사 결과는 나만 볼 수 있어요',
+        en: 'Only you can see the result',
+        zhHans: '只有你能看到调查结果',
+        zhHant: '只有你能看到調查結果',
+      ),
       _ => null,
     };
   }
@@ -425,8 +490,13 @@ class MafiaNightActionView extends StatelessWidget {
     final target = players
         .where((player) => player.uid == selectedUid)
         .firstOrNull;
-    if (current == null || target == null) return '선택 완료';
-    return '${target.nickname} ${current.nightPromptVerb}';
+    if (current == null || target == null) return '선택 완료'.localized;
+    return GameLocale.select(
+      ko: '${target.nickname} ${current.nightPromptVerb}',
+      en: '${current.localizedNightPromptVerb} ${target.nickname}',
+      zhHans: '${current.localizedNightPromptVerb}${target.nickname}',
+      zhHant: '${current.localizedNightPromptVerb}${target.nickname}',
+    );
   }
 
   /// 조사 결과 화면입니다(P4 두 번째 시안).
@@ -448,7 +518,14 @@ class MafiaNightActionView extends StatelessWidget {
     final posterWidth = 230 * scale;
     final posterHeight = 320 * scale;
     final bannerText = result.asFactionSentence
-        ? (mafia ? '마피아' : '마피아 아님')
+        ? (mafia
+              ? MafiaFaction.mafia.displayName
+              : GameLocale.select(
+                  ko: '마피아 아님',
+                  en: 'Not Mafia',
+                  zhHans: '不是黑手党',
+                  zhHant: '不是黑手黨',
+                ))
         : result.verdict;
 
     return [
@@ -505,14 +582,14 @@ class MafiaNightActionView extends StatelessWidget {
         top: MafiaPhoneDesign.top(size, 592),
         child: IgnorePointer(
           child: Text(
-            '이 결과는 나만 볼 수 있어요',
+            '이 결과는 나만 볼 수 있어요'.localized,
             textAlign: TextAlign.center,
             style: mafiaNoirBody(14 * scale),
           ),
         ),
       ),
       MafiaPhoneActionButton(
-        label: '확인',
+        label: '확인'.localized,
         onTap: onConfirmResult,
         enabled: onConfirmResult != null,
       ),
@@ -552,9 +629,12 @@ class MafiaNightActionView extends StatelessWidget {
         top: MafiaPhoneDesign.top(size, 412),
         child: IgnorePointer(
           child: _hasSubmittedAction
-              ? _MafiaSubmissionConfirmation(scale: scale, label: '선택을 완료했습니다')
+              ? _MafiaSubmissionConfirmation(
+                  scale: scale,
+                  label: '선택을 완료했습니다'.localized,
+                )
               : Text(
-                  isWrappingUp ? '곧 아침이 옵니다' : '조용히 밤을 보내세요',
+                  (isWrappingUp ? '곧 아침이 옵니다' : '조용히 밤을 보내세요').localized,
                   textAlign: TextAlign.center,
                   style: mafiaNoirDisplay(34 * scale),
                 ),
@@ -567,8 +647,13 @@ class MafiaNightActionView extends StatelessWidget {
         child: IgnorePointer(
           child: Text(
             isWrappingUp || _hasSubmittedAction
-                ? waitingMessage
-                : '화면을 켜 둔 채\n아침을 기다려 주세요.',
+                ? waitingMessage.localized
+                : GameLocale.select(
+                    ko: '화면을 켜 둔 채\n아침을 기다려 주세요.',
+                    en: 'Keep the screen on\nand wait for morning.',
+                    zhHans: '请保持屏幕开启\n等待天亮。',
+                    zhHant: '請保持螢幕開啟\n等待天亮。',
+                  ),
             textAlign: TextAlign.center,
             style: mafiaNoirBody(15 * scale, height: 1.6),
           ),
@@ -584,7 +669,7 @@ class MafiaNightActionView extends StatelessWidget {
               child: Transform.scale(
                 scale: scale,
                 child: MafiaNoirRuledLabel(
-                  label: '아침까지',
+                  label: '아침까지'.localized,
                   value: mafiaNoirClock(seconds),
                 ),
               ),
