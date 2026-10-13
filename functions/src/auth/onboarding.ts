@@ -203,9 +203,7 @@ export const completeOnboardingProfile = onCall<ProfileData>(
             age14: true,
             terms: true,
             privacy: true,
-            marketing: consents.marketing,
             agreedAt: FieldValue.serverTimestamp(),
-            marketingUpdatedAt: FieldValue.serverTimestamp(),
           },
         } : {}),
       }, {merge: true});

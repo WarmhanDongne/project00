@@ -127,7 +127,6 @@ void main() {
       await tester.tap(next);
       expect(service.calls, 1);
       expect(service.consents!.requiredAgreed, isTrue);
-      expect(service.consents!.marketing, isFalse);
       service.pending.completeError(
         const AuthServiceException('unavailable', '준비 실패'),
       );

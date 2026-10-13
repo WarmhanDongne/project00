@@ -22,7 +22,6 @@ syncGoogleUserProfile	onCall	인증	asia-northeast3		auth/sync-google-profile.ts
 syncAppleUserProfile	onCall	인증	asia-northeast3		auth/sync-apple-profile.ts	애플용. 애플은 이름을 최초 승인 때 한 번만 주고 사진은 아예 안 줘서, 비어 있는 값이 기존 값을 덮지 않도록 병합
 deleteAccount	onCall	인증	asia-northeast3		auth/delete-account.ts	계정 삭제
 cleanupIncompleteAccounts	주기	인증	asia-northeast3	매일 03:30	auth/cleanup-incomplete-accounts.ts	온보딩 미완료 계정 — 지금은 보고만 하고 실제 삭제는 꺼져 있음
-registerProfile	HTTP	인증	asia-northeast3		auth/register-profile.ts	프로필 등록 HTTP 엔드포인트. Dart 호출부 0곳 — 삭제 후보
 game_mafia_start_game	onCall	마피아	asia-northeast3		mafia/start-game.ts	역할 배분하고 게임 시작. 역할 구성은 태블릿이 고른 값
 game_mafia_confirm_role	onCall	마피아	asia-northeast3		mafia/role-reveal.ts	내 역할 카드를 확인했다고 알림. 전원 확인하면 곧바로 밤으로
 game_mafia_complete_role_reveal	onCall	마피아	asia-northeast3		mafia/role-reveal.ts	태블릿 배분 연출 종료. 미확인자가 있어도 넘어감 — 한 명 때문에 판이 멈추지 않게

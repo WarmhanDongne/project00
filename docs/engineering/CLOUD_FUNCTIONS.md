@@ -29,9 +29,8 @@ completeGuestOnboarding.
 그대로 받는다. 2026-10-13 운영 Firebase Authentication의 Anonymous provider가
 활성 상태임을 확인하고 `completeGuestOnboarding`을 `asia-northeast3`의 Node.js 22
 2nd Gen callable로 배포했다. 인증 없는 요청은 HTTP 401 `UNAUTHENTICATED`로 거절된다.
-registerProfile은 별도 HTTP다.
 completeOnboardingProfile은 처음 가입을 마칠 때 현재 `SIGNUP_TERMS_VERSION`의 필수 동의
-(`consents`: age14·terms·privacy, 선택 marketing)가 없으면 `failed-precondition`으로 거절하고,
+(`consents`: age14·terms·privacy)가 없으면 `failed-precondition`으로 거절하고,
 `users/{uid}.consents`(동의 항목·`agreedAt`·`marketingUpdatedAt`)와
 `userOnboarding/{uid}.consentVersion`을 저장한다. 이 검사는 동의를 보내지 않는 이전 앱의
 가입 완료를 막으므로 Functions와 앱을 함께 배포한다.
@@ -102,13 +101,9 @@ vote_to_continue/finish_now는 현재 index export와 소비자에서 제거했�
 
 ## 7. 정리할 것
 
-### C1. `registerProfile` — 쓰지 않는 HTTP 엔드포인트
+### C1. `registerProfile` — 삭제함
 
-79개 중 유일한 `onRequest` 다. Firebase ID 토큰을 제대로 검증하므로 보안 구멍은
-아니지만, **Dart 쪽에서 부르는 곳이 0곳**이고 하는 일이 `syncGoogleUserProfile` 과
-겹친다. `index.ts` 주석에도 "삭제 여부는 따로 결정한 뒤 정리하세요"로 남아 있다.
-
-→ 삭제. 함수 하나가 줄면 배포 시간과 콜드스타트 표면이 줄어든다.
+2026-10-13 소스에서 지웠다. 배포할 때 Firebase CLI가 운영 함수 삭제를 물으면 승인한다.
 
 ### C2. `cleanupIncompleteAccounts` 가 실제로는 아무것도 안 지운다
 
