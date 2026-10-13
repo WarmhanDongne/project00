@@ -315,7 +315,8 @@ const _termsOfServiceKo = LegalDocument(
 const _privacyPolicyKo = LegalDocument(
   title: '모시겜 개인정보 처리방침',
   effectiveDate: '2026-10-12',
-  intro: '따스한동네(이하 "운영자")는 "모시겜: 모이면 시작하는 게임" 서비스(이하 "서비스")를 제공하면서 「개인정보 보호법」 등 관련 법령에 따라 이용자의 개인정보를 보호하고, 이와 관련한 고충을 신속하게 처리하기 위해 다음과 같이 개인정보처리방침을 정합니다.',
+  intro:
+      '따스한동네(이하 "운영자")는 "모시겜: 모이면 시작하는 게임" 서비스(이하 "서비스")를 제공하면서 「개인정보 보호법」 등 관련 법령에 따라 이용자의 개인정보를 보호하고, 이와 관련한 고충을 신속하게 처리하기 위해 다음과 같이 개인정보처리방침을 정합니다.',
   sections: [
     (
       '1. 수집하는 개인정보 항목과 수집 방법',
@@ -461,7 +462,8 @@ String get _legalLanguage {
 const _termsOfServiceEn = LegalDocument(
   title: 'Mosigame Terms of Service',
   effectiveDate: '2026-10-12',
-  intro: 'This is a translation. If it differs from the Korean version, the Korean version prevails.',
+  intro:
+      'This is a translation. If it differs from the Korean version, the Korean version prevails.',
   sections: [
     (
       'Article 1 (Purpose)',
