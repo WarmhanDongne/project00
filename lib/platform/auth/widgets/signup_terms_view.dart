@@ -30,7 +30,7 @@ class SignupTermsView extends StatefulWidget {
   State<SignupTermsView> createState() => _SignupTermsViewState();
 }
 
-enum _TermsItem { age14, terms, privacy, marketing }
+enum _TermsItem { age14, terms, privacy }
 
 class _SignupTermsViewState extends State<SignupTermsView> {
   late SignupConsents _consents = widget.initial;
@@ -39,7 +39,6 @@ class _SignupTermsViewState extends State<SignupTermsView> {
     _TermsItem.age14 => _consents.age14,
     _TermsItem.terms => _consents.terms,
     _TermsItem.privacy => _consents.privacy,
-    _TermsItem.marketing => _consents.marketing,
   };
 
   void _set(_TermsItem item, bool value) => setState(() {
@@ -47,18 +46,16 @@ class _SignupTermsViewState extends State<SignupTermsView> {
       _TermsItem.age14 => _consents.copyWith(age14: value),
       _TermsItem.terms => _consents.copyWith(terms: value),
       _TermsItem.privacy => _consents.copyWith(privacy: value),
-      _TermsItem.marketing => _consents.copyWith(marketing: value),
     };
   });
 
   void _toggleAll() {
-    final value = !_consents.allAgreed;
+    final value = !_consents.requiredAgreed;
     setState(
       () => _consents = SignupConsents(
         age14: value,
         terms: value,
         privacy: value,
-        marketing: value,
       ),
     );
   }
@@ -102,7 +99,7 @@ class _SignupTermsViewState extends State<SignupTermsView> {
         ),
         const SizedBox(height: 18),
         _AllAgreeCard(
-          checked: _consents.allAgreed,
+          checked: _consents.requiredAgreed,
           onTap: widget.busy ? null : _toggleAll,
         ),
         Container(
@@ -171,26 +168,6 @@ class _SignupTermsViewState extends State<SignupTermsView> {
               ? null
               : () => _set(_TermsItem.privacy, !_isOn(_TermsItem.privacy)),
           onView: () => _view(_TermsItem.privacy, privacyPolicy),
-        ),
-        _TermsRow(
-          key: const ValueKey('terms-marketing'),
-          required: false,
-          title: GameLocale.select(
-            ko: '새 게임·이벤트 소식 받기',
-            en: 'Receive game and event news',
-            zhHans: '接收新游戏与活动消息',
-            zhHant: '接收新遊戲與活動消息',
-          ),
-          sub: GameLocale.select(
-            ko: '원할 때 언제든 끌 수 있어요',
-            en: 'You can turn this off anytime',
-            zhHans: '可随时关闭',
-            zhHant: '可隨時關閉',
-          ),
-          checked: _isOn(_TermsItem.marketing),
-          onToggle: widget.busy
-              ? null
-              : () => _set(_TermsItem.marketing, !_isOn(_TermsItem.marketing)),
         ),
         const SizedBox(height: 20),
         if (left == 0)

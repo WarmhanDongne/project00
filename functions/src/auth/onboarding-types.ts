@@ -28,13 +28,12 @@ export const INCOMPLETE_ACCOUNT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export const SIGNUP_TERMS_VERSION = "2026-10-12";
 
-/** 회원가입 약관 동의 내용입니다. 필수 세 가지와 선택 마케팅 수신입니다. */
+/** 회원가입 약관 동의 내용입니다. 모두 필수 항목입니다. */
 export type SignupConsents = {
   version: string;
   age14: true;
   terms: true;
   privacy: true;
-  marketing: boolean;
 };
 
 /**
@@ -57,7 +56,6 @@ export function parseSignupConsents(value: unknown):
     age14: true,
     terms: true,
     privacy: true,
-    marketing: raw.marketing === true,
   };
 }
 

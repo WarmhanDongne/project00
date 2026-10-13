@@ -51,7 +51,7 @@ export const completeGuestOnboarding = onCall(
       transaction.set(userRef, {
         uid, email: null, nickname: generatedNickname, profileImageUrl: null,
         createdAt: now, updatedAt: now,
-        consents: {...consents, agreedAt: now, marketingUpdatedAt: now},
+        consents: {...consents, agreedAt: now},
       });
       transaction.set(onboardingRef, {
         uid, provider: "anonymous", status: "complete",
