@@ -30,7 +30,7 @@ macOS 결과는 팀원이 실제로 실행하기 전까지 USER VERIFICATION REQ
 ## 필요한 도구와 기준
 
 - Git
-- Flutter stable 3.44.8, Dart 3.12.2 기준
+- Flutter stable 3.47.5, Dart 3.13.4 기준 (CI `validate.yml`과 동일)
 - Node.js major 22: 저장소 .nvmrc와 Functions engines의 공통 계약
 - npm과 functions/package-lock.json
 - Java 17 이상: Android 빌드 target은 JVM 17

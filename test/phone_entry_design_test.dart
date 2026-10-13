@@ -53,8 +53,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('2 / 3'), findsOneWidget);
-      expect(find.text('파이널콜'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('mafia 선택'));
+      expect(find.text('final_call'), findsOneWidget);
+      // 옆 책등도 같은 이름표를 가지므로 마지막(점 버튼)을 누릅니다.
+      await tester.tap(find.bySemanticsLabel('mafia 선택').last);
       await tester.pumpAndSettle();
       expect(find.text('3 / 3'), findsOneWidget);
       await tester.drag(
@@ -91,6 +92,7 @@ void main() {
       requests++;
       expect(((call as List).first as Map)['parameters'], {
         'roomCode': 'K7Q2M',
+        'presenceProtocol': 2,
       });
       return response.future;
     });

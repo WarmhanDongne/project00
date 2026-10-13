@@ -293,7 +293,8 @@ void main() {
     await show(allIn);
     await tester.pump(const Duration(milliseconds: 50));
     expect(sound.played, [HoldemSounds.allIn]);
-    await tester.pump(const Duration(milliseconds: 800));
+    // 올인 연출은 2,100ms라 첫 칩 착지(.61)는 약 1.16초 뒤입니다.
+    await tester.pump(const Duration(milliseconds: 1200));
     expect(sound.played, [HoldemSounds.allIn, HoldemSounds.chipLanding]);
     await show(allIn.copyWith(revision: 11));
     await tester.pump(const Duration(seconds: 1));
