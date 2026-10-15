@@ -1,5 +1,34 @@
 # LOBBY-DESIGN-01
 
+## 2026-10-14 — 로그인 카드 비밀번호 재설정 후보
+
+로그인 비밀번호 아래에 `비밀번호를 잊으셨나요?`를 추가하고, 별도 route 이동 없이
+기존 `MosiAuthTransition` 안에서 재설정 폼과 발송 완료 안내로 교체한다. 로그인에서
+입력한 이메일을 유지하며 같은 도메인 선택 UI를 사용한다. 발송 중 중복 탭을 막고,
+완료 뒤 메일 재전송과 로그인 복귀를 제공한다. 한국어·영어·중국어 간체·번체 문구를
+함께 추가했다.
+
+메일은 Firebase Auth `sendPasswordResetEmail`로 발송한다. `user-not-found`를 성공과
+같이 처리해 화면에서 계정 존재 여부를 노출하지 않으며, 형식·네트워크·요청 제한 오류는
+현지화된 안내로 표시한다. 별도 Functions, DB/rules, 배포 변경은 없다. auth suite의
+Flutter 80개와 Functions 38개, 변경 파일 정적 분석이 통과했다. 실제 Firebase 메일
+수신과 링크의 브라우저 재설정 화면, 사용자 승인 FULL validation은 남아 있다.
+[검증·보존 기록](../logs/2026-10.md#password-reset-20261014).
+
+## 2026-10-14 — 태블릿 첫 화면 가로 시작 후보
+
+태블릿 방향을 Flutter 첫 프레임 뒤에만 적용해 Android 시작 화면과 iPad 네이티브
+시작 화면이 세로로 먼저 보일 수 있었다. Android는 기본/`sw600dp` resource로 기기를
+나누고 `MainActivity.onCreate`의 `super` 호출 전에 태블릿만 sensor landscape를
+요청한다. target API 36의 대화면 방향 제한 예외가 적용되도록 실제 앱 용도에 맞는
+`android:appCategory="game"`도 선언했다. iPad 지원 방향은 좌·우 가로만 남겼고,
+iPhone의 기존 지원 방향과 Flutter의 scene 활성화 후 재적용은 유지했다.
+
+네이티브 설정 회귀 2개, Android debug APK 조립, plist/XML 문법 검사와 변경 파일
+정적 분석이 통과했다. Android 태블릿과 iPad의 실제 콜드 스타트 및 사용자 승인
+FULL validation은 남아 있다.
+[검증·보존 기록](../logs/2026-10.md#tablet-native-start-orientation-20261014).
+
 ## 2026-10-12 — Selected-game theme propagation
 
 The selected book now supplies the primary action colors to the empty-room

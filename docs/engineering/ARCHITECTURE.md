@@ -71,6 +71,18 @@ Mosigame 정식 앱 바이너리
 
 실제 파일과 등록 상태를 확인하지 않은 폴더나 기능을 존재한다고 가정하지 않는다.
 
+## Initial device orientation
+
+- 플랫폼 화면은 휴대폰 세로, 태블릿 가로가 기본이다. 게임 진입 뒤 휴대폰 방향은
+  게임별 `PhoneGameOrientation`을 따르고 태블릿 게임은 계속 가로를 유지한다.
+- 첫 Flutter 프레임 뒤에 방향을 바꾸면 네이티브 시작 화면이 세로로 먼저 보일 수 있다.
+  Android는 `sw600dp` resource와 `MainActivity`에서 태블릿 시작 방향을 먼저 가로로
+  설정한다. 앱은 게임이므로 manifest의 `android:appCategory`도 `game`으로 선언한다.
+- iPad는 `Info.plist`의 기기별 지원 방향을 좌·우 가로로 제한한다. iPhone 지원 방향은
+  게임별 휴대폰 회전을 위해 별도로 유지한다.
+- Flutter의 `_InitialOrientationApplier`는 활성 scene과 유효한 화면 크기가 준비된 뒤
+  `AppOrientation` 정책을 다시 적용한다. 네이티브 시작 설정을 대신하거나 제거하지 않는다.
+
 ## Game extension contract
 
 - 새 게임은 [`TemplateGame`](../../packages/game_kit/lib/template_game.dart)을 구현하고

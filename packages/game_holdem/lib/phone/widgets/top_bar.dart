@@ -3,7 +3,7 @@ import 'package:game_holdem/game_copy.dart';
 import 'package:game_holdem/game_theme.dart';
 import 'package:game_holdem/shared/models/game_state.dart';
 import 'package:game_kit/phone/widgets/game_top_bar.dart';
-import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 
 /// 휴대폰 상단의 게임 이름과 규칙·나가기 버튼입니다.
@@ -53,12 +53,9 @@ void showHoldemRules(BuildContext context, [Offset? origin]) {
   showPhoneRippleDialog<void>(
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
-    builder: (_) => PhoneGameRuleDialog(
+    builder: (_) => PhoneGameRulebookDialog(
       title: 'TEXAS HOLD’EM',
-      rules: HoldemCopy.phoneRules,
-      surfaceColor: HoldemColors.sheet,
-      foregroundColor: HoldemColors.ivory,
-      dismissOnAnyTap: true,
+      markdown: HoldemCopy.tabletRules,
     ),
   );
 }

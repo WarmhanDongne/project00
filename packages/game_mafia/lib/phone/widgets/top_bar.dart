@@ -8,7 +8,7 @@
 // ========================[ import ]==========================
 import 'package:flutter/material.dart';
 import 'package:game_mafia/game_copy.dart';
-import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_mafia/shared/models/player.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
@@ -210,18 +210,15 @@ class MafiaPhoneTopBar extends StatelessWidget {
 
 /// 룰 다이얼로그를 엽니다. 상단바 책 버튼이 부릅니다.
 ///
-/// 배경이 밝은 시안이라 파이널콜과 달리 흰 바탕 + 검은 글자를 씁니다.
+/// 태블릿 룰북처럼 항목을 왼쪽에서 고르고 오른쪽에서 읽습니다(공통 휴대폰 룰북).
 void showMafiaRules(BuildContext context, [Offset? origin, String? rules]) {
   final screenSize = MediaQuery.sizeOf(context);
   showPhoneRippleDialog<void>(
     context: context,
     origin: origin ?? Offset(screenSize.width - 82, 28),
-    builder: (_) => PhoneGameRuleDialog(
+    builder: (_) => PhoneGameRulebookDialog(
       title: '마피아'.localized,
-      rules: rules ?? MafiaCopy.phoneRules,
-      surfaceColor: MafiaColors.noirInk,
-      foregroundColor: MafiaColors.noirPaper,
-      dismissOnAnyTap: true,
+      markdown: rules ?? MafiaCopy.tabletRulebook,
     ),
   );
 }

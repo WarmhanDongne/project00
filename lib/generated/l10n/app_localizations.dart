@@ -258,6 +258,66 @@ abstract class AppLocalizations {
   /// **'게스트로 시작하기'**
   String get guestLogin;
 
+  /// No description provided for @forgotPassword.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀번호를 잊으셨나요?'**
+  String get forgotPassword;
+
+  /// No description provided for @resetPasswordTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀번호 재설정'**
+  String get resetPasswordTitle;
+
+  /// No description provided for @resetPasswordDescription.
+  ///
+  /// In ko, this message translates to:
+  /// **'가입한 이메일로 비밀번호 재설정 링크를 보내드려요.'**
+  String get resetPasswordDescription;
+
+  /// No description provided for @sendResetEmail.
+  ///
+  /// In ko, this message translates to:
+  /// **'재설정 메일 보내기'**
+  String get sendResetEmail;
+
+  /// No description provided for @resetEmailSentTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'메일을 보냈습니다'**
+  String get resetEmailSentTitle;
+
+  /// No description provided for @resetEmailSentDescription.
+  ///
+  /// In ko, this message translates to:
+  /// **'메일함에서 재설정 링크를 열어 새 비밀번호를 설정해 주세요.'**
+  String get resetEmailSentDescription;
+
+  /// No description provided for @resendResetEmail.
+  ///
+  /// In ko, this message translates to:
+  /// **'메일 다시 보내기'**
+  String get resendResetEmail;
+
+  /// No description provided for @backToLogin.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인으로 돌아가기'**
+  String get backToLogin;
+
+  /// No description provided for @tooManyRequests.
+  ///
+  /// In ko, this message translates to:
+  /// **'요청이 많습니다. 잠시 후 다시 시도해 주세요.'**
+  String get tooManyRequests;
+
+  /// No description provided for @passwordResetFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'재설정 메일을 보내지 못했습니다. 다시 시도해 주세요.'**
+  String get passwordResetFailed;
+
   /// No description provided for @checkCredentials.
   ///
   /// In ko, this message translates to:

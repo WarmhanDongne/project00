@@ -91,6 +91,19 @@ class FirebaseAuthService {
     }
   }
 
+  /// Firebase가 제공하는 웹 화면에서 새 비밀번호를 설정할 수 있는 메일을 보냅니다.
+  ///
+  /// 계정 존재 여부를 로그인 화면에서 추측할 수 없도록, Firebase가 구버전 설정에서
+  /// `user-not-found`를 반환하더라도 정상 발송 안내와 같은 결과로 처리합니다.
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'user-not-found') return;
+      throw _toServiceException(error);
+    }
+  }
+
   Future<void> updateDisplayName(String displayName) async {
     final user = _auth.currentUser;
     if (user == null) {

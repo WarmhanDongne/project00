@@ -71,7 +71,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/12 이메일 인증·게스트 로그인·태블릿 입력 도구막대 후보 FULL 및 실기기 확인, Anonymous provider 활성화·인증 함수 3개 배포 승인 대기, 세션 회귀는 NEWGUI-RECOVERY-01과 연결 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/14 로그인 카드 비밀번호 재설정 후보: Firebase Auth 발송, 같은 카드 전환·4개 locale·중복 방지, auth Flutter80/Functions38 PASS. 태블릿 네이티브 가로 후보·Android APK 빌드 PASS도 유지. 다음은 사용자 승인 FULL, 실제 재설정 메일/링크와 Android/iPad 콜드 스타트 확인 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
 | [GAME-TUTORIAL-01](tasks/GAME-TUTORIAL-01.md#game-tutorial-01) | 게임 첫 플레이 튜토리얼 | 요구사항 확인 | 게임별 안내 범위 결정 |

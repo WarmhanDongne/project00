@@ -9,7 +9,7 @@ import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 
-enum _LoginAction { password, google, apple, guest }
+enum _LoginAction { password, passwordReset, google, apple, guest }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.authService});
@@ -21,8 +21,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _authProvider = AuthProvider();
-  late final _authService = widget.authService ?? FirebaseAuthService();
+  late final FirebaseAuthService _authService;
+  late final AuthProvider _authProvider;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _customDomainController = TextEditingController();
@@ -32,6 +32,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isCustomDomain = false;
   String _emailDomain = 'gmail.com';
   bool _isRegistering = false;
+  bool _isResettingPassword = false;
+  bool _passwordResetSent = false;
+  String? _resetTargetEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = widget.authService ?? FirebaseAuthService();
+    _authProvider = AuthProvider(authService: _authService);
+  }
 
   @override
   void dispose() {
@@ -89,6 +99,62 @@ class _LoginScreenState extends State<LoginScreen> {
       await _authService.signInAsGuest();
     } on AuthServiceException catch (error) {
       if (mounted) setState(() => _errorMessage = error.message);
+    } finally {
+      if (mounted) setState(() => _action = null);
+    }
+  }
+
+  void _openPasswordReset() {
+    if (_action != null) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isResettingPassword = true;
+      _passwordResetSent = false;
+      _resetTargetEmail = null;
+      _errorMessage = null;
+    });
+  }
+
+  void _closePasswordReset() {
+    if (_action != null) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isResettingPassword = false;
+      _passwordResetSent = false;
+      _resetTargetEmail = null;
+      _errorMessage = null;
+    });
+  }
+
+  Future<void> _sendPasswordResetEmail() async {
+    if (_action != null) return;
+    final email = _email();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      setState(() => _errorMessage = context.l10n.invalidEmail);
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _action = _LoginAction.passwordReset;
+      _errorMessage = null;
+    });
+    try {
+      await _authService.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      setState(() {
+        _passwordResetSent = true;
+        _resetTargetEmail = email;
+      });
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _errorMessage = switch (error.code) {
+          'invalid-email' => context.l10n.invalidEmail,
+          'network-request-failed' => context.l10n.checkNetwork,
+          'too-many-requests' => context.l10n.tooManyRequests,
+          _ => context.l10n.passwordResetFailed,
+        },
+      );
     } finally {
       if (mounted) setState(() => _action = null);
     }
@@ -174,6 +240,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 key: const ValueKey('register'),
                 onCancel: () => setState(() => _isRegistering = false),
               )
+            : _isResettingPassword
+            ? KeyedSubtree(
+                key: ValueKey(
+                  _passwordResetSent
+                      ? 'password-reset-sent'
+                      : 'password-reset-request',
+                ),
+                child: _buildPasswordReset(context),
+              )
             : KeyedSubtree(
                 key: const ValueKey('login'),
                 child: _buildLogin(context),
@@ -224,11 +299,30 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: mosiInputDecoration(hintText: context.l10n.password),
           ),
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            key: const Key('forgot-password-button'),
+            onPressed: isBusy ? null : _openPasswordReset,
+            style: TextButton.styleFrom(
+              foregroundColor: MosiColors.navy,
+              padding: const EdgeInsets.fromLTRB(8, 8, 0, 4),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: MosiFonts.sans(
+                locale: Localizations.maybeLocaleOf(context),
+                size: 13,
+                weight: FontWeight.w700,
+              ),
+            ),
+            child: Text(context.l10n.forgotPassword),
+          ),
+        ),
         if (_errorMessage != null) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           MosiNotice(message: _errorMessage!),
         ],
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
@@ -294,6 +388,110 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _signInWithApple,
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildPasswordReset(BuildContext context) {
+    final isBusy = _action != null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MosiAuthHeader(
+          title: _passwordResetSent
+              ? context.l10n.resetEmailSentTitle
+              : context.l10n.resetPasswordTitle,
+          onBack: _closePasswordReset,
+        ),
+        const SizedBox(height: 18),
+        if (_passwordResetSent) ...[
+          Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: MosiColors.lime,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: MosiColors.ink, width: 3),
+                boxShadow: const [
+                  BoxShadow(color: MosiColors.navy, offset: Offset(5, 5)),
+                ],
+              ),
+              child: const Icon(
+                Icons.mark_email_read_outlined,
+                size: 36,
+                color: MosiColors.navy,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          MosiNotice(
+            tone: MosiNoticeTone.success,
+            message: context.l10n.resetEmailSentDescription,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _resetTargetEmail ?? _email(),
+            key: const Key('password-reset-target-email'),
+            textAlign: TextAlign.center,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 15,
+              weight: FontWeight.w700,
+              color: MosiColors.navy,
+            ),
+          ),
+        ] else ...[
+          Text(
+            context.l10n.resetPasswordDescription,
+            style: MosiFonts.sans(
+              locale: Localizations.maybeLocaleOf(context),
+              size: 14,
+              weight: FontWeight.w500,
+              color: MosiColors.navyDim,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 18),
+          MosiLabeledField(
+            label: context.l10n.email,
+            child: MosiEmailField(
+              emailController: _emailController,
+              customDomainController: _customDomainController,
+              customDomainFocusNode: _customDomainFocusNode,
+              emailDomain: _emailDomain,
+              isCustomDomain: _isCustomDomain,
+              enabled: !isBusy,
+              onDomainChanged: _changeDomain,
+            ),
+          ),
+        ],
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 14),
+          MosiNotice(message: _errorMessage!),
+        ],
+        const SizedBox(height: 20),
+        MosiButton(
+          key: const Key('send-password-reset-button'),
+          label: _passwordResetSent
+              ? context.l10n.resendResetEmail
+              : context.l10n.sendResetEmail,
+          height: 54,
+          expand: true,
+          loading: _action == _LoginAction.passwordReset,
+          onPressed: isBusy ? null : _sendPasswordResetEmail,
+        ),
+        const SizedBox(height: 12),
+        MosiButton(
+          key: const Key('back-to-login-button'),
+          label: context.l10n.backToLogin,
+          background: MosiColors.white,
+          height: 50,
+          expand: true,
+          onPressed: isBusy ? null : _closePasswordReset,
+        ),
       ],
     );
   }

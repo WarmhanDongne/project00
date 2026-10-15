@@ -14,10 +14,9 @@ import 'package:game_kit/errors/widgets/leave_failure_notice.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
-import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_kit/core/constants/room_character.dart';
-import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_kit/localization/game_locale.dart';
 
 // ============================================================
@@ -332,13 +331,9 @@ class PhoneSpectator extends StatelessWidget {
     showPhoneRippleDialog<void>(
       context: context,
       origin: origin,
-      builder: (_) => PhoneGameRuleDialog(
+      builder: (_) => PhoneGameRulebookDialog(
         title: "LIAR'S POKER",
-        rules: LiarsPokerCopy.phoneRules,
-        surfaceColor: LiarsPokerColors.spectatorSurface,
-        foregroundColor: Colors.white,
-        showSurface: false,
-        dismissOnAnyTap: true,
+        markdown: LiarsPokerCopy.tabletRules,
       ),
     );
   }

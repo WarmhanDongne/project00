@@ -88,6 +88,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get guestLogin => '게스트로 시작하기';
 
   @override
+  String get forgotPassword => '비밀번호를 잊으셨나요?';
+
+  @override
+  String get resetPasswordTitle => '비밀번호 재설정';
+
+  @override
+  String get resetPasswordDescription => '가입한 이메일로 비밀번호 재설정 링크를 보내드려요.';
+
+  @override
+  String get sendResetEmail => '재설정 메일 보내기';
+
+  @override
+  String get resetEmailSentTitle => '메일을 보냈습니다';
+
+  @override
+  String get resetEmailSentDescription => '메일함에서 재설정 링크를 열어 새 비밀번호를 설정해 주세요.';
+
+  @override
+  String get resendResetEmail => '메일 다시 보내기';
+
+  @override
+  String get backToLogin => '로그인으로 돌아가기';
+
+  @override
+  String get tooManyRequests => '요청이 많습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get passwordResetFailed => '재설정 메일을 보내지 못했습니다. 다시 시도해 주세요.';
+
+  @override
   String get checkCredentials => '이메일과 비밀번호를 확인해주세요.';
 
   @override

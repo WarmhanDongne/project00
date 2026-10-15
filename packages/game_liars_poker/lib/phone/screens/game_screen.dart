@@ -25,12 +25,11 @@ import 'package:game_liars_poker/phone/widgets/turn_timer.dart';
 import 'package:game_liars_poker/phone/widgets/top_bar.dart';
 import 'package:game_liars_poker/phone/widgets/turn_action_switcher.dart';
 import 'package:game_liars_poker/shared/widgets/pressable_button.dart';
-import 'package:game_kit/phone/widgets/rule_dialog.dart';
+import 'package:game_kit/phone/widgets/rulebook_dialog.dart';
 import 'package:game_kit/phone/widgets/ripple_dialog.dart';
 import 'package:game_kit/shared/widgets/game_announcement_layer.dart';
 import 'package:game_liars_poker/gen/assets.gen.dart';
 import 'package:game_liars_poker/game_assets.dart';
-import 'package:game_liars_poker/game_theme.dart';
 import 'package:game_liars_poker/phone/providers/game_stage.dart';
 
 part 'game_screen/landscape_view.dart';
@@ -303,13 +302,9 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     showPhoneRippleDialog<void>(
       context: context,
       origin: origin ?? Offset(screenSize.width - 82, 28),
-      builder: (_) => PhoneGameRuleDialog(
+      builder: (_) => PhoneGameRulebookDialog(
         title: "LIAR'S POKER",
-        rules: LiarsPokerCopy.phoneRules,
-        surfaceColor: LiarsPokerColors.spectatorSurface,
-        foregroundColor: Colors.white,
-        showSurface: false,
-        dismissOnAnyTap: true,
+        markdown: LiarsPokerCopy.tabletRules,
       ),
     );
   }

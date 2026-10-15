@@ -67,6 +67,7 @@ void main() {
         'test/auth/email_link_error_message_test.dart',
         'test/auth/email_link_service_test.dart',
         'test/auth/password_verification_test.dart',
+        'test/auth/password_reset_test.dart',
         'test/auth/guest_login_test.dart',
         'test/auth/google_login_button_test.dart',
         'test/auth/onboarding_parity_test.dart',
