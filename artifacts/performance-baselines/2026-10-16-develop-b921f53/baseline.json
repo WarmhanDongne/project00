@@ -1,0 +1,162 @@
+{
+  "baselineId": "android-release-develop-b921f53-20261016",
+  "source": {
+    "branch": "develop",
+    "commit": "b921f53bfb73c4b5f37c883d4285e1bb9ffcf393",
+    "trackedFileCount": 1499,
+    "initialWorkingTree": "clean",
+    "finalSourceCheck": {
+      "checkedFiles": 1499,
+      "changedTrackedFiles": [
+        "docs/planning/logs/2026-10.md",
+        "docs/planning/tasks/NET-RECOVERY-01.md"
+      ],
+      "unexpectedTrackedChanges": [],
+      "productSourceUnchanged": true,
+      "sourceCommit": "b921f53bfb73c4b5f37c883d4285e1bb9ffcf393",
+      "branch": "develop"
+    }
+  },
+  "application": {
+    "applicationId": "com.warmhandongne.msg",
+    "versionName": "1.0.0",
+    "versionCode": 4,
+    "mode": "release",
+    "signingConfiguration": "debug fallback (android/key.properties absent)",
+    "distribution": "local measurement APK; not a Google Play or Shorebird release",
+    "submittedGoogleTestBuildMatch": "not verified"
+  },
+  "toolchain": {
+    "flutter": "3.47.5",
+    "dart": "3.13.4",
+    "flutterFrameworkRevision": "6a19cca56475dbfba1478ee68d7bd0c2ef891da1",
+    "flutterEngineRevision": "af7e796e161ae0bb1ff0758c71a7105418bd9ded",
+    "shellJava": "Microsoft OpenJDK 21.0.11+10-LTS",
+    "node": "v22.23.2",
+    "npm": "10.9.8",
+    "gradleWrapper": "9.1.0",
+    "androidGradlePlugin": "9.0.1",
+    "kotlin": "2.3.20",
+    "os": "Windows 11 Home 10.0.26200"
+  },
+  "locks": {
+    "pubspecLockSha256": "17b20e2a4bfa49232c5cce8c4ec1fc6247b32c8796c0db34a6c32cb678a7f1d4",
+    "functionsPackageLockSha256": "110b8072fbb366f510aa8018b60316c609f567be9b13cdba26c5ce85a42020e5"
+  },
+  "operation": {
+    "doctor": {
+      "command": ".\\tool\\invoke_mosigame.ps1 doctor --json",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    "buildStatus": "PASS",
+    "fullValidationStatus": "PASS",
+    "deviceInstallation": "not performed",
+    "performanceMeasurement": "not performed",
+    "serverDeploymentState": "not queried; local source does not identify live revision",
+    "productionQueries": "not performed",
+    "fullValidation": {
+      "command": ".\\tool\\invoke_mosigame.ps1 validate --full --json",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": {
+        "passed": 12,
+        "failed": 0,
+        "blocked": 0,
+        "invalid": 0,
+        "total": 12
+      },
+      "evidence": "Guard process completed with exit 0; final JSON observed in tool transcript. Console forwarding bypassed PowerShell redirection; this is a normalized summary, not the raw CLI JSON.",
+      "checks": [
+        {
+          "id": "preflight",
+          "status": "PASS"
+        },
+        {
+          "id": "dart-format",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-analyze",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test-game-kit",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test-game-liars-poker",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test-game-final-call",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test-game-mafia",
+          "status": "PASS"
+        },
+        {
+          "id": "flutter-test-game-holdem",
+          "status": "PASS"
+        },
+        {
+          "id": "functions-lint",
+          "status": "PASS"
+        },
+        {
+          "id": "functions-test",
+          "status": "PASS"
+        },
+        {
+          "id": "working-tree-mutation",
+          "status": "PASS"
+        }
+      ]
+    },
+    "build": {
+      "command": ".\\android\\gradlew.bat -p android -q -Ptarget-platform=android-arm,android-arm64,android-x64 -Ptarget=lib/main.dart -Pbase-application-name=android.app.Application -Pdart-obfuscation=false -Ptrack-widget-creation=false -Ptree-shake-icons=true :app:assembleRelease -x :app:uploadCrashlyticsMappingFileRelease",
+      "startedAtUtc": "2026-10-16T17:18:09.2874296+09:00",
+      "finishedAtUtc": "2026-10-16T17:26:49.5088666+09:00",
+      "durationMs": 520226,
+      "exitCode": 0,
+      "status": "PASS",
+      "timedOut": false,
+      "stdout": "C:\\workspace\\git\\project00\\build\\performance-baselines\\2026-10-16-develop-b921f53\\build.stdout.log",
+      "stderr": "C:\\workspace\\git\\project00\\build\\performance-baselines\\2026-10-16-develop-b921f53\\build.stderr.log"
+    }
+  },
+  "artifact": {
+    "path": "C:\\workspace\\git\\project00\\artifacts\\performance-baselines\\2026-10-16-develop-b921f53\\mosigame-1.0.0-build4-release-b921f53.apk",
+    "sizeBytes": 139434291,
+    "sha256": "1db19a2366017308ba917df0c72d8c4e825ba19059bdcb12250ec953d84cc71c",
+    "copyHashMatches": true
+  },
+  "binaryVerification": {
+    "aaptStatus": "PASS",
+    "aaptExitCode": 0,
+    "apksignerStatus": "PASS",
+    "apksignerExitCode": 0,
+    "applicationId": "com.warmhandongne.msg",
+    "versionName": "1.0.0",
+    "versionCode": 4,
+    "debuggable": false,
+    "targetSdk": 36,
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "apkSignatureScheme": "v2",
+    "signerCertificateSha256": "c0b6b3a2eb965e6d8eb9b8dd047d2a1e9505e895fd2c580f3bd171f49895256c",
+    "minSdk": 24,
+    "compileSdk": 36
+  },
+  "builtAtKst": "2026-10-16 17:26:49 +09:00",
+  "evidenceArchive": "C:\\workspace\\git\\project00\\artifacts\\performance-baselines\\2026-10-16-develop-b921f53\\baseline-evidence.zip",
+  "recordDocument": "docs/operations/PERFORMANCE_BASELINE_20261016.md"
+}
