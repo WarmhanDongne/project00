@@ -211,8 +211,8 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     _zoomController.dispose();
     if (!_handedOffToGame) {
       //================상태바 표시=================
-      // 자리 배치를 취소한 경우에는 게임으로 넘기지 않았으므로 플랫폼 상태바를 복원합니다.
-      unawaited(AppSystemUi.showPlatformSystemBars());
+      // 태블릿 로비도 같은 전체 화면 영역을 쓰므로 시스템 바를 다시 켜지 않습니다.
+      unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     }
     super.dispose();
   }
@@ -599,8 +599,9 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                 fontSize: 15,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 leading: const Icon(Icons.chevron_left_rounded),
-                loading: _isCancelling,
-                onPressed: () => unawaited(_cancel()),
+                // 복귀 route를 즉시 역재생하므로 회전 로딩으로 버튼 폭과
+                // 내용이 바뀌지 않게 하고, 중복 입력만 막습니다.
+                onPressed: _isCancelling ? null : () => unawaited(_cancel()),
               ),
             ),
             Align(

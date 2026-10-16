@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/template_game.dart';
 import 'package:project00/generated/l10n/app_localizations.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
@@ -56,9 +57,21 @@ final _games = [
   GameInfo.fromJson({
     'id': 'final_call',
     'name': '파이널콜',
+    'localizedNames': {
+      'en': 'Final Call',
+      'zh-Hans': '最终召集',
+      'zh-Hant': '最終召集',
+    },
     'description':
         '같은 색 합이나 같은 숫자 합으로 점수를 겨루는 팀전 카드 게임이에요. '
         '이길 것 같으면 CALL을 외쳐 판을 끝내세요.',
+    'localizedDescriptions': {
+      'en':
+          'A team card game where matching colors and numbers score points. '
+          'Call the round when your team is ready to win.',
+      'zh-Hans': '以相同颜色或数字组合得分的团队卡牌游戏。认为能获胜时喊出 CALL 结束回合。',
+      'zh-Hant': '以相同顏色或數字組合得分的團隊卡牌遊戲。認為能獲勝時喊出 CALL 結束回合。',
+    },
     'minPlayers': 4,
     'maxPlayers': 6,
     'playTime': 20,
@@ -186,6 +199,8 @@ void main() {
   for (final (locale, textScale) in const [
     (Locale('ko'), 1.0),
     (Locale('en'), 1.0),
+    (Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'), 1.0),
+    (Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'), 1.3),
     (Locale('ko'), 1.3),
   ]) {
     testWidgets('${locale.languageCode} ×$textScale 상점·선반·게임 상세의 글자가 태블릿 크기에서 '
@@ -258,6 +273,31 @@ void main() {
               .evaluate()
               .isNotEmpty) {
             problems.add('$where: 소개가 스크롤 안에 있음');
+          }
+          final title = tester.widget<Text>(
+            find.byKey(const Key('shelf-info-title')),
+          );
+          final description = tester.widget<Text>(
+            find.byKey(const Key('shelf-info-description')),
+          );
+          if ((title.style?.fontSize ?? 0) < 32) {
+            problems.add('$where: 제목 기준 크기가 32보다 작음');
+          }
+          if ((description.style?.fontSize ?? 0) < 16) {
+            problems.add('$where: 설명 기준 크기가 16보다 작음');
+          }
+          for (final pill in tester.widgetList<MosiPill>(
+            find.descendant(of: content, matching: find.byType(MosiPill)),
+          )) {
+            if (pill.fontSize < 14) {
+              problems.add('$where: 인원·시간 기준 크기가 14보다 작음');
+            }
+          }
+          final detailButton = tester.widget<MosiButton>(
+            find.descendant(of: content, matching: find.byType(MosiButton)),
+          );
+          if (detailButton.fontSize < 17) {
+            problems.add('$where: 자세히 보기 기준 크기가 17보다 작음');
           }
           await tester.pumpWidget(const SizedBox.shrink());
           room.dispose();

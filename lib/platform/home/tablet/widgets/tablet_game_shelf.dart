@@ -444,13 +444,20 @@ class _ShelfBody extends StatelessWidget {
       builder: (context, constraints) {
         final compact = constraints.maxHeight < 640;
         final coverWidth = compact ? 200.0 : 240.0;
-        // 아래 소개(이름·설명·안내·버튼)가 기기 글자 크기에서 차지할 높이를
-        // 먼저 남기고, 선반 그림은 남은 높이에 맞춰 통째로 줄입니다. 그래도
-        // 모자라면 소개 전체를 살짝 줄입니다(스크롤·잘림 없음).
+        final titleSize = compact ? 32.0 : 40.0;
+        final englishSize = compact ? 14.0 : 16.0;
+        final descriptionSize = compact ? 16.0 : 18.0;
+        final pillSize = compact ? 14.0 : 15.0;
+        final buttonHeight = compact ? 52.0 : 56.0;
+        final buttonSize = compact ? 17.0 : 18.0;
+        // 아래 소개를 먼저 크게 확보하고 선반 그림이 남은 높이에 맞춰 줄어들게
+        // 합니다. 글자가 큰 기기에서는 책보다 읽을 문구를 우선합니다. 마지막
+        // 안전장치인 MosiFitHeight는 아주 작은 창이나 긴 번역에서만 작동합니다.
         final textScale = MediaQuery.textScalerOf(context).scale(100) / 100;
-        final infoHeight = 92 + 120 * textScale;
+        final infoHeight =
+            (compact ? 240.0 : 270.0) * textScale.clamp(1.0, 1.3).toDouble();
         final shelfHeight = math.max(
-          (coverWidth * 4 / 3 + 24) * .6,
+          (coverWidth * 4 / 3 + 24) * .42,
           constraints.maxHeight - infoHeight - 20,
         );
         return Column(
@@ -501,59 +508,85 @@ class _ShelfBody extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      displayName,
-                      style: MosiFonts.sans(
-                        locale: Localizations.maybeLocaleOf(context),
-                        size: compact ? 26 : 32,
-                        weight: FontWeight.w700,
-                        color: theme.fg,
-                        letterSpacing: -1,
-                        height: 1.1,
+                    SizedBox(
+                      width: double.infinity,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          displayName,
+                          key: const Key('shelf-info-title'),
+                          maxLines: 1,
+                          style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
+                            size: titleSize,
+                            weight: FontWeight.w700,
+                            color: theme.fg,
+                            letterSpacing: -1,
+                            height: 1.08,
+                          ),
+                        ),
                       ),
                     ),
                     if (englishName.toUpperCase() !=
                         displayName.toUpperCase()) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        englishName,
-                        style: MosiFonts.grotesk(
-                          locale: Localizations.maybeLocaleOf(context),
-                          size: 12,
-                          color: art.id == 'liars_poker'
-                              ? theme.accA
-                              : theme.accB,
-                          letterSpacing: 3,
+                      const SizedBox(height: 7),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            englishName,
+                            key: const Key('shelf-info-english-name'),
+                            maxLines: 1,
+                            style: MosiFonts.grotesk(
+                              locale: Localizations.maybeLocaleOf(context),
+                              size: englishSize,
+                              color: art.id == 'liars_poker'
+                                  ? theme.accA
+                                  : theme.accB,
+                              letterSpacing: compact ? 2.4 : 3,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                     if (selected
                         .localizedDescription(Localizations.localeOf(context))
                         .isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       // 줄 수를 막지 않고 칸에 맞춰 함께 줄여 끝까지 보여 줍니다.
                       Text(
                         selected.localizedDescription(
                           Localizations.localeOf(context),
                         ),
+                        key: const Key('shelf-info-description'),
                         textAlign: TextAlign.center,
                         style: MosiFonts.sans(
                           locale: Localizations.maybeLocaleOf(context),
-                          size: 14,
+                          size: descriptionSize,
                           color: theme.fg,
+                          height: 1.3,
                         ),
                       ),
                     ],
                     GameStartHint(message: cannotStart),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Wrap(
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
-                      runSpacing: 10,
+                      spacing: 10,
+                      runSpacing: 12,
                       children: [
                         if (range.isNotEmpty) ...[
-                          MosiPill(label: range, color: theme.fg),
-                          const SizedBox(width: 8),
+                          MosiPill(
+                            label: range,
+                            color: theme.fg,
+                            fontSize: pillSize,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 13,
+                              vertical: 7,
+                            ),
+                          ),
                         ],
                         if (selected.playTime > 0) ...[
                           MosiPill(
@@ -564,18 +597,21 @@ class _ShelfBody extends StatelessWidget {
                               zhHant: '${selected.playTime} 分鐘',
                             ),
                             color: theme.fg,
+                            fontSize: pillSize,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 13,
+                              vertical: 7,
+                            ),
                           ),
-                          const SizedBox(width: 8),
                         ],
-                        const SizedBox(width: 6),
                         MosiButton(
                           label: context.l10n.viewDescription,
                           onPressed: () => onOpenDetail(selected),
                           background: theme.btnBg,
                           foreground: theme.btnFg,
                           shadowColor: theme.deep,
-                          height: 48,
-                          fontSize: 15,
+                          height: buttonHeight,
+                          fontSize: buttonSize,
                           radius: 6,
                         ),
                       ],
@@ -670,14 +706,19 @@ class _GameStartHintState extends State<GameStartHint>
               offset: Offset(0, 12 * (1 - pill)),
               child: Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: MosiPill(
-                  label: shown,
-                  background: MosiColors.sun,
-                  borderColor: MosiColors.ink,
-                  fontSize: 13,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                // 지원 인원 문구가 긴 언어·큰 글자 설정에서도 한 줄을 유지하되,
+                // 가용 폭을 넘는 경우에만 알약 전체를 비율로 줄입니다.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: MosiPill(
+                    label: shown,
+                    background: MosiColors.sun,
+                    borderColor: MosiColors.ink,
+                    fontSize: 15,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                   ),
                 ),
               ),

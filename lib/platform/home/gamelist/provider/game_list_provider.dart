@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 
+enum GameListScope { library, store }
+
 class GameProvider extends ChangeNotifier {
-  GameProvider({GameService? service}) : _service = service ?? GameService();
+  GameProvider({GameService? service, this.scope = GameListScope.library})
+    : _service = service ?? GameService();
 
   final GameService _service;
+  final GameListScope scope;
 
   List<GameInfo> games = [];
   bool isLoading = false;
@@ -43,7 +47,10 @@ class GameProvider extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      final result = await _service.fetchGames();
+      final result = switch (scope) {
+        GameListScope.library => await _service.fetchGames(),
+        GameListScope.store => await _service.fetchStoreGames(),
+      };
       if (!_isDisposed) games = result;
     } catch (e) {
       errorMessage = e.toString();

@@ -10,6 +10,7 @@ import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_header.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 import 'package:project00/platform/home/phone/widgets/session_return_prompt.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -151,7 +152,7 @@ class _PhoneHomeState extends State<PhoneHome> {
     }
     _waitingRoomOpen = true;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
+      PhoneFlowRoute<void>(
         builder: (_) => PhoneRoomWaiting(provider: _restoredRoomProvider),
       ),
     );
@@ -163,7 +164,7 @@ class _PhoneHomeState extends State<PhoneHome> {
     if (_restoreInFlight || _waitingRoomOpen) return;
     await Navigator.push<void>(
       context,
-      MaterialPageRoute<void>(
+      PhoneFlowRoute<void>(
         builder: (_) => PhoneRoomJoin(gameCatalog: widget.gameCatalog),
       ),
     );

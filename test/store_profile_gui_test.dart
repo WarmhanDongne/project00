@@ -17,6 +17,7 @@ import 'package:project00/platform/home/gamelist/provider/game_list_provider.dar
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/store/screens/tablet_store_screen.dart';
 import 'package:project00/platform/home/store/store_motion.dart';
+import 'package:project00/platform/profile/providers/profile_update_controller.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile_modal.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +27,80 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   TestFirebaseCoreHostApi.setUp(_FirebaseCore());
   setUpAll(() async => Firebase.initializeApp());
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    ProfileUpdateController.instance.resetForTest();
+  });
+
+  testWidgets('프로필은 모달을 먼저 닫고 낙관적으로 반영하며 실패 초안을 재시도한다', (tester) async {
+    final auth = _Auth();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              const Profile(),
+              Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showMosiDialog<bool>(
+                    context: context,
+                    builder: (_) => TabletProfileModal(authService: auth),
+                  ),
+                  child: const Text('프로필 수정'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('프로필 수정'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '빠른적용');
+    await tester.ensureVisible(find.text('저장'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('저장'));
+    await tester.pump();
+
+    expect(auth.profileUpdates, 1);
+    expect(ProfileUpdateController.instance.isSaving, isTrue);
+    expect(ProfileUpdateController.instance.pendingFor(null)?.nickname, '빠른적용');
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TabletProfileModal), findsNothing);
+    expect(find.text('빠른적용'), findsOneWidget);
+    expect(find.byKey(const Key('profile-syncing-indicator')), findsOneWidget);
+
+    auth.profileUpdate.completeError(
+      const AuthServiceException('unavailable', '연결 실패'),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(ProfileUpdateController.instance.hasFailed, isTrue);
+    expect(
+      find.byKey(const Key('profile-sync-failed-indicator')),
+      findsOneWidget,
+    );
+    expect(find.text('연결 실패'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+
+    auth.profileUpdate = Completer<void>();
+    tester.widget<SnackBarAction>(find.byType(SnackBarAction)).onPressed();
+    await tester.pump();
+    expect(auth.profileUpdates, 2);
+    expect(ProfileUpdateController.instance.isSaving, isTrue);
+    expect(find.byKey(const Key('profile-syncing-indicator')), findsOneWidget);
+
+    auth.profileUpdate.complete();
+    await tester.pump();
+    expect(auth.profileDocuments, 1);
+    auth.profileDocument.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(ProfileUpdateController.instance.status, ProfileUpdateStatus.idle);
+    expect(find.text('프로필이 저장됐어요.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('로그아웃 중 중복 요청을 막고 실패 후 재시도·성공 시 상점 route까지 닫는다', (tester) async {
     final messenger = tester.binding.defaultBinaryMessenger;
@@ -231,6 +305,38 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('유료 미보유 게임은 상점에 보이지만 비과금 게이트웨이가 소유권을 주지 않는다', (tester) async {
+    final games = GameProvider(service: _Games(), scope: GameListScope.store)
+      ..games = [
+        GameInfo.fromJson({
+          'id': 'paid_game',
+          'name': '유료 게임',
+          'accessType': 'paid',
+          'enabled': true,
+          'storeVisible': true,
+          'storeProductIds': {
+            'appStore': 'mosigame.game.paid',
+            'googlePlay': 'mosigame_game_paid',
+          },
+        }),
+      ];
+    addTearDown(games.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(home: TabletStoreScreen(gameProvider: games)),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('유료 게임'), findsWidgets);
+    expect(find.text('구매 준비 중'), findsWidgets);
+    await tester.tap(find.widgetWithText(MosiButton, '구매 준비 중'));
+    await tester.pump();
+
+    expect(find.text('결제 기능은 준비 중이에요. 곧 열어 드릴게요.'), findsOneWidget);
+    expect(games.games.single.isOwned, isFalse);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final size in [
     const Size(800, 600),
@@ -568,6 +674,23 @@ class _FirebaseCore extends MockFirebaseApp {
 class _Auth implements FirebaseAuthService {
   int deletions = 0;
   Completer<void> pending = Completer<void>();
+  int profileUpdates = 0;
+  int profileDocuments = 0;
+  Completer<void> profileUpdate = Completer<void>();
+  Completer<void> profileDocument = Completer<void>();
+
+  @override
+  Future<void> updateDisplayName(String displayName) {
+    profileUpdates++;
+    return profileUpdate.future;
+  }
+
+  @override
+  Future<void> createUserDocument() {
+    profileDocuments++;
+    return profileDocument.future;
+  }
+
   @override
   Future<void> deleteAccount() {
     deletions++;

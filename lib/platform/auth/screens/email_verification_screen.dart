@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -141,7 +142,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     if (leave != true || !mounted) return;
     setState(() => _busy = true);
     try {
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
       await SignupConsentStore().clear();
     } on FirebaseAuthException catch (_) {
       if (mounted) {

@@ -32,6 +32,9 @@ Future<void> launchTabletGame({
   required bool Function() isCurrent,
   required VoidCallback onLaunched,
   Rect? Function()? originRect,
+  VoidCallback? onTransitionStarted,
+  VoidCallback? onTransitionReturning,
+  VoidCallback? onInsufficientPlayers,
 }) => _TabletGameLauncher(
   context,
   game,
@@ -40,6 +43,9 @@ Future<void> launchTabletGame({
   isCurrent,
   onLaunched,
   originRect,
+  onTransitionStarted,
+  onTransitionReturning,
+  onInsufficientPlayers,
 ).start();
 
 class _TabletGameLauncher {
@@ -51,6 +57,9 @@ class _TabletGameLauncher {
     this.isCurrent,
     this.onLaunched,
     this.originRect,
+    this.onTransitionStarted,
+    this.onTransitionReturning,
+    this.onInsufficientPlayers,
   );
   final BuildContext context;
   final GameInfo game;
@@ -58,6 +67,9 @@ class _TabletGameLauncher {
   final Future<bool> Function() ensureSelection;
   final bool Function() isCurrent;
   final VoidCallback onLaunched;
+  final VoidCallback? onTransitionStarted;
+  final VoidCallback? onTransitionReturning;
+  final VoidCallback? onInsufficientPlayers;
 
   /// 화면에서 고른 책의 자리입니다. 있으면 그 책이 열리며 자리 배치로 넘어갑니다.
   final Rect? Function()? originRect;
@@ -66,6 +78,24 @@ class _TabletGameLauncher {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showInsufficientPlayers(String fallbackMessage) {
+    final feedback = onInsufficientPlayers;
+    if (feedback != null) {
+      feedback();
+      return;
+    }
+    _showMessage(context, fallbackMessage);
+  }
+
+  bool _isTooFewPlayers(int playerCount, List<int>? supportedCounts) {
+    if (supportedCounts != null) {
+      return !supportedCounts.contains(playerCount) &&
+          supportedCounts.any((count) => count > playerCount);
+    }
+    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
+    return playerCount < minPlayers;
   }
 
   Future<void> start() async {
@@ -103,23 +133,24 @@ class _TabletGameLauncher {
     final supportedCounts = templateGame.supportedPlayerCounts;
     if (supportedCounts != null &&
         !supportedCounts.contains(currentPlayerCount)) {
-      _showMessage(
-        context,
-        GameLocale.select(
-          ko: '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
-          en: 'This game starts with ${supportedCounts.join(' or ')} players. $currentPlayerCount are here now.',
-          zhHans:
-              '此游戏需要 ${supportedCounts.join(' 或 ')} 人才能开始。目前有 $currentPlayerCount 人。',
-          zhHant:
-              '此遊戲需要 ${supportedCounts.join(' 或 ')} 人才能開始。目前有 $currentPlayerCount 人。',
-        ),
+      final message = GameLocale.select(
+        ko: '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
+        en: 'This game starts with ${supportedCounts.join(' or ')} players. $currentPlayerCount are here now.',
+        zhHans:
+            '此游戏需要 ${supportedCounts.join(' 或 ')} 人才能开始。目前有 $currentPlayerCount 人。',
+        zhHant:
+            '此遊戲需要 ${supportedCounts.join(' 或 ')} 人才能開始。目前有 $currentPlayerCount 人。',
       );
+      if (_isTooFewPlayers(currentPlayerCount, supportedCounts)) {
+        _showInsufficientPlayers(message);
+      } else {
+        _showMessage(context, message);
+      }
       return;
     }
 
     if (supportedCounts == null && currentPlayerCount < minPlayers) {
-      _showMessage(
-        context,
+      _showInsufficientPlayers(
         GameLocale.select(
           ko: '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
           en: 'This game needs at least $minPlayers players. $currentPlayerCount are here now.',
@@ -200,6 +231,21 @@ class _TabletGameLauncher {
     final seatingStarted = await provider.beginPlayerSeating();
     if (!context.mounted || !isCurrent()) return;
     if (!seatingStarted) {
+      final latestPlayerCount = provider.players
+          .where((player) => player.isActive && player.isPlayer)
+          .length;
+      if (_isTooFewPlayers(latestPlayerCount, supportedCounts)) {
+        _showInsufficientPlayers(
+          provider.errorMessage?.localized ??
+              GameLocale.select(
+                ko: '게임을 시작할 인원이 부족합니다.',
+                en: 'There are not enough players to start.',
+                zhHans: '开始游戏的人数不足。',
+                zhHant: '開始遊戲的人數不足。',
+              ),
+        );
+        return;
+      }
       _showMessage(
         context,
         provider.errorMessage?.localized ??
@@ -221,25 +267,59 @@ class _TabletGameLauncher {
     // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
     final origin = originRect?.call();
     unawaited(AppSystemUi.enterGameFullscreen());
-    onLaunched();
+    onTransitionStarted?.call();
     Widget buildSetup(BuildContext layoutContext) => _buildStartSetup(
       layoutContext,
       templateGame: templateGame,
       initialLayout: initialLayout,
       roomCode: roomCode,
     );
-    Navigator.of(context).push<void>(
-      origin == null
-          ? MaterialPageRoute(builder: buildSetup)
-          : BookOpenRoute(
-              origin: origin,
-              coverColor: MosiGameArt.of(
-                game.id,
+    final PageRoute<void> setupRoute = origin == null
+        ? MaterialPageRoute(builder: buildSetup)
+        : BookOpenRoute(
+            origin: origin,
+            coverColor: MosiGameArt.of(
+              game.id,
+              fallbackName: game.name,
+            ).spineColor,
+            cover: FittedBox(
+              fit: BoxFit.fill,
+              child: MosiGameCover(
+                gameId: game.id,
                 fallbackName: game.name,
-              ).spineColor,
-              builder: buildSetup,
+                displayName: game.localizedName(
+                  Localizations.localeOf(context),
+                ),
+                englishName: game.englishName,
+                fallbackImageUrl: game.imageUrl,
+                width: 240,
+                shadow: 0,
+              ),
             ),
-    );
+            builder: buildSetup,
+          );
+    Navigator.of(context).push<void>(setupRoute);
+
+    // 상세→선반 교체와 선택 상태 정리는 책이 화면을 완전히 덮은 뒤에만
+    // 수행합니다. 전환 중 뒤쪽 로비가 먼저 재배치되면 길이와 위치가 흔들려
+    // 보이고, 되돌아올 때 출발점도 달라집니다.
+    var markedAsLaunched = false;
+    void markAsLaunched(AnimationStatus status) {
+      if (status != AnimationStatus.completed || markedAsLaunched) return;
+      markedAsLaunched = true;
+      setupRoute.animation?.removeStatusListener(markAsLaunched);
+      if (isCurrent()) onLaunched();
+    }
+
+    final animation = setupRoute.animation;
+    if (animation == null || animation.status == AnimationStatus.completed) {
+      markAsLaunched(AnimationStatus.completed);
+    } else {
+      animation.addStatusListener(markAsLaunched);
+      setupRoute.completed.whenComplete(
+        () => animation.removeStatusListener(markAsLaunched),
+      );
+    }
   }
 
   /// 자리 배치 화면 자리에 무엇을 띄울지 정합니다.
@@ -273,21 +353,11 @@ class _TabletGameLauncher {
         }
         return false;
       }
-      final cleared = await provider.clearSelectedGame();
-      if (!layoutContext.mounted) return false;
-      if (!cleared) {
-        _showMessage(
-          layoutContext,
-          provider.errorMessage?.localized ??
-              GameLocale.select(
-                ko: '게임 선택을 해제하지 못했습니다.',
-                en: 'Could not clear the game selection.',
-                zhHans: '无法取消游戏选择。',
-                zhHant: '無法取消遊戲選擇。',
-              ),
-        );
-      }
-      return cleared;
+      // route는 즉시 역재생하고 서버의 seating→waiting 전환은 그 애니메이션과
+      // 겹쳐 처리합니다. 실패하면 복귀한 로비에서 같은 해제를 재시도합니다.
+      onTransitionReturning?.call();
+      unawaited(_clearSelectionAfterReturn(roomCode));
+      return true;
     }
 
     Future<bool> prepare(
@@ -349,10 +419,10 @@ class _TabletGameLauncher {
       // 화면을 닫기 전에 미리 잡아 둡니다. pop 뒤에는 이 context로 messenger를
       // 찾을 수 없어 안내가 사라진 화면과 함께 묻힙니다.
       final messenger = ScaffoldMessenger.of(layoutContext);
-      // 서버 상태를 먼저 waiting으로 되돌립니다. 실패해도 화면은 닫습니다.
-      // 낡은 배치를 들고 남아 있는 편이 더 나쁘고, 대기실에서 다시 고르면
-      // 같은 선택 해제가 재시도됩니다.
-      await provider.clearSelectedGame();
+      // 낡은 배치를 들고 남지 않도록 화면은 즉시 닫고, 서버 상태 복원은
+      // 같은 역방향 책 전환과 겹쳐 처리합니다.
+      onTransitionReturning?.call();
+      unawaited(_clearSelectionAfterReturn(roomCode));
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -383,15 +453,16 @@ class _TabletGameLauncher {
       Navigator.of(layoutContext).pushReplacement(gameRoute);
       // 게임 화면의 퇴장 연출까지 끝난 뒤에 게임 데이터를 정리합니다.
       // 먼저 지우면 덮이는 동안 결과 화면이 사라질 수 있습니다.
-      gameRoute.completed.then(
-        (_) => unawaited(
+      gameRoute.completed.then((_) {
+        onTransitionReturning?.call();
+        unawaited(
           restoreRoomToWaiting(
             provider,
             expectedTarget: cleanupTarget,
             captured: true,
           ),
-        ),
-      );
+        );
+      });
     }
 
     // 공용 자리 배치와 게임별 준비 화면을 **여기서 한 번** 감쌉니다. 두 화면을
@@ -418,5 +489,36 @@ class _TabletGameLauncher {
             onComplete: complete,
           ),
     );
+  }
+
+  Future<void> _clearSelectionAfterReturn(String roomCode) async {
+    final cleared = await provider.clearSelectedGame();
+    if (cleared || !context.mounted || provider.roomCode != roomCode) {
+      return;
+    }
+    final message =
+        provider.errorMessage?.localized ??
+        GameLocale.select(
+          ko: '대기실 상태를 확인하지 못했습니다.',
+          en: 'Could not confirm the lobby state.',
+          zhHans: '无法确认大厅状态。',
+          zhHant: '無法確認大廳狀態。',
+        );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: SnackBarAction(
+            label: GameLocale.select(
+              ko: '다시 시도',
+              en: 'Retry',
+              zhHans: '重试',
+              zhHant: '重試',
+            ),
+            onPressed: () => unawaited(_clearSelectionAfterReturn(roomCode)),
+          ),
+        ),
+      );
   }
 }

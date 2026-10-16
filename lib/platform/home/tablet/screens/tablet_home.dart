@@ -43,10 +43,14 @@ class TabletHome extends StatefulWidget {
 }
 
 class _TabletHomeState extends State<TabletHome>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late final AnimationController _storeExit = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 180),
+  );
+  late final AnimationController _gameExit = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 360),
   );
   bool _isOpeningStore = false;
 
@@ -56,14 +60,17 @@ class _TabletHomeState extends State<TabletHome>
 
   /// 선반에서 고른 책 자리를 잽니다. 게임을 시작하면 이 책이 열립니다.
   final GlobalKey _selectedCoverKey = GlobalKey();
+  Rect? _lastSelectedCoverRect;
 
   late final RoomProvider roomProvider = RoomProvider(
     gameCatalog: widget.gameCatalog,
   );
   final GameProvider gameProvider = GameProvider();
+  final GameProvider storeProvider = GameProvider(scope: GameListScope.store);
   String? _selectedGameId;
   bool _isDetailOpen = false;
   bool _isStarting = false;
+  int _insufficientPlayersFeedback = 0;
   late final TabletLobbySelection _selection = TabletLobbySelection(
     roomProvider,
   );
@@ -77,8 +84,10 @@ class _TabletHomeState extends State<TabletHome>
   @override
   void initState() {
     super.initState();
-    //================상태바 표시=================
-    unawaited(AppSystemUi.showPlatformSystemBars());
+    //================태블릿 플랫폼 전체 화면=================
+    // 자리 배치 직전에 viewport를 바꾸지 않도록 로비부터 같은 전체 화면을 씁니다.
+    // 로비에서는 wakelock을 켜지 않아 기기 절전 설정은 그대로 유지합니다.
+    unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     //=======================초기 화면 방향 요청 금지==============================
     // 앱 첫 실행에서는 이 initState가 iOS scene 연결보다 먼저 호출될 수 있습니다.
     // 초기 태블릿 가로 고정은 main.dart가 lifecycle resumed 이후 한 번만 적용합니다.
@@ -241,6 +250,7 @@ class _TabletHomeState extends State<TabletHome>
     Navigator.of(context).push(gameRoute);
     gameRoute.completed.then((_) {
       _isOpeningRestoredGame = false;
+      unawaited(AppSystemUi.enterTabletPlatformFullscreen());
       // 복구 경로로 연 게임도 닫힐 때 방을 대기 상태로 되돌립니다(P-02).
       unawaited(
         restoreRoomToWaiting(
@@ -255,6 +265,9 @@ class _TabletHomeState extends State<TabletHome>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        unawaited(AppSystemUi.enterTabletPlatformFullscreen());
+      }
       unawaited(roomProvider.resumeControllerPresence());
       return;
     }
@@ -281,7 +294,9 @@ class _TabletHomeState extends State<TabletHome>
     _selection.dispose();
     roomProvider.dispose();
     gameProvider.dispose();
+    storeProvider.dispose();
     _storeExit.dispose();
+    _gameExit.dispose();
     super.dispose();
   }
 
@@ -291,6 +306,7 @@ class _TabletHomeState extends State<TabletHome>
 
   void _openDetail(GameInfo game) {
     if (_isStarting || _isOpeningStore) return;
+    _lastSelectedCoverRect = _selectedCoverRect() ?? _lastSelectedCoverRect;
     setState(() {
       _selectedGameId = game.id;
       _isDetailOpen = true;
@@ -346,15 +362,53 @@ class _TabletHomeState extends State<TabletHome>
           _isDetailOpen = false;
           _selection.didLaunch();
         },
-        // 선반에서 시작했다면 그 책이 열리며 자리 배치로 넘어갑니다.
-        originRect: () {
-          final coverContext = _selectedCoverKey.currentContext;
-          return coverContext == null ? null : mosiOriginOf(coverContext);
+        onTransitionStarted: _exitLobbyForGame,
+        onTransitionReturning: _returnLobbyFromGame,
+        onInsufficientPlayers: () {
+          if (mounted) {
+            setState(() => _insufficientPlayersFeedback += 1);
+          }
         },
+        // 선반에서 시작했다면 그 책이 열리며 자리 배치로 넘어갑니다.
+        // 상세 화면에서도 직전에 보였던 책 자리에서 같은 전환을 시작합니다.
+        originRect: () => _selectedCoverRect() ?? _lastSelectedCoverRect,
       );
     } finally {
       if (mounted) setState(() => _isStarting = false);
     }
+  }
+
+  Rect? _selectedCoverRect() {
+    final coverContext = _selectedCoverKey.currentContext;
+    if (coverContext == null) return null;
+    final box = coverContext.findRenderObject();
+    if (box is! RenderBox || !box.hasSize || !box.attached) return null;
+    // 홀덤처럼 선반에서 scale된 표지도 보이는 크기 그대로 이어져야 첫
+    // frame에서 커졌다가 중앙으로 이동하는 튐이 생기지 않습니다.
+    return Rect.fromPoints(
+      box.localToGlobal(Offset.zero),
+      box.localToGlobal(box.size.bottomRight(Offset.zero)),
+    );
+  }
+
+  void _exitLobbyForGame() {
+    if (!mounted) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _gameExit.value = 1;
+      return;
+    }
+    unawaited(_gameExit.forward());
+  }
+
+  void _returnLobbyFromGame() {
+    if (!mounted) return;
+    // 게임이 켜 둔 wakelock만 해제하고 viewport는 그대로 유지합니다.
+    unawaited(AppSystemUi.enterTabletPlatformFullscreen());
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _gameExit.value = 0;
+      return;
+    }
+    unawaited(_gameExit.reverse());
   }
 
   int _maxSlots(GameInfo game) {
@@ -381,7 +435,10 @@ class _TabletHomeState extends State<TabletHome>
         ),
         pageBuilder: (_, _, _) => LobbyMusic(
           track: LobbyTracks.store,
-          child: TabletStoreScreen(gameProvider: gameProvider),
+          child: TabletStoreScreen(
+            gameProvider: storeProvider,
+            onEntitlementsChanged: gameProvider.fetchGames,
+          ),
         ),
         transitionsBuilder: (context, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
@@ -430,63 +487,80 @@ class _TabletHomeState extends State<TabletHome>
               header: StoreExit(
                 progress: _storeExit,
                 offset: const Offset(0, -2),
-                child: _HomeHeader(
-                  theme: theme,
-                  onOpenStore: _openStore,
-                  onBack: detail == null
-                      ? null
-                      : () => unawaited(_closeDetail()),
-                  busy: _isStarting,
+                child: _LobbyGameExit(
+                  progress: _gameExit,
+                  offset: const Offset(0, -0.55),
+                  child: IgnorePointer(
+                    ignoring: _isStarting,
+                    child: _HomeHeader(
+                      theme: theme,
+                      onOpenStore: _openStore,
+                      onBack: detail == null
+                          ? null
+                          : () => unawaited(_closeDetail()),
+                    ),
+                  ),
                 ),
               ),
               content: StoreExit(
                 progress: _storeExit,
                 offset: const Offset(-1.15, 0.2),
-                child: IgnorePointer(
-                  ignoring: _isStarting,
-                  child: TabletLobbyContentTransition(
-                    child: detail == null
-                        ? TabletGameShelf(
-                            key: const ValueKey('lobby-shelf'),
-                            gameProvider: gameProvider,
-                            roomProvider: roomProvider,
-                            selectedGameId: _selectedGameId,
-                            theme: theme,
-                            onlyPlayable: _onlyPlayable,
-                            onOnlyPlayableChanged: (value) =>
-                                setState(() => _onlyPlayable = value),
-                            onSelect: (game) =>
-                                setState(() => _selectedGameId = game.id),
-                            onOpenDetail: _openDetail,
-                            preparing: _isStarting,
-                            selectedCoverKey: _selectedCoverKey,
-                          )
-                        : TabletGameDetailContent(
-                            key: ValueKey('lobby-detail-${detail.id}'),
-                            game: detail,
-                            roomProvider: roomProvider,
-                          ),
+                child: _LobbyGameExit(
+                  progress: _gameExit,
+                  offset: const Offset(-0.22, 0.06),
+                  child: IgnorePointer(
+                    ignoring: _isStarting,
+                    child: TabletLobbyContentTransition(
+                      child: detail == null
+                          ? TabletGameShelf(
+                              key: const ValueKey('lobby-shelf'),
+                              gameProvider: gameProvider,
+                              roomProvider: roomProvider,
+                              selectedGameId: _selectedGameId,
+                              theme: theme,
+                              onlyPlayable: _onlyPlayable,
+                              onOnlyPlayableChanged: (value) =>
+                                  setState(() => _onlyPlayable = value),
+                              onSelect: (game) =>
+                                  setState(() => _selectedGameId = game.id),
+                              onOpenDetail: _openDetail,
+                              selectedCoverKey: _selectedCoverKey,
+                            )
+                          : TabletGameDetailContent(
+                              key: ValueKey('lobby-detail-${detail.id}'),
+                              game: detail,
+                              roomProvider: roomProvider,
+                            ),
+                    ),
                   ),
                 ),
               ),
               roomPanel: StoreExit(
                 progress: _storeExit,
                 offset: const Offset(1.2, 0.15),
-                child: IgnorePointer(
-                  ignoring: _isStarting,
-                  child: TabletRoomPanel(
-                    key: const ValueKey('lobby-room-panel'),
-                    provider: roomProvider,
-                    deep: theme.deep,
-                    // 흰 덮개 위 마름모는 게임 색입니다(바탕이 어두운 게임은 버튼 색).
-                    coverGemColor: theme.ground == MosiColors.navy
-                        ? theme.btnBg
-                        : theme.ground,
-                    startBackground: theme.btnBg,
-                    startForeground: theme.btnFg,
-                    maxSlots: detail == null ? null : _maxSlots(detail),
-                    startLoading: _isStarting,
-                    onStart: () => unawaited(_startSelectedGame()),
+                child: _LobbyGameExit(
+                  progress: _gameExit,
+                  offset: const Offset(0.24, 0.06),
+                  child: IgnorePointer(
+                    ignoring: _isStarting,
+                    child: TabletRoomPanel(
+                      key: const ValueKey('lobby-room-panel'),
+                      provider: roomProvider,
+                      deep: theme.deep,
+                      // 흰 덮개 위 마름모는 게임 색입니다(바탕이 어두운 게임은 버튼 색).
+                      coverGemColor: theme.ground == MosiColors.navy
+                          ? theme.btnBg
+                          : theme.ground,
+                      startBackground: theme.btnBg,
+                      startForeground: theme.btnFg,
+                      maxSlots: detail == null ? null : _maxSlots(detail),
+                      // 시작 요청은 입력만 잠그고 로비의 글자·책·버튼 모양은
+                      // 그대로 둡니다. 다음 route가 열리기 전 레이아웃이 움직이면
+                      // 책 전환의 출발점이 흔들려 보입니다.
+                      startLoading: false,
+                      insufficientPlayersFeedback: _insufficientPlayersFeedback,
+                      onStart: () => unawaited(_startSelectedGame()),
+                    ),
                   ),
                 ),
               ),
@@ -498,21 +572,52 @@ class _TabletHomeState extends State<TabletHome>
   }
 }
 
+/// 선택한 책만 route 위에 남겨 두고 로비의 나머지 블록을 화면 바깥으로
+/// 빠르게 흩어지게 합니다. 복귀할 때는 같은 controller를 역재생합니다.
+class _LobbyGameExit extends StatelessWidget {
+  const _LobbyGameExit({
+    required this.progress,
+    required this.offset,
+    required this.child,
+  });
+
+  final Animation<double> progress;
+  final Offset offset;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: progress,
+    child: child,
+    builder: (context, child) {
+      final t = Curves.easeInOutCubic.transform(progress.value);
+      return IgnorePointer(
+        ignoring: t > 0,
+        child: Opacity(
+          opacity: 1 - t,
+          child: FractionalTranslation(
+            translation: offset * t,
+            child: Transform.scale(scale: 1 - 0.035 * t, child: child),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _HomeHeader extends StatelessWidget {
-  // 상점 재공개 시 true로 바꾸면 기존 진입 버튼과 연출을 다시 사용합니다.
-  static const _showGameStore = false;
+  // 상점 진입 버튼과 기존 퇴장·등장 연출을 사용합니다.
+  static const _showGameStore = true;
 
   const _HomeHeader({
     required this.theme,
     required this.onOpenStore,
     this.onBack,
-    this.busy = false,
   });
 
   final MosiShelfTheme theme;
   final VoidCallback onOpenStore;
   final VoidCallback? onBack;
-  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -540,7 +645,7 @@ class _HomeHeader extends StatelessWidget {
                         ? Icons.shopping_bag_outlined
                         : Icons.chevron_left_rounded,
                   ),
-                  onPressed: busy ? null : onBack ?? onOpenStore,
+                  onPressed: onBack ?? onOpenStore,
                 ),
               ),
             ),

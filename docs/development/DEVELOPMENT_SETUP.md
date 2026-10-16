@@ -144,8 +144,9 @@ secret, production credential, Firebase 로그인과 계정 선택은 자동 생
 - Android SDK/ADB 누락: 공식 Android 도구로 SDK를 설치하고 환경 변수를 설정한다.
 - setup 뒤 Git 상태 변화: 자동 restore하지 말고 diff를 검토해 dependency resolution
   결과인지 기존 변경인지 먼저 판단한다.
-- Emulator multi-device 자동화: 현재 보류 상태다.
-  `docs/operations/EMULATOR_PILOT.md`를 참고하고 사용자 승인 없이 재개하지 않는다.
+- 로컬 Firebase 개발은 `docs/development/LOCAL_FIREBASE.md`의 demo project, 실행 옵션,
+  테스트 계정과 저장 절차를 따른다. 과거 다중 기기 조작 자동화 파일럿의 범위와
+  한계는 `docs/operations/EMULATOR_PILOT.md`에 보존한다.
 
 ## AI가 자동화하지 않는 작업
 

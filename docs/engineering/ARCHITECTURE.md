@@ -21,6 +21,15 @@ reference다. 모든 작업의 공통 규칙은 [`ENGINEERING_CONTRACT.md`](ENGI
 - Firebase rules는 읽기/쓰기 가능 범위를 제한한다. 서비스 책임을 바꿀 때는 client,
   Functions, rules와 테스트를 함께 조사한다.
 
+## Profile update presentation
+
+Firebase Auth와 `completeOnboardingProfile`은 저장된 프로필의 source of truth다.
+`ProfileUpdateController`는 저장 요청 중인 프로필 초안만 UID별로 잠시 보관해 태블릿·
+휴대폰 머리글과 방 입장 기본 닉네임에 즉시 보여 준다. 서버 성공 뒤에는 Auth의 값을 다시
+사용하고, 실패하면 초안을 유지해 사용자가 재시도할 수 있게 한다. 로그아웃·회원탈퇴에서는
+초안을 지우며 다른 UID에 이전 계정의 초안을 노출하지 않는다. 이 화면 상태는 서버 프로필,
+방 참가자 정보 또는 persistent data를 대신하지 않는다.
+
 ## Repository map
 
 ```text
@@ -73,15 +82,32 @@ Mosigame 정식 앱 바이너리
 
 ## Initial device orientation
 
-- 플랫폼 화면은 휴대폰 세로, 태블릿 가로가 기본이다. 게임 진입 뒤 휴대폰 방향은
-  게임별 `PhoneGameOrientation`을 따르고 태블릿 게임은 계속 가로를 유지한다.
+- 플랫폼 화면은 휴대폰 세로, Android 태블릿 가로가 기본이다. iPad 플랫폼 화면은
+  iPadOS가 scene에 부여한 현재 방향을 따른다. 게임 진입 뒤 휴대폰 방향은 게임별
+  `PhoneGameOrientation`을 따르고 태블릿 게임은 계속 가로를 요청한다.
 - 첫 Flutter 프레임 뒤에 방향을 바꾸면 네이티브 시작 화면이 세로로 먼저 보일 수 있다.
   Android는 `sw600dp` resource와 `MainActivity`에서 태블릿 시작 방향을 먼저 가로로
   설정한다. 앱은 게임이므로 manifest의 `android:appCategory`도 `game`으로 선언한다.
-- iPad는 `Info.plist`의 기기별 지원 방향을 좌·우 가로로 제한한다. iPhone 지원 방향은
-  게임별 휴대폰 회전을 위해 별도로 유지한다.
+- iPad는 네 방향을 모두 지원한다. `UIRequiresFullScreen`은 기존 iPadOS의 전체 화면
+  계약을 위해 유지하되 `UIRequiresFullScreenIgnoredStartingWithVersion=26.0`으로
+  iPadOS 26의 고정 방향 호환 창을 피한다. 별도 view controller 방향 잠금이나
+  `SceneDelegate` geometry 요청은 사용하지 않는다. 앱은 운영체제가 제공한 scene을
+  채우며 iPhone 지원 방향은 게임별 휴대폰 회전을 위해 별도로 유지한다.
+- Android의 launcher activity는 창 분할과 picture-in-picture를 허용하지 않고,
+  API 36 대화면 호환 속성과 `game` category로 전체 화면 task를 요청한다.
+- 전체 화면 여부와 창 배치의 최종 결정은 운영체제가 가진다. iPadOS 26에서 사용자가
+  Windowed Apps를 선택한 경우 앱 코드만으로 시스템 workspace를 최대화하거나 Full
+  Screen Apps로 바꿀 수 없다. Apple의
+  [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)를
+  기준으로 resizable scene을 계속 지원한다. Android 대화면도 제조사·운영체제 정책이
+  resize 제한을 재정의할 수 있다.
 - Flutter의 `_InitialOrientationApplier`는 활성 scene과 유효한 화면 크기가 준비된 뒤
-  `AppOrientation` 정책을 다시 적용한다. 네이티브 시작 설정을 대신하거나 제거하지 않는다.
+  휴대폰 세로, Android 태블릿 가로, iPad 회전 허용 정책을 적용한다. 네이티브 시작
+  설정을 대신하거나 제거하지 않는다.
+- 태블릿 앱은 첫 Flutter frame부터 `SystemUiMode.immersiveSticky`를 사용하고 로비,
+  자리 배치, 게임이 같은 viewport를 유지한다. 로비와 자리 배치 취소에서는 wakelock을
+  끄고, 실제 게임에서만 화면 켜짐 잠금을 사용한다. 휴대폰 플랫폼 화면은 시스템 바를
+  표시한다. 이 정책은 `AppSystemUi`를 통해서만 변경한다.
 
 ## Game extension contract
 
@@ -186,3 +212,8 @@ Firestore 카탈로그 밖의 앱·게임 화면 문구는 `game_kit`의 `GameLo
 짧은 소개, 휴대폰 규칙, 장르, 인원, 시간, 순서, 활성·접근·상점 상태와 Hold'em의 최소
 앱 버전만 저장한다. 알려진 네 게임의 이미지·구성품·표지와 상세 연출은 앱 패키지가
 소유하므로 URL·별도 태블릿 소개·timestamp 필드는 만들지 않는다.
+
+로비 library는 활성 무료·보유 게임만 읽고, 상점 store는 소유 여부와 관계없이
+`storeVisible` 게임을 읽는다. 결제는 현재 비활성 gateway 뒤에 있으며 상품 ID만으로
+과금이나 소유권 변경이 일어나지 않는다. 현재 경계와 실제 결제를 붙일 때 필요한 서버
+검증·entitlement 단계는 [구매·소유권 기반 구조](PURCHASE_FOUNDATION.md)를 따른다.

@@ -6,6 +6,42 @@
 후속: [네트워크·화면 응답 개선 개발팀 공유](../engineering/NETWORK_LATENCY_IMPROVEMENTS.md)에
 이 조사 이후 구현한 범위와 검증 상태를 기록한다. 아래 표의 ‘현재’는 조사 당시 상태다.
 
+## 2026-10-15 현재 코드 재대조와 제품 결정 순서
+
+2026-10-10 조사 뒤 B03·B05·B06·B08·B10·D01·E01의 병행/중복 왕복 개선과
+B02의 추가 정지 제거가 구현됐다. A05 프로필은 2026-10-15에 한 단계 더 바꿔 입력값을
+즉시 표시하고 모달을 닫은 뒤 서버 동기화하며, 실패 초안과 재시도를 유지한다. 기존 50개
+후보는 삭제하지 않고 당시 근거와 아직 필요한 실측 범위를 보존한다.
+
+현재 화면에서 사용자가 직접 선택해야 할 체감 정책은 다음 순서로 한 항목씩 결정한다.
+
+1. 휴대폰 방 나가기: **2026-10-15 결정·구현.** 버튼을 누르면 선택 게임 색의 전환 화면과
+   `그룹에서 나가는 중이에요` 안내를 즉시 열고 서버 확정을 기다린다. 성공 뒤에만 홈으로
+   이동하며, 실패하면 대기실 복귀와 같은 durable 퇴장 요청 재시도를 제공한다.
+2. 태블릿 게임 시작: **2026-10-16 전환 2차 구현.** 태블릿 첫 frame과 로비부터 자리
+   배치·게임과 같은 전체 화면 viewport를 유지한다. 시작 입력 뒤 선택한 실제 책 표지가
+   중앙으로 모이고 로비 블록이 퇴장한 다음, 자리 배치 화면이 책 주변에서 사방으로
+   퍼진다. 복귀는 같은 920ms 시간축을 역재생하고 서버 게임 선택 해제와 병행한다.
+3. 앱 콜드 스타트: Firebase 등 필수 초기화를 `runApp` 전에 기다린다. 브랜드 시작 화면을
+   먼저 그리고 단계별 준비를 뒤에서 할지 결정한다.
+4. 회원가입 마지막 프로필: 서버 가입 완료 전까지 입력 카드에 머문다. 권한 확인은 유지하면서
+   별도 `계정 준비 중` 화면으로 즉시 전환할지 결정한다.
+5. 게임·보유 목록 갱신: 최초 로딩/실패 표시는 있으나 앱 재진입에서 마지막 정상 목록을
+   먼저 보여 주는 stale-while-refresh 정책을 쓸지 결정한다.
+6. 게임 결과·발표 연출: Final Call, 라이어스, 홀덤, 마피아의 의도된 연출 시간을 기본값으로
+   둘지, 진행자용 빠른 진행 옵션을 둘지 게임별로 결정한다.
+7. 언어 설정: 작은 로컬 저장 완료 뒤 언어가 바뀐다. 즉시 언어를 바꾸고 저장 실패 때만
+   되돌리는 정책을 쓸지 결정한다.
+8. 회원탈퇴: 서버 정리 완료까지 모달에서 기다리는 안전 경계는 유지하되, 현재 행 문구 대신
+   전체 진행 단계와 취소 불가 안내를 보여 줄지 결정한다.
+9. 상점 진입·도움말 전환: 상점 버튼은 현재 숨김 상태다. 다시 공개할 때 등장 연출 중 입력
+   가능 시점과 빠른 전환 정책을 함께 결정한다.
+
+네트워크 재연결, 명령 재시도, 이메일 재발송 cooldown, 서버 권한·턴 검증은 단순한 화면
+지연으로 줄이지 않는다. 화면 즉시 반응은 추가할 수 있지만 실제 성공 확정과 durable
+operation/session 보호는 유지한다. rebuild·이미지 decode·서버 transaction 후보는 사용자
+취향보다 profile/실측 증거가 먼저 필요한 기술 항목으로 분리한다.
+
 ## 결론과 조사 경계
 
 지연은 **고정 연출 대기, 직렬 네트워크 왕복, 서버 DB 처리, 화면·리소스 준비,
@@ -109,7 +145,7 @@ export를 추적했다. **559개 파일 모두를 정독했다거나 모든 기�
 | E03 P2 | 확인. 같은 파일 L93, L154: existsSync 경로 확인. [GameImage](../../packages/game_kit/lib/core/assets/game_image.dart) L72: 표시 크기는 받지만 decode 크기 API 없음 | remote provider 해석 결과 캐시·파일 확인을 준비 단계로 이동. 실제 표시 픽셀/DPR에 맞춘 ResizeImage 또는 decode 크기 옵션 검토. API 추가 시 소비자 호환 검토. GPU/이미지 메모리 실측 필요 |
 | E04 P2 | 확인. [LP asset_preloader.dart](../../packages/game_liars_poker/lib/shared/services/asset_preloader.dart) 및 FC/Mafia preloader | 이미 이미지 4개씩 병행·사운드 비동기 준비. 첫 화면 필수 이미지와 후속 라운드 이미지를 구분하여 barrier 대상 최소화. 게임/기기별 캐시 eviction·재입장 메모리 측정; 전부 무제한 precache하지 않음 |
 | E05 P2 | 확인. [sound_service.dart](../../packages/game_kit/lib/sound/services/sound_service.dart): 준비된 효과음 pool 재사용, preload 소스/사본 순차, setEffectVolume 각 player 순차 | 첫 소리의 준비 누락, 동일 소리 동시 preload, 볼륨 슬라이더의 오래된 쓰기 누적 측정. 준비 작업 공유와 마지막 볼륨만 반영하는 coalescing 검토. decoder 수 제한·scope 해제를 지키며 제한 병행 |
-| E06 P3 | 확인. [book_open_route.dart](../../lib/platform/home/tablet/book_open_route.dart) L21: 진입760/복귀320ms, [game_exit_route.dart](../../packages/game_kit/lib/widgets/game_exit_route.dart) L5: 복귀960ms, how-to route560/360ms | 반복 사용하는 진입/복귀부터 짧게 하고 reduced motion에 실제 route duration도 일치시키는지 확인. 연출 지속시간=항상 입력 불가 시간은 아님. 방 코드/QR 동시 연출도 합산하지 않음 |
+| E06 P3 | 일부 적용. [book_open_route.dart](../../lib/platform/home/tablet/book_open_route.dart)는 책 중앙 이동→책 주변 화면 확장을 920ms로 구성하고 복귀에 같은 시간축을 역재생한다. 태블릿 로비·자리 배치·게임은 같은 immersive viewport를 유지한다. [phone_flow_transition.dart](../../lib/platform/home/phone/widgets/phone_flow_transition.dart)는 휴대폰 홈→코드→프로필→대기실 route를 이전 화면 위의 대각선 그라데이션 reveal로 바꾸고, 게임 선택→자리 배치의 색은 460ms 공통 배경 레이어에서 전환한다. QR↔코드는 같은 화면의 공통 요소를 유지한다. [game_exit_route.dart](../../packages/game_kit/lib/widgets/game_exit_route.dart) 복귀960ms, how-to route560/360ms는 유지 | 실기기에서 태블릿 책 이동·확장·역재생, 휴대폰 route 420/260ms·배경색 460ms, 내부 요소 교체 280/260ms의 체감과 shader frame, 키보드·카메라 전환, reduced motion을 확인한다. 연출 지속시간=항상 입력 불가 시간은 아니며 방 코드/QR 동시 연출도 합산하지 않음 |
 | E07 P2 | 확인. [store_motion.dart](../../lib/platform/home/store/store_motion.dart) L33: 등장 완료 전 IgnorePointer. 도움말 자동 넘김7.2초, scene5.6초 | 요소가 보이고 위치가 안정되면 입력 허용하는 시점 검토. 도움말은 수동 넘김과 자동 재생을 구분. 상점 구매/복원은 현재 UI placeholder여서 결제 API 지연은 분석 대상 구현 자체가 없음 |
 | E08 P2 | 가설. 로비/provider 전체 rebuild, LP penalty blur, round reveal ShaderMask, 여러 게임의 정적 배경+움직이는 카드 | profile frame trace에서 UI/raster 구분 후 Selector, AnimatedBuilder child, 필요한 RepaintBoundary, 그림 decode 크기 적용. shader/blur가 있다는 이유만으로 삭제하지 않는다. timer250ms/1초 UI tick도 해당 영역만 rebuild하도록 확인 |
 | E09 P2 | 확인. [game_communication_log.dart](../../packages/game_kit/lib/core/diagnostics/game_communication_log.dart) L45/89: debug에만 기록. 이전 실행은 Simulator debug | 로그 켠/끈 동일 조건과 실기기 profile을 분리. 콘솔 출력·DevTools·동시 Simulator 부하를 통신 병목으로 계산하지 않음. release에서 원래 비활성인 계측을 제거해도 배포 성능은 개선되지 않음 |
@@ -131,6 +167,16 @@ export를 추적했다. **559개 파일 모두를 정독했다거나 모든 기�
   전부 더해 사용자 대기 시간이라고 표시하지 않는다.
 
 ## 동작별 측정 체크리스트
+
+### 휴대폰 전체 화면 색 전환 기준
+
+- route 이동, 게임 선택·해제, 자리 배치 진입, 그룹 나가기는 이전 화면색을 화면 전체에
+  계속 칠한 상태에서 새 색의 대각선 그라데이션 경계만 이동한다.
+- 전체 화면 `ColorTween`, 불투명 `Scaffold` 교체, 기존 화면 전체의 opacity·scale 감소로
+  기본 canvas가 보이는 구현을 다시 넣지 않는다. 내부 버튼·카드·문구 애니메이션은
+  이 기준의 대상이 아니다.
+- 실기기 profile에서 전환 중 UI/raster frame과 shader 비용을 확인한다. 460ms의 시각
+  연출 시간은 서버 응답 시간에 더하지 않고, 동작 줄이기에서는 즉시 완료한다.
 
 이 표는 후속 측정 범위이며 이번에 실행했다는 뜻이 아니다.
 

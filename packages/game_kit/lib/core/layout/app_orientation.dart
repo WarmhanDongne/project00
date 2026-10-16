@@ -14,8 +14,8 @@ import 'package:game_kit/core/layout/device_layout.dart';
 
 /// 휴대폰 게임이 허용하는 화면 방향입니다.
 ///
-/// 이 정책은 휴대폰에만 적용됩니다. 태블릿 게임은 게임 종류와 관계없이 항상
-/// 가로 고정이며, 태블릿용 방향 옵션을 이 enum에 추가하면 안 됩니다.
+/// 이 정책은 휴대폰에만 적용됩니다. 태블릿 게임은 게임 종류와 관계없이 가로를
+/// 요청하며, 태블릿용 방향 옵션을 이 enum에 추가하면 안 됩니다.
 enum PhoneGameOrientation { portraitOnly, landscapeOnly, portraitAndLandscape }
 
 /// 플랫폼과 게임마다 사용하는 화면 방향 정책을 한곳에서 관리합니다.
@@ -37,6 +37,12 @@ abstract final class AppOrientation {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ];
+  static const _all = [
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ];
 
   static List<DeviceOrientation>? _applied;
   static List<DeviceOrientation>? _pendingOrientations;
@@ -48,15 +54,20 @@ abstract final class AppOrientation {
   /// 게임 선택·방 참여·자리 배치 등 플랫폼 화면은 태블릿에서 가로로 고정합니다.
   static Future<void> lockPlatformLandscape() => _apply(_landscape);
 
+  /// iPadOS 26의 resizable scene에서 현재 기기 방향과 전체 scene 크기를 따릅니다.
+  static Future<void> allowPlatformRotation() => _apply(_all);
+
   /// 게임을 나와 플랫폼 화면(로비·대기실)으로 돌아올 때의 방향입니다.
   ///
-  /// **게임 화면은 이 함수만 부르세요.** 기기를 보고 정합니다 — 휴대폰은 세로,
-  /// 태블릿은 가로. 화면마다 어느 쪽인지 적어 두면 한 곳만 틀려도 로비가
-  /// 엉뚱한 방향으로 잠깁니다(마피아 태블릿이 세로로 되돌려, 게임을 끝내고
-  /// 나온 로비가 세로로 고정되던 문제).
-  static Future<void> restorePlatform() => DeviceLayout.isTabletDevice()
-      ? lockPlatformLandscape()
-      : lockPlatformPortrait();
+  /// **게임 화면은 이 함수만 부르세요.** 휴대폰은 세로, Android 태블릿은 가로,
+  /// iPad 플랫폼 화면은 현재 방향을 따릅니다. 화면마다 어느 쪽인지 적어 두면 한
+  /// 곳만 틀려도 로비가 엉뚱한 방향으로 잠깁니다.
+  static Future<void> restorePlatform() {
+    if (!DeviceLayout.isTabletDevice()) return lockPlatformPortrait();
+    return defaultTargetPlatform == TargetPlatform.iOS
+        ? allowPlatformRotation()
+        : lockPlatformLandscape();
+  }
 
   /// 모든 태블릿 게임 화면을 가로로 고정합니다.
   ///

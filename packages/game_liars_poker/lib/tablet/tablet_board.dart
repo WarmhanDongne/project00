@@ -5,9 +5,9 @@
 library;
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'package:game_liars_poker/shared/widgets/card_face_view.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/store/services/game_purchase_gateway.dart';
 
 void main() {
   test('catalog text follows locale with legacy fallback', () {
@@ -97,6 +98,15 @@ void main() {
     expect(legacy.localizedDescription(const Locale('en')), '기존 소개');
     expect(legacy.localizedRulesFor(const Locale('en')), '기존 규칙');
     expect(legacy.localizedGenresFor(const Locale('en')), ['기존 장르']);
+    final paid = GameInfo.fromJson({
+      'id': 'paid',
+      'storeProductIds': {
+        'appStore': 'mosigame.game.paid',
+        'googlePlay': 'mosigame_game_paid',
+      },
+    });
+    expect(paid.storeProductId('appStore'), 'mosigame.game.paid');
+    expect(paid.storeProductId('googlePlay'), 'mosigame_game_paid');
   });
 
   test(
@@ -167,6 +177,46 @@ void main() {
       });
       expect((await service.getGame('liars'))?.name, 'old');
       expect(db.reads, ['games/liars', 'games/liars_poker']);
+    },
+  );
+
+  test(
+    'store catalog includes visible paid and disabled games without granting access',
+    () async {
+      final db = _Database();
+      final service = GameService(
+        firestore: db,
+        auth: _Auth(),
+        functions: _Functions(),
+      );
+      db.catalog.complete(
+        _Catalog([
+          _Document('hidden', {'storeVisible': false, 'order': 0}),
+          _Document('paid', {
+            'accessType': 'paid',
+            'storeVisible': true,
+            'order': 2,
+          }),
+          _Document('disabled', {
+            'enabled': false,
+            'storeVisible': true,
+            'order': 3,
+          }),
+          _Document('free', {
+            'accessType': 'free',
+            'storeVisible': true,
+            'order': 1,
+          }),
+        ]),
+      );
+      db.owner.complete(_Document('user', {}));
+
+      final games = await service.fetchStoreGames();
+
+      expect(games.map((game) => game.id), ['free', 'paid', 'disabled']);
+      expect(games[1].isOwned, isFalse);
+      expect(games[1].isAccessible, isFalse);
+      expect(games[2].enabled, isFalse);
     },
   );
 
@@ -284,6 +334,43 @@ void main() {
     await pending;
     expect(notifications, 1);
   });
+
+  test(
+    'store-scoped provider uses the unfiltered store catalog endpoint',
+    () async {
+      final service = _ScopedService();
+      final provider = GameProvider(
+        service: service,
+        scope: GameListScope.store,
+      );
+      addTearDown(provider.dispose);
+
+      await provider.fetchGames();
+
+      expect(service.libraryCalls, 0);
+      expect(service.storeCalls, 1);
+      expect(provider.games.single.id, 'paid');
+    },
+  );
+
+  test(
+    'default purchase gateway cannot charge or grant an entitlement',
+    () async {
+      const gateway = DisabledGamePurchaseGateway();
+      final game = GameInfo.fromJson({
+        'id': 'paid',
+        'accessType': 'paid',
+        'storeProductIds': {'appStore': 'mosigame.game.paid'},
+      });
+
+      expect(gateway.isConfigured, isFalse);
+      expect(await gateway.purchase(game), GamePurchaseResult.notConfigured);
+      expect(
+        await gateway.restorePurchases(),
+        GamePurchaseResult.notConfigured,
+      );
+    },
+  );
 }
 
 class _DeferredService extends Fake implements GameService {
@@ -293,6 +380,25 @@ class _DeferredService extends Fake implements GameService {
   Future<List<GameInfo>> fetchGames() {
     calls++;
     return reply.future;
+  }
+}
+
+class _ScopedService extends Fake implements GameService {
+  var libraryCalls = 0;
+  var storeCalls = 0;
+
+  @override
+  Future<List<GameInfo>> fetchGames() async {
+    libraryCalls++;
+    return const [];
+  }
+
+  @override
+  Future<List<GameInfo>> fetchStoreGames() async {
+    storeCalls++;
+    return [
+      GameInfo.fromJson({'id': 'paid', 'accessType': 'paid'}),
+    ];
   }
 }
 

@@ -40,6 +40,7 @@ class GameInfo implements GameRoomMetadata {
     this.accessType = GameAccessType.free,
     this.minAppVersion = '',
     this.storeVisible = false,
+    this.storeProductIds = const {},
     this.createdAt,
     this.updatedAt,
   });
@@ -79,6 +80,7 @@ class GameInfo implements GameRoomMetadata {
       accessType: GameAccessType.fromFirestore(json['accessType']),
       minAppVersion: firestoreString(json['minAppVersion']),
       storeVisible: json['storeVisible'] == true,
+      storeProductIds: _storeProductIds(json['storeProductIds']),
       createdAt: firestoreDateTime(json['createdAt']),
       updatedAt: firestoreDateTime(json['updatedAt']),
     );
@@ -131,6 +133,16 @@ class GameInfo implements GameRoomMetadata {
   /// `true`인 게임만 상점에 보입니다. 값이 없거나 `false`면 진열하지 않으며,
   /// 로비 선반·방 게임 목록에는 영향을 주지 않습니다.
   final bool storeVisible;
+
+  /// 앱스토어별 비소모성 상품 ID입니다.
+  ///
+  /// 현재 결제 게이트웨이는 비활성 상태라 이 값만으로 과금되지 않습니다. 실제
+  /// 결제를 붙일 때 `appStore`와 `googlePlay` 키를 사용하고, 가격은 스토어에서
+  /// 조회합니다.
+  final Map<String, String> storeProductIds;
+
+  String? storeProductId(String store) => storeProductIds[store];
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -199,6 +211,17 @@ Map<String, String> _localizedStrings(Object? value) {
     if (key.isNotEmpty && text.isNotEmpty) strings[key] = text;
   }
   return Map.unmodifiable(strings);
+}
+
+Map<String, String> _storeProductIds(Object? value) {
+  if (value is! Map) return const {};
+  final ids = <String, String>{};
+  for (final entry in value.entries) {
+    final key = entry.key.toString().trim();
+    final id = entry.value?.toString().trim() ?? '';
+    if (key.isNotEmpty && id.isNotEmpty) ids[key] = id;
+  }
+  return Map.unmodifiable(ids);
 }
 
 Map<String, List<String>> _localizedStringLists(Object? value) {

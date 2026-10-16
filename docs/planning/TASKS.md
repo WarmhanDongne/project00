@@ -18,16 +18,17 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | 분류 | 개수 |
 | --- | ---: |
-| 구현 검증 대기 | 5 |
+| 구현 검증 대기 | 6 |
 | 출시 전 필수 | 11 |
 | 출시 전 권장 | 11 |
-| 출시 후 작업 | 7 |
-| 합계 | 34 |
+| 출시 후 작업 | 8 |
+| 합계 | 36 |
 
 ## 구현 검증 대기
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
+| [LOCAL-EMULATOR-01](tasks/LOCAL-EMULATOR-01.md#local-emulator-01) | 로컬 Firebase 개발환경과 서버 전환 | 검증 대기 — local 통합·auth/session·양 모드 회귀·iPad 실행 PASS | 사용자 승인 FULL |
 | [GAME-CATALOG-I18N-01](tasks/GAME-CATALOG-I18N-01.md#game-catalog-i18n-01) | Firestore 게임 이름 다국어화 | 검증 대기 — 앱·Functions targeted PASS | 운영 문서 갱신·확인, 사용자 승인 FULL |
 | [LIARS-CATALOG-01](tasks/LIARS-CATALOG-01.md#liars-catalog-01) | 라이어스 Firebase 문서 ID 이전 | 검증 대기 — 호환 reader·이전 스크립트 회귀/session PASS | 사용자 승인 FULL, 사용 앱 배포 범위 확인 → 서버 두 함수/앱 반영 → 문서 원자 이전 및 실제 게임 확인 |
 | [MAFIA-RULES-03](tasks/MAFIA-RULES-03.md#mafia-rules-03) | 마피아 규칙·역할·룰북 개선 | 검증 대기 | 사용자 명시 승인 후 FULL, 양 기기 실제 게임 흐름 확인 |
@@ -71,7 +72,8 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 검증 대기 | 10/14 로그인 카드 비밀번호 재설정 후보: Firebase Auth 발송, 같은 카드 전환·4개 locale·중복 방지, auth Flutter80/Functions38 PASS. 태블릿 네이티브 가로 후보·Android APK 빌드 PASS도 유지. 다음은 사용자 승인 FULL, 실제 재설정 메일/링크와 Android/iPad 콜드 스타트 확인 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 진행 중 | 10/16 휴대폰 참가자 목록의 `나` 표시를 얼굴 오른쪽 아래 작은 중첩 배지로 통일. 관련 GUI 37개 PASS. 방향성 배경 전환의 GUI69·session Flutter219/Functions155 근거도 유지. 다음 체감 항목 결정 후 사용자 승인 FULL·실기기 확인 |
+| [STORE-ENTITLEMENT-01](tasks/STORE-ENTITLEMENT-01.md#store-entitlement-01) | 게임 상점과 소유권·구매 기반 구조 | 검증 대기 — 비과금 gateway·상점/library 분리 targeted PASS | 사용자 승인 FULL. 실제 과금은 별도 승인 후 서버 검증·entitlement·스토어 sandbox 구현 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
 | [GAME-TUTORIAL-01](tasks/GAME-TUTORIAL-01.md#game-tutorial-01) | 게임 첫 플레이 튜토리얼 | 요구사항 확인 | 게임별 안내 범위 결정 |

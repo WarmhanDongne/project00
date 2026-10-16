@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:project00/platform/home/store/store_motion.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/store/services/game_purchase_gateway.dart';
 
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
@@ -13,8 +14,8 @@ import 'package:game_kit/localization/game_locale.dart';
 //=======================게임 상점 (UI만)==============================
 // 시안 '모시 서점(신간 매대)'입니다. 매대에는 Firestore `games`에서
 // `storeVisible`이 true인 게임만 진열합니다. 상점 상세(아래 마피아 예고편 포함)는
-// 추후 개발이라 '자세히 보기'를 누를 수 없습니다. 결제·구매 복원·배경 음악은
-// 아직 연결되지 않았습니다. 누르면 준비 중이라고만 알립니다
+// 추후 개발이라 '자세히 보기'를 누를 수 없습니다. 결제·구매 복원은
+// [GamePurchaseGateway] 경계만 있고 기본 구현은 비활성입니다. 누르면 준비 중이라고 알립니다
 // (docs/planning/NEWGUI_FEATURE_GAP.md 참고).
 
 const _canvas = Size(1194, 834);
@@ -156,8 +157,15 @@ _StoreCopy _copyFor(GameInfo game, int index) =>
     _knownCopy[game.id] ?? _StoreCopy(tilt: index.isEven ? -1.5 : 1.5);
 
 class TabletStoreScreen extends StatefulWidget {
-  const TabletStoreScreen({super.key, required this.gameProvider});
+  const TabletStoreScreen({
+    super.key,
+    required this.gameProvider,
+    this.purchaseGateway = const DisabledGamePurchaseGateway(),
+    this.onEntitlementsChanged,
+  });
   final GameProvider gameProvider;
+  final GamePurchaseGateway purchaseGateway;
+  final Future<void> Function()? onEntitlementsChanged;
 
   @override
   State<TabletStoreScreen> createState() => _TabletStoreScreenState();
@@ -166,6 +174,7 @@ class TabletStoreScreen extends StatefulWidget {
 class _TabletStoreScreenState extends State<TabletStoreScreen> {
   /// 고른 책(`_StoreEntry.id`)입니다. 없으면 매대의 첫 책을 고릅니다.
   String? _selectedId;
+  bool _purchaseBusy = false;
   @override
   void initState() {
     super.initState();
@@ -210,6 +219,7 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     if (widget.gameProvider.errorMessage != null) {
       return context.l10n.checkFailed;
     }
+    if (!game.enabled) return context.l10n.comingSoon;
     return game.isOwned
         ? context.l10n.owned
         : game.isFree
@@ -219,13 +229,33 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
 
   void _select(_StoreEntry entry) => setState(() => _selectedId = entry.id);
 
-  void _act(_StoreEntry entry) {
+  Future<void> _act(_StoreEntry entry) async {
+    if (_purchaseBusy) return;
     if (widget.gameProvider.errorMessage != null) {
       widget.gameProvider.fetchGames();
       return;
     }
     if (entry.canPlay) {
       Navigator.of(context).pop(entry.game!.id);
+      return;
+    }
+    final game = entry.game;
+    if (game != null && game.enabled && !game.isFree && !game.isOwned) {
+      setState(() => _purchaseBusy = true);
+      try {
+        final result = await widget.purchaseGateway.purchase(game);
+        if (!mounted) return;
+        if (result == GamePurchaseResult.entitlementsChanged) {
+          await widget.gameProvider.fetchGames();
+          await widget.onEntitlementsChanged?.call();
+        } else {
+          _notReady(context, context.l10n.purchaseNotice);
+        }
+      } catch (_) {
+        if (mounted) _notReady(context, context.l10n.purchaseNotice);
+      } finally {
+        if (mounted) setState(() => _purchaseBusy = false);
+      }
       return;
     }
     _notReady(
@@ -236,18 +266,39 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     );
   }
 
+  Future<void> _restorePurchases() async {
+    if (_purchaseBusy) return;
+    setState(() => _purchaseBusy = true);
+    try {
+      final result = await widget.purchaseGateway.restorePurchases();
+      if (!mounted) return;
+      if (result == GamePurchaseResult.entitlementsChanged) {
+        await widget.gameProvider.fetchGames();
+        await widget.onEntitlementsChanged?.call();
+      } else {
+        _notReady(context, context.l10n.restoreSoon);
+      }
+    } catch (_) {
+      if (mounted) _notReady(context, context.l10n.restoreSoon);
+    } finally {
+      if (mounted) setState(() => _purchaseBusy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     final entries = _entries;
     final current = _current(entries);
     final chip = _status(current);
-    final buttonLabel = widget.gameProvider.isLoading
+    final buttonLabel = widget.gameProvider.isLoading || _purchaseBusy
         ? context.l10n.checkingProgress
         : widget.gameProvider.errorMessage != null
         ? context.l10n.checkAgain
         : current.canPlay
         ? context.l10n.playFromShelf
+        : current.game != null && !current.game!.enabled
+        ? context.l10n.releaseSoon
         : current.game == null
         ? context.l10n.releaseSoon
         : context.l10n.purchaseSoon;
@@ -395,10 +446,9 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                                 alignment: Alignment.topRight,
                                 child: _StoreHeaderButton(
                                   label: context.l10n.restorePurchases,
-                                  onPressed: () => _notReady(
-                                    context,
-                                    context.l10n.restoreSoon,
-                                  ),
+                                  onPressed: _purchaseBusy
+                                      ? null
+                                      : () => _restorePurchases(),
                                 ),
                               ),
                             ),
@@ -424,7 +474,8 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                         hint: width >= 1100,
                         compact: compact,
                         buttonLabel: buttonLabel,
-                        onPressed: widget.gameProvider.isLoading
+                        onPressed:
+                            widget.gameProvider.isLoading || _purchaseBusy
                             ? null
                             : () => _act(current),
                         locale: locale,
@@ -456,7 +507,7 @@ class _StoreHeaderButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData? icon;
 
   @override
