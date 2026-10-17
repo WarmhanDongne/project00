@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "exit_code": 0,
+  "original_files_preserved": 5,
+  "integrity_files_verified": 4,
+  "events": 236,
+  "working_copy_source_hashes_verified": 15,
+  "tracked_unchanged": true,
+  "pilot_passed": true
+}

@@ -1,0 +1,3450 @@
+{
+  "capture": "debug-game-start-20261017-235803-e2abd37a",
+  "manifest_status": "COLLECTED",
+  "events": 198,
+  "roles": {
+    "tablet": {
+      "events": 68,
+      "probes": 34,
+      "connection": "USB (user-confirmed mapping)",
+      "rtt_us": {
+        "min": 0,
+        "median": 16000.0,
+        "p95_nearest_rank": 47000,
+        "max": 63000
+      },
+      "probes_over_100ms": 0,
+      "probes_over_250ms": 0,
+      "event_counts": {
+        "armed": 1,
+        "foreground": 2,
+        "pending_commands": 6,
+        "action_accepted": 1,
+        "seating_prepare_start": 1,
+        "seat_save_start": 1,
+        "seat_save_end": 1,
+        "command_start": 2,
+        "request_link": 2,
+        "attempt_start": 2,
+        "attempt_end": 2,
+        "command_end": 2,
+        "seating_prepare_end": 1,
+        "game_bound": 1,
+        "public_received": 5,
+        "public_applied": 5,
+        "participant_count": 1,
+        "session_blockers": 8,
+        "session_can_send": 6,
+        "assets_start": 1,
+        "startup_uncovered": 2,
+        "tablet_gate": 2,
+        "tablet_deck_tappable_frame": 1,
+        "tablet_deck_entry_started": 1,
+        "tablet_deck_entry_completed": 1,
+        "assets_end": 1,
+        "screen_ready": 1,
+        "tablet_deck_tap_accepted": 1,
+        "tablet_deal_started": 1,
+        "tablet_deal_animation_completed": 1,
+        "tablet_deal_completed": 1,
+        "tablet_round_reveal_completed": 1,
+        "tablet_stage": 1,
+        "tablet_playing_frame": 1,
+        "capture_stopped": 1
+      },
+      "largest_probe": {
+        "h0": 125951968000,
+        "h1": 125952031000,
+        "process": "6ce677619d11",
+        "mono_us": 66
+      }
+    },
+    "phone_A": {
+      "events": 63,
+      "probes": 34,
+      "connection": "USB (user-confirmed mapping)",
+      "rtt_us": {
+        "min": 0,
+        "median": 15000.0,
+        "p95_nearest_rank": 32000,
+        "max": 32000
+      },
+      "probes_over_100ms": 0,
+      "probes_over_250ms": 0,
+      "event_counts": {
+        "armed": 1,
+        "foreground": 2,
+        "pending_commands": 2,
+        "game_bound": 1,
+        "public_received": 7,
+        "public_applied": 7,
+        "participant_count": 1,
+        "session_blockers": 7,
+        "session_can_send": 4,
+        "assets_start": 1,
+        "assets_end": 1,
+        "screen_ready": 1,
+        "private_received": 2,
+        "private_applied": 2,
+        "phone_stage": 3,
+        "startup_uncovered": 1,
+        "phone_waiting_for_deal": 1,
+        "phone_gate": 6,
+        "phone_game_intro_completed": 1,
+        "hand_gate": 4,
+        "pack_entry_started": 1,
+        "pack_tappable_frame": 1,
+        "pack_tap_accepted": 1,
+        "reveal_completed": 1,
+        "controls_started": 1,
+        "phone_hand_selectable_frame": 1,
+        "controls_completed": 1,
+        "capture_stopped": 1
+      },
+      "largest_probe": {
+        "h0": 125947843000,
+        "h1": 125947875000,
+        "process": "d87c785efc2d",
+        "mono_us": 14
+      }
+    },
+    "phone_B": {
+      "events": 67,
+      "probes": 34,
+      "connection": "Wi-Fi ADB (user-confirmed mapping)",
+      "rtt_us": {
+        "min": 15000,
+        "median": 23500.0,
+        "p95_nearest_rank": 156000,
+        "max": 328000
+      },
+      "probes_over_100ms": 2,
+      "probes_over_250ms": 1,
+      "event_counts": {
+        "armed": 1,
+        "foreground": 2,
+        "pending_commands": 4,
+        "game_bound": 1,
+        "public_received": 5,
+        "public_applied": 5,
+        "participant_count": 1,
+        "session_blockers": 7,
+        "session_can_send": 6,
+        "assets_start": 1,
+        "assets_end": 1,
+        "screen_ready": 1,
+        "private_received": 2,
+        "private_applied": 2,
+        "phone_stage": 3,
+        "startup_uncovered": 1,
+        "phone_waiting_for_deal": 1,
+        "phone_gate": 4,
+        "phone_game_intro_completed": 1,
+        "hand_gate": 4,
+        "pack_entry_started": 1,
+        "pack_tappable_frame": 1,
+        "pack_tap_accepted": 1,
+        "command_start": 1,
+        "request_link": 1,
+        "attempt_start": 1,
+        "reveal_completed": 1,
+        "controls_started": 1,
+        "phone_hand_selectable_frame": 1,
+        "phone_first_turn_playable_frame": 1,
+        "controls_completed": 1,
+        "attempt_end": 1,
+        "command_end": 1,
+        "capture_stopped": 1
+      },
+      "largest_probe": {
+        "h0": 125961250000,
+        "h1": 125961578000,
+        "process": "c0a63d756f67",
+        "mono_us": 13907668
+      }
+    }
+  },
+  "integrity": "PASS",
+  "source_hash_matches": {
+    "lib/main.dart": true,
+    "lib/platform/home/tablet/tablet_game_start.dart": true,
+    "packages/game_kit/lib/core/diagnostics/startup_measurements.dart": true,
+    "packages/game_kit/lib/phone/animations/card_receive_animation.dart": true,
+    "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart": true,
+    "packages/game_kit/lib/recovery/providers/game_session_controller.dart": true,
+    "packages/game_kit/lib/services/game_command_service.dart": true,
+    "packages/game_kit/lib/tablet/widgets/game_settings_dialog.dart": true,
+    "packages/game_liars_poker/lib/phone/screens/game_screen.dart": true,
+    "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart": true,
+    "packages/game_liars_poker/lib/shared/providers/game_controller.dart": true,
+    "packages/game_liars_poker/lib/tablet/src/board_state.dart": true,
+    "tool/startup_measurements/collect.py": true,
+    "tool/startup_measurements/measurement_analysis.py": true,
+    "packages/game_kit/lib/tablet/animations/card_deal_animation.dart": true
+  },
+  "recorded_summary": {
+    "protocol": 2,
+    "status": "VALID_OBSERVED_TRIAL",
+    "quality_limit_us": 250000,
+    "actual_scenario": "initial_start",
+    "issues": [],
+    "warnings": [],
+    "progress": {
+      "tablet_completed": true,
+      "first_turn_phone": "phone_B",
+      "input_validation": {
+        "selection_seen": false,
+        "submission_seen": false,
+        "submission_succeeded": false
+      }
+    },
+    "total_elapsed_estimated_range_us": [
+      22137113,
+      22174970
+    ],
+    "observed_total_reference_range_us": [
+      22137113,
+      22174970
+    ],
+    "exclusive_user_wait_estimated_range_us": [
+      83822,
+      83856
+    ],
+    "user_wait_excluded_total_estimated_range_us": [
+      22053257,
+      22091148
+    ],
+    "user_wait_excluded_reason": "Only observed joint quiescence with a pending user tap is excluded; not CPU time or a simulated instant-tap run",
+    "clock_offset_estimates_us": {
+      "tablet": [
+        125951984847,
+        125952006583
+      ],
+      "phone_A": [
+        125947844018,
+        125947864024
+      ],
+      "phone_B": [
+        125947633558,
+        125947662510
+      ]
+    },
+    "logical_command_totals": [
+      {
+        "role": "tablet",
+        "request": 1,
+        "game": null,
+        "action": 1,
+        "command": "game_liars_poker_start_game",
+        "start_us": 5853592,
+        "end_us": 8829190,
+        "elapsed_us": 2975598,
+        "outcome": 1,
+        "request_alias": "e7fb671468aaaef70b7b7056a006bd1a"
+      },
+      {
+        "role": "tablet",
+        "request": 2,
+        "game": "33f5a0478e8854b26784206117543672",
+        "action": 1,
+        "command": "game_liars_poker_complete_dealing",
+        "start_us": 15759322,
+        "end_us": 18729691,
+        "elapsed_us": 2970369,
+        "outcome": 1,
+        "request_alias": "c9f4b6bc54d810e02deaf846f7008f10"
+      },
+      {
+        "role": "phone_B",
+        "request": 1,
+        "game": "33f5a0478e8854b26784206117543672",
+        "action": 0,
+        "command": "game_liars_poker_ready_turn",
+        "start_us": 27523203,
+        "end_us": 30419056,
+        "elapsed_us": 2895853,
+        "outcome": 1,
+        "request_alias": "95acc43ea5ea4705d128f2cfcde025fe"
+      }
+    ],
+    "transport_attempt_round_trips": [
+      {
+        "role": "tablet",
+        "request": 1,
+        "attempt": 1,
+        "elapsed_us": 2828859,
+        "outcome": 1
+      },
+      {
+        "role": "tablet",
+        "request": 2,
+        "attempt": 1,
+        "elapsed_us": 2965462,
+        "outcome": 1
+      },
+      {
+        "role": "phone_B",
+        "request": 1,
+        "attempt": 1,
+        "elapsed_us": 2884808,
+        "outcome": 1
+      }
+    ],
+    "card_pack_waits": [
+      {
+        "role": "tablet",
+        "elapsed_us": 1391525,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      },
+      {
+        "role": "phone_A",
+        "elapsed_us": 926642,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      },
+      {
+        "role": "phone_B",
+        "elapsed_us": 83839,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      }
+    ],
+    "local_milestones": [
+      {
+        "role": "tablet",
+        "from": "tablet_deck_tappable_frame",
+        "to": "tablet_deck_entry_started",
+        "elapsed_us": 80
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_entry_started",
+        "to": "tablet_deck_entry_completed",
+        "elapsed_us": 670314
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_entry_completed",
+        "to": "tablet_deck_tap_accepted",
+        "elapsed_us": 721131
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_tap_accepted",
+        "to": "tablet_deal_started",
+        "elapsed_us": 1638
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_started",
+        "to": "tablet_deal_animation_completed",
+        "elapsed_us": 2817196
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_animation_completed",
+        "to": "tablet_deal_completed",
+        "elapsed_us": 1995
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_completed",
+        "to": "tablet_playing_frame",
+        "elapsed_us": 4794594
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_entry_started",
+        "to": "pack_tappable_frame",
+        "elapsed_us": 729897
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_tappable_frame",
+        "to": "pack_tap_accepted",
+        "elapsed_us": 83839
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_tap_accepted",
+        "to": "reveal_completed",
+        "elapsed_us": 1468322
+      },
+      {
+        "role": "tablet",
+        "from": "action_accepted",
+        "to": "tablet_deck_tappable_frame",
+        "elapsed_us": 8114034
+      },
+      {
+        "role": "tablet",
+        "from": "action_accepted",
+        "to": "tablet_playing_frame",
+        "elapsed_us": 17120982
+      },
+      {
+        "role": "phone_A",
+        "from": "controls_started",
+        "to": "controls_completed",
+        "elapsed_us": 931876
+      },
+      {
+        "role": "phone_B",
+        "from": "controls_started",
+        "to": "controls_completed",
+        "elapsed_us": 917684
+      }
+    ],
+    "session_blocker_changes": [
+      {
+        "role": "phone_A",
+        "mono_us": 13466534,
+        "mask": 49
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 14178812,
+        "mask": 49
+      },
+      {
+        "role": "tablet",
+        "mono_us": 10655857,
+        "mask": 49
+      },
+      {
+        "role": "tablet",
+        "mono_us": 11523206,
+        "mask": 48
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 19588145,
+        "mask": 48
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 19595771,
+        "mask": 16
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 19743184,
+        "mask": 48
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 19811740,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 15661336,
+        "mask": 16
+      },
+      {
+        "role": "tablet",
+        "mono_us": 15684825,
+        "mask": 0
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 23015940,
+        "mask": 1
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 23224732,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 18787678,
+        "mask": 1
+      },
+      {
+        "role": "tablet",
+        "mono_us": 18894517,
+        "mask": 0
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 22871398,
+        "mask": 1
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 22952923,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 26120631,
+        "mask": 1
+      },
+      {
+        "role": "tablet",
+        "mono_us": 26152388,
+        "mask": 0
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 30260444,
+        "mask": 1
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 30299697,
+        "mask": 0
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 30408809,
+        "mask": 1
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 30536166,
+        "mask": 0
+      }
+    ],
+    "command_errors": [],
+    "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing",
+    "pilot_requested": true,
+    "pilot_passed": false
+  },
+  "conservative_analysis": {
+    "protocol": 2,
+    "status": "VALID_OBSERVED_TRIAL",
+    "quality_limit_us": 250000,
+    "actual_scenario": "initial_start",
+    "issues": [],
+    "warnings": [],
+    "progress": {
+      "tablet_completed": true,
+      "first_turn_phone": "phone_B",
+      "input_validation": {
+        "selection_seen": false,
+        "submission_seen": false,
+        "submission_succeeded": false
+      }
+    },
+    "total_elapsed_estimated_range_us": [
+      22105863,
+      22206220
+    ],
+    "observed_total_reference_range_us": [
+      22105863,
+      22206220
+    ],
+    "exclusive_user_wait_estimated_range_us": [
+      83822,
+      83856
+    ],
+    "user_wait_excluded_total_estimated_range_us": [
+      22022007,
+      22122398
+    ],
+    "user_wait_excluded_reason": "Only observed joint quiescence with a pending user tap is excluded; not CPU time or a simulated instant-tap run",
+    "clock_offset_estimates_us": {
+      "tablet": [
+        125951969216,
+        125952022214
+      ],
+      "phone_A": [
+        125947828387,
+        125947879655
+      ],
+      "phone_B": [
+        125947617927,
+        125947678141
+      ]
+    },
+    "logical_command_totals": [
+      {
+        "role": "tablet",
+        "request": 1,
+        "game": null,
+        "action": 1,
+        "command": "game_liars_poker_start_game",
+        "start_us": 5853592,
+        "end_us": 8829190,
+        "elapsed_us": 2975598,
+        "outcome": 1,
+        "request_alias": "e7fb671468aaaef70b7b7056a006bd1a"
+      },
+      {
+        "role": "tablet",
+        "request": 2,
+        "game": "33f5a0478e8854b26784206117543672",
+        "action": 1,
+        "command": "game_liars_poker_complete_dealing",
+        "start_us": 15759322,
+        "end_us": 18729691,
+        "elapsed_us": 2970369,
+        "outcome": 1,
+        "request_alias": "c9f4b6bc54d810e02deaf846f7008f10"
+      },
+      {
+        "role": "phone_B",
+        "request": 1,
+        "game": "33f5a0478e8854b26784206117543672",
+        "action": 0,
+        "command": "game_liars_poker_ready_turn",
+        "start_us": 27523203,
+        "end_us": 30419056,
+        "elapsed_us": 2895853,
+        "outcome": 1,
+        "request_alias": "95acc43ea5ea4705d128f2cfcde025fe"
+      }
+    ],
+    "transport_attempt_round_trips": [
+      {
+        "role": "tablet",
+        "request": 1,
+        "attempt": 1,
+        "elapsed_us": 2828859,
+        "outcome": 1
+      },
+      {
+        "role": "tablet",
+        "request": 2,
+        "attempt": 1,
+        "elapsed_us": 2965462,
+        "outcome": 1
+      },
+      {
+        "role": "phone_B",
+        "request": 1,
+        "attempt": 1,
+        "elapsed_us": 2884808,
+        "outcome": 1
+      }
+    ],
+    "card_pack_waits": [
+      {
+        "role": "tablet",
+        "elapsed_us": 1391525,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      },
+      {
+        "role": "phone_B",
+        "elapsed_us": 83839,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      },
+      {
+        "role": "phone_A",
+        "elapsed_us": 926642,
+        "classification": "raw_prompt_wait_including_parallel_work"
+      }
+    ],
+    "local_milestones": [
+      {
+        "role": "tablet",
+        "from": "tablet_deck_tappable_frame",
+        "to": "tablet_deck_entry_started",
+        "elapsed_us": 80
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_entry_started",
+        "to": "tablet_deck_entry_completed",
+        "elapsed_us": 670314
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_entry_completed",
+        "to": "tablet_deck_tap_accepted",
+        "elapsed_us": 721131
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deck_tap_accepted",
+        "to": "tablet_deal_started",
+        "elapsed_us": 1638
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_started",
+        "to": "tablet_deal_animation_completed",
+        "elapsed_us": 2817196
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_animation_completed",
+        "to": "tablet_deal_completed",
+        "elapsed_us": 1995
+      },
+      {
+        "role": "tablet",
+        "from": "tablet_deal_completed",
+        "to": "tablet_playing_frame",
+        "elapsed_us": 4794594
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_entry_started",
+        "to": "pack_tappable_frame",
+        "elapsed_us": 729897
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_tappable_frame",
+        "to": "pack_tap_accepted",
+        "elapsed_us": 83839
+      },
+      {
+        "role": "phone_B",
+        "from": "pack_tap_accepted",
+        "to": "reveal_completed",
+        "elapsed_us": 1468322
+      },
+      {
+        "role": "tablet",
+        "from": "action_accepted",
+        "to": "tablet_deck_tappable_frame",
+        "elapsed_us": 8114034
+      },
+      {
+        "role": "tablet",
+        "from": "action_accepted",
+        "to": "tablet_playing_frame",
+        "elapsed_us": 17120982
+      },
+      {
+        "role": "phone_A",
+        "from": "controls_started",
+        "to": "controls_completed",
+        "elapsed_us": 931876
+      },
+      {
+        "role": "phone_B",
+        "from": "controls_started",
+        "to": "controls_completed",
+        "elapsed_us": 917684
+      }
+    ],
+    "session_blocker_changes": [
+      {
+        "role": "phone_A",
+        "mono_us": 13466534,
+        "mask": 49
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 14178812,
+        "mask": 49
+      },
+      {
+        "role": "tablet",
+        "mono_us": 10655857,
+        "mask": 49
+      },
+      {
+        "role": "tablet",
+        "mono_us": 11523206,
+        "mask": 48
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 19588145,
+        "mask": 48
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 19595771,
+        "mask": 16
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 19743184,
+        "mask": 48
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 19811740,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 15661336,
+        "mask": 16
+      },
+      {
+        "role": "tablet",
+        "mono_us": 15684825,
+        "mask": 0
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 23015940,
+        "mask": 1
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 23224732,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 18787678,
+        "mask": 1
+      },
+      {
+        "role": "tablet",
+        "mono_us": 18894517,
+        "mask": 0
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 22871398,
+        "mask": 1
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 22952923,
+        "mask": 0
+      },
+      {
+        "role": "tablet",
+        "mono_us": 26120631,
+        "mask": 1
+      },
+      {
+        "role": "tablet",
+        "mono_us": 26152388,
+        "mask": 0
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 30260444,
+        "mask": 1
+      },
+      {
+        "role": "phone_A",
+        "mono_us": 30299697,
+        "mask": 0
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 30408809,
+        "mask": 1
+      },
+      {
+        "role": "phone_B",
+        "mono_us": 30536166,
+        "mask": 0
+      }
+    ],
+    "command_errors": [],
+    "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"
+  },
+  "host_quantization_allowance_us_per_endpoint": 15625,
+  "audited_runtime": {
+    "python": "3.12.14",
+    "monotonic": {
+      "implementation": "GetTickCount64()",
+      "monotonic": true,
+      "adjustable": false,
+      "resolution": 0.015625
+    }
+  },
+  "local_stages_us": {
+    "seat_save": 3154863,
+    "tablet_deck_entry": 670314,
+    "tablet_after_entry_until_tap": 721131,
+    "tablet_deal_animation": 2817196,
+    "tablet_callback_to_ready": 17120982,
+    "phone_B_pack_entry": 729897,
+    "phone_B_pack_wait": 83839,
+    "phone_B_reveal": 1468322,
+    "phone_B_pack_to_input_gate": 2465796,
+    "phone_B_ready_response_after_input_gate": 1252033
+  },
+  "timeline": [
+    {
+      "role": "tablet",
+      "event": "armed",
+      "value": null,
+      "request": null,
+      "seq": 1,
+      "mono_us": 155286,
+      "host_range_us": [
+        125952129687,
+        125952180580
+      ],
+      "relative_midpoint_seconds": -2.501157
+    },
+    {
+      "role": "tablet",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 2,
+      "mono_us": 164768,
+      "host_range_us": [
+        125952139167,
+        125952190064
+      ],
+      "relative_midpoint_seconds": -2.491675
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 3,
+      "mono_us": 164889,
+      "host_range_us": [
+        125952139288,
+        125952190185
+      ],
+      "relative_midpoint_seconds": -2.491554
+    },
+    {
+      "role": "tablet",
+      "event": "action_accepted",
+      "value": null,
+      "request": null,
+      "seq": 4,
+      "mono_us": 2659334,
+      "host_range_us": [
+        125954631731,
+        125954680850
+      ],
+      "relative_midpoint_seconds": 0.0
+    },
+    {
+      "role": "tablet",
+      "event": "seating_prepare_start",
+      "value": null,
+      "request": null,
+      "seq": 5,
+      "mono_us": 2663385,
+      "host_range_us": [
+        125954635781,
+        125954684902
+      ],
+      "relative_midpoint_seconds": 0.004051
+    },
+    {
+      "role": "tablet",
+      "event": "seat_save_start",
+      "value": null,
+      "request": null,
+      "seq": 6,
+      "mono_us": 2672059,
+      "host_range_us": [
+        125954644453,
+        125954693578
+      ],
+      "relative_midpoint_seconds": 0.012725
+    },
+    {
+      "role": "tablet",
+      "event": "seat_save_end",
+      "value": 1,
+      "request": null,
+      "seq": 7,
+      "mono_us": 5826922,
+      "host_range_us": [
+        125957798685,
+        125957848879
+      ],
+      "relative_midpoint_seconds": 3.1674915
+    },
+    {
+      "role": "tablet",
+      "event": "command_start",
+      "value": null,
+      "request": 1,
+      "seq": 8,
+      "mono_us": 5853592,
+      "host_range_us": [
+        125957825350,
+        125957875544
+      ],
+      "relative_midpoint_seconds": 3.1941565
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 1,
+      "request": null,
+      "seq": 9,
+      "mono_us": 5853886,
+      "host_range_us": [
+        125957825644,
+        125957875838
+      ],
+      "relative_midpoint_seconds": 3.1944505
+    },
+    {
+      "role": "tablet",
+      "event": "request_link",
+      "value": null,
+      "request": 1,
+      "seq": 10,
+      "mono_us": 5955345,
+      "host_range_us": [
+        125957929287,
+        125957971825
+      ],
+      "relative_midpoint_seconds": 3.2942655
+    },
+    {
+      "role": "tablet",
+      "event": "attempt_start",
+      "value": 1,
+      "request": 1,
+      "seq": 11,
+      "mono_us": 5961889,
+      "host_range_us": [
+        125957935833,
+        125957978367
+      ],
+      "relative_midpoint_seconds": 3.3008095
+    },
+    {
+      "role": "tablet",
+      "event": "attempt_end",
+      "value": 1,
+      "request": 1,
+      "seq": 12,
+      "mono_us": 8790748,
+      "host_range_us": [
+        125960765257,
+        125960806661
+      ],
+      "relative_midpoint_seconds": 6.1296685
+    },
+    {
+      "role": "tablet",
+      "event": "command_end",
+      "value": 1,
+      "request": 1,
+      "seq": 13,
+      "mono_us": 8829190,
+      "host_range_us": [
+        125960803707,
+        125960845095
+      ],
+      "relative_midpoint_seconds": 6.1681105
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 14,
+      "mono_us": 8829529,
+      "host_range_us": [
+        125960804046,
+        125960845434
+      ],
+      "relative_midpoint_seconds": 6.1684495
+    },
+    {
+      "role": "tablet",
+      "event": "seating_prepare_end",
+      "value": null,
+      "request": null,
+      "seq": 15,
+      "mono_us": 9853730,
+      "host_range_us": [
+        125961828181,
+        125961869701
+      ],
+      "relative_midpoint_seconds": 7.1926505
+    },
+    {
+      "role": "tablet",
+      "event": "game_bound",
+      "value": null,
+      "request": null,
+      "seq": 16,
+      "mono_us": 10559909,
+      "host_range_us": [
+        125962534219,
+        125962576021
+      ],
+      "relative_midpoint_seconds": 7.8988295
+    },
+    {
+      "role": "tablet",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 17,
+      "mono_us": 10560002,
+      "host_range_us": [
+        125962534312,
+        125962576114
+      ],
+      "relative_midpoint_seconds": 7.8989225
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 18,
+      "mono_us": 10560061,
+      "host_range_us": [
+        125962534371,
+        125962576173
+      ],
+      "relative_midpoint_seconds": 7.8989815
+    },
+    {
+      "role": "tablet",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 19,
+      "mono_us": 10560091,
+      "host_range_us": [
+        125962534401,
+        125962576203
+      ],
+      "relative_midpoint_seconds": 7.8990115
+    },
+    {
+      "role": "tablet",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 20,
+      "mono_us": 10654994,
+      "host_range_us": [
+        125962629285,
+        125962671125
+      ],
+      "relative_midpoint_seconds": 7.9939145
+    },
+    {
+      "role": "tablet",
+      "event": "participant_count",
+      "value": 2,
+      "request": null,
+      "seq": 21,
+      "mono_us": 10655062,
+      "host_range_us": [
+        125962629353,
+        125962671193
+      ],
+      "relative_midpoint_seconds": 7.9939825
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 49,
+      "request": null,
+      "seq": 22,
+      "mono_us": 10655857,
+      "host_range_us": [
+        125962630147,
+        125962671989
+      ],
+      "relative_midpoint_seconds": 7.9947775
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 23,
+      "mono_us": 10657718,
+      "host_range_us": [
+        125962632008,
+        125962673850
+      ],
+      "relative_midpoint_seconds": 7.9966385
+    },
+    {
+      "role": "tablet",
+      "event": "assets_start",
+      "value": null,
+      "request": null,
+      "seq": 24,
+      "mono_us": 10665912,
+      "host_range_us": [
+        125962640200,
+        125962682046
+      ],
+      "relative_midpoint_seconds": 8.0048325
+    },
+    {
+      "role": "tablet",
+      "event": "startup_uncovered",
+      "value": 0,
+      "request": null,
+      "seq": 25,
+      "mono_us": 10769445,
+      "host_range_us": [
+        125962743713,
+        125962785599
+      ],
+      "relative_midpoint_seconds": 8.1083655
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_gate",
+      "value": 0,
+      "request": null,
+      "seq": 26,
+      "mono_us": 10769821,
+      "host_range_us": [
+        125962744089,
+        125962785975
+      ],
+      "relative_midpoint_seconds": 8.1087415
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deck_tappable_frame",
+      "value": null,
+      "request": null,
+      "seq": 27,
+      "mono_us": 10773368,
+      "host_range_us": [
+        125962747635,
+        125962789523
+      ],
+      "relative_midpoint_seconds": 8.1122885
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deck_entry_started",
+      "value": null,
+      "request": null,
+      "seq": 28,
+      "mono_us": 10773448,
+      "host_range_us": [
+        125962747715,
+        125962789603
+      ],
+      "relative_midpoint_seconds": 8.1123685
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deck_entry_completed",
+      "value": null,
+      "request": null,
+      "seq": 29,
+      "mono_us": 11443762,
+      "host_range_us": [
+        125963417895,
+        125963460051
+      ],
+      "relative_midpoint_seconds": 8.7826825
+    },
+    {
+      "role": "tablet",
+      "event": "assets_end",
+      "value": null,
+      "request": null,
+      "seq": 30,
+      "mono_us": 11461177,
+      "host_range_us": [
+        125963435306,
+        125963477470
+      ],
+      "relative_midpoint_seconds": 8.8000975
+    },
+    {
+      "role": "tablet",
+      "event": "screen_ready",
+      "value": 1,
+      "request": null,
+      "seq": 31,
+      "mono_us": 11488938,
+      "host_range_us": [
+        125963463062,
+        125963505236
+      ],
+      "relative_midpoint_seconds": 8.8278585
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 48,
+      "request": null,
+      "seq": 32,
+      "mono_us": 11523206,
+      "host_range_us": [
+        125963497323,
+        125963539511
+      ],
+      "relative_midpoint_seconds": 8.8621265
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deck_tap_accepted",
+      "value": null,
+      "request": null,
+      "seq": 33,
+      "mono_us": 12164893,
+      "host_range_us": [
+        125964136146,
+        125964189178
+      ],
+      "relative_midpoint_seconds": 9.5063715
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deal_started",
+      "value": null,
+      "request": null,
+      "seq": 34,
+      "mono_us": 12166531,
+      "host_range_us": [
+        125964137784,
+        125964190816
+      ],
+      "relative_midpoint_seconds": 9.5080095
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deal_animation_completed",
+      "value": null,
+      "request": null,
+      "seq": 35,
+      "mono_us": 14983727,
+      "host_range_us": [
+        125966954446,
+        125967007881
+      ],
+      "relative_midpoint_seconds": 12.324873
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_deal_completed",
+      "value": null,
+      "request": null,
+      "seq": 36,
+      "mono_us": 14985722,
+      "host_range_us": [
+        125966956441,
+        125967009876
+      ],
+      "relative_midpoint_seconds": 12.326868
+    },
+    {
+      "role": "tablet",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 37,
+      "mono_us": 15648149,
+      "host_range_us": [
+        125967619001,
+        125967672436
+      ],
+      "relative_midpoint_seconds": 12.989428
+    },
+    {
+      "role": "tablet",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 38,
+      "mono_us": 15652804,
+      "host_range_us": [
+        125967623657,
+        125967677092
+      ],
+      "relative_midpoint_seconds": 12.994084
+    },
+    {
+      "role": "tablet",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 39,
+      "mono_us": 15658072,
+      "host_range_us": [
+        125967628926,
+        125967682361
+      ],
+      "relative_midpoint_seconds": 12.999353
+    },
+    {
+      "role": "tablet",
+      "event": "public_applied",
+      "value": 6,
+      "request": null,
+      "seq": 40,
+      "mono_us": 15661242,
+      "host_range_us": [
+        125967632096,
+        125967685531
+      ],
+      "relative_midpoint_seconds": 13.002523
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 16,
+      "request": null,
+      "seq": 41,
+      "mono_us": 15661336,
+      "host_range_us": [
+        125967632190,
+        125967685625
+      ],
+      "relative_midpoint_seconds": 13.002617
+    },
+    {
+      "role": "tablet",
+      "event": "startup_uncovered",
+      "value": 1,
+      "request": null,
+      "seq": 42,
+      "mono_us": 15672941,
+      "host_range_us": [
+        125967643798,
+        125967697233
+      ],
+      "relative_midpoint_seconds": 13.014225
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 43,
+      "mono_us": 15684825,
+      "host_range_us": [
+        125967655684,
+        125967709119
+      ],
+      "relative_midpoint_seconds": 13.026111
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 44,
+      "mono_us": 15684870,
+      "host_range_us": [
+        125967655729,
+        125967709164
+      ],
+      "relative_midpoint_seconds": 13.026156
+    },
+    {
+      "role": "tablet",
+      "event": "command_start",
+      "value": null,
+      "request": 2,
+      "seq": 45,
+      "mono_us": 15759322,
+      "host_range_us": [
+        125967730196,
+        125967783631
+      ],
+      "relative_midpoint_seconds": 13.100623
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 1,
+      "request": null,
+      "seq": 46,
+      "mono_us": 15759375,
+      "host_range_us": [
+        125967730249,
+        125967783684
+      ],
+      "relative_midpoint_seconds": 13.100676
+    },
+    {
+      "role": "tablet",
+      "event": "request_link",
+      "value": null,
+      "request": 2,
+      "seq": 47,
+      "mono_us": 15762369,
+      "host_range_us": [
+        125967733244,
+        125967786678
+      ],
+      "relative_midpoint_seconds": 13.1036705
+    },
+    {
+      "role": "tablet",
+      "event": "attempt_start",
+      "value": 1,
+      "request": 2,
+      "seq": 48,
+      "mono_us": 15763223,
+      "host_range_us": [
+        125967734098,
+        125967787533
+      ],
+      "relative_midpoint_seconds": 13.104525
+    },
+    {
+      "role": "tablet",
+      "event": "attempt_end",
+      "value": 1,
+      "request": 2,
+      "seq": 49,
+      "mono_us": 18728685,
+      "host_range_us": [
+        125970704219,
+        125970745589
+      ],
+      "relative_midpoint_seconds": 16.0686135
+    },
+    {
+      "role": "tablet",
+      "event": "command_end",
+      "value": 1,
+      "request": 2,
+      "seq": 50,
+      "mono_us": 18729691,
+      "host_range_us": [
+        125970705225,
+        125970746595
+      ],
+      "relative_midpoint_seconds": 16.0696195
+    },
+    {
+      "role": "tablet",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 51,
+      "mono_us": 18729764,
+      "host_range_us": [
+        125970705298,
+        125970746668
+      ],
+      "relative_midpoint_seconds": 16.0696925
+    },
+    {
+      "role": "tablet",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 52,
+      "mono_us": 18781896,
+      "host_range_us": [
+        125970757419,
+        125970798811
+      ],
+      "relative_midpoint_seconds": 16.1218245
+    },
+    {
+      "role": "tablet",
+      "event": "public_applied",
+      "value": 7,
+      "request": null,
+      "seq": 53,
+      "mono_us": 18787413,
+      "host_range_us": [
+        125970762935,
+        125970804329
+      ],
+      "relative_midpoint_seconds": 16.1273415
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 54,
+      "mono_us": 18787678,
+      "host_range_us": [
+        125970763200,
+        125970804594
+      ],
+      "relative_midpoint_seconds": 16.1276065
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 55,
+      "mono_us": 18787744,
+      "host_range_us": [
+        125970763266,
+        125970804660
+      ],
+      "relative_midpoint_seconds": 16.1276725
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 56,
+      "mono_us": 18894517,
+      "host_range_us": [
+        125970870018,
+        125970911454
+      ],
+      "relative_midpoint_seconds": 16.2344455
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 57,
+      "mono_us": 18894560,
+      "host_range_us": [
+        125970870061,
+        125970911497
+      ],
+      "relative_midpoint_seconds": 16.2344885
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_round_reveal_completed",
+      "value": null,
+      "request": null,
+      "seq": 58,
+      "mono_us": 19747088,
+      "host_range_us": [
+        125971722418,
+        125971764196
+      ],
+      "relative_midpoint_seconds": 17.0870165
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_stage",
+      "value": 3,
+      "request": null,
+      "seq": 59,
+      "mono_us": 19747498,
+      "host_range_us": [
+        125971722828,
+        125971764606
+      ],
+      "relative_midpoint_seconds": 17.0874265
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_gate",
+      "value": 1,
+      "request": null,
+      "seq": 60,
+      "mono_us": 19780252,
+      "host_range_us": [
+        125971755575,
+        125971797367
+      ],
+      "relative_midpoint_seconds": 17.1201805
+    },
+    {
+      "role": "tablet",
+      "event": "tablet_playing_frame",
+      "value": null,
+      "request": null,
+      "seq": 61,
+      "mono_us": 19780316,
+      "host_range_us": [
+        125971755639,
+        125971797431
+      ],
+      "relative_midpoint_seconds": 17.1202445
+    },
+    {
+      "role": "tablet",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 62,
+      "mono_us": 26116074,
+      "host_range_us": [
+        125978089539,
+        125978143226
+      ],
+      "relative_midpoint_seconds": 23.460092
+    },
+    {
+      "role": "tablet",
+      "event": "public_applied",
+      "value": 8,
+      "request": null,
+      "seq": 63,
+      "mono_us": 26120486,
+      "host_range_us": [
+        125978093952,
+        125978147639
+      ],
+      "relative_midpoint_seconds": 23.464505
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 64,
+      "mono_us": 26120631,
+      "host_range_us": [
+        125978094097,
+        125978147784
+      ],
+      "relative_midpoint_seconds": 23.46465
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 65,
+      "mono_us": 26120673,
+      "host_range_us": [
+        125978094139,
+        125978147826
+      ],
+      "relative_midpoint_seconds": 23.464692
+    },
+    {
+      "role": "tablet",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 66,
+      "mono_us": 26152388,
+      "host_range_us": [
+        125978125861,
+        125978179547
+      ],
+      "relative_midpoint_seconds": 23.4964135
+    },
+    {
+      "role": "tablet",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 67,
+      "mono_us": 26152436,
+      "host_range_us": [
+        125978125909,
+        125978179595
+      ],
+      "relative_midpoint_seconds": 23.4964615
+    },
+    {
+      "role": "tablet",
+      "event": "capture_stopped",
+      "value": null,
+      "request": null,
+      "seq": 68,
+      "mono_us": 31790957,
+      "host_range_us": [
+        125983763973,
+        125983815857
+      ],
+      "relative_midpoint_seconds": 29.1336245
+    },
+    {
+      "role": "phone_A",
+      "event": "armed",
+      "value": null,
+      "request": null,
+      "seq": 1,
+      "mono_us": 4330907,
+      "host_range_us": [
+        125952166472,
+        125952207370
+      ],
+      "relative_midpoint_seconds": -2.4693695
+    },
+    {
+      "role": "phone_A",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 2,
+      "mono_us": 4332536,
+      "host_range_us": [
+        125952168101,
+        125952209000
+      ],
+      "relative_midpoint_seconds": -2.46774
+    },
+    {
+      "role": "phone_A",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 3,
+      "mono_us": 4332615,
+      "host_range_us": [
+        125952168180,
+        125952209079
+      ],
+      "relative_midpoint_seconds": -2.467661
+    },
+    {
+      "role": "phone_A",
+      "event": "game_bound",
+      "value": null,
+      "request": null,
+      "seq": 4,
+      "mono_us": 13425113,
+      "host_range_us": [
+        125961254739,
+        125961311189
+      ],
+      "relative_midpoint_seconds": 6.6266735
+    },
+    {
+      "role": "phone_A",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 5,
+      "mono_us": 13425178,
+      "host_range_us": [
+        125961254804,
+        125961311254
+      ],
+      "relative_midpoint_seconds": 6.6267385
+    },
+    {
+      "role": "phone_A",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 6,
+      "mono_us": 13425205,
+      "host_range_us": [
+        125961254831,
+        125961311281
+      ],
+      "relative_midpoint_seconds": 6.6267655
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 7,
+      "mono_us": 13425218,
+      "host_range_us": [
+        125961254844,
+        125961311294
+      ],
+      "relative_midpoint_seconds": 6.6267785
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 8,
+      "mono_us": 13465830,
+      "host_range_us": [
+        125961295447,
+        125961351778
+      ],
+      "relative_midpoint_seconds": 6.667322
+    },
+    {
+      "role": "phone_A",
+      "event": "participant_count",
+      "value": 2,
+      "request": null,
+      "seq": 9,
+      "mono_us": 13465876,
+      "host_range_us": [
+        125961295493,
+        125961351824
+      ],
+      "relative_midpoint_seconds": 6.667368
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 49,
+      "request": null,
+      "seq": 10,
+      "mono_us": 13466534,
+      "host_range_us": [
+        125961296151,
+        125961352482
+      ],
+      "relative_midpoint_seconds": 6.668026
+    },
+    {
+      "role": "phone_A",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 11,
+      "mono_us": 13466553,
+      "host_range_us": [
+        125961296170,
+        125961352501
+      ],
+      "relative_midpoint_seconds": 6.668045
+    },
+    {
+      "role": "phone_A",
+      "event": "assets_start",
+      "value": null,
+      "request": null,
+      "seq": 12,
+      "mono_us": 13473510,
+      "host_range_us": [
+        125961303126,
+        125961359457
+      ],
+      "relative_midpoint_seconds": 6.675001
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 13,
+      "mono_us": 14482552,
+      "host_range_us": [
+        125962311966,
+        125962368297
+      ],
+      "relative_midpoint_seconds": 7.683841
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 14,
+      "mono_us": 14487412,
+      "host_range_us": [
+        125962316825,
+        125962373156
+      ],
+      "relative_midpoint_seconds": 7.6887
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 15,
+      "mono_us": 14621741,
+      "host_range_us": [
+        125962451127,
+        125962507458
+      ],
+      "relative_midpoint_seconds": 7.823002
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 16,
+      "mono_us": 14622120,
+      "host_range_us": [
+        125962451506,
+        125962507837
+      ],
+      "relative_midpoint_seconds": 7.823381
+    },
+    {
+      "role": "phone_A",
+      "event": "assets_end",
+      "value": null,
+      "request": null,
+      "seq": 17,
+      "mono_us": 14963216,
+      "host_range_us": [
+        125962792534,
+        125962848865
+      ],
+      "relative_midpoint_seconds": 8.164409
+    },
+    {
+      "role": "phone_A",
+      "event": "screen_ready",
+      "value": 1,
+      "request": null,
+      "seq": 18,
+      "mono_us": 14977220,
+      "host_range_us": [
+        125962806535,
+        125962862866
+      ],
+      "relative_midpoint_seconds": 8.17841
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 19,
+      "mono_us": 19587720,
+      "host_range_us": [
+        125967421078,
+        125967462632
+      ],
+      "relative_midpoint_seconds": 12.7855645
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 20,
+      "mono_us": 19588101,
+      "host_range_us": [
+        125967421459,
+        125967463013
+      ],
+      "relative_midpoint_seconds": 12.7859455
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 48,
+      "request": null,
+      "seq": 21,
+      "mono_us": 19588145,
+      "host_range_us": [
+        125967421503,
+        125967463057
+      ],
+      "relative_midpoint_seconds": 12.7859895
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 22,
+      "mono_us": 19593384,
+      "host_range_us": [
+        125967426743,
+        125967468295
+      ],
+      "relative_midpoint_seconds": 12.7912285
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 6,
+      "request": null,
+      "seq": 23,
+      "mono_us": 19595716,
+      "host_range_us": [
+        125967429076,
+        125967470626
+      ],
+      "relative_midpoint_seconds": 12.7935605
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 16,
+      "request": null,
+      "seq": 24,
+      "mono_us": 19595771,
+      "host_range_us": [
+        125967429131,
+        125967470681
+      ],
+      "relative_midpoint_seconds": 12.7936155
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 25,
+      "mono_us": 22869708,
+      "host_range_us": [
+        125970702714,
+        125970742528
+      ],
+      "relative_midpoint_seconds": 16.0663305
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 7,
+      "request": null,
+      "seq": 26,
+      "mono_us": 22871329,
+      "host_range_us": [
+        125970704335,
+        125970744149
+      ],
+      "relative_midpoint_seconds": 16.0679515
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 27,
+      "mono_us": 22871398,
+      "host_range_us": [
+        125970704404,
+        125970744218
+      ],
+      "relative_midpoint_seconds": 16.0680205
+    },
+    {
+      "role": "phone_A",
+      "event": "private_received",
+      "value": null,
+      "request": null,
+      "seq": 28,
+      "mono_us": 22872499,
+      "host_range_us": [
+        125970705505,
+        125970745319
+      ],
+      "relative_midpoint_seconds": 16.0691215
+    },
+    {
+      "role": "phone_A",
+      "event": "private_applied",
+      "value": null,
+      "request": null,
+      "seq": 29,
+      "mono_us": 22877229,
+      "host_range_us": [
+        125970710234,
+        125970750048
+      ],
+      "relative_midpoint_seconds": 16.0738505
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_stage",
+      "value": 1,
+      "request": null,
+      "seq": 30,
+      "mono_us": 22952807,
+      "host_range_us": [
+        125970785797,
+        125970825611
+      ],
+      "relative_midpoint_seconds": 16.1494135
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 31,
+      "mono_us": 22952923,
+      "host_range_us": [
+        125970785913,
+        125970825727
+      ],
+      "relative_midpoint_seconds": 16.1495295
+    },
+    {
+      "role": "phone_A",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 32,
+      "mono_us": 22952938,
+      "host_range_us": [
+        125970785928,
+        125970825742
+      ],
+      "relative_midpoint_seconds": 16.1495445
+    },
+    {
+      "role": "phone_A",
+      "event": "startup_uncovered",
+      "value": 1,
+      "request": null,
+      "seq": 33,
+      "mono_us": 22953093,
+      "host_range_us": [
+        125970786083,
+        125970825897
+      ],
+      "relative_midpoint_seconds": 16.1496995
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_waiting_for_deal",
+      "value": 0,
+      "request": null,
+      "seq": 34,
+      "mono_us": 22953117,
+      "host_range_us": [
+        125970786107,
+        125970825921
+      ],
+      "relative_midpoint_seconds": 16.1497235
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 8,
+      "request": null,
+      "seq": 35,
+      "mono_us": 22954740,
+      "host_range_us": [
+        125970787729,
+        125970827543
+      ],
+      "relative_midpoint_seconds": 16.1513455
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_game_intro_completed",
+      "value": null,
+      "request": null,
+      "seq": 36,
+      "mono_us": 24578819,
+      "host_range_us": [
+        125972412325,
+        125972451297
+      ],
+      "relative_midpoint_seconds": 17.7755205
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_stage",
+      "value": 5,
+      "request": null,
+      "seq": 37,
+      "mono_us": 24608370,
+      "host_range_us": [
+        125972441881,
+        125972480842
+      ],
+      "relative_midpoint_seconds": 17.805071
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 9,
+      "request": null,
+      "seq": 38,
+      "mono_us": 24608975,
+      "host_range_us": [
+        125972442487,
+        125972481447
+      ],
+      "relative_midpoint_seconds": 17.8056765
+    },
+    {
+      "role": "phone_A",
+      "event": "hand_gate",
+      "value": 0,
+      "request": null,
+      "seq": 39,
+      "mono_us": 24610085,
+      "host_range_us": [
+        125972443597,
+        125972482557
+      ],
+      "relative_midpoint_seconds": 17.8067865
+    },
+    {
+      "role": "phone_A",
+      "event": "pack_entry_started",
+      "value": null,
+      "request": null,
+      "seq": 40,
+      "mono_us": 26535699,
+      "host_range_us": [
+        125974369596,
+        125974408491
+      ],
+      "relative_midpoint_seconds": 19.732753
+    },
+    {
+      "role": "phone_A",
+      "event": "pack_tappable_frame",
+      "value": null,
+      "request": null,
+      "seq": 41,
+      "mono_us": 27272277,
+      "host_range_us": [
+        125975106208,
+        125975145255
+      ],
+      "relative_midpoint_seconds": 20.469441
+    },
+    {
+      "role": "phone_A",
+      "event": "pack_tap_accepted",
+      "value": null,
+      "request": null,
+      "seq": 42,
+      "mono_us": 28198919,
+      "host_range_us": [
+        125976032664,
+        125976071712
+      ],
+      "relative_midpoint_seconds": 21.3958975
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 8,
+      "request": null,
+      "seq": 43,
+      "mono_us": 28227504,
+      "host_range_us": [
+        125976061244,
+        125976100291
+      ],
+      "relative_midpoint_seconds": 21.424477
+    },
+    {
+      "role": "phone_A",
+      "event": "reveal_completed",
+      "value": null,
+      "request": null,
+      "seq": 44,
+      "mono_us": 29677729,
+      "host_range_us": [
+        125977508977,
+        125977550401
+      ],
+      "relative_midpoint_seconds": 22.8733985
+    },
+    {
+      "role": "phone_A",
+      "event": "controls_started",
+      "value": null,
+      "request": null,
+      "seq": 45,
+      "mono_us": 29680312,
+      "host_range_us": [
+        125977511560,
+        125977552984
+      ],
+      "relative_midpoint_seconds": 22.8759815
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_stage",
+      "value": 6,
+      "request": null,
+      "seq": 46,
+      "mono_us": 29784820,
+      "host_range_us": [
+        125977616047,
+        125977657513
+      ],
+      "relative_midpoint_seconds": 22.9804895
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 9,
+      "request": null,
+      "seq": 47,
+      "mono_us": 29785128,
+      "host_range_us": [
+        125977616355,
+        125977657821
+      ],
+      "relative_midpoint_seconds": 22.9807975
+    },
+    {
+      "role": "phone_A",
+      "event": "hand_gate",
+      "value": 1,
+      "request": null,
+      "seq": 48,
+      "mono_us": 29785215,
+      "host_range_us": [
+        125977616442,
+        125977657908
+      ],
+      "relative_midpoint_seconds": 22.9808845
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_hand_selectable_frame",
+      "value": null,
+      "request": null,
+      "seq": 49,
+      "mono_us": 29785240,
+      "host_range_us": [
+        125977616467,
+        125977657933
+      ],
+      "relative_midpoint_seconds": 22.9809095
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 50,
+      "mono_us": 30260444,
+      "host_range_us": [
+        125978091576,
+        125978133232
+      ],
+      "relative_midpoint_seconds": 23.4561135
+    },
+    {
+      "role": "phone_A",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 51,
+      "mono_us": 30260470,
+      "host_range_us": [
+        125978091602,
+        125978133258
+      ],
+      "relative_midpoint_seconds": 23.4561395
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 0,
+      "request": null,
+      "seq": 52,
+      "mono_us": 30260606,
+      "host_range_us": [
+        125978091738,
+        125978133394
+      ],
+      "relative_midpoint_seconds": 23.4562755
+    },
+    {
+      "role": "phone_A",
+      "event": "hand_gate",
+      "value": 0,
+      "request": null,
+      "seq": 53,
+      "mono_us": 30260632,
+      "host_range_us": [
+        125978091764,
+        125978133420
+      ],
+      "relative_midpoint_seconds": 23.4563015
+    },
+    {
+      "role": "phone_A",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 54,
+      "mono_us": 30263888,
+      "host_range_us": [
+        125978095019,
+        125978136677
+      ],
+      "relative_midpoint_seconds": 23.4595575
+    },
+    {
+      "role": "phone_A",
+      "event": "public_applied",
+      "value": 8,
+      "request": null,
+      "seq": 55,
+      "mono_us": 30264612,
+      "host_range_us": [
+        125978095743,
+        125978137401
+      ],
+      "relative_midpoint_seconds": 23.4602815
+    },
+    {
+      "role": "phone_A",
+      "event": "private_received",
+      "value": null,
+      "request": null,
+      "seq": 56,
+      "mono_us": 30264719,
+      "host_range_us": [
+        125978095850,
+        125978137508
+      ],
+      "relative_midpoint_seconds": 23.4603885
+    },
+    {
+      "role": "phone_A",
+      "event": "private_applied",
+      "value": null,
+      "request": null,
+      "seq": 57,
+      "mono_us": 30264858,
+      "host_range_us": [
+        125978095989,
+        125978137647
+      ],
+      "relative_midpoint_seconds": 23.4605275
+    },
+    {
+      "role": "phone_A",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 58,
+      "mono_us": 30299697,
+      "host_range_us": [
+        125978130821,
+        125978172493
+      ],
+      "relative_midpoint_seconds": 23.4953665
+    },
+    {
+      "role": "phone_A",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 59,
+      "mono_us": 30299727,
+      "host_range_us": [
+        125978130851,
+        125978172523
+      ],
+      "relative_midpoint_seconds": 23.4953965
+    },
+    {
+      "role": "phone_A",
+      "event": "phone_gate",
+      "value": 9,
+      "request": null,
+      "seq": 60,
+      "mono_us": 30299978,
+      "host_range_us": [
+        125978131102,
+        125978172774
+      ],
+      "relative_midpoint_seconds": 23.4956475
+    },
+    {
+      "role": "phone_A",
+      "event": "hand_gate",
+      "value": 1,
+      "request": null,
+      "seq": 61,
+      "mono_us": 30339689,
+      "host_range_us": [
+        125978170805,
+        125978212493
+      ],
+      "relative_midpoint_seconds": 23.5353585
+    },
+    {
+      "role": "phone_A",
+      "event": "controls_completed",
+      "value": null,
+      "request": null,
+      "seq": 62,
+      "mono_us": 30612188,
+      "host_range_us": [
+        125978443249,
+        125978485047
+      ],
+      "relative_midpoint_seconds": 23.8078575
+    },
+    {
+      "role": "phone_A",
+      "event": "capture_stopped",
+      "value": null,
+      "request": null,
+      "seq": 63,
+      "mono_us": 35989126,
+      "host_range_us": [
+        125983818989,
+        125983872469
+      ],
+      "relative_midpoint_seconds": 29.1894385
+    },
+    {
+      "role": "phone_B",
+      "event": "armed",
+      "value": null,
+      "request": null,
+      "seq": 1,
+      "mono_us": 4572600,
+      "host_range_us": [
+        125952191008,
+        125952247306
+      ],
+      "relative_midpoint_seconds": -2.4371335
+    },
+    {
+      "role": "phone_B",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 2,
+      "mono_us": 4575436,
+      "host_range_us": [
+        125952193844,
+        125952250142
+      ],
+      "relative_midpoint_seconds": -2.4342975
+    },
+    {
+      "role": "phone_B",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 3,
+      "mono_us": 4575578,
+      "host_range_us": [
+        125952193987,
+        125952250284
+      ],
+      "relative_midpoint_seconds": -2.434155
+    },
+    {
+      "role": "phone_B",
+      "event": "game_bound",
+      "value": null,
+      "request": null,
+      "seq": 4,
+      "mono_us": 14151043,
+      "host_range_us": [
+        125961770594,
+        125961827960
+      ],
+      "relative_midpoint_seconds": 7.1429865
+    },
+    {
+      "role": "phone_B",
+      "event": "foreground",
+      "value": 1,
+      "request": null,
+      "seq": 5,
+      "mono_us": 14151101,
+      "host_range_us": [
+        125961770652,
+        125961828018
+      ],
+      "relative_midpoint_seconds": 7.1430445
+    },
+    {
+      "role": "phone_B",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 6,
+      "mono_us": 14151132,
+      "host_range_us": [
+        125961770683,
+        125961828049
+      ],
+      "relative_midpoint_seconds": 7.1430755
+    },
+    {
+      "role": "phone_B",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 7,
+      "mono_us": 14151151,
+      "host_range_us": [
+        125961770702,
+        125961828068
+      ],
+      "relative_midpoint_seconds": 7.1430945
+    },
+    {
+      "role": "phone_B",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 8,
+      "mono_us": 14177736,
+      "host_range_us": [
+        125961797282,
+        125961854658
+      ],
+      "relative_midpoint_seconds": 7.1696795
+    },
+    {
+      "role": "phone_B",
+      "event": "participant_count",
+      "value": 2,
+      "request": null,
+      "seq": 9,
+      "mono_us": 14177809,
+      "host_range_us": [
+        125961797355,
+        125961854731
+      ],
+      "relative_midpoint_seconds": 7.1697525
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 49,
+      "request": null,
+      "seq": 10,
+      "mono_us": 14178812,
+      "host_range_us": [
+        125961798358,
+        125961855734
+      ],
+      "relative_midpoint_seconds": 7.1707555
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 11,
+      "mono_us": 14178859,
+      "host_range_us": [
+        125961798405,
+        125961855781
+      ],
+      "relative_midpoint_seconds": 7.1708025
+    },
+    {
+      "role": "phone_B",
+      "event": "assets_start",
+      "value": null,
+      "request": null,
+      "seq": 12,
+      "mono_us": 14190449,
+      "host_range_us": [
+        125961809992,
+        125961867374
+      ],
+      "relative_midpoint_seconds": 7.1823925
+    },
+    {
+      "role": "phone_B",
+      "event": "assets_end",
+      "value": null,
+      "request": null,
+      "seq": 13,
+      "mono_us": 15027009,
+      "host_range_us": [
+        125962641138,
+        125962707127
+      ],
+      "relative_midpoint_seconds": 8.017842
+    },
+    {
+      "role": "phone_B",
+      "event": "screen_ready",
+      "value": 1,
+      "request": null,
+      "seq": 14,
+      "mono_us": 15040477,
+      "host_range_us": [
+        125962654609,
+        125962720597
+      ],
+      "relative_midpoint_seconds": 8.0313125
+    },
+    {
+      "role": "phone_B",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 15,
+      "mono_us": 19722779,
+      "host_range_us": [
+        125967347046,
+        125967404225
+      ],
+      "relative_midpoint_seconds": 12.719345
+    },
+    {
+      "role": "phone_B",
+      "event": "public_applied",
+      "value": 2,
+      "request": null,
+      "seq": 16,
+      "mono_us": 19743020,
+      "host_range_us": [
+        125967367291,
+        125967424462
+      ],
+      "relative_midpoint_seconds": 12.739586
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 48,
+      "request": null,
+      "seq": 17,
+      "mono_us": 19743184,
+      "host_range_us": [
+        125967367455,
+        125967424626
+      ],
+      "relative_midpoint_seconds": 12.73975
+    },
+    {
+      "role": "phone_B",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 18,
+      "mono_us": 19802121,
+      "host_range_us": [
+        125967426404,
+        125967483552
+      ],
+      "relative_midpoint_seconds": 12.7986875
+    },
+    {
+      "role": "phone_B",
+      "event": "public_applied",
+      "value": 6,
+      "request": null,
+      "seq": 19,
+      "mono_us": 19811552,
+      "host_range_us": [
+        125967435837,
+        125967492981
+      ],
+      "relative_midpoint_seconds": 12.8081185
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 20,
+      "mono_us": 19811740,
+      "host_range_us": [
+        125967436025,
+        125967493169
+      ],
+      "relative_midpoint_seconds": 12.8083065
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 21,
+      "mono_us": 19811775,
+      "host_range_us": [
+        125967436060,
+        125967493204
+      ],
+      "relative_midpoint_seconds": 12.8083415
+    },
+    {
+      "role": "phone_B",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 22,
+      "mono_us": 23013193,
+      "host_range_us": [
+        125970638017,
+        125970691117
+      ],
+      "relative_midpoint_seconds": 16.0082765
+    },
+    {
+      "role": "phone_B",
+      "event": "public_applied",
+      "value": 7,
+      "request": null,
+      "seq": 23,
+      "mono_us": 23015733,
+      "host_range_us": [
+        125970640556,
+        125970693658
+      ],
+      "relative_midpoint_seconds": 16.0108165
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 24,
+      "mono_us": 23015940,
+      "host_range_us": [
+        125970640763,
+        125970693865
+      ],
+      "relative_midpoint_seconds": 16.0110235
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 25,
+      "mono_us": 23015985,
+      "host_range_us": [
+        125970640808,
+        125970693910
+      ],
+      "relative_midpoint_seconds": 16.0110685
+    },
+    {
+      "role": "phone_B",
+      "event": "private_received",
+      "value": null,
+      "request": null,
+      "seq": 26,
+      "mono_us": 23020196,
+      "host_range_us": [
+        125970645019,
+        125970698122
+      ],
+      "relative_midpoint_seconds": 16.01528
+    },
+    {
+      "role": "phone_B",
+      "event": "private_applied",
+      "value": null,
+      "request": null,
+      "seq": 27,
+      "mono_us": 23040229,
+      "host_range_us": [
+        125970665048,
+        125970718159
+      ],
+      "relative_midpoint_seconds": 16.035313
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_stage",
+      "value": 1,
+      "request": null,
+      "seq": 28,
+      "mono_us": 23224388,
+      "host_range_us": [
+        125970849170,
+        125970902354
+      ],
+      "relative_midpoint_seconds": 16.2194715
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 29,
+      "mono_us": 23224732,
+      "host_range_us": [
+        125970849514,
+        125970902698
+      ],
+      "relative_midpoint_seconds": 16.2198155
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 30,
+      "mono_us": 23224756,
+      "host_range_us": [
+        125970849538,
+        125970902723
+      ],
+      "relative_midpoint_seconds": 16.21984
+    },
+    {
+      "role": "phone_B",
+      "event": "startup_uncovered",
+      "value": 1,
+      "request": null,
+      "seq": 31,
+      "mono_us": 23225167,
+      "host_range_us": [
+        125970849949,
+        125970903134
+      ],
+      "relative_midpoint_seconds": 16.220251
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_waiting_for_deal",
+      "value": 0,
+      "request": null,
+      "seq": 32,
+      "mono_us": 23225220,
+      "host_range_us": [
+        125970850002,
+        125970903187
+      ],
+      "relative_midpoint_seconds": 16.220304
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_gate",
+      "value": 14,
+      "request": null,
+      "seq": 33,
+      "mono_us": 23229122,
+      "host_range_us": [
+        125970853903,
+        125970907089
+      ],
+      "relative_midpoint_seconds": 16.2242055
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_game_intro_completed",
+      "value": null,
+      "request": null,
+      "seq": 34,
+      "mono_us": 24706302,
+      "host_range_us": [
+        125972330787,
+        125972384133
+      ],
+      "relative_midpoint_seconds": 17.7011695
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_stage",
+      "value": 5,
+      "request": null,
+      "seq": 35,
+      "mono_us": 24749686,
+      "host_range_us": [
+        125972374163,
+        125972427508
+      ],
+      "relative_midpoint_seconds": 17.744545
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_gate",
+      "value": 15,
+      "request": null,
+      "seq": 36,
+      "mono_us": 24750217,
+      "host_range_us": [
+        125972374694,
+        125972428039
+      ],
+      "relative_midpoint_seconds": 17.745076
+    },
+    {
+      "role": "phone_B",
+      "event": "hand_gate",
+      "value": 0,
+      "request": null,
+      "seq": 37,
+      "mono_us": 24751297,
+      "host_range_us": [
+        125972375773,
+        125972429119
+      ],
+      "relative_midpoint_seconds": 17.7461555
+    },
+    {
+      "role": "phone_B",
+      "event": "pack_entry_started",
+      "value": null,
+      "request": null,
+      "seq": 38,
+      "mono_us": 26701227,
+      "host_range_us": [
+        125974321209,
+        125974374114
+      ],
+      "relative_midpoint_seconds": 19.691371
+    },
+    {
+      "role": "phone_B",
+      "event": "pack_tappable_frame",
+      "value": null,
+      "request": null,
+      "seq": 39,
+      "mono_us": 27431124,
+      "host_range_us": [
+        125975051161,
+        125975102399
+      ],
+      "relative_midpoint_seconds": 20.4204895
+    },
+    {
+      "role": "phone_B",
+      "event": "pack_tap_accepted",
+      "value": null,
+      "request": null,
+      "seq": 40,
+      "mono_us": 27514963,
+      "host_range_us": [
+        125975134983,
+        125975186221
+      ],
+      "relative_midpoint_seconds": 20.5043115
+    },
+    {
+      "role": "phone_B",
+      "event": "command_start",
+      "value": null,
+      "request": 1,
+      "seq": 41,
+      "mono_us": 27523203,
+      "host_range_us": [
+        125975143221,
+        125975194460
+      ],
+      "relative_midpoint_seconds": 20.51255
+    },
+    {
+      "role": "phone_B",
+      "event": "pending_commands",
+      "value": 1,
+      "request": null,
+      "seq": 42,
+      "mono_us": 27523283,
+      "host_range_us": [
+        125975143301,
+        125975194540
+      ],
+      "relative_midpoint_seconds": 20.51263
+    },
+    {
+      "role": "phone_B",
+      "event": "request_link",
+      "value": null,
+      "request": 1,
+      "seq": 43,
+      "mono_us": 27529864,
+      "host_range_us": [
+        125975149881,
+        125975201119
+      ],
+      "relative_midpoint_seconds": 20.5192095
+    },
+    {
+      "role": "phone_B",
+      "event": "attempt_start",
+      "value": 1,
+      "request": 1,
+      "seq": 44,
+      "mono_us": 27531055,
+      "host_range_us": [
+        125975151072,
+        125975202310
+      ],
+      "relative_midpoint_seconds": 20.5204005
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_gate",
+      "value": 14,
+      "request": null,
+      "seq": 45,
+      "mono_us": 27555331,
+      "host_range_us": [
+        125975175343,
+        125975226581
+      ],
+      "relative_midpoint_seconds": 20.5446715
+    },
+    {
+      "role": "phone_B",
+      "event": "reveal_completed",
+      "value": null,
+      "request": null,
+      "seq": 46,
+      "mono_us": 28983285,
+      "host_range_us": [
+        125976603011,
+        125976654250
+      ],
+      "relative_midpoint_seconds": 21.97234
+    },
+    {
+      "role": "phone_B",
+      "event": "controls_started",
+      "value": null,
+      "request": null,
+      "seq": 47,
+      "mono_us": 28987896,
+      "host_range_us": [
+        125976607621,
+        125976658860
+      ],
+      "relative_midpoint_seconds": 21.97695
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_stage",
+      "value": 6,
+      "request": null,
+      "seq": 48,
+      "mono_us": 29166351,
+      "host_range_us": [
+        125976786041,
+        125976837279
+      ],
+      "relative_midpoint_seconds": 22.1553695
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_gate",
+      "value": 15,
+      "request": null,
+      "seq": 49,
+      "mono_us": 29166836,
+      "host_range_us": [
+        125976786526,
+        125976837764
+      ],
+      "relative_midpoint_seconds": 22.1558545
+    },
+    {
+      "role": "phone_B",
+      "event": "hand_gate",
+      "value": 3,
+      "request": null,
+      "seq": 50,
+      "mono_us": 29166970,
+      "host_range_us": [
+        125976786660,
+        125976837898
+      ],
+      "relative_midpoint_seconds": 22.1559885
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_hand_selectable_frame",
+      "value": null,
+      "request": null,
+      "seq": 51,
+      "mono_us": 29167005,
+      "host_range_us": [
+        125976786695,
+        125976837933
+      ],
+      "relative_midpoint_seconds": 22.1560235
+    },
+    {
+      "role": "phone_B",
+      "event": "phone_first_turn_playable_frame",
+      "value": null,
+      "request": null,
+      "seq": 52,
+      "mono_us": 29167023,
+      "host_range_us": [
+        125976786713,
+        125976837951
+      ],
+      "relative_midpoint_seconds": 22.1560415
+    },
+    {
+      "role": "phone_B",
+      "event": "controls_completed",
+      "value": null,
+      "request": null,
+      "seq": 53,
+      "mono_us": 29905580,
+      "host_range_us": [
+        125977524450,
+        125977576533
+      ],
+      "relative_midpoint_seconds": 22.894201
+    },
+    {
+      "role": "phone_B",
+      "event": "public_received",
+      "value": null,
+      "request": null,
+      "seq": 54,
+      "mono_us": 30398208,
+      "host_range_us": [
+        125978016980,
+        125978069259
+      ],
+      "relative_midpoint_seconds": 23.386829
+    },
+    {
+      "role": "phone_B",
+      "event": "public_applied",
+      "value": 8,
+      "request": null,
+      "seq": 55,
+      "mono_us": 30408534,
+      "host_range_us": [
+        125978027304,
+        125978079587
+      ],
+      "relative_midpoint_seconds": 23.397155
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 1,
+      "request": null,
+      "seq": 56,
+      "mono_us": 30408809,
+      "host_range_us": [
+        125978027579,
+        125978079862
+      ],
+      "relative_midpoint_seconds": 23.39743
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 0,
+      "request": null,
+      "seq": 57,
+      "mono_us": 30408849,
+      "host_range_us": [
+        125978027619,
+        125978079902
+      ],
+      "relative_midpoint_seconds": 23.39747
+    },
+    {
+      "role": "phone_B",
+      "event": "private_received",
+      "value": null,
+      "request": null,
+      "seq": 58,
+      "mono_us": 30409242,
+      "host_range_us": [
+        125978028011,
+        125978080295
+      ],
+      "relative_midpoint_seconds": 23.3978625
+    },
+    {
+      "role": "phone_B",
+      "event": "private_applied",
+      "value": null,
+      "request": null,
+      "seq": 59,
+      "mono_us": 30410653,
+      "host_range_us": [
+        125978029422,
+        125978081707
+      ],
+      "relative_midpoint_seconds": 23.399274
+    },
+    {
+      "role": "phone_B",
+      "event": "attempt_end",
+      "value": 1,
+      "request": 1,
+      "seq": 60,
+      "mono_us": 30415863,
+      "host_range_us": [
+        125978034631,
+        125978086918
+      ],
+      "relative_midpoint_seconds": 23.404484
+    },
+    {
+      "role": "phone_B",
+      "event": "command_end",
+      "value": 1,
+      "request": 1,
+      "seq": 61,
+      "mono_us": 30419056,
+      "host_range_us": [
+        125978037823,
+        125978090111
+      ],
+      "relative_midpoint_seconds": 23.4076765
+    },
+    {
+      "role": "phone_B",
+      "event": "pending_commands",
+      "value": 0,
+      "request": null,
+      "seq": 62,
+      "mono_us": 30419225,
+      "host_range_us": [
+        125978037992,
+        125978090280
+      ],
+      "relative_midpoint_seconds": 23.4078455
+    },
+    {
+      "role": "phone_B",
+      "event": "session_blockers",
+      "value": 0,
+      "request": null,
+      "seq": 63,
+      "mono_us": 30536166,
+      "host_range_us": [
+        125978154910,
+        125978207245
+      ],
+      "relative_midpoint_seconds": 23.524787
+    },
+    {
+      "role": "phone_B",
+      "event": "session_can_send",
+      "value": 1,
+      "request": null,
+      "seq": 64,
+      "mono_us": 30536227,
+      "host_range_us": [
+        125978154971,
+        125978207306
+      ],
+      "relative_midpoint_seconds": 23.524848
+    },
+    {
+      "role": "phone_B",
+      "event": "hand_gate",
+      "value": 0,
+      "request": null,
+      "seq": 65,
+      "mono_us": 30536797,
+      "host_range_us": [
+        125978155541,
+        125978207876
+      ],
+      "relative_midpoint_seconds": 23.525418
+    },
+    {
+      "role": "phone_B",
+      "event": "hand_gate",
+      "value": 3,
+      "request": null,
+      "seq": 66,
+      "mono_us": 30613621,
+      "host_range_us": [
+        125978232350,
+        125978284715
+      ],
+      "relative_midpoint_seconds": 23.602242
+    },
+    {
+      "role": "phone_B",
+      "event": "capture_stopped",
+      "value": null,
+      "request": null,
+      "seq": 67,
+      "mono_us": 36255206,
+      "host_range_us": [
+        125983877152,
+        125983931768
+      ],
+      "relative_midpoint_seconds": 29.2481695
+    }
+  ],
+  "user_confirmation": "The user opened the card pack only; did not select or submit cards.",
+  "input_pilot_passed": false,
+  "git": {
+    "branch": "codex/release-performance-capture",
+    "head": "09657ef77c0fcb8b801e758763982013d4b6768d"
+  },
+  "limitations": [
+    "One sample, no wireless-vs-USB crossover on the same phone.",
+    "Diagnostic RPC RTT includes VM/UI queue/PC scheduling and clock quantization, not pure Wi-Fi RTT.",
+    "No server-internal timing query; SDK command durations are not server-only.",
+    "Input completion is the code gate frame; physical selection/submission was not tested.",
+    "Source hash is a PC working-copy check, not installed APK attestation."
+  ]
+}

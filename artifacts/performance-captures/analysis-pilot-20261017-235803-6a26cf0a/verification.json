@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "exit_code": 0,
+  "source_files_unchanged": 5,
+  "listed_integrity_files_verified": 4,
+  "events": 198,
+  "source_hashes_verified": 15,
+  "tracked_unchanged": true,
+  "pilot_input_verification": "NOT_PERFORMED_USER_CONFIRMED",
+  "whole_timing_quality": "PASS_250MS_WITH_ADDITIONAL_PC_QUANTIZATION_ALLOWANCE"
+}
