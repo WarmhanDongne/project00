@@ -5,6 +5,7 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -12,6 +13,7 @@ import 'package:flutter/widgets.dart';
 /// No production identifiers, payloads, error text or service credentials leave
 /// this recorder. A separate bounded journal avoids the communication UI ring.
 class StartupMeasurements with WidgetsBindingObserver {
+  static const protocol = 2;
   StartupMeasurements({
     this.enabled = false,
     int Function()? clock,
@@ -33,6 +35,7 @@ class StartupMeasurements with WidgetsBindingObserver {
   final _states = <String, int>{};
   final _once = <String>{};
   final _requests = <int>{};
+  final _requestActions = <int, int>{};
   late final String _process = List.generate(
     12,
     (_) => Random.secure().nextInt(16).toRadixString(16),
@@ -66,7 +69,8 @@ class StartupMeasurements with WidgetsBindingObserver {
           requestEnd(id, function, outcome: result['success'] == false ? 2 : 1);
         }
         return result;
-      } catch (_) {
+      } catch (error) {
+        recordError(error, request: currentRequest);
         if (currentRequest != 0) requestEnd(id, function, outcome: 3);
         rethrow;
       }
@@ -113,7 +117,7 @@ class StartupMeasurements with WidgetsBindingObserver {
     if (!enabled) return {'error': 'disabled'};
     switch (args['op']) {
       case 'clock':
-        return {'process': _process, 'mono_us': _clock()};
+        return {'protocol': protocol, 'process': _process, 'mono_us': _clock()};
       case 'arm':
         final capture = args['capture'] ?? '';
         final trial = args['trial'] ?? '';
@@ -156,8 +160,10 @@ class StartupMeasurements with WidgetsBindingObserver {
         _states.clear();
         _once.clear();
         _requests.clear();
+        _requestActions.clear();
         record('armed');
         state('foreground', _foreground ? 1 : 0);
+        state('pending_commands', 0);
         return {'ok': true, 'process': _process};
       case 'drain':
         final after = int.tryParse(args['after'] ?? '') ?? 0;
@@ -186,12 +192,15 @@ class StartupMeasurements with WidgetsBindingObserver {
 
   void beginAction(String source) {
     if (!active || _role != 'tablet') return;
-    if (source != _scenario || _action != 0) {
-      record('action_rejected');
+    if (!const {
+      'initial_start',
+      'menu_restart',
+      'result_restart',
+    }.contains(source)) {
       return;
     }
-    _action = 1;
-    record('action_accepted');
+    _action++;
+    record('action_accepted', source: source);
   }
 
   /// Called only after the normal session has accepted the public game context.
@@ -209,6 +218,7 @@ class StartupMeasurements with WidgetsBindingObserver {
     _states.clear();
     _once.clear();
     record('game_bound');
+    state('foreground', _foreground ? 1 : 0);
     state('pending_commands', _requests.length);
   }
 
@@ -218,6 +228,7 @@ class StartupMeasurements with WidgetsBindingObserver {
     }
     final id = ++_requestSeq;
     _requests.add(id);
+    _requestActions[id] = _action;
     record('command_start', request: id, command: function);
     state('pending_commands', _requests.length);
     return id;
@@ -226,6 +237,7 @@ class StartupMeasurements with WidgetsBindingObserver {
   void requestEnd(int id, String function, {required int outcome}) {
     if (id == 0 || !_requests.remove(id)) return;
     record('command_end', request: id, command: function, value: outcome);
+    _requestActions.remove(id);
     state('pending_commands', _requests.length);
   }
 
@@ -274,13 +286,61 @@ class StartupMeasurements with WidgetsBindingObserver {
   }
 
   void checkPhone(String game) {
-    if (!_foreground || _states['session_can_send'] == 0) return;
+    if (!_foreground || _states['session_can_send'] != 1) return;
     final p = _states['phone_gate'] ?? 0;
     final h = _states['hand_gate'] ?? 0;
     if ((p & 9) == 9 && (h & 1) == 1) {
       once('phone_hand_selectable_frame', game: game);
     }
     if (p == 15 && h == 3) once('phone_first_turn_playable_frame', game: game);
+  }
+
+  /// Composite input blockers, not an assertion of network failure.
+  void sessionState({
+    required bool localUsable,
+    required bool transportConnected,
+    required bool transportRecovering,
+    required bool controllerAvailable,
+    required bool serverConfirmed,
+    required bool paused,
+    required bool leaving,
+  }) {
+    final mask =
+        (!localUsable ? 1 : 0) |
+        (!transportConnected ? 2 : 0) |
+        (transportRecovering ? 4 : 0) |
+        (!controllerAvailable ? 8 : 0) |
+        (!serverConfirmed ? 16 : 0) |
+        (paused ? 32 : 0) |
+        (leaving ? 64 : 0);
+    state('session_blockers', mask);
+    state('session_can_send', mask == 0 ? 1 : 0);
+  }
+
+  /// Only a fixed code vocabulary leaves the app; never error.toString/details.
+  void recordError(Object error, {required int request}) {
+    const codes = [
+      'unknown',
+      'cancelled',
+      'invalid-argument',
+      'deadline-exceeded',
+      'not-found',
+      'already-exists',
+      'permission-denied',
+      'resource-exhausted',
+      'failed-precondition',
+      'aborted',
+      'out-of-range',
+      'unimplemented',
+      'internal',
+      'unavailable',
+      'data-loss',
+      'unauthenticated',
+    ];
+    final code = error is FirebaseFunctionsException
+        ? codes.indexOf(error.code)
+        : -1;
+    record('command_error', request: request, value: code < 0 ? 0 : code);
   }
 
   @override
@@ -297,12 +357,13 @@ class StartupMeasurements with WidgetsBindingObserver {
     int? request,
     String? command,
     String? link,
+    String? source,
   }) {
     if (!active) return;
     if (request == 0) return;
     if (game != null && game != _game) return;
     final row = <String, Object?>{
-      'schema': 1,
+      'schema': protocol,
       'capture': _capture,
       'trial': _trial,
       'scenario': _scenario,
@@ -310,13 +371,16 @@ class StartupMeasurements with WidgetsBindingObserver {
       'process': _process,
       'seq': ++_seq,
       'mono_us': _clock(),
-      'action': _action,
+      'action': request == null
+          ? _action
+          : (_requestActions[request] ?? _action),
       'event': event,
       'game': game ?? _game,
       'value': ?value,
       'request': ?request,
       'command': ?command,
       'link': ?link,
+      'source': ?source,
     };
     _journal.add(row);
     if (_journal.length > capacity) {

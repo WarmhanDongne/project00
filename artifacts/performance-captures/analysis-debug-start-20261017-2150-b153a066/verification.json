@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "captures": 16,
+  "capturesWithEvents": 13,
+  "events": 880,
+  "originalFilesUnchanged": 77,
+  "integrityListedFilesVerified": 61,
+  "sequenceAndMonotonicity": "PASS_FOR_ALL_RECORDED_ROLES",
+  "recordedWorkingCopyFingerprintsMatch": true,
+  "sourceAndIndexUnchanged": true,
+  "analysisDataSha256": "13c119389e615d14dbf208579f5de0c8be1bf5aa9f44873509b8b13467e8e1d9",
+  "reportSha256": "8b6103a594c656e4e030580f3ff91533f5d08342b3572efbf7fc75b69b0dcb11",
+  "reportLineCount": 138,
+  "finalOriginalHashRecheck": "PASS",
+  "finalTrackedStateRecheck": "PASS",
+  "analysisScriptExitCode": 0,
+  "reportScriptExitCode": 0
+}

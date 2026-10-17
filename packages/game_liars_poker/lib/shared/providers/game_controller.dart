@@ -621,7 +621,18 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
       );
     }
     measurement.record('public_applied', value: revision);
-    measurement.state('session_can_send', recoverySession.canSend ? 1 : 0);
+    if (nextRound == 1) {
+      measurement.state('participant_count', nextPlayers.length);
+    }
+    measurement.sessionState(
+      localUsable: recoverySession.localUsable,
+      transportConnected: recoverySession.transportConnected,
+      transportRecovering: recoverySession.transportRecovering,
+      controllerAvailable: recoverySession.controllerAvailable,
+      serverConfirmed: recoverySession.serverConfirmed,
+      paused: recoverySession.paused,
+      leaving: recoverySession.leaving,
+    );
     // 발행한 뒤에 검사해야 새 상태를 기준으로 판단합니다.
     _completeInitialDataIfReady();
   }

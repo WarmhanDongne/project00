@@ -5,6 +5,8 @@ One invocation = one explicitly armed scenario/trial on all participating device
 """
 import argparse
 import hashlib
+import http.client
+from concurrent.futures import ThreadPoolExecutor
 import json
 import re
 import secrets
@@ -12,8 +14,9 @@ import subprocess
 import time
 from datetime import datetime
 import urllib.parse
-import urllib.request
 from pathlib import Path
+
+from measurement_analysis import MAX_CLOCK_WIDTH_US, analyze, clock_offset
 
 ROLES = {"tablet", "phone_A", "phone_B", "phone_C", "phone_D", "phone_E", "phone_F"}
 SCENARIOS = {"initial_start", "menu_restart", "result_restart"}
@@ -26,17 +29,19 @@ tablet_stage tablet_deal_completed tablet_round_reveal_completed phone_stage
 pack_entry_started pack_tappable_frame pack_tap_accepted reveal_completed
 controls_started controls_completed phone_game_intro_completed phone_gate hand_gate
 phone_hand_selectable_frame phone_first_turn_playable_frame card_selection_handler
-submit_handler""".split())
+submit_handler submit_result command_error session_blockers participant_count
+startup_uncovered phone_waiting_for_deal tablet_deck_tappable_frame
+tablet_deck_entry_started tablet_deck_entry_completed tablet_deck_tap_accepted
+tablet_deal_started tablet_deal_animation_completed""".split())
 FIELDS = {"schema", "capture", "trial", "scenario", "role", "process", "seq",
-          "mono_us", "action", "event", "game", "value", "request", "command", "link"}
-TOKEN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+          "mono_us", "action", "event", "game", "value", "request", "command", "link", "source"}
 HEX32 = re.compile(r"^[0-9a-f]{32}$")
 
 
 def validate_event(event, role, capture, trial):
     if not isinstance(event, dict) or set(event) - FIELDS:
         raise ValueError("unexpected_event_fields")
-    if (event.get("schema") != 1 or event.get("event") not in EVENTS
+    if (event.get("schema") != 2 or event.get("event") not in EVENTS
             or event.get("role") != role or event.get("capture") != capture
             or event.get("trial") != trial or event.get("scenario") not in SCENARIOS):
         raise ValueError("unexpected_event_identity")
@@ -53,173 +58,9 @@ def validate_event(event, role, capture, trial):
             raise ValueError("invalid_alias")
     if "command" in event and not re.fullmatch(r"game_liars_poker_[a-z_]{1,48}", event["command"]):
         raise ValueError("invalid_command")
+    if "source" in event and event["source"] not in SCENARIOS:
+        raise ValueError("invalid_action_source")
     return event
-
-
-def clock_offset(probes):
-    """Estimated interval, with explicit 200 ppm drift allowance + 5ms margin.
-
-    Not a hardware-guaranteed bound. Reject incompatible calibrations rather than
-    inventing exact cross-device latency. Returned interval is deliberately wide.
-    """
-    if len(probes) < 2:
-        return None
-    if len({p["process"] for p in probes}) != 1:
-        return None
-    span = max(p["h1"] for p in probes) - min(p["h0"] for p in probes)
-    margin = 5000 + int(span * 0.0002)
-    low = max(p["h0"] - p["mono_us"] for p in probes) - margin
-    high = min(p["h1"] - p["mono_us"] for p in probes) + margin
-    if low > high:
-        return None
-    return [low, high]
-
-
-def exclusive_wait_segments(local):
-    """Only observed intervals with no known concurrent local blocker.
-
-    The caller additionally clips to tablet-ready, so parallel tablet startup
-    never gets subtracted. Missing gate state invalidates the adjusted metric.
-    """
-    states = {}
-    prompt = False
-    previous = None
-    segments, unknown = [], False
-    for e in local:
-        if prompt and previous is not None:
-            needed = {"phone_gate", "pending_commands", "session_can_send", "foreground"}
-            if not needed.issubset(states):
-                unknown = True
-            elif (states["phone_gate"] & 8 and states["pending_commands"] == 0
-                  and states["session_can_send"] == 1 and states["foreground"] == 1):
-                if e["mono_us"] > previous:
-                    segments.append([previous, e["mono_us"]])
-        if e["event"] in {"phone_gate", "pending_commands", "session_can_send", "foreground"}:
-            states[e["event"]] = e["value"]
-        if e["event"] == "pack_tappable_frame":
-            prompt = True
-        elif e["event"] == "pack_tap_accepted":
-            prompt = False
-        previous = e["mono_us"]
-    return segments, unknown or prompt
-
-
-def analyze(events, clocks, issues):
-    """Retain incomplete trials; never substitute zero or population medians."""
-    issues = list(issues)
-    starts = [e for e in events if e["event"] == "action_accepted"]
-    games = {e["game"] for e in events if e["event"] == "game_bound"}
-    if len(starts) != 1:
-        issues.append("expected_one_action")
-    if len(games) != 1:
-        issues.append("unmatched_or_multiple_games")
-    if any(e["event"] in {"game_replaced", "action_rejected"}
-           or (e["event"] == "foreground" and e.get("value") == 0) for e in events):
-        issues.append("action_or_lifecycle_interrupted")
-    target = next(iter(games)) if len(games) == 1 else None
-    tablet = [e for e in events if e["event"] == "tablet_playing_frame" and e["game"] == target]
-    phone = [e for e in events if e["event"] == "phone_first_turn_playable_frame" and e["game"] == target]
-    if len(tablet) != 1 or len(phone) != 1:
-        issues.append("missing_or_ambiguous_completion")
-    if len(phone) == 1:
-        actor, end = phone[0]["role"], phone[0]["mono_us"]
-        prompt_times = [e["mono_us"] for e in events
-                        if e["role"] == actor and e["event"] == "pack_tappable_frame"]
-        if prompt_times and any(e["role"] == actor and e["event"] == "session_can_send"
-                                and e.get("value") == 0 and min(prompt_times) <= e["mono_us"] < end
-                                for e in events):
-            issues.append("recovery_during_phone_startup")
-    offsets = {role: clock_offset(p) for role, p in clocks.items()}
-
-    def host_range(e):
-        probes = clocks.get(e["role"], [])
-        if offsets.get(e["role"]) is None:
-            return None
-        near = sorted(probes, key=lambda p: abs(p["mono_us"] - e["mono_us"]))[:3]
-        lows, highs = [], []
-        for p in near:
-            margin = 5000 + int(abs(p["mono_us"] - e["mono_us"]) * 0.0002)
-            lows.append(e["mono_us"] + p["h0"] - p["mono_us"] - margin)
-            highs.append(e["mono_us"] + p["h1"] - p["mono_us"] + margin)
-        return [max(lows), min(highs)] if max(lows) <= min(highs) else None
-
-    total = None
-    if not issues and len(starts) == len(tablet) == len(phone) == 1:
-        start, t_end, p_end = map(host_range, (starts[0], tablet[0], phone[0]))
-        if start and t_end and p_end:
-            total = [max(t_end[0], p_end[0]) - start[1], max(t_end[1], p_end[1]) - start[0]]
-            if total[0] < 0 or total[1] - total[0] > 100000:
-                issues.append("cross_device_clock_quality_failed")
-                total = None
-        else:
-            issues.append("cross_device_clock_unavailable")
-    calls = []
-    attempts = []
-    waits = []
-    for role in clocks:
-        local = sorted((e for e in events if e["role"] == role), key=lambda e: e["seq"])
-        pending = {}
-        pending_attempts = {}
-        prompt = None
-        for e in local:
-            if e["event"] == "command_start":
-                pending[e["request"]] = e
-            elif e["event"] == "command_end":
-                begin = pending.pop(e["request"], None)
-                if begin:
-                    calls.append({"role": role, "request": e["request"], "command": begin["command"],
-                                  "elapsed_us": e["mono_us"] - begin["mono_us"], "outcome": e.get("value")})
-            elif e["event"] == "attempt_start":
-                pending_attempts[e["request"]] = e
-            elif e["event"] == "attempt_end":
-                begin = pending_attempts.pop(e["request"], None)
-                if begin:
-                    attempts.append({"role": role, "request": e["request"], "attempt": begin["value"],
-                                     "elapsed_us": e["mono_us"] - begin["mono_us"], "outcome": e.get("value")})
-            elif e["event"] == "pack_tappable_frame":
-                prompt = e
-            elif e["event"] == "pack_tap_accepted" and prompt:
-                waits.append({"role": role, "elapsed_us": e["mono_us"] - prompt["mono_us"],
-                              "classification": "prompt_wait_including_possible_parallel_work"})
-                prompt = None
-        for request in pending:
-            calls.append({"role": role, "request": request, "status": "INCOMPLETE"})
-        if prompt:
-            waits.append({"role": role, "status": "NOT_TAPPED"})
-    adjusted = None
-    exclusive = None
-    adjusted_reason = "Incomplete trial, missing gates, or clock quality failure"
-    if total is not None and len(phone) == 1:
-        actor = phone[0]["role"]
-        local = sorted((e for e in events if e["role"] == actor
-                        and e["mono_us"] <= phone[0]["mono_us"]), key=lambda e: e["seq"])
-        segments, unknown = exclusive_wait_segments(local)
-        offset, t_end = offsets[actor], host_range(tablet[0])
-        if offset and t_end and not unknown:
-            exclusive = [0, 0]
-            for begin, end in segments:
-                if begin + offset[0] >= t_end[1]:
-                    exclusive[0] += end - begin
-                    exclusive[1] += end - begin
-                    continue
-                lower_start = max(begin + offset[0], t_end[0])
-                upper_start = max(begin + offset[1], t_end[1])
-                exclusive[0] += max(0, end + offset[0] - upper_start)
-                exclusive[1] += max(0, end + offset[1] - lower_start)
-            adjusted = [total[0] - exclusive[1], total[1] - exclusive[0]]
-            if adjusted[0] < 0:
-                adjusted = None
-                adjusted_reason = "Inconsistent subtraction bounds"
-            else:
-                adjusted_reason = "Observed user-only wait after tablet readiness excluded; not CPU time or a simulated instant-tap run"
-    return {"status": "VALID_OBSERVED_TRIAL" if not issues and total else "INCOMPLETE_OR_INVALID",
-            "issues": sorted(set(issues)), "total_elapsed_estimated_range_us": total,
-            "clock_offset_estimates_us": offsets, "logical_command_totals": calls,
-            "transport_attempt_round_trips": attempts, "card_pack_waits": waits,
-            "exclusive_user_wait_estimated_range_us": exclusive,
-            "user_wait_excluded_total_estimated_range_us": adjusted,
-            "user_wait_excluded_reason": adjusted_reason,
-            "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"}
 
 
 class Device:
@@ -231,6 +72,7 @@ class Device:
         self.after = 0
         self.process = None
         self.probes = []
+        self.http = None
 
     def shell_adb(self, *args):
         return subprocess.run([self.adb, "-s", self.serial, *args], check=True,
@@ -247,6 +89,7 @@ class Device:
             raise RuntimeError("unexpected_service_address")
         self.port = int(self.shell_adb("forward", "tcp:0", f"tcp:{remote.port}").strip())
         self.uri = f"http://127.0.0.1:{self.port}{remote.path.rstrip('/')}/"
+        self.http = http.client.HTTPConnection("127.0.0.1", self.port, timeout=8)
         vm = self.rpc("getVM")
         for isolate in vm["isolates"]:
             info = self.rpc("getIsolate", isolateId=isolate["id"])
@@ -258,10 +101,14 @@ class Device:
     def rpc(self, method, **args):
         query = urllib.parse.urlencode(args)
         request = self.uri + method + ("?" + query if query else "")
-        # Disable ambient proxies for the authenticated local service connection.
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(request, timeout=8) as response:
-            envelope = json.load(response)
+        # Persistent direct loopback HTTP; no ambient proxy, no saved auth URI.
+        parsed = urllib.parse.urlsplit(request)
+        self.http.request("GET", parsed.path + ("?" + parsed.query if parsed.query else ""))
+        response = self.http.getresponse()
+        body = response.read()
+        if response.status != 200:
+            raise RuntimeError("vm_service_http_error")
+        envelope = json.loads(body)
         if "error" in envelope:
             raise RuntimeError("vm_service_error")
         return envelope["result"]
@@ -276,6 +123,8 @@ class Device:
         h0 = time.monotonic_ns() // 1000
         reply = self.control("clock")
         h1 = time.monotonic_ns() // 1000
+        if reply.get("protocol") != 2:
+            raise RuntimeError("measurement_protocol_requires_new_debug_build")
         if (not re.fullmatch(r"[0-9a-f]{12}", reply.get("process", ""))
                 or type(reply.get("mono_us")) is not int or reply["mono_us"] < 0):
             raise RuntimeError("invalid_clock_reply")
@@ -286,6 +135,8 @@ class Device:
                             "process": reply["process"], "mono_us": reply["mono_us"]})
 
     def close(self):
+        if self.http:
+            self.http.close()
         if self.port:
             self.shell_adb("forward", "--remove", f"tcp:{self.port}")
 
@@ -298,14 +149,24 @@ def write_report(out, summary):
              f"- 사용자 단독 대기 제외: {seconds(summary['user_wait_excluded_total_estimated_range_us'])}",
              "- 기기 간 시간은 시계 교환·드리프트 가정을 적용한 추정 범위다. Release 성능으로 사용하지 않는다.",
              "- 논리 명령 시간에는 사전 준비·재시도·정리가 포함된다. 실제 전송 시도 왕복은 별도로 확인한다.",
-             "- 사용자 대기는 첫 턴 폰의 관측 구간 중 동시 작업·태블릿 준비와 겹치지 않는 구간만 제외한다.", "",
+             "- 태블릿·선공 폰의 자동 작업이 모두 관측상 없고 사용자 탭을 기다리는 구간만 제외한다.", "",
              "## 수집·판정 문제", ""]
     lines += [f"- {issue}" for issue in summary["issues"]] or ["없음"]
-    lines += ["", "## 논리 명령", "", "| 기기 | 함수 | 요청 | 소요(ms) / 상태 |",
-              "| --- | --- | ---: | ---: |"]
+    lines += ["", f"- 실제 조작: {summary['actual_scenario']}",
+              f"- 시계 품질 기준: 추정 범위 폭 {summary['quality_limit_us']/1000:.0f}ms 이하",
+              f"- 예비 검증 실제 선택·제출: {summary['progress']['input_validation']}"]
+    lines += [f"- 참고: {warning}" for warning in summary["warnings"]]
+    lines += ["", "## 같은 기기의 관측 구간", "", "| 기기 | 시작 → 종료 | 소요(ms) |",
+              "| --- | --- | ---: |"]
+    for stage in summary["local_milestones"]:
+        lines.append(f"| {stage['role']} | {stage['from']} → {stage['to']} | {stage['elapsed_us']/1000:.3f} |")
+    lines += ["", "연출·요청은 병행할 수 있다. 위 구간을 합산해 전체 시간으로 사용하지 않는다.",
+              "", "## 논리 명령", "", "| 기기 | 함수 | 요청 | 소요(ms) | 결과 |",
+              "| --- | --- | ---: | ---: | --- |"]
     for call in summary["logical_command_totals"]:
         duration = str(round(call["elapsed_us"]/1000, 3)) if "elapsed_us" in call else "미완료"
-        lines.append(f"| {call['role']} | {call.get('command', '미확정')} | {call['request']} | {duration} |")
+        outcome = {1: '성공', 2: '실패 반환', 3: '예외'}.get(call.get('outcome'), '미완료')
+        lines.append(f"| {call['role']} | {call.get('command', '미확정')} | {call['request']} | {duration} | {outcome} |")
     lines += ["", "세부 단계·요청별 전송 시도·대기 분류는 summary.json과 events.sanitized.jsonl에 보존한다.", ""]
     (out / "REPORT.md").write_text("\n".join(lines), encoding="utf-8")
 
@@ -316,6 +177,7 @@ def main():
     parser.add_argument("--device", action="append", required=True, help="role=adb-serial (not saved)")
     parser.add_argument("--scenario", choices=sorted(SCENARIOS), required=True)
     parser.add_argument("--condition", choices=["first_after_launch", "repeated", "unspecified"], default="unspecified")
+    parser.add_argument("--pilot", action="store_true", help="Require real selection and successful submission after completion")
     parser.add_argument("--duration", type=int, default=180)
     parser.add_argument("--output-parent", type=Path, default=Path("artifacts/performance-captures"))
     args = parser.parse_args()
@@ -324,7 +186,7 @@ def main():
     devices = []
     for item in args.device:
         role, separator, serial = item.partition("=")
-        if not separator or role not in ROLES or any(d.role == role for d in devices) or not serial:
+        if not separator or role not in ROLES or any(d.role == role or d.serial == serial for d in devices) or not serial:
             parser.error("unique allowed roles required")
         devices.append(Device(args.adb, role, serial))
     if "tablet" not in {d.role for d in devices} or len(devices) < 2:
@@ -336,6 +198,8 @@ def main():
     started_at = datetime.now().astimezone().isoformat()
     events, issues, armed = [], [], []
     status = "FAILED"
+    failure_phase = "connecting"
+    last_progress = None
 
     def drain(device, stream):
         while True:
@@ -357,13 +221,20 @@ def main():
                 return
 
     try:
-        for device in devices:
+        def connect_and_calibrate(device):
             device.connect()
-            for _ in range(3):
+            for _ in range(5):
                 device.probe()
+        with ThreadPoolExecutor(max_workers=len(devices)) as pool:
+            list(pool.map(connect_and_calibrate, devices))
+        failure_phase = "clock_preflight"
+        offsets = [clock_offset(d.probes) for d in devices]
+        if any(o is None for o in offsets) or 2 * max(o[1] - o[0] for o in offsets) > MAX_CLOCK_WIDTH_US:
+            raise RuntimeError("clock_preflight_quality_failed")
         for device in devices:
             device.control("arm", capture=capture, trial=trial, role=device.role, scenario=args.scenario, key=key)
             armed.append(device)
+        failure_phase = "collecting"
         print("COLLECTING: all devices armed. Perform one start/restart only.", flush=True)
         print(f"Stop by creating {out / 'stop.request'} or press Ctrl+C.", flush=True)
         deadline, next_probe = time.monotonic() + args.duration, time.monotonic()
@@ -373,9 +244,19 @@ def main():
                     for device in devices:
                         drain(device, stream)
                     if time.monotonic() >= next_probe:
-                        for device in devices:
-                            device.probe()
-                        next_probe = time.monotonic() + 3
+                        def sample_clock(device):
+                            for _ in range(2):
+                                device.probe()
+                        with ThreadPoolExecutor(max_workers=len(devices)) as pool:
+                            list(pool.map(sample_clock, devices))
+                        next_probe = time.monotonic() + 2
+                    current = analyze(events, {d.role: d.probes for d in devices}, [])
+                    progress = (current["status"], current["actual_scenario"],
+                                current["progress"], current["user_wait_excluded_total_estimated_range_us"] is not None)
+                    if progress != last_progress:
+                        print("PROGRESS:", json.dumps({"status": progress[0], "actual_scenario": progress[1],
+                              **progress[2], "wait_exclusion_measured": progress[3]}, ensure_ascii=False), flush=True)
+                        last_progress = progress
                     time.sleep(0.2)
             except KeyboardInterrupt:
                 pass
@@ -385,7 +266,11 @@ def main():
                     drain(device, stream)
                     device.probe()
         status = "COLLECTED"
-    except Exception:
+    except Exception as error:
+        if str(error) in {"measurement_protocol_requires_new_debug_build", "clock_preflight_quality_failed",
+                          "event_sequence_gap", "event_loss_or_process_replaced", "event_process_mismatch"}:
+            issues.append(str(error))
+        issues.append("failed_phase_" + failure_phase)
         # Exception messages from HTTP/adb can contain URI tokens or device IDs.
         issues.append("collector_failed_or_incomplete")
         print("Collection incomplete. No raw exception or credentials stored.", flush=True)
@@ -402,9 +287,13 @@ def main():
                 issues.append("forward_cleanup_failed")
         clocks = {d.role: d.probes for d in devices}
         summary = analyze(events, clocks, issues)
+        summary["pilot_requested"] = args.pilot
+        summary["pilot_passed"] = (summary["status"] == "VALID_OBSERVED_TRIAL"
+            and summary["user_wait_excluded_total_estimated_range_us"] is not None
+            and all(summary["progress"]["input_validation"].values())) if args.pilot else None
         (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
         write_report(out, summary)
-        manifest = {"capture": capture, "scenario": args.scenario, "status": status,
+        manifest = {"protocol": 2, "quality_limit_us": MAX_CLOCK_WIDTH_US, "pilot": args.pilot, "capture": capture, "scenario": args.scenario, "status": status,
                     "condition": args.condition,
                     "started_at": started_at,
                     "roles": [d.role for d in devices], "events": len(events),
@@ -421,7 +310,9 @@ def main():
                    "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart",
                    "packages/game_liars_poker/lib/shared/providers/game_controller.dart",
                    "packages/game_liars_poker/lib/tablet/src/board_state.dart",
-                   "tool/startup_measurements/collect.py"]
+                   "tool/startup_measurements/collect.py",
+                   "tool/startup_measurements/measurement_analysis.py",
+                   "packages/game_kit/lib/tablet/animations/card_deal_animation.dart"]
         manifest["working_copy_sources_sha256"] = {
             name: hashlib.sha256((repo / name).read_bytes()).hexdigest()
             for name in sources if (repo / name).is_file()}
@@ -438,7 +329,7 @@ def main():
         hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir() if p.is_file()}
         (out / "integrity.json").write_text(json.dumps(hashes, indent=2), encoding="utf-8")
     print(f"{status}: {out}", flush=True)
-    return 0 if status == "COLLECTED" and summary["status"] == "VALID_OBSERVED_TRIAL" else 1
+    return 0 if status == "COLLECTED" and summary["status"] == "VALID_OBSERVED_TRIAL" and (not args.pilot or summary["pilot_passed"]) else 1
 
 
 if __name__ == "__main__":

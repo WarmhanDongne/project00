@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'package:game_kit/phone/animations/card_receive_animation.dart';
+import 'package:game_kit/tablet/animations/card_deal_animation.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 Map<String, String> arm({String trial = 'one', String role = 'tablet'}) => {
   'op': 'arm',
@@ -19,6 +21,158 @@ List<Map<String, Object?>> events(StartupMeasurements m) =>
         .cast<Map<String, Object?>>();
 
 void main() {
+  testWidgets('two real deck taps are retained for ambiguous-trial rejection', (
+    tester,
+  ) async {
+    final m = StartupMeasurements(enabled: true);
+    StartupMeasurements.testInstance = m;
+    addTearDown(() => StartupMeasurements.testInstance = null);
+    m.control(arm());
+    m.bindGame('new-game');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CardDealAnimation(
+          playerCount: 2,
+          cardsPerPlayer: 1,
+          cardBuilder: (_, _, _) => const ColoredBox(color: Colors.red),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(GestureDetector));
+    await tester.tap(find.byType(GestureDetector));
+    expect(
+      events(m).where((e) => e['event'] == 'tablet_deck_tap_accepted'),
+      hasLength(2),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      events(m).where((e) => e['event'] == 'tablet_deal_started'),
+        isNotEmpty,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  test(
+    'actual source and request action survive mismatched label and retry',
+    () async {
+      final m = StartupMeasurements(enabled: true);
+      m.control(arm());
+      expect(m.control({'op': 'clock'})['protocol'], 2);
+      m.beginAction('result_restart');
+      final response = Completer<Map<String, dynamic>>();
+      final pending = m.measureCommand(
+        'game_liars_poker_start_game',
+        warmup: false,
+        send: () => response.future,
+      );
+      m.beginAction('menu_restart');
+      response.complete({'success': true});
+      await pending;
+      final actions = events(
+        m,
+      ).where((e) => e['event'] == 'action_accepted').toList();
+      expect(actions.map((e) => e['action']), [1, 2]);
+      expect(actions.map((e) => e['source']), [
+        'result_restart',
+        'menu_restart',
+      ]);
+      expect(
+        events(m).singleWhere((e) => e['event'] == 'command_end')['action'],
+        1,
+      );
+    },
+  );
+
+  test(
+    'only allowlisted error codes and composite gate reasons leave recorder',
+    () {
+      final m = StartupMeasurements(enabled: true)..control(arm());
+      m.recordError(
+        FirebaseFunctionsException(
+          code: 'deadline-exceeded',
+          message: 'secret',
+          details: {'private': 'secret'},
+        ),
+        request: 1,
+      );
+      m.recordError(
+        FirebaseFunctionsException(code: 'secret', message: 'secret'),
+        request: 2,
+      );
+      m.sessionState(
+        localUsable: false,
+        transportConnected: true,
+        transportRecovering: false,
+        controllerAvailable: true,
+        serverConfirmed: true,
+        paused: false,
+        leaving: false,
+      );
+      expect(
+        events(
+          m,
+        ).where((e) => e['event'] == 'command_error').map((e) => e['value']),
+        [3, 0],
+      );
+      expect(
+        events(m).lastWhere((e) => e['event'] == 'session_blockers')['value'],
+        1,
+      );
+      expect(jsonEncode(events(m)), isNot(contains('secret')));
+    },
+  );
+
+  for (final earlyTap in [false, true]) {
+    testWidgets(
+      'tablet deck measures entry, real tap and actual deal (early=$earlyTap)',
+      (tester) async {
+        final m = StartupMeasurements(enabled: true);
+        StartupMeasurements.testInstance = m;
+        addTearDown(() => StartupMeasurements.testInstance = null);
+        m.control(arm());
+        m.bindGame('new-game');
+        await tester.pumpWidget(
+          MaterialApp(
+            home: CardDealAnimation(
+              playerCount: 2,
+              cardsPerPlayer: 1,
+              cardBuilder: (_, _, _) => const ColoredBox(color: Colors.red),
+            ),
+          ),
+        );
+        List<String> names() =>
+            events(m).map((e) => e['event']! as String).toList();
+        expect(names(), contains('tablet_deck_tappable_frame'));
+        if (earlyTap) {
+          await tester.tap(find.byType(GestureDetector));
+          expect(names(), contains('tablet_deck_tap_accepted'));
+          expect(names(), isNot(contains('tablet_deal_started')));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 700));
+        } else {
+          await tester.pumpAndSettle();
+          await tester.pump(const Duration(seconds: 5));
+          expect(names(), contains('tablet_deck_entry_completed'));
+          expect(names(), isNot(contains('tablet_deal_started')));
+          await tester.tap(find.byType(GestureDetector));
+        }
+        await tester.pumpAndSettle();
+        expect(
+          names().where((n) => n == 'tablet_deck_tap_accepted'),
+          hasLength(1),
+        );
+        expect(names().where((n) => n == 'tablet_deal_started'), hasLength(1));
+        expect(
+          names().where((n) => n == 'tablet_deal_animation_completed'),
+          hasLength(1),
+        );
+        expect(
+          names().indexOf('tablet_deck_entry_completed'),
+          lessThan(names().indexOf('tablet_deal_started')),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
   test(
     'disabled recorder does not collect, alter results, or swallow errors',
     () async {
@@ -64,12 +218,9 @@ void main() {
       a.beginAction('initial_start');
       expect(
         events(a).where((e) => e['event'] == 'action_accepted'),
-        hasLength(1),
+        hasLength(2),
       );
-      expect(
-        events(a).where((e) => e['event'] == 'action_rejected'),
-        hasLength(1),
-      );
+      expect(events(a).where((e) => e['event'] == 'action_rejected'), isEmpty);
     },
   );
 
@@ -143,6 +294,7 @@ void main() {
       final m = StartupMeasurements(enabled: true);
       m.control(arm(role: 'phone_A'));
       m.bindGame('game-one');
+      m.state('session_can_send', 1);
       final old = m.game!;
       m.phoneGate(
         game: old,
@@ -169,6 +321,7 @@ void main() {
         isEmpty,
       );
       m.bindGame('game-two');
+      m.state('session_can_send', 1);
       m.handGate(old, selectable: true, submittable: true);
       m.didChangeAppLifecycleState(AppLifecycleState.resumed);
       m.phoneGate(

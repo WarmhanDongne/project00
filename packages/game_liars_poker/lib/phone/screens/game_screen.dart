@@ -98,11 +98,33 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
       );
       final regions = widget.flowConfig.stepFor(stage).phoneRegions;
       measurement.state('phone_stage', stage.index, game: game);
-      measurement.state(
-        'session_can_send',
-        controller.recoverySession.canSend ? 1 : 0,
-        game: game,
+      measurement.sessionState(
+        localUsable: controller.recoverySession.localUsable,
+        transportConnected: controller.recoverySession.transportConnected,
+        transportRecovering: controller.recoverySession.transportRecovering,
+        controllerAvailable: controller.recoverySession.controllerAvailable,
+        serverConfirmed: controller.recoverySession.serverConfirmed,
+        paused: controller.recoverySession.paused,
+        leaving: controller.recoverySession.leaving,
       );
+      measurement.state(
+        'startup_uncovered',
+        ModalRoute.isCurrentOf(context) == true &&
+                controller.interruption == null &&
+                !controller.isInitialLoading &&
+                !widget.showSpectatorTopBar
+            ? 1
+            : 0,
+      );
+      measurement.state(
+        'phone_waiting_for_deal',
+        stage == LiarsPokerPhoneStage.dealing &&
+                !_isRevealInProgress &&
+                !_controlsEntryController.isAnimating
+            ? 1
+            : 0,
+      );
+
       measurement.phoneGate(
         game: game,
         selectable:

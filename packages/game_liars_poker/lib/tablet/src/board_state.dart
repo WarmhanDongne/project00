@@ -610,10 +610,25 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _measurementFramePending = false;
       if (!mounted || measurement.game != measurementGame) return;
-      measurement.state(
-        'session_can_send',
-        game.recoverySession.canSend ? 1 : 0,
+      measurement.sessionState(
+        localUsable: game.recoverySession.localUsable,
+        transportConnected: game.recoverySession.transportConnected,
+        transportRecovering: game.recoverySession.transportRecovering,
+        controllerAvailable: game.recoverySession.controllerAvailable,
+        serverConfirmed: game.recoverySession.serverConfirmed,
+        paused: game.recoverySession.paused,
+        leaving: game.recoverySession.leaving,
       );
+      measurement.state(
+        'startup_uncovered',
+        ModalRoute.isCurrentOf(context) == true &&
+                !_isExitingToLobby &&
+                !game.isFinished &&
+                game.interruption == null
+            ? 1
+            : 0,
+      );
+
       final ready =
           measurement.foreground &&
           _stage == LiarsPokerTabletStage.playing &&

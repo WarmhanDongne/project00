@@ -376,6 +376,10 @@ abstract class GameCommandService {
                 ? Map<String, dynamic>.from(response.data as Map)
                 : const <String, dynamic>{};
           } catch (error) {
+            StartupMeasurements.instance.recordError(
+              error,
+              request: StartupMeasurements.instance.currentRequest,
+            );
             StartupMeasurements.instance.record(
               'attempt_end',
               request: StartupMeasurements.instance.currentRequest,

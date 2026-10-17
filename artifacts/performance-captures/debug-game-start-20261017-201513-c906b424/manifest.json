@@ -1,0 +1,228 @@
+{
+  "capture": "debug-game-start-20261017-201513-c906b424",
+  "scenario": "initial_start",
+  "status": "COLLECTED",
+  "condition": "first_after_launch",
+  "started_at": "2026-10-17T20:15:13.349841+09:00",
+  "roles": [
+    "tablet",
+    "phone_A"
+  ],
+  "events": 83,
+  "clocks": {
+    "tablet": [
+      {
+        "h0": 112580184658,
+        "h1": 112580273947,
+        "process": "3dbd72254b2e",
+        "mono_us": 1950189374
+      },
+      {
+        "h0": 112580274134,
+        "h1": 112580384918,
+        "process": "3dbd72254b2e",
+        "mono_us": 1950300491
+      },
+      {
+        "h0": 112580384953,
+        "h1": 112580473653,
+        "process": "3dbd72254b2e",
+        "mono_us": 1950390152
+      },
+      {
+        "h0": 112584515916,
+        "h1": 112584757360,
+        "process": "3dbd72254b2e",
+        "mono_us": 1954672117
+      },
+      {
+        "h0": 112588355284,
+        "h1": 112588454133,
+        "process": "3dbd72254b2e",
+        "mono_us": 1958370093
+      },
+      {
+        "h0": 112591942755,
+        "h1": 112592058056,
+        "process": "3dbd72254b2e",
+        "mono_us": 1961966877
+      },
+      {
+        "h0": 112595420144,
+        "h1": 112595505823,
+        "process": "3dbd72254b2e",
+        "mono_us": 1965420730
+      },
+      {
+        "h0": 112598828327,
+        "h1": 112598913025,
+        "process": "3dbd72254b2e",
+        "mono_us": 1968828449
+      },
+      {
+        "h0": 112602185199,
+        "h1": 112602277525,
+        "process": "3dbd72254b2e",
+        "mono_us": 1972190964
+      },
+      {
+        "h0": 112605561912,
+        "h1": 112605667953,
+        "process": "3dbd72254b2e",
+        "mono_us": 1975584827
+      },
+      {
+        "h0": 112608961226,
+        "h1": 112609035660,
+        "process": "3dbd72254b2e",
+        "mono_us": 1978951050
+      },
+      {
+        "h0": 112612388427,
+        "h1": 112612491125,
+        "process": "3dbd72254b2e",
+        "mono_us": 1982407324
+      },
+      {
+        "h0": 112615696446,
+        "h1": 112615780320,
+        "process": "3dbd72254b2e",
+        "mono_us": 1985695122
+      },
+      {
+        "h0": 112618994287,
+        "h1": 112619075232,
+        "process": "3dbd72254b2e",
+        "mono_us": 1988990419
+      },
+      {
+        "h0": 112622779061,
+        "h1": 112623017159,
+        "process": "3dbd72254b2e",
+        "mono_us": 1992929791
+      },
+      {
+        "h0": 112626141580,
+        "h1": 112626240002,
+        "process": "3dbd72254b2e",
+        "mono_us": 1996154199
+      }
+    ],
+    "phone_A": [
+      {
+        "h0": 112582808879,
+        "h1": 112583083254,
+        "process": "758a6423ea04",
+        "mono_us": 1950175639
+      },
+      {
+        "h0": 112583083287,
+        "h1": 112583299064,
+        "process": "758a6423ea04",
+        "mono_us": 1950389688
+      },
+      {
+        "h0": 112583299091,
+        "h1": 112583498054,
+        "process": "758a6423ea04",
+        "mono_us": 1950587946
+      },
+      {
+        "h0": 112584757400,
+        "h1": 112585017361,
+        "process": "758a6423ea04",
+        "mono_us": 1952105409
+      },
+      {
+        "h0": 112588454154,
+        "h1": 112588543931,
+        "process": "758a6423ea04",
+        "mono_us": 1955632409
+      },
+      {
+        "h0": 112592058084,
+        "h1": 112592166844,
+        "process": "758a6423ea04",
+        "mono_us": 1959256374
+      },
+      {
+        "h0": 112595505842,
+        "h1": 112595614035,
+        "process": "758a6423ea04",
+        "mono_us": 1962702588
+      },
+      {
+        "h0": 112598913037,
+        "h1": 112598988049,
+        "process": "758a6423ea04",
+        "mono_us": 1966077858
+      },
+      {
+        "h0": 112602277539,
+        "h1": 112602362839,
+        "process": "758a6423ea04",
+        "mono_us": 1969453949
+      },
+      {
+        "h0": 112605667969,
+        "h1": 112605767594,
+        "process": "758a6423ea04",
+        "mono_us": 1972855655
+      },
+      {
+        "h0": 112609035674,
+        "h1": 112609132724,
+        "process": "758a6423ea04",
+        "mono_us": 1976222255
+      },
+      {
+        "h0": 112612491142,
+        "h1": 112612587146,
+        "process": "758a6423ea04",
+        "mono_us": 1979678425
+      },
+      {
+        "h0": 112615780351,
+        "h1": 112615873380,
+        "process": "758a6423ea04",
+        "mono_us": 1982965003
+      },
+      {
+        "h0": 112619075252,
+        "h1": 112619293807,
+        "process": "758a6423ea04",
+        "mono_us": 1986385040
+      },
+      {
+        "h0": 112623017195,
+        "h1": 112623259844,
+        "process": "758a6423ea04",
+        "mono_us": 1990352590
+      },
+      {
+        "h0": 112626433706,
+        "h1": 112626544700,
+        "process": "758a6423ea04",
+        "mono_us": 1993634079
+      }
+    ]
+  },
+  "privacy": "No service URIs, keys, serials, identifiers, raw logs or payloads",
+  "working_copy_sources_sha256": {
+    "lib/main.dart": "5a676276f7164035cf96c0df67beadd088717350a05599a083b046f77100bd2b",
+    "lib/platform/home/tablet/tablet_game_start.dart": "fd5d59a38d2aa755c29fa8353e02e50347a97a972a9a354fb843bc1259170066",
+    "packages/game_kit/lib/core/diagnostics/startup_measurements.dart": "c4e147cbf2450d334ba2b226fb6fed7ef61d096fc606d88541fd5af83ef40d95",
+    "packages/game_kit/lib/phone/animations/card_receive_animation.dart": "16122cff302f5e9b14fcfa24e28c772772d6f4c434ae8887138988d1e2061470",
+    "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart": "781a8da230b23d5b1fcd04c23c6e1e835a251314f5842324afcb60650410ddb1",
+    "packages/game_kit/lib/recovery/providers/game_session_controller.dart": "230b1aec54bf4b48bef50c701e0a242ba7732f4e7476fd8d38b33de0da01d0b4",
+    "packages/game_kit/lib/services/game_command_service.dart": "1808f4827d6fb9a84050db12caf73a7356e2d492a488e8b5870e1543b174e4ab",
+    "packages/game_kit/lib/tablet/widgets/game_settings_dialog.dart": "0fbc169b1c5f2d41cc3ffd176b056416ad83a8cff15fc58e76ab5e7b8e2234ed",
+    "packages/game_liars_poker/lib/phone/screens/game_screen.dart": "b52d547ce7a9860c381c8f6551137638db4de2783222d87b2377e372aebf32bb",
+    "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart": "be1db32b8cc46258dc5c3cf85582f066bf64c4e56a4e5bf08b7e009ff62912b0",
+    "packages/game_liars_poker/lib/shared/providers/game_controller.dart": "d5c709e294c2668223124b60f0f759c20ea0932f5fa798c554bf98daf44da357",
+    "packages/game_liars_poker/lib/tablet/src/board_state.dart": "79edf59364404a35aaa9d154682d111adbccdf9d4fb14f794c8885f2a12f90ab",
+    "tool/startup_measurements/collect.py": "e1bd29283507fb3c1ef0e57315ff246e8ed2858bc983048dd512592fab1b5890"
+  },
+  "source_note": "Collector working copy snapshot; not an attestation of the installed APK",
+  "working_copy_head": "a5fd5eed5af2e57b08542367e01e6547511f4359"
+}

@@ -1,0 +1,25 @@
+# Debug 게임 시작·재시작 측정
+
+판정: INCOMPLETE_OR_INVALID
+
+- 전체 준비 완료: 미측정
+- 사용자 단독 대기 제외: 미측정
+- 기기 간 시간은 시계 교환·드리프트 가정을 적용한 추정 범위다. Release 성능으로 사용하지 않는다.
+- 논리 명령 시간에는 사전 준비·재시도·정리가 포함된다. 실제 전송 시도 왕복은 별도로 확인한다.
+- 사용자 대기는 첫 턴 폰의 관측 구간 중 동시 작업·태블릿 준비와 겹치지 않는 구간만 제외한다.
+
+## 수집·판정 문제
+
+- action_or_lifecycle_interrupted
+- expected_one_action
+- recovery_during_phone_startup
+
+## 논리 명령
+
+| 기기 | 함수 | 요청 | 소요(ms) / 상태 |
+| --- | --- | ---: | ---: |
+| tablet | game_liars_poker_start_game | 1 | 950.831 |
+| tablet | game_liars_poker_complete_dealing | 2 | 1425.616 |
+| phone_A | game_liars_poker_ready_turn | 1 | 496.967 |
+
+세부 단계·요청별 전송 시도·대기 분류는 summary.json과 events.sanitized.jsonl에 보존한다.

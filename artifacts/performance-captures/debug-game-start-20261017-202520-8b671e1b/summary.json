@@ -1,0 +1,38 @@
+{
+  "status": "INCOMPLETE_OR_INVALID",
+  "issues": [
+    "action_or_lifecycle_interrupted",
+    "missing_or_ambiguous_completion"
+  ],
+  "total_elapsed_estimated_range_us": null,
+  "clock_offset_estimates_us": {
+    "tablet": [
+      110630005169,
+      110630092195
+    ],
+    "phone_A": [
+      110632820833,
+      110632920157
+    ]
+  },
+  "logical_command_totals": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "command": "game_liars_poker_start_game",
+      "elapsed_us": 8037272,
+      "outcome": 3
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "status": "INCOMPLETE"
+    }
+  ],
+  "transport_attempt_round_trips": [],
+  "card_pack_waits": [],
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Incomplete trial, missing gates, or clock quality failure",
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"
+}

@@ -389,16 +389,17 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   }
 
   Future<void> _submitSelectedCards() async {
+    if (_selectedCardIds.isEmpty ||
+        !widget.submissionEnabled ||
+        _isSubmitting) {
+      return;
+    }
+
     if (_measurementGame != null) {
       StartupMeasurements.instance.record(
         'submit_handler',
         game: _measurementGame,
       );
-    }
-    if (_selectedCardIds.isEmpty ||
-        !widget.submissionEnabled ||
-        _isSubmitting) {
-      return;
     }
 
     final submittedIndexes = List<int>.unmodifiable(_selectedIndexes);
@@ -438,6 +439,13 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _notifySelectionChanged();
 
     final accepted = await submitFuture;
+    if (_measurementGame != null) {
+      StartupMeasurements.instance.record(
+        'submit_result',
+        game: _measurementGame,
+        value: accepted ? 1 : 0,
+      );
+    }
     if (!mounted) return;
 
     // 함수 응답을 잃었더라도 RTDB 손패가 먼저 바뀌었다면 제출 성공으로

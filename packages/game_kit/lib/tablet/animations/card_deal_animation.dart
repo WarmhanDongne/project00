@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/localization/game_locale.dart';
@@ -131,6 +132,18 @@ class CardDealAnimationState extends State<CardDealAnimation>
   Timer? _startDelayTimer;
   Timer? _completionTimer;
   bool _hasStarted = false;
+  final _measurementGame = StartupMeasurements.instance.game;
+  void _measure(String event) {
+    final m = StartupMeasurements.instance;
+    if (_measurementGame != null && m.scenario != null) {
+      if (event == 'tablet_deck_tap_accepted' ||
+          event == 'tablet_deal_started') {
+        m.record(event, game: _measurementGame);
+      } else {
+        m.once(event, game: _measurementGame);
+      }
+    }
+  }
 
   /// 현재까지 분배 효과음을 재생한 카드 수입니다.
   int _dealtSoundCount = 0;
@@ -147,10 +160,13 @@ class CardDealAnimationState extends State<CardDealAnimation>
       ..addStatusListener(_onStatusChanged)
       ..addListener(_playDealingSounds);
 
-    _deckEntryController = AnimationController(
-      vsync: this,
-      duration: _deckEntryDuration,
-    );
+    _deckEntryController =
+        AnimationController(vsync: this, duration: _deckEntryDuration)
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed) {
+              _measure('tablet_deck_entry_completed');
+            }
+          });
 
     _animation = Listenable.merge([_controller, _deckEntryController]);
 
@@ -158,6 +174,9 @@ class CardDealAnimationState extends State<CardDealAnimation>
     // 2. autoplay가 켜져 있으면 등장 연출이 끝난 뒤 카드 분배를 시작합니다.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      // The existing hit target accepts taps during entry. Do not change it.
+      if (widget.tapToStart) _measure('tablet_deck_tappable_frame');
+      _measure('tablet_deck_entry_started');
 
       await _deckEntryController.forward();
 
@@ -182,6 +201,7 @@ class CardDealAnimationState extends State<CardDealAnimation>
 
   void _onStatusChanged(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
+      _measure('tablet_deal_animation_completed');
       _completionTimer?.cancel();
       if (widget.afterDelay == Duration.zero) {
         widget.onCompleted?.call();
@@ -220,11 +240,15 @@ class CardDealAnimationState extends State<CardDealAnimation>
     _startDelayTimer?.cancel();
     _completionTimer?.cancel();
     if (widget.beforeDelay == Duration.zero) {
+      _measure('tablet_deal_started');
       _controller.forward(from: restart ? 0 : null);
       return;
     }
     _startDelayTimer = Timer(widget.beforeDelay, () {
-      if (mounted) _controller.forward(from: restart ? 0 : null);
+      if (mounted) {
+        _measure('tablet_deal_started');
+        _controller.forward(from: restart ? 0 : null);
+      }
     });
   }
 
@@ -350,7 +374,10 @@ class CardDealAnimationState extends State<CardDealAnimation>
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => play(restart: true),
+            onTap: () {
+              _measure('tablet_deck_tap_accepted');
+              play(restart: true);
+            },
           ),
         ),
       ),

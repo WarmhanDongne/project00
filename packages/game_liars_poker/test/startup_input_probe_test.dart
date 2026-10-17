@@ -22,6 +22,7 @@ void main() {
           'key': List.filled(64, 'a').join(),
         });
         metrics.bindGame('new-game');
+        metrics.state('session_can_send', 1);
         metrics.phoneGate(
           game: metrics.game,
           selectable: true,
@@ -86,6 +87,18 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         expect(submitted, hasLength(1));
+        expect(
+          rows().where((e) => e['event'] == 'card_selection_handler'),
+          isNotEmpty,
+        );
+        expect(
+          rows().where((e) => e['event'] == 'submit_handler'),
+          hasLength(1),
+        );
+        expect(
+          rows().where((e) => e['event'] == 'submit_result' && e['value'] == 1),
+          hasLength(1),
+        );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },
