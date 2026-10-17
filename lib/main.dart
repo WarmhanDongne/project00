@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
@@ -23,6 +24,7 @@ import 'package:provider/provider.dart';
 void main() async {
   // 1. Flutter 프레임워크 코어와 네이티브 엔진 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
+  StartupMeasurements.instance.install();
   // 링크 처리 인스턴스 생성. 콜드 스타트 보다 먼저 생성. 이메일 인증 링크 기능도 수행
   final appLinks = AppLinks();
 

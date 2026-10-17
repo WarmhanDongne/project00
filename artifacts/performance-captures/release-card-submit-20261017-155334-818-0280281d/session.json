@@ -1,0 +1,18 @@
+{
+  "maxDurationSeconds": 1800,
+  "test": "card-submit-and-turn-transition",
+  "status": "started",
+  "game": "pending",
+  "video": "User records manually",
+  "label": "4번 카드 제출 / 다음 턴 — 재수집",
+  "phoneBCollected": false,
+  "previousInterruptedSession": "release-game-session-20261017-154859-576-34abb956",
+  "roles": [
+    "tablet",
+    "phone_A"
+  ],
+  "mode": "release",
+  "sessionId": "release-card-submit-20261017-155334-818-0280281d",
+  "rawMessagesStored": false,
+  "createdAtUtc": "2026-10-17T06:53:35.4179379+00:00"
+}

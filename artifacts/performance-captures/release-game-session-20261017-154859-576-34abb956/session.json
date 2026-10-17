@@ -1,0 +1,16 @@
+{
+  "createdAtUtc": "2026-10-17T06:49:00.2828294+00:00",
+  "phoneB": "not connected to ADB; no B collector",
+  "roles": [
+    "tablet",
+    "phone_A"
+  ],
+  "status": "started",
+  "game": "pending",
+  "rawMessagesStored": false,
+  "sessionId": "release-game-session-20261017-154859-576-34abb956",
+  "mode": "release",
+  "video": "User records manually",
+  "test": "game-session",
+  "maxDurationSeconds": 1800
+}

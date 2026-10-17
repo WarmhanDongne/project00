@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [card_receive_animation.dart] 는 휴대폰에서 카드를 받는 연출을 관리하는 파일이다.
 //
 // - [Package] : 게임 공통 기반
@@ -93,6 +94,12 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
   late final AnimationController _idleController;
   late final Listenable _animation;
 
+  final _measurementGame = StartupMeasurements.instance.game;
+  void _measure(String event) {
+    final game = _measurementGame;
+    if (game != null) StartupMeasurements.instance.once(event, game: game);
+  }
+
   bool _isEntryCompleted = false;
   bool _isRevealStarted = false;
   double _revealStartIdleOffsetY = 0;
@@ -134,6 +141,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
       _idleController,
     ]);
 
+    _measure('pack_entry_started');
     _entryController.forward();
   }
 
@@ -156,10 +164,16 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
     //=======================미공개 덱 대기 모션==============================
     // 카드가 중앙에 도착한 뒤 사용자가 누를 때까지 아주 작게 떠다닙니다.
     _idleController.repeat();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _canReveal) {
+        _measure('pack_tappable_frame');
+      }
+    });
   }
 
   void _handleRevealStatus(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
+      _measure('reveal_completed');
       widget.onCompleted?.call();
     }
   }
@@ -167,6 +181,7 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
   void _revealCards() {
     if (!_canReveal) return;
 
+    _measure('pack_tap_accepted');
     _revealStartIdleOffsetY = _currentIdleOffsetY;
     _idleController.stop();
     setState(() {

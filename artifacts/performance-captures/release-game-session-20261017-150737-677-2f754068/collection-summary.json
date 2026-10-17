@@ -1,0 +1,104 @@
+{
+  "sessionId": "release-game-session-20261017-150737-677-2f754068",
+  "status": "COLLECTED_PENDING_VIDEO_ALIGNMENT",
+  "reportedByUser": [
+    "Test completed",
+    "Phone B disconnected during test; cause not established",
+    "Approximately two additional game restarts at the end; exact count and intervals pending video"
+  ],
+  "coverageNotes": [
+    "Only tablet and phone_A logs collected; phone_B not collected",
+    "Collector interval may include preparation and post-test idle time",
+    "Network error classification is metadata only and cannot establish phone_B disconnect cause",
+    "No structured operation timing; durations and restart boundaries require video alignment",
+    "Game identity and complete test-area coverage remain unverified"
+  ],
+  "video": "User local recording; not received in this chat",
+  "serverLogs": "Not queried",
+  "devices": [
+    {
+      "role": "tablet",
+      "eventsFile": "tablet/tablet-events.sanitized.jsonl",
+      "sha256": "784e4dfedac0345663423a6b26c13f68ccdcb0588087a0d5c09371c7e03f33fe",
+      "appEvents": 2637,
+      "collectorState": "stopped",
+      "stopReason": "duration_limit",
+      "captureStartedKst": "2026-10-17T15:10:01+09:00",
+      "captureStoppedKst": "2026-10-17T15:40:02+09:00",
+      "firstEventKst": "2026-10-17T15:11:57.692+09:00",
+      "lastEventKst": "2026-10-17T15:29:04.258+09:00",
+      "structuredTimingEvents": 0,
+      "categories": {
+        "network_error": 1,
+        "metadata_only": 2516,
+        "app_check_event": 52,
+        "input_pointer_1": 34,
+        "input_pointer_0": 34
+      },
+      "networkErrorTimesKst": [
+        "2026-10-17 15:22:57.091 +09:00"
+      ]
+    },
+    {
+      "role": "phone_A",
+      "eventsFile": "phone_A/phone_A-events.sanitized.jsonl",
+      "sha256": "875ba1a73595d60fb99aff05ae08e643b0955054d3ea3fa66d7ee96cae059dc4",
+      "appEvents": 1382,
+      "collectorState": "stopped",
+      "stopReason": "logcat_eof",
+      "captureStartedKst": "2026-10-17T15:10:01+09:00",
+      "captureStoppedKst": "2026-10-17T15:38:41+09:00",
+      "firstEventKst": "2026-10-17T15:15:26.267+09:00",
+      "lastEventKst": "2026-10-17T15:36:06.561+09:00",
+      "structuredTimingEvents": 0,
+      "categories": {
+        "network_error": 37,
+        "input_pointer_0": 10,
+        "input_pointer_1": 10,
+        "metadata_only": 1311,
+        "app_check_event": 14
+      },
+      "networkErrorTimesKst": [
+        "2026-10-17 15:15:31.330 +09:00",
+        "2026-10-17 15:15:31.336 +09:00",
+        "2026-10-17 15:15:31.336 +09:00",
+        "2026-10-17 15:15:31.881 +09:00",
+        "2026-10-17 15:15:31.881 +09:00",
+        "2026-10-17 15:15:32.871 +09:00",
+        "2026-10-17 15:15:32.871 +09:00",
+        "2026-10-17 15:15:35.329 +09:00",
+        "2026-10-17 15:15:35.329 +09:00",
+        "2026-10-17 15:15:38.726 +09:00",
+        "2026-10-17 15:15:38.726 +09:00",
+        "2026-10-17 15:15:43.207 +09:00",
+        "2026-10-17 15:15:43.207 +09:00",
+        "2026-10-17 15:15:53.812 +09:00",
+        "2026-10-17 15:15:53.812 +09:00",
+        "2026-10-17 15:24:59.684 +09:00",
+        "2026-10-17 15:24:59.684 +09:00",
+        "2026-10-17 15:24:59.684 +09:00",
+        "2026-10-17 15:24:59.684 +09:00",
+        "2026-10-17 15:35:01.071 +09:00",
+        "2026-10-17 15:35:01.079 +09:00",
+        "2026-10-17 15:35:01.079 +09:00",
+        "2026-10-17 15:35:02.098 +09:00",
+        "2026-10-17 15:35:02.098 +09:00",
+        "2026-10-17 15:35:03.743 +09:00",
+        "2026-10-17 15:35:03.743 +09:00",
+        "2026-10-17 15:35:06.168 +09:00",
+        "2026-10-17 15:35:06.168 +09:00",
+        "2026-10-17 15:35:09.495 +09:00",
+        "2026-10-17 15:35:09.495 +09:00",
+        "2026-10-17 15:35:14.892 +09:00",
+        "2026-10-17 15:35:14.892 +09:00",
+        "2026-10-17 15:35:22.575 +09:00",
+        "2026-10-17 15:35:22.575 +09:00",
+        "2026-10-17 15:35:37.733 +09:00",
+        "2026-10-17 15:35:37.733 +09:00",
+        "2026-10-17 15:36:04.891 +09:00"
+      ]
+    }
+  ],
+  "totalAppEvents": 4019,
+  "verifiedAtUtc": "2026-10-17T15:42:30.5790562+09:00"
+}

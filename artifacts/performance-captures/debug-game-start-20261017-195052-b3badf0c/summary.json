@@ -1,0 +1,74 @@
+{
+  "status": "INCOMPLETE_OR_INVALID",
+  "issues": [
+    "missing_or_ambiguous_completion"
+  ],
+  "total_elapsed_estimated_range_us": null,
+  "clock_offset_estimates_us": {
+    "tablet": [
+      110630000720,
+      110630096019
+    ],
+    "phone_A": [
+      110632815078,
+      110632913440
+    ]
+  },
+  "logical_command_totals": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "command": "game_liars_poker_start_game",
+      "elapsed_us": 861282,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "command": "game_liars_poker_complete_dealing",
+      "elapsed_us": 1095237,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 3,
+      "command": "game_liars_poker_end_game",
+      "elapsed_us": 502502,
+      "outcome": 1
+    }
+  ],
+  "transport_attempt_round_trips": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 796997,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 1090962,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 3,
+      "attempt": 1,
+      "elapsed_us": 499083,
+      "outcome": 1
+    }
+  ],
+  "card_pack_waits": [
+    {
+      "role": "phone_A",
+      "elapsed_us": 1206135,
+      "classification": "prompt_wait_including_possible_parallel_work"
+    }
+  ],
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Incomplete trial, missing gates, or clock quality failure",
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"
+}

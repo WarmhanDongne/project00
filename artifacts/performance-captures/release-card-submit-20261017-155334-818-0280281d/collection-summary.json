@@ -1,0 +1,54 @@
+{
+  "sessionId": "release-card-submit-20261017-155334-818-0280281d",
+  "label": "4번 카드 제출 / 다음 턴 — 재수집",
+  "status": "COLLECTED_PENDING_VIDEO_ALIGNMENT",
+  "userReport": "테스트 종료. 중간에 태블릿이 서버와 연결되지 않는 현상 발생",
+  "cause": "미확정; 사용자 관찰이며 원인은 영상·로그 대조 필요",
+  "phoneBCollected": false,
+  "video": "사용자 로컬 녹화; 미수령",
+  "serverLogs": "조회하지 않음",
+  "devices": [
+    {
+      "role": "tablet",
+      "eventsFile": "tablet/tablet-events.sanitized.jsonl",
+      "sha256": "2cebefa8b6b1e057baa9412de41eb0cadfeb0270979b89645468787fb70d82eb",
+      "appEvents": 7338,
+      "collectorState": "stopped",
+      "stopReason": "requested",
+      "startedAtUtc": "2026-10-17T15:53:36.1328331+09:00",
+      "stoppedAtUtc": "2026-10-17T16:04:40.3408243+09:00",
+      "categories": {
+        "render_slow_frame": 3,
+        "input_pointer_1": 85,
+        "input_pointer_0": 86,
+        "app_check_event": 131,
+        "network_error": 3,
+        "render_skipped_frames": 12,
+        "timeout": 1,
+        "metadata_only": 7017
+      },
+      "structuredTimingEvents": 0
+    },
+    {
+      "role": "phone_A",
+      "eventsFile": "phone_A/phone_A-events.sanitized.jsonl",
+      "sha256": "75fae8e78658ea6bd9f8d33249e9f032547aa6070f08c15c6cdb667913d56775",
+      "appEvents": 1347,
+      "collectorState": "stopped",
+      "stopReason": "requested",
+      "startedAtUtc": "2026-10-17T15:53:36.269193+09:00",
+      "stoppedAtUtc": "2026-10-17T16:04:40.5102412+09:00",
+      "categories": {
+        "app_check_event": 44,
+        "input_pointer_0": 58,
+        "input_pointer_1": 58,
+        "metadata_only": 1178,
+        "network_error": 9
+      },
+      "structuredTimingEvents": 0
+    }
+  ],
+  "totalAppEvents": 8685,
+  "verification": "Event counts match collector status; capture_stopped flush markers present",
+  "verifiedAtUtc": "2026-10-17T07:04:57.8861541+00:00"
+}

@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:game_kit/mosi_ui/mosi_game_modal.dart';
@@ -151,7 +152,12 @@ class TabletGameSettingsDialog extends StatelessWidget {
                 radius: 12,
                 onPressed: onRestartGame == null
                     ? null
-                    : () => _closeAndRun(context, onRestartGame),
+                    : () {
+                        StartupMeasurements.instance.beginAction(
+                          'menu_restart',
+                        );
+                        _closeAndRun(context, onRestartGame);
+                      },
               ),
               const SizedBox(width: 12),
               MosiButton(

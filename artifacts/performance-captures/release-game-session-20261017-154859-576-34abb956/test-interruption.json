@@ -1,0 +1,8 @@
+{
+  "cause": "미확정",
+  "reportedByUser": "게임 시작이 안 돼 테스트 중단",
+  "label": "4번 로그 수집 중 게임 시작 지연",
+  "status": "INTERRUPTED_GAME_START_DELAY",
+  "requestedStopAtUtc": "2026-10-17T06:52:07.9519529+00:00",
+  "sessionId": "release-game-session-20261017-154859-576-34abb956"
+}

@@ -1,0 +1,1094 @@
+{
+  "status": "PARTIAL_VISUAL_MEASUREMENTS_STARTUP_AND_PHONE_PACK_WITHDRAWN",
+  "generatedAtKst": "2026-10-17T17:30:02.135728+09:00",
+  "videos": {
+    "v01": {
+      "file": "3번 1, 2 통합 비디오 폰 A_20261017_152209.mp4",
+      "sha256": "aeb93894d86ede781939df16bcbff0ece832e041abb6e377c17103cc14528517",
+      "durationSeconds": 182.0201
+    },
+    "v02": {
+      "file": "3번 2 태블릿 _20261017_152209.mp4",
+      "sha256": "a1ea1d3844eacd92b765eed87b4fd2de26ce03d96a46b6447d0088839763862b",
+      "durationSeconds": 128.7002
+    },
+    "v03": {
+      "file": "3번 게임 시작 1 태블릿_20261017_151952.mp4",
+      "sha256": "d2055ae0693874b81ed1d9a200811a6d81acd9401b081af5022444c3f512f4fe",
+      "durationSeconds": 45.1169
+    },
+    "v04": {
+      "file": "4번 카드 제출 태블릿_20261017_160400.mp4",
+      "sha256": "f18af3e12d069618e117dec871c2cdd5a79257214092f4f50197ef8f6eaba529",
+      "durationSeconds": 601.2963
+    },
+    "v05": {
+      "file": "4번 카드 제출 테스트 중 네트워크 오류 태블릿_20261017_155119.mp4",
+      "sha256": "402be379652b7cea70ebf978d9e0575c2eea18ff754f38fb44f92e72b0c94365",
+      "durationSeconds": 96.292
+    },
+    "v06": {
+      "file": "4번 카드 제출 테스트 폰 A 20261017_161134~2.mp4",
+      "sha256": "9e65705517b61acf10d52f9bf48373a3103be681469027e9042cc09e7dd0499c",
+      "durationSeconds": 602.1036
+    },
+    "v07": {
+      "file": "4번 테스트 중 네트워크 오류 폰 A_20261017_155119.mp4",
+      "sha256": "eeaa1e5adf02b4e10af8cec9c3f6b61f8dad5deacecd8063a6bdde17eb8ded02",
+      "durationSeconds": 95.5388
+    },
+    "v08": {
+      "file": "로비 방 테스트 A_20261017_122341.mp4",
+      "sha256": "63393da4b68e3016f864e2f23942872faa049b2b1d649b483db7238ee311fc00",
+      "durationSeconds": 321.8468
+    },
+    "v09": {
+      "file": "로비 테스트 태블릿_20261017_122341.mp4",
+      "sha256": "fbea19773e180f9f9ed65d7c7779d00ca5cdfd425d8f401c98852d8604f2c006",
+      "durationSeconds": 322.3177
+    }
+  },
+  "method": {
+    "reference": "Observable loading/transition/submission gesture; physical touch-down not instrumented",
+    "samplingSeconds": {
+      "submits": 0.1,
+      "lobby": 0.25,
+      "startup": 0.5
+    },
+    "bounds": "Lower bound is prior sample, upper bound is first confirming sample. Estimates use interval midpoints.",
+    "crossDevice": "Native clock rollover used; cross-device values remain approximate. Do not infer precise RTDB propagation or phone B enable time.",
+    "humanWait": "Startup/card-pack user-wait separation is not verified; related measurements withdrawn.",
+    "localVisual": "Cards depart optimistically before server acknowledgment; local exit is not end-to-end command latency."
+  },
+  "statistics": {
+    "createFirst": 6.5,
+    "createSubsequent": {
+      "n": 4,
+      "medianSeconds": 2.5,
+      "minEstimateSeconds": 2.25,
+      "maxEstimateSeconds": 3.25
+    },
+    "resetFirst": 4.25,
+    "resetSubsequent": {
+      "n": 4,
+      "medianSeconds": 0.75,
+      "minEstimateSeconds": 0.5,
+      "maxEstimateSeconds": 0.75
+    },
+    "removeSubsequent": {
+      "n": 3,
+      "medianSeconds": 0.5,
+      "minEstimateSeconds": 0.25,
+      "maxEstimateSeconds": 0.75
+    },
+    "phoneResetFirst": 5.25,
+    "phoneResetSubsequent": {
+      "n": 4,
+      "medianSeconds": 1.625,
+      "minEstimateSeconds": 1.5,
+      "maxEstimateSeconds": 1.75
+    },
+    "submitLocal": {
+      "n": 10,
+      "medianSeconds": 0.463,
+      "minEstimateSeconds": 0.4,
+      "maxEstimateSeconds": 0.5
+    },
+    "submitNextTurnDisplay": {
+      "n": 10,
+      "medianSeconds": 0.8,
+      "minEstimateSeconds": 0.775,
+      "maxEstimateSeconds": 0.925
+    }
+  },
+  "lobbyCreates": [
+    {
+      "id": "C1",
+      "video": "v09",
+      "action": "create",
+      "startBoundsSeconds": [
+        17.25,
+        17.5
+      ],
+      "endBoundsSeconds": [
+        23.75,
+        24.0
+      ],
+      "estimateSeconds": 6.5,
+      "minSeconds": 6.25,
+      "maxSeconds": 6.75,
+      "repeat": "first-observed"
+    },
+    {
+      "id": "C2",
+      "video": "v09",
+      "action": "create",
+      "startBoundsSeconds": [
+        83.25,
+        83.5
+      ],
+      "endBoundsSeconds": [
+        85.5,
+        85.75
+      ],
+      "estimateSeconds": 2.25,
+      "minSeconds": 2.0,
+      "maxSeconds": 2.5,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "C3",
+      "video": "v09",
+      "action": "create",
+      "startBoundsSeconds": [
+        118.5,
+        118.75
+      ],
+      "endBoundsSeconds": [
+        121.0,
+        121.25
+      ],
+      "estimateSeconds": 2.5,
+      "minSeconds": 2.25,
+      "maxSeconds": 2.75,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "C4",
+      "video": "v09",
+      "action": "create",
+      "startBoundsSeconds": [
+        157.75,
+        158.0
+      ],
+      "endBoundsSeconds": [
+        161.0,
+        161.25
+      ],
+      "estimateSeconds": 3.25,
+      "minSeconds": 3.0,
+      "maxSeconds": 3.5,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "C5",
+      "video": "v09",
+      "action": "create",
+      "startBoundsSeconds": [
+        194.0,
+        194.25
+      ],
+      "endBoundsSeconds": [
+        196.5,
+        196.75
+      ],
+      "estimateSeconds": 2.5,
+      "minSeconds": 2.25,
+      "maxSeconds": 2.75,
+      "repeat": "subsequent"
+    }
+  ],
+  "lobbyRemovals": [
+    {
+      "id": "K1a",
+      "video": "v09",
+      "action": "remove-member",
+      "startBoundsSeconds": [
+        43.25,
+        43.5
+      ],
+      "endBoundsSeconds": [
+        46.75,
+        47.0
+      ],
+      "estimateSeconds": 3.5,
+      "minSeconds": 3.25,
+      "maxSeconds": 3.75,
+      "repeat": "first-overlapping-pair",
+      "note": "Two removals overlap; not isolated request latency"
+    },
+    {
+      "id": "K1b",
+      "video": "v09",
+      "action": "remove-member",
+      "startBoundsSeconds": [
+        44.25,
+        44.5
+      ],
+      "endBoundsSeconds": [
+        46.75,
+        47.0
+      ],
+      "estimateSeconds": 2.5,
+      "minSeconds": 2.25,
+      "maxSeconds": 2.75,
+      "repeat": "first-overlapping-pair",
+      "note": "Second removal while first remains pending"
+    },
+    {
+      "id": "K2",
+      "video": "v09",
+      "action": "remove-member",
+      "startBoundsSeconds": [
+        94.25,
+        94.5
+      ],
+      "endBoundsSeconds": [
+        94.5,
+        94.75
+      ],
+      "estimateSeconds": 0.25,
+      "minSeconds": 0.0,
+      "maxSeconds": 0.5,
+      "repeat": "subsequent",
+      "note": "Remaining member removal after first row collapses"
+    },
+    {
+      "id": "K4a",
+      "video": "v09",
+      "action": "remove-member",
+      "startBoundsSeconds": [
+        170.25,
+        170.5
+      ],
+      "endBoundsSeconds": [
+        171.0,
+        171.25
+      ],
+      "estimateSeconds": 0.75,
+      "minSeconds": 0.5,
+      "maxSeconds": 1.0,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "K4b",
+      "video": "v09",
+      "action": "remove-member",
+      "startBoundsSeconds": [
+        172.25,
+        172.5
+      ],
+      "endBoundsSeconds": [
+        172.75,
+        173.0
+      ],
+      "estimateSeconds": 0.5,
+      "minSeconds": 0.25,
+      "maxSeconds": 0.75,
+      "repeat": "subsequent"
+    }
+  ],
+  "lobbyResets": [
+    {
+      "id": "R1",
+      "video": "v09",
+      "action": "reset",
+      "startBoundsSeconds": [
+        67.5,
+        67.75
+      ],
+      "endBoundsSeconds": [
+        71.75,
+        72.0
+      ],
+      "estimateSeconds": 4.25,
+      "minSeconds": 4.0,
+      "maxSeconds": 4.5,
+      "repeat": "first-observed"
+    },
+    {
+      "id": "R2",
+      "video": "v09",
+      "action": "reset",
+      "startBoundsSeconds": [
+        104.75,
+        105.0
+      ],
+      "endBoundsSeconds": [
+        105.5,
+        105.75
+      ],
+      "estimateSeconds": 0.75,
+      "minSeconds": 0.5,
+      "maxSeconds": 1.0,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "R3",
+      "video": "v09",
+      "action": "reset",
+      "startBoundsSeconds": [
+        153.0,
+        153.25
+      ],
+      "endBoundsSeconds": [
+        153.5,
+        153.75
+      ],
+      "estimateSeconds": 0.5,
+      "minSeconds": 0.25,
+      "maxSeconds": 0.75,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "R4",
+      "video": "v09",
+      "action": "reset",
+      "startBoundsSeconds": [
+        183.0,
+        183.25
+      ],
+      "endBoundsSeconds": [
+        183.75,
+        184.0
+      ],
+      "estimateSeconds": 0.75,
+      "minSeconds": 0.5,
+      "maxSeconds": 1.0,
+      "repeat": "subsequent"
+    },
+    {
+      "id": "R5",
+      "video": "v09",
+      "action": "reset",
+      "startBoundsSeconds": [
+        251.5,
+        251.75
+      ],
+      "endBoundsSeconds": [
+        252.25,
+        252.5
+      ],
+      "estimateSeconds": 0.75,
+      "minSeconds": 0.5,
+      "maxSeconds": 1.0,
+      "repeat": "subsequent"
+    }
+  ],
+  "lobbyPhoneResets": [
+    {
+      "id": "PR1",
+      "startVideo": "v09",
+      "endVideo": "v08",
+      "startBoundsSeconds": [
+        67.5,
+        67.75
+      ],
+      "phoneHomeBoundsSeconds": [
+        72.25,
+        72.5
+      ],
+      "phoneToTabletOffsetBoundsSeconds": [
+        0.4,
+        0.6
+      ],
+      "estimateSeconds": 5.25,
+      "minSeconds": 4.9,
+      "maxSeconds": 5.6,
+      "note": "Full phone home screen and group-join button visible; cross-device clock alignment is approximate"
+    },
+    {
+      "id": "PR2",
+      "startVideo": "v09",
+      "endVideo": "v08",
+      "startBoundsSeconds": [
+        104.75,
+        105.0
+      ],
+      "phoneHomeBoundsSeconds": [
+        106.0,
+        106.25
+      ],
+      "phoneToTabletOffsetBoundsSeconds": [
+        0.4,
+        0.6
+      ],
+      "estimateSeconds": 1.75,
+      "minSeconds": 1.4,
+      "maxSeconds": 2.1,
+      "note": "Full phone home screen and group-join button visible; cross-device clock alignment is approximate"
+    },
+    {
+      "id": "PR3",
+      "startVideo": "v09",
+      "endVideo": "v08",
+      "startBoundsSeconds": [
+        153.0,
+        153.25
+      ],
+      "phoneHomeBoundsSeconds": [
+        154.0,
+        154.25
+      ],
+      "phoneToTabletOffsetBoundsSeconds": [
+        0.4,
+        0.6
+      ],
+      "estimateSeconds": 1.5,
+      "minSeconds": 1.15,
+      "maxSeconds": 1.85,
+      "note": "Full phone home screen and group-join button visible; cross-device clock alignment is approximate"
+    },
+    {
+      "id": "PR4",
+      "startVideo": "v09",
+      "endVideo": "v08",
+      "startBoundsSeconds": [
+        183.0,
+        183.25
+      ],
+      "phoneHomeBoundsSeconds": [
+        184.0,
+        184.25
+      ],
+      "phoneToTabletOffsetBoundsSeconds": [
+        0.4,
+        0.6
+      ],
+      "estimateSeconds": 1.5,
+      "minSeconds": 1.15,
+      "maxSeconds": 1.85,
+      "note": "Full phone home screen and group-join button visible; cross-device clock alignment is approximate"
+    },
+    {
+      "id": "PR5",
+      "startVideo": "v09",
+      "endVideo": "v08",
+      "startBoundsSeconds": [
+        251.5,
+        251.75
+      ],
+      "phoneHomeBoundsSeconds": [
+        252.75,
+        253.0
+      ],
+      "phoneToTabletOffsetBoundsSeconds": [
+        0.4,
+        0.6
+      ],
+      "estimateSeconds": 1.75,
+      "minSeconds": 1.4,
+      "maxSeconds": 2.1,
+      "note": "Full phone home screen and group-join button visible; cross-device clock alignment is approximate"
+    }
+  ],
+  "submits": [
+    {
+      "id": "S01",
+      "video": "v06",
+      "startBoundsSeconds": [
+        66.8,
+        66.9
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        67.2,
+        67.3
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        67.6,
+        67.7
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.4,
+        "minSeconds": 0.3,
+        "maxSeconds": 0.5
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.8,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.9
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S02",
+      "video": "v06",
+      "startBoundsSeconds": [
+        69.55,
+        69.65
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        70.05,
+        70.15
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        70.35,
+        70.45
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.5,
+        "minSeconds": 0.4,
+        "maxSeconds": 0.6
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.8,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.9
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S03",
+      "video": "v06",
+      "startBoundsSeconds": [
+        72.05,
+        72.15
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        72.45,
+        72.55
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        72.85,
+        72.95
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.4,
+        "minSeconds": 0.3,
+        "maxSeconds": 0.5
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.8,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.9
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S04",
+      "video": "v06",
+      "startBoundsSeconds": [
+        74.9,
+        75.0
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        75.3,
+        75.4
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        75.7,
+        75.8
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.4,
+        "minSeconds": 0.3,
+        "maxSeconds": 0.5
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.8,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.9
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S05",
+      "video": "v06",
+      "startBoundsSeconds": [
+        104.2,
+        104.3
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        104.7,
+        104.8
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        105.1,
+        105.2
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.5,
+        "minSeconds": 0.4,
+        "maxSeconds": 0.6
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.9,
+        "minSeconds": 0.8,
+        "maxSeconds": 1.0
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S06",
+      "video": "v06",
+      "startBoundsSeconds": [
+        107.95,
+        108.0
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        108.35,
+        108.45
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        108.85,
+        108.95
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.425,
+        "minSeconds": 0.35,
+        "maxSeconds": 0.5
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.925,
+        "minSeconds": 0.85,
+        "maxSeconds": 1.0
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S07",
+      "video": "v06",
+      "startBoundsSeconds": [
+        185.3,
+        185.4
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        185.8,
+        185.9
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        186.1,
+        186.2
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.5,
+        "minSeconds": 0.4,
+        "maxSeconds": 0.6
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.8,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.9
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S08",
+      "video": "v06",
+      "startBoundsSeconds": [
+        188.5,
+        188.55
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        188.95,
+        189.05
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        189.25,
+        189.35
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.475,
+        "minSeconds": 0.4,
+        "maxSeconds": 0.55
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.775,
+        "minSeconds": 0.7,
+        "maxSeconds": 0.85
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S09",
+      "video": "v06",
+      "startBoundsSeconds": [
+        190.9,
+        191.0
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        191.35,
+        191.45
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        191.75,
+        191.85
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.45,
+        "minSeconds": 0.35,
+        "maxSeconds": 0.55
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.85,
+        "minSeconds": 0.75,
+        "maxSeconds": 0.95
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    },
+    {
+      "id": "S10",
+      "video": "v06",
+      "startBoundsSeconds": [
+        222.75,
+        222.8
+      ],
+      "selectedCardsExitBoundsSeconds": [
+        223.2,
+        223.3
+      ],
+      "nextTurnLabelBoundsSeconds": [
+        223.6,
+        223.7
+      ],
+      "localVisual": {
+        "estimateSeconds": 0.475,
+        "minSeconds": 0.4,
+        "maxSeconds": 0.55
+      },
+      "nextTurnDisplay": {
+        "estimateSeconds": 0.875,
+        "minSeconds": 0.8,
+        "maxSeconds": 0.95
+      },
+      "inputReference": "First visible upward submission gesture / departure after preselection, not physical touch-down or exact network send time",
+      "nextPlayerInputEnabled": "NOT_VERIFIED_NO_PHONE_B_VIDEO",
+      "serverAck": "NOT_INFERRED_FROM_LOCAL_CARD_EXIT"
+    }
+  ],
+  "errorObservations": [
+    {
+      "id": "E-start-1",
+      "video": "v05",
+      "startBoundsSeconds": [
+        0,
+        0.25
+      ],
+      "endBoundsSeconds": [
+        51.5,
+        51.75
+      ],
+      "estimateSeconds": 51.5,
+      "minSeconds": 51.25,
+      "maxSeconds": 51.75,
+      "status": "START_LOADING_RETURNS_WITHOUT_GAME_START",
+      "note": "Loading sampled through the interval; error feedback and re-enabled start button at the end; excluded from normal timings"
+    },
+    {
+      "id": "E-start-2",
+      "video": "v05",
+      "startBoundsSeconds": [
+        83.0,
+        83.25
+      ],
+      "observedThroughSeconds": 95.0,
+      "minimumObservedSeconds": 11.75,
+      "status": "RIGHT_CENSORED",
+      "note": "Loading remains visible near clip end; not reported as successful game start"
+    },
+    {
+      "id": "E-tablet-reconnect",
+      "video": "v06",
+      "sameScreenObservedAtSeconds": [
+        290,
+        300,
+        310,
+        320,
+        330,
+        340,
+        350,
+        360,
+        370
+      ],
+      "observedSpanSeconds": 80,
+      "status": "RECONNECTION_SAMPLE_SPAN",
+      "note": "Repeated samples of reconnect-to-tablet screen; not an exact continuous outage duration; manual leave follows. Not included in normal submit timings"
+    }
+  ],
+  "unverified": [
+    "Physical touch-down to network request",
+    "Exact per-submit propagation to tablet across device videos",
+    "Phone B button enable time",
+    "Exact reason for B disconnect and tablet server connection failure",
+    "Every frame of the full recordings; this is sampled interval analysis with targeted refinement, not continuous full-frame annotation"
+  ],
+  "sourceChanges": "None",
+  "serverQueriesThisTask": "None; existing bounded server collection remains in ignored build/device-test/server-performance-20261017",
+  "withdrawnVisualObservations": {
+    "gameStarts": [
+      {
+        "id": "G3-first",
+        "video": "v03",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          12.25,
+          12.5
+        ],
+        "endBoundsSeconds": [
+          29.5,
+          29.75
+        ],
+        "estimateSeconds": 17.25,
+        "minSeconds": 17.0,
+        "maxSeconds": 17.5,
+        "repeat": "first-observed",
+        "phonePack": {
+          "video": "v01",
+          "boundsSeconds": [
+            35.0,
+            35.25
+          ],
+          "comparison": "About 23s from tablet feedback, coarse cross-file alignment from recording metadata; not used for precise aggregates"
+        }
+      },
+      {
+        "id": "G3-interrupted",
+        "video": "v02",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          30.25,
+          30.5
+        ],
+        "status": "INTERRUPTED_NO_NORMAL_COMPLETION",
+        "interruptionObservedBoundsSeconds": [
+          63,
+          66
+        ],
+        "note": "Tablet pause overlay observed; no successful completion substituted"
+      },
+      {
+        "id": "G3-next",
+        "video": "v02",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          86.0,
+          86.25
+        ],
+        "endBoundsSeconds": [
+          93.75,
+          94.0
+        ],
+        "estimateSeconds": 7.75,
+        "minSeconds": 7.5,
+        "maxSeconds": 8.0,
+        "repeat": "subsequent",
+        "phonePack": "Not aggregated: another manual restart follows before a comparable phone completion"
+      },
+      {
+        "id": "G3-menu-restart",
+        "video": "v02",
+        "action": "menu-restart-to-table",
+        "startBoundsSeconds": [
+          97.0,
+          97.25
+        ],
+        "endBoundsSeconds": [
+          102.5,
+          102.75
+        ],
+        "estimateSeconds": 5.5,
+        "minSeconds": 5.25,
+        "maxSeconds": 5.75,
+        "repeat": "subsequent"
+      },
+      {
+        "id": "G4-first",
+        "video": "v04",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          2.0,
+          2.5
+        ],
+        "endBoundsSeconds": [
+          15.5,
+          16.0
+        ],
+        "estimateSeconds": 13.5,
+        "minSeconds": 13.0,
+        "maxSeconds": 14.0,
+        "repeat": "first-in-card-test"
+      },
+      {
+        "id": "G4-result-restart-1",
+        "video": "v04",
+        "action": "result-restart-to-table",
+        "startBoundsSeconds": [
+          54.0,
+          54.5
+        ],
+        "endBoundsSeconds": [
+          58.5,
+          59.0
+        ],
+        "estimateSeconds": 4.5,
+        "minSeconds": 4.0,
+        "maxSeconds": 5.0,
+        "repeat": "subsequent"
+      },
+      {
+        "id": "G4-next-seating",
+        "video": "v04",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          166.5,
+          167.0
+        ],
+        "endBoundsSeconds": [
+          174.5,
+          175.0
+        ],
+        "estimateSeconds": 8.0,
+        "minSeconds": 7.5,
+        "maxSeconds": 8.5,
+        "repeat": "subsequent"
+      },
+      {
+        "id": "G4-new-room-start",
+        "video": "v04",
+        "action": "seating-complete-to-table",
+        "startBoundsSeconds": [
+          493.5,
+          493.75
+        ],
+        "endBoundsSeconds": [
+          501.5,
+          502.0
+        ],
+        "estimateSeconds": 8.125,
+        "minSeconds": 7.75,
+        "maxSeconds": 8.5,
+        "repeat": "subsequent"
+      },
+      {
+        "id": "G4-result-restart-2",
+        "video": "v04",
+        "action": "result-restart-to-table",
+        "startBoundsSeconds": [
+          536.0,
+          536.5
+        ],
+        "endBoundsSeconds": [
+          540.5,
+          541.0
+        ],
+        "estimateSeconds": 4.5,
+        "minSeconds": 4.0,
+        "maxSeconds": 5.0,
+        "repeat": "subsequent"
+      }
+    ],
+    "phonePackArrival": [
+      {
+        "id": "G4-first-phone-pack",
+        "startVideo": "v04",
+        "endVideo": "v06",
+        "tabletStartBoundsSeconds": [
+          2.0,
+          2.5
+        ],
+        "phonePackArrivalBoundsSeconds": [
+          20.5,
+          21.0
+        ],
+        "estimateSeconds": 18.4,
+        "minSeconds": 17.5,
+        "maxSeconds": 19.3,
+        "note": "Card-back pack arrival before manual tap; excludes waiting to reveal and waiting for another player. Approximate cross-device duration, not proof of button enabled."
+      },
+      {
+        "id": "G4-result-restart-1-phone-pack",
+        "startVideo": "v04",
+        "endVideo": "v06",
+        "tabletStartBoundsSeconds": [
+          54.0,
+          54.5
+        ],
+        "phonePackArrivalBoundsSeconds": [
+          63.5,
+          64.0
+        ],
+        "estimateSeconds": 9.4,
+        "minSeconds": 8.5,
+        "maxSeconds": 10.3,
+        "note": "Card-back pack arrival before manual tap; excludes waiting to reveal and waiting for another player. Approximate cross-device duration, not proof of button enabled."
+      },
+      {
+        "id": "G4-next-seating-phone-pack",
+        "startVideo": "v04",
+        "endVideo": "v06",
+        "tabletStartBoundsSeconds": [
+          166.5,
+          167.0
+        ],
+        "phonePackArrivalBoundsSeconds": [
+          180.0,
+          180.5
+        ],
+        "estimateSeconds": 13.4,
+        "minSeconds": 12.5,
+        "maxSeconds": 14.3,
+        "note": "Card-back pack arrival before manual tap; excludes waiting to reveal and waiting for another player. Approximate cross-device duration, not proof of button enabled."
+      },
+      {
+        "id": "G4-new-room-start-phone-pack",
+        "startVideo": "v04",
+        "endVideo": "v06",
+        "tabletStartBoundsSeconds": [
+          493.5,
+          493.75
+        ],
+        "phonePackArrivalBoundsSeconds": [
+          506.5,
+          507.0
+        ],
+        "estimateSeconds": 13.025,
+        "minSeconds": 12.25,
+        "maxSeconds": 13.8,
+        "note": "Card-back pack arrival before manual tap; excludes waiting to reveal and waiting for another player. Approximate cross-device duration, not proof of button enabled."
+      },
+      {
+        "id": "G4-result-restart-2-phone-pack",
+        "startVideo": "v04",
+        "endVideo": "v06",
+        "tabletStartBoundsSeconds": [
+          536.0,
+          536.5
+        ],
+        "phonePackArrivalBoundsSeconds": [
+          546.0,
+          546.5
+        ],
+        "estimateSeconds": 9.9,
+        "minSeconds": 9.0,
+        "maxSeconds": 10.8,
+        "note": "Card-back pack arrival before manual tap; excludes waiting to reveal and waiting for another player. Approximate cross-device duration, not proof of button enabled."
+      }
+    ],
+    "statistics": {
+      "gameSubsequentTablet": {
+        "n": 6,
+        "medianSeconds": 6.625,
+        "minEstimateSeconds": 4.5,
+        "maxEstimateSeconds": 8.125
+      },
+      "gameSubsequentPhonePack": {
+        "n": 4,
+        "medianSeconds": 11.463,
+        "minEstimateSeconds": 9.4,
+        "maxEstimateSeconds": 13.4
+      }
+    },
+    "status": "WITHDRAWN_NOT_VALID_PERFORMANCE_MEASUREMENTS",
+    "reason": "Ambiguous start/end events, mixed action paths, unverified user-wait exclusion and cross-device event matching",
+    "usableForPerformanceComparison": false
+  },
+  "correctedAtUtc": "2026-10-17T08:44:04.762554+00:00"
+}

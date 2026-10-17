@@ -1,0 +1,15 @@
+{
+  "includes": [
+    "game-start",
+    "card-submit",
+    "turn-transition"
+  ],
+  "createdAtUtc": "2026-10-17T06:07:37.8756063+00:00",
+  "video": "user records manually",
+  "rawMessagesStored": false,
+  "maxDurationSeconds": 1800,
+  "sessionId": "release-game-session-20261017-150737-677-2f754068",
+  "test": "game-session",
+  "status": "prepared",
+  "game": "pending"
+}

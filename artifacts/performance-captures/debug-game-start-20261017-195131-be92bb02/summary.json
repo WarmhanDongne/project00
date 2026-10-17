@@ -1,0 +1,23 @@
+{
+  "status": "INCOMPLETE_OR_INVALID",
+  "issues": [
+    "expected_one_action",
+    "missing_or_ambiguous_completion",
+    "unmatched_or_multiple_games"
+  ],
+  "total_elapsed_estimated_range_us": null,
+  "clock_offset_estimates_us": {
+    "tablet": [
+      110629997152,
+      110630092264
+    ],
+    "phone_A": null
+  },
+  "logical_command_totals": [],
+  "transport_attempt_round_trips": [],
+  "card_pack_waits": [],
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Incomplete trial, missing gates, or clock quality failure",
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"
+}

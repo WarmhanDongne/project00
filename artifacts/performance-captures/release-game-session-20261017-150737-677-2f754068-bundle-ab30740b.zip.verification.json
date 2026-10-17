@@ -1,0 +1,7 @@
+{
+  "sha256": "cd404cd0bbdec1beee6add368bfac5dd6c828bcbcd74e50c3694d0a274ff1720",
+  "archiveFile": "release-game-session-20261017-150737-677-2f754068-bundle-ab30740b.zip",
+  "verification": "PASS: original counts and archived event hashes",
+  "excluded": "Collector scripts and app UID metadata",
+  "appEvents": 4019
+}

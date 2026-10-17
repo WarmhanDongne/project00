@@ -1,0 +1,27 @@
+{
+  "role": "tablet",
+  "state": "stopped",
+  "collectorPid": 11500,
+  "logcatPid": 11808,
+  "startedAtUtc": "2026-10-17T06:53:36.1328331+00:00",
+  "updatedAtUtc": "2026-10-17T07:04:40.3408243+00:00",
+  "durationSeconds": 664.2,
+  "readLines": 7339,
+  "retainedEvents": 7338,
+  "structuredTimingEvents": 0,
+  "lastEventEpoch": 1792220640.526,
+  "categories": {
+    "render_slow_frame": 3,
+    "input_pointer_1": 85,
+    "input_pointer_0": 86,
+    "app_check_event": 131,
+    "network_error": 3,
+    "render_skipped_frames": 12,
+    "timeout": 1,
+    "metadata_only": 7017
+  },
+  "stopReason": "requested",
+  "maxDurationSeconds": 1800,
+  "maxRetainedEvents": 30000,
+  "privacy": "App Linux UID only. No raw messages, identifiers, payloads, URLs, tokens or account data stored."
+}

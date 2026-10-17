@@ -1,0 +1,70 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "checks": [
+    "5 create samples",
+    "5 reset samples",
+    "10 normal submission samples",
+    "Nonnegative and ordered within-video boundaries",
+    "All within-video timestamps within original duration"
+  ],
+  "filesSha256": {
+    "measurements.json": "b878d7f754b1f18e126688d542fcf2999daa3360a9e46455a1fb11112ad295eb",
+    "REPORT.md": "fb9685ed102e2c17c177fb65c394111a5463dc53d7281d6cbeb1e58c5a397ef6"
+  },
+  "originals": [
+    {
+      "file": "3번 1, 2 통합 비디오 폰 A_20261017_152209.mp4",
+      "sha256": "aeb93894d86ede781939df16bcbff0ece832e041abb6e377c17103cc14528517",
+      "unchanged": true
+    },
+    {
+      "file": "3번 2 태블릿 _20261017_152209.mp4",
+      "sha256": "a1ea1d3844eacd92b765eed87b4fd2de26ce03d96a46b6447d0088839763862b",
+      "unchanged": true
+    },
+    {
+      "file": "3번 게임 시작 1 태블릿_20261017_151952.mp4",
+      "sha256": "d2055ae0693874b81ed1d9a200811a6d81acd9401b081af5022444c3f512f4fe",
+      "unchanged": true
+    },
+    {
+      "file": "4번 카드 제출 태블릿_20261017_160400.mp4",
+      "sha256": "f18af3e12d069618e117dec871c2cdd5a79257214092f4f50197ef8f6eaba529",
+      "unchanged": true
+    },
+    {
+      "file": "4번 카드 제출 테스트 중 네트워크 오류 태블릿_20261017_155119.mp4",
+      "sha256": "402be379652b7cea70ebf978d9e0575c2eea18ff754f38fb44f92e72b0c94365",
+      "unchanged": true
+    },
+    {
+      "file": "4번 카드 제출 테스트 폰 A 20261017_161134~2.mp4",
+      "sha256": "9e65705517b61acf10d52f9bf48373a3103be681469027e9042cc09e7dd0499c",
+      "unchanged": true
+    },
+    {
+      "file": "4번 테스트 중 네트워크 오류 폰 A_20261017_155119.mp4",
+      "sha256": "eeaa1e5adf02b4e10af8cec9c3f6b61f8dad5deacecd8063a6bdde17eb8ded02",
+      "unchanged": true
+    },
+    {
+      "file": "로비 방 테스트 A_20261017_122341.mp4",
+      "sha256": "63393da4b68e3016f864e2f23942872faa049b2b1d649b483db7238ee311fc00",
+      "unchanged": true
+    },
+    {
+      "file": "로비 테스트 태블릿_20261017_122341.mp4",
+      "sha256": "fbea19773e180f9f9ed65d7c7779d00ca5cdfd425d8f401c98852d8604f2c006",
+      "unchanged": true
+    }
+  ],
+  "originalHashRecheck": "PASS",
+  "submissionBoundaryRecheck": "PASS",
+  "temporaryUnmaskedFramesRemoved": 3097,
+  "temporaryUnmaskedFramesRemaining": 0,
+  "gitDiffCheckExitCode": 0,
+  "trackedSourceChanges": 0,
+  "productValidation": "Not run: read-only video measurement, no product source changes",
+  "startupAndPhonePackValidity": "WITHDRAWN; integrity checks do not validate semantic measurement boundaries"
+}

@@ -1,0 +1,24 @@
+{
+  "role": "phone_A",
+  "state": "stopped",
+  "collectorPid": 22360,
+  "logcatPid": 26400,
+  "startedAtUtc": "2026-10-17T06:49:01.1452033+00:00",
+  "updatedAtUtc": "2026-10-17T06:52:08.3624390+00:00",
+  "durationSeconds": 187.2,
+  "readLines": 340,
+  "retainedEvents": 339,
+  "structuredTimingEvents": 0,
+  "lastEventEpoch": 1792219889.934,
+  "categories": {
+    "input_pointer_0": 16,
+    "app_check_event": 5,
+    "input_pointer_1": 16,
+    "metadata_only": 295,
+    "network_error": 7
+  },
+  "stopReason": "requested",
+  "maxDurationSeconds": 1800,
+  "maxRetainedEvents": 30000,
+  "privacy": "App Linux UID only. No raw messages, identifiers, payloads, URLs, tokens or account data stored."
+}

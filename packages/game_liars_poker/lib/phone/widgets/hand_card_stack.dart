@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [hand_card_stack.dart] 휴대폰 손패의 분배·공개·선택·제출
 // 애니메이션과 선택 상태를 관리하는 파일이다.
 
@@ -177,6 +178,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   static const Duration _submitExitDuration = Duration(milliseconds: 420);
   static const Duration _submitReturnDuration = Duration(milliseconds: 380);
 
+  final _measurementGame = StartupMeasurements.instance.game;
   final Set<int> _selectedCardIds = <int>{};
   late List<_HandCardEntry> _renderCards;
 
@@ -303,6 +305,12 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   void _toggleSelection(int cardId) {
     if (!widget.enabled || _isSubmitting) return;
+    if (_measurementGame != null) {
+      StartupMeasurements.instance.record(
+        'card_selection_handler',
+        game: _measurementGame,
+      );
+    }
 
     if (!_selectedCardIds.contains(cardId) &&
         _selectedCardIds.length >= widget.maxSelection) {
@@ -381,6 +389,12 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   }
 
   Future<void> _submitSelectedCards() async {
+    if (_measurementGame != null) {
+      StartupMeasurements.instance.record(
+        'submit_handler',
+        game: _measurementGame,
+      );
+    }
     if (_selectedCardIds.isEmpty ||
         !widget.submissionEnabled ||
         _isSubmitting) {
@@ -510,6 +524,22 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   @override
   Widget build(BuildContext context) {
+    if (StartupMeasurements.instance.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final ready =
+            !_isDealing &&
+            !_isSubmitting &&
+            !_isReturningSubmittedCards &&
+            _renderCards.isNotEmpty &&
+            widget.enabled;
+        StartupMeasurements.instance.handGate(
+          _measurementGame,
+          selectable: ready,
+          submittable: ready && widget.submissionEnabled,
+        );
+      });
+    }
     if (_isDealing) {
       return LayoutBuilder(
         builder: (context, constraints) {

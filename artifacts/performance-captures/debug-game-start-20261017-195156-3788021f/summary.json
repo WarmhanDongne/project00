@@ -1,0 +1,172 @@
+{
+  "status": "INCOMPLETE_OR_INVALID",
+  "issues": [
+    "recovery_during_phone_startup"
+  ],
+  "total_elapsed_estimated_range_us": null,
+  "clock_offset_estimates_us": {
+    "tablet": [
+      110630005234,
+      110630099358
+    ],
+    "phone_A": [
+      110632819196,
+      110632916087
+    ]
+  },
+  "logical_command_totals": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "command": "game_liars_poker_start_game",
+      "elapsed_us": 884677,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "command": "game_liars_poker_complete_dealing",
+      "elapsed_us": 646935,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 3,
+      "command": "game_liars_poker_prepare_penalty",
+      "elapsed_us": 675908,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 4,
+      "command": "game_liars_poker_resolve_penalty",
+      "elapsed_us": 760648,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 1,
+      "command": "game_liars_poker_ready_turn",
+      "elapsed_us": 423812,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 2,
+      "command": "game_liars_poker_submit_cards",
+      "elapsed_us": 436815,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 3,
+      "command": "game_liars_poker_submit_cards",
+      "elapsed_us": 576323,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 4,
+      "command": "game_liars_poker_submit_cards",
+      "elapsed_us": 398284,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 5,
+      "command": "game_liars_poker_submit_cards",
+      "elapsed_us": 414087,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 6,
+      "command": "game_liars_poker_submit_cards",
+      "elapsed_us": 459248,
+      "outcome": 1
+    }
+  ],
+  "transport_attempt_round_trips": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 782024,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 643417,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 3,
+      "attempt": 1,
+      "elapsed_us": 672352,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 4,
+      "attempt": 1,
+      "elapsed_us": 758430,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 421079,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 435194,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 3,
+      "attempt": 1,
+      "elapsed_us": 574657,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 4,
+      "attempt": 1,
+      "elapsed_us": 396390,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 5,
+      "attempt": 1,
+      "elapsed_us": 412167,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 6,
+      "attempt": 1,
+      "elapsed_us": 457336,
+      "outcome": 1
+    }
+  ],
+  "card_pack_waits": [
+    {
+      "role": "phone_A",
+      "elapsed_us": 373782,
+      "classification": "prompt_wait_including_possible_parallel_work"
+    }
+  ],
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Incomplete trial, missing gates, or clock quality failure",
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing"
+}

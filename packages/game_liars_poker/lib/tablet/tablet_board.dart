@@ -4,6 +4,8 @@
 
 library;
 
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
+
 // ========================[ import ]==========================
 import 'dart:async';
 import 'package:game_liars_poker/shared/widgets/card_face_view.dart';

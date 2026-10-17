@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [game_session_controller.dart] 는 여러 게임이 함께 사용하는 게임 세션 구독과 명령 실행의 공통 뼈대를 담당하는 파일이다.
 //
 // - [Package] : 게임 공통 기반
@@ -113,7 +114,9 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
   Future<void> prepareScreen(Future<void> Function() prepareAssets) async {
     _prepareAssets = prepareAssets;
     try {
+      StartupMeasurements.instance.record('assets_start');
       await prepareAssets();
+      StartupMeasurements.instance.record('assets_end');
       RecoveryMetrics.instance.mark(RecoveryStage.assets);
       await WidgetsBinding.instance.endOfFrame;
       if (ref.mounted) reportScreenReady(assetsReady: true);
@@ -150,6 +153,10 @@ abstract class GameSessionController<TState extends GameSessionState<TState>>
 
   /// Called after the game adapter has decoded required assets and rendered a frame.
   void reportScreenReady({required bool assetsReady}) {
+    StartupMeasurements.instance.record(
+      'screen_ready',
+      value: assetsReady ? 1 : 0,
+    );
     _assetsReady = assetsReady;
     _screenReady = assetsReady;
     RecoveryMetrics.instance.mark(RecoveryStage.assets);
