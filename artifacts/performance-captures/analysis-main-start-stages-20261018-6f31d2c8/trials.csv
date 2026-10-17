@@ -1,0 +1,18 @@
+﻿trial,scenario,number,folder,original_capture,recovered,events,first_turn_phone,condition,completion_device,user_note
+initial_start-1,initial_start,1,debug-game-start-20261018-005036-0503abb7,debug-game-start-20261018-005036-0503abb7,False,223,phone_A,unspecified,first_turn_phone,
+initial_start-2,initial_start,2,debug-game-start-20261018-005153-def595be,debug-game-start-20261018-005153-def595be,False,232,phone_A,unspecified,first_turn_phone,
+initial_start-3,initial_start,3,recovered-debug-game-start-20261018-010031-4153e545,debug-game-start-20261018-010031-cd88cf80,True,258,phone_B,unspecified,first_turn_phone,
+initial_start-4,initial_start,4,debug-game-start-20261018-011357-b4d246c7,debug-game-start-20261018-011357-b4d246c7,False,229,phone_A,unspecified,first_turn_phone,
+initial_start-5,initial_start,5,debug-game-start-20261018-011455-1bb8ff18,debug-game-start-20261018-011455-1bb8ff18,False,235,phone_A,unspecified,first_turn_phone,
+initial_start-6,initial_start,6,debug-game-start-20261018-011603-364f9072,debug-game-start-20261018-011603-364f9072,False,231,phone_B,unspecified,first_turn_phone,
+menu_restart-1,menu_restart,1,debug-game-start-20261018-013848-20c24974,debug-game-start-20261018-013848-20c24974,False,254,phone_A,repeated,first_turn_phone,
+menu_restart-2,menu_restart,2,debug-game-start-20261018-013939-85fe8948,debug-game-start-20261018-013939-85fe8948,False,311,phone_B,repeated,first_turn_phone,여러 번 선택 뒤 selection_seen=true; 첫 제출 뒤 선택 이벤트 관측. 시작 측정과 분리.
+menu_restart-3,menu_restart,3,debug-game-start-20261018-014055-7e247e0f,debug-game-start-20261018-014055-7e247e0f,False,230,phone_A,repeated,first_turn_phone,
+menu_restart-4,menu_restart,4,debug-game-start-20261018-014137-65719ea8,debug-game-start-20261018-014137-65719ea8,False,230,phone_A,repeated,first_turn_phone,
+menu_restart-5,menu_restart,5,debug-game-start-20261018-014211-58bb46e0,debug-game-start-20261018-014211-58bb46e0,False,226,phone_B,repeated,first_turn_phone,
+result_restart-1,result_restart,1,debug-game-start-20261018-014548-0f5eb212,debug-game-start-20261018-014548-0f5eb212,False,233,phone_A,repeated,first_turn_phone,
+result_restart-2,result_restart,2,debug-game-start-20261018-014747-012542a4,debug-game-start-20261018-014747-012542a4,False,238,phone_A,repeated,first_turn_phone,
+result_restart-3,result_restart,3,debug-game-start-20261018-015516-37282d37,debug-game-start-20261018-015516-37282d37,False,237,phone_B,repeated,first_turn_phone,
+result_restart-4,result_restart,4,debug-game-start-20261018-015634-2d282724,debug-game-start-20261018-015634-2d282724,False,229,phone_B,repeated,first_turn_phone,
+result_restart-5,result_restart,5,debug-game-start-20261018-015802-66b67dab,debug-game-start-20261018-015802-66b67dab,False,231,phone_B,repeated,first_turn_phone,
+result_restart-6,result_restart,6,debug-game-start-20261018-015354-ef07417b,debug-game-start-20261018-015354-ef07417b,False,239,phone_A,repeated,first_turn_phone,사용자 목록에서 빠진 유효 수집; 사용자 동의로 추가. 회차 6은 식별 번호이며 촬영 시각 순서 아님.

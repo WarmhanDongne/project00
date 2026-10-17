@@ -1,0 +1,104 @@
+﻿scenario,metric,label,n,median_s,min_s,max_s,median_lower_s,median_upper_s
+initial_start,action_to_deck,버튼→태블릿 카드 더미,6,3.5149280000000003,3.242416,7.009963,3.5149280000000003,3.5149280000000003
+initial_start,adjusted,adjusted,6,14.38853825,13.6349575,19.4532745,14.362151999999998,14.4149245
+initial_start,assets_phone_A,assets,4,0.0101265,0.006216,0.887973,0.0101265,0.0101265
+initial_start,assets_phone_B,assets,2,0.34378400000000003,0.007677,0.679891,0.34378400000000003,0.34378400000000003
+initial_start,assets_tablet,assets,6,0.38796149999999996,0.297732,0.426281,0.38796149999999996,0.38796149999999996
+initial_start,attempt_complete_dealing,game_liars_poker_complete_dealing,6,1.0555459999999999,0.475536,2.738709,1.0555459999999999,1.0555459999999999
+initial_start,attempt_ready_turn,game_liars_poker_ready_turn,6,0.5244420000000001,0.464165,3.053685,0.5244420000000001,0.5244420000000001
+initial_start,attempt_start_game,game_liars_poker_start_game,6,0.6397605,0.578246,2.851717,0.6397605,0.6397605
+initial_start,call_complete_dealing,complete_dealing,6,1.0595015,0.478832,2.742346,1.0595015,1.0595015
+initial_start,call_ready_turn,ready_turn,6,0.5280525,0.466647,3.056398,0.5280525,0.5280525
+initial_start,call_start_game,start_game,6,0.673148,0.635102,2.868203,0.673148,0.673148
+initial_start,deal_to_phone_data,deal_to_phone_data,6,0.85533975,0.3653225,2.6524185,0.8336075000000001,0.877072
+initial_start,deal_to_phone_entry,deal_to_phone_entry,6,4.48733825,3.99395,6.2961135,4.468292,4.5063845
+initial_start,exclusive_wait,exclusive_wait,6,0.616538,0.167558,0.685906,0.608363,0.6247130000000001
+initial_start,game_start_intro,폰 GAME START 안내,6,1.6919715,1.659127,1.707426,1.6919715,1.6919715
+initial_start,input_human_delay,폰 입력 준비→첫 제출 조작,6,1.6043375000000002,0.820761,2.676718,1.6043375000000002,1.6043375000000002
+initial_start,phone_controls,조작부 등장,6,0.9322105,0.920745,0.933154,0.9322105,0.9322105
+initial_start,phone_data_to_pack,폰 첫 손패 반영→카드팩 등장,6,3.640802,3.618596,3.646542,3.640802,3.640802
+initial_start,phone_entry,폰 카드팩 등장,6,0.753816,0.749952,0.772605,0.753816,0.753816
+initial_start,phone_ready_lag,phone_ready_lag,6,5.45905675,5.0583755,5.692382,5.440194,5.4779195000000005
+initial_start,phone_reveal,폰 손패 공개,6,1.470336,1.457564,1.474759,1.470336,1.470336
+initial_start,phone_reveal_to_ready,손패 공개 끝→폰 입력 준비,6,0.0335095,0.030245,0.069194,0.0335095,0.0335095
+initial_start,phone_stage5_to_pack,폰 공개 단계→카드팩 등장,6,1.9084780000000001,1.903572,1.910772,1.9084780000000001,1.9084780000000001
+initial_start,phone_wait,폰 카드팩 탭 대기,6,0.616538,0.167558,0.685906,0.616538,0.616538
+initial_start,ready_response_after_reveal,손패 공개 뒤 준비 요청 응답 잔여,6,0.0,0.0,1.587976,0.0,0.0
+initial_start,ready_response_minus_ready,준비 요청 응답−입력 준비 시각,6,-0.993703,-1.037261,1.555388,-0.993703,-0.993703
+initial_start,screen_after_assets_phone_A,screen_after_assets,4,0.008272999999999999,0.00663,0.015608,0.008272999999999999,0.008272999999999999
+initial_start,screen_after_assets_phone_B,screen_after_assets,2,0.012504999999999999,0.010353,0.014657,0.012504999999999999,0.012504999999999999
+initial_start,screen_after_assets_tablet,screen_after_assets,6,0.006286,0.005811,0.013001,0.006286,0.006286
+initial_start,seat_save,자리 저장,6,0.723794,0.644449,2.589373,0.723794,0.723794
+initial_start,seating_prepare,자리 저장·화면 이동,6,2.930002,2.90193,6.503928,2.930002,2.930002
+initial_start,submit_completion,첫 제출 조작→성공 콜백,6,0.470237,0.421716,0.975947,0.470237,0.470237
+initial_start,tablet_after_deal,배분 연출 끝→태블릿 준비,6,1.8703940000000001,1.395921,3.644019,1.8703940000000001,1.8703940000000001
+initial_start,tablet_after_entry_wait,태블릿 등장 완료→탭,6,0.48883,0.354629,0.946677,0.48883,0.48883
+initial_start,tablet_deal,카드 배분 연출,6,2.8224929999999997,2.816909,2.825753,2.8224929999999997,2.8224929999999997
+initial_start,tablet_entry,태블릿 카드 더미 등장,6,0.6479710000000001,0.640394,0.65763,0.6479710000000001,0.6479710000000001
+initial_start,tablet_raw_wait,태블릿 원시 탭 대기,6,1.1436505000000001,1.012305,1.587105,1.1436505000000001,1.1436505000000001
+initial_start,tablet_ready,버튼→태블릿 준비,6,9.503674499999999,8.74384,14.543082,9.503674499999999,9.503674499999999
+initial_start,tablet_round_ending,테이블 안내 종료→태블릿 준비,6,0.0134665,0.012744,0.015656,0.0134665,0.0134665
+initial_start,total,total,6,15.00507625,13.8025155,19.9610015,14.986865,15.0232875
+menu_restart,action_to_deck,버튼→태블릿 카드 더미,5,0.630224,0.556277,0.650163,0.630224,0.630224
+menu_restart,adjusted,adjusted,5,8.825118,8.6371495,9.338094,8.764201,8.885575
+menu_restart,attempt_complete_dealing,game_liars_poker_complete_dealing,5,0.412612,0.360456,0.642698,0.412612,0.412612
+menu_restart,attempt_ready_turn,game_liars_poker_ready_turn,5,0.341929,0.31448,0.370357,0.341929,0.341929
+menu_restart,attempt_start_game,game_liars_poker_start_game,5,0.546626,0.477303,0.634049,0.546626,0.546626
+menu_restart,call_complete_dealing,complete_dealing,5,0.419987,0.367804,0.647461,0.419987,0.419987
+menu_restart,call_ready_turn,ready_turn,5,0.345816,0.321489,0.372851,0.345816,0.345816
+menu_restart,call_start_game,start_game,5,0.617028,0.525537,0.690469,0.617028,0.617028
+menu_restart,deal_to_phone_data,deal_to_phone_data,5,0.396489,0.328179,0.765018,0.376627,0.416351
+menu_restart,deal_to_phone_entry,deal_to_phone_entry,5,2.348864,2.258044,2.7037225,2.329393,2.368335
+menu_restart,exclusive_wait,exclusive_wait,5,1.228882,1.047353,2.116763,1.226167,1.229128
+menu_restart,input_human_delay,폰 입력 준비→첫 제출 조작,5,2.021811,1.807374,2.968379,2.021811,2.021811
+menu_restart,phone_controls,조작부 등장,5,0.931027,0.914035,0.931861,0.931027,0.931027
+menu_restart,phone_data_to_pack,폰 첫 손패 반영→카드팩 등장,5,1.939738,1.929865,1.956459,1.939738,1.939738
+menu_restart,phone_entry,폰 카드팩 등장,5,0.756091,0.748855,0.775472,0.756091,0.756091
+menu_restart,phone_ready_lag,phone_ready_lag,5,3.8198945,3.6647065,3.898049,3.798668,3.841121
+menu_restart,phone_reveal,폰 손패 공개,5,1.469342,1.466713,1.476791,1.469342,1.469342
+menu_restart,phone_reveal_to_ready,손패 공개 끝→폰 입력 준비,5,0.040516,0.037601,0.131606,0.040516,0.040516
+menu_restart,phone_stage5_to_pack,폰 공개 단계→카드팩 등장,5,1.912588,1.902153,1.922026,1.912588,1.912588
+menu_restart,phone_wait,폰 카드팩 탭 대기,5,0.594543,0.474678,0.687933,0.594543,0.594543
+menu_restart,ready_response_after_reveal,손패 공개 뒤 준비 요청 응답 잔여,5,0.0,0.0,0.0,0.0,0.0
+menu_restart,ready_response_minus_ready,준비 요청 응답−입력 준비 시각,5,-1.17292,-1.27662,-1.140591,-1.17292,-1.17292
+menu_restart,submit_completion,첫 제출 조작→성공 콜백,5,0.425208,0.421361,0.430844,0.425208,0.425208
+menu_restart,tablet_after_deal,배분 연출 끝→태블릿 준비,5,1.430269,1.387718,1.666126,1.430269,1.430269
+menu_restart,tablet_after_entry_wait,태블릿 등장 완료→탭,5,0.779132,0.572675,1.52222,0.779132,0.779132
+menu_restart,tablet_deal,카드 배분 연출,5,2.823131,2.817302,2.824611,2.823131,2.823131
+menu_restart,tablet_entry,태블릿 카드 더미 등장,5,0.641936,0.639302,0.650648,0.641936,0.641936
+menu_restart,tablet_raw_wait,태블릿 원시 탭 대기,5,1.429042,1.212122,2.164176,1.429042,1.429042
+menu_restart,tablet_ready,버튼→태블릿 준비,5,6.264342,6.023336,7.083179,6.264342,6.264342
+menu_restart,tablet_round_ending,테이블 안내 종료→태블릿 준비,5,0.018026,0.015422,0.021431,0.018026,0.018026
+menu_restart,total,total,5,10.091665,9.686953,10.9798845,10.071128,10.112202
+result_restart,action_to_deck,버튼→태블릿 카드 더미,6,0.644495,0.544277,0.760738,0.644495,0.644495
+result_restart,adjusted,adjusted,6,10.92369875,10.494041,11.4221795,10.862083,10.9853145
+result_restart,attempt_complete_dealing,game_liars_poker_complete_dealing,6,0.9237664999999999,0.443965,1.666527,0.9237664999999999,0.9237664999999999
+result_restart,attempt_ready_turn,game_liars_poker_ready_turn,6,0.3696385,0.318383,0.494712,0.3696385,0.3696385
+result_restart,attempt_start_game,game_liars_poker_start_game,6,0.565247,0.523223,0.66963,0.565247,0.565247
+result_restart,call_complete_dealing,complete_dealing,6,0.928584,0.448211,1.671912,0.928584,0.928584
+result_restart,call_ready_turn,ready_turn,6,0.372135,0.321586,0.497204,0.372135,0.372135
+result_restart,call_start_game,start_game,6,0.6123609999999999,0.558812,0.715078,0.6123609999999999,0.6123609999999999
+result_restart,deal_to_phone_data,deal_to_phone_data,6,0.84294075,0.3179385,1.3731635,0.8221375,0.8637440000000001
+result_restart,deal_to_phone_entry,deal_to_phone_entry,6,4.4794215,3.9477305,4.996064,4.458718,4.500125
+result_restart,exclusive_wait,exclusive_wait,6,0.7958805,0.503639,2.0589685,0.7781,0.8201755
+result_restart,game_start_intro,폰 GAME START 안내,6,1.680817,1.670466,1.693929,1.680817,1.680817
+result_restart,input_human_delay,폰 입력 준비→첫 제출 조작,6,2.1427725,1.932342,2.940088,2.1427725,2.1427725
+result_restart,phone_controls,조작부 등장,6,0.9315515,0.920898,0.933022,0.9315515,0.9315515
+result_restart,phone_data_to_pack,폰 첫 손패 반영→카드팩 등장,6,3.6280215,3.621796,3.647974,3.6280215,3.6280215
+result_restart,phone_entry,폰 카드팩 등장,6,0.757118,0.751914,0.769033,0.757118,0.757118
+result_restart,phone_ready_lag,phone_ready_lag,6,5.07462225,4.8815145,5.7638275,5.0532985,5.095946
+result_restart,phone_reveal,폰 손패 공개,6,1.4699885,1.457578,1.474114,1.4699885,1.4699885
+result_restart,phone_reveal_to_ready,손패 공개 끝→폰 입력 준비,6,0.0710365,0.032733,0.109549,0.0710365,0.0710365
+result_restart,phone_stage5_to_pack,폰 공개 단계→카드팩 등장,6,1.9085429999999999,1.90399,1.916681,1.9085429999999999,1.9085429999999999
+result_restart,phone_wait,폰 카드팩 탭 대기,6,0.243126,0.160645,0.847843,0.243126,0.243126
+result_restart,ready_response_after_reveal,손패 공개 뒤 준비 요청 응답 잔여,6,0.0,0.0,0.0,0.0,0.0
+result_restart,ready_response_minus_ready,준비 요청 응답−입력 준비 시각,6,-1.162482,-1.256139,-1.007187,-1.162482,-1.162482
+result_restart,submit_completion,첫 제출 조작→성공 콜백,6,0.4238765,0.421723,0.463925,0.4238765,0.4238765
+result_restart,tablet_after_deal,배분 연출 끝→태블릿 준비,6,1.9216435,1.350442,2.629016,1.9216435,1.9216435
+result_restart,tablet_after_entry_wait,태블릿 등장 완료→탭,6,0.574439,0.342994,1.31013,0.574439,0.574439
+result_restart,tablet_deal,카드 배분 연출,6,2.8198825000000003,2.818689,2.827422,2.8198825000000003,2.8198825000000003
+result_restart,tablet_entry,태블릿 카드 더미 등장,6,0.6531125,0.639032,0.676671,0.6531125,0.6531125
+result_restart,tablet_raw_wait,태블릿 원시 탭 대기,6,1.228399,1.019685,1.953267,1.228399,1.228399
+result_restart,tablet_ready,버튼→태블릿 준비,6,6.894732,5.980597,7.282252,6.894732,6.894732
+result_restart,tablet_round_ending,테이블 안내 종료→태블릿 준비,6,0.0173325,0.013517,0.019751,0.0173325,0.0173325
+result_restart,total,total,6,11.8811495,10.99768,13.044919,11.862805999999999,11.899493

@@ -1,0 +1,17 @@
+[
+  {
+    "scenario": "initial_start",
+    "trial": "initial_start-2",
+    "total_s": 15.1045695
+  },
+  {
+    "scenario": "menu_restart",
+    "trial": "menu_restart-1",
+    "total_s": 10.091665
+  },
+  {
+    "scenario": "result_restart",
+    "trial": "result_restart-1",
+    "total_s": 12.108524
+  }
+]

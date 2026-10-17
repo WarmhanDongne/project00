@@ -1,0 +1,66 @@
+{
+  "status": "PASS",
+  "exit_code": 0,
+  "valid_samples": 17,
+  "scenario_counts": {
+    "initial_start": 6,
+    "menu_restart": 5,
+    "result_restart": 6
+  },
+  "original_file_hashes_checked": 69,
+  "event_count": 4066,
+  "source_hashes_verified_in_all_17": {
+    "packages/game_liars_poker/lib/phone/screens/game_screen.dart": "9e35dd5dadeae7d064e28aad6c8f37c1271552008ec48c695c6d72399d810dda",
+    "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart": "5c8ae295ab29744fd07159f9f0712654e54b7dac733956c102163d2e041023e0",
+    "packages/game_liars_poker/lib/shared/providers/game_controller.dart": "2bf973bf43fd815df1653130200581128a7d7d278ffa2c8dd7a5f2aeb4574be3",
+    "packages/game_liars_poker/lib/tablet/src/board_state.dart": "baa5b6545aafb7415e2262f2f7946dd1e31808adb3d0efedd0d720938a118c11",
+    "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart": "781a8da230b23d5b1fcd04c23c6e1e835a251314f5842324afcb60650410ddb1"
+  },
+  "max_estimation_width_ms": 144.996,
+  "pdf_pages": 2,
+  "pdf_page_size": "A4",
+  "visual_review": "Both final rendered pages inspected: no clipping, overlaps or missing Korean glyphs",
+  "source_capture_modifications": false,
+  "product_source_modifications": false,
+  "full_validation": "Not run: offline analysis only; user explicitly excluded FULL for temporary instrumentation",
+  "commands": [
+    {
+      "command": "Python 3.13 analyze.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "Bundled Python build_report.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "Poppler pdftoppm -scale-to 1600 -png REPORT.pdf",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "Bundled Python verify_outputs.py",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "working_tree_after": [
+    "?? artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-012816-d5c02b32/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-013223-0f3392e4/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-013519-5b2c6e88/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/",
+    "?? artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/",
+    "?? artifacts/performance-captures/restored-test-records-20261018/"
+  ]
+}
