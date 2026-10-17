@@ -1,0 +1,4189 @@
+{
+  "schema": 1,
+  "original_workspace_hint": "C:\\workspace\\git\\project00",
+  "path_basis": "Paths relative to the original capture workspace, not new worktree. Do not resolve same names in another clone without matching hashes.",
+  "hash_algorithm": "SHA-256 of exact original bytes",
+  "raw_files_copied": false,
+  "files": [
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/analyze.py",
+      "sha256": "625a41ef18fe2207400a3f0de719e08e41ecedd2c8b213a323366678c3fad0d3",
+      "bytes": 12328
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/APPENDIX.md",
+      "sha256": "63cf6c682a4653cf786a36f1fbf55ab92a6a8c8dd8020bd9f76db068ceb291f0",
+      "bytes": 20701
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/build_report.py",
+      "sha256": "e6b87a573dafa0a67c9daa1533fd727226b98cbd7d501e0229fa6cba5ba02f89",
+      "bytes": 30646
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/commands.csv",
+      "sha256": "86e9ea1363256169df49a90d37f2257a9577c6ffb5f61760ead605df57c03404",
+      "bytes": 7163
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/input_validation.csv",
+      "sha256": "7530e003dba2506bd4c9e2a3207bf6731208e4f4eca16787aed4c742c25d45ff",
+      "bytes": 2989
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/integrity.json",
+      "sha256": "8c84472000aa3dee61e04031055d3c053e280acfa83bb227d18de612b8cf6b20",
+      "bytes": 1341
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/measurements.json",
+      "sha256": "1f0bbdb0706d51716ee5d8c02b0fccee8bfc0b257b196045496b7606b77d987b",
+      "bytes": 342819
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/REPORT.md",
+      "sha256": "f59263fd5c11991694d3ea751299bd267f7890c98c3aca3f0ed8b1386a9e0e94",
+      "bytes": 9412
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/REPORT.pdf",
+      "sha256": "5d959784d4e84c90f0c458c30a150ecb856ad9e565c7affbcb9f8cf144b7369b",
+      "bytes": 131060
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/representative_flows.json",
+      "sha256": "289b34a264b5cca28db6c5003f2080a03d16f0a7c9fcbe58410d3d55fb0f01e4",
+      "bytes": 316
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/stage_statistics.csv",
+      "sha256": "086f8d88941d0e6e5fc757b13a928877a9a5379991bb0b39a73c43438519376e",
+      "bytes": 11560
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/stages.csv",
+      "sha256": "c5c18b64f2b6bfe8b61e9ba25f30768e1bf98cc34bbafc64dcbb4d653b94b037",
+      "bytes": 98739
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/timeline.csv",
+      "sha256": "3a4633b6ba5565198b21035da76bab020fc9e4deda32f225a8cfe15cc1d40d67",
+      "bytes": 431925
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/trials.csv",
+      "sha256": "27f97b6f6987fc74e87a132d44048a1d3e31e366ac52acdf3f8e1b14c62af9c9",
+      "bytes": 3145
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/validation.json",
+      "sha256": "bae99459195d7073f3091708562c0d8311dd645635add6c2be7dccb4810785af",
+      "bytes": 3248
+    },
+    {
+      "path": "artifacts/performance-captures/analysis-main-start-stages-20261018-6f31d2c8/verify_outputs.py",
+      "sha256": "b498df1c535d760848f19aebf673442f35ad61b798766295daf6f68a6f2261a9",
+      "bytes": 5755
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005036-0503abb7/events.sanitized.jsonl",
+      "sha256": "77715f7c3d130e147681cbe30fbe14d166b02084c07b9edca31e8a31c6a50ff7",
+      "bytes": 60263
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005036-0503abb7/integrity.json",
+      "sha256": "c2fca56c0d77258963f6db992a09688bfabdde8e6cad72ccff50f6332690296f",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005036-0503abb7/manifest.json",
+      "sha256": "52012859ed8d6160a3e3b3ae92a01cdbc35bf2b802fa45c925b03d5a92d26d9b",
+      "bytes": 16558
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005036-0503abb7/REPORT.md",
+      "sha256": "56981da3007e124d3c7dd4bde273d05086e726cf6ac184b0e21bc50724d269f5",
+      "bytes": 2540
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005036-0503abb7/summary.json",
+      "sha256": "42322165ed92a5acb57e0a2ef7b0f2b6fc2bb796b172c6a0835aba0433d3161e",
+      "bytes": 8112
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005153-def595be/events.sanitized.jsonl",
+      "sha256": "4bb65a842ab9e6c17782295c340b28cb656e8c77cd47e39e64340b62fcf58cce",
+      "bytes": 62723
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005153-def595be/integrity.json",
+      "sha256": "3b30c2c8751af016669488ade9175b71fbef5a6bedf76d4182b18068e46c4810",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005153-def595be/manifest.json",
+      "sha256": "77817b2c33a2b2e1042bd2eef5f32b8f1dec6056d3219fee5648e509d2716c3b",
+      "bytes": 13966
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005153-def595be/REPORT.md",
+      "sha256": "0bd7d541d75129c4060712b173b9e127e8696ab0f13c19f71982cbf0035adf70",
+      "bytes": 2535
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-005153-def595be/summary.json",
+      "sha256": "5d6cb391a94313948e1e054c3d12b5d35c28c204d76bbdab76a2fd59c9af97db",
+      "bytes": 8281
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-010031-cd88cf80/events.sanitized.jsonl",
+      "sha256": "deb3d55118fe91e420ea8cd41415f1fa881a77afaa1689ef329337f564b23618",
+      "bytes": 63793
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-010031-cd88cf80/integrity.json",
+      "sha256": "a9b396b4fb3ca2167f3d8cb9ab155c1a86efaa3308bd5c3dc201402a3acc991d",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-010031-cd88cf80/manifest.json",
+      "sha256": "037c4bbf45cb208d9954e2ac3685e8dfe5ef5e9e33968e812f26d092d5766ff3",
+      "bytes": 15547
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-010031-cd88cf80/REPORT.md",
+      "sha256": "9b4f3d085f0af79443d8c6a34013ddce8c2699f218d5c00c8dda1786f4d33ff7",
+      "bytes": 2576
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-010031-cd88cf80/summary.json",
+      "sha256": "926099fc9c712d17d10460f73100ffb2f9f914a5e4b1219e76a20ac5f86c45ff",
+      "bytes": 8358
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011357-b4d246c7/events.sanitized.jsonl",
+      "sha256": "6b8351ff9688a8bcc354c122caf8b700190f3c83a1284f489d8da5439c47ecb4",
+      "bytes": 61915
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011357-b4d246c7/integrity.json",
+      "sha256": "4ef69a2654f7226e1184d292b842602b0ec60382afd54a1e381d852995c2594c",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011357-b4d246c7/manifest.json",
+      "sha256": "409b784d28ab6dfa6696c31e76fe92793899ff82519ef4c2d9d5c93c7b397cb4",
+      "bytes": 14038
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011357-b4d246c7/REPORT.md",
+      "sha256": "b68a45705a1c42441b32079356054bdd6cef2ee78e66ca89d6b3fdb36d6c7f34",
+      "bytes": 2536
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011357-b4d246c7/summary.json",
+      "sha256": "f07b737906b5df870fdd99a71536db83ba4b96f787061c30457f3c636d828b1f",
+      "bytes": 8355
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011455-1bb8ff18/events.sanitized.jsonl",
+      "sha256": "bfab58311136effd11a3d52f5665ef8cc6363f827b64cde2b83a7352f3abca6f",
+      "bytes": 63534
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011455-1bb8ff18/integrity.json",
+      "sha256": "36dcf66e3710f0c47e304077782489df94d45a3c9aeb00d9e5ad85cfd0737757",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011455-1bb8ff18/manifest.json",
+      "sha256": "e4965e059ede5ca4a9ffeff6722b0a2cfd818f27fd77bc70ff6aef344f9f49a9",
+      "bytes": 14038
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011455-1bb8ff18/REPORT.md",
+      "sha256": "4eb19892acc3a320564f7cbb6640c5399b052015ae77883bdaf419915fe9b774",
+      "bytes": 2536
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011455-1bb8ff18/summary.json",
+      "sha256": "b6528f3a1934c264d8bbaf49de3e28061b810871455b701e49636b42a54c6b4c",
+      "bytes": 8442
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011603-364f9072/events.sanitized.jsonl",
+      "sha256": "727ff3d1ac611eaf42a4a89623fe782322c3ac23be509641e546825fde238c20",
+      "bytes": 62453
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011603-364f9072/integrity.json",
+      "sha256": "9c368d2ee886587b92bed340a07ae6b615ca7a4dfe8434d42bf8e4ecbe5e9b94",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011603-364f9072/manifest.json",
+      "sha256": "bd7b2d417f8afe11d67f79bf5f9d30f28b99b9fc20b45393f01b56136f7dc13c",
+      "bytes": 14038
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011603-364f9072/REPORT.md",
+      "sha256": "7636a2257bbc1d5d7316cc5489943faa12d557617f8dc2d52604b68692f7f771",
+      "bytes": 2536
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-011603-364f9072/summary.json",
+      "sha256": "99428ebb162d2f917f117d0e6cf6b1e82ea709e4feaa16c5d386e0407f6b9581",
+      "bytes": 8355
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/events.sanitized.jsonl",
+      "sha256": "c42acfe11ce47544c41006c2ca990d6f52ed3c5ed31984e22739c016d9ae1dc9",
+      "bytes": 67691
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/integrity.json",
+      "sha256": "3a18bba902a1ac28055add6e59be3dbc65ef9bc39590062b7f4f3ad4e7f030f6",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/manifest.json",
+      "sha256": "dbaa60ffd695791cf4c2f0a0bde311cbe6633889fd08fb195a3f4ba7b6ea0409",
+      "bytes": 13905
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/REPORT.md",
+      "sha256": "0348aed5ad66be28ba19836981a3a739211d386a1d224700999057ec4bf35350",
+      "bytes": 2532
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013848-20c24974/summary.json",
+      "sha256": "a87f1596a88135c583eb97f115c1d0b40cffc988b7fe26651aedf9bf78c4fbf5",
+      "bytes": 8824
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/events.sanitized.jsonl",
+      "sha256": "a568dc1096c3e484c551cc285f651cb8188513f8ec51d87b2624fcea15e1cbb1",
+      "bytes": 83895
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/integrity.json",
+      "sha256": "d5e9938d170672db90676117024c9b2b7832e03bd6355e2a1ecf45820304ff4c",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/manifest.json",
+      "sha256": "7b0bf6b7fdac9623e92cb737ceb6b4b426f0f8928cb1ab49b0308485bae705bb",
+      "bytes": 15642
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/REPORT.md",
+      "sha256": "26d52482b2aa91d287539df4d6ce23dcebf106c9000f6b7393be6568c08c0a50",
+      "bytes": 2668
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-013939-85fe8948/summary.json",
+      "sha256": "85215dd01e22d0f96db1a284f53d1777cb5a21820002b31c59d09d38b4eda9be",
+      "bytes": 10478
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/events.sanitized.jsonl",
+      "sha256": "d3deea7a1e36c3844691586e50a873c2298d0966629772b16429239a1df88b6f",
+      "bytes": 61992
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/integrity.json",
+      "sha256": "95c599b12e506088d27ac3dbbab7c131e9c7ce11467422a4a868d969300d6281",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/manifest.json",
+      "sha256": "6988422ffb9b9d11b80b93161805d38a233b61225e507f9602bd7faa571abe74",
+      "bytes": 12240
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/REPORT.md",
+      "sha256": "0dd57fda15d05d5c2738873e4edaca8d55beddfb601f8d0dca560d4f9beae885",
+      "bytes": 2530
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014055-7e247e0f/summary.json",
+      "sha256": "36994232b006c363714973537fbced3b527439f597a29263db67c7de808af80e",
+      "bytes": 8488
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/events.sanitized.jsonl",
+      "sha256": "58a084faa35157bda3f90ef9c138a873fe4be206ab65c1fc14621505947dd387",
+      "bytes": 62022
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/integrity.json",
+      "sha256": "e6434d500b35c91b9ca9ed87404408ab83e511f9cc4d835d542828be691b01e5",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/manifest.json",
+      "sha256": "141c6bf7d6c5a7068f3077c55c3913ca10ad47877b5235ce0828854f0d22a7d2",
+      "bytes": 12240
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/REPORT.md",
+      "sha256": "6a804766304df24bf3df399c524d1d885321ba5616bc57da00d589a6d6dc60a7",
+      "bytes": 2532
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014137-65719ea8/summary.json",
+      "sha256": "b099ecc4dadf14a44ea56f11f1552c1bc33080881355a1947e93475f7972184b",
+      "bytes": 8491
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/events.sanitized.jsonl",
+      "sha256": "f5201ee9b0a95959aa581cf6fb9c9607da3dd56844edde79094a5514718e945d",
+      "bytes": 60960
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/integrity.json",
+      "sha256": "b637b54a9eb56b65f9a8f178ddb0f159373621a138b6180d9ceee22f8bf7116d",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/manifest.json",
+      "sha256": "87fbf6b8554118b6d038d05652635db7010cbf91803edebf45c5bac3988a46cf",
+      "bytes": 12240
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/REPORT.md",
+      "sha256": "ea42c8429f939d066eea35ede991fbf0ef41582376314ec210ce846e954b7b6f",
+      "bytes": 2530
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014211-58bb46e0/summary.json",
+      "sha256": "c861d826a0a3c246d4cff390be19215b6f53512bd9d2e8dda8bdcda813276859",
+      "bytes": 8487
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/events.sanitized.jsonl",
+      "sha256": "504e51529f15fe89e1e1ec019bf7f0d6cc4b775d12360a8ab51e764cc27678ad",
+      "bytes": 63200
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/integrity.json",
+      "sha256": "2c44763cda39e89a2c35647c221d4f0d88b91f4efc556f2face25e38ba33d229",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/manifest.json",
+      "sha256": "7a2efb1e0dccdf13e5f7c751b409eba6f957de0f5f520e78e8db16e1cecfa399",
+      "bytes": 14816
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/REPORT.md",
+      "sha256": "9a4ee5078ce22f776f686c48c2873a8474354c84230f7ae167f9654082529d71",
+      "bytes": 2536
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014548-0f5eb212/summary.json",
+      "sha256": "b6c960d690a95a83000307da1cb91da2cfd8f5e7cf4a6409a06e9622d67ee33d",
+      "bytes": 8582
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/events.sanitized.jsonl",
+      "sha256": "76966f67dd7922b3f74330557f5928fd8369b2c74b8db5556d0c79d80edb19fa",
+      "bytes": 64562
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/integrity.json",
+      "sha256": "3757bbf40ab8add655a1e95e3b92d36fb6c3a60412895dc85b01d49c0b50f4c3",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/manifest.json",
+      "sha256": "e1679ea82fdfcad2ba47ba7a879c8e00133e841f3a8d1d1b56bb898d11413a7f",
+      "bytes": 13100
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/REPORT.md",
+      "sha256": "fed79d5ed180cdc06cae7a7f02fff261980543d6aa7d6bd10952508a84eed7bb",
+      "bytes": 2537
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-014747-012542a4/summary.json",
+      "sha256": "6e28dc455507ef5987c83e280af3277057d1b411391b71a6a51018b4e2009785",
+      "bytes": 8494
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/events.sanitized.jsonl",
+      "sha256": "522b22f4a63bc810486c5fedd90c0cc96d4883b715427335bcd2c19a65f38664",
+      "bytes": 64670
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/integrity.json",
+      "sha256": "7791286f96941c6442c3dd9da4e4533116dacdf38aa118265a4c6c1000946aca",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/manifest.json",
+      "sha256": "1e54bacdf5f1bb480fc1fa0ea76bbc98d6b0bfff5a867788cf3acbf022c62ceb",
+      "bytes": 13070
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/REPORT.md",
+      "sha256": "c181f5ed2b8204743e45eee7c4aa9fb799331d7d732e90e05e67f84e0ab5c0d4",
+      "bytes": 2535
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015354-ef07417b/summary.json",
+      "sha256": "2ce37ea127602c978f623997c3a6f6145e1c15c0660986ed797ef1dec3994547",
+      "bytes": 8568
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/events.sanitized.jsonl",
+      "sha256": "3e9af39838cc9ff9742eb36267d090f50bc29c66bf9317503df6d1add897d71a",
+      "bytes": 64405
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/integrity.json",
+      "sha256": "b366e2f65ce3f8f4d2c0c6904f9a03dbdb49622e2dbe5bae0be04210de759fcf",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/manifest.json",
+      "sha256": "9c982186f3669823f2bb58bb74a7f9fb0e4f959b8cacb14d823df658e16a2203",
+      "bytes": 13109
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/REPORT.md",
+      "sha256": "36b7c348b00f85a76b9fd5ca1c4b4d67f455d7e7af32d55bd8085a4aff9dfe94",
+      "bytes": 2536
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015516-37282d37/summary.json",
+      "sha256": "27b348150112f9ec22f75722bb715ddfe5547c9a9bfbd069ce423dbb55126f3a",
+      "bytes": 8498
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/events.sanitized.jsonl",
+      "sha256": "f727d173016b442ca47e20af52344db75e081cd8b0556f0b0893e7fcd5f063ce",
+      "bytes": 62305
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/integrity.json",
+      "sha256": "dfa3cbdcebf40d6e14aaebe3a131c6cd3a7fe601830113aea3a2a6fc53e689a7",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/manifest.json",
+      "sha256": "eda55492280b49a765fc6d597c75cf4022d81c496d60cfd167f01c38e094629b",
+      "bytes": 13148
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/REPORT.md",
+      "sha256": "afab2609bb7cec24920db41da7f938d0fbf54094288c58aebccf11f2131347ba",
+      "bytes": 2535
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015634-2d282724/summary.json",
+      "sha256": "e4599c29ed2adefc67ea0b5eb60285239fd0ca94c628b8865a70fbc52bf5d55e",
+      "bytes": 8517
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/events.sanitized.jsonl",
+      "sha256": "50ab19f53c90bc7d2025d4d135e251b29dda7bf0a4e3cca508c2a049f3b0650d",
+      "bytes": 62935
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/integrity.json",
+      "sha256": "da8850264e44bd657fdfd6af8fd8496f6dd4ce7313b080f58de4e2e28f008913",
+      "bytes": 359
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/manifest.json",
+      "sha256": "b915dc007f903c2f8eee7c72f4044dd5e73fb25b108b46b2620d472212ee4f34",
+      "bytes": 13148
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/REPORT.md",
+      "sha256": "5864438c5977c719f509f09ca8b9a5da78333827aba36a2527220fe4e20db6c8",
+      "bytes": 2538
+    },
+    {
+      "path": "artifacts/performance-captures/debug-game-start-20261018-015802-66b67dab/summary.json",
+      "sha256": "00d4c159207f64abb2da25c9adb897e427b5127f8a27f56dfd1c44a32dc89e0b",
+      "bytes": 8522
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/clocks.json",
+      "sha256": "8b21c20dd33e4ebca75fea953d3a6878afba0dc285276d763dee2ab97b61c327",
+      "bytes": 12209
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/events.sanitized.jsonl",
+      "sha256": "23368ff80515a78aefe0fc3a0e21bb267250dc0f6c914edcca84f49b6c53c39e",
+      "bytes": 69767
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/integrity.json",
+      "sha256": "e4820398bafbe5c7604d54d8ffcf725641ce924308bcd8f5e350b003a4ce849c",
+      "bytes": 445
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/recovery.json",
+      "sha256": "4ba5a2a1c1a999a6860688f110b852b6547c09e2042d74737150f1b66de0532d",
+      "bytes": 1237
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/REPORT.md",
+      "sha256": "384a9752182e2a7279792d548308554886bdb2ef8f4030bbc1c3fa4d60b83b50",
+      "bytes": 2031
+    },
+    {
+      "path": "artifacts/performance-captures/recovered-debug-game-start-20261018-010031-4153e545/summary.json",
+      "sha256": "a5cf6d5221eaf27c3cc770e710df6aaff38516052ad0cae28692462e888f4401",
+      "bytes": 8723
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/collection-summary.json",
+      "sha256": "ed9f46b0b2de626efe54cd6d2abd7c6b2e02464bfb42016144722faaeb70c064",
+      "bytes": 2047
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/capture-status.json",
+      "sha256": "a9d43d96dcf7434a63b5cf599176b093b6ad9c0eacea6ce489b6855a6251f5f0",
+      "bytes": 725
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/capture.ps1",
+      "sha256": "5d133bd5e629f6f9fd35041b1f717fd18f0a7fef8e8f1e3254b684bc42e7cec0",
+      "bytes": 7067
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/launch.json",
+      "sha256": "19c1276e1a9a9337232a1c7ec9cec8015dc90945c655ac9342385ea40a1548e3",
+      "bytes": 109
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/phone_A-events.sanitized.jsonl",
+      "sha256": "75fae8e78658ea6bd9f8d33249e9f032547aa6070f08c15c6cdb667913d56775",
+      "bytes": 174451
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/phone_A-metadata.json",
+      "sha256": "dcbdb134ce4ffc5a1b6573c98f82867148a3ffe19b28cfcf008e87845e783d8e",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/phone_A/stop.request",
+      "sha256": "a01fb491068e481136f11b1b2ea95590028ed2a166fdb5cd8ec6b2e4718bedde",
+      "bytes": 28
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/session.json",
+      "sha256": "eecd9aad8968b2edfe11765d2be66439fe4419c4f4b150bd7711a7e82675a560",
+      "bytes": 568
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/capture-status.json",
+      "sha256": "463e03377ca39aec9ea8274691fc84eacf3e81d3e66251c88e23bb890e113c15",
+      "bytes": 807
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/capture.ps1",
+      "sha256": "c721b016495713e7f9c2daba7e90e0a3579bce32c5e621ef7128ae43e92e0f10",
+      "bytes": 7060
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/launch.json",
+      "sha256": "df94c2c66996005207f0d716f11692a33fda6a48510bdb9029b5f60309258d72",
+      "bytes": 108
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/stop.request",
+      "sha256": "a01fb491068e481136f11b1b2ea95590028ed2a166fdb5cd8ec6b2e4718bedde",
+      "bytes": 28
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/tablet-events.sanitized.jsonl",
+      "sha256": "2cebefa8b6b1e057baa9412de41eb0cadfeb0270979b89645468787fb70d82eb",
+      "bytes": 943972
+    },
+    {
+      "path": "artifacts/performance-captures/release-card-submit-20261017-155334-818-0280281d/tablet/tablet-metadata.json",
+      "sha256": "494bc2a43bacef3125322a0c215c2cb99a954196390c493df90b0467929db9bb",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/collection-summary.json",
+      "sha256": "d18fbbe931ea19f742dcafe9834ee2a93916a5a8a62e0cbea9ed6817fe4d6be8",
+      "bytes": 4177
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/capture-status.json",
+      "sha256": "00f8ed312cda400e329380b952f6cb09a3df4c37781a54bb34271bafb5d238ed",
+      "bytes": 728
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/capture.ps1",
+      "sha256": "61cf73323b91615a300487a2436406e955a536461d14557029fa8189e5135540",
+      "bytes": 7064
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/launch.json",
+      "sha256": "218606694a7135dba090d094920d6d8248063e32010484f75018371455ad5881",
+      "bytes": 109
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/phone_A-events.sanitized.jsonl",
+      "sha256": "875ba1a73595d60fb99aff05ae08e643b0955054d3ea3fa66d7ee96cae059dc4",
+      "bytes": 179488
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/phone_A/phone_A-metadata.json",
+      "sha256": "dcbdb134ce4ffc5a1b6573c98f82867148a3ffe19b28cfcf008e87845e783d8e",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/session.json",
+      "sha256": "417593ede60ebc337ec1f0d3e0093cd2ac81c5226e3489c03e1a9f218e692f03",
+      "bytes": 388
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/capture-status.json",
+      "sha256": "5fa5c8cc8d7f24917289ae84e4132b6efb85e61f963ea456219606e4d2e30b86",
+      "bytes": 729
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/capture.ps1",
+      "sha256": "556212cfe23289d5599fc40de05641f822c126fa5f9a8fad77650ae41aaeec75",
+      "bytes": 7057
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/launch.json",
+      "sha256": "0616ef6c72e3a2ef30d83b768b5e7ff47124aa807f52ee44511f610f55f3153b",
+      "bytes": 108
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/tablet-events.sanitized.jsonl",
+      "sha256": "784e4dfedac0345663423a6b26c13f68ccdcb0588087a0d5c09371c7e03f33fe",
+      "bytes": 340222
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-150737-677-2f754068/tablet/tablet-metadata.json",
+      "sha256": "494bc2a43bacef3125322a0c215c2cb99a954196390c493df90b0467929db9bb",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/capture-status.json",
+      "sha256": "017f2f89600a7d2e188a8f7c8f5f02e033b1257ea07cca35af2007073bd34829",
+      "bytes": 721
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/capture.ps1",
+      "sha256": "a369866f93d3d50813399f454a8cad4814fbd814ddaa4d032bfd7274f20c21d0",
+      "bytes": 7066
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/launch.json",
+      "sha256": "4ee2163e2fa1955cfea0cc2ddda28778ce438230eb5d1205e28fff6b9f3a843f",
+      "bytes": 109
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/phone_A-events.sanitized.jsonl",
+      "sha256": "893a47705b6930ddf6f569a17034963c0ab2dfb4bdcbbbefb025800e6c4241ed",
+      "bytes": 44269
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/phone_A-metadata.json",
+      "sha256": "dcbdb134ce4ffc5a1b6573c98f82867148a3ffe19b28cfcf008e87845e783d8e",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/phone_A/stop.request",
+      "sha256": "026b6399533e686a4f9aa05fa0068e88dc897ff64ce676af9ad0a126907e8a2f",
+      "bytes": 40
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/session.json",
+      "sha256": "fab6a2c6d88737a168c3fda067d66845d28991a0e532de4ba57934786845b1f3",
+      "bytes": 427
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/capture-status.json",
+      "sha256": "0c7ac9b56677959a89911d98a80cc41c600d6d05afadefe4805f31397c9529d4",
+      "bytes": 778
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/capture.ps1",
+      "sha256": "ee2f666e8c18c931085fa00a17c278149f20faacc9f55515964f5a54949458b9",
+      "bytes": 7059
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/collector.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/collector.stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/launch.json",
+      "sha256": "97752e60c2130cbc67d10eb6dc1a43e3246da0a17f9aa3d3d63a9ae4a9f219c0",
+      "bytes": 107
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/stop.request",
+      "sha256": "026b6399533e686a4f9aa05fa0068e88dc897ff64ce676af9ad0a126907e8a2f",
+      "bytes": 40
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/tablet-events.sanitized.jsonl",
+      "sha256": "0e6f20f378a33afeae14dfcd3b721d7230fc39180aa15e16d711eeb3c67f978f",
+      "bytes": 11624
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/tablet/tablet-metadata.json",
+      "sha256": "494bc2a43bacef3125322a0c215c2cb99a954196390c493df90b0467929db9bb",
+      "bytes": 30
+    },
+    {
+      "path": "artifacts/performance-captures/release-game-session-20261017-154859-576-34abb956/test-interruption.json",
+      "sha256": "fbe748e28dd5ac132a6c37e4155a842e75f9211e27565ad65fe4b74ee675df96",
+      "bytes": 331
+    },
+    {
+      "path": "artifacts/performance-captures/release-video-measurements-liars-poker-bundle-20261017-172813-221-4eeddf6e/measurements.json",
+      "sha256": "b878d7f754b1f18e126688d542fcf2999daa3360a9e46455a1fb11112ad295eb",
+      "bytes": 29704
+    },
+    {
+      "path": "artifacts/performance-captures/release-video-measurements-liars-poker-bundle-20261017-172813-221-4eeddf6e/REPORT.md",
+      "sha256": "21554aebf04235bbf4b317b621e9b5e1b8abfad3c08a59f8256c00e69433c9fc",
+      "bytes": 9542
+    },
+    {
+      "path": "artifacts/performance-captures/release-video-measurements-liars-poker-bundle-20261017-172813-221-4eeddf6e/verification.json",
+      "sha256": "203d5a176c58f36c88adfb0b4592c8de7ea0dd2ff86a93abae1ccc9e2e60c9cc",
+      "bytes": 2689
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/analysis.json",
+      "sha256": "3288bd1b27f7ccdd6514edcd5a9ea5c0753e495125d96c18b76e65b68d8d2065",
+      "bytes": 11461
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/analyze.py",
+      "sha256": "7112f81adb507b4d59581e71c09c2e89c94483b38fa4b065365b559bb1eda1fd",
+      "bytes": 7558
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/APPENDIX.md",
+      "sha256": "cbdf861f193bd39f0a00365144f7a6081a47f5aa8c583c85f8efab297c758e88",
+      "bytes": 8382
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/collect.py",
+      "sha256": "eabe91e4510be07f7852b113a041c6fe01b5b3148003cb9f3a24a265594e51cc",
+      "bytes": 9737
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/confirmed_cases.csv",
+      "sha256": "e8b6db65011235686c9d9fa9d1f0311f10302f5d0556e9259c1f4e781a05d1be",
+      "bytes": 1036
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/handler-metadata.json",
+      "sha256": "540765042884ba0f032622454e38a72b393e1fe36cf063fc22b4b730921d5280",
+      "bytes": 3384
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/integrity.json",
+      "sha256": "6ffd80e1276b61bda0e938cfe7f15be618c208d850685d24561d1af0faa096a5",
+      "bytes": 2185
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/plan.json",
+      "sha256": "8e0b1b4d9adc4a3ea5b283e7c06422d71fb670468a1e03d52077976066b7eda7",
+      "bytes": 47976
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/probe-retry.json",
+      "sha256": "14a4f5b4bf8cc6d3bb9b3a6772e8393a5745b125de3390a11c65d463e9716fb4",
+      "bytes": 2110
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/probe.json",
+      "sha256": "5b38443b2d7e9338b482abef31f14e6fbf6655ee122df97402f75f41e4c1cc6b",
+      "bytes": 1584
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/REPORT.md",
+      "sha256": "23d36e76ae6691c3bb90551e82a9be52adf4937dece8128481c354f829dd8de4",
+      "bytes": 4526
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/requests.json",
+      "sha256": "3db25c3efc0d4597450094ce725fa74c5663390148434d40558a960c5e4965f1",
+      "bytes": 3719
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/system.json",
+      "sha256": "8896a70197b832131afabe89f6949fd62376e6269c6a0383012934983be524e6",
+      "bytes": 3446
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/timeline.csv",
+      "sha256": "b0f597b08693ef69752ad0aa9313cbcea85556d3b4822166e829d9441966629b",
+      "bytes": 1886
+    },
+    {
+      "path": "build/device-test/cold-start-evidence-20261018-d92f4a71/validation.json",
+      "sha256": "fa1112388b194abf3d5218dfc5045f1e009123285f02c6b3b5119c29ad8ea4c9",
+      "bytes": 521
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/analysis.json",
+      "sha256": "35ae4b78b9c6997262d0e06bde5c61a19d4b91ee6546d0c38cea0c0bb7d5e770",
+      "bytes": 35837
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/analyze.py",
+      "sha256": "4919986e96c4e7c150f3b5986fc14b829dc533f72e38d86014cfdc4e44c66f9c",
+      "bytes": 11190
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/APPENDIX.md",
+      "sha256": "d7bf78ab0e54a2a6f41a82661980d696f42a986fe13cb66877a564ed31dfe6a4",
+      "bytes": 13814
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/commands-inplace.json",
+      "sha256": "1558de73bba7e8faeb5a68ee564aadc87ca3309fce95997f0b99f8de499e680c",
+      "bytes": 14079
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/commands-logger.json",
+      "sha256": "db730505f808ee61d44e6ba13029805fc137e6cb195b7807521d2b7c656def6a",
+      "bytes": 5676
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/commands.json",
+      "sha256": "098e26d87cb167d6e2657c90677835210d9e3cad3f0ddae2dfcf5882b79ddec3",
+      "bytes": 39784
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/account-room-cleanup.js",
+      "sha256": "46aff3d4f3e233f572a4622ed68401e8029d4f6e56a0785ad7b671c2e1820f76",
+      "bytes": 2890
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/account-room-cleanup.js.map",
+      "sha256": "70dc1fd3bc349305c469b9706eea486a86563abe9c99beb4bdce81a8715bdcfa",
+      "bytes": 2266
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/check-email.js",
+      "sha256": "b62609bc67439f655aaef6c8ff4c6a301cdabff04a53e3efa12e9cd97d2aad21",
+      "bytes": 1150
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/check-email.js.map",
+      "sha256": "96c6b5bacbf355421b6598f16607cabc61de38016ab3612f9adc96018d89759b",
+      "bytes": 945
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/cleanup-incomplete-accounts.js",
+      "sha256": "dfcc1fc1dbada2dde2b31495ca3eab24c5dffbeb2de626c2e2aa7856d5bcff71",
+      "bytes": 1241
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/cleanup-incomplete-accounts.js.map",
+      "sha256": "a4f3dda9472f88da2bd5e78649b9e95911d80403c68aea774f9afe5d38da4c94",
+      "bytes": 825
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/complete-guest-onboarding.js",
+      "sha256": "c4f486a5a7bd12ce3443145811c929e5dcf3bf0dd3761a7070eb136977950f7a",
+      "bytes": 4002
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/complete-guest-onboarding.js.map",
+      "sha256": "6a68c4208b1951b576cbc3603622194d666ad7c1f842d3136571cf82d1a521d5",
+      "bytes": 2801
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/delete-account.js",
+      "sha256": "725c97fea09f06f3394fc4b457644d3eea473555a987b4b4e3688ae775911dbe",
+      "bytes": 3513
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/delete-account.js.map",
+      "sha256": "6c6fd4484650d0cfe29967a98f8aff504ce275c6785bd53f05573666a3c8b1d2",
+      "bytes": 2147
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/onboarding-types.js",
+      "sha256": "3384f68a825ef76b67e2215c41d0a71c99ac7ab0e2d1114e01d266ed65e0558c",
+      "bytes": 5669
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/onboarding-types.js.map",
+      "sha256": "5574f7ee819114a1f4a5fdbb169cd06c62be65d53dce1ebdcd1346b507209c3f",
+      "bytes": 2329
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/onboarding.js",
+      "sha256": "b6ed6d23dd9b8449f9a89cf562c7e4e3d9805c1ead42683d64da98fd1afa0649",
+      "bytes": 10899
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/onboarding.js.map",
+      "sha256": "b8674d1d0eb50f46022003cd91866271681e1c77ca46f80da7e5c963686d7780",
+      "bytes": 8030
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/require-complete-onboarding.js",
+      "sha256": "b779678e8a80c8ff34e592417cbe97a6acd449154aa9ab1897bb25130121af93",
+      "bytes": 2285
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/require-complete-onboarding.js.map",
+      "sha256": "7c7622ba79458d564a1937bdf8254128c497f0e22700631d6e2123589275c631",
+      "bytes": 1350
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-apple-profile.js",
+      "sha256": "6a271a2c25a0f2113b02f77aa1ce62ae995463f2a205124a8d440e26a534c4b3",
+      "bytes": 1175
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-apple-profile.js.map",
+      "sha256": "f4e948cda832065e184a988b98837a2815182d3ce82131583149cc1303e02da1",
+      "bytes": 694
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-google-profile.js",
+      "sha256": "de012eb2f8f0c2349f1d92955fe8535a0a095d17ece7d94d2a7d1781b6d22ba6",
+      "bytes": 969
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-google-profile.js.map",
+      "sha256": "f9b30c58bd3fc6f089e49cc024cfa0858ea2bcc7aa54f86bcb1ab3b0c36fa00a",
+      "bytes": 693
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-social-profile.js",
+      "sha256": "19c59aa45988b6235ea2bb1bbaf7298ed4b810e9850a2b06ddb9d71cedfe8a38",
+      "bytes": 5019
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/auth/sync-social-profile.js.map",
+      "sha256": "45e6ac353d79f0f1c95ebb1b1476ba9ed1ece5fd62a0c4c563d85c60997272be",
+      "bytes": 3145
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/common/start-game-transaction.js",
+      "sha256": "9d44468243e780cababf4b7591d89237c737ac2f09dcf6dd8ec062a3a440e6c9",
+      "bytes": 1911
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/common/start-game-transaction.js.map",
+      "sha256": "8c863465e7f9503849dd1fb65f71974513b97defca9c7e168a50ad4e5e63dfb7",
+      "bytes": 1564
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/common/transaction-random.js",
+      "sha256": "d6baac73e9a1c3a4196c30c8d08681b0673ae777be5f71f81c69d2d9a7f056ab",
+      "bytes": 1871
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/common/transaction-random.js.map",
+      "sha256": "f27665da25563f1a814ba698391de56597860e4a3bfa39f6a6ad52dbd8865ccb",
+      "bytes": 1901
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/call.js",
+      "sha256": "e029590fc4cd35c82442a9ce0849b2a0aaa32015534f2821cddff6bdd95bbe51",
+      "bytes": 3403
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/call.js.map",
+      "sha256": "99963b30c36d99cc70fda0b2675f856d8029a4f1a8be43feb52ed56add4e1a94",
+      "bytes": 2494
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/clear-game.js",
+      "sha256": "2523f6e8a35dfd4f4cbfa87fb97ca2da589d438f13d872a7b6c0a03441790e1d",
+      "bytes": 2725
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/clear-game.js.map",
+      "sha256": "b4f6abb68c78a7f9dadc150f5566a262ebbe70ab14405873d179be1257c5376d",
+      "bytes": 1794
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/commands.js",
+      "sha256": "8dbf6ed3ae68c222ada94a8f5b4725c675d4578c9ba1089a2ecef59836f9b770",
+      "bytes": 962
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/commands.js.map",
+      "sha256": "d4d3936cb36d175f50bf718949ef674cee48f5bc55d8b2743ab6dd09b65b6c4f",
+      "bytes": 619
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-dealing.js",
+      "sha256": "f493afd439677a105277a8134364306afa3514fefac302730ca875302c54e07f",
+      "bytes": 2335
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-dealing.js.map",
+      "sha256": "1e3ad20a26e7e1f04d1f162febc7a226302d37370d144ae17163c26f86e41087",
+      "bytes": 1772
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-result-reveal.js",
+      "sha256": "139b67dab9d623d312cb14ee401dc420904a346b75fbebf24d0da93a43e644fd",
+      "bytes": 2452
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-result-reveal.js.map",
+      "sha256": "f2c9214db8f5438ee45ba569321a9c58963d75d78629f91c04a036989366631b",
+      "bytes": 1718
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-turn.js",
+      "sha256": "3ad62815505731e02f5d99acc98af63700ed7ff088867c1cce37105cdaf0c4c0",
+      "bytes": 4419
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/complete-turn.js.map",
+      "sha256": "71a3a866cf3512aaabb03142d7500046dd974ed4331b0b129164928aec8a1ae0",
+      "bytes": 3235
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/draw-card.js",
+      "sha256": "d8621f5d85adc26eeb074df55479bcfe5703ad7a1ed5643e7eb13b2f7ec23db2",
+      "bytes": 4326
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/draw-card.js.map",
+      "sha256": "1927eb3db756f13dd5c1a3fca2fa715ba7756c0d58260cf0127e246f49617c58",
+      "bytes": 3183
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/end-game.js",
+      "sha256": "13471f4dcb8d3268b82f224b13e9ba7681a8b7cef8f3807e6eedc0d758b15c5d",
+      "bytes": 2750
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/end-game.js.map",
+      "sha256": "de5deb2ca56b339bdc0779263e60465be132fddc5d84e3194999cae80ada314d",
+      "bytes": 2227
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/exclude-player.js",
+      "sha256": "3a7987d8d1ecca791dd2146f09cb2f1e22fc2e994e62548cd96919fedb619a0e",
+      "bytes": 1750
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/exclude-player.js.map",
+      "sha256": "031d677d3ab5f8eea5015e5344586a2b18f48087fbe23ee1f760a6fa4d95ad29",
+      "bytes": 1484
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/game.js",
+      "sha256": "17ffff16e20862ec526d9ca5a7cbf7467f8d297d8ec205ab37d42ba0ec3ed2ba",
+      "bytes": 15995
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/game.js.map",
+      "sha256": "3b1173edde30c914c169d5864512657b80e67301fa1b3ccc7d665f32a32dea23",
+      "bytes": 13416
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/leave-game.js",
+      "sha256": "a159904fdeac13d4ca8058cee1a4769eaa02f2210d17986063fcbebd3842e2a1",
+      "bytes": 422
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/leave-game.js.map",
+      "sha256": "7dfcc37dba99379c1db5e0683304182310e3e90cefce9a77994c4e912a63addd",
+      "bytes": 261
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/next-round.js",
+      "sha256": "b0fd0c2ef79f31a3b24b3ff07668fe930daa13619b6c8cd626df9dc2b090a19d",
+      "bytes": 2466
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/next-round.js.map",
+      "sha256": "af4798557b760847245d7e4a934d960b67e9360777ab823810865fd2bde665d1",
+      "bytes": 1623
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/start-game.js",
+      "sha256": "9d37b28da5842eba4118bdd22c833d107228047f4e44eb4326130db32dd202f1",
+      "bytes": 3264
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/start-game.js.map",
+      "sha256": "8c4c538296706fb3e437b8e5ee7a1500c12bf16f7d7de3fc9c7507119dd6540f",
+      "bytes": 2245
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/submit-final-hand.js",
+      "sha256": "880e7b148e753f629127c8a29a0f9c7d27eb1ee4d45740e98e057a4e30ebb67d",
+      "bytes": 4865
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/submit-final-hand.js.map",
+      "sha256": "ddb832b5fd58dfc8c888c95d22d9b70e8e5bc4ddb50dc306364185fbfc356ef7",
+      "bytes": 3689
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/timeout-turn.js",
+      "sha256": "e0434c72a26762c0261391737a8536810ae2f86ae27ec50edb2f297c34a0d4e9",
+      "bytes": 6984
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/timeout-turn.js.map",
+      "sha256": "61eb5749330bcf30ee6520c211a869a9287bd1fc7343862c5b81423cc6cdbae1",
+      "bytes": 5460
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/types.js",
+      "sha256": "9993a63afbcbc52dc6cea465e79c49898e8d2b49c2b5865959921746b618bfff",
+      "bytes": 291
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/types.js.map",
+      "sha256": "176f4a3dda60b896d31ea6736c936b48df01b8c06ecfd1c49b72abf61f2f5600",
+      "bytes": 214
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/validation.js",
+      "sha256": "add35d1829a5068d061338e6b6abb16375d345158150d24a03ced41c535d8f83",
+      "bytes": 2692
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/final-call/validation.js.map",
+      "sha256": "f944dcfce4d0cde0be3d403141f52127699646e8a2b64ce92ae0bfffa8efd7b3",
+      "bytes": 2021
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/controller-presence.js",
+      "sha256": "dc7df9a3d6622ec0478f7e7fb5b48092ee017cae898c573d7803726deb6e9274",
+      "bytes": 6269
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/controller-presence.js.map",
+      "sha256": "92fe29c3e0bab8468f920a0b3bf3130a3d55d06acfe2b296005e8203da17a2d1",
+      "bytes": 3191
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/expire-resolution.js",
+      "sha256": "694f4ece79c4202888fad1baab397e6a05ebf6122de00a9a63e9f651a449913c",
+      "bytes": 3666
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/expire-resolution.js.map",
+      "sha256": "a6b91bdebbd793faf1277bb48f4acece021fc479bdb5464548a14e50a1553577",
+      "bytes": 1834
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/expire-scheduler.js",
+      "sha256": "3b1bdfe16c21c43b6617796cdbfb64e873afdb4b2b9075b705372be858d3ae70",
+      "bytes": 5242
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/expire-scheduler.js.map",
+      "sha256": "412a98eff27df308e27abfd07900e6c7375209076407d7409153481fc8e01817",
+      "bytes": 4194
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/finish-now-resolution.js",
+      "sha256": "54852a8bb3e9714fba55b8fdbae3413d9c7dcad89069ea817af3aeefd2d0515f",
+      "bytes": 8086
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/finish-now-resolution.js.map",
+      "sha256": "8b175099dfafc8112a77ba3d03355959f0517b1d7d089302ba2f3f4223abefeb",
+      "bytes": 3470
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/finish-now.js",
+      "sha256": "d513f2fbf15b0ea0d43e3d5eb4a0833dabec33dad2ff22d241f7cdc746af44b8",
+      "bytes": 4353
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/finish-now.js.map",
+      "sha256": "5e7936a2db75176f72effef51db1cb0f606b2ae9ef2c801d70d94ea593d6f1e9",
+      "bytes": 2215
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/functions.js",
+      "sha256": "e1ae9120bcd48e910973c1cd0a061530e6589501e28b534affd6b13251a452bb",
+      "bytes": 10482
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/functions.js.map",
+      "sha256": "7a56d12dd5c48a41945078584376a1a0893a456742c0a0274329a24814e8fb20",
+      "bytes": 8274
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-adapters.js",
+      "sha256": "f6fa54fdb87ab06bc502ff8af3087c632713e45f13a9942a5ced4f41b926aaed",
+      "bytes": 2429
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-adapters.js.map",
+      "sha256": "79410bd1e0f021cd62f1620ecba0ed8b2904968c698d1beced850f63c20ab6ad",
+      "bytes": 1705
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-command-transaction.js",
+      "sha256": "c29cb64ecd7d1a0196bc84477e0f0f1e1dfec4d0ccf55e6f65a318236e99cfb0",
+      "bytes": 5401
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-command-transaction.js.map",
+      "sha256": "fb9ebb28cf14dcd863d76ea9939eaa8cf5d0e2523c220fffbdb1dc2b632dca4d",
+      "bytes": 4413
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-mutation.js",
+      "sha256": "dbd755e41f68397c012007406f8aa48101af4b17f95ee29055c1e45daf099de4",
+      "bytes": 3601
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/game-mutation.js.map",
+      "sha256": "1e7b98c7ca0966835c82d04f5083218bbab133a533392b0b39fc6a6c8d50d270",
+      "bytes": 3630
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/leave-request.js",
+      "sha256": "7540b00a91a66d5ddd568cf7f7af59ece16d16de438fd27411f945c4ce724da7",
+      "bytes": 3127
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/leave-request.js.map",
+      "sha256": "f2613ebf410184447e2739ec493f9a5758a3eb158630453c77647875d0ce7bc4",
+      "bytes": 2220
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/recovery-state.js",
+      "sha256": "ea52f8f7dad7831f6e8d20da0fc041e15ce5665f6486b30584ef439eb51d813b",
+      "bytes": 14886
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/recovery-state.js.map",
+      "sha256": "2c8ed7ca239eb1e1f576bdb6207336a8bc77a2e39d1b38d5837b86b17eed26a3",
+      "bytes": 13132
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/state.js",
+      "sha256": "f0d8e09ef228d44027223ebcdf61a095205c545280d145975efdd9a04f183406",
+      "bytes": 8214
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/state.js.map",
+      "sha256": "5ac734e918bfbd6f448d22bee17398a223b0e18640e08f07ef6f2d149269f9b6",
+      "bytes": 5699
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/types.js",
+      "sha256": "b0d2bc4142d0c62d43f996aaeb64f22c4889ac853f8a3765758b505d972d0149",
+      "bytes": 110
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/game-interruption/types.js.map",
+      "sha256": "ca70c1ac5ef7932389a7e6110c364c1c3617bde8d06dfc89eeb11658c1c235ce",
+      "bytes": 142
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/act.js",
+      "sha256": "d52a582ad1e79faaa804a5c5e0839740d872412a2000aef9a2395a97f14fc78c",
+      "bytes": 2930
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/act.js.map",
+      "sha256": "926d4798e5816b289e3dd565d40219414aaa6251c9718d12aeb9f2ba0f23456f",
+      "bytes": 1973
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/betting.js",
+      "sha256": "e5670b1d39996bf60308e6ca7ba2ab65e1bf84fb47b16d90ff0681b3524be422",
+      "bytes": 9281
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/betting.js.map",
+      "sha256": "d04bf5552facb8302cd8b87c28c635abea0d08a0e73222e0c58695daf05d8424",
+      "bytes": 7918
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/common.js",
+      "sha256": "3c069256833d8195755afc3a5af25a0ec7691771d2f92a5070fa54d71e027973",
+      "bytes": 1281
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/common.js.map",
+      "sha256": "9d24ac004d64ea943d798f1d1dd773b3cb465a6feb866a85634a9cf92425852d",
+      "bytes": 1127
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/complete-dealing.js",
+      "sha256": "04356925b0cffe7cadbc6e2fbc6a8466cf00b9972947389e3da4cd22a3106c4c",
+      "bytes": 2031
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/complete-dealing.js.map",
+      "sha256": "f763727aa2176d006b1e85c2da6102da491e6698c720b9b08daefe92c4c6ae1b",
+      "bytes": 1357
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/complete-result.js",
+      "sha256": "8f36328f559ab6a10fd2f9fd1b6214c0bec57ec564f9244e84f03cc79168d171",
+      "bytes": 2026
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/complete-result.js.map",
+      "sha256": "25858d65d0ba829a4dad4a79f32d616fb4fe21e21063ad18b30a60543416c0e3",
+      "bytes": 1355
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/config.js",
+      "sha256": "ed3bba7ea103988eb43cb4e14dd87bef9c0aa15a8306129549c44d70679a643f",
+      "bytes": 1514
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/config.js.map",
+      "sha256": "a1e0c033d01bf3f5f95459344a434bd600805675ae8e9c41368e59dcf876aacb",
+      "bytes": 1136
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/deck.js",
+      "sha256": "b0a82fbb463add3f8a67cdc50a754dc7c4315a9d01866d9f25204cec48c2cb5f",
+      "bytes": 1048
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/deck.js.map",
+      "sha256": "6612f4eb08223903884579b187d6572440718d728c4fd7a749138bb3f9b97c72",
+      "bytes": 940
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/end-game.js",
+      "sha256": "780aeafd9ab9f4abb68b0a84f3c7ff8dc04831ad7d3638d68023188f9ac6f863",
+      "bytes": 1962
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/end-game.js.map",
+      "sha256": "19cbec9aad5d21b28c21545660668158b192d871264df6a0d605e7c92da4b93d",
+      "bytes": 1360
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/game.js",
+      "sha256": "2d188a876f0d7d30931cccfa23e324f02448e992beaa6963926cdf14284ada23",
+      "bytes": 25285
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/game.js.map",
+      "sha256": "c478afd43c793862db7c6822db46dc8ac378ea84abf2256f14b27752abae74d6",
+      "bytes": 25962
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/hand-evaluator.js",
+      "sha256": "12887ca531596c533f163869b94c81e6ef67f75ffe889604cc72e657823a28ee",
+      "bytes": 6425
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/hand-evaluator.js.map",
+      "sha256": "55c0791e6e05d6193a1be2cd2c9fe1b6175af61ef9acbe513d99d2bdab1cfb37",
+      "bytes": 7513
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/leave-game.js",
+      "sha256": "7a57e3b60539471119f3546084bf90335858d159d67c0b0dabbd2e0fe0190453",
+      "bytes": 414
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/leave-game.js.map",
+      "sha256": "9666cca4afbd46406a03cea9ae1809eae80020a4d4ce4849992cb637091037fb",
+      "bytes": 257
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/pots.js",
+      "sha256": "7c503be4e7c1fced55fb42e39f3dfe818f5cd39cad9b25618f6d2ba6ba7a8bb3",
+      "bytes": 4312
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/pots.js.map",
+      "sha256": "e2d31b9e34f948886216e576df4f0e10e2491430b7da540eb6e4b68912056bf3",
+      "bytes": 4378
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/start-game.js",
+      "sha256": "8579721a78cf5cf608bec6d591bbde2dab681c216ba0d56956f04820542c89dd",
+      "bytes": 4317
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/start-game.js.map",
+      "sha256": "fd972690434e1dd0b19a4ca817b23e0a2d640aa67f9ec35231545513380382e2",
+      "bytes": 3125
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/table.js",
+      "sha256": "81440c2536da00a23c5b150efd2165a29c7646b9225e7ae82b02d8aec6a9ed58",
+      "bytes": 2715
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/table.js.map",
+      "sha256": "0b0148752dd9b7765c1ccf086ab154561ffb7621d38b5b7b402411d76d78767b",
+      "bytes": 2559
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/timeout-turn.js",
+      "sha256": "5467f205700142d4fb450fdb2378cb73c7c9751e1222697b7ad6e65a361b6ae3",
+      "bytes": 2015
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/timeout-turn.js.map",
+      "sha256": "523696e8cbb799f4190a2d591e562d6925a00949f4143b2df3256cc8677494f2",
+      "bytes": 1349
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/types.js",
+      "sha256": "87f645ebd98a85c7d36be2d6d9cc25b424ec2ab67b1cbca9f60468c7d88bb5c1",
+      "bytes": 370
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/types.js.map",
+      "sha256": "000d7c733ce12a42917870ddc5b04c8c4adcb5b0f3b800e5d355cb73a537ad57",
+      "bytes": 379
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/validation.js",
+      "sha256": "2b59ff7489f1cede35f4fce3274ac11d5a7a477ac36c2df5a58c9cae0806b5de",
+      "bytes": 3420
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/holdem/validation.js.map",
+      "sha256": "e50d99d225e96736fc0c9b14a1af835cbd18c21b252d42e8ba7b54c36391a39b",
+      "bytes": 2529
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/index.js",
+      "sha256": "e1b98a26d92818282e69fcc3fb1d6e35a7d5178e8123d1de183b269058cb1549",
+      "bytes": 20614
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/index.js.map",
+      "sha256": "09f26b91a43929cc98a2884a4a35c9396294d368fe5e1e4a2b940b424ad0f005",
+      "bytes": 2953
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/call-liar.js",
+      "sha256": "f0890b14080ebdfb6fa5dbf09e00bde4c729fb36b381f5cded125730daef445a",
+      "bytes": 5656
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/call-liar.js.map",
+      "sha256": "92f48689b9e1ca65b0e462ad2651fd02b1207a7edab36f22969b41423f945ba9",
+      "bytes": 3967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/commands.js",
+      "sha256": "33afb79e23e07a7bc74dc9d9bedcffdb39909c3cc1fe16e190a7375c19c9f520",
+      "bytes": 1628
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/commands.js.map",
+      "sha256": "41271d9243ad7ece062314fe80a4c18fcdb6a21d9510ca90c68d58ccd07e17c3",
+      "bytes": 1194
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/deal-card.js",
+      "sha256": "824e7478b4a7c665d3c57115dfca1764f902f755283cb0afb98fa8952c5163f4",
+      "bytes": 911
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/deal-card.js.map",
+      "sha256": "66127ce0e7a2d68bd49ea3beb77f5c29b9b689ec32c24dbe6eed4c52f151edd2",
+      "bytes": 968
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/deck.js",
+      "sha256": "299491218e90fa6941f63b7eb5ebaa93f8f240db753df6eb7b753fecaf5a27c7",
+      "bytes": 1460
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/deck.js.map",
+      "sha256": "8e2556c762da9ac133a2ddcbb80e2aa7e0fb8a00c02cf0f80caa8e4472e35f6e",
+      "bytes": 1624
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/next-turn.js",
+      "sha256": "3a96981b5585ea03232249b58aefd8c8ebb263984cb57bfaa42e0d81053b1240",
+      "bytes": 3476
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/next-turn.js.map",
+      "sha256": "5b04570614c2f8df19d58f8cd589fe220df7fd4b843b5b34b26a825eeef0a4fd",
+      "bytes": 2035
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/table.js",
+      "sha256": "c883996eca69a7c2ae0eb8e028a952efc5498ecac5fef61a7f249ff89057f8bb",
+      "bytes": 480
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/table.js.map",
+      "sha256": "a012b3b7ed3c8ad83bdddc5cc9a20bd52beb65abb895c7487bbe86760f883ee0",
+      "bytes": 352
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/types.js",
+      "sha256": "78287403b49e06d168c45af2afb86635d10311e8e7279a36e7cc0874828d7611",
+      "bytes": 367
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/types.js.map",
+      "sha256": "9e3b87f00303aaf2fd5507d3c21aabf4801942489343db42f24726f4f88c14e0",
+      "bytes": 296
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/validator.js",
+      "sha256": "583a6ed872d8b8500a8387cb8e240aba167fcc07fc17efd3e0c72e9d3b235244",
+      "bytes": 4974
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/common/validator.js.map",
+      "sha256": "c898c02c53dc760ca8e41acdaf8a07254867faf045a71bc70bce9831857787a3",
+      "bytes": 3614
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/complete-dealing.js",
+      "sha256": "0db29d0d070825b3c190d0bc1f2fc0a622147cdf97e18102bb441a65ebe3eff5",
+      "bytes": 3248
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/complete-dealing.js.map",
+      "sha256": "360ce72c4548cff00a132497d36ccdc894f99910422b38f3e4bddd2b69d0a7e1",
+      "bytes": 2309
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/end-game.js",
+      "sha256": "1f13eef442dfd079294b3b675648c06596d1c32c3d6d7a8807679422a07e212a",
+      "bytes": 3385
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/end-game.js.map",
+      "sha256": "74d36b26645f67664143927cebaa3f23487a894b29e594121439122a21abe935",
+      "bytes": 2648
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/exclude-player.js",
+      "sha256": "4a2167682136bc3598c7b29993ad481f138f97e9597bd343719352c61c189e6e",
+      "bytes": 4957
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/exclude-player.js.map",
+      "sha256": "953735089d4bc8867e815b41fd1427a292ac1b783cc0d4883a92f341f0c4bad8",
+      "bytes": 3908
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/finish-game.js",
+      "sha256": "1b1aa00ee9867dc2a643654f452c207ade04be5b88707ec55444b52ab89516de",
+      "bytes": 709
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/finish-game.js.map",
+      "sha256": "4c9a81db8532538650b9907745ed2cd5fe1b893ebf0112c82c62d301ffbdf61c",
+      "bytes": 757
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/finish-penalty.js",
+      "sha256": "37cb7f2ec973b8cee6ad521a6d7a165009d95fc313e51d59781fc10df6a6cef1",
+      "bytes": 9096
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/finish-penalty.js.map",
+      "sha256": "3126f065328b69b301a852417682df804aff8a1bb10bd5eefb236cc1a765c8d7",
+      "bytes": 6137
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/force-timeout.js",
+      "sha256": "e4005a2367915182b4796195df2cafbbb56aac922bca68fe4968b723bfabe300",
+      "bytes": 2421
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/force-timeout.js.map",
+      "sha256": "6aee9e14a40d020b08fbf317aa4481c47bd1291b87d57ef3715a8133e2468d9e",
+      "bytes": 1227
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/forced-timeout-resolution.js",
+      "sha256": "bc1ecb1a5573deafc473b44f3a6ccd97ab54dbc73518b3168f520e1efce0e7c3",
+      "bytes": 6772
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/forced-timeout-resolution.js.map",
+      "sha256": "84e58a241708c2caf26a2ce4c51592ace4e828f3528e2b04b8d775bad9c746f7",
+      "bytes": 5395
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/leave-game.js",
+      "sha256": "89d2f644611184d0de08bc28b70ccbf0228cf7a27fc1a900eb749ad08f6dea20",
+      "bytes": 424
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/leave-game.js.map",
+      "sha256": "48701d800df5852816b81c2c797df906b476e1c02d79375b2c8ba1939d05b5f9",
+      "bytes": 262
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/pass-challenge.js",
+      "sha256": "1957e38ed710280face0fb1c0f758992112da06235c284bac86c29b644854f60",
+      "bytes": 4057
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/pass-challenge.js.map",
+      "sha256": "f3590e0737c10fc38739ebb3f63bfa588bd3c14ecfbc7959d4eebf83dd09e661",
+      "bytes": 2687
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/ready-turn.js",
+      "sha256": "0f0a570ba14cf6e8f46e2b565dff03371473e51b7889bbddcef36a29ba2cbd97",
+      "bytes": 3411
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/ready-turn.js.map",
+      "sha256": "d15fa54d051d2e2679320b107e30dac274fd8e217dca84338ceb031d0e29cddd",
+      "bytes": 2417
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/restart-round.js",
+      "sha256": "87a5036869d0a80f3145e4ba835c051e59ce4f15a561c448278263622f6598ab",
+      "bytes": 2047
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/restart-round.js.map",
+      "sha256": "97a8470506085f20dc60ac2c6bb9b79f4194fdf6ed8fb3cde9c56c06e91e34e4",
+      "bytes": 1855
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/start-game.js",
+      "sha256": "27bc31c30c61e8bffadb5658853e6df7320d0ea7a3f7722d10c4d600d37de1ae",
+      "bytes": 7492
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/start-game.js.map",
+      "sha256": "1dc76fb00f8e469c2d227b999985a3f45ef4f96c40399832361284858573d1c5",
+      "bytes": 5060
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/submit-card.js",
+      "sha256": "83c9c2b230214441f487636e8c40a529205a027c952066c66b2ff87cda7c281d",
+      "bytes": 6361
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/liars-poker/submit-card.js.map",
+      "sha256": "e9e8c4652eb92a1722ae5d3c793991f26df6d6bdcb4a30cfa59cf5fd32be2ce2",
+      "bytes": 4440
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/commands.js",
+      "sha256": "a5ea02a468c76e4c3fe1ec9f07205be569ef5e1bfeb09e281141ea2b2d896eed",
+      "bytes": 938
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/commands.js.map",
+      "sha256": "9c83b65636f49d39921c9537b5f1712aef5e1db1526035a521f82beeee0b1417",
+      "bytes": 612
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/day.js",
+      "sha256": "5a0d1cef968f1eca7b5cdfef5ef8ecfc112279fb8b13eda75fcc067316d8d0a9",
+      "bytes": 5879
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/day.js.map",
+      "sha256": "d696d8fc151d14f63594994360228facbc30b72cdd275497240ac91737d83011",
+      "bytes": 4188
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/end-game.js",
+      "sha256": "6c9373ed84b05bcb24ef5f84a99ebfc790a27b0cc631aa9b1e770fd0f79c0047",
+      "bytes": 2771
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/end-game.js.map",
+      "sha256": "958b131097c92b997a5d79d552bcec3763aea2e6b775755c67f4a07286701ebd",
+      "bytes": 1992
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/exclude-player.js",
+      "sha256": "1d56f53534e200fc3d230b168eb57f6089b605d8edce6920bb8e5adf615682fd",
+      "bytes": 4346
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/exclude-player.js.map",
+      "sha256": "49a355e39938ea7fc7606492e471be0e47d170e2f6c2806860bffa466fc88b22",
+      "bytes": 3243
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/game.js",
+      "sha256": "adbb390df96fec7552c8b55bda7b20f90d7526215bae4a71642abb121138e38f",
+      "bytes": 56292
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/game.js.map",
+      "sha256": "51f2c9425ef3622e8510a33413cf8b7f798b07d2512ba343879b6b4d5e777303",
+      "bytes": 38670
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/morning.js",
+      "sha256": "4abcd7972b043093f4411574278bb5fc93338feffb8a2f662ead2223eac0736f",
+      "bytes": 2300
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/morning.js.map",
+      "sha256": "d14e52e5605519a1f3dc4d3e31ae222f5b3a13a7bd627170fd651fc095ebb94d",
+      "bytes": 1519
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/night.js",
+      "sha256": "e2e7dc128d6222dce94822d86fcdffab69e23c6fc47fe0cc61e0afc272e5db07",
+      "bytes": 11435
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/night.js.map",
+      "sha256": "90449ee147ebd9585d256f4410a09650711c2cd633f18ca1ff52c9536e7ed1d1",
+      "bytes": 6841
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/role-reveal.js",
+      "sha256": "22ff620cc031d7e89ce66d5679484cdca87c07f3a8136f8f6c2084f15a8c9d59",
+      "bytes": 5252
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/role-reveal.js.map",
+      "sha256": "1d409b0fb31bfa3010ce92e8dcd41f1efee79c5ce7546df41ac3c2f03411c830",
+      "bytes": 3452
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/roles.js",
+      "sha256": "01a8a42f9aacc7418bdbe026e8352caaca11df316526f554b715f2997737f840",
+      "bytes": 9616
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/roles.js.map",
+      "sha256": "db04b8cca09216b78c0dfd86c74ae3751845c397cb6714b7dab3f164673b8dce",
+      "bytes": 6440
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/start-game.js",
+      "sha256": "3047627717b6f454afd36e2257db93ee91d5c1c2cd33c455927fdda2fb5c39c7",
+      "bytes": 5246
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/start-game.js.map",
+      "sha256": "a7db53f26e5bdba7046aa3f291513bb0d95b0d8f36ea7156731fa01969e8167d",
+      "bytes": 3148
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/types.js",
+      "sha256": "efc5262bc98747c93d8a143041a8216c5534f92d7c70e5db6b3250fe12c747d6",
+      "bytes": 3912
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/types.js.map",
+      "sha256": "b2c0e8513bdee0f79a4a08ba688d1cff477c20d7bcf8b37cd29ae18a05c5fff6",
+      "bytes": 917
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/validation.js",
+      "sha256": "ab1c36c7f4c119323ba85dafbf38164435f5c5ab38dd2f0eadfc5158c1226d5d",
+      "bytes": 6669
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/validation.js.map",
+      "sha256": "08302ddd931e29de51350243e3a9c1c64fe3f706ec17685491f580ef37c30298",
+      "bytes": 4734
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/vote.js",
+      "sha256": "9e1535c3bbfae430bc71264c931a9bb1ae9566bf98298125f7440a4d3a4d2268",
+      "bytes": 8765
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/mafia/vote.js.map",
+      "sha256": "839aa3c815151accb37cb9fa2e76266945d027bbe2b6e271ca77cc90fe68123a",
+      "bytes": 6237
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/cleanup-signal.js",
+      "sha256": "601b335dd3f682117284162044627feba0de0f5900bd90c5f722ea2bcb8feb41",
+      "bytes": 3088
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/cleanup-signal.js.map",
+      "sha256": "17eb53b850fbb2e443dda84ed3045a8c8b11cfd5b626792cb129e948c3f2363a",
+      "bytes": 2159
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/controller-session.js",
+      "sha256": "cedbd6e8996343ff413fdb9b9461eb1b13a268f70473d2460537e3818d53fde9",
+      "bytes": 1884
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/controller-session.js.map",
+      "sha256": "7ae389d7642d133ab1ad3731c8c74de0945388d38cf1b0703841ed681a1bfa0c",
+      "bytes": 1079
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/create-room.js",
+      "sha256": "1c19e58bca8c3321320d95d084ba0572f1138d1ff02fd304032ca81c2405fb2b",
+      "bytes": 11822
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/create-room.js.map",
+      "sha256": "c0260709d09555c438af4b1115cc68954602838ee8ad365a510ff3062129175a",
+      "bytes": 9694
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/current-presence.js",
+      "sha256": "1ba8c9772cddabaab03340151df6ff642635809fcaf4080b2ac95821ed2c11cb",
+      "bytes": 3387
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/current-presence.js.map",
+      "sha256": "7f66691d17135c4054790854476cbb34fd9d717c80b632f08917c336a18998e0",
+      "bytes": 2729
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/game-catalog.js",
+      "sha256": "61510e8e301e0f6c95d134f1c130896def09bdb195a5deeb5b7621783d654505",
+      "bytes": 1151
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/game-catalog.js.map",
+      "sha256": "e3c152568725d5fe3f50e300162c19ac1f2b124b573578b59445f3948d352b6d",
+      "bytes": 955
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/ghost-player-policy.js",
+      "sha256": "62e65fb5e420a98f2421a8872578b4c0a6a5553afc5d41250d02003c1bdec817",
+      "bytes": 3426
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/ghost-player-policy.js.map",
+      "sha256": "b758c6bb0f4b7cf323c317d27d8c85a59c814060ea918bac69d2c95eb3189ca9",
+      "bytes": 1462
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/realtime-room-functions.js",
+      "sha256": "1c03ad00848b05c738f8128cb9eb7916a81c18fe42cbef8f1c555a67a5bac58e",
+      "bytes": 19222
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/realtime-room-functions.js.map",
+      "sha256": "a40f34f6620bbe37b4803a0378e7a1d9377af443277548c2506b24fd4b4aa5de",
+      "bytes": 12653
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/realtime-room-lifecycle.js",
+      "sha256": "31fcbcd5306c8504256f5573e8d86235f238bf0e31a319e450df597d482a6fdf",
+      "bytes": 33097
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/realtime-room-lifecycle.js.map",
+      "sha256": "64d8677f363e597a85fb3ec8939be71ff8735a38c008a14f9637ba095b4346d5",
+      "bytes": 20558
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-action-timing.js",
+      "sha256": "c2342aa9c7cfa794d90cbd200eb210819c6c76af575208c50d5eaeb309b88cf8",
+      "bytes": 2101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-action-timing.js.map",
+      "sha256": "cc830a220a7e0389a7ef7affd3ed9b1b30e8ccaf7bad98fb02b53ef41d48391c",
+      "bytes": 1692
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-allocation.js",
+      "sha256": "afbbff501840974122aef0d926e1dd1f1447a5c06b64a1cb96ece3007b0a6791",
+      "bytes": 2304
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-allocation.js.map",
+      "sha256": "bc5fb89ad2eea346f19ce525624768e906edb11d879862e1f7ca93e4e9c90780",
+      "bytes": 1748
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-cleanup.js",
+      "sha256": "28afe1e135d9f2e9e8f5a40cc68a5b9db78987f510e712e1995834fcbff28c8f",
+      "bytes": 11357
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-cleanup.js.map",
+      "sha256": "fac22873ecc56ff47eae9b242b1c8c47623ee251208b74c350828587f60c834b",
+      "bytes": 9804
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-join-policy.js",
+      "sha256": "68770893ab837b899956733ca71e81541cc8885ceb559e0c23eee1a066b155c0",
+      "bytes": 1508
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-join-policy.js.map",
+      "sha256": "ed4769ce1914fe162c5cb388d13f6db52f4e858e4c88b6e78e3b2717058a4de4",
+      "bytes": 950
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-seating-policy.js",
+      "sha256": "ca32cae209d1cebe6c54df2a68562eb4c4ebae114064654c0765815e6e43eb51",
+      "bytes": 3454
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-seating-policy.js.map",
+      "sha256": "0ee1ece1da44deaa56e5327a9c8dec7a78c29333cc6acfbf60ae9afb52a893ad",
+      "bytes": 2265
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-transaction.js",
+      "sha256": "ab54edf56ff691ecd0671080c1b97fd71d70fdb57f3606001452270eb8b7eecd",
+      "bytes": 2103
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/room-transaction.js.map",
+      "sha256": "a2bcd791308fa92ee316535c10b0e51a6f0a6db1b7a17a2a139015d7f0439f17",
+      "bytes": 1239
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/session-contract.js",
+      "sha256": "aebb30b6a1ac8749dc37f4d37c4c61fb340d87bf6862fd1df9bf379af1d78992",
+      "bytes": 8506
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/session-contract.js.map",
+      "sha256": "42385da8810213100edf5b6b381ec50a944e87d2d6f0fc4d102765eb5f3342ed",
+      "bytes": 7194
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/session-functions.js",
+      "sha256": "4f6df85d03e3aeb815e2727552df17477c6e7a22ce1563de1c6236d48da42c09",
+      "bytes": 6059
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/compiled/room/session-functions.js.map",
+      "sha256": "f1a8462c6862f5f12d59036f0ba208214304e3e09d9615aacab0ed86539fe353",
+      "bytes": 4307
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/cpu-profile-summary.json",
+      "sha256": "8d3ffd2bb3f10d487457bac5425b64ecf0ba08dfa0f85ad5e13e8e31fafec1e6",
+      "bytes": 240791
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/environment.json",
+      "sha256": "da1dd27edcd6b080890207fa17d9d2935edd5ef8abaced1c506d617359f4d0c9",
+      "bytes": 12723
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/exclusive-module-groups.json",
+      "sha256": "0c61dcd3255d4f74933720a2f5d5f8225a5b716418f3040649211339af50c189",
+      "bytes": 223316
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/initialize-app-calls.json",
+      "sha256": "f4ff2a91c4bed1ceabf8717d5204a641738ad7005e5c4b02d6c35a5388d9d5d9",
+      "bytes": 1274
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/inplace-design.json",
+      "sha256": "2ede354380db0d0626511e7a4da2ce6d654e0e3674186e993160796a212cf05d",
+      "bytes": 343
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/instrumentation-comparison.json",
+      "sha256": "8d4e712faba860c23207c815ca747aa3422c041dbef5027b7925b92cf54b7711",
+      "bytes": 4498
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/integrity.json",
+      "sha256": "b0fd642a73910dc76e1586438d3f234812480a7af7e75c3faa7a8958c20d9433",
+      "bytes": 53404
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/loaded-package-manifests.json",
+      "sha256": "3ca6f341c5f83233daf0932dab1048968ed9f481510f588807952070be09e206",
+      "bytes": 9753
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/logger-counterfactual.json",
+      "sha256": "195052f32c89faf1b685662adf320c35ddd0d9b9fdce0425e29fe1b65445f97e",
+      "bytes": 5257
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/logger-design.json",
+      "sha256": "623f84694f81dea112d700658bdef9f77b10e418a134ff72f3f6e37ae9b57f5b",
+      "bytes": 368
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/measurements.csv",
+      "sha256": "09c6bd8b04bc99cd3bbf60eed6b525ff7228e2fc1399310e8362b0575afbdf65",
+      "bytes": 23812
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/prepare.cjs",
+      "sha256": "42f6e30a6cf8db9e91628158fc72cce35c1c4008a7f3a55aaefd6c99db275de8",
+      "bytes": 2999
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/preservation-before.json",
+      "sha256": "a2167159e8f6c40608e5bf85ae873eabc0f795111a4cb0b422379cc23f1e6755",
+      "bytes": 41112
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip0-close.cpuprofile",
+      "sha256": "f45a7ae512ac6b8f78869016eecbbdcc3cd0b2e4fec26624bc63596bcb3a92f3",
+      "bytes": 1096151
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip0-create.cpuprofile",
+      "sha256": "c0db22c5291ddccd78edccf6433e3a4b97bb03e75c0a1c29e3e8883542b5f05a",
+      "bytes": 1053694
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip0-root.cpuprofile",
+      "sha256": "03021c8c9e3ef1e35cec8632714eb876709de47fa879bbf3e3f3ceeec4475379",
+      "bytes": 1463703
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip1-close.cpuprofile",
+      "sha256": "c83a5c0e2c7710ab7aa40c7fb9ba3fe9f91c4b15d48de6b90aea53d54550427e",
+      "bytes": 1135442
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip1-create.cpuprofile",
+      "sha256": "fc67c992a2f400622a0b4285cba50adde87ced4d91b7387a1417d8c2c6f357d4",
+      "bytes": 1028524
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip1-root.cpuprofile",
+      "sha256": "30161e3014f3f50de5bbbdf501292118260fa00c5c2492639c90d5dfeba5397a",
+      "bytes": 1233041
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip2-close.cpuprofile",
+      "sha256": "12f10994bcf132822b4a33324f4388800b6d42f1006ae0fc72c07e9cc6ec119c",
+      "bytes": 1149933
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip2-create.cpuprofile",
+      "sha256": "73a5045df97ac05fb9ada7cc3d2ba327f03ae82fde5c7d7be2703acf2f4e7e78",
+      "bytes": 1091429
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/ip2-root.cpuprofile",
+      "sha256": "949e7dcc7e46824421120a01d76b8b1d4f7db806231473ea06613791de29099e",
+      "bytes": 1360577
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/lp0-narrow.cpuprofile",
+      "sha256": "3400e58c6eb92c819a72bb18bbb8e010a0a15b4a6c1a7d1f0e2bd5edd18872f2",
+      "bytes": 1272564
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/lp1-narrow.cpuprofile",
+      "sha256": "f8b0079d65db134921558ea259d3fd3dee3dea152b52f0d9401bd75c7fe989cd",
+      "bytes": 1287722
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/lp2-narrow.cpuprofile",
+      "sha256": "e62203640b9f11be972fd19dc1340d24ee025ec2b536640f552fd5c1dca2a7c4",
+      "bytes": 1285417
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p0-close.cpuprofile",
+      "sha256": "9b24b37e909079bd8331ea2abdbb4a81a4c8dc8ef9f6f2e026249ba71b3f3a03",
+      "bytes": 1119706
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p0-create.cpuprofile",
+      "sha256": "8c240c4e1c6cb17834e578104833061d163cdde713ef630d9364df0545e89455",
+      "bytes": 1065417
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p0-root-clients.cpuprofile",
+      "sha256": "183f852c24794b1d7811f7c65f9fd0fa6a5ac01b72101b25d1de1af42c62493c",
+      "bytes": 1334309
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p0-root.cpuprofile",
+      "sha256": "5a41f8e16e5d8ebef1febb5d4eb8ec79eb253cef23f12b28af93d4312d3711c9",
+      "bytes": 1286137
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p1-close.cpuprofile",
+      "sha256": "cec2253617dc54b13465669796457192c6cd6fd358e0bbcb99d7cf8ad96cc494",
+      "bytes": 1110977
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p1-create.cpuprofile",
+      "sha256": "9dd3c89fec21875ff64a090388abb621db4367e4d60ef45467ef220124f32dd0",
+      "bytes": 1061730
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p1-root-clients.cpuprofile",
+      "sha256": "b6ac8242db51cc9ebfc6da63d75e80fed180f04678bc2b9713d66536ff1c3528",
+      "bytes": 1317551
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p1-root.cpuprofile",
+      "sha256": "05ce2c48659d66b0d55002ed642a00321278ebe06e713eb69087f54fde185eb9",
+      "bytes": 1268814
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p2-close.cpuprofile",
+      "sha256": "601d716186b9b6f8dc51484ba8d46a2c2f4d0299e96d1422abd24319c8236d9b",
+      "bytes": 1177771
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p2-create.cpuprofile",
+      "sha256": "89a70f962139cf930dc601053f956bea5d5b43e384b46fb8fa922f1f892e9c6f",
+      "bytes": 1064059
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p2-root-clients.cpuprofile",
+      "sha256": "29c70626dfa61abe843d47c4abcd2c5442cd51c697beb873cdd275a3dd803d6a",
+      "bytes": 1236012
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/profiles/p2-root.cpuprofile",
+      "sha256": "71c92c9a35331b6182bc47916311bf04956aa72f91ab31ed372c45f0780a37b8",
+      "bytes": 1268362
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/REPORT.md",
+      "sha256": "35eecc3a2187dc064c1b1ebdb3729b7a603c3f2eaa1b0e88691284673a5f2d76",
+      "bytes": 6102
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/analysis.json",
+      "sha256": "183c2f606e0c740762a4419baeb8598ddd8557ea086a60bbff948fa9997faf97",
+      "bytes": 20680
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/analyze.py",
+      "sha256": "a17e7e7c4964614fe3cf9a5a52737334971b36eb73a7ef663b864d592871997c",
+      "bytes": 7621
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/cpu-profile-summary.json",
+      "sha256": "088e4ec1ada194ae351303b026d494c277ba78aef89f2f49334987acad2adb99",
+      "bytes": 116119
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/exclusive-module-groups.json",
+      "sha256": "68c798296219e758520196649240608fa2fdd9d13fd6af84a02a7d2f526634c5",
+      "bytes": 135143
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/initialize-app-calls.json",
+      "sha256": "9521248bbf26b0865103fe051c46d27d3032ed8764e897b844a4e0202b9ff3ff",
+      "bytes": 857
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/instrumentation-comparison.json",
+      "sha256": "46a08a3d61a906b8f11d20de1783872fc9e6054ea0e20ce8f6d1c0a083097f00",
+      "bytes": 2280
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/measurements.csv",
+      "sha256": "84b02657e118e4e7343094017760dff770171e4449d5640d30b13bb74a89b382",
+      "bytes": 14170
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/root-application-loads.json",
+      "sha256": "4f5bd8a3713884d24ba9a421ed2063b7f936beea08dafcb60181a1d1bef2fd53",
+      "bytes": 24491
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/run.py",
+      "sha256": "0c13fdcaea764a4cc10e3589f33c28c31072f8aeaf92c07e408f7407918ac4df",
+      "bytes": 5435
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v1/worker.cjs",
+      "sha256": "5d6a6d2fc0b2de29016e5bb49ada038c2765b9d1d3019d400b339a161e262ae6",
+      "bytes": 8475
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v2/analysis.json",
+      "sha256": "f98377fb699340d6e5b8ab38e56012ad8501fdb8f66e4520017024483d1bcbe4",
+      "bytes": 33876
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v2/analyze.py",
+      "sha256": "41a9805ef46bfb2fc6deba0a894f91a7cfc97ab818126bc4ff01e3e68071a2f9",
+      "bytes": 8775
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v2/cpu-profile-summary.json",
+      "sha256": "b38e434422e51b836af6fdf219bc247b9fc97dabd8032789252daddcd3baca7d",
+      "bytes": 210990
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v2/run-inplace.py",
+      "sha256": "07b6c321bdfb0187d087dd7876d674927d8326b6bb520dea4ee7ecbae0675d7b",
+      "bytes": 2837
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v2/worker.cjs",
+      "sha256": "f78dfbe42a926054784097bf65d625d128c37b55b1c9382fba4d700aecb31d23",
+      "bytes": 8588
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/revisions/v3/worker.cjs",
+      "sha256": "f6e22b47dc952fb57f11379aec7dbf66d861a4917a62df52dfc8ea6e4f655a83",
+      "bytes": 9730
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/root-application-loads.json",
+      "sha256": "9bdb7ed52681e5c0bd7698984b1974b367d2ba3a5bb0aba1b5403a2d2d336b34",
+      "bytes": 51760
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/run-design.json",
+      "sha256": "7ac6ef3aa3dbd4dca79c28a8e2bc011bd3aa8d47752c6baf44d29b8f56daf2ce",
+      "bytes": 1339
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/run-inplace.py",
+      "sha256": "07b6c321bdfb0187d087dd7876d674927d8326b6bb520dea4ee7ecbae0675d7b",
+      "bytes": 2837
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/run-logger-control.py",
+      "sha256": "cb97a4723bcf7bb49c831ff67aa86bc14ddae1e1160715ac3f99894315e20e82",
+      "bytes": 2586
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/run.py",
+      "sha256": "0c13fdcaea764a4cc10e3589f33c28c31072f8aeaf92c07e408f7407918ac4df",
+      "bytes": 5435
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-app.json",
+      "sha256": "d8fe3e4a99691ed7f5132404130b3cc3f07f384d14ae39bf5f7ed73393fc45dd",
+      "bytes": 5574
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-close-create.json",
+      "sha256": "ad0f607fa5042372c5900505e7b3b4df454b1da4a57bc0db6c5836a68b265cf1",
+      "bytes": 28869
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-close.json",
+      "sha256": "897d10fc8d7da087546635430aa6d38d11907fe83629514fb2e6b629acad4fcc",
+      "bytes": 28604
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-create-close.json",
+      "sha256": "4550e385e66409b5934122ed9b890cbd29944c0db69ce550254ea777fa9c66df",
+      "bytes": 28881
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-create.json",
+      "sha256": "0c4f852cc81a5bf0daf25339c2e8e9449fa107e7dfa6ef27632f677346806f5a",
+      "bytes": 27457
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-database.json",
+      "sha256": "5c0c9ddc54252f3aa6b026afb5c987a0879fc8c9d6a085ec9c511b3a3d320d63",
+      "bytes": 5975
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-firestore-https.json",
+      "sha256": "54ce4d92a2aadefffb21fb045717b6cdfce87ad367ac267234b0e0f4c0aee6c8",
+      "bytes": 24110
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-firestore.json",
+      "sha256": "3171c4b2733f645771c76a4438b94aeb550bc27b18ac418f282be5c96d045370",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-https-firestore.json",
+      "sha256": "7de9d617d374519611216114321df27b956ad9fd6d7e4a89706b4ad66aae4a24",
+      "bytes": 24109
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-https.json",
+      "sha256": "2dbdf226556670361ea1e3c942862537c0a6c286edc59ed8924765886d32bdc3",
+      "bytes": 17584
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-root-clients.json",
+      "sha256": "14cfa48249e4055d5405ce085959426b8d98cc8a8fe85f1f8285fe1aaa88fa4d",
+      "bytes": 32648
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b00-root.json",
+      "sha256": "247a6d83f03d835159ec65b40f80b8f2dd95029cf8535f4c5854c12c76ff6f64",
+      "bytes": 32263
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-app.json",
+      "sha256": "cbaef1b9ebc841be6d270e5abcc1e230407e056379eccf45aa0845805e50aeb7",
+      "bytes": 5574
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-close-create.json",
+      "sha256": "f1e71d15dfd982611f55bfbbec92a3a54f4befdaf0953f9ca06910814ed543da",
+      "bytes": 28859
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-close.json",
+      "sha256": "0f061a03557fc7a2b35c79df3e136d6202d72d56c3950cecf66e982d77b4d6d4",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-create-close.json",
+      "sha256": "33b661d1453e06b7b12f33bdb1e45d6e7c49f3177d8a1f6c69329df64c93fe85",
+      "bytes": 28870
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-create.json",
+      "sha256": "0e8d3180558d094b02c0dc15387eb6abe094c1b0975329d37679cb4c44afc509",
+      "bytes": 27457
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-database.json",
+      "sha256": "eb5792852e97acb68212a35485a1615ee41afc21a0b7be88a09202011f425c7a",
+      "bytes": 5976
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-firestore-https.json",
+      "sha256": "15b8baf8281ee4eb99296dc320af7743ea237dcd1d6df2ffeba0a253fe37bd22",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-firestore.json",
+      "sha256": "ec0d6e656b03c044a5e6cbeebe4a8b2a73ee95f0546afe687ec7d2f187100b85",
+      "bytes": 11992
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-https-firestore.json",
+      "sha256": "4fb80b893436dd9d18e2d17292f31fd08c8b972017cee5b124a32bb951f4981b",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-https.json",
+      "sha256": "bfdd4e72b9fe26e8e913b82003b421e543c822376b3022ecbbc9bdf213e7a26a",
+      "bytes": 17585
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-root-clients.json",
+      "sha256": "13116db0e1f0396f16f31dc48c0e073d6189520f4ce19df9109d90cf241c0f58",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b01-root.json",
+      "sha256": "72ee9a3528905c27b6059cb7b394840cfb93860dd6d451f8ad35074f920a8bee",
+      "bytes": 32264
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-app.json",
+      "sha256": "6dccbe12923124b8e63eb997a7738eab93238572c42a9f3fe392346967f1ef21",
+      "bytes": 5573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-close-create.json",
+      "sha256": "84b0e18b03be56d0a5c27ba6795b08ebcaae83d18e4e85bfdf24384e8878d844",
+      "bytes": 28871
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-close.json",
+      "sha256": "76ee5f7460bccab62c04ffcf07641f8b1664973b6cfe67cceac0c807825ac54e",
+      "bytes": 28604
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-create-close.json",
+      "sha256": "dc85133c15940de9cbba531a6cdfa266a1517c8265c81a44bd85b20dabb7c5dd",
+      "bytes": 28881
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-create.json",
+      "sha256": "33c4bca1e8cb140f33aa9399158d39f8ec6a0d195dbb2e361c5ccd20fe7b355c",
+      "bytes": 27448
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-database.json",
+      "sha256": "232b05b8cd55d135631e59d22fe8c0f87cef880310562417dac27197977a9a06",
+      "bytes": 5986
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-firestore-https.json",
+      "sha256": "f78937c58c084a202720d20fa607d5c820e00fdc3e76c9d027f3116bdc4c0122",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-firestore.json",
+      "sha256": "640f037b65ba42f2d7ec3c218ca9e2285680f7e58a8e38741e9065ba937b7b42",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-https-firestore.json",
+      "sha256": "3c4790ab92b92b97b29c7c298567df7f20ccabcdfaffdbe6c84ea98f6956a216",
+      "bytes": 24100
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-https.json",
+      "sha256": "17b9462628ca05a555f9629b84fcff436e4dc1dfaaa1e0886f538978c22bcde3",
+      "bytes": 17575
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-root-clients.json",
+      "sha256": "a669748a6556f1d3515d96b5874cc6e53c72072d5c81819af1a4ed3474de8f7a",
+      "bytes": 32650
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b02-root.json",
+      "sha256": "06df90a2220cdf6d53432ea1b35c4b2b2fa5b75790991e4a842994936244dc42",
+      "bytes": 32273
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-app.json",
+      "sha256": "ad558d2d561ee88f2c01573aa8562edddd0a0ecf4e424c085b9aa2d4382335b6",
+      "bytes": 5573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-close-create.json",
+      "sha256": "0097d67d28fe4b94f621e9522e00818281a5ef02dc97cbde246ad9663f0b336f",
+      "bytes": 28878
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-close.json",
+      "sha256": "311bd296a69d1f7563e2229eace03a0aa1d84ce329efee59776b44feb8f61a54",
+      "bytes": 28595
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-create-close.json",
+      "sha256": "c8d976f54875397219de1718b58fef270da57d1858632ae077d052f9f5730b0e",
+      "bytes": 28881
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-create.json",
+      "sha256": "b7276c7d45b483987a9d018482998e94479b6c456677e2f9fac44a8a97d4b131",
+      "bytes": 27448
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-database.json",
+      "sha256": "62968ab2627ff4f0c2d0a1c2e03fbab69a47e5844a1632adac99b2afb5326c13",
+      "bytes": 5975
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-firestore-https.json",
+      "sha256": "e4313ffaec47bb4f5a45a481c3368eaea5409a939d1726a8f5d96b1e826bf7a4",
+      "bytes": 24102
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-firestore.json",
+      "sha256": "7296390dea9ebf0f898d45b340965e726f513cc200a14a98e5f957f69aa91588",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-https-firestore.json",
+      "sha256": "db8b841b28f73f914e7ce4c20e40b1504a2a7681ced38ff3a0ebe93e97fe468d",
+      "bytes": 24102
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-https.json",
+      "sha256": "09d77c2bcc9cc54b73b2e608d0b69984df7a19da38bb7219a704583f40c6f844",
+      "bytes": 17584
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-root-clients.json",
+      "sha256": "f90f0218875da8db0a1ac98b49533c34cebfc437bad922fcaeee4faa29e3bdd5",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b03-root.json",
+      "sha256": "55cf98be6b52cdeb11c8f45c09c12b8c5eabbd00de1c83bbe233442eb388c76b",
+      "bytes": 32273
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-app.json",
+      "sha256": "712d052cf522b10f22f631072858d072fcdb89192a69c18a01364c787c1f5ccb",
+      "bytes": 5573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-close-create.json",
+      "sha256": "eb1c9dca31308d3cf49328282557bf235a83527d794c74a3c61307a5d3e0986a",
+      "bytes": 28869
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-close.json",
+      "sha256": "e2353c20022090ebea193434901f21774b06ab0d241892862f8bdd07d6b95f95",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-create-close.json",
+      "sha256": "37eff1742c3d3ea46d9d19e86ccaf29e990de48ce086965be81b809436f337da",
+      "bytes": 28880
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-create.json",
+      "sha256": "f4a3edd30e3d3c62246a51b954becfa029f9a6a237459fcb9240eeef32b219bf",
+      "bytes": 27448
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-database.json",
+      "sha256": "7cdf4b9101d035075c0253953ba0bfe9a88b28e59f6b14289c60071f0bd220d2",
+      "bytes": 5986
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-firestore-https.json",
+      "sha256": "9ccbf4a37e07f2d3504acdb99eae4bd131c672a9681b4ff72cd78820dbbb22d3",
+      "bytes": 24092
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-firestore.json",
+      "sha256": "15debaf75eb6d74754d19c7a2ef4d1cb29d605441d474f37546f8f312dbda3db",
+      "bytes": 11991
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-https-firestore.json",
+      "sha256": "8d17521efe325dd97fe96509282b0d62beeca991e6600db607ea59337715d62c",
+      "bytes": 24102
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-https.json",
+      "sha256": "0278ccc49777ddf7c29ebb7ee4d56e951f4e9199199193c263ddc66b9da66087",
+      "bytes": 17577
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-root-clients.json",
+      "sha256": "06db8881ddcc420ab0c0b6aeddd52dc86924a54c58bd89f9e86d08f77473a660",
+      "bytes": 32660
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b04-root.json",
+      "sha256": "3ff1dadb0445e16c9c9447e4a25371cf92c532e883480248d6ea5047025eb4ea",
+      "bytes": 32264
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-app.json",
+      "sha256": "3425bb492769d90513421e700dc9a7e7c714b0627f74ed65e3ec2577d904016c",
+      "bytes": 5573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-close-create.json",
+      "sha256": "a83b5b03f56c463b5a90e4fa1eb83f3a7e1a53c87484607289915cbcaeee8e5d",
+      "bytes": 28878
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-close.json",
+      "sha256": "fc0098d30c20a429000d59eb90729979be513bd735754223265b02b03c89c4d3",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-create-close.json",
+      "sha256": "ac65ebd6506cd12ef9e544d85c653ecc8af64c18d94b536e3382cc2ebe6479c6",
+      "bytes": 28871
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-create.json",
+      "sha256": "214f994630936b07f64eb8dc94e158795007c4c67522803c637c0df09564546f",
+      "bytes": 27448
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-database.json",
+      "sha256": "0ef00ea3b62a42def06b8c93bf483d071c6d5109127389fb268ff0ec5466ee7e",
+      "bytes": 5976
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-firestore-https.json",
+      "sha256": "6aeaed3d1c6f673678ff312be50ece38d2ab18bf46ebf8f2121e2f0f4bfee019",
+      "bytes": 24092
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-firestore.json",
+      "sha256": "06b7d49f3d44bd34ffa6fdbad4aeeec24e5adfd7f04004051cc78c685c1b5301",
+      "bytes": 11991
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-https-firestore.json",
+      "sha256": "e021293f79fd52a90346672e4e63179ece2a7047012ac32e5da5f4470ef0fffa",
+      "bytes": 24100
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-https.json",
+      "sha256": "af4c2b0949f5989e8ad35caca44e6e03bfd9e63ed8b68393c60c0c101c6db3ce",
+      "bytes": 17577
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-root-clients.json",
+      "sha256": "bc806bade045b8c81201f8e0358eac8cca7d8d73b1c42df9c6fc7eca8b1eb70f",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b05-root.json",
+      "sha256": "86a76adde64e9ff695866e97933764a67b562bb3085cd12fae0259d7c244d3fa",
+      "bytes": 32273
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-app.json",
+      "sha256": "aaec96091b70fd072cff41cb7377b201fe1f6d0af8727f0c11cd0cffd7e9b67a",
+      "bytes": 5583
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-close-create.json",
+      "sha256": "4ef60b4345df0c1cdbf78f58d971feb5ae453e088b275fe31719b618a67e9221",
+      "bytes": 28868
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-close.json",
+      "sha256": "e042d9b955ab48e0d6eb1f514fb4c2c86cd28b5f5b619fce0fcbecd88adaa643",
+      "bytes": 28604
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-create-close.json",
+      "sha256": "ec947d902f172897b2cb54b8b65dd69621add524316a5b21b018f8003dd6c6c2",
+      "bytes": 28871
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-create.json",
+      "sha256": "28f80fc2c65d89744c28ebd5267b0d04dd4dd486cd2084733dec8751ee7b64be",
+      "bytes": 27448
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-database.json",
+      "sha256": "62aff91e789e3dac6f42a190986f6c6b02bdb8c69d75059d93d7c14bab287648",
+      "bytes": 5975
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-firestore-https.json",
+      "sha256": "c5b3ef716aeebaa22e65c46ef8e117aaacc31fb35f20c52b272270d2d628e5a6",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-firestore.json",
+      "sha256": "a4f680ec6d4ddc0400a0f6d5c6c92bbb66bb61534c7b20f62ee3ec39fa664efd",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-https-firestore.json",
+      "sha256": "dce8236983a16eb3ef63aa669d62080595c7160c084ecfdb0f5165b4fd492147",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-https.json",
+      "sha256": "a0da9e6fd9431ad585ad5c74be7c49a26628d87849ab664c8175f758fbb21ba8",
+      "bytes": 17577
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-root-clients.json",
+      "sha256": "3925f0cc145445d7f576063703d61dff3d6e10d3b01133be32b2e66f058706e2",
+      "bytes": 32651
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b06-root.json",
+      "sha256": "076dd179d7acd9701008c1d1bb45af7d8091ce14079685f28f50b6c8af2969d0",
+      "bytes": 32273
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-app.json",
+      "sha256": "4930a3d082295acdf44252503b1a4eb53282b473499ceae8873e059f24ad1ac8",
+      "bytes": 5584
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-close-create.json",
+      "sha256": "ac89a30e97c1efbc5d984972148ec89427b599ee8813f55e23f6bbd0a0e056ac",
+      "bytes": 28878
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-close.json",
+      "sha256": "ceebe5443f8281d09febdba76e5de6934dd9b11b07eb2cec3d1ef5d5bb9caada",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-create-close.json",
+      "sha256": "294e65d914c5bcac4a830aa68332196393773e45cb32a363bcbc3e61e27b29cc",
+      "bytes": 28872
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-create.json",
+      "sha256": "1ceb0a5dfa19f69e6f4f11935659ac1a934d73da11cdeaa1e1e300021503c8db",
+      "bytes": 27457
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-database.json",
+      "sha256": "ca44232c2e6264b7a050ba0e9b6d3dd93e58f763cf5d8fccb02149a845466d3f",
+      "bytes": 5975
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-firestore-https.json",
+      "sha256": "297c9cb11880d77e7f17f3133e05fefb402e33dbea507a1664dbce46ef737d98",
+      "bytes": 24102
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-firestore.json",
+      "sha256": "6770c9d66eb18277d3e7bd2731965540b63b8e0b09045135f867f5b55e6d154c",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-https-firestore.json",
+      "sha256": "c1259f022c301bd9c4dfbd6aa464346e553beccab3554923a54eec042fd75521",
+      "bytes": 24092
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-https.json",
+      "sha256": "9cac231e11ceabb4ff5a9663b95320e81c1ac8a0b7762bd9ba805d82babfde8a",
+      "bytes": 17584
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-root-clients.json",
+      "sha256": "76ea5f3487c831de238f1ca45ecfb4cfa195cbd237d335c452735841186dc71e",
+      "bytes": 32651
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b07-root.json",
+      "sha256": "6e6504db20d7d29cb363ee1d91c3d42d608e57fbb4444e140779162d39a80c23",
+      "bytes": 32264
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-app.json",
+      "sha256": "a8ef0686716961fda312849bae627bb9a21dbc449bc8731c922c1a9b1ccf494e",
+      "bytes": 5583
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-close-create.json",
+      "sha256": "823c03f4f7fda69acefb8cdc0cd4b8522579b287c1341a46380327f4fef6db94",
+      "bytes": 28867
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-close.json",
+      "sha256": "4a2a26c71fbc3e28a7f6f0b03f5f3051e64255af95e12f1502847d2cd6e0b4e8",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-create-close.json",
+      "sha256": "77edbfc0822159ec1852aac53734a33404657bbcec368ecb513e74400a6c0a5a",
+      "bytes": 28871
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-create.json",
+      "sha256": "6ecfffcae573d06fabf3f8149cbb468b8b3167c1ab41dca9036b31c779cca0f1",
+      "bytes": 27449
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-database.json",
+      "sha256": "5ee7c617f1c2a60ddbbefba7a3df65adb922c8325985467bdc45893d8b68f622",
+      "bytes": 5986
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-firestore-https.json",
+      "sha256": "cbf7ebf638e1700286ea1193029a80d3fa900001fdbbeed09ea94466d8b2eee6",
+      "bytes": 24112
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-firestore.json",
+      "sha256": "24fed0952378dae7a9360a0d27af535c233f79eaae763431f331ad490ce61669",
+      "bytes": 11982
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-https-firestore.json",
+      "sha256": "aa500fc7e49a4d0e37d2b7bf206023a8b82e60b776605794d6cad6a9b95cea12",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-https.json",
+      "sha256": "69a4587d89773835cc10f9a7a00a25c95248e4729a7a1b93a1db48605a1e4fe1",
+      "bytes": 17577
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-root-clients.json",
+      "sha256": "156276e3008569c8ef985da2b4b5e920cd9a840e69ce8c62e2a51fcf5d2e385a",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b08-root.json",
+      "sha256": "f5098257a6f982c7678cf6744b9e6b96d86b3c3d9028466e40bf5eea5cde542b",
+      "bytes": 32264
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-app.json",
+      "sha256": "8f562e49b7d3cbfee87bc41f8f25e87c4300d2f00fde822ed1f2dd7f0f0bf446",
+      "bytes": 5573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-close-create.json",
+      "sha256": "c2b37475310240791664c09456e101fca389017a0276baed0b661d1a25ae1666",
+      "bytes": 28870
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-close.json",
+      "sha256": "1995b3f4028c6dadc8d2159cb755d7b4900b72f49e217fe935511254c362cf36",
+      "bytes": 28594
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-create-close.json",
+      "sha256": "d371d3ee8d1baf14ca8fc3484a0375ccca41231da80a8a6edf2275fc34fde834",
+      "bytes": 28870
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-create.json",
+      "sha256": "df5e545bcc1e9ea1fbeaefd953965e4b5b02abdccf80445c4d96414e43ad20dc",
+      "bytes": 27449
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-database.json",
+      "sha256": "e77fac36619b6079cb036239bd6b2536a3ad6df79ec33b31fc24f07ca69d5e21",
+      "bytes": 5976
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-firestore-https.json",
+      "sha256": "8ef10c816c688c48eb4b8e21dd32d5f1ac693b9ffef8d14e4ee17ee5dc56d0f5",
+      "bytes": 24101
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-firestore.json",
+      "sha256": "85b279673a779b7e7465a5db21ed3376b68ea271771cb15c77ce25a8fd8e9815",
+      "bytes": 11991
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-https-firestore.json",
+      "sha256": "0e3e67d8c58ef477b4daf92d74fee6272107125bacdf2a2064dbd7fc7ecc7e34",
+      "bytes": 24100
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-https.json",
+      "sha256": "e0f98d90b658874742b37aef83bebca7e823498d705dc542abb200618d7f35ae",
+      "bytes": 17575
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-root-clients.json",
+      "sha256": "998be8b476c960148803d985969698f65f60773c94969f7c80aae2ca4139dd88",
+      "bytes": 32653
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/b09-root.json",
+      "sha256": "de551ebc282a2d910334e009a1ac36312d4195ae4bfd4c13f3170373af346fa8",
+      "bytes": 32261
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-close-create.json",
+      "sha256": "c00f6ecb8b412503551b71aed1696db9c8c755bdc5e2a8ffd6819602a28ddf97",
+      "bytes": 28848
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-close.json",
+      "sha256": "19cf7f33fadc448bc5d950df634c4042d6eeff3a888f72c1283f174c2319d510",
+      "bytes": 28574
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-create-close.json",
+      "sha256": "97fccd904d0c329b335eceafa87a7770ff3ba1a330cdaebbf00ec7f175be01a9",
+      "bytes": 28845
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-create.json",
+      "sha256": "47b0182e0a81d9abaeedb4866a956bcd9246951c95ac2587ce7054da96fa4586",
+      "bytes": 27461
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-root-clients.json",
+      "sha256": "910c9a5f6c60b55727381bc155752eec55bdc89983d57e945f09e7e2bf4865e9",
+      "bytes": 32561
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i0-root.json",
+      "sha256": "69dfc436788f40e28a08c2bf1a387fb22663c0c65e77ab3a4a37725860892d14",
+      "bytes": 32173
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-close-create.json",
+      "sha256": "9ac855abbc9ee6f29a8b47d32a88510ae4fe88cbc30e3e6fb67c23aff049c893",
+      "bytes": 28845
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-close.json",
+      "sha256": "7fe34dc2f4b7fc8abe8b0e46ea80ddb783df550f37eb221278ea5982d768bad1",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-create-close.json",
+      "sha256": "47b17d0d81cccf4664e3cfcae7c6d21d78b0e5bd1c6245d4c8b15d323614090b",
+      "bytes": 28854
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-create.json",
+      "sha256": "27c478cd9cf1fbef15dd0dd4a5cbaa4986fba4ed44ae34b34e2adb48fee783ba",
+      "bytes": 27450
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-root-clients.json",
+      "sha256": "8b53f6e4b561225825ed405ea408da189b7dacee515e2d1926f60480df81d6cb",
+      "bytes": 32560
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i1-root.json",
+      "sha256": "989c9ee9a736674b2d3639059468655ec16fe1a3faf3c9cf5074ae4ca249da3d",
+      "bytes": 32173
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-close-create.json",
+      "sha256": "9cb34da148f71731ed8cf5c25c50c3a3f07f158e56b7562c7c6bd57d36c461ef",
+      "bytes": 28842
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-close.json",
+      "sha256": "0d2011f3890223ca27dab2143bdd3b6d44274d55613152e9e5dbd1277f986438",
+      "bytes": 28572
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-create-close.json",
+      "sha256": "478b51bf1a80e46993625aeb0802a7c6671118bded1a60d9b433ce7e09cd84b3",
+      "bytes": 28845
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-create.json",
+      "sha256": "a44416358eb187a88d946bc6d83a399bab0eab1d5491a1ab0941a2efc6480af1",
+      "bytes": 27450
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-root-clients.json",
+      "sha256": "c0fe53f07c36e926de68393436cdda5f56035234ba182a40414d8fa515fb5cf6",
+      "bytes": 32562
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i2-root.json",
+      "sha256": "7a70cf7522f08373e8083216a61bad1e5dd72ba526c1723a3b03efa4298f9f3d",
+      "bytes": 32182
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-close-create.json",
+      "sha256": "b386576c9f9244ff2031d63ad4a4c94aba7c2ad6d7f7b7126ab4ee9e2b5a54ce",
+      "bytes": 28844
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-close.json",
+      "sha256": "5128311680502065eee3279382d94a05e1f3361b887bec083996d581553cd522",
+      "bytes": 28582
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-create-close.json",
+      "sha256": "3d7bc308f112f8f8a34c08d1a0e454691155eb311c54db7b2e453878424170de",
+      "bytes": 28846
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-create.json",
+      "sha256": "43f1cbef6aae1bd8cb55e58cc59ca9200fee75287045be96a1eea480b8ed0a5e",
+      "bytes": 27450
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-root-clients.json",
+      "sha256": "f3b21c497e6b39ebd4faa261b07491ec412b6c5c341856edfeb1263d46d7b950",
+      "bytes": 32559
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i3-root.json",
+      "sha256": "d7a8ec668aab0d5ca11675943e3ef84d88bc05a6d9ca862ac437216e10dc1142",
+      "bytes": 32182
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i4-close.json",
+      "sha256": "623f6d171cdb428fca7cdf83c3a517be3c16af83c8eeb716e177a5281be4d215",
+      "bytes": 28582
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i4-create.json",
+      "sha256": "dd545ab1de28c3c9b954c45d0e877000d6abdfaad71c4c7dc989586312bfb875",
+      "bytes": 27450
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i4-root-clients.json",
+      "sha256": "71ebe856b5d1a7563067cbc9e0ff332b37a6865514cf705a8a2f8f4e70a2aceb",
+      "bytes": 32570
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i4-root.json",
+      "sha256": "b86bcddb803dc93923223b8a689f84b904934f209961b9cd21774d71314ff155",
+      "bytes": 32174
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i5-close.json",
+      "sha256": "6d72ce53e7daeeedc2cb9b9db6ced8fb2ff37c1a093a15e9999b4a7ead395275",
+      "bytes": 28572
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i5-create.json",
+      "sha256": "9c1d101d1830d42a57c76bf273c9f3db451acb2f93330c2a025c243c7a117347",
+      "bytes": 27451
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i5-root-clients.json",
+      "sha256": "5601d6c6d7eba507bb483233da1c89b039a913097627ec2c64a926062b41bbd7",
+      "bytes": 32562
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i5-root.json",
+      "sha256": "8cdf407d50433e4898511ccc7b186689edc80372cb81fbcb56815362128c0bec",
+      "bytes": 32171
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i6-close.json",
+      "sha256": "7a9bfccf773623e08e238964c551c14af59d1f6b338eebea3433ff62525fd20a",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i6-create.json",
+      "sha256": "e9c7291bbbf519d1e96615c66482b7ef348fec48e8d51654e8a69a3e1fa31740",
+      "bytes": 27460
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i6-root-clients.json",
+      "sha256": "c1afa6448aa8018f7e6d2203519566a1ced8040448117f914649567d6e38e99b",
+      "bytes": 32561
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i6-root.json",
+      "sha256": "f79d37f8ebd114406ae06a66537f82a94eba11909c300ebf8a260af3b3a1ad74",
+      "bytes": 32173
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i7-close.json",
+      "sha256": "ffb6253fa15dc8cdaf991030754dc8045fd239d47b74fd982c323175578a8686",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i7-create.json",
+      "sha256": "07034d697489553e41bef7d78f25f577e0439a5a24dac45397d47bfb24dff62b",
+      "bytes": 27450
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i7-root-clients.json",
+      "sha256": "71900802deac66baaa1081217855dd4f108220d8b24196da605314d571ab0e1d",
+      "bytes": 32569
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/i7-root.json",
+      "sha256": "81f95c69a92cb4fd446e3b2fbcb4e2071d9a8a485d76b8e024aed7118882071c",
+      "bytes": 32172
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip0-close.json",
+      "sha256": "86507af5f6f4c3ea4bdcd2deb933e0d3890724837a38f4ba6a679f6526ad3b64",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip0-create.json",
+      "sha256": "e5781ab8b54dcf119435d242d8b4536986aa32a5ef70dc55a48c0560abea6b3e",
+      "bytes": 27460
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip0-root.json",
+      "sha256": "1d9fd67937db02cdbce27310b8f74c279b4830b8b4d4d6a3f8bc83abfc5fadbd",
+      "bytes": 32067
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip1-close.json",
+      "sha256": "bef0c237728400072304e1cadc1a23a6f83d4683f22102a119384e1a1cd3a79a",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip1-create.json",
+      "sha256": "7042e238592cd5dc33a09234c4bf51edbc0e37f45e72cff4fef1b87c988fa5e9",
+      "bytes": 27451
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip1-root.json",
+      "sha256": "f08c4a4469cd88591a18ce532c76d10442b2fd54531176dbcd0beaab38fe1b72",
+      "bytes": 32076
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip2-close.json",
+      "sha256": "df1f7e93defff0ae513f5497d0908b36d81cc678686d2260f09f1c02f5c32541",
+      "bytes": 28573
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip2-create.json",
+      "sha256": "7883ddda804311baac111bd401851e7738f7b7e03c57f6f8506d46f11e47f31e",
+      "bytes": 27451
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/ip2-root.json",
+      "sha256": "d0f4be8f0f981f69cc401a32099518b28b8eed880ffbf27f7fe1ce0aa6e99d58",
+      "bytes": 32067
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it0-close.json",
+      "sha256": "0baa6fecd62394589aa59a07072de784457c3faf73b5bd08dd8531fc3753a5dc",
+      "bytes": 520596
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it0-create.json",
+      "sha256": "81014eb825e3b3287d86d459bba78703fc42a0745e6dd2c0c1d7857a109ddd75",
+      "bytes": 505808
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it0-root.json",
+      "sha256": "0c92afeb7f67d0529baa2ecc4e74af9fa1739a73ffae02f1823fa3ce2276bfc3",
+      "bytes": 635025
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it1-close.json",
+      "sha256": "ea1591491d25cdbfacf025e8781848695fd1f7ad262064294189c95f4a95f8de",
+      "bytes": 520366
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it1-create.json",
+      "sha256": "9751a32515bcbda9dc7c3579890990b2049309a5c7e1d27c15e2f9fa25c29cf7",
+      "bytes": 506071
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it1-root.json",
+      "sha256": "50805e3e3daca3fb94ba5afa1f8483ad0883c186a387f3682b39a8a075611191",
+      "bytes": 635204
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it2-close.json",
+      "sha256": "c20daad792dd66f5b10ef24aa6862788f69ecc34068515d414979c3335dbd49a",
+      "bytes": 520406
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it2-create.json",
+      "sha256": "0bbb54faeeca91659b5b42c13cb8b3f3a81d4036af78253f56fdc6bfcff14809",
+      "bytes": 505989
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/it2-root.json",
+      "sha256": "b4b9488333efe6a747e5a5682f4e07d14cfde1d3ecae01c7a1c24d035cd1cd46",
+      "bytes": 635048
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l0-control.json",
+      "sha256": "62f84da34b51a4a06b732f7136678e88ce1145c09d8d4ddfab6f881dde654b03",
+      "bytes": 34966
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l0-narrow.json",
+      "sha256": "0db672348dc9c58027a8460faa8f9b72f0fb399e36e3889e3a56b284d5b3b0ab",
+      "bytes": 32866
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l1-control.json",
+      "sha256": "9018d24198a0eec6d918bc4fc71df8093eae16d7157f7511e68761cee5d36526",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l1-narrow.json",
+      "sha256": "a9e116fe4f6eae17f420e6e492a0c3317092d956a2a85be93f414f4d56017d1c",
+      "bytes": 32867
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l2-control.json",
+      "sha256": "adc8601deaa430a98d07458762f0e9f1a2ab0d4da5d703a8813f75b62eddd860",
+      "bytes": 34976
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l2-narrow.json",
+      "sha256": "b5f672117a9f49fea5574c90e5da8e72ec3d675f5b9e51362f95575f9ae8c47b",
+      "bytes": 32867
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l3-control.json",
+      "sha256": "4a093e6efe6d95faa044e0e9dd8a8984667fdb166595792ec6200c28285d7a1d",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l3-narrow.json",
+      "sha256": "42897f4e17ad5b11f2897d3b2c42008c0c4a4bfab3dcbd8e08799d4b5301ad97",
+      "bytes": 32875
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l4-control.json",
+      "sha256": "e249ce5632cf95e7a98ff9a4f0cb261694c2a8d5cf95fbd8514c27b1602b115b",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l4-narrow.json",
+      "sha256": "3c88acb74554837b0109ed9b4caa2b9b2af59219e87faefe6e64ad5f2d69c1d3",
+      "bytes": 32865
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l5-control.json",
+      "sha256": "190854d68bf27115393af97a0a2a6b54f8da7760ca970ade65e5c53c1b5824ff",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l5-narrow.json",
+      "sha256": "10ee62b6b0ba64455d935a849a57eb987d05cd6c8a6dc9b2ea06816196896a34",
+      "bytes": 32866
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l6-control.json",
+      "sha256": "b7f93bd4e4b4f7b201da16b55e9d8a985a5c631a99e0065c8dcfb23a07c0c178",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l6-narrow.json",
+      "sha256": "b51906a0ea76e3a50c3adf535ec51219753fd855fdbe4522b036587f80f6bccf",
+      "bytes": 32866
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l7-control.json",
+      "sha256": "fe5c75b55ffa1155601b367c282b89f734d9257dc1d0e455217c76dc75748819",
+      "bytes": 34967
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/l7-narrow.json",
+      "sha256": "ce6a3229f2ffe3a282c5e9c742eb32243e5812eb5761bd2024ef13dbedf8dab2",
+      "bytes": 32865
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/lp0-narrow.json",
+      "sha256": "a9946cdfe9eb7245bee49f64305ba7e839c334152d0dbd12453d136133efe18e",
+      "bytes": 32866
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/lp1-narrow.json",
+      "sha256": "bebedeb5ccb804fdd84e149c085ee21f1ea5ccd6f3f64aec590811b03ef88d46",
+      "bytes": 32866
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/lp2-narrow.json",
+      "sha256": "7c8ea15175a0ab6e4050b5a291a797a959449d6a5e6c741e6115b89e7f19570b",
+      "bytes": 32875
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p0-close.json",
+      "sha256": "f7dbfacd339c979d142806f9e27228d37fdd75da29cdb639b62ac65b4a89cb17",
+      "bytes": 28593
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p0-create.json",
+      "sha256": "3858c047804deb001479c12bdbc9621d53ac5f6c42f00dfea4dc6f2e87404b1e",
+      "bytes": 27447
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p0-root-clients.json",
+      "sha256": "74684d2d6eba3291f7068aad7162a5f5d15d60a77566650e773bc5cc92cf7e5a",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p0-root.json",
+      "sha256": "dbadd762fe65408d3a666280da3072c7a0708c26d2e7c11ccdf8d70d8e14c91c",
+      "bytes": 32270
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p1-close.json",
+      "sha256": "4c36020651f0b1953b30367894f4b0a1a7d76a1e4327d52f5d029b65cbb0c705",
+      "bytes": 28592
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p1-create.json",
+      "sha256": "5666b15ca76f3250fdc055b0e7eb85d659d94c06b7c820c7e6dd3c5fd102adc3",
+      "bytes": 27446
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p1-root-clients.json",
+      "sha256": "eb4d28cf8d20a5083c1240f7ce2f2ce48ca8796a42ea20fc08ed12a3c8fc89c3",
+      "bytes": 32651
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p1-root.json",
+      "sha256": "4956343092030db5bb9087b943dc22ae12c0301b60b5fbd4e9f2ab11820775c9",
+      "bytes": 32271
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p2-close.json",
+      "sha256": "522a6f2d2beacdca4f4525cd077e2f6b0a0af955258950dcc1602b8df8904ac4",
+      "bytes": 28593
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p2-create.json",
+      "sha256": "1cc5fb9b23dd4a34f9eab7714ff004940e4148eebd9e6db4e5d8ec9bbe1be850",
+      "bytes": 27446
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p2-root-clients.json",
+      "sha256": "6c54a1db0e21a221f744b01c0552933e77b3ea3c45e013c92c66785abfe89bb3",
+      "bytes": 32652
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/p2-root.json",
+      "sha256": "24d19235c1a0501826e53dca2ea6cbdeaf2203d7af1343c71fa86ce8ee7f9d25",
+      "bytes": 32261
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/probe-root.json",
+      "sha256": "4ab71b460bed48ad123e5fda4a7e88748ca98b674e3f0b66a68519740f08d5a2",
+      "bytes": 638984
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-close.json",
+      "sha256": "494b6a7085c5ffba2a838efbb7d132836616e0828cf041fb45e20dccf0f789ad",
+      "bytes": 520745
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-create.json",
+      "sha256": "814c3b9303adf7bcc590be9345790ba78a955222a29a75fe71e8da48528352fb",
+      "bytes": 506046
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-firestore-https.json",
+      "sha256": "46c4e294041dc8fcdfafbb1e705462589f657f7f33089d752a519eea202b3287",
+      "bytes": 429379
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-https-firestore.json",
+      "sha256": "aeca8b0202b319d6c9056b94b931db57bc4c09dd8f22478e204c811a85e4d4e3",
+      "bytes": 428426
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-root-clients.json",
+      "sha256": "e7f2827a4e5adbd7c1a0db90d9dfc26965300fd23937646be822fa75cb94ab46",
+      "bytes": 639452
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t0-root.json",
+      "sha256": "c09e17bfba6007b854f82d3f76ab7923046129bdb67ce556e1f1192a9c9342c3",
+      "bytes": 636512
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-close.json",
+      "sha256": "362500bcc9ab678ddcabd6931cfb33eac8345a365fb07bdaf1395b653cc551a6",
+      "bytes": 520722
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-create.json",
+      "sha256": "867fa9b9c2d16004f62d2f39f8522c77de37ed507972d922c80975c3e29ab4c1",
+      "bytes": 506098
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-firestore-https.json",
+      "sha256": "8d73bd9dc1a6b407090f903cd6211fec7b98a53b264b208ed57ce476a3a19596",
+      "bytes": 429291
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-https-firestore.json",
+      "sha256": "07e868116d34951a33388802e6c0db1dd38c1f00fb1b91b75443545738b7a32c",
+      "bytes": 428400
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-root-clients.json",
+      "sha256": "f503555995bdc239cb0f6d83a3beb1d7440738b16228f7fd7883391dd0cfacf4",
+      "bytes": 639316
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t1-root.json",
+      "sha256": "851b3dfac3fcad5db0ba938fd2eb6ca21d7d13ceedb837aba9184cdcf4179637",
+      "bytes": 636567
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-close.json",
+      "sha256": "2e7f00c7bdd87047a36b6bfd129d5e50f1f345b8a28cff28576317c0051f73e3",
+      "bytes": 520613
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-create.json",
+      "sha256": "2f918c0c0c512538f69b8023c30906b66e81edbb35f0ed8684aa39fc1d21d1cc",
+      "bytes": 506049
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-firestore-https.json",
+      "sha256": "34dc086046b55456e6bca71d1e4b671c7391ff09e17b04762346418e4cbe2727",
+      "bytes": 429386
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-https-firestore.json",
+      "sha256": "89dab4f88f7d4df50e3f2727ab6d55a775688e6d3832c4b419a43e0f30325901",
+      "bytes": 428387
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-root-clients.json",
+      "sha256": "c969ea277aa220dfc49ebb735730a65fe09ab2219ea18b89496d4dc44b7db829",
+      "bytes": 639301
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/runs/t2-root.json",
+      "sha256": "cec963e245dbac9a1e62d4290727f3d473f01a456a14aeffa60c3f23f2bee752",
+      "bytes": 636793
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/validation.json",
+      "sha256": "4e021c914ab9183a8afc0bb751eb52db49f39a919630c65ddd765ad7de5c4c4d",
+      "bytes": 1242
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/verify.py",
+      "sha256": "639f2fc303cd43d9fc09cdd4e250dbc5618c01a74200ee06506908dce26a28fc",
+      "bytes": 5007
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/worker.cjs",
+      "sha256": "bb7d697ffc190bc41689e870908a70f113e40f45291788af1a83c2f8692aaa20",
+      "bytes": 9727
+    },
+    {
+      "path": "build/device-test/cold-start-local-20261018-a9d46e20/write-report.py",
+      "sha256": "ca0855372c3d6eab6ad9783734334e946b08fed757262969ce6f92b2e739c021",
+      "bytes": 21732
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/all_trials.csv",
+      "sha256": "9565809ca3a8ab53df835263f48384a22cf2e563486025d9ff53a91770bfa7fb",
+      "bytes": 4887
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/analysis.json",
+      "sha256": "9fa83a2762d8125e38b2b9e6e730f64a4aee4b2ac5b9df875dfcb205123e7427",
+      "bytes": 34030
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/analyze.py",
+      "sha256": "00e99f267244423dfa07f3a8c6eac4cd1df8fceb42b2b7c163ed9e5090f7fff9",
+      "bytes": 19972
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/APPENDIX.md",
+      "sha256": "ab51c86f75763a4d5677ea71de753a16d0a61eb7dc3843eb237c3eeb3b354157",
+      "bytes": 21471
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/case_comparison.csv",
+      "sha256": "dc95d2a36ed08a7e3641344f18f49fd9c794b8c9808ba659211b67657d427ebe",
+      "bytes": 3310
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/code_evidence.json",
+      "sha256": "7af8f5043c41e4183f6ce7803240c869cf259f2e2a2c6b25ecf094ddd2bd98ef",
+      "bytes": 7653
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/commands.csv",
+      "sha256": "1993e8d9392a35bd7eb5703fbd149bfd8dab16a0e29ef342516d13a96788988a",
+      "bytes": 4276
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/derived_intervals.csv",
+      "sha256": "1d5f6890023c542cb89bd75b8e6d5fccd2cde7f6693e71cc5a394be8bfab2c9c",
+      "bytes": 48171
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/events.csv",
+      "sha256": "7033ee466ee7676e1442965d02353778e2d14dc18749184994c5bd4b6d6245e1",
+      "bytes": 356051
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/integrity.json",
+      "sha256": "e91dbfb89cde2e1fb868c79e62e2497201333ed8adcb3493c69f844416a08d8f",
+      "bytes": 1537
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/next_evidence.json",
+      "sha256": "93fe34c0d9f51ab3491e6988c4ea16e61a04b51751626936fec0fa78a3cb3b95",
+      "bytes": 1708
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/preservation_before.json",
+      "sha256": "9870c92e0ef7d9203e746f87fbc764f31ac1e2245299d8a4d7f5b6766fea035e",
+      "bytes": 47281
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/REPORT.md",
+      "sha256": "052834752c3753a8aaa6e3fa0381b0669f136e5ed5a5aa3db7d533b375c2ff59",
+      "bytes": 6611
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/source_coverage.json",
+      "sha256": "34758a7ef0deb7eed96a0dc52e23bf50802ede128974587dbc44caf28441cc1c",
+      "bytes": 3126
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/validation.json",
+      "sha256": "20db1a4aceb7153fc5491b073855ea682397bdea7c63c5fa0596e2db1571f7e1",
+      "bytes": 1027
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/verify.py",
+      "sha256": "9db469e1be8bf901226f9358851d22fe20d6433ff71448d00b8195513dd0dcb8",
+      "bytes": 4539
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/version_checks.json",
+      "sha256": "8d1695574d78158ce64a83a9df23f5fcea10a2b309cbffe1426a386bc9265f30",
+      "bytes": 6928
+    },
+    {
+      "path": "build/device-test/game-request-variation-20261018-8e61b427/write_report.py",
+      "sha256": "97d9b8e834755be3c2e5cf86409f18c065e4641ee463a19dffb7d608ddd35248",
+      "bytes": 28064
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/analyze.py",
+      "sha256": "dd9078d783fb2158b6117691305786d40736b3a84ce94e0f07122e39d8b84234",
+      "bytes": 5955
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/APPENDIX.md",
+      "sha256": "a1ee5de98a94ae1216abcf90c625f11b18bd61af6abbae194b82c2895ae67922",
+      "bytes": 20829
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/code-evidence.json",
+      "sha256": "783b634df9f37d54aa4753058e9cb910e228aa3e33ae7cd3da282f5e249df35f",
+      "bytes": 2433
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/evidence.json",
+      "sha256": "da37aff4a045e87d57444f48c060f28da170136729da853c1b590a92c15154e1",
+      "bytes": 1117
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/integrity.json",
+      "sha256": "6c1981ead85a49b2f3e1ca348a94dfda488af341f39cc52efa3fb5830cb5a527",
+      "bytes": 811
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/module-reachability.json",
+      "sha256": "5e3667dfe209fdd31acaf6db669193641be0d992d84a2c65693721815f7f4fb8",
+      "bytes": 40197
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/PLAN.md",
+      "sha256": "dfb77ba80a1c67b6b3007f54049e28b5896ed9b2e6d78db53a4b2a5b2706f012",
+      "bytes": 8169
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/preservation-before.json",
+      "sha256": "1fff5ce36400bcdccc19e4b8db6e2065b5eda2aa3a429ac3f85dd03b09538ba0",
+      "bytes": 21000
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/validation.json",
+      "sha256": "1e5490f91f22f2eeed86cefc636d519eaf4a2f3d31c51a040423124179260bd9",
+      "bytes": 794
+    },
+    {
+      "path": "build/device-test/performance-development-plan-20261018-4b29a6d7/verify.py",
+      "sha256": "8c5b03e9e8376bc7da1ec6f0eedd4c2a4611bdc00da0804ca2310914a353ae7d",
+      "bytes": 5102
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/APPENDIX.md",
+      "sha256": "00f9284f8bb157859eab3f95578263bccb3d7d0fc2f81b6deed972f5b24f913b",
+      "bytes": 30833
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/candidate_plan.json",
+      "sha256": "d6631f0c5b367f8810835337cc3c93b71dc5cbad5b3b3e9f8c7ef56dcc457547",
+      "bytes": 2037
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/cold_start_evidence.json",
+      "sha256": "6db049eb93e768bda6063b770c49cd3ee5939d5227445dfdbd6b67cffefa2018",
+      "bytes": 2929
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/collect_evidence.py",
+      "sha256": "72e60bf9ef8af68dadc03ddad36dc4fc5e5aaeea35044406c69da2eec4314b52",
+      "bytes": 9699
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/comparison_design.csv",
+      "sha256": "d026fd423dcbe04de42f0e36b66712fae9ff0da2c41937f2e6e7ab19a17493cd",
+      "bytes": 3193
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/debug_decision_metrics.csv",
+      "sha256": "da0d6c28f76aa5e1facc7a529a243073f914d0b50bb0e966cc06cfce561ee6b4",
+      "bytes": 7592
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/evidence.json",
+      "sha256": "72981c35d200a5114c114bb81e4b61d1e13909c36108cd9821b7361b13b4fefa",
+      "bytes": 7119
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/integrity.json",
+      "sha256": "970eca90f963399210ecebe67834de45f5c5e4934f12349c753e511dc5bc859d",
+      "bytes": 1224
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/preservation_before.json",
+      "sha256": "35d9651c551615dd65b69bf273e26a557b4da07ebdb001490e7d110eb54b5c76",
+      "bytes": 44751
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/release_valid_observations.csv",
+      "sha256": "e55810bd4abce6fd64ccbf337309bfe969f18843105f99cddb656192995703d8",
+      "bytes": 2405
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/REPORT.md",
+      "sha256": "d056ebcdc9d175586960d142ee674147bdedd872f4471172665022dd4fd0efdf",
+      "bytes": 7345
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/cold_update_inputs.json",
+      "sha256": "c9802c6c4aac98f03edc80fd94abfcf0e86b0d0abcbda94d136cb8e839ee0eb1",
+      "bytes": 2377
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/APPENDIX.md",
+      "sha256": "195bcef121e0dc7e4e96577856ee248af08cdec50091288b7258d7a98ed4f418",
+      "bytes": 23968
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/candidate_plan.json",
+      "sha256": "8c63adbe6de83391f850d13b8bb6fd02b64de174ee87b2d082619be2366f8359",
+      "bytes": 1285
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/collect_evidence.py",
+      "sha256": "72e60bf9ef8af68dadc03ddad36dc4fc5e5aaeea35044406c69da2eec4314b52",
+      "bytes": 9699
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/comparison_design.csv",
+      "sha256": "bac6b689af8073172f4ed5b484a2b92bfd17f9a1dddcff0e16beda605d14df52",
+      "bytes": 2001
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/debug_decision_metrics.csv",
+      "sha256": "da0d6c28f76aa5e1facc7a529a243073f914d0b50bb0e966cc06cfce561ee6b4",
+      "bytes": 7592
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/evidence.json",
+      "sha256": "72981c35d200a5114c114bb81e4b61d1e13909c36108cd9821b7361b13b4fefa",
+      "bytes": 7119
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/integrity.json",
+      "sha256": "0b93a7c84794203ef8f6124d5e9ad385959c468641a47faed314093022a6002b",
+      "bytes": 1125
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/preservation_before.json",
+      "sha256": "35d9651c551615dd65b69bf273e26a557b4da07ebdb001490e7d110eb54b5c76",
+      "bytes": 44751
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/release_valid_observations.csv",
+      "sha256": "e55810bd4abce6fd64ccbf337309bfe969f18843105f99cddb656192995703d8",
+      "bytes": 2405
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/REPORT.md",
+      "sha256": "d2e0ae766a9f2bcc787cc0dcfe9f0c26649feb65fa71a55760377538aa22a457",
+      "bytes": 6997
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/snapshot_manifest.json",
+      "sha256": "e926a0cff4c9afd91c9c8b892a5052631c47797f73dcf2a72dcd66c828ac55b5",
+      "bytes": 1351
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/validation.json",
+      "sha256": "4bbffc5f08bc7af511f3272c0ac062eb7e538bf73b0d94221b70a5563ac8bb9f",
+      "bytes": 4194
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/verify_preservation.py",
+      "sha256": "6d7eeb18cb09b70d87c62029b71414052f8379d47aaeca9ea854cd2ad13fc342",
+      "bytes": 3789
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/pre-cold-start-20261018-01/write_plan.py",
+      "sha256": "81c5193814415dd5db64655f1f03dac13f8fa8c015abf4a5c9c3b3c74460cc9f",
+      "bytes": 33567
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/revisions/update_cold_metadata.py",
+      "sha256": "a2d0ce0daed96205108b73aaeddca8304a7abf4daf7ae1fc532285564ffeb0ea",
+      "bytes": 4550
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/validation.json",
+      "sha256": "73e33e67d0d749be271f79058c4624a8856096e499536ea17cd11129dbf4107b",
+      "bytes": 4414
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/verify_preservation.py",
+      "sha256": "ad71723c77e5a7f3d9382300a703365919de1f93e16e74f0655e305776992c25",
+      "bytes": 5385
+    },
+    {
+      "path": "build/device-test/performance-improvement-plan-20261018-0251-e4c7b9a2/write_plan.py",
+      "sha256": "81c5193814415dd5db64655f1f03dac13f8fa8c015abf4a5c9c3b3c74460cc9f",
+      "bytes": 33567
+    },
+    {
+      "path": "build/device-test/performance-proposal-notion-20261018-c5e87219/APPENDIX.md",
+      "sha256": "b902309453bca750f5318c05d1d6a15cd49938f22c81cc3de039cc97c3c44250",
+      "bytes": 3226
+    },
+    {
+      "path": "build/device-test/performance-proposal-notion-20261018-c5e87219/integrity.json",
+      "sha256": "3f47d234d40db328d3abedbe22d65dc5e364f68b3e1aa6e9f66380107ddee5b2",
+      "bytes": 349
+    },
+    {
+      "path": "build/device-test/performance-proposal-notion-20261018-c5e87219/REPORT.md",
+      "sha256": "8005191ce6ed1decca4221b314c67cb3224f83ad5fe4cea022b5ed322ded564d",
+      "bytes": 10227
+    },
+    {
+      "path": "build/device-test/performance-proposal-notion-20261018-c5e87219/validation.json",
+      "sha256": "fc4fdbf1d3b82cad09118965f410d9bb802cc5e8ae24def210414eb33b18290f",
+      "bytes": 956
+    },
+    {
+      "path": "build/device-test/performance-proposal-notion-20261018-c5e87219/verify.py",
+      "sha256": "f75b8e3c08ccd1021b46a704b84d7120ae0adcca41339f8037fcabcfbf3ef901",
+      "bytes": 2757
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/analysis.json",
+      "sha256": "7e42f46b4c88596e1d1fdf1c41635d8efa83a7c26772f363575ffef7bf060efe",
+      "bytes": 17588
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/analyze_local.py",
+      "sha256": "d4c58edce670f70bd5402d09826be273be4a3248e12cf3da0dacf279ed11564d",
+      "bytes": 9598
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/APPENDIX.md",
+      "sha256": "05483905ed46825513b00f35270cbabb2f376e1c9f078c82bc349f2e3e99a279",
+      "bytes": 9470
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/client_attempt_decomposition.csv",
+      "sha256": "ce11d5231e8a6b10b514a06c9e0a8597cc8547b54bf8409595f168f55dda71c3",
+      "bytes": 6784
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/client_state_application.csv",
+      "sha256": "15c7c974a70f39cce0bcfaddcdf1ea4722c65f0c1d9b2fa2955bc35ee48ea0eb",
+      "bytes": 938
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/code_evidence.json",
+      "sha256": "6c58624de10fea0b265073b97d075d11637f4e4360c5b7beb616a7d21c86f920",
+      "bytes": 735
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/integrity.json",
+      "sha256": "178d68c7c62f0514d6301f1b3459a05095d4ba8190023313c4650718358c4528",
+      "bytes": 1135
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/legacy_room_db_stages.csv",
+      "sha256": "e5858091ff6929cd447f6b31f2cd461eec2a105b4b812c0edd7f75ac697c61a3",
+      "bytes": 5904
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/query_proposal.json",
+      "sha256": "42f5fb2b829812dc040578379d9ee7e715837ce84c1d91db8611489986c8be68",
+      "bytes": 3331
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/REPORT.md",
+      "sha256": "03f9540cd0221b055012ac3d4086832369ddfbd77b677dc7b432fee2fbc54c29",
+      "bytes": 9513
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/server_reference_statistics.csv",
+      "sha256": "2f5010d50096eb0f4f12d42335a7b151592c1e04499ca3d29790c0605874cbd6",
+      "bytes": 679
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/validation.json",
+      "sha256": "24b23ecb7037539637a808cca652c21858ae501136eec7e6320754c0d19f2413",
+      "bytes": 765
+    },
+    {
+      "path": "build/device-test/server-client-performance-20261018-7c23d8a1/write_report.py",
+      "sha256": "b1a56b07c3c80eeff2a882ce9447eecff3529c79050bb3a085eb0f2b3388720e",
+      "bytes": 21333
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-connection-requests-page2.json",
+      "sha256": "397b4441b547252499f55be9d46046858f240da5253374067487ff48a9ef3358",
+      "bytes": 4146
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-connection-requests.json",
+      "sha256": "013ffdbad70879687fdeb2d6cd0ea8259734e3cef50e705e12fd3b48e6f7f86b",
+      "bytes": 37954
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-errors.json",
+      "sha256": "10822b92d6b8366fcf6e373eef8b0a1bbd6f758b1085b8f343b63d8cd31e3c2c",
+      "bytes": 8682
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-game-requests-page2.json",
+      "sha256": "42ef16413780326bf1a610b97572bfdc405d0d21561e0513da6da8d4429d1e56",
+      "bytes": 20123
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-game-requests.json",
+      "sha256": "73c891aaf101e91133b4f619e873f04ebcba4a2d17c4879e1618040aa9300f99",
+      "bytes": 37512
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-room-requests.json",
+      "sha256": "5d72bcc0ebd1bf51f7c0fac31250882e3b0db6248f6d72e234e6cd6179eaf3de",
+      "bytes": 27395
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/card_turn-warnings.json",
+      "sha256": "48f21ed300fad7de50ad6bf030309db48fcfd1313960d95ff884e66b382964ca",
+      "bytes": 56209
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/collect.py",
+      "sha256": "455cebb8d89ac4aa1fb9f0429d2fa78a3d46c8d1f84a854f05ea9c018baf306f",
+      "bytes": 13648
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-beginRealtimeRoomSeating.json",
+      "sha256": "f5ff3b91ebc323d702345216148473353c6ff732bb8839c382501be9932102cd",
+      "bytes": 2088
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-cleanupExpiredGameInterruptions.json",
+      "sha256": "525fc5966424d61e4f38a861c1480b32a8c7a79932e289b8134bac538b13b5e5",
+      "bytes": 2114
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-closeRoom.json",
+      "sha256": "70b25c487b694295415317b9271b25c451ae15537b3e515a5a1c14ee7530a157",
+      "bytes": 2028
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-createRealtimeRoom.json",
+      "sha256": "ac10596b5fc993e8cb1947eef8dcb3324d74f2f47578d24fec006168ddb1ef32",
+      "bytes": 2064
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-fetchRealtimeRoomGroupEntitlements.json",
+      "sha256": "687c962f9e10a2cd620468c9f94bf9ab6d0619ed63a27b01321e26a64da060e8",
+      "bytes": 2128
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-fetchRealtimeRoomSession.json",
+      "sha256": "c9b834225cc3aec58fd7a14ecb815fd8f2c38ea0c0fc382e935d4847c099c9ac",
+      "bytes": 2088
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_controller_presence_changed.json",
+      "sha256": "52aad5962cb8208dc067344ad6742881fe044ced4606ca02859697515ff9f4dc",
+      "bytes": 2210
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_exclude_player.json",
+      "sha256": "83371c71d74de524223ebbce06b218271d72f4577ff5335d4c16d5cbfed5d1b7",
+      "bytes": 1846
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_expire.json",
+      "sha256": "b6894294fe751f4beae2f01f41d9cc6ca470651bcf3bb1f3aaad5b1e9d4ad64b",
+      "bytes": 1822
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_on_connection_changed.json",
+      "sha256": "d1609cff6cabb509748af82e0b27b32913ece917be46a49b4314e4ef9744a2aa",
+      "bytes": 2244
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_report_stale_controller.json",
+      "sha256": "766c5f1219f88178e5f2a15a71d7a3c269d1aa3d38ee247c59ac6b7d25206c1e",
+      "bytes": 2255
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_report_stale_player.json",
+      "sha256": "cb6d6eb923838cdd46b5aaf45b23f828b9f95876c72b9f98b25180109c53ecf6",
+      "bytes": 2235
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_interruption_wait_more.json",
+      "sha256": "dcf0a0e4c4921694e10f39f7da6b92d7ee40022eccaf057c5de5ba7789301829",
+      "bytes": 1831
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_operation_status.json",
+      "sha256": "d8cb0c4f2bedcabc020e5fcda5a063875062e8532cc0c6be45720fc14f75ecf1",
+      "bytes": 2155
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_common_recovery_report.json",
+      "sha256": "6dc37d32007d5a85ce2e40f241090579475eaba2cde7b5c79bdae3fdb1932ad5",
+      "bytes": 2150
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_call_liar.json",
+      "sha256": "b1ca725171189bc1f23c083dc34ca3400b44e9efe3f8439f11834f85e2ade759",
+      "bytes": 2145
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_complete_dealing.json",
+      "sha256": "e787e381b06a672b0995dd4a86783f7dd91527493b68a8f5fa24b8352f7483c5",
+      "bytes": 2180
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_end_game.json",
+      "sha256": "b2e978d699e61baa7028acb5cdcd59cb5af09756a23897a9fe788b8b1d6ebd7f",
+      "bytes": 2140
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_force_timeout.json",
+      "sha256": "5928477bb3dc27b3c0178288ea6bb068b33250616ff184e2d8cc7712bbb9152a",
+      "bytes": 1819
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_leave_game.json",
+      "sha256": "c8c613b9682b968e07a2647d3d4e3a8376e96e1bfae4cd5f0bfc615130ba53f3",
+      "bytes": 2150
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_pass_challenge.json",
+      "sha256": "04dc5837822156fd1fcd6de162b89b76dd0dcf210f578219ebcb85f3950897e6",
+      "bytes": 2170
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_prepare_penalty.json",
+      "sha256": "eed96cbbf2468571f92d13d8695cc2e7e858c76c923a3005d1fa7a06c1c5c38a",
+      "bytes": 2175
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_ready_turn.json",
+      "sha256": "f68352d22ad67ef2bc2afe68cc68ba6832f1cc5d1f5621e2e80e846dfde7600d",
+      "bytes": 2150
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_resolve_penalty.json",
+      "sha256": "ea53535d0b82221ecb7dc07c372dc2df20af3aa6b2e993bae2abfde52d184341",
+      "bytes": 2175
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_start_game.json",
+      "sha256": "f9004bbfd199c9c2dc0de8c8222f68d82f50c705dc825095e80e098f713420b4",
+      "bytes": 2150
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-game_liars_poker_submit_cards.json",
+      "sha256": "e786909aea48a8a42faf1a11d13ba3cab4260001db9047be130b4dde0614e134",
+      "bytes": 2160
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-joinRealtimeRoom.json",
+      "sha256": "8513c43853fa289f7c9fa93dfcff0b87ccf8f250b8c1348ae7f09735f7be6883",
+      "bytes": 2056
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-leaveRealtimeRoom.json",
+      "sha256": "1ab730ad3aaa537b7dacb21958a9934a5f5968145e865b133e2c158baab9082a",
+      "bytes": 2060
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-removeRealtimeRoomPlayer.json",
+      "sha256": "2f2d41edea8847e2ad8379c0111e80a9338481780f293c5d04ac64f3a35df9a6",
+      "bytes": 2088
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-resumeRealtimeControllerRoom.json",
+      "sha256": "d20f782fc0140567773b938f21ca8f1b98c149a3d9a29fdf53788badaee67a22",
+      "bytes": 2104
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-saveRealtimePlayerSeatIndexes.json",
+      "sha256": "86ceb4b590ed6c86059192cb06451f5fdd154e93b7c0ea75053107072cda2756",
+      "bytes": 2108
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-selectRealtimeRoomGame.json",
+      "sha256": "f9112bb0eabdeb986b5c9f179dc68ac413aea5bb043c1c50ba74b5da6525b2e5",
+      "bytes": 2080
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-syncRealtimeRoomConnection.json",
+      "sha256": "10ddec1624c2044dacc3c37a3fd2b63cc8d00ef224e09121d592dbffe200a9b0",
+      "bytes": 2096
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-syncRealtimeRoomGameStatus.json",
+      "sha256": "7b0ccb522d9f1fcf43cdfd7052cfa9aab7cd1db618ffeced8e9175636fb532a0",
+      "bytes": 2096
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/discover-validateRealtimeRoom.json",
+      "sha256": "c7a6763660a90750412092a7f766141ade932a78406c12d7782f34915fc389c7",
+      "bytes": 2072
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game-timing.json",
+      "sha256": "cb88d0e5ad2ace0f680ec2e8f30cbfb9afafcd38a94aef78d2ec61e6cd180004",
+      "bytes": 7808
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-connection-requests-page2.json",
+      "sha256": "85203b6bcbdeb49febb68ca965527ea0f731f624132ea9e41536fc54f532bebd",
+      "bytes": 4834
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-connection-requests.json",
+      "sha256": "278e122b4a870a57ab4f731094fdb39639831577e76e94fd994ae3f82d6a080d",
+      "bytes": 38187
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-errors.json",
+      "sha256": "b8a4ba541523746c48673dc4e0b2e83ecb2c341bc3e43cd6c4eb32e0bb61f859",
+      "bytes": 8683
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-game-requests.json",
+      "sha256": "1ff281af512d68c3740bd6ea3e29b4b429708153c827ebb5d3a127c8b008468c",
+      "bytes": 11173
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-room-requests.json",
+      "sha256": "e8788551ea1c7dc19c78f27b2bb132b14fbeb20bffc72d5b125cc14c331a20e8",
+      "bytes": 13933
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/game_start-warnings.json",
+      "sha256": "d933978cf2912f818d1b14834d252e5c64ccabc12bfcd6c174c2751f4576973f",
+      "bytes": 57002
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/integrity.json",
+      "sha256": "3d25998ecfc1673dfd0098ead82f4f6c501e69ab56c4d4623eef7a9c8249b269",
+      "bytes": 11107
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-connection-requests-page2.json",
+      "sha256": "f5238a80063614f4cbd499875b238cbf9d7e7d84466a2dabb3cd037e8cdea2d8",
+      "bytes": 32541
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-connection-requests.json",
+      "sha256": "734b927d0a186db90947fa6ae06f83a1d0a76f9b79a89c083f15409e0b6dce10",
+      "bytes": 38699
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-errors.json",
+      "sha256": "32962affeadc37c4155fd45a633f62fedf5388949d586da9c12c7c07afa1e5e2",
+      "bytes": 8678
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-game-requests.json",
+      "sha256": "0102e1ce02def145d262ba44f5392229aed3faefd5e8d5445d714675423d3897",
+      "bytes": 3719
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-room-requests-page2.json",
+      "sha256": "32e44db9fa4fa95cfc02f1badac3f37716586c917e712c42a2ed63930bef9b14",
+      "bytes": 35906
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-room-requests.json",
+      "sha256": "61084bf27de1a9002e34f01fcabfe35d2794572c5711ea8e26360fbb7166585a",
+      "bytes": 37643
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/lobby-timing.json",
+      "sha256": "2dc63e944bb5d4fa636eb5a72c19a0e0bc4b0fe82ceac729cad03df375f3abcd",
+      "bytes": 22482
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/pagination-status.json",
+      "sha256": "9ad85ec7d4c4538adf89024eac4adc267375d4c22e240b856eb3be7a48ac9f6b",
+      "bytes": 115
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/plan.json",
+      "sha256": "164b33c1a5ee95980fdb2604ada8a45e21b8fde2de76e6c98c3a0569627ba2dd",
+      "bytes": 2292
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/probe.json",
+      "sha256": "fe57f354cf5aa71ae00b2110fa415df70b1b52fb7827a31bd1cbd20f5ea511ce",
+      "bytes": 1798
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/REPORT.md",
+      "sha256": "726c2d34135e6db30aa1095395c7034a3f7d7840da6b987043cbe0ed1247590f",
+      "bytes": 5801
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/summarize.py",
+      "sha256": "2a1544e682788fa8a7f30261c76cadf2464f7390058212ef93dd352e05a347d6",
+      "bytes": 10192
+    },
+    {
+      "path": "build/device-test/server-performance-20261017/summary.json",
+      "sha256": "2fa069304771e2eb134653663b1800efcb3cbe9b2f87dc0b0e10039e5a096927",
+      "bytes": 38533
+    }
+  ]
+}

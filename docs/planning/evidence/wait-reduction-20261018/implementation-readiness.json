@@ -1,0 +1,45 @@
+{
+  "scope": [
+    "agreed-1 startup cleanup target prefetch",
+    "agreed-2 old-connection cancel separation"
+  ],
+  "extra_candidates_require_separate_adoption": [
+    "logger import",
+    "start snapshot reuse",
+    "create independent reads"
+  ],
+  "core_source_drift": "Reviewed; unchanged at launcher/service/target guards, instrumentation differs.",
+  "setup_audit": {
+    "status": "BLOCKED",
+    "exit_code": 1,
+    "reason": "tool/setup_mosigame.ps1 expects lib/firebase/firebase_options.dart; tracked file is packages/game_kit/lib/firebase/firebase_options.dart",
+    "dependencies_ready": false,
+    "next": "Resolved by approved tracked config path correction and locked Prepare; original failed audit retained above.",
+    "resolved": {
+      "status": "READY",
+      "exit_code": 0,
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\tool\\setup_mosigame.ps1 -Prepare",
+      "doctor_checks_passed": 9,
+      "lock_changes": false,
+      "new_dependencies_added": false
+    }
+  },
+  "implementation_allowed_after_environment_ready": true,
+  "performance_adoption_ready": false,
+  "performance_prerequisite": "Develop lacks startup instrumentation/collector. Establish matching measurement boundaries in a separate minimal measurement step before claiming before/after gains.",
+  "ui_direction": "Resolved: preserve intentional intro/pack/animation order.",
+  "warm_instances": "Resolved: deferred by user for cost.",
+  "full_validation": "PASS / exit 0 after renewed explicit approval on 2026-10-18; same reviewed implementation candidate.",
+  "document_only_checkpoint": "Create before touching product sources; no commit/stage implied.",
+  "implementation_candidate": {
+    "status": "implementation and canonical FULL PASS; device/mixed-version/performance adoption unverified",
+    "items": [
+      1,
+      2
+    ],
+    "unapproved_extra_candidates_implemented": false,
+    "functions_rules_or_protocol_changed": false,
+    "actual_performance_measured": false,
+    "record": "../../WAIT_REDUCTION_IMPLEMENTATION_20261018.md"
+  }
+}
