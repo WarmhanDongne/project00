@@ -259,3 +259,31 @@ connection leaf만 정상으로 돌아오고 player 요약 trigger가 지연된 
 그 테스트에 없다. 이번 probe 3개는 결함 재현 PASS(exit0)이지 수정 성공이 아니다.
 제품 수정·새 FULL·운영 접근·배포는 하지 않았다. 상세 실행 근거는 위 계획과
 [월별 검토 기록](../logs/2026-10.md#room-action-function-review-20261012)에 남겼다.
+
+
+## 2026-10-18 — 대기 단축 구현 인수인계
+
+[인수인계](../WAIT_REDUCTION_HANDOFF_20261018.md)에 최신 합의 2개·추가 후보 3개,
+원본 위치/해시·유효 17건·develop 코드 대조·안전/완료 조건을 정리했다.
+폰 연출 유지·준비 인스턴스 비용 보류 결정을 보존한다. 기존 capture checkout은 보존하고
+develop 4325d69 기반 codex/wait-reduction worktree에 문서부터 반영했다.
+실제 구현은 기존 합의 두 항목부터다. 새 worktree의 setup Firebase 경로 오류와 의존성
+미준비를 확인했고 사용자가 경로 수정·기존 lock 범위 Prepare를 승인했다.
+이 기록은 구현·FULL·실기기 성능 채택 완료를 뜻하지 않는다. 계측/수집기는 develop에 없어
+전후 측정 수단 준비가 별도로 필요하다. 새 dependency·운영·배포 승인은 포함하지 않는다.
+
+
+### 10/18 대기 단축 구현 후보 검증
+
+문서 전용 중간점 뒤 승인된 Windows setup Firebase 경로를 고쳐 기존 lock Prepare/doctor READY(exit0)를 확인했다. 기존 합의 두 항목을 구현하고 관련 회귀·정적 분석·session suite를 통과했다. 원 수집 checkout과 자료·lock·staging은 보존했다. [구현·검증 기록](../WAIT_REDUCTION_IMPLEMENTATION_20261018.md)에 명령/exit·실패 진단·제한을 남겼다. FULL은 skill에 따라 명시적 승인 대기이며 실기기·혼합 버전·실제 성능 효과는 미검증이다. 추가 후보 세 개·운영·배포·commit/push는 진행하지 않았다. 기존 작업의 완료 상태를 덮어쓰지 않는다.
+
+
+### 2026-10-18 — 대기 단축 두 합의 항목 FULL 승인·PASS
+
+이전 FULL 미실행 선택 뒤 사용자가 실행을 승인했다. 동일 구현 후보의 해시 확인 후
+`tool/invoke_mosigame.ps1 validate --full --json`을 Windows guarded 경로로 1회 실행했다.
+PASS/exit 0, 검증 전후 작업 트리 동일. 원 수집 자료 836개·관련 소스 27개의 해시는
+보존됐다. 검증 후 변경은 현재 기술 설명/작업 기록 문서뿐이다. 제품 재수정·commit/push·
+운영 조회·배포 없이 합의 두 항목의 코드 구현과 자동 검증을 마쳤다. 실기기·혼합 버전·
+실제 전후 효과는 미검증이고 추가 세 후보는 별도 채택 대상이다.
+[최신 검증 기록](../WAIT_REDUCTION_IMPLEMENTATION_20261018.md)을 따른다.

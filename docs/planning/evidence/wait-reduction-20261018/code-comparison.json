@@ -1,0 +1,291 @@
+{
+  "analysis_commit": "13119f23f3ae2f92c5de8eb251379c62a8e30ce6",
+  "develop_base": "4325d691d7b94d2458e1140c601ba66894d54ca3",
+  "meaning": "Git blob SHA-256 (LF); working-file SHA-256 is separate because checkout line endings can differ.",
+  "implementation_checkpoints": [
+    {
+      "path": "lib/platform/home/tablet/tablet_game_launcher.dart",
+      "analysis_blob_sha256": "6950f1f61e7bc59f2374532c5d488fc83d926fb095ac7a5050bfdadcfcebe6c7",
+      "develop_blob_sha256": "6950f1f61e7bc59f2374532c5d488fc83d926fb095ac7a5050bfdadcfcebe6c7",
+      "identical_git_content": true,
+      "analysis_file_sha256": "6950f1f61e7bc59f2374532c5d488fc83d926fb095ac7a5050bfdadcfcebe6c7"
+    },
+    {
+      "path": "lib/platform/home/tablet/tablet_game_start.dart",
+      "analysis_blob_sha256": "318e9d06e43b60f0884355bd132a724d13df905e32acd45dff13cb7d0d19d6e2",
+      "develop_blob_sha256": "7fb73fb7d80b3229698a4dad9b20568f8d463d39bf17e50ce5be79424df08c9d",
+      "identical_git_content": false,
+      "analysis_file_sha256": "fd5d59a38d2aa755c29fa8353e02e50347a97a972a9a354fb843bc1259170066"
+    },
+    {
+      "path": "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart",
+      "analysis_blob_sha256": "d1ecabfaae682b86565bc58b1b3d3e82e8191061d638a192d5d36ba235cc89fd",
+      "develop_blob_sha256": "b930e522957daddf6e467b3b1356361b2e51fdb0c8c48431dbb711170d149fcb",
+      "identical_git_content": false,
+      "analysis_file_sha256": "781a8da230b23d5b1fcd04c23c6e1e835a251314f5842324afcb60650410ddb1"
+    },
+    {
+      "path": "lib/platform/home/room/services/room_service.dart",
+      "analysis_blob_sha256": "3a74c9889df960aa955b5bf9fb8c18f9f2bf9dc1975c633d80d6c6a2dc4052aa",
+      "develop_blob_sha256": "3a74c9889df960aa955b5bf9fb8c18f9f2bf9dc1975c633d80d6c6a2dc4052aa",
+      "identical_git_content": true,
+      "analysis_file_sha256": "3a74c9889df960aa955b5bf9fb8c18f9f2bf9dc1975c633d80d6c6a2dc4052aa"
+    },
+    {
+      "path": "lib/platform/home/room/providers/room_provider.dart",
+      "analysis_blob_sha256": "028156779a3299f15e78a5fb4d2773cf931f2b9a63d00c5331c899ef60a3355d",
+      "develop_blob_sha256": "028156779a3299f15e78a5fb4d2773cf931f2b9a63d00c5331c899ef60a3355d",
+      "identical_git_content": true,
+      "analysis_file_sha256": "028156779a3299f15e78a5fb4d2773cf931f2b9a63d00c5331c899ef60a3355d"
+    },
+    {
+      "path": "lib/platform/home/room/services/room_restore_to_waiting.dart",
+      "analysis_blob_sha256": "cd533b5bc70846e509060a0c9cc584ee3c3ff2cebec622898ad9087dc9740bd8",
+      "develop_blob_sha256": "cd533b5bc70846e509060a0c9cc584ee3c3ff2cebec622898ad9087dc9740bd8",
+      "identical_git_content": true,
+      "analysis_file_sha256": "cd533b5bc70846e509060a0c9cc584ee3c3ff2cebec622898ad9087dc9740bd8"
+    },
+    {
+      "path": "lib/platform/home/room/services/room_action_timing.dart",
+      "analysis_blob_sha256": "c800c6dab942a3ff6fdc5968f79dd25c39466e48596ba113ccd01aa10104db76",
+      "develop_blob_sha256": "c800c6dab942a3ff6fdc5968f79dd25c39466e48596ba113ccd01aa10104db76",
+      "identical_git_content": true,
+      "analysis_file_sha256": "c800c6dab942a3ff6fdc5968f79dd25c39466e48596ba113ccd01aa10104db76"
+    },
+    {
+      "path": "lib/platform/home/room/services/controller_presence.dart",
+      "analysis_blob_sha256": "c9ce93f77ac7a94499bfeafa3fdf7244c544867c5ea3991c08e21cbdf3943459",
+      "develop_blob_sha256": "c9ce93f77ac7a94499bfeafa3fdf7244c544867c5ea3991c08e21cbdf3943459",
+      "identical_git_content": true,
+      "analysis_file_sha256": "c9ce93f77ac7a94499bfeafa3fdf7244c544867c5ea3991c08e21cbdf3943459"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/services/room_session_identity_store.dart",
+      "analysis_blob_sha256": "281ba23655e384a5009733941810f6c4df3196fc794d97cbc6a4cdbb35c92bf0",
+      "develop_blob_sha256": "281ba23655e384a5009733941810f6c4df3196fc794d97cbc6a4cdbb35c92bf0",
+      "identical_git_content": true,
+      "analysis_file_sha256": "281ba23655e384a5009733941810f6c4df3196fc794d97cbc6a4cdbb35c92bf0"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/services/durable_room_operation_store.dart",
+      "analysis_blob_sha256": "4417edd5919e133ac203ebb30a856db13f1a7d735820dd2bab0b903e87f4f9b5",
+      "develop_blob_sha256": "4417edd5919e133ac203ebb30a856db13f1a7d735820dd2bab0b903e87f4f9b5",
+      "identical_git_content": true,
+      "analysis_file_sha256": "4417edd5919e133ac203ebb30a856db13f1a7d735820dd2bab0b903e87f4f9b5"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/services/room_recovery_batch.dart",
+      "analysis_blob_sha256": "44435e23423e4278a5715faf8386c350fa10efab33290b0c37d52fd78bd316d7",
+      "develop_blob_sha256": "44435e23423e4278a5715faf8386c350fa10efab33290b0c37d52fd78bd316d7",
+      "identical_git_content": true,
+      "analysis_file_sha256": "44435e23423e4278a5715faf8386c350fa10efab33290b0c37d52fd78bd316d7"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/models/game_recovery_context.dart",
+      "analysis_blob_sha256": "131ff5989e6d60b425a41502625028311f4e3207bfbd36c85dae7a2ef8fa46a2",
+      "develop_blob_sha256": "131ff5989e6d60b425a41502625028311f4e3207bfbd36c85dae7a2ef8fa46a2",
+      "identical_git_content": true,
+      "analysis_file_sha256": "131ff5989e6d60b425a41502625028311f4e3207bfbd36c85dae7a2ef8fa46a2"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/models/room_session_identity.dart",
+      "analysis_blob_sha256": "29ada10beab0195be36c7e8f68fdeb2f83efeacdccd865f7e3f138fd694e6599",
+      "develop_blob_sha256": "29ada10beab0195be36c7e8f68fdeb2f83efeacdccd865f7e3f138fd694e6599",
+      "identical_git_content": true,
+      "analysis_file_sha256": "29ada10beab0195be36c7e8f68fdeb2f83efeacdccd865f7e3f138fd694e6599"
+    },
+    {
+      "path": "packages/game_kit/lib/recovery/providers/game_session_controller.dart",
+      "analysis_blob_sha256": "0c6d2f73222f40f1311267b624aae7349b7da9f74c0ac96327c3e64a00fd8af8",
+      "develop_blob_sha256": "aee1cff39e4ded2b883a3a47e419d812157451adfce0cd11d7c356359338e56b",
+      "identical_git_content": false,
+      "analysis_file_sha256": "230b1aec54bf4b48bef50c701e0a242ba7732f4e7476fd8d38b33de0da01d0b4"
+    },
+    {
+      "path": "functions/src/room/realtime-room-lifecycle.ts",
+      "analysis_blob_sha256": "a7ce432ae37ae1b811d74df2d39c453c66d21cb736b97ff63d5bf816e074916c",
+      "develop_blob_sha256": "a7ce432ae37ae1b811d74df2d39c453c66d21cb736b97ff63d5bf816e074916c",
+      "identical_git_content": true,
+      "analysis_file_sha256": "a7ce432ae37ae1b811d74df2d39c453c66d21cb736b97ff63d5bf816e074916c"
+    },
+    {
+      "path": "functions/src/liars-poker/start-game.ts",
+      "analysis_blob_sha256": "176d420b600cc7871fac584aa1bd61d0e0396f34d5e12e7cc4c6c34629c385ca",
+      "develop_blob_sha256": "176d420b600cc7871fac584aa1bd61d0e0396f34d5e12e7cc4c6c34629c385ca",
+      "identical_git_content": true,
+      "analysis_file_sha256": "176d420b600cc7871fac584aa1bd61d0e0396f34d5e12e7cc4c6c34629c385ca"
+    },
+    {
+      "path": "functions/src/game-interruption/game-command-transaction.ts",
+      "analysis_blob_sha256": "ba1fe06655f1b77202545e323a535d29d5d88f96bd88b23fa677b9a1834a3ca2",
+      "develop_blob_sha256": "ba1fe06655f1b77202545e323a535d29d5d88f96bd88b23fa677b9a1834a3ca2",
+      "identical_git_content": true,
+      "analysis_file_sha256": "ba1fe06655f1b77202545e323a535d29d5d88f96bd88b23fa677b9a1834a3ca2"
+    },
+    {
+      "path": "functions/src/room/room-transaction.ts",
+      "analysis_blob_sha256": "0b91dfbdbd751253aec5e864c9bbc46eb056034bdb51fbccb0ed43feff2efff9",
+      "develop_blob_sha256": "0b91dfbdbd751253aec5e864c9bbc46eb056034bdb51fbccb0ed43feff2efff9",
+      "identical_git_content": true,
+      "analysis_file_sha256": "0b91dfbdbd751253aec5e864c9bbc46eb056034bdb51fbccb0ed43feff2efff9"
+    },
+    {
+      "path": "functions/src/room/create-room.ts",
+      "analysis_blob_sha256": "14c4a57ce51354a96ffd26d0a443183fa4160ee23d61194d3674e65c5aabd2a9",
+      "develop_blob_sha256": "14c4a57ce51354a96ffd26d0a443183fa4160ee23d61194d3674e65c5aabd2a9",
+      "identical_git_content": true,
+      "analysis_file_sha256": "14c4a57ce51354a96ffd26d0a443183fa4160ee23d61194d3674e65c5aabd2a9"
+    },
+    {
+      "path": "functions/src/room/room-action-timing.ts",
+      "analysis_blob_sha256": "28ae6ca73e0bf248e6d8a626970d17687bf76930c357ea82179ace1789e1c530",
+      "develop_blob_sha256": "28ae6ca73e0bf248e6d8a626970d17687bf76930c357ea82179ace1789e1c530",
+      "identical_git_content": true,
+      "analysis_file_sha256": "28ae6ca73e0bf248e6d8a626970d17687bf76930c357ea82179ace1789e1c530"
+    },
+    {
+      "path": "test/room_action_fast_path_test.dart",
+      "analysis_blob_sha256": "c5123dbdb05f144efd6b48bac8e54c77ee000bfee2b794754539502280e2e0b8",
+      "develop_blob_sha256": "c5123dbdb05f144efd6b48bac8e54c77ee000bfee2b794754539502280e2e0b8",
+      "identical_git_content": true,
+      "analysis_file_sha256": "c5123dbdb05f144efd6b48bac8e54c77ee000bfee2b794754539502280e2e0b8"
+    },
+    {
+      "path": "test/tablet_room_reset_test.dart",
+      "analysis_blob_sha256": "c797480d44dbf06c702663b93b4df8ec46d622fbc0f7573d621383230a48640b",
+      "develop_blob_sha256": "c797480d44dbf06c702663b93b4df8ec46d622fbc0f7573d621383230a48640b",
+      "identical_git_content": true,
+      "analysis_file_sha256": "c797480d44dbf06c702663b93b4df8ec46d622fbc0f7573d621383230a48640b"
+    },
+    {
+      "path": "test/room_restore_to_waiting_test.dart",
+      "analysis_blob_sha256": "b46693845b9db645bede52bd1740d1af5aff38ef7aff851b2b89edbd9315196a",
+      "develop_blob_sha256": "b46693845b9db645bede52bd1740d1af5aff38ef7aff851b2b89edbd9315196a",
+      "identical_git_content": true,
+      "analysis_file_sha256": "b46693845b9db645bede52bd1740d1af5aff38ef7aff851b2b89edbd9315196a"
+    },
+    {
+      "path": "test/game_command_response_loss_test.dart",
+      "analysis_blob_sha256": "d1bd2b11ee16be3ad9a61499863dd91befddef2a860e9ab21e7acae02608c61d",
+      "develop_blob_sha256": "d1bd2b11ee16be3ad9a61499863dd91befddef2a860e9ab21e7acae02608c61d",
+      "identical_git_content": true,
+      "analysis_file_sha256": "d1bd2b11ee16be3ad9a61499863dd91befddef2a860e9ab21e7acae02608c61d"
+    },
+    {
+      "path": "docs/engineering/ENGINEERING_CONTRACT.md",
+      "analysis_blob_sha256": "4dea3a590285f2958d003152b6d11ff359061dbcccd6756dfc560ba0de745e73",
+      "develop_blob_sha256": "4dea3a590285f2958d003152b6d11ff359061dbcccd6756dfc560ba0de745e73",
+      "identical_git_content": true,
+      "analysis_file_sha256": "4dea3a590285f2958d003152b6d11ff359061dbcccd6756dfc560ba0de745e73"
+    },
+    {
+      "path": "docs/engineering/NETWORK_SESSION_CONTRACT.md",
+      "analysis_blob_sha256": "054a2a121bb780c47d8e0fa414523fcb99b46e93be9c47c7a036114716c5288e",
+      "develop_blob_sha256": "054a2a121bb780c47d8e0fa414523fcb99b46e93be9c47c7a036114716c5288e",
+      "identical_git_content": true,
+      "analysis_file_sha256": "054a2a121bb780c47d8e0fa414523fcb99b46e93be9c47c7a036114716c5288e"
+    },
+    {
+      "path": "tool/setup_mosigame.ps1",
+      "analysis_blob_sha256": "07f4f30a9267f37b7dd49fa6d8ec5dd348df32f8d7ed42e8807ee9dde887b22a",
+      "develop_blob_sha256": "07f4f30a9267f37b7dd49fa6d8ec5dd348df32f8d7ed42e8807ee9dde887b22a",
+      "identical_git_content": true,
+      "analysis_file_sha256": "07f4f30a9267f37b7dd49fa6d8ec5dd348df32f8d7ed42e8807ee9dde887b22a"
+    }
+  ],
+  "all_context_changes": [
+    [
+      "A",
+      "docs/operations/GAME_START_MEASUREMENTS.md"
+    ],
+    [
+      "M",
+      "docs/planning/TASKS.md"
+    ],
+    [
+      "M",
+      "docs/planning/logs/2026-10.md"
+    ],
+    [
+      "M",
+      "docs/planning/tasks/NET-RECOVERY-01.md"
+    ],
+    [
+      "M",
+      "lib/main.dart"
+    ],
+    [
+      "M",
+      "lib/platform/home/tablet/tablet_game_start.dart"
+    ],
+    [
+      "A",
+      "packages/game_kit/lib/core/diagnostics/startup_measurements.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/phone/animations/card_receive_animation.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/recovery/providers/game_session_controller.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/services/game_command_service.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/tablet/animations/card_deal_animation.dart"
+    ],
+    [
+      "M",
+      "packages/game_kit/lib/tablet/widgets/game_settings_dialog.dart"
+    ],
+    [
+      "A",
+      "packages/game_kit/test/core/diagnostics/startup_measurements_test.dart"
+    ],
+    [
+      "M",
+      "packages/game_liars_poker/lib/phone/screens/game_screen.dart"
+    ],
+    [
+      "M",
+      "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart"
+    ],
+    [
+      "M",
+      "packages/game_liars_poker/lib/shared/providers/game_controller.dart"
+    ],
+    [
+      "M",
+      "packages/game_liars_poker/lib/tablet/src/board_state.dart"
+    ],
+    [
+      "M",
+      "packages/game_liars_poker/lib/tablet/tablet_board.dart"
+    ],
+    [
+      "A",
+      "packages/game_liars_poker/test/startup_input_probe_test.dart"
+    ],
+    [
+      "A",
+      "tool/startup_measurements/collect.py"
+    ],
+    [
+      "A",
+      "tool/startup_measurements/measurement_analysis.py"
+    ],
+    [
+      "A",
+      "tool/startup_measurements/test_collect.py"
+    ]
+  ],
+  "interpretation": "Core launcher/room lifecycle unchanged. Measurement instrumentation/collector absent from develop. Do not merge the whole capture branch."
+}

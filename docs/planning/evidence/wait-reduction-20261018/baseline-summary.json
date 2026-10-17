@@ -1,0 +1,202 @@
+{
+  "schema": 1,
+  "debug_trials": [
+    {
+      "trial": "initial_start-1",
+      "scenario": "initial_start",
+      "number": 1,
+      "folder": "debug-game-start-20261018-005036-0503abb7",
+      "original_capture": "debug-game-start-20261018-005036-0503abb7",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "initial_start-2",
+      "scenario": "initial_start",
+      "number": 2,
+      "folder": "debug-game-start-20261018-005153-def595be",
+      "original_capture": "debug-game-start-20261018-005153-def595be",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "initial_start-3",
+      "scenario": "initial_start",
+      "number": 3,
+      "folder": "recovered-debug-game-start-20261018-010031-4153e545",
+      "original_capture": "debug-game-start-20261018-010031-cd88cf80",
+      "recovered": true,
+      "first_turn_phone": "phone_B",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "initial_start-4",
+      "scenario": "initial_start",
+      "number": 4,
+      "folder": "debug-game-start-20261018-011357-b4d246c7",
+      "original_capture": "debug-game-start-20261018-011357-b4d246c7",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "initial_start-5",
+      "scenario": "initial_start",
+      "number": 5,
+      "folder": "debug-game-start-20261018-011455-1bb8ff18",
+      "original_capture": "debug-game-start-20261018-011455-1bb8ff18",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "initial_start-6",
+      "scenario": "initial_start",
+      "number": 6,
+      "folder": "debug-game-start-20261018-011603-364f9072",
+      "original_capture": "debug-game-start-20261018-011603-364f9072",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "unspecified"
+    },
+    {
+      "trial": "menu_restart-1",
+      "scenario": "menu_restart",
+      "number": 1,
+      "folder": "debug-game-start-20261018-013848-20c24974",
+      "original_capture": "debug-game-start-20261018-013848-20c24974",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    },
+    {
+      "trial": "menu_restart-2",
+      "scenario": "menu_restart",
+      "number": 2,
+      "folder": "debug-game-start-20261018-013939-85fe8948",
+      "original_capture": "debug-game-start-20261018-013939-85fe8948",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "repeated"
+    },
+    {
+      "trial": "menu_restart-3",
+      "scenario": "menu_restart",
+      "number": 3,
+      "folder": "debug-game-start-20261018-014055-7e247e0f",
+      "original_capture": "debug-game-start-20261018-014055-7e247e0f",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    },
+    {
+      "trial": "menu_restart-4",
+      "scenario": "menu_restart",
+      "number": 4,
+      "folder": "debug-game-start-20261018-014137-65719ea8",
+      "original_capture": "debug-game-start-20261018-014137-65719ea8",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    },
+    {
+      "trial": "menu_restart-5",
+      "scenario": "menu_restart",
+      "number": 5,
+      "folder": "debug-game-start-20261018-014211-58bb46e0",
+      "original_capture": "debug-game-start-20261018-014211-58bb46e0",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-1",
+      "scenario": "result_restart",
+      "number": 1,
+      "folder": "debug-game-start-20261018-014548-0f5eb212",
+      "original_capture": "debug-game-start-20261018-014548-0f5eb212",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-2",
+      "scenario": "result_restart",
+      "number": 2,
+      "folder": "debug-game-start-20261018-014747-012542a4",
+      "original_capture": "debug-game-start-20261018-014747-012542a4",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-3",
+      "scenario": "result_restart",
+      "number": 3,
+      "folder": "debug-game-start-20261018-015516-37282d37",
+      "original_capture": "debug-game-start-20261018-015516-37282d37",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-4",
+      "scenario": "result_restart",
+      "number": 4,
+      "folder": "debug-game-start-20261018-015634-2d282724",
+      "original_capture": "debug-game-start-20261018-015634-2d282724",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-5",
+      "scenario": "result_restart",
+      "number": 5,
+      "folder": "debug-game-start-20261018-015802-66b67dab",
+      "original_capture": "debug-game-start-20261018-015802-66b67dab",
+      "recovered": false,
+      "first_turn_phone": "phone_B",
+      "condition": "repeated"
+    },
+    {
+      "trial": "result_restart-6",
+      "scenario": "result_restart",
+      "number": 6,
+      "folder": "debug-game-start-20261018-015354-ef07417b",
+      "original_capture": "debug-game-start-20261018-015354-ef07417b",
+      "recovered": false,
+      "first_turn_phone": "phone_A",
+      "condition": "repeated"
+    }
+  ],
+  "valid_counts": {
+    "initial_start": 6,
+    "menu_restart": 5,
+    "result_restart": 6
+  },
+  "completion": "action callback -> max(tablet input ready, first turn phone input ready); real submission is separate validation",
+  "seating_end_to_tablet_deck_ms": {
+    "n": 6,
+    "median_ms": 481.6665,
+    "min_ms": 291.159,
+    "max_ms": 877.491
+  },
+  "debug_total_median_seconds": {
+    "initial_start": 15.01,
+    "menu_restart": 10.09,
+    "result_restart": 11.88
+  },
+  "server_client_game_request_joins": 0,
+  "game_server_db_stage_timers": 0,
+  "local_processes": 228,
+  "cpu_profiles": 24,
+  "logger_cache_entries_removed": 43,
+  "logger_faster_pairs": 6,
+  "logger_total_pairs": 8,
+  "release_note": "Use report/manifest as baseline only. Withdrawn start/card-pack video values are excluded.",
+  "quality_bound_ms": 250,
+  "new_device_measurements": false
+}
