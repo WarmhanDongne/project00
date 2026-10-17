@@ -1,0 +1,379 @@
+{
+  "protocol": 2,
+  "status": "VALID_OBSERVED_TRIAL",
+  "quality_limit_us": 250000,
+  "actual_scenario": "initial_start",
+  "issues": [],
+  "warnings": [],
+  "progress": {
+    "tablet_completed": true,
+    "first_turn_phone": "phone_B",
+    "input_validation": {
+      "selection_seen": true,
+      "submission_seen": true,
+      "submission_succeeded": true
+    }
+  },
+  "total_elapsed_estimated_range_us": [
+    14886312,
+    14924854
+  ],
+  "observed_total_reference_range_us": [
+    14886312,
+    14924854
+  ],
+  "exclusive_user_wait_estimated_range_us": [
+    594384,
+    594622
+  ],
+  "user_wait_excluded_total_estimated_range_us": [
+    14291690,
+    14330470
+  ],
+  "user_wait_excluded_reason": "Only observed joint quiescence with a pending user tap is excluded; not CPU time or a simulated instant-tap run",
+  "clock_offset_estimates_us": {
+    "tablet": [
+      125952008777,
+      125952032638
+    ],
+    "phone_A": [
+      125947886539,
+      125947910738
+    ],
+    "phone_B": [
+      125987286642,
+      125987316030
+    ]
+  },
+  "logical_command_totals": [
+    {
+      "role": "phone_B",
+      "request": 1,
+      "game": "110fde394d61a3e545f5c8460d8a7080",
+      "action": 0,
+      "command": "game_liars_poker_ready_turn",
+      "start_us": 4659217793,
+      "end_us": 4659762240,
+      "elapsed_us": 544447,
+      "outcome": 1,
+      "request_alias": "a2e3479d9cbe68267d8ca947bccc81d4"
+    },
+    {
+      "role": "phone_B",
+      "request": 2,
+      "game": "110fde394d61a3e545f5c8460d8a7080",
+      "action": 0,
+      "command": "game_liars_poker_submit_cards",
+      "start_us": 4662462074,
+      "end_us": 4662903194,
+      "elapsed_us": 441120,
+      "outcome": 1,
+      "request_alias": "170e7c504254be5b05480f6595e75bde"
+    },
+    {
+      "role": "tablet",
+      "request": 1,
+      "game": null,
+      "action": 1,
+      "command": "game_liars_poker_start_game",
+      "start_us": 4681778732,
+      "end_us": 4682503423,
+      "elapsed_us": 724691,
+      "outcome": 1,
+      "request_alias": "41555e9b42318dd6d3166327a5f926f9"
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "game": "110fde394d61a3e545f5c8460d8a7080",
+      "action": 1,
+      "command": "game_liars_poker_complete_dealing",
+      "start_us": 4688621244,
+      "end_us": 4689751753,
+      "elapsed_us": 1130509,
+      "outcome": 1,
+      "request_alias": "4c9915fa9b20922b02d4bdd2290f83b3"
+    }
+  ],
+  "transport_attempt_round_trips": [
+    {
+      "role": "phone_B",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 541050,
+      "outcome": 1
+    },
+    {
+      "role": "phone_B",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 438497,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 701001,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 1126780,
+      "outcome": 1
+    }
+  ],
+  "card_pack_waits": [
+    {
+      "role": "phone_B",
+      "elapsed_us": 594503,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    },
+    {
+      "role": "phone_A",
+      "elapsed_us": 548357,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    },
+    {
+      "role": "tablet",
+      "elapsed_us": 1012305,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    }
+  ],
+  "local_milestones": [
+    {
+      "role": "tablet",
+      "from": "tablet_deck_tappable_frame",
+      "to": "tablet_deck_entry_started",
+      "elapsed_us": 46
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_entry_started",
+      "to": "tablet_deck_entry_completed",
+      "elapsed_us": 657630
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_entry_completed",
+      "to": "tablet_deck_tap_accepted",
+      "elapsed_us": 354629
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_tap_accepted",
+      "to": "tablet_deal_started",
+      "elapsed_us": 55
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_started",
+      "to": "tablet_deal_animation_completed",
+      "elapsed_us": 2825753
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_animation_completed",
+      "to": "tablet_deal_completed",
+      "elapsed_us": 61
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_completed",
+      "to": "tablet_playing_frame",
+      "elapsed_us": 1943626
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_entry_started",
+      "to": "pack_tappable_frame",
+      "elapsed_us": 758614
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_tappable_frame",
+      "to": "pack_tap_accepted",
+      "elapsed_us": 594503
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_tap_accepted",
+      "to": "reveal_completed",
+      "elapsed_us": 1457564
+    },
+    {
+      "role": "tablet",
+      "from": "action_accepted",
+      "to": "tablet_deck_tappable_frame",
+      "elapsed_us": 3664238
+    },
+    {
+      "role": "tablet",
+      "from": "action_accepted",
+      "to": "tablet_playing_frame",
+      "elapsed_us": 9446038
+    },
+    {
+      "role": "phone_B",
+      "from": "controls_started",
+      "to": "controls_completed",
+      "elapsed_us": 920745
+    },
+    {
+      "role": "phone_A",
+      "from": "controls_started",
+      "to": "controls_completed",
+      "elapsed_us": 933870
+    }
+  ],
+  "session_blocker_changes": [
+    {
+      "role": "phone_A",
+      "mono_us": 4686797907,
+      "mask": 49
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4647539517,
+      "mask": 49
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4687325584,
+      "mask": 48
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4647887325,
+      "mask": 48
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4684742669,
+      "mask": 49
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4685177186,
+      "mask": 48
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4685741782,
+      "mask": 16
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4685809607,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4650454664,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4689996248,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4693677792,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4654242353,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4654281131,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4689560692,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4689603458,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4693696652,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4699000687,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4699017621,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4659571346,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4659581163,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4694882343,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4694897206,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4662823844,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 4662852340,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4698161372,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 4698191174,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4702288074,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 4702314786,
+      "mask": 0
+    }
+  ],
+  "command_errors": [],
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing",
+  "collector_diagnostics": [],
+  "stop_reason": "keyboard_interrupt",
+  "pilot_requested": true,
+  "pilot_passed": true
+}

@@ -292,3 +292,21 @@ PASS/exit 0이다. FULL은 임시 계측에 대한 사용자 생략 지시에 �
 보완판 기기 설치·예비 수집은 USB 기기 연결 후 진행해야 하며 본 테스트 준비 완료로
 표시하지 않는다. 실행 기준은 [측정 문서](../../operations/GAME_START_MEASUREMENTS.md),
 검증 evidence는 ignored `build/device-test/startup-measurement-v2-20261017/`에 둔다.
+
+## 2026-10-18 — Ctrl+C 종료 반복 실패 보완
+
+시작/메뉴/결과 실기기 예비 검증 뒤 본 수집에서 성공 PROGRESS 후 Ctrl+C 종료 시
+FAILED가 반복됐다. 중단된 HTTP 연결을 stop에 재사용하고 첫 기기 종료 실패 시 뒤
+기기 처리를 건너뛰는 경로를 확인했다. B에 이전 실패 수집이 남아 arm이 거절된 상태도
+로컬 진단으로 확인했다.
+
+PC 수집기만 수정해 중단 연결 폐기·독립 종료·멱등 stop의 제한 재시도·종료 중 추가
+SIGINT 무시·정제 오류 코드와 arming 단계 구분을 추가했다. 앱·서버·게임 규칙과
+250ms/이벤트 검증 기준은 유지한다. Python 회귀 24개 PASS/exit 0이며 실제 IO 오류를
+성공으로 바꾸지 않는 검사와 Ctrl+C 전체 저장 흐름을 포함한다. FULL은 사용자 생략
+지시로 미실행이다.
+
+`010031-cd88cf80` 원본 236개 이벤트에 B의 미회수 tail 22개를 별도 복구본으로 합쳐
+총 258개 순번·process·입력 성공·시간 품질을 재검증했다. 원본 FAILED 자료는 변경하지
+않는다. B의 해당 실패 capture 진단 상태만 해제했고 새 게임 동작은 실행하지 않았다.
+근거는 ignored `build/device-test/collector-ctrlc-fix-20261018/`와 별도 복구 보고서다.

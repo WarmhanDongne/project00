@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import re
 import secrets
+import signal
 import subprocess
 import time
 from datetime import datetime
@@ -36,6 +37,66 @@ tablet_deal_started tablet_deal_animation_completed""".split())
 FIELDS = {"schema", "capture", "trial", "scenario", "role", "process", "seq",
           "mono_us", "action", "event", "game", "value", "request", "command", "link", "source"}
 HEX32 = re.compile(r"^[0-9a-f]{32}$")
+
+
+def safe_error_code(error):
+    """Fixed vocabulary only; HTTP/adb exception text may contain credentials."""
+    known = {'measurement_protocol_requires_new_debug_build', 'clock_preflight_quality_failed',
+             'event_sequence_gap', 'event_loss_or_process_replaced', 'event_process_mismatch',
+             'app_process_replaced', 'measurement_control_already_armed',
+             'measurement_control_invalid_configuration', 'measurement_control_rejected',
+             'vm_service_error', 'vm_service_http_error', 'invalid_clock_reply'}
+    if isinstance(error, RuntimeError) and str(error) in known:
+        return str(error)
+    if isinstance(error, KeyboardInterrupt):
+        return 'keyboard_interrupt'
+    if isinstance(error, TimeoutError):
+        return 'local_transport_timeout'
+    if isinstance(error, http.client.HTTPException):
+        return 'local_http_connection_state'
+    if isinstance(error, OSError):
+        return 'local_transport_error'
+    if isinstance(error, ValueError):
+        return 'invalid_diagnostic_data'
+    return 'collector_internal_error'
+
+
+def finalize_devices(devices, drain, issues, diagnostics):
+    """Stop every recorder independently, even if one transport is interrupted.
+
+    stop is idempotent; a fresh HTTP connection makes its one retry safe. drain
+    validates sequence/process as usual; a semantic failure is never retried or
+    converted to a successful measurement. Repeated Ctrl+C cannot abort cleanup.
+    """
+    previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    success = True
+    try:
+        for device in devices:
+            device.reset_http()
+            for attempt in range(2):
+                operation = 'stop'
+                try:
+                    device.control('stop')
+                    operation = 'drain'
+                    if drain is not None:
+                        drain(device)
+                    operation = 'final_clock'
+                    device.probe()
+                    break
+                except Exception as error:
+                    diagnostics.append({'phase': 'finalizing', 'role': device.role,
+                                        'operation': operation, 'attempt': attempt + 1,
+                                        'code': safe_error_code(error)})
+                    device.reset_http()
+                    if attempt == 0 and isinstance(error, (OSError, http.client.HTTPException)):
+                        continue
+                    issues.append('device_finalization_failed_' + device.role)
+                    success = False
+                    # Still try stop for later devices; do not abandon cleanup.
+                    break
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    return success
 
 
 def validate_event(event, role, capture, trial):
@@ -103,19 +164,37 @@ class Device:
         request = self.uri + method + ("?" + query if query else "")
         # Persistent direct loopback HTTP; no ambient proxy, no saved auth URI.
         parsed = urllib.parse.urlsplit(request)
-        self.http.request("GET", parsed.path + ("?" + parsed.query if parsed.query else ""))
-        response = self.http.getresponse()
-        body = response.read()
-        if response.status != 200:
-            raise RuntimeError("vm_service_http_error")
-        envelope = json.loads(body)
-        if "error" in envelope:
-            raise RuntimeError("vm_service_error")
-        return envelope["result"]
+        if self.http is None:
+            self.http = http.client.HTTPConnection('127.0.0.1', self.port, timeout=8)
+        try:
+            self.http.request("GET", parsed.path + ("?" + parsed.query if parsed.query else ""))
+            response = self.http.getresponse()
+            body = response.read()
+            if response.status != 200:
+                raise RuntimeError("vm_service_http_error")
+            envelope = json.loads(body)
+            if "error" in envelope:
+                raise RuntimeError("vm_service_error")
+            return envelope["result"]
+        except BaseException:
+            # Ctrl+C can interrupt request(), getresponse(), or read(). The HTTP
+            # state machine is then unusable, even though the socket still exists.
+            self.reset_http()
+            raise
+
+    def reset_http(self):
+        connection, self.http = self.http, None
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                pass
 
     def control(self, op, **args):
         result = self.rpc("ext.mosigame.startup", isolateId=self.isolate, op=op, **args)
         if "error" in result:
+            if result['error'] in {'already_armed', 'invalid_configuration'}:
+                raise RuntimeError('measurement_control_' + result['error'])
             raise RuntimeError("measurement_control_rejected")
         return result
 
@@ -135,8 +214,7 @@ class Device:
                             "process": reply["process"], "mono_us": reply["mono_us"]})
 
     def close(self):
-        if self.http:
-            self.http.close()
+        self.reset_http()
         if self.port:
             self.shell_adb("forward", "--remove", f"tcp:{self.port}")
 
@@ -156,6 +234,8 @@ def write_report(out, summary):
               f"- 시계 품질 기준: 추정 범위 폭 {summary['quality_limit_us']/1000:.0f}ms 이하",
               f"- 예비 검증 실제 선택·제출: {summary['progress']['input_validation']}"]
     lines += [f"- 참고: {warning}" for warning in summary["warnings"]]
+    for diagnostic in summary.get('collector_diagnostics', []):
+        lines.append(f"- 수집기 진단: {json.dumps(diagnostic, ensure_ascii=False)}")
     lines += ["", "## 같은 기기의 관측 구간", "", "| 기기 | 시작 → 종료 | 소요(ms) |",
               "| --- | --- | ---: |"]
     for stage in summary["local_milestones"]:
@@ -200,6 +280,9 @@ def main():
     status = "FAILED"
     failure_phase = "connecting"
     last_progress = None
+    finalized = False
+    diagnostics = []
+    stop_reason = 'not_started'
 
     def drain(device, stream):
         while True:
@@ -231,6 +314,7 @@ def main():
         offsets = [clock_offset(d.probes) for d in devices]
         if any(o is None for o in offsets) or 2 * max(o[1] - o[0] for o in offsets) > MAX_CLOCK_WIDTH_US:
             raise RuntimeError("clock_preflight_quality_failed")
+        failure_phase = 'arming'
         for device in devices:
             device.control("arm", capture=capture, trial=trial, role=device.role, scenario=args.scenario, key=key)
             armed.append(device)
@@ -258,28 +342,27 @@ def main():
                               **progress[2], "wait_exclusion_measured": progress[3]}, ensure_ascii=False), flush=True)
                         last_progress = progress
                     time.sleep(0.2)
+                stop_reason = 'stop_request' if (out / 'stop.request').exists() else 'duration'
             except KeyboardInterrupt:
-                pass
+                stop_reason = 'keyboard_interrupt'
             finally:
-                for device in armed:
-                    device.control("stop")
-                    drain(device, stream)
-                    device.probe()
-        status = "COLLECTED"
+                cleanup_ok = finalize_devices(armed, lambda d: drain(d, stream), issues, diagnostics)
+                finalized = True
+        status = 'COLLECTED' if cleanup_ok else 'FAILED'
+    except KeyboardInterrupt:
+        issues.extend(['collector_interrupted_before_ready', 'failed_phase_' + failure_phase])
+        stop_reason = 'keyboard_interrupt_before_ready'
     except Exception as error:
-        if str(error) in {"measurement_protocol_requires_new_debug_build", "clock_preflight_quality_failed",
-                          "event_sequence_gap", "event_loss_or_process_replaced", "event_process_mismatch"}:
-            issues.append(str(error))
+        code = safe_error_code(error)
+        diagnostics.append({'phase': failure_phase, 'code': code})
+        issues.append(code)
         issues.append("failed_phase_" + failure_phase)
         # Exception messages from HTTP/adb can contain URI tokens or device IDs.
         issues.append("collector_failed_or_incomplete")
         print("Collection incomplete. No raw exception or credentials stored.", flush=True)
     finally:
-        for device in armed:
-            try:
-                device.control("stop")
-            except Exception:
-                pass
+        if armed and not finalized:
+            finalize_devices(armed, None, issues, diagnostics)
         for device in devices:
             try:
                 device.close()
@@ -287,6 +370,8 @@ def main():
                 issues.append("forward_cleanup_failed")
         clocks = {d.role: d.probes for d in devices}
         summary = analyze(events, clocks, issues)
+        summary['collector_diagnostics'] = diagnostics
+        summary['stop_reason'] = stop_reason
         summary["pilot_requested"] = args.pilot
         summary["pilot_passed"] = (summary["status"] == "VALID_OBSERVED_TRIAL"
             and summary["user_wait_excluded_total_estimated_range_us"] is not None
@@ -294,6 +379,7 @@ def main():
         (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
         write_report(out, summary)
         manifest = {"protocol": 2, "quality_limit_us": MAX_CLOCK_WIDTH_US, "pilot": args.pilot, "capture": capture, "scenario": args.scenario, "status": status,
+                    'stop_reason': stop_reason, 'collector_diagnostics': diagnostics,
                     "condition": args.condition,
                     "started_at": started_at,
                     "roles": [d.role for d in devices], "events": len(events),

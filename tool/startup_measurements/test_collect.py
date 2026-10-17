@@ -2,13 +2,126 @@ import copy
 import json
 import threading
 import unittest
+import http.client
+import signal
+import tempfile
+import contextlib
+import io
+from pathlib import Path
+from unittest.mock import Mock, patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-from collect import Device, analyze, clock_offset, validate_event
+from collect import Device, analyze, clock_offset, validate_event, finalize_devices, safe_error_code
+from collect import main
 from measurement_analysis import MAX_CLOCK_WIDTH_US, host_range, union_length
 
 class CollectorTests(unittest.TestCase):
+    def test_main_ctrl_c_preserves_valid_pilot_and_real_io_errors_still_fail(self):
+        for interrupt in (True,False):
+            with self.subTest(keyboard_interrupt=interrupt), tempfile.TemporaryDirectory() as tmp:
+                rows=self.fixture()
+                clocks=self.clocks()
+                devices=[]
+                class FakeDevice:
+                    def __init__(self,adb,role,serial):
+                        self.role=role;self.serial=serial;self.after=0;self.process='a'*12
+                        self.probes=clocks[role];self.capture=None;self.stopped=False;self.closed=False
+                        devices.append(self)
+                    def connect(self):pass
+                    def probe(self):pass
+                    def reset_http(self):pass
+                    def close(self):self.closed=True
+                    def control(self,op,**kwargs):
+                        if op=='arm':self.capture=kwargs['capture'];return {'ok':True}
+                        if op=='stop':self.stopped=True;return {'ok':True}
+                        events=[{**e,'capture':self.capture,'trial':'trial-1'} for e in rows if e['role']==self.role]
+                        if not self.stopped:events=[e for e in events if e['event']!='capture_stopped']
+                        return {'process':self.process,'dropped':0,'last_seq':events[-1]['seq'],
+                                'events':[e for e in events if e['seq']>kwargs.get('after',0)]}
+                argv=['collect.py','--device','tablet=private-serial-1','--device','phone_A=private-serial-2',
+                      '--scenario','initial_start','--duration','10','--pilot','--output-parent',tmp]
+                failure=KeyboardInterrupt() if interrupt else OSError('private-uri-with-token')
+                output=io.StringIO()
+                with patch('collect.Device',FakeDevice),patch('sys.argv',argv), \
+                     patch('collect.time.sleep',side_effect=failure),contextlib.redirect_stdout(output):
+                    code=main()
+                capture=next(Path(tmp).iterdir())
+                summary=json.loads((capture/'summary.json').read_text())
+                manifest=json.loads((capture/'manifest.json').read_text())
+                self.assertEqual(code,0 if interrupt else 1,summary)
+                self.assertEqual(summary['pilot_passed'],interrupt)
+                self.assertEqual(manifest['status'],'COLLECTED' if interrupt else 'FAILED')
+                if interrupt:self.assertEqual(summary['stop_reason'],'keyboard_interrupt')
+                else:self.assertIn('failed_phase_collecting',summary['issues'])
+                self.assertTrue(all(d.stopped and d.closed for d in devices))
+                stored=''.join(p.read_text() for p in capture.iterdir() if p.is_file())
+                self.assertNotIn('private-serial',stored)
+                self.assertNotIn('private-uri',stored+output.getvalue())
+    def test_ctrl_c_at_each_http_stage_closes_connection_before_final_stop(self):
+        for stage in ('request', 'getresponse', 'read'):
+            with self.subTest(stage=stage):
+                device=Device('adb','phone_B','never-persist-serial')
+                device.uri='http://127.0.0.1:1234/never-persist-token/'
+                device.port=1234
+                stale=Mock()
+                response=Mock(status=200)
+                stale.getresponse.return_value=response
+                target=response.read if stage=='read' else getattr(stale,stage)
+                target.side_effect=KeyboardInterrupt()
+                device.http=stale
+                with self.assertRaises(KeyboardInterrupt):device.control('drain',after=0)
+                stale.close.assert_called_once()
+                self.assertIsNone(device.http)
+                fresh=Mock()
+                fresh.getresponse.return_value.status=200
+                fresh.getresponse.return_value.read.return_value=b'{"result":{"ok":true}}'
+                with patch('collect.http.client.HTTPConnection',return_value=fresh):
+                    self.assertTrue(device.control('stop')['ok'])
+                fresh.request.assert_called_once()
+
+    def test_cleanup_continues_after_one_device_fails_and_restores_signal(self):
+        failed=Mock(role='phone_B')
+        failed.control.side_effect=TimeoutError('never-persist-token')
+        good=Mock(role='tablet')
+        issues,diagnostics=[],[]
+        previous=signal.getsignal(signal.SIGINT)
+        drained=[]
+        self.assertFalse(finalize_devices([failed,good],lambda d:drained.append(d.role),issues,diagnostics))
+        self.assertEqual(failed.control.call_count,2)
+        good.control.assert_called_once_with('stop')
+        good.probe.assert_called_once()
+        self.assertEqual(drained,['tablet'])
+        self.assertEqual(issues,['device_finalization_failed_phone_B'])
+        self.assertEqual(signal.getsignal(signal.SIGINT),previous)
+        self.assertNotIn('never-persist',json.dumps(diagnostics))
+
+    def test_cleanup_transient_failure_uses_fresh_connection_without_invalidating_data(self):
+        device=Mock(role='phone_B')
+        device.control.side_effect=[http.client.CannotSendRequest('private-uri'),{'ok':True}]
+        issues,diagnostics=[],[]
+        self.assertTrue(finalize_devices([device],lambda d:None,issues,diagnostics))
+        self.assertEqual(issues,[])
+        self.assertEqual(device.reset_http.call_count,2)
+        self.assertEqual(diagnostics[0]['code'],'local_http_connection_state')
+        self.assertNotIn('private-uri',json.dumps(diagnostics))
+
+    def test_cleanup_never_retries_or_hides_sequence_errors(self):
+        device=Mock(role='phone_A')
+        issues,diagnostics=[],[]
+        def bad_drain(_):raise RuntimeError('event_sequence_gap')
+        self.assertFalse(finalize_devices([device],bad_drain,issues,diagnostics))
+        self.assertEqual(device.control.call_count,1)
+        self.assertEqual(diagnostics[0]['operation'],'drain')
+        self.assertEqual(diagnostics[0]['code'],'event_sequence_gap')
+        self.assertTrue(issues)
+
+    def test_logical_control_errors_are_allowlisted_without_raw_details(self):
+        device=Device('adb','tablet','private-serial')
+        device.rpc=Mock(return_value={'error':'already_armed'})
+        with self.assertRaisesRegex(RuntimeError,'measurement_control_already_armed'):
+            device.control('arm')
+        self.assertEqual(safe_error_code(RuntimeError('private-token')),'collector_internal_error')
     def row(self, role, event, t, **extra):
         return dict(schema=2, capture='test', trial='one', scenario='initial_start', role=role,
                     process='a'*12, seq=t+1, mono_us=t, action=1, event=event, game='b'*32, **extra)
