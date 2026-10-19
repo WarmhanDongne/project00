@@ -51,3 +51,12 @@
 ## 검증 실행 기록
 
 analyze.py: PASS/exit0(원본19 통과·1무효); 파생 복원: PASS/exit0(원문 변경 없음); preserve.py: PASS/exit0(243개 해시 확인); video.ps1: PASS/exit0(Windows 내장 API, 새 dependency 없음). 첫 분석 실행은 Git worktree 읽기 sandbox 권한으로 exit1이어서 권한 부여 뒤 동일 계산을 재실행했다. 원본 checkout tracked 상태는 clean이다. 통합 targeted/FULL/최종 실기기 확인은 별도 최신 기록을 따른다.
+
+
+## 통합 준비 결과
+
+원격 develop fetch는 exit0이다. origin/develop은 b10fc43, 로컬 develop은 그 뒤 4325d69(로컬 추가 규칙 1건)였다. 이를 보존한 develop에서 새 codex/wait-reduction-integration을 만들고 기능 ea08181만 cherry-pick해 25d3ea3a31c87caa8bb6ba388e4bb777b2b0f1a7이 됐다. 트리는 원 기능 커밋과 완전히 같으며 Debug 계측 코드·수집기가 없다. 원 수집 checkout은 clean, 기록 브랜치는 원본 untracked 수집만 남았다.
+
+새 worktree audit은 의존성 미준비로 BLOCKED/exit3, 기존 Prepare 승인 범위에서 기존 lock 기준 환경 준비 후 doctor PASS/exit0·Git 변화 없음. guarded test session은 PASS/exit0(29 Flutter/15 Functions 파일), 직접 관련 3개 파일은 39 tests PASS/exit0이다. 실행 원문과 상태는 ignored 분석 폴더의 integration-*.json/stdout/stderr에 보존한다. FULL은 적용 skill에 따라 새 후보의 명시적 승인을 요청했으며 아직 실행하지 않았다. develop 병합·push는 수행하지 않았다.
+
+초기화 5건의 각 새 방에서 후속 게임 시작까지 이어진 별도 initial_start 로그 연결은 확인하지 못했다. R2 영상에는 새 방 게임 진행 1사례가 있다. 전체 5건을 후속 게임까지 자동 검증했다고 표현하지 않는다. G1 생략·V1 보류를 유지하고 계측 없는 최종 앱의 정상 시작·초기화·새 방 확인은 남긴다.
