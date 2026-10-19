@@ -32,6 +32,8 @@ Firebase Auth와 `completeOnboardingProfile`은 저장된 프로필의 source of
 
 ## Repository map
 
+새 게임을 실제로 추가하는 순서는 [새 게임 제작·연결 가이드](NEW_GAME_GUIDE.md)를 따른다.
+
 ```text
 lib/                       앱 부트스트랩·조립·게임 registry·에셋 다운로드 배선
 lib/platform/              인증, 프로필, 방/홈, 테마와 플랫폼 UI
@@ -192,6 +194,11 @@ Firestore `games/{catalogId}` 문서는 이전 앱용 한국어 `name`, `descrip
 `zh-Hant`다. 앱은 현재 locale의 정확한 중국어 script, language code, 영어, 기존
 한국어 필드 순서로 값을 선택한다. 따라서 다국어 필드가 없는 문서와 이전 앱도 계속
 동작한다.
+
+새 게임 문서는 [새 게임 제작·연결 가이드](NEW_GAME_GUIDE.md)에 따라 네 locale 정보를
+모두 넣고 `enabled: false`, `storeVisible: false`로 먼저 등록한다. 카탈로그 snapshot의
+`enabled`가 누락되거나 boolean true가 아니면 앱과 서버는 비활성으로 판정한다. 기존
+문서 호환을 이유로 새 문서의 공개 상태 필드를 생략하지 않는다.
 
 홈의 책 표지·책등, 게임 목록·상세·대기 화면과 상점은 `GameInfo`의 locale-aware
 이름·소개·규칙·장르 선택기를 사용한다. 관리 스크립트

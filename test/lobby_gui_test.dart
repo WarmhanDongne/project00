@@ -9,9 +9,11 @@ import 'package:firebase_auth_platform_interface/firebase_auth_platform_interfac
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
-import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
 import 'package:game_kit/template_game.dart';
+import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/player_layout_editor.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/tablet/tablet_game_launcher.dart';
 import 'package:project00/platform/home/tablet/book_open_route.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
@@ -38,6 +40,20 @@ final _game = GameInfo.fromJson({
   'playTime': 15,
 });
 final _other = GameInfo.fromJson({'id': 'mafia', 'name': '마피아'});
+final _classicYut = GameInfo.fromJson({
+  'id': 'yut',
+  'name': '윷놀이',
+  'description': '두 명부터 할 수 있는 윷놀이',
+  'minPlayers': 4,
+  'maxPlayers': 4,
+  'playTime': 20,
+});
+final _strategyYut = GameInfo.fromJson({
+  'id': 'strategy_yut',
+  'name': '전략 윷놀이',
+  'minPlayers': 2,
+  'maxPlayers': 4,
+});
 const _players = [
   RoomPlayer(
     uid: 'one',
@@ -209,6 +225,49 @@ void main() {
     Navigator.of(context).pop();
     await tester.pumpAndSettle();
     expect(find.text('로비 시작'), findsOneWidget);
+  });
+
+  testWidgets('두 명으로 일반 윷놀이 자리 배치를 시작한다', (tester) async {
+    final service = _RoomService();
+    final provider = _RoomProvider(service, gameCatalog: const GameRegistry())
+      ..roomCode = 'YUT2'
+      ..players = _players;
+    addTearDown(provider.dispose);
+    expect(isGamePlayableWith(_classicYut, 2, provider), isTrue);
+    expect(gamePlayerRangeLabel(_classicYut, provider), '2–4명');
+    expect(gameCannotStartMessage(_classicYut, 2, provider), isNull);
+    expect(isGamePlayableWith(_strategyYut, 2, provider), isFalse);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => unawaited(
+                launchTabletGame(
+                  context: context,
+                  game: _classicYut,
+                  provider: provider,
+                  ensureSelection: () async => true,
+                  isCurrent: () => context.mounted,
+                  onLaunched: () {},
+                ),
+              ),
+              child: const Text('일반 윷놀이 시작'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('일반 윷놀이 시작'));
+    await tester.pumpAndSettle();
+
+    expect(service.commands, ['YUT2:seating']);
+    final editor = tester.widget<PlayerLayoutEditor>(
+      find.byType(PlayerLayoutEditor),
+    );
+    expect(editor.initialLayout.playerCount, 2);
   });
 
   testWidgets('시작 인원이 부족하면 오류 메시지 대신 버튼 피드백을 요청한다', (tester) async {
@@ -628,11 +687,11 @@ void main() {
 }
 
 class _RoomProvider extends RoomProvider {
-  _RoomProvider(_RoomService service)
+  _RoomProvider(_RoomService service, {GameCatalog? gameCatalog})
     : super(
         service: service,
         gameService: _GameService(),
-        gameCatalog: _Catalog(),
+        gameCatalog: gameCatalog ?? _Catalog(),
       );
   bool connected = true;
   @override

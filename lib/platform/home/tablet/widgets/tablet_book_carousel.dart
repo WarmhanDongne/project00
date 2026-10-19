@@ -45,6 +45,7 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
     with SingleTickerProviderStateMixin {
   double _dragDistance = 0;
   late double _position = _selectedIndex(widget).toDouble();
+  double? _pendingPosition;
 
   // ---------------------------------------------------------------------------
   // 목록 변화(필터) 연출 — 로비 연출 12번
@@ -60,16 +61,36 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
   /// 마지막으로 그린 선반 위치입니다. 목록이 바뀔 때 책의 이전 자리를 잽니다.
   double _drawnPosition = 0;
   Map<String, double> _fromOffsets = const {};
+  int _fromCount = 0;
   Set<String> _appearing = const {};
   List<({GameInfo game, double offset})> _leaving = const [];
 
+  List<GameInfo> _uniqueGames(TabletBookCarousel widget) {
+    final seen = <String>{};
+    return widget.games.where((game) => seen.add(game.id)).toList();
+  }
+
   int _selectedIndex(TabletBookCarousel widget) => math.max(
     0,
-    widget.games.indexWhere((game) => game.id == widget.selected.id),
+    _uniqueGames(widget).indexWhere((game) => game.id == widget.selected.id),
   );
 
+  int _nearestVirtualPosition(int index, double reference, int count) {
+    if (count < 1) return 0;
+    final lower = index + ((reference - index) / count).floor() * count;
+    final upper = lower + count;
+    return (reference - lower).abs() <= (upper - reference).abs()
+        ? lower
+        : upper;
+  }
+
+  double _wrappedOffset(double offset, int count) {
+    if (count < 1) return offset;
+    return (offset + count / 2) % count - count / 2;
+  }
+
   String _catalogKey(TabletBookCarousel widget) =>
-      widget.games.map((game) => game.id).join('/');
+      _uniqueGames(widget).map((game) => game.id).join('/');
 
   @override
   void dispose() {
@@ -81,33 +102,61 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
   void didUpdateWidget(covariant TabletBookCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_catalogKey(oldWidget) != _catalogKey(widget)) {
-      final nextIds = {for (final game in widget.games) game.id};
-      final oldIds = {for (final game in oldWidget.games) game.id};
+      final oldGames = _uniqueGames(oldWidget);
+      final games = _uniqueGames(widget);
+      final nextIds = {for (final game in games) game.id};
+      final oldIds = {for (final game in oldGames) game.id};
       _fromOffsets = {
-        for (var i = 0; i < oldWidget.games.length; i++)
-          oldWidget.games[i].id: i - _drawnPosition,
+        for (var i = 0; i < oldGames.length; i++)
+          oldGames[i].id: i - _drawnPosition,
       };
+      _fromCount = oldGames.length;
       _leaving = [
-        for (var i = 0; i < oldWidget.games.length; i++)
-          if (!nextIds.contains(oldWidget.games[i].id))
-            (game: oldWidget.games[i], offset: i - _drawnPosition),
+        for (var i = 0; i < oldGames.length; i++)
+          if (!nextIds.contains(oldGames[i].id))
+            (
+              game: oldGames[i],
+              offset: _wrappedOffset(i - _drawnPosition, oldGames.length),
+            ),
       ];
       _appearing = {
-        for (final game in widget.games)
+        for (final game in games)
           if (!oldIds.contains(game.id)) game.id,
       };
-      _position = _selectedIndex(widget).toDouble();
+      _position = _nearestVirtualPosition(
+        _selectedIndex(widget),
+        _drawnPosition,
+        games.length,
+      ).toDouble();
       if (MediaQuery.disableAnimationsOf(context)) {
         _morph.value = 1;
       } else {
         _morph.forward(from: 0);
       }
     } else if (oldWidget.selected.id != widget.selected.id) {
-      _position = _selectedIndex(widget).toDouble();
+      _position =
+          (_pendingPosition ??
+                  _nearestVirtualPosition(
+                    _selectedIndex(widget),
+                    _drawnPosition,
+                    widget.games.length,
+                  ))
+              .toDouble();
+      _pendingPosition = null;
     }
   }
 
+  void _selectAt(GameInfo game, int virtualIndex) {
+    if (game.id == widget.selected.id) {
+      widget.onOpenDetail(game);
+      return;
+    }
+    _pendingPosition = virtualIndex.toDouble();
+    widget.onSelect(game);
+  }
+
   void _finishDrag(DragEndDetails details) {
+    final games = _uniqueGames(widget);
     final velocity = details.primaryVelocity ?? 0;
     final direction = _dragDistance.abs() >= 32
         ? _dragDistance
@@ -115,16 +164,24 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
         ? velocity
         : 0.0;
     _dragDistance = 0;
-    if (direction == 0 || widget.games.length < 2) return;
-    final next = _selectedIndex(widget) + (direction < 0 ? 1 : -1);
-    if (next < 0 || next >= widget.games.length) return;
-    widget.onSelect(widget.games[next]);
+    if (direction == 0 || games.length < 2) return;
+    final directionStep = direction < 0 ? 1 : -1;
+    final currentVirtual = _nearestVirtualPosition(
+      _selectedIndex(widget),
+      _position,
+      games.length,
+    );
+    final nextVirtual = currentVirtual + directionStep;
+    final next = nextVirtual % games.length;
+    _pendingPosition = nextVirtual.toDouble();
+    widget.onSelect(games[next]);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.games.isEmpty) return const SizedBox.shrink();
-    final count = widget.games.length;
+    final games = _uniqueGames(widget);
+    if (games.isEmpty) return const SizedBox.shrink();
+    final count = games.length;
     const sideCount = 3;
     final stageWidth = widget.coverWidth + 396;
     final stageHeight = widget.coverWidth * 4 / 3 + 24;
@@ -175,22 +232,38 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
                       final morphing = _morph.value < 1;
                       final entries =
                           [
-                            for (var i = 0; i < count; i++)
-                              (
-                                game: widget.games[i],
-                                offset:
-                                    morphing &&
-                                        _fromOffsets.containsKey(
-                                          widget.games[i].id,
-                                        )
-                                    ? _fromOffsets[widget.games[i].id]! +
-                                          ((i - position) -
-                                                  _fromOffsets[widget
-                                                      .games[i]
-                                                      .id]!) *
-                                              morph
-                                    : i - position,
-                              ),
+                            for (
+                              var gameIndex = 0;
+                              gameIndex < count;
+                              gameIndex++
+                            )
+                              () {
+                                final game = games[gameIndex];
+                                final virtualIndex = count == 1
+                                    ? position.round()
+                                    : _nearestVirtualPosition(
+                                        gameIndex,
+                                        position,
+                                        count,
+                                      );
+                                final offset = virtualIndex - position;
+                                final fromOffset = _fromOffsets[game.id];
+                                final startOffset =
+                                    fromOffset == null || _fromCount < 1
+                                    ? offset
+                                    : fromOffset +
+                                          ((offset - fromOffset) / _fromCount)
+                                                  .round() *
+                                              _fromCount;
+                                return (
+                                  game: game,
+                                  virtualIndex: virtualIndex,
+                                  offset: morphing
+                                      ? startOffset +
+                                            (offset - startOffset) * morph
+                                      : offset,
+                                );
+                              }(),
                           ]..sort(
                             (a, b) => b.offset.abs().compareTo(a.offset.abs()),
                           );
@@ -199,28 +272,6 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
                       return Stack(
                         clipBehavior: Clip.hardEdge,
                         children: [
-                          // 원래 책장의 빈 칸과 고정 순서를 유지합니다.
-                          for (var slot = 0; slot < 2; slot++)
-                            Positioned(
-                              left: 64 + slot * 58,
-                              bottom: 0,
-                              child: Opacity(
-                                opacity: (2 - slot - position).clamp(0.0, 1.0),
-                                child: MosiEmptySpine(color: widget.emptyColor),
-                              ),
-                            ),
-                          for (var slot = 0; slot < 3; slot++)
-                            Positioned(
-                              left: 216 + widget.coverWidth + slot * 58,
-                              bottom: 0,
-                              child: Opacity(
-                                opacity: (position - (count - 2 - slot)).clamp(
-                                  0.0,
-                                  1.0,
-                                ),
-                                child: MosiEmptySpine(color: widget.emptyColor),
-                              ),
-                            ),
                           if (morphing)
                             for (final ghost in _leaving)
                               _buildBook(
@@ -228,6 +279,13 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
                                 ghost.offset,
                                 stageWidth,
                                 sideCount,
+                                virtualIndex:
+                                    -100000 -
+                                    games.indexWhere(
+                                      (game) => game.id == ghost.game.id,
+                                    ),
+                                selected: false,
+                                onTap: () {},
                                 fade: 1 - leaveT,
                                 shrink: 1 - 0.2 * leaveT,
                                 interactive: false,
@@ -238,6 +296,13 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
                               entry.offset,
                               stageWidth,
                               sideCount,
+                              virtualIndex: entry.virtualIndex,
+                              selected: entry.virtualIndex == position.round(),
+                              onTap: () =>
+                                  entry.virtualIndex == position.round()
+                                  ? widget.onOpenDetail(entry.game)
+                                  : _selectAt(entry.game, entry.virtualIndex),
+                              canonicalOccurrence: true,
                               fade:
                                   morphing && _appearing.contains(entry.game.id)
                                   ? Curves.easeOut.transform(
@@ -272,6 +337,10 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
     double offset,
     double stageWidth,
     int sideCount, {
+    required int virtualIndex,
+    required bool selected,
+    required VoidCallback onTap,
+    bool canonicalOccurrence = false,
     double fade = 1,
     double shrink = 1,
     bool interactive = true,
@@ -284,10 +353,11 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
         ? firstGap * offset
         : offset.sign * (firstGap + (distance - 1) * 58);
     final opacity = (sideCount + 1 - distance).clamp(0.0, 1.0) * fade;
-    final selected = game.id == widget.selected.id;
     final bookScale = game.id == 'holdem' ? 0.88 : 1.0;
     return Positioned(
-      key: ValueKey('book-${game.id}${interactive ? '' : '-leaving'}'),
+      key: ValueKey(
+        'book-${game.id}-$virtualIndex${interactive ? '' : '-leaving'}',
+      ),
       left: 192 + widget.coverWidth / 2 + displacement - width / 2,
       bottom: 0,
       child: ExcludeSemantics(
@@ -312,9 +382,10 @@ class _TabletBookCarouselState extends State<TabletBookCarousel>
                     width: width,
                     coverWidth: widget.coverWidth,
                     deep: widget.deep,
-                    onTap: () => selected
-                        ? widget.onOpenDetail(game)
-                        : widget.onSelect(game),
+                    onTap: onTap,
+                    spineKey: canonicalOccurrence
+                        ? ValueKey('shelf-spine-${game.id}')
+                        : ValueKey('shelf-spine-${game.id}-$virtualIndex'),
                   ),
                 ),
               ),
@@ -335,6 +406,7 @@ class _TurningBook extends StatelessWidget {
     required this.coverWidth,
     required this.deep,
     required this.onTap,
+    required this.spineKey,
   });
   final GameInfo game;
   final bool selected;
@@ -343,6 +415,7 @@ class _TurningBook extends StatelessWidget {
   final double coverWidth;
   final Color deep;
   final VoidCallback onTap;
+  final Key spineKey;
 
   @override
   Widget build(BuildContext context) {
@@ -364,9 +437,7 @@ class _TurningBook extends StatelessWidget {
       excludeSemantics: true,
       onTap: onTap,
       child: GestureDetector(
-        key: selected
-            ? const Key('shelf-selected-cover')
-            : ValueKey('shelf-spine-${game.id}'),
+        key: selected ? const Key('shelf-selected-cover') : spineKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: SizedBox(

@@ -125,6 +125,17 @@ export {
 } from "./mafia/vote.js";
 export {game_mafia_end_game, game_mafia_leave_game} from "./mafia/end-game.js";
 
+// ---------------------------------------------- 게임: 윷놀이
+export {
+  game_yut_start_game,
+  game_yut_roll,
+  game_yut_submit_choice,
+  game_yut_move_piece,
+  game_yut_timeout_turn,
+  game_yut_end_game,
+  game_yut_leave_game,
+} from "./yut/callables.js";
+
 // ---------------------------------------------- 게임 공용: 중단·재접속
 export {
   game_common_interruption_exclude_player,

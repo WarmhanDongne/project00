@@ -606,8 +606,8 @@ class _LobbyGameExit extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
-  // 상점 진입 버튼과 기존 퇴장·등장 연출을 사용합니다.
-  static const _showGameStore = true;
+  // 상점 공개 전까지 로비의 진입 버튼을 숨깁니다.
+  static const _showGameStore = false;
 
   const _HomeHeader({
     required this.theme,

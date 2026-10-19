@@ -649,12 +649,16 @@ void main() {
       expect(cover.gameId, id);
       expect(cover.width, 170);
       if (id == 'holdem') {
-        final image = tester.widget<Image>(
-          find.byKey(const Key('holdem-cardbox-cover')),
+        // 표지는 그림 파일 없이 코드로 그립니다.
+        final art = find.byKey(const Key('holdem-cardbox-cover'));
+        expect(art, findsOneWidget);
+        expect(
+          find.descendant(of: art, matching: find.byType(Image)),
+          findsNothing,
         );
         expect(
-          (image.image as AssetImage).assetName,
-          'packages/game_kit/assets/images/covers/poker_cardbox.png',
+          find.descendant(of: art, matching: find.byType(CustomPaint)),
+          findsWidgets,
         );
       }
       expect(tester.takeException(), isNull);

@@ -3,6 +3,7 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {assertRoomTarget, SessionRoom} from "../room/session-contract.js";
 import {TURN_DURATION_MS, LAST_CARD_CHALLENGE_DURATION_MS} from "../liars-poker/common/types.js";
 import {FINAL_CALL_TURN_MS} from "../final-call/types.js";
+import {YUT_TURN_MS} from "../yut/game.js";
 
 export interface GameContext {
   gameInstanceId: string;
@@ -118,7 +119,8 @@ export function beginRecoveryPause(
   const turnLimit = game.public.gameType === "liars_poker" ?
     (game.public.phase === "playing" ? TURN_DURATION_MS :
       game.public.phase === "lastCardChallenge" ? LAST_CARD_CHALLENGE_DURATION_MS : undefined) :
-    game.public.gameType === "final_call" ? FINAL_CALL_TURN_MS : undefined;
+    game.public.gameType === "final_call" ? FINAL_CALL_TURN_MS :
+      ["yut", "strategy_yut", "strategy_yut_edition"].includes(String(game.public.gameType)) ? YUT_TURN_MS : undefined;
   if (turnLimit !== undefined && typeof deadline === "number" && Number.isFinite(deadline)) {
     timerReferenceAt = Math.max(timerReferenceAt, deadline - turnLimit);
   }

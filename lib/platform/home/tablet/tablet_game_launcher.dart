@@ -105,8 +105,14 @@ class _TabletGameLauncher {
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
     final currentPlayerCount = players.length;
-    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
-    final maxPlayers = game.maxPlayers > 0
+    final minPlayers = game.id == 'yut'
+        ? 2
+        : game.minPlayers > 0
+        ? game.minPlayers
+        : 2;
+    final maxPlayers = game.id == 'yut'
+        ? 4
+        : game.maxPlayers > 0
         ? game.maxPlayers
         : RoomLimits.defaultMaxPlayers;
 
@@ -130,7 +136,11 @@ class _TabletGameLauncher {
       _showMessage(context, gameRequiresUpdateMessage);
       return;
     }
-    final supportedCounts = templateGame.supportedPlayerCounts;
+    // Classic Yut has a range, even if an older package build still advertises
+    // a fixed count. The strategy variants keep their exact four-player rule.
+    final supportedCounts = game.id == 'yut'
+        ? null
+        : templateGame.supportedPlayerCounts;
     if (supportedCounts != null &&
         !supportedCounts.contains(currentPlayerCount)) {
       final message = GameLocale.select(
@@ -443,13 +453,19 @@ class _TabletGameLauncher {
       // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
       // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
       // 바꿔서 하나의 연출처럼 이어지게 합니다.
-      final gameRoute = GameExitInstantPageRoute<void>(
-        pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
-          playerLayout: completedLayout,
-          provider: provider,
-          roomCode: roomCode,
-        ),
+      Widget buildGame(
+        BuildContext _,
+        Animation<double> _,
+        Animation<double> _,
+      ) => templateGame.buildTabletScreen(
+        playerLayout: completedLayout,
+        provider: provider,
+        roomCode: roomCode,
       );
+      // 윷놀이처럼 자기 입장 연출이 있는 게임은 창호문이 닫혔다 열리며 들어갑니다.
+      final PageRoute<void> gameRoute = templateGame.usesDoorEntrance
+          ? GameDoorEntryPageRoute<void>(pageBuilder: buildGame)
+          : GameExitInstantPageRoute<void>(pageBuilder: buildGame);
       Navigator.of(layoutContext).pushReplacement(gameRoute);
       // 게임 화면의 퇴장 연출까지 끝난 뒤에 게임 데이터를 정리합니다.
       // 먼저 지우면 덮이는 동안 결과 화면이 사라질 수 있습니다.
@@ -484,6 +500,7 @@ class _TabletGameLauncher {
             tableImage: templateGame.layoutTableImage,
             chairImage: templateGame.layoutChairImage,
             seatTheme: MosiSeatTheme.of(templateGame.id),
+            zoomHandoff: !templateGame.usesDoorEntrance,
             onCancel: cancel,
             onPrepare: prepare,
             onComplete: complete,

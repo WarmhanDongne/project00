@@ -109,6 +109,18 @@ void main() {
     expect(paid.storeProductId('googlePlay'), 'mosigame_game_paid');
   });
 
+  test('classic Yut always shows a two-to-four player range', () {
+    final game = GameInfo.fromJson({
+      'id': 'yut',
+      'name': '윷놀이',
+      'minPlayers': 4,
+      'maxPlayers': 4,
+    });
+
+    expect(game.minPlayers, 2);
+    expect(game.maxPlayers, 4);
+  });
+
   test(
     'migrated catalog deduplicates aliases and preserves game routing',
     () async {
@@ -155,6 +167,28 @@ void main() {
       );
       db.owner.complete(_Document('user', {}));
       expect(await service.fetchGames(), isEmpty);
+    },
+  );
+
+  test(
+    'catalog entries without enabled true stay out of the library',
+    () async {
+      final db = _Database();
+      final service = GameService(
+        firestore: db,
+        auth: _Auth(),
+        functions: _Functions(),
+      );
+      db.catalog.complete(
+        _Catalog([
+          _Document('missing', {'accessType': 'free'}),
+          _Document('mistyped', {'accessType': 'free', 'enabled': 'true'}),
+          _Document('enabled', {'accessType': 'free', 'enabled': true}),
+        ]),
+      );
+      db.owner.complete(_Document('user', {}));
+
+      expect((await service.fetchGames()).map((game) => game.id), ['enabled']);
     },
   );
 
@@ -466,8 +500,8 @@ class _Catalog extends Fake implements QuerySnapshot<Map<String, dynamic>> {
   List<QueryDocumentSnapshot<Map<String, dynamic>>> get docs =>
       entries ??
       [
-        _Document('paid', {'accessType': 'paid', 'order': 2}),
-        _Document('free', {'accessType': 'free', 'order': 1}),
+        _Document('paid', {'accessType': 'paid', 'enabled': true, 'order': 2}),
+        _Document('free', {'accessType': 'free', 'enabled': true, 'order': 1}),
       ];
 }
 

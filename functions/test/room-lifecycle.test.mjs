@@ -17,6 +17,7 @@ import {decideRoomJoin} from "../lib/room/room-join-policy.js";
 import {
   applyWaitingGameSelection,
   decideRoomSeating,
+  resolveRoomPlayerRange,
 } from "../lib/room/room-seating-policy.js";
 import {runPrimedTransaction} from "../lib/room/room-transaction.js";
 
@@ -374,6 +375,23 @@ test("파이널콜 자리 배치는 이전 카탈로그에서도 4·6인만 허�
     assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "begin");
   }
   for (const count of [2, 3, 5, 7, 8]) {
+    assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "invalid-player-count");
+  }
+});
+
+test("일반 윷놀이는 오래된 카탈로그 값이 4명이어도 2~4명으로 자리 배치한다", () => {
+  const range = resolveRoomPlayerRange("yut", 4, 4);
+  assert.deepEqual(range, {minPlayers: 2, maxPlayers: 4});
+  const state = {
+    roomStatus: "waiting",
+    selectedGame: "yut",
+    expectedGame: "yut",
+    ...range,
+  };
+  for (const count of [2, 3, 4]) {
+    assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "begin");
+  }
+  for (const count of [1, 5]) {
     assert.equal(decideRoomSeating({...state, activePlayerCount: count}), "invalid-player-count");
   }
 });

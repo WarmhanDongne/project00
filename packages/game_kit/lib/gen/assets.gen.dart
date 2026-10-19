@@ -49,9 +49,9 @@ class $AssetsSoundsGen {
   /// File path: assets/sounds/holdem_all_in.mp3
   String get holdemAllIn => 'packages/game_kit/assets/sounds/holdem_all_in.mp3';
 
-  /// File path: assets/sounds/holdem_background.mp3
+  /// File path: assets/sounds/holdem_background.m4a
   String get holdemBackground =>
-      'packages/game_kit/assets/sounds/holdem_background.mp3';
+      'packages/game_kit/assets/sounds/holdem_background.m4a';
 
   /// File path: assets/sounds/holdem_check.wav
   String get holdemCheck => 'packages/game_kit/assets/sounds/holdem_check.wav';
@@ -211,8 +211,42 @@ class $AssetsImagesCoversGen {
   AssetGenImage get pokerCardbox =>
       const AssetGenImage('assets/images/covers/poker_cardbox.png');
 
+  /// File path: assets/images/covers/strategy_yut_cover.png
+  AssetGenImage get strategyYutCoverPng =>
+      const AssetGenImage('assets/images/covers/strategy_yut_cover.png');
+
+  /// File path: assets/images/covers/strategy_yut_cover.svg
+  String get strategyYutCoverSvg =>
+      'packages/game_kit/assets/images/covers/strategy_yut_cover.svg';
+
+  /// File path: assets/images/covers/strategy_yut_edition_cover.png
+  AssetGenImage get strategyYutEditionCoverPng => const AssetGenImage(
+    'assets/images/covers/strategy_yut_edition_cover.png',
+  );
+
+  /// File path: assets/images/covers/strategy_yut_edition_cover.svg
+  String get strategyYutEditionCoverSvg =>
+      'packages/game_kit/assets/images/covers/strategy_yut_edition_cover.svg';
+
+  /// File path: assets/images/covers/yut_cover.png
+  AssetGenImage get yutCoverPng =>
+      const AssetGenImage('assets/images/covers/yut_cover.png');
+
+  /// File path: assets/images/covers/yut_cover.svg
+  String get yutCoverSvg =>
+      'packages/game_kit/assets/images/covers/yut_cover.svg';
+
   /// List of all assets
-  List<AssetGenImage> get values => [holdemCardbox, pokerCardbox];
+  List<dynamic> get values => [
+    holdemCardbox,
+    pokerCardbox,
+    strategyYutCoverPng,
+    strategyYutCoverSvg,
+    strategyYutEditionCoverPng,
+    strategyYutEditionCoverSvg,
+    yutCoverPng,
+    yutCoverSvg,
+  ];
 }
 
 class $AssetsImagesOthersGen {

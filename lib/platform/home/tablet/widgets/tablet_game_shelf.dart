@@ -209,20 +209,28 @@ class _TabletGameShelfState extends State<TabletGameShelf> {
 
 /// 지금 인원으로 이 게임을 시작할 수 있는지 판단합니다.
 bool isGamePlayableWith(GameInfo game, int count, RoomProvider roomProvider) {
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) return supported.contains(count);
-  final min = game.minPlayers > 0 ? game.minPlayers : 2;
-  final max = game.maxPlayers > 0 ? game.maxPlayers : 99;
+  final min = game.id == 'yut'
+      ? 2
+      : game.minPlayers > 0
+      ? game.minPlayers
+      : 2;
+  final max = game.id == 'yut'
+      ? 4
+      : game.maxPlayers > 0
+      ? game.maxPlayers
+      : 99;
   return count >= min && count <= max;
 }
 
 /// 시안의 인원 표기('2–6명', '4명 · 6명')입니다.
 String gamePlayerRangeLabel(GameInfo game, RoomProvider roomProvider) {
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) {
     return supported
         .map(
@@ -235,12 +243,14 @@ String gamePlayerRangeLabel(GameInfo game, RoomProvider roomProvider) {
         )
         .join(' · ');
   }
-  if (game.minPlayers > 0 && game.maxPlayers > 0) {
+  final minPlayers = game.id == 'yut' ? 2 : game.minPlayers;
+  final maxPlayers = game.id == 'yut' ? 4 : game.maxPlayers;
+  if (minPlayers > 0 && maxPlayers > 0) {
     return GameLocale.select(
-      ko: '${game.minPlayers}–${game.maxPlayers}명',
-      en: '${game.minPlayers}–${game.maxPlayers} players',
-      zhHans: '${game.minPlayers}–${game.maxPlayers} 人',
-      zhHant: '${game.minPlayers}–${game.maxPlayers} 人',
+      ko: '$minPlayers–$maxPlayers명',
+      en: '$minPlayers–$maxPlayers players',
+      zhHans: '$minPlayers–$maxPlayers 人',
+      zhHant: '$minPlayers–$maxPlayers 人',
     );
   }
   if (game.minPlayers > 0) {
@@ -269,9 +279,9 @@ String? gameCannotStartMessage(
   RoomProvider roomProvider,
 ) {
   if (isGamePlayableWith(game, count, roomProvider)) return null;
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) {
     return GameLocale.select(
       ko: '${supported.join('명이나 ')}명이 모이면 시작할 수 있어요 · 지금 $count명',
@@ -280,7 +290,11 @@ String? gameCannotStartMessage(
       zhHant: '需要 ${supported.join(' 或 ')} 人開始 · 目前 $count 人',
     );
   }
-  final min = game.minPlayers > 0 ? game.minPlayers : 2;
+  final min = game.id == 'yut'
+      ? 2
+      : game.minPlayers > 0
+      ? game.minPlayers
+      : 2;
   if (count < min) {
     return GameLocale.select(
       ko: '$min명부터 시작할 수 있어요 · 지금 $count명',
@@ -290,10 +304,10 @@ String? gameCannotStartMessage(
     );
   }
   return GameLocale.select(
-    ko: '최대 ${game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명',
-    en: 'Supports up to ${game.maxPlayers} players · $count now',
-    zhHans: '最多支持 ${game.maxPlayers} 人 · 当前 $count 人',
-    zhHant: '最多支援 ${game.maxPlayers} 人 · 目前 $count 人',
+    ko: '최대 ${game.id == 'yut' ? 4 : game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명',
+    en: 'Supports up to ${game.id == 'yut' ? 4 : game.maxPlayers} players · $count now',
+    zhHans: '最多支持 ${game.id == 'yut' ? 4 : game.maxPlayers} 人 · 当前 $count 人',
+    zhHant: '最多支援 ${game.id == 'yut' ? 4 : game.maxPlayers} 人 · 目前 $count 人',
   );
 }
 

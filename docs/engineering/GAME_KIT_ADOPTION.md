@@ -160,6 +160,9 @@ widgets/phone/mafia_phone_layout.dart
 
 ## 6. 새 게임 체크리스트
 
+전체 제작·화면 연결·서버 통신·Firestore 등록과 공개 순서는
+[새 게임 제작·연결 가이드](NEW_GAME_GUIDE.md)를 먼저 따른다.
+
 - [ ] `game_template` 복사 후 `pubspec.yaml`의 `name`·`description` 수정
 - [ ] 상태 클래스가 `GameSessionState<T>`를 구현하고 `==`/`hashCode`를 갖는다
 - [ ] 컨트롤러가 `GameSessionController<T>`를 상속하고
@@ -173,3 +176,6 @@ widgets/phone/mafia_phone_layout.dart
 - [ ] `python3 tool/check_package_boundaries.py` 가 위반 0건
 - [ ] 다운로드 게임이면 `requiredAssetVersion`을 1 이상으로 올린다
       (0이면 번들 게임으로 남는다 — `template_game.dart` 기본값)
+- [ ] Firestore `games/{gameId}`에 네 언어 이름·소개·규칙·장르를 저장했다
+- [ ] 첫 등록 상태가 `enabled: false`, `storeVisible: false`다
+- [ ] Functions의 start/action/timeout/end/leave와 공통 interruption adapter를 연결했다

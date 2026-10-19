@@ -20,6 +20,8 @@
     "catalog:rebuild": "node scripts/rebuild-game-catalog.mjs --apply --confirm-project=project0000-ec01e",
     "catalog:holdem:dry-run": "node scripts/register-holdem.mjs --dry-run",
     "catalog:holdem:register": "node scripts/register-holdem.mjs",
+    "catalog:yut:dry-run": "node scripts/seed-yut-catalog.mjs",
+    "catalog:yut:seed": "node scripts/seed-yut-catalog.mjs --apply --confirm-project=project0000-ec01e",
     "assets:holdem:dry-run": "node scripts/upload-holdem-assets.mjs --dry-run",
     "assets:holdem:upload": "node scripts/upload-holdem-assets.mjs",
     "deploy": "firebase deploy --only functions",

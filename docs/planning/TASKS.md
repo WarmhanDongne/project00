@@ -18,11 +18,11 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | 분류 | 개수 |
 | --- | ---: |
-| 구현 검증 대기 | 6 |
+| 구현 검증 대기 | 7 |
 | 출시 전 필수 | 11 |
 | 출시 전 권장 | 11 |
 | 출시 후 작업 | 8 |
-| 합계 | 36 |
+| 합계 | 37 |
 
 ## 구현 검증 대기
 
@@ -34,6 +34,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 | [MAFIA-RULES-03](tasks/MAFIA-RULES-03.md#mafia-rules-03) | 마피아 규칙·역할·룰북 개선 | 검증 대기 | 사용자 명시 승인 후 FULL, 양 기기 실제 게임 흐름 확인 |
 | [MAFIA-ROLE-SETUP-02](tasks/MAFIA-ROLE-SETUP-02.md#mafia-role-setup-02) | 마피아 신분카드 구성 화면 개선 | 검증 대기 | 사용자 승인 후 FULL, 실제 태블릿 터치·전환 확인 |
 | [GAME-DEVICE-BOARD-01](tasks/GAME-DEVICE-BOARD-01.md#game-device-board-01) | 게임 패키지 기기별 화면·흐름 구조 정리 | 검증 대기 | 사용자 승인 후 FULL, 회귀 테스트는 TEST-REGRESSION-01에서 관리 |
+| [YUT-GAMEPLAY-01](tasks/YUT-GAMEPLAY-01.md#yut-gameplay-01) | 윷놀이 3종 서버 게임·휴대폰/태블릿 플레이 화면 | 구현 완료, 검증 승인 대기 | 사용자 승인 후 targeted 테스트와 FULL validation, 4인 실제 플레이 검증. 카탈로그 공개·Functions 배포는 별도 출시 승인 |
 
 ## 출시 전 필수
 

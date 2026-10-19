@@ -3,6 +3,7 @@ import 'package:game_final_call/game_final_call.dart';
 import 'package:game_liars_poker/game_liars_poker.dart';
 import 'package:game_mafia/game_mafia.dart';
 import 'package:game_holdem/game_holdem.dart';
+import 'package:game_yut/game_yut.dart';
 
 final class GameRegistry implements GameCatalog {
   const GameRegistry();
@@ -13,6 +14,9 @@ final class GameRegistry implements GameCatalog {
     FinalCallGame(),
     MafiaGame(),
     HoldemGame(),
+    YutGame(),
+    StrategyYutGame(),
+    StrategyYutEditionGame(),
   ];
 
   @override

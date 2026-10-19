@@ -11,6 +11,11 @@ callable/schedule/HTTP는 asia-northeast3, RTDB 트리거는 asia-southeast1이�
 현재 후보의 기존 네트워크 투표/finish_now 제거와 소비자 변경은 채택한 기술안에 따른다.
 실제 반영·기존 데이터·함수 삭제/혼합 상태는 별도 승인된 배포 계획에서 확인한다.
 
+새 게임의 함수·RTDB 상태·Flutter 화면·Firestore 카탈로그를 연결하는 전체 순서는
+[새 게임 제작·연결 가이드](NEW_GAME_GUIDE.md)를 따른다. 새 카탈로그는
+`enabled: false`, `storeVisible: false`로 먼저 저장하고, Functions와 앱이 모두 준비된
+뒤 별도 승인으로 공개한다.
+
 ## 2. 방과 인증
 
 room/ callable 12개: createRealtimeRoom, validateRealtimeRoom, joinRealtimeRoom,

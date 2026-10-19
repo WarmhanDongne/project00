@@ -49,16 +49,21 @@ class GameInfo implements GameRoomMetadata {
     DocumentSnapshot<Map<String, dynamic>> snapshot, {
     bool isOwned = false,
   }) {
+    final data = snapshot.data();
     return GameInfo.fromJson({
-      ...?snapshot.data(),
+      ...?data,
       'id': snapshot.id,
       'isOwned': isOwned,
+      // Catalog documents must opt in explicitly. A missing or mistyped value
+      // must not publish a newly registered game by accident.
+      'enabled': data?['enabled'] == true,
     });
   }
 
   factory GameInfo.fromJson(Map<String, dynamic> json) {
+    final id = runtimeGameId(firestoreString(json['id']));
     return GameInfo(
-      id: runtimeGameId(firestoreString(json['id'])),
+      id: id,
       name: firestoreString(json['name'], fallback: '이름 없음'),
       localizedNames: _localizedStrings(json['localizedNames']),
       description: firestoreString(json['description']),
@@ -71,8 +76,10 @@ class GameInfo implements GameRoomMetadata {
       enabled: json['enabled'] as bool? ?? true,
       genres: firestoreStringList(json['genres']),
       localizedGenres: _localizedStringLists(json['localizedGenres']),
-      minPlayers: firestoreInt(json['minPlayers']),
-      maxPlayers: firestoreInt(json['maxPlayers']),
+      // Classic Yut is a built-in four-seat game that supports two players.
+      // Keep the visible range correct even if the remote catalog is stale.
+      minPlayers: id == 'yut' ? 2 : firestoreInt(json['minPlayers']),
+      maxPlayers: id == 'yut' ? 4 : firestoreInt(json['maxPlayers']),
       playTime: firestoreInt(json['playTime']),
       order: firestoreInt(json['order']),
       ruleVideoUrl: firestoreString(json['ruleVideoUrl']),

@@ -10,6 +10,16 @@ export function catalogDocumentId(id: string): string {
 }
 
 /**
+ * A catalog entry is playable only when it explicitly opts in.
+ * @param {unknown} data Firestore catalog document data.
+ * @return {boolean} Whether the entry is explicitly enabled.
+ */
+export function isCatalogGameEnabled(data: unknown): boolean {
+  return typeof data === "object" && data !== null &&
+    (data as {enabled?: unknown}).enabled === true;
+}
+
+/**
  * Fall back only when the canonical document is missing.
  * @param {string} id Stable runtime ID or catalog document ID.
  * @param {Function} read Catalog reader; failures propagate without fallback.

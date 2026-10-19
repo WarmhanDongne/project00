@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:project00/platform/home/store/store_motion.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
+import 'package:project00/platform/home/store/models/game_bundle.dart';
 import 'package:project00/platform/home/store/services/game_purchase_gateway.dart';
+import 'package:project00/platform/home/store/screens/tablet_store_game_detail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/constants/room_character.dart';
@@ -13,10 +15,9 @@ import 'package:game_kit/localization/game_locale.dart';
 
 //=======================게임 상점 (UI만)==============================
 // 시안 '모시 서점(신간 매대)'입니다. 매대에는 Firestore `games`에서
-// `storeVisible`이 true인 게임만 진열합니다. 상점 상세(아래 마피아 예고편 포함)는
-// 추후 개발이라 '자세히 보기'를 누를 수 없습니다. 결제·구매 복원은
-// [GamePurchaseGateway] 경계만 있고 기본 구현은 비활성입니다. 누르면 준비 중이라고 알립니다
-// (docs/planning/NEWGUI_FEATURE_GAP.md 참고).
+// `storeVisible`이 true인 게임과 공개 번들만 진열합니다. 윷놀이 3종은 상품 상세의
+// 플레이 미리보기·구성품 탭을 제공하며, 번들 상세는 구성 게임과 개별 보유 상태를
+// 보여줍니다. 결제·구매 복원은 [GamePurchaseGateway] 기본 구현이 비활성입니다.
 
 const _canvas = Size(1194, 834);
 
@@ -80,6 +81,9 @@ const _knownCopy = {
   'mafia': _StoreCopy(tilt: 1.5, spineShade: .3),
   'final_call': _StoreCopy(tilt: -1, spineShade: .1),
   'holdem': _StoreCopy(tilt: 1, spineShade: .18),
+  'yut': _StoreCopy(tilt: -1.5, spineShade: .26),
+  'strategy_yut': _StoreCopy(tilt: 1, spineShade: .16),
+  'strategy_yut_edition': _StoreCopy(tilt: -1.2, spineShade: .12),
 };
 
 /// 매대 맨 끝 '곧 나올 게임' 자리 문구입니다.
@@ -107,34 +111,65 @@ _StoreCopy get _comingSoonCopy => _StoreCopy(
   spineShade: .12,
 );
 
-/// 매대에 놓이는 책 한 권입니다. [game]이 없으면 '곧 나올 게임' 자리입니다.
+/// 매대에 놓이는 게임·번들·'곧 나올 게임' 항목입니다.
 class _StoreEntry {
-  const _StoreEntry({required this.id, required this.game, required this.copy});
+  const _StoreEntry({
+    required this.id,
+    required this.game,
+    required this.copy,
+    this.bundle,
+    this.bundleGames = const [],
+    this.order = 0,
+  });
 
-  /// 책 키(`store-book-<id>`)에 쓰는 값입니다. 게임 id 또는 `soon`입니다.
+  /// 책 키(`store-book-<id>`)에 쓰는 값입니다. 게임·번들 ID 또는 `soon`입니다.
   final String id;
   final GameInfo? game;
+  final GameBundle? bundle;
+  final List<GameInfo> bundleGames;
+  final int order;
   final _StoreCopy copy;
 
   String name(Locale? locale) {
+    final bundle = this.bundle;
+    if (bundle != null)
+      return bundle.localizedName(locale ?? const Locale('ko'));
     final game = this.game;
     if (game == null) return '곧 나올 게임'.localized;
     return game.localizedName(locale ?? const Locale('ko'));
   }
 
   String description(Locale locale) {
+    final bundle = this.bundle;
+    if (bundle != null) return bundle.localizedDescription(locale);
     final game = this.game;
     if (game == null) return copy.description;
     return game.effectiveTabletDescriptionFor(locale);
   }
 
   String meta(Locale locale) {
+    if (bundle != null) {
+      return GameLocale.select(
+        ko: '${bundleGames.length}종 게임 묶음',
+        en: '${bundleGames.length}-GAME BUNDLE',
+        zhHans: '${bundleGames.length}款游戏组合',
+        zhHant: '${bundleGames.length}款遊戲組合',
+      );
+    }
     final game = this.game;
     if (game == null) return copy.meta;
     return game.localizedGenresText(locale, separator: ' · ');
   }
 
   String note(Locale locale) {
+    if (bundle != null) {
+      return GameLocale.select(
+        ko: '묶음 상품',
+        en: 'BUNDLE',
+        zhHans: '组合',
+        zhHant: '組合',
+      );
+    }
     final game = this.game;
     if (game == null) return copy.note;
     final genres = game.localizedGenresFor(locale);
@@ -142,19 +177,34 @@ class _StoreEntry {
   }
 
   String sub(Locale locale) {
+    if (bundle != null) {
+      return bundleGames.map((game) => game.localizedName(locale)).join(' · ');
+    }
     final game = this.game;
     if (game == null) return copy.sub;
     return game.localizedGenresFor(locale).skip(1).join(' · ');
   }
 
   bool get canPlay {
+    if (bundle != null) return false;
     final game = this.game;
     return game != null && game.enabled && game.isAccessible;
   }
+
+  bool get bundleOwned =>
+      bundle != null &&
+      bundle!.gameIds.every(
+        (id) => bundleGames.any((game) => game.id == id && game.isOwned),
+      );
 }
 
 _StoreCopy _copyFor(GameInfo game, int index) =>
     _knownCopy[game.id] ?? _StoreCopy(tilt: index.isEven ? -1.5 : 1.5);
+
+bool _hasYutStoreDetail(String gameId) =>
+    gameId == 'yut' ||
+    gameId == 'strategy_yut' ||
+    gameId == 'strategy_yut_edition';
 
 class TabletStoreScreen extends StatefulWidget {
   const TabletStoreScreen({
@@ -175,6 +225,7 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
   /// 고른 책(`_StoreEntry.id`)입니다. 없으면 매대의 첫 책을 고릅니다.
   String? _selectedId;
   bool _purchaseBusy = false;
+  int _pageStart = 0;
   @override
   void initState() {
     super.initState();
@@ -182,10 +233,18 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     if (widget.gameProvider.games.isEmpty && !widget.gameProvider.isLoading) {
       widget.gameProvider.fetchGames();
     }
+    if (widget.gameProvider.bundles.isEmpty) {
+      widget.gameProvider.fetchStoreBundles();
+    }
   }
 
   void _catalogChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        final maxPageStart = ((_entries.length - 1) ~/ 4) * 4;
+        _pageStart = math.min(_pageStart, maxPageStart);
+      });
+    }
   }
 
   @override
@@ -200,11 +259,38 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
     final games =
         widget.gameProvider.games.where((game) => game.storeVisible).toList()
           ..sort((a, b) => a.order.compareTo(b.order));
-    return [
+    final entries = <_StoreEntry>[
       for (final (index, game) in games.indexed)
-        _StoreEntry(id: game.id, game: game, copy: _copyFor(game, index)),
-      _StoreEntry(id: 'soon', game: null, copy: _comingSoonCopy),
-    ];
+        _StoreEntry(
+          id: game.id,
+          game: game,
+          copy: _copyFor(game, index),
+          order: game.order,
+        ),
+      for (final bundle in widget.gameProvider.bundles.where(
+        (bundle) =>
+            bundle.gameIds.every((id) => games.any((game) => game.id == id)),
+      ))
+        _StoreEntry(
+          id: 'bundle:${bundle.id}',
+          game: null,
+          bundle: bundle,
+          bundleGames: games
+              .where((game) => bundle.gameIds.contains(game.id))
+              .toList(growable: false),
+          copy: _StoreCopy(tilt: -1, spineShade: .14),
+          order: bundle.order,
+        ),
+    ]..sort((left, right) => left.order.compareTo(right.order));
+    entries.add(
+      _StoreEntry(
+        id: 'soon',
+        game: null,
+        copy: _comingSoonCopy,
+        order: 1 << 30,
+      ),
+    );
+    return entries;
   }
 
   _StoreEntry _current(List<_StoreEntry> entries) => entries.firstWhere(
@@ -213,6 +299,20 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
   );
 
   String _status(_StoreEntry entry) {
+    if (entry.bundle != null) {
+      if (widget.gameProvider.bundleErrorMessage != null) {
+        return context.l10n.checkFailed;
+      }
+      if (widget.gameProvider.isLoading) return context.l10n.checking;
+      if (entry.bundleOwned) return context.l10n.owned;
+      final ownedCount = entry.bundleGames.where((game) => game.isOwned).length;
+      return GameLocale.select(
+        ko: ownedCount == 0 ? '구매 준비 중' : '$ownedCount종 보유',
+        en: ownedCount == 0 ? 'COMING SOON' : '$ownedCount OWNED',
+        zhHans: ownedCount == 0 ? '即将推出' : '已拥有$ownedCount款',
+        zhHant: ownedCount == 0 ? '即將推出' : '已擁有$ownedCount款',
+      );
+    }
     final game = entry.game;
     if (game == null) return context.l10n.comingSoon;
     if (widget.gameProvider.isLoading) return context.l10n.checking;
@@ -229,8 +329,45 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
 
   void _select(_StoreEntry entry) => setState(() => _selectedId = entry.id);
 
+  void _openDetails(_StoreEntry entry) {
+    final game = entry.game;
+    final bundle = entry.bundle;
+    if (game == null && bundle == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => game != null
+            ? TabletStoreGameDetail(game: game)
+            : TabletStoreBundleDetail(
+                bundle: bundle!,
+                games: entry.bundleGames,
+              ),
+      ),
+    );
+  }
+
   Future<void> _act(_StoreEntry entry) async {
     if (_purchaseBusy) return;
+    if (entry.id == 'soon' && widget.gameProvider.bundleErrorMessage != null) {
+      widget.gameProvider.fetchStoreBundles();
+      _notReady(context, context.l10n.checking);
+      return;
+    }
+    if (entry.bundle != null) {
+      if (widget.gameProvider.bundleErrorMessage != null) {
+        widget.gameProvider.fetchStoreBundles();
+      } else {
+        _notReady(
+          context,
+          GameLocale.select(
+            ko: '묶음 상품 구매는 준비 중입니다. 구매가 열리면 포함된 게임별 소유권을 각각 지급합니다.',
+            en: 'Bundle purchases are coming soon. Each included game will receive separate ownership.',
+            zhHans: '组合购买即将推出。购买后将分别获得组合内各款游戏的所有权。',
+            zhHant: '組合購買即將推出。購買後將分別取得組合內各款遊戲的所有權。',
+          ),
+        );
+      }
+      return;
+    }
     if (widget.gameProvider.errorMessage != null) {
       widget.gameProvider.fetchGames();
       return;
@@ -288,7 +425,12 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
-    final entries = _entries;
+    final allEntries = _entries;
+    const pageSize = 4;
+    final pageCount = (allEntries.length / pageSize).ceil();
+    final pageIndex = (_pageStart ~/ pageSize).clamp(0, pageCount - 1).toInt();
+    final pageStart = pageIndex * pageSize;
+    final entries = allEntries.skip(pageStart).take(pageSize).toList();
     final current = _current(entries);
     final chip = _status(current);
     final buttonLabel = widget.gameProvider.isLoading || _purchaseBusy
@@ -302,7 +444,7 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
         : current.game == null
         ? context.l10n.releaseSoon
         : context.l10n.purchaseSoon;
-    // 책이 많아지면 매대를 넓히고, 화면에는 비율을 지켜 줄여 넣습니다.
+    // 한 페이지에 최대 네 권씩 보여 표지와 선택 정보를 읽기 쉽게 유지합니다.
     final bookRow = Size(
       math.max(_bookRow.width, entries.length * 268.5),
       _bookRow.height,
@@ -391,7 +533,9 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                               _StoreBook(
                                 key: ValueKey('store-book-${entry.id}'),
                                 entry: entry,
-                                owned: entry.game?.isOwned == true,
+                                owned:
+                                    entry.game?.isOwned == true ||
+                                    entry.bundleOwned,
                                 entranceIndex: i,
                                 selected: entry.id == current.id,
                                 onTap: () => _select(entry),
@@ -401,6 +545,47 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                       ),
                     ),
                   ),
+                  if (pageCount > 1) ...[
+                    Positioned(
+                      left: 4,
+                      top: displayTop + displayHeight * .47,
+                      child: _StorePageArrow(
+                        key: const ValueKey('store-page-previous'),
+                        label: GameLocale.select(
+                          ko: '이전 상품',
+                          en: 'Previous products',
+                          zhHans: '上一页商品',
+                          zhHant: '上一頁商品',
+                        ),
+                        icon: Icons.chevron_left_rounded,
+                        enabled: pageIndex > 0,
+                        onPressed: () => setState(() {
+                          _pageStart = math.max(0, _pageStart - pageSize);
+                        }),
+                      ),
+                    ),
+                    Positioned(
+                      right: 4,
+                      top: displayTop + displayHeight * .47,
+                      child: _StorePageArrow(
+                        key: const ValueKey('store-page-next'),
+                        label: GameLocale.select(
+                          ko: '다음 상품',
+                          en: 'Next products',
+                          zhHans: '下一页商品',
+                          zhHant: '下一頁商品',
+                        ),
+                        icon: Icons.chevron_right_rounded,
+                        enabled: pageIndex < pageCount - 1,
+                        onPressed: () => setState(() {
+                          _pageStart = math.min(
+                            (pageCount - 1) * pageSize,
+                            _pageStart + pageSize,
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
                   // 헤더: 선반 · 간판 · 구매 내역 복원
                   Positioned(
                     left: inset,
@@ -479,7 +664,16 @@ class _TabletStoreScreenState extends State<TabletStoreScreen> {
                             ? null
                             : () => _act(current),
                         locale: locale,
-                        showDetails: current.game != null,
+                        showDetails:
+                            current.bundle != null ||
+                            (current.game != null &&
+                                _hasYutStoreDetail(current.game!.id)),
+                        onDetails:
+                            current.bundle != null ||
+                                (current.game != null &&
+                                    _hasYutStoreDetail(current.game!.id))
+                            ? () => _openDetails(current)
+                            : null,
                       ),
                     ),
                   ),
@@ -526,6 +720,49 @@ class _StoreHeaderButton extends StatelessWidget {
       leading: icon == null ? null : Icon(icon),
     );
   }
+}
+
+class _StorePageArrow extends StatelessWidget {
+  const _StorePageArrow({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    enabled: enabled,
+    label: label,
+    child: Material(
+      color: MosiColors.white.withValues(alpha: enabled ? .95 : .48),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: enabled ? onPressed : null,
+        child: Container(
+          width: 46,
+          height: 46,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: MosiColors.ink, width: 2),
+            boxShadow: const [
+              BoxShadow(color: MosiColors.ink, offset: Offset(2, 2)),
+            ],
+          ),
+          child: Icon(icon, color: MosiColors.navy, size: 30),
+        ),
+      ),
+    ),
+  );
 }
 
 class _HangingSign extends StatelessWidget {
@@ -754,7 +991,9 @@ class _StoreBook extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (game == null)
+            if (entry.bundle != null)
+              _BundleCover(entry: entry, locale: locale ?? const Locale('ko'))
+            else if (game == null)
               const _ComingSoonCover()
             else
               FittedBox(
@@ -859,7 +1098,7 @@ class _StoreBook extends StatelessWidget {
                   note: entry.note(locale ?? const Locale('ko')),
                   sub: entry.sub(locale ?? const Locale('ko')),
                   tilt: book.tilt,
-                  dashed: game == null,
+                  dashed: game == null && entry.bundle == null,
                   locale: locale,
                 ),
                 const SizedBox(height: 10),
@@ -870,6 +1109,155 @@ class _StoreBook extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BundleCover extends StatelessWidget {
+  const _BundleCover({required this.entry, required this.locale});
+
+  final _StoreEntry entry;
+  final Locale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = entry.bundleGames
+        .map((game) => game.localizedName(locale))
+        .toList(growable: false);
+    return Container(
+      color: const Color(0xFF151E58),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CustomPaint(painter: _BundleCoverPainter()),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  GameLocale.select(
+                    ko: 'MOSIGAME  ·  묶음',
+                    en: 'MOSIGAME  ·  BUNDLE',
+                    zhHans: 'MOSIGAME  ·  套装',
+                    zhHant: 'MOSIGAME  ·  套裝',
+                  ),
+                  style: MosiFonts.grotesk(
+                    size: 10,
+                    weight: FontWeight.w700,
+                    color: const Color(0xFFF2D58F),
+                    letterSpacing: 1,
+                  ),
+                ),
+                const Spacer(),
+                for (final (index, name) in names.take(3).indexed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 18,
+                          height: 3,
+                          color: index == 0
+                              ? const Color(0xFFD45349)
+                              : const Color(0xFFF2D58F),
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MosiFonts.sans(
+                              size: 13,
+                              weight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  entry.name(locale),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: MosiFonts.sans(
+                    size: 20,
+                    weight: FontWeight.w900,
+                    color: const Color(0xFFF2D58F),
+                    height: 1.05,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 11,
+            top: 11,
+            child: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2D58F),
+                shape: BoxShape.circle,
+                border: Border.all(color: MosiColors.ink, width: 2),
+              ),
+              child: Text(
+                '${names.length}',
+                style: MosiFonts.grotesk(
+                  size: 12,
+                  weight: FontWeight.w900,
+                  color: const Color(0xFF151E58),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BundleCoverPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gold = Paint()
+      ..color = const Color(0x55F2D58F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    for (var i = 0; i < 4; i++) {
+      final rect = Rect.fromLTWH(
+        -30 + i * 18,
+        8 + i * 18,
+        size.width - 20,
+        size.height - 30,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(80)),
+        gold,
+      );
+    }
+    final flower = Paint()
+      ..color = const Color(0x77D45349)
+      ..style = PaintingStyle.fill;
+    for (final point in [
+      Offset(size.width - 22, size.height * .36),
+      Offset(size.width * .28, 28),
+    ]) {
+      for (var petal = 0; petal < 5; petal++) {
+        final angle = petal * math.pi * 2 / 5;
+        canvas.drawCircle(
+          point + Offset(math.cos(angle) * 9, math.sin(angle) * 9),
+          5,
+          flower,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _StandClipper extends CustomClipper<Path> {
@@ -1091,6 +1479,7 @@ class _CounterCard extends StatelessWidget {
     required this.onPressed,
     required this.locale,
     this.showDetails = true,
+    this.onDetails,
   });
 
   final String name;
@@ -1103,8 +1492,9 @@ class _CounterCard extends StatelessWidget {
   final VoidCallback? onPressed;
   final Locale? locale;
 
-  /// 게임 상세 버튼을 둘지입니다. 상점 상세는 아직 없어 눌리지 않습니다.
+  /// 게임 상세 버튼을 둘지입니다.
   final bool showDetails;
+  final VoidCallback? onDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -1235,7 +1625,6 @@ class _CounterCard extends StatelessWidget {
             const SizedBox(width: 28),
           ],
           if (showDetails) ...[
-            // 상점 상세는 추후 개발합니다. 지금은 자리만 두고 누를 수 없습니다.
             MosiButton(
               label: context.l10n.details,
               background: MosiColors.white,
@@ -1244,7 +1633,7 @@ class _CounterCard extends StatelessWidget {
               shadowOffset: 5,
               fontSize: compact ? 15 : 18,
               padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 22),
-              onPressed: null,
+              onPressed: onDetails,
             ),
             SizedBox(width: compact ? 10 : 14),
           ],
