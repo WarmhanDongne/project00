@@ -52,7 +52,7 @@ $requiredFiles = @(
     'functions/package-lock.json',
     'android/app/google-services.json',
     'ios/Runner/GoogleService-Info.plist',
-    'lib/firebase/firebase_options.dart'
+    'packages/game_kit/lib/firebase/firebase_options.dart'
 )
 $missingFiles = @($requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
 if ($missingFiles.Count -gt 0) {

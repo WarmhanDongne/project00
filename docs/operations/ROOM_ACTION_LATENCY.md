@@ -18,7 +18,7 @@ debug 앱의 기존 오른쪽 아래 통신 진단 버튼에서 기록을 확인
 | `callable:createRealtimeRoom` | 생성 함수 요청부터 응답/오류/클라이언트 timeout까지 |
 | `callable:resumeRealtimeControllerRoom` | 생성 응답 후 controller 세션 복구 요청 |
 | `rtdb:presence_write` | 현재 controller 접속 쓰기 완료까지, 해당 쓰기의 재시도 포함 |
-| `rtdb:disconnect_cancel` | 초기화 전 onDisconnect 예약 취소 |
+| `rtdb:disconnect_cancel` | durable 종료 의도 저장 후 옛 접속의 onDisconnect 예약 취소. close/status와 병행 |
 | `callable:game_common_operation_status` | 초기화 요청의 기존 처리 결과 조회 |
 | `callable:closeRoom` | 서버 방 종료 요청 |
 | `local:*` | 로컬 intent·identity 저장/조회 등. identity cache miss 시 하위 callable 포함 가능 |
@@ -153,3 +153,25 @@ PASS/exit 0이다. FULL은 원본과 동일한 영문 경로 사본에서 root 3
 Functions 397개 및 포맷/분석/lint를 검증했고 working-tree mutation이 없었다.
 [명령·상태·보존 근거](../planning/logs/2026-10.md#room-action-improvement-20261010).
 이 결과는 로컬 구현 검증이며 배포 후 응답 시간이나 1초대 달성의 근거가 아니다.
+
+
+## 2026-10-18 초기화 보조 정리 대기 분리
+
+현재 초기화는 옛 identity·connection 참조·종료 payload 고정 → durable close 의도와
+awaitingResult 저장 → [옛 단절 예약 취소 ∥ 서버 close/status] → 서버 확인 → 해당 신원
+정리 순서다. 최초 requested는 close를 직접 보내고 미확정 재시도는 기존 status 확인을
+사용한다. 저장 실패 시 보조 취소와 새 close를 시작하지 않는다. 이미 confirmed인 작업도
+필요한 옛 예약 취소를 시도한다. 취소는 정확한 옛 경로만 사용하고, 종료 전에 시작한
+옛 등록이 나중에 완료되면 그 경로를 다시 취소한다. 새 접속 등록/신원은 보존한다.
+
+`rtdb:disconnect_cancel`과 callable 단계는 병행하므로 각 elapsed_ms를 합산해 전체
+시간으로 해석하지 않는다. 보조 취소가 sample 종료 뒤 끝나면 완료 기록을 추가하지
+않으며, 단계 시작만 남은 것이 곧 취소 실패라는 뜻은 아니다. 전체 완료는 계속 서버
+확인 뒤 로컬 정리까지의 시간이다. 화면 연출/실제 입력 준비와 서버 내부 DB 시간을
+대신하지 않는다.
+
+계측 앱 실기기 5건에서 옛 접속 취소와 서버 종료의 병행, 옛 방 정리 및 새 방의
+두 폰 참가·유지를 확인했다. 취소 자체는 4.5~21.5ms였으므로 큰 전체 단축 효과로
+표현하지 않는다. 이전 시험과 관측 경계·조건이 달라 전체 절감량은 미확정이다.
+관련 안전 회귀와 검증 범위는 [작업 기록](../planning/tasks/NET-RECOVERY-01.md#wait-reduction-integration-20261020)을 따른다.
+준비 인스턴스 유지·주기적 예열은 비용으로 보류한 사용자 결정을 유지한다.
