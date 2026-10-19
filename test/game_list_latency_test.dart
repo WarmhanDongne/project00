@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/store/services/game_bundle_service.dart';
 import 'package:project00/platform/home/store/services/game_purchase_gateway.dart';
 
 void main() {
@@ -343,7 +344,10 @@ void main() {
 
   test('provider shares completion and allows a later refresh', () async {
     final service = _DeferredService();
-    final provider = GameProvider(service: service);
+    final provider = GameProvider(
+      service: service,
+      bundleService: _BundleService(),
+    );
     final first = provider.fetchGames();
     final second = provider.fetchGames();
     expect(identical(first, second), isTrue);
@@ -358,7 +362,10 @@ void main() {
 
   test('disposed provider does not publish a pending response', () async {
     final service = _DeferredService();
-    final provider = GameProvider(service: service);
+    final provider = GameProvider(
+      service: service,
+      bundleService: _BundleService(),
+    );
     var notifications = 0;
     provider.addListener(() => notifications++);
     final pending = provider.fetchGames();
@@ -375,6 +382,7 @@ void main() {
       final service = _ScopedService();
       final provider = GameProvider(
         service: service,
+        bundleService: _BundleService(),
         scope: GameListScope.store,
       );
       addTearDown(provider.dispose);
@@ -541,3 +549,6 @@ class _Result<T> extends Fake implements HttpsCallableResult<T> {
   @override
   final T data;
 }
+
+// These cases test the game list, not bundle I/O; an unexpected bundle call fails.
+class _BundleService extends Fake implements GameBundleService {}

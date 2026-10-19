@@ -16,6 +16,7 @@ import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/store/screens/tablet_store_screen.dart';
+import 'package:project00/platform/home/store/screens/tablet_store_game_detail.dart';
 import 'package:project00/platform/home/store/store_motion.dart';
 import 'package:project00/platform/profile/providers/profile_update_controller.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
@@ -431,16 +432,12 @@ void main() {
     expect(find.text('알림 켜짐'), findsNothing);
     expect(find.textContaining('알림 신청은 준비'), findsOneWidget);
 
-    // 상점 상세는 추후 개발이라 버튼은 보이지만 눌리지 않습니다.
+    // 현재 상세 진입은 윷놀이·번들에만 제공하며, 마피아 예고편은 열지 않습니다.
     await tester.tap(find.byKey(const ValueKey('store-book-mafia')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    final details = find.widgetWithText(MosiButton, '자세히 보기');
-    expect(details, findsOneWidget);
-    expect(tester.widget<MosiButton>(details).onPressed, isNull);
-    await tester.tap(details, warnIfMissed: false);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.widgetWithText(MosiButton, '자세히 보기'), findsNothing);
+    expect(find.byType(TabletStoreGameDetail), findsNothing);
     expect(find.byType(TabletStoreMafiaDetail), findsNothing);
     expect(find.text('선반에서 하기'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -455,6 +452,43 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  for (final id in ['yut', 'strategy_yut', 'strategy_yut_edition']) {
+    testWidgets('$id 상세는 설명만 열며 미보유 상품을 구매 처리하지 않는다', (tester) async {
+      final game = GameInfo.fromJson({
+        'id': id,
+        'name': id,
+        'storeVisible': true,
+        'enabled': false,
+        'accessType': 'paid',
+      });
+      final games = GameProvider(service: _Games())..games = [game];
+      addTearDown(games.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: TabletStoreScreen(gameProvider: games)),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(game.isOwned, isFalse);
+      expect(find.byType(TabletStoreGameDetail), findsNothing);
+      final details = find.widgetWithText(MosiButton, '자세히 보기');
+      expect(details, findsOneWidget);
+      expect(tester.widget<MosiButton>(details).onPressed, isNotNull);
+      await tester.tap(details);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(TabletStoreGameDetail), findsOneWidget);
+      expect(
+        tester
+            .widget<TabletStoreGameDetail>(find.byType(TabletStoreGameDetail))
+            .game,
+        same(game),
+      );
+      expect(game.isOwned, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+  }
 
   testWidgets('상점은 storeVisible이 true인 게임만 order 순서로 진열하고 끝에 곧 나올 게임을 둔다', (
     tester,

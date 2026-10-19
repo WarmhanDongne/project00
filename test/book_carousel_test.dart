@@ -9,6 +9,7 @@ import 'package:project00/generated/l10n/app_localizations.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
+import 'package:project00/platform/home/store/services/game_bundle_service.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
@@ -444,7 +445,10 @@ void main() {
       service: _RoomService(),
       gameService: _GameService(),
     );
-    final games = GameProvider(service: _GameService())..games = _books;
+    final games = GameProvider(
+      service: _GameService(),
+      bundleService: _BundleService(),
+    )..games = _books;
     addTearDown(provider.dispose);
     addTearDown(games.dispose);
     var selected = _books.first;
@@ -471,7 +475,15 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(MosiEmptySpine), findsNWidgets(5));
+    // The carousel now wraps the real books rather than padding empty spines.
+    // With no room, the previous player-count filter must not hide any game.
+    final carousel = tester.widget<TabletBookCarousel>(
+      find.byType(TabletBookCarousel),
+    );
+    expect(
+      carousel.games.map((game) => game.id),
+      _books.map((game) => game.id),
+    );
     await tester.tap(find.byKey(const ValueKey('shelf-spine-final_call')));
     await tester.pumpAndSettle();
     expect(selected.id, 'final_call');
@@ -602,7 +614,10 @@ void main() {
           ]
           ..groupGames = _books
           ..groupGamesLoadStatus = RoomDataLoadStatus.loaded;
-    final games = GameProvider(service: _GameService());
+    final games = GameProvider(
+      service: _GameService(),
+      bundleService: _BundleService(),
+    );
     addTearDown(provider.dispose);
     addTearDown(games.dispose);
 
@@ -652,3 +667,6 @@ class _GameService implements GameService {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+// These cases test the game list, not bundle I/O; an unexpected bundle call fails.
+class _BundleService extends Fake implements GameBundleService {}

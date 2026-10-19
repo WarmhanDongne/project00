@@ -4,8 +4,10 @@
 
 팀원 `디벨럽1`의 로컬 Firebase 선택·로비/화면 전환·윷놀이 세 경로와, 로컬
 `develop`의 시작 조회 병행·초기화 보조 취소 분리를 함께 유지한 통합 후보를 만들었다.
-겹친 코드의 충돌을 해결하고 관련 자동 검사를 통과했다. 최종 FULL은 이 결합 후보에
-대한 사용자 승인 대기다. PR 생성·원격 develop 병합은 최종 검증 후 진행한다.
+겹친 코드의 충돌을 해결하고 관련 자동 검사를 통과했다. 첫 FULL은 아래 테스트 준비·
+기대값 불일치 12건으로 앱 단계에서 FAIL/exit1이었다. 제품을 바꾸지 않고 회귀 테스트를
+보완한 뒤 관련 79개와 분석이 PASS/exit0이다. 새 후보 FULL은 재승인 대기이며 PR 생성·
+원격 develop 병합은 최종 통과 뒤 진행한다.
 
 ## 비교 기준
 
@@ -55,7 +57,10 @@ Windows Project CLI는 `powershell.exe -NoProfile -NonInteractive -OutputFormat 
 | `tool/invoke_mosigame.ps1 test auth --json` | PASS, Flutter 80·Functions 38·mutation 없음 | 0 |
 | `npm --prefix functions run lint` | PASS | 0 |
 | 패키지 경계 회귀/검사·요청 retry 계약 검사 | PASS, 경계 위반 0 | 0 |
-| `validate --full` | 이번 결합 후보의 명시적 승인 대기, 미실행 | — |
+| `tool/invoke_mosigame.ps1 validate --full --json` (16480f4) | FAIL, 앱 테스트 12건. 포맷·분석·상태 보존 PASS, 뒤 패키지/Functions 미실행 | 1 |
+| 보완한 책장·목록·글자 맞춤·상점·FULL 순서 5파일 테스트 | PASS, 79개 | 0 |
+| 보완 테스트 5파일 `flutter analyze --no-pub` | PASS, 문제 0 | 0 |
+| 보완 후보 `validate --full` | 새 후보의 명시적 재승인 대기 | — |
 
 관련 테스트 수는 실행별 수이며 서로 중복되므로 합산하지 않는다. 최초 Prepare 전 환경
 점검은 의존성 미준비(exit3)였고 Prepare 뒤 READY가 됐다. 최초 경계 검사와 정적 분석은
@@ -78,3 +83,24 @@ exit0을 확인했다. 검증 명령 실행 중 tracked/unignored 파일 변화�
 [초기화 시간 해석](../operations/ROOM_ACTION_LATENCY.md) ·
 [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md#wait-reduction-integration-20261020) ·
 [YUT-GAMEPLAY-01](tasks/YUT-GAMEPLAY-01.md)
+
+## 첫 FULL 실패와 회귀 테스트 보완
+
+승인 후보16480f4의 FULL은 포맷·분석 뒤 앱 테스트12건에서 중단됐다(exit1,
+195.62초). 검증 중 파일 변화는 없었다. 뒤 패키지·Functions를 통과로 집계하지 않는다.
+
+- 번들 서비스가 새로 생성되는 세 테스트 파일에 미사용 bundle I/O용 Fake를 주입했다.
+  실제 Firebase 접근 없이 기존 게임 목록·dispose·화면 검증을 유지한다. 예상하지 않은
+  번들 호출은 Fake에서 실패한다. 제품의 Firebase 초기화 순서는 바꾸지 않았다.
+- 윷놀이를 FULL에 포함하면서 누락한 순서 회귀의 실행 수/npm 위치를 패키지 개수에
+  맞췄다. 패키지 이름/순서는 별도 manifest 회귀가 고정하고 정확한 호출 인수도 유지한다.
+- 팀원 UI에서 빈 책등 대신 실제 책 순환, 상점4권씩 페이지 이동, 윷놀이/번들에만 상세
+  진입을 제공하는 것을 대조했다. 해당 UI로 실제 이동해 같은 모든 게임·언어·화면 크기를
+  검사한다. 마피아 예고편·가짜 결제/음악 완료 금지를 유지하며 윷놀이3종의 상세 진입과
+  미보유 상태 보존을 양성 회귀로 추가했다.
+
+중간 재검사에서 Firebase 오류가 해결된 뒤 페이지2 미탐색·옛 빈 책등 기대가 드러났다.
+이를 테스트 절차에 반영한 뒤 관련79개와 보완5파일 분석이 PASS/exit0이다. 테스트를
+삭제/skip하거나 문구 잘림 기준·폰트 크기·언어/기기 크기를 완화하지 않았다. 첫 FULL
+이후 제품·설정·package manifest의 내용은16480f4와 같고 변경은 테스트·검증 문서다.
+새 후보의 FULL은 명시적 재승인을 받은 뒤 수행한다. 아직 PR·원격 병합은 하지 않았다.

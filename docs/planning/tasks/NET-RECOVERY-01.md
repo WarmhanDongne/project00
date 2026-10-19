@@ -338,3 +338,11 @@ Functions lint/test·작업 트리 보존이 모두 통과했다.
 양쪽 시작 전환/로컬 Firebase/취소 병행을 보존하고 관련 session/auth 및 직접 회귀가
 PASS/exit0이다. 이번 결합의 최종 FULL은 승인 대기다.
 [브랜치 기준·수정·검증·유지한 한계](../DEVELOP1_WAIT_REDUCTION_INTEGRATION_20261020.md).
+
+
+### 10/20 결합 후보 첫 FULL·회귀 테스트 보완
+
+사용자 승인16480f4의 FULL은 앱 테스트12건에서 FAIL/exit1이다. 번들 의존성 주입과
+현재 팀원 UI/패키지 수에 맞는 테스트 절차를 보완했으며 제품은 그대로다. 관련79개·
+보완5파일 분석은 PASS/exit0이다. 새 후보 FULL은 skill의 실패 후 재승인 절차를 따른다.
+[실패·보완 근거](../DEVELOP1_WAIT_REDUCTION_INTEGRATION_20261020.md#첫-full-실패와-회귀-테스트-보완).
