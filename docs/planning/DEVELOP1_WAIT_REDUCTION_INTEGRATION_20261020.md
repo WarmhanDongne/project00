@@ -5,9 +5,11 @@
 팀원 `디벨럽1`의 로컬 Firebase 선택·로비/화면 전환·윷놀이 세 경로와, 로컬
 `develop`의 시작 조회 병행·초기화 보조 취소 분리를 함께 유지한 통합 후보를 만들었다.
 겹친 코드의 충돌을 해결하고 관련 자동 검사를 통과했다. 첫 FULL은 아래 테스트 준비·
-기대값 불일치 12건으로 앱 단계에서 FAIL/exit1이었다. 제품을 바꾸지 않고 회귀 테스트를
-보완한 뒤 관련 79개와 분석이 PASS/exit0이다. 새 후보 FULL은 재승인 대기이며 PR 생성·
-원격 develop 병합은 최종 통과 뒤 진행한다.
+기대값 불일치12건을 보완한 뒤 관련79개·분석이 PASS다. 사용자 재승인0d48bfb의
+FULL은 앱·전 게임·lint를 포함한12단계 PASS, 서버 목록 기대2건으로 마지막1단계
+FAIL/exit1이었다. 이 두 테스트도 보완한 뒤 서버512개가 PASS/exit0이다. 수정 후
+canonical FULL은 미실행이다. 최신 요청에 따라 검증 상태를 명시한 Draft PR만 생성하고
+병합은 하지 않는다.
 
 ## 비교 기준
 
@@ -60,7 +62,9 @@ Windows Project CLI는 `powershell.exe -NoProfile -NonInteractive -OutputFormat 
 | `tool/invoke_mosigame.ps1 validate --full --json` (16480f4) | FAIL, 앱 테스트 12건. 포맷·분석·상태 보존 PASS, 뒤 패키지/Functions 미실행 | 1 |
 | 보완한 책장·목록·글자 맞춤·상점·FULL 순서 5파일 테스트 | PASS, 79개 | 0 |
 | 보완 테스트 5파일 `flutter analyze --no-pub` | PASS, 문제 0 | 0 |
-| 보완 후보 `validate --full` | 새 후보의 명시적 재승인 대기 | — |
+| 재승인 `tool/invoke_mosigame.ps1 validate --full --json` (0d48bfb) | 12단계 PASS, Functions 테스트2건 때문에 마지막1단계 FAIL, 549.46초, mutation 없음 | 1 |
+| 카탈로그 기대 목록 보완 후 `npm --prefix functions test` | TypeScript build·서버512개 PASS, mutation 없음 | 0 |
+| 카탈로그 테스트 보완 후 canonical FULL | 미실행. Draft PR에서 CI/후속 최종 검증 확인 | — |
 
 관련 테스트 수는 실행별 수이며 서로 중복되므로 합산하지 않는다. 최초 Prepare 전 환경
 점검은 의존성 미준비(exit3)였고 Prepare 뒤 READY가 됐다. 최초 경계 검사와 정적 분석은
@@ -103,4 +107,25 @@ exit0을 확인했다. 검증 명령 실행 중 tracked/unignored 파일 변화�
 이를 테스트 절차에 반영한 뒤 관련79개와 보완5파일 분석이 PASS/exit0이다. 테스트를
 삭제/skip하거나 문구 잘림 기준·폰트 크기·언어/기기 크기를 완화하지 않았다. 첫 FULL
 이후 제품·설정·package manifest의 내용은16480f4와 같고 변경은 테스트·검증 문서다.
-새 후보의 FULL은 명시적 재승인을 받은 뒤 수행한다. 아직 PR·원격 병합은 하지 않았다.
+후속 FULL과 서버 검사, PR 전용 범위는 아래 기록을 따른다.
+
+## 재승인 FULL 결과·서버 후속 검사·Draft PR 범위
+
+사용자 “다시 실행하고 pr 생성만 해” 지시로0d48bfb에서 guarded FULL을 한 번
+재실행했다. 549.46초, exit1이며 앱·공용·다섯 게임 패키지·Functions lint·작업 트리
+보존 등12단계는 PASS다. 서버512개 중510개 PASS,2개 FAIL로 Functions 단계만 실패했다.
+원인은 카탈로그 재작성 단위 테스트가 신규 윷놀이3종을 제외한 옛4종 목록을 기대한 것이다.
+
+`functions/test/rebuild-game-catalog.test.mjs`의 정확한 대상 목록을7종으로 보완하고
+윷놀이3종의 `enabled:false`·`accessType:paid` 조건도 검사했다. dry-run 무변경·기존 자료
+백업·최소 스키마·하위 collection 보호 검증은 유지한다. 이 테스트는 메모리 Fake DB를
+사용하며 실제 재작성 CLI·운영 접속·배포는 실행하지 않았다. 제품/카탈로그 정의는 그대로다.
+
+실패한 서버 단계만 `npm --prefix functions test`로 재실행해 TypeScript build와512개
+모두 PASS/exit0, 작업 트리 보존을 확인했다. 수정 후 canonical FULL을 다시 실행하거나
+그 결과를 PASS로 바꾸지 않는다. 이 범위와 로컬 FULL 실패 이력을 PR에 명시한다.
+
+최신 직접 지시에 따라 통합 브랜치만 push하고 **develop 대상 Draft PR만 생성**한다.
+원격/로컬 develop 병합·직접 push·자동 병합은 하지 않는다. 최종 FULL/CI 확인 뒤
+review-ready 및 병합 여부는 후속 판단이다. 앞선 실기기·혼합 버전·신규 게임 출시
+보류 조건도 유지한다. 로그·원본과 기존 브랜치는 보존한다.

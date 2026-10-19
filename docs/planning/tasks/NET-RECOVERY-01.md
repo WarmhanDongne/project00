@@ -346,3 +346,13 @@ PASS/exit0이다. 이번 결합의 최종 FULL은 승인 대기다.
 현재 팀원 UI/패키지 수에 맞는 테스트 절차를 보완했으며 제품은 그대로다. 관련79개·
 보완5파일 분석은 PASS/exit0이다. 새 후보 FULL은 skill의 실패 후 재승인 절차를 따른다.
 [실패·보완 근거](../DEVELOP1_WAIT_REDUCTION_INTEGRATION_20261020.md#첫-full-실패와-회귀-테스트-보완).
+
+
+### 10/20 FULL 재승인 결과·Draft PR 전용
+
+최신 사용자 지시는 “다시 실행하고 pr 생성만 해”다.0d48bfb의 FULL 재실행은
+12단계 PASS/Functions 마지막1단계 FAIL/exit1(549.46초)이었다. 서버 카탈로그의
+옛4종 기대 목록2건만7종으로 보완한 뒤 `npm --prefix functions test`의 build·512개가
+모두 PASS/exit0이다. 제품은 그대로고 수정 후 canonical FULL은 미실행이다.
+검증 상태를 명시한 develop 대상 Draft PR만 생성하며 병합·자동 병합은 하지 않는다.
+[정확한 검증 범위](../DEVELOP1_WAIT_REDUCTION_INTEGRATION_20261020.md).

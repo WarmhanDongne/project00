@@ -45,7 +45,17 @@ test("dry-run reports the replacement without changing Firestore", async () => {
   const result = await rebuildGameCatalog(db);
   assert.equal(result.status, "dry-run");
   assert.deepEqual(result.removedIds, ["liars_poker", "extra"]);
-  assert.deepEqual(result.documentIds, ["liars", "final_call", "mafia", "holdem"]);
+  assert.deepEqual(result.documentIds, [
+    "liars", "final_call", "mafia", "holdem",
+    "yut", "strategy_yut", "strategy_yut_edition",
+  ]);
+  for (const id of ["yut", "strategy_yut", "strategy_yut_edition"]) {
+    assert.deepEqual(result.availability[id], {
+      enabled: false,
+      accessType: "paid",
+      storeVisible: true,
+    });
+  }
   assert.deepEqual(result.availability.mafia, {
     enabled: false,
     accessType: "paid",
@@ -68,9 +78,17 @@ test("apply backs up, removes old documents, and writes only the minimal schema"
   assert.equal(result.status, "rebuilt");
   assert.deepEqual(
     [...db.records.keys()].sort(),
-    ["games/final_call", "games/holdem", "games/liars", "games/mafia"],
+    [
+      "games/final_call", "games/holdem", "games/liars", "games/mafia",
+      "games/strategy_yut", "games/strategy_yut_edition", "games/yut",
+    ],
   );
   assert.equal(backup.documents.length, 3);
+  for (const id of ["yut", "strategy_yut", "strategy_yut_edition"]) {
+    assert.deepEqual(db.records.get(`games/${id}`), minimalGameCatalog[id]);
+    assert.equal(db.records.get(`games/${id}`).enabled, false);
+    assert.equal(db.records.get(`games/${id}`).accessType, "paid");
+  }
   assert.deepEqual(db.records.get("games/liars"), minimalGameCatalog.liars);
   assert.equal(db.records.get("games/mafia").enabled, false);
   assert.equal(db.records.get("games/final_call").unnecessary, undefined);
