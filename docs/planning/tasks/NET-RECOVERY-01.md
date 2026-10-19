@@ -316,3 +316,17 @@ codex/wait-reduction의 918228f다. APK·로그·영상은 Git 외 별도 로컬
 검증 중 제품 코드를 바꾸지 않았고 이후 갱신은 이 결과를 남기는 작업 문서뿐이다.
 최종 FULL은 이 후보에 대한 명시적 승인 대기이며 아직 실행하지 않았다. develop 병합·
 push·배포는 하지 않았다. 원 수집·기록 브랜치의 미커밋 문서·이전 후보는 보존했다.
+
+
+### 10/20 최종 FULL 승인·PASS
+
+사용자가 “FULL 검증 후 병합 진행”을 승인했다. 최종 최소 후보6e07361에서
+`powershell.exe -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -File tool/invoke_mosigame.ps1 validate --full --json`을 실행해
+FULL12단계 PASS/exit0, 약 360.05초를 확인했다. 실행 전후 HEAD·branch·
+staged/unstaged/untracked 상태가 같았다. 포맷·정적 분석·루트 앱·공용과 네 게임 패키지·
+Functions lint/test·작업 트리 보존이 모두 통과했다.
+
+검증 뒤 변경은 이 결과를 남기는 작업 문서3개뿐이며 제품·테스트·환경/설정 파일은
+검증한 후보와 같다. 원 수집·기록 브랜치의 미커밋 문서·이전 후보도 보존했다.
+비계측 앱 실기기 확인은 방 생성·추방 개선 후로 이관하며 G1 생략·V1 보류를 유지한다.
+병합은 최신 develop 재확인 후 진행하고, 원격 push·배포는 별도다.
