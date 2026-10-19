@@ -1,7 +1,7 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:project00/platform/localization/platform_localizations.dart';
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/core/time/server_clock.dart';
@@ -303,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (!mounted) return;
       setState(() => _step = RegisterStep.settingPassword);
     } on AuthServiceException catch (error) {
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
       final message = EmailLinkErrorMessage.from(error);
       widget.onEmailLinkHandled?.call(message);
       if (!mounted) return;
@@ -379,7 +379,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         });
         _startCooldownTicker();
       }
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
     } on AuthServiceException catch (error) {
       if (mounted) {
         setState(() {
@@ -448,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         _step != RegisterStep.terms &&
         _step != RegisterStep.passwordAccount) {
       await _pendingEmailStore.clear();
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
     }
     if (!mounted) return;
     final onCancel = widget.onCancel;

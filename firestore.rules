@@ -18,6 +18,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 상점의 게임 묶음 진열 카탈로그입니다. 구성과 공개 여부는 관리자가
+    // 등록하고 앱은 인증된 사용자에게 읽기만 허용합니다.
+    match /gameBundles/{bundleId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // 사용자 프로필과 보유 게임(`ownedGames`)입니다. 민감 필드가 같은 문서에
     // 있으므로 본인만 읽습니다. 그룹 보유 게임은 인증된 callable이 방 참가자를
     // 검증한 뒤 필요한 ID만 반환합니다.

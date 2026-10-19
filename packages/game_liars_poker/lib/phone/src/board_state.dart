@@ -45,7 +45,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
     unawaited(
       AppOrientation.applyPhoneGame(PhoneGameOrientation.portraitAndLandscape),
     );
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid == null) {
       _initializationError = GameFlowCopy.authenticationRequired;
       return;
@@ -335,7 +335,7 @@ class _LiarsPokerPhoneGameState extends ConsumerState<LiarsPokerPhoneGame> {
           ),
           interruption: GameInterruptionRecovery(
             state: controller.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
             isSubmitting: controller.commandInFlight,
             failureMessage: controller.errorMessage,
 

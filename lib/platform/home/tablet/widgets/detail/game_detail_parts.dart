@@ -15,6 +15,9 @@ Widget? buildGameParts(String gameId, {int? playerCount}) => switch (gameId) {
   'final_call' => const _FinalParts(),
   'mafia' => const _MafiaParts(),
   'holdem' => const _HoldemParts(),
+  'yut' => const _YutParts(strategy: false),
+  'strategy_yut' => const _YutParts(strategy: true),
+  'strategy_yut_edition' => const _YutParts(strategy: true, edition: true),
   _ => null,
 };
 
@@ -1017,3 +1020,247 @@ Widget _puckGlow(Widget puck) => DecoratedBox(
   ),
   child: puck,
 );
+
+//=======================윷놀이 3종 구성품 판==============================
+// 시안 `게임 상세 · 구성품`을 옮겼습니다: 윷판 1개, 얼굴이 들어간 윷가락 4개,
+// 팀 말 더미 둘. 일반판은 네 사람의 말 네 묶음, 에디션은 홀로그램 부품입니다.
+class _YutParts extends StatelessWidget {
+  const _YutParts({required this.strategy, this.edition = false});
+
+  final bool strategy;
+  final bool edition;
+
+  static const _characters = ['frog', 'cat', 'crab', 'whale'];
+
+  @override
+  Widget build(BuildContext context) {
+    final board = Container(
+      width: 240,
+      height: 240,
+      decoration: BoxDecoration(
+        color: edition ? yut.YutColors.night : const Color(0xFFC98A4B),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: edition ? yut.YutColors.lilac : MosiColors.ink,
+          width: 3,
+        ),
+        boxShadow: const [BoxShadow(color: _deepest, offset: Offset(5, 5))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        // 일반·전략 윷놀이는 게임과 같은 오크 판(E안), 에디션은 홀로그램 판입니다.
+        child: edition
+            ? Image(image: yut.YutImages.boardHolo, fit: BoxFit.fill)
+            : const yut.YutOakBoard(side: 234),
+      ),
+    );
+    final sticks = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final (i, angle) in [-8.0, -3.0, 3.0, 8.0].indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Transform.rotate(
+              angle: angle * math.pi / 180,
+              child: yut.YutStick(
+                // 일반판은 한 사람이 던지는 윷 네 개, 전략판은 사람마다 하나입니다.
+                front: strategy || i != 2,
+                width: 46,
+                edition: edition,
+                characterId: strategy ? _characters[i] : _characters.first,
+                marked: !strategy && i == 0,
+              ),
+            ),
+          ),
+      ],
+    );
+    final teams = strategy
+        ? [yut.YutTeam.blue, yut.YutTeam.white]
+        : [
+            yut.YutTeam.east,
+            yut.YutTeam.south,
+            yut.YutTeam.west,
+            yut.YutTeam.north,
+          ];
+    final pieceSize = strategy ? 66.0 : 46.0;
+    final stacks = SizedBox(
+      width: strategy ? 186 : 210,
+      height: strategy ? 128 : 112,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final (t, team) in teams.indexed)
+            for (final (k, dx) in [10.0, 12.0, 6.0, 16.0].indexed)
+              Positioned(
+                left: (strategy ? 98.0 : 52.0) * t + dx * (strategy ? 1 : .6),
+                bottom: k * (strategy ? 14.0 : 11.0),
+                child: yut.YutPieceToken(
+                  team: team,
+                  label: '',
+                  size: pieceSize,
+                  edition: edition,
+                  characterId: strategy ? null : _characters[t],
+                ),
+              ),
+        ],
+      ),
+    );
+    final piecesCount = strategy
+        ? GameLocale.select(
+            ko: '청 4 · 백 4',
+            en: 'Blue 4 · White 4',
+            zhHans: '青 4 · 白 4',
+            zhHant: '青 4 · 白 4',
+          )
+        : GameLocale.select(
+            ko: '4색 · 4개씩',
+            en: '4 colors · 4 each',
+            zhHans: '4色 · 各4枚',
+            zhHant: '4色 · 各4枚',
+          );
+    return _PartsLayout(
+      parts: [
+        _Part(
+          label: GameLocale.select(
+            ko: '윷판',
+            en: 'Board',
+            zhHans: '柶盘',
+            zhHant: '柶盤',
+          ),
+          count: GameLocale.select(
+            ko: '1개',
+            en: '1',
+            zhHans: '1个',
+            zhHant: '1個',
+          ),
+          flex: 13,
+          child: _Float(child: board),
+        ),
+        _Part(
+          label: GameLocale.select(
+            ko: '윷가락',
+            en: 'Sticks',
+            zhHans: '柶',
+            zhHant: '柶',
+          ),
+          count: strategy
+              ? GameLocale.select(
+                  ko: '4개 · 1인 1개',
+                  en: '4 · 1 each',
+                  zhHans: '4根 · 每人1根',
+                  zhHant: '4根 · 每人1根',
+                )
+              : GameLocale.select(
+                  ko: '4개',
+                  en: '4 sticks',
+                  zhHans: '4根',
+                  zhHant: '4根',
+                ),
+          flex: 10,
+          child: _Float(delay: .3, child: sticks),
+        ),
+        _Part(
+          label: GameLocale.select(
+            ko: '말',
+            en: 'Pieces',
+            zhHans: '棋子',
+            zhHant: '棋子',
+          ),
+          count: piecesCount,
+          flex: 10,
+          child: _Float(delay: .6, child: stacks),
+        ),
+      ],
+      rules: strategy
+          ? [
+              _Rule(
+                GameLocale.select(
+                  ko: '앞·뒤 고르기',
+                  en: 'Pick a side',
+                  zhHans: '选正反',
+                  zhHant: '選正反',
+                ),
+                GameLocale.select(
+                  ko: '네 명이 각자 윷 하나의 앞이나 뒤를 골라요. 공개 전까지는 서로 볼 수 없어요.',
+                  en: 'All four secretly pick front or back on one stick.',
+                  zhHans: '四人各自秘密选择一根柶的正面或反面。',
+                  zhHant: '四人各自秘密選擇一根柶的正面或反面。',
+                ),
+              ),
+              _Rule(
+                GameLocale.select(
+                  ko: '동시 공개',
+                  en: 'Reveal',
+                  zhHans: '同时公开',
+                  zhHant: '同時公開',
+                ),
+                GameLocale.select(
+                  ko: '앞면 개수로 도·개·걸·윷·모가 정해져요. 상대 차례에도 막을 수 있어요.',
+                  en: 'Fronts decide the throw. You can block the other team too.',
+                  zhHans: '正面数量决定结果，也能在对方回合阻挡。',
+                  zhHant: '正面數量決定結果，也能在對方回合阻擋。',
+                ),
+              ),
+              _Rule(
+                GameLocale.select(
+                  ko: '말 4개 완주',
+                  en: 'Bring 4 home',
+                  zhHans: '4子到家',
+                  zhHant: '4子到家',
+                ),
+                GameLocale.select(
+                  ko: '팀 말 4개를 먼저 모두 내보내는 팀이 이겨요.',
+                  en: 'The first team to bring all four pieces home wins.',
+                  zhHans: '先让本队4枚棋子全部回家的一队获胜。',
+                  zhHant: '先讓本隊4枚棋子全部回家的一隊獲勝。',
+                ),
+              ),
+            ]
+          : [
+              _Rule(
+                GameLocale.select(
+                  ko: '흔들어 던지기',
+                  en: 'Shake',
+                  zhHans: '摇动投掷',
+                  zhHant: '搖動投擲',
+                ),
+                GameLocale.select(
+                  ko: '내 차례에 휴대폰을 흔들면 윷 네 개가 태블릿으로 던져져요.',
+                  en: 'Shake your phone to throw four sticks onto the tablet.',
+                  zhHans: '轮到自己时摇动手机，四根柶会掷到平板上。',
+                  zhHant: '輪到自己時搖動手機，四根柶會擲到平板上。',
+                ),
+              ),
+              _Rule(
+                GameLocale.select(
+                  ko: '한 번 더',
+                  en: 'Again',
+                  zhHans: '再来一次',
+                  zhHant: '再來一次',
+                ),
+                GameLocale.select(
+                  ko: '윷·모가 나오거나 상대 말을 잡으면 한 번 더 던져요.',
+                  en: 'Yut, Mo or a capture earns another throw.',
+                  zhHans: '掷出柶、模或吃子可再掷一次。',
+                  zhHant: '擲出柶、模或吃子可再擲一次。',
+                ),
+              ),
+              _Rule(
+                GameLocale.select(
+                  ko: '말 4개 완주',
+                  en: 'Bring 4 home',
+                  zhHans: '4子到家',
+                  zhHant: '4子到家',
+                ),
+                GameLocale.select(
+                  ko: '내 말 4개를 먼저 모두 내보내면 이겨요.',
+                  en: 'Bring all four of your pieces home first to win.',
+                  zhHans: '先让自己的4枚棋子全部回家即获胜。',
+                  zhHant: '先讓自己的4枚棋子全部回家即獲勝。',
+                ),
+              ),
+            ],
+    );
+  }
+}

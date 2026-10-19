@@ -60,6 +60,7 @@ class PlayerLayoutEditor extends StatefulWidget {
     this.tableImage,
     this.chairImage,
     this.seatTheme = MosiSeatTheme.fallback,
+    this.zoomHandoff = true,
   }) : assert(
          initialLayout.playerCount >= 2 && initialLayout.playerCount <= 12,
          '지원하는 플레이어 수는 2~12명입니다.',
@@ -69,6 +70,10 @@ class PlayerLayoutEditor extends StatefulWidget {
   final PlayerLayoutPrepared onPrepare;
   final PlayerLayoutCompleted onComplete;
   final PlayerLayoutCancelled onCancel;
+
+  /// false면 착석 연출 뒤 테이블 확대(줌) 없이 바로 [onComplete]를 부릅니다.
+  /// 게임이 자기 입장 연출(예: 윷놀이 창호문)을 따로 쓸 때 끕니다.
+  final bool zoomHandoff;
 
   /// 설정 완료 연출에서 중앙 테이블에 쓰는 바탕색입니다. [tableBackgroundImage]가
   /// 없거나 아직 안 그려졌을 때를 대비한 입장할 게임의 배경 이미지와 같은 톤입니다.
@@ -211,8 +216,8 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     _zoomController.dispose();
     if (!_handedOffToGame) {
       //================상태바 표시=================
-      // 자리 배치를 취소한 경우에는 게임으로 넘기지 않았으므로 플랫폼 상태바를 복원합니다.
-      unawaited(AppSystemUi.showPlatformSystemBars());
+      // 태블릿 로비도 같은 전체 화면 영역을 쓰므로 시스템 바를 다시 켜지 않습니다.
+      unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     }
     super.dispose();
   }
@@ -407,7 +412,9 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
       // 4) 서버 상태와 배경이 준비된 뒤에만 줌인하고, 완료 즉시 게임 화면으로
       // 교체합니다. 줌 완료 프레임에서는 네트워크 작업을 절대 기다리지 않습니다.
-      await _zoomController.forward(from: 0).orCancel;
+      if (widget.zoomHandoff) {
+        await _zoomController.forward(from: 0).orCancel;
+      }
       if (!mounted) return;
       handedOffToGame = true;
       _handedOffToGame = true;
@@ -510,6 +517,8 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                         ),
                       ),
                     ),
+                    if (theme.teams != null && _playerCount == 4)
+                      _buildTeamBackground(boardRect, theme.teams!),
                     _buildWorldBackground(viewport, boardRect, t),
                     SafeArea(
                       child: Column(
@@ -599,8 +608,9 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
                 fontSize: 15,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 leading: const Icon(Icons.chevron_left_rounded),
-                loading: _isCancelling,
-                onPressed: () => unawaited(_cancel()),
+                // 복귀 route를 즉시 역재생하므로 회전 로딩으로 버튼 폭과
+                // 내용이 바뀌지 않게 하고, 중복 입력만 막습니다.
+                onPressed: _isCancelling ? null : () => unawaited(_cancel()),
               ),
             ),
             Align(
@@ -661,17 +671,24 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   Widget _buildBoard(Size boardSize, double t, double uiOpacity) {
     final theme = widget.seatTheme;
     final metrics = _metricsFor(boardSize);
-    _slotPositions = seatingCardTopLeftPositions(
+    final positions = seatingCardTopLeftPositions(
       playerCount: _playerCount,
       boardSize: boardSize,
       cardSize: metrics.size,
     );
+    // 서버의 전략 윷 팀 규칙은 짝수 좌석=청군, 홀수 좌석=백군입니다.
+    // 일반 4인 원형 자리의 아래 두 위치만 바꿔 각 팀을 좌우에 모읍니다.
+    _slotPositions = theme.teams != null && _playerCount == 4
+        ? [positions[0], positions[1], positions[3], positions[2]]
+        : positions;
     final chairSize = _chairSizeFor(boardSize);
     // 배경과 같은 테이블 중심·배율로 확대해 하나의 화면으로 이어집니다.
     return Transform.scale(
       scale: _zoomScaleFor(boardSize),
       child: Stack(
         children: [
+          if (theme.teams != null && _playerCount == 4)
+            ..._buildTeamHeadings(boardSize, metrics, theme.teams!, uiOpacity),
           _buildFlatTable(boardSize: boardSize, t: t),
           _buildTable(boardSize: boardSize, t: t),
           _buildTabletMarker(boardSize: boardSize, metrics: metrics, t: t),
@@ -721,6 +738,113 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     );
   }
 
+  Widget _buildTeamBackground(Rect boardRect, MosiSeatTeams teams) {
+    return Positioned.fromRect(
+      rect: boardRect,
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      teams.left.zone,
+                      teams.left.zone,
+                      teams.divider,
+                      teams.divider,
+                      teams.right.zone,
+                      teams.right.zone,
+                    ],
+                    stops: const [0, 0.4965, 0.4965, 0.5035, 0.5035, 1],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              top: 48,
+              bottom: 100,
+              width: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: teams.left.accent,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 18,
+              top: 48,
+              bottom: 100,
+              width: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: teams.right.accent,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildTeamHeadings(
+    Size boardSize,
+    _SeatCardMetrics metrics,
+    MosiSeatTeams teams,
+    double opacity,
+  ) {
+    final width = math.min(260.0, boardSize.width * 0.38);
+    final subtitle = GameLocale.select(
+      ko: '같은 진영 · 2명',
+      en: 'SAME SIDE · 2 PLAYERS',
+      zhHans: '同一阵营 · 2人',
+      zhHant: '同一陣營 · 2人',
+    );
+    Widget heading(int slotIndex, MosiSeatTeamSide side) {
+      final center = _slotCenterPixel(slotIndex, boardSize, metrics.size);
+      return Positioned(
+        left: center.dx - width / 2,
+        top: 12,
+        width: width,
+        child: IgnorePointer(
+          child: Opacity(
+            opacity: opacity,
+            child: Column(
+              children: [
+                Text(
+                  '◆ ${side.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: MosiFonts.sans(
+                    color: side.accent,
+                    size: (boardSize.width / 1280 * 27).clamp(18.0, 27.0),
+                    weight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: MosiFonts.sans(
+                    color: const Color(0xFFC1BFDB),
+                    size: (boardSize.width / 1280 * 12).clamp(10.0, 12.0),
+                    weight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return [heading(0, teams.left), heading(1, teams.right)];
+  }
+
   Widget _buildPlayer({
     required int playerIndex,
     required Size boardSize,
@@ -730,6 +854,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     final player = widget.initialLayout.players[playerIndex];
     final slotIndex = _playerSlotIndexes[playerIndex];
     final isDragging = _draggingPlayerIndex == playerIndex;
+    final teams = widget.seatTheme.teams;
+    final teamSide = teams != null && _playerCount == 4
+        ? (slotIndex.isEven ? teams.left : teams.right)
+        : null;
 
     final child = GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -748,6 +876,8 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       child: _SeatCard(
         player: player,
         seatNumber: slotIndex + 1,
+        teamSide: teamSide,
+        teamSeatNumber: slotIndex ~/ 2 + 1,
         metrics: metrics,
         theme: widget.seatTheme,
         isDragging: isDragging,
@@ -1119,6 +1249,8 @@ class _SeatCard extends StatefulWidget {
   const _SeatCard({
     required this.player,
     required this.seatNumber,
+    required this.teamSide,
+    required this.teamSeatNumber,
     required this.metrics,
     required this.theme,
     required this.isDragging,
@@ -1131,6 +1263,8 @@ class _SeatCard extends StatefulWidget {
 
   final PlayerLayoutPlayer player;
   final int seatNumber;
+  final MosiSeatTeamSide? teamSide;
+  final int teamSeatNumber;
   final _SeatCardMetrics metrics;
   final MosiSeatTheme theme;
   final bool isDragging;
@@ -1190,16 +1324,26 @@ class _SeatCardState extends State<_SeatCard> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final metrics = widget.metrics;
     final theme = widget.theme;
+    final teamSide = widget.teamSide;
     final highlighted = widget.isSelected || widget.isDragging;
     return Semantics(
       button: true,
       selected: widget.isSelected,
-      label: GameLocale.select(
-        ko: '${widget.seatNumber}번 자리 ${widget.player.nickname}',
-        en: 'Seat ${widget.seatNumber}, ${widget.player.nickname}',
-        zhHans: '${widget.seatNumber} 号座位，${widget.player.nickname}',
-        zhHant: '${widget.seatNumber} 號座位，${widget.player.nickname}',
-      ),
+      label: teamSide == null
+          ? GameLocale.select(
+              ko: '${widget.seatNumber}번 자리 ${widget.player.nickname}',
+              en: 'Seat ${widget.seatNumber}, ${widget.player.nickname}',
+              zhHans: '${widget.seatNumber} 号座位，${widget.player.nickname}',
+              zhHant: '${widget.seatNumber} 號座位，${widget.player.nickname}',
+            )
+          : GameLocale.select(
+              ko: '${teamSide.name} ${widget.teamSeatNumber}번 자리 ${widget.player.nickname}',
+              en: '${teamSide.name}, seat ${widget.teamSeatNumber}, ${widget.player.nickname}',
+              zhHans:
+                  '${teamSide.name} ${widget.teamSeatNumber} 号座位，${widget.player.nickname}',
+              zhHant:
+                  '${teamSide.name} ${widget.teamSeatNumber} 號座位，${widget.player.nickname}',
+            ),
       excludeSemantics: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.grab,
@@ -1235,42 +1379,95 @@ class _SeatCardState extends State<_SeatCard> with TickerProviderStateMixin {
             child: AnimatedScale(
               scale: widget.isDragging ? 1.06 : 1,
               duration: const Duration(milliseconds: 120),
-              child: Container(
-                width: metrics.size.width,
-                height: metrics.size.height,
-                padding: EdgeInsets.symmetric(horizontal: metrics.padding),
-                decoration: BoxDecoration(
-                  color: highlighted ? theme.selected : MosiColors.white,
-                  borderRadius: BorderRadius.circular(metrics.radius),
-                  border: Border.all(color: MosiColors.ink, width: 3),
-                  boxShadow: [
-                    if (highlighted)
-                      BoxShadow(color: theme.ring, spreadRadius: 5),
-                    BoxShadow(color: theme.deep, offset: const Offset(6, 6)),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    MosiFace(
-                      characterId: widget.player.characterId,
-                      size: metrics.avatar,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: metrics.size.width,
+                    height: metrics.size.height,
+                    padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+                    decoration: BoxDecoration(
+                      color: highlighted ? theme.selected : MosiColors.white,
+                      borderRadius: BorderRadius.circular(metrics.radius),
+                      border: Border.all(color: MosiColors.ink, width: 3),
+                      boxShadow: [
+                        if (highlighted)
+                          BoxShadow(color: theme.ring, spreadRadius: 5),
+                        BoxShadow(
+                          color: theme.deep,
+                          offset: const Offset(6, 6),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: metrics.gap),
-                    Expanded(
-                      child: Text(
-                        widget.player.nickname,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: MosiFonts.sans(
-                          color: MosiColors.navy,
-                          size: metrics.nicknameSize,
-                          weight: FontWeight.w700,
-                          letterSpacing: -0.5,
+                    child: Row(
+                      children: [
+                        MosiFace(
+                          characterId: widget.player.characterId,
+                          size: metrics.avatar,
+                        ),
+                        SizedBox(width: metrics.gap),
+                        Expanded(
+                          child: Text(
+                            widget.player.nickname,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MosiFonts.sans(
+                              color: MosiColors.navy,
+                              size: metrics.nicknameSize,
+                              weight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (teamSide != null) ...[
+                    Positioned(
+                      left: 4,
+                      right: 4,
+                      bottom: 3,
+                      height: 5,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: teamSide.badge,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: -10,
+                      left: 18,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: teamSide.badge,
+                          border: Border.all(color: MosiColors.ink, width: 2),
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: MosiColors.ink,
+                              offset: Offset(3, 3),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            '${teamSide.mark} · ${widget.teamSeatNumber}',
+                            style: MosiFonts.sans(
+                              color: teamSide.badgeFg,
+                              size: 11,
+                              weight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
           ),

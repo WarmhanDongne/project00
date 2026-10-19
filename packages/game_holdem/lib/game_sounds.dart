@@ -12,7 +12,7 @@ abstract final class HoldemSounds {
       'packages/game_kit/assets/sounds/holdem_pot_award.mp3';
   static const chipLanding = 'packages/game_kit/assets/sounds/poker_chips.mp3';
   static const background =
-      'packages/game_kit/assets/sounds/holdem_background.mp3';
+      'packages/game_kit/assets/sounds/holdem_background.m4a';
 
   static const preloadTargets = [
     dealing,

@@ -1,5 +1,8 @@
 # Template 수정 위치
 
+패키지를 복사하기 전 [새 게임 제작·연결 가이드](../../../docs/engineering/NEW_GAME_GUIDE.md)에서
+앱 registry, 양 기기 화면, Functions, Firestore 카탈로그와 공개 순서를 먼저 확인합니다.
+
 - 게임 등록·기기 연결: `game_template.dart`
 - 휴대폰 흐름·문구·시간·화면 생성 함수: `phone/phone_board.dart`
 - 태블릿 흐름·문구·시간·실제 화면 선택: `tablet/tablet_board.dart`

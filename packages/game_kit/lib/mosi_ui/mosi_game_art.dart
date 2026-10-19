@@ -1,7 +1,7 @@
 // [mosi_game_art.dart] 는 게임 상자 표지와 선반 위 상자 옆면을 그리는 파일이다.
 //
 // - [Package] : 게임 공통 기반
-// - [Design] : 시안의 300×400 표지를 Flutter 캔버스와 패키지 이미지로 구성
+// - [Design] : 시안의 300×400 표지를 Flutter 캔버스와 패키지 자산으로 구성
 //
 // 선반, 게임 상세, 상점, 게임 안 설정 모달이 같은 표지를 씁니다. 표지 그림이
 // 없는 게임(새로 추가된 게임)은 이름으로 만든 기본 표지를 그립니다.
@@ -12,6 +12,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/localization/game_locale.dart';
+
+part 'mosi_game_art_yut_covers.dart';
+part 'mosi_game_art_holdem_cover.dart';
 
 // ============================================================
 
@@ -89,11 +92,71 @@ class MosiGameArt {
     accent: Color(0xFFD7B56D),
   );
 
+  static const yut = MosiGameArt(
+    id: 'yut',
+    koreanName: '윷놀이',
+    englishName: 'YUT NORI',
+    shelfTheme: MosiShelfTheme(
+      ground: Color(0xFFB85A47),
+      fg: MosiColors.white,
+      fgDim: Color(0xB3FFFFFF),
+      deep: Color(0xFF4D2A28),
+      btnBg: Color(0xFFE8C77C),
+      btnFg: Color(0xFF30201B),
+      accA: Color(0xFFE8C77C),
+      accB: Color(0xFF2C775F),
+    ),
+    spineColor: Color(0xFF8D3F35),
+    spineText: MosiColors.white,
+    accent: Color(0xFFE8C77C),
+  );
+
+  static const strategyYut = MosiGameArt(
+    id: 'strategy_yut',
+    koreanName: '전략 윷놀이',
+    englishName: 'STRATEGY YUT',
+    shelfTheme: MosiShelfTheme(
+      ground: Color(0xFF286A68),
+      fg: MosiColors.white,
+      fgDim: Color(0xB3FFFFFF),
+      deep: Color(0xFF173F47),
+      btnBg: Color(0xFFE1C990),
+      btnFg: Color(0xFF173F47),
+      accA: Color(0xFFE1C990),
+      accB: Color(0xFFCE5A4A),
+    ),
+    spineColor: Color(0xFF1D5353),
+    spineText: MosiColors.white,
+    accent: Color(0xFFE1C990),
+  );
+
+  static const strategyYutEdition = MosiGameArt(
+    id: 'strategy_yut_edition',
+    koreanName: '전략 윷놀이 에디션',
+    englishName: 'STRATEGY YUT · EDITION',
+    shelfTheme: MosiShelfTheme(
+      ground: Color(0xFF151E58),
+      fg: Color(0xFFF4E8CA),
+      fgDim: Color(0xB3F4E8CA),
+      deep: Color(0xFF0D143F),
+      btnBg: Color(0xFFC99A48),
+      btnFg: Color(0xFF111B55),
+      accA: Color(0xFFC99A48),
+      accB: Color(0xFFCF5A50),
+    ),
+    spineColor: Color(0xFF101747),
+    spineText: Color(0xFFF2D58F),
+    accent: Color(0xFFC99A48),
+  );
+
   static const _known = <String, MosiGameArt>{
     'liars_poker': liarsPoker,
     'final_call': finalCall,
     'mafia': mafia,
     'holdem': holdem,
+    'yut': yut,
+    'strategy_yut': strategyYut,
+    'strategy_yut_edition': strategyYutEdition,
   };
 
   /// 표지 그림이 등록된 게임인지 알려 줍니다.
@@ -148,34 +211,28 @@ class MosiGameCover extends StatelessWidget {
     final artInfo = MosiGameArt.of(gameId, fallbackName: fallbackName);
     final localizedTitle = displayName?.trim().isNotEmpty == true
         ? displayName!.trim()
-        : artInfo.koreanName;
+        : _localizedGameTitle(artInfo);
     final englishTitle = englishName?.trim().isNotEmpty == true
         ? englishName!.trim()
         : artInfo.englishName;
     final imageUrl = fallbackImageUrl;
     Widget art;
-    if (gameId == 'holdem') {
-      // 원본의 왼쪽 빨간 표지(749×1050)만 비율을 유지해 보여 줍니다.
-      // 합쳐 놓은 빨강/파랑 표지를 가로로 압축하지 않습니다.
-      const source = Size(1560, 1050);
-      const redWidth = 749.0;
-      final scale = math.max(width / redWidth, height / source.height);
+    if (gameId == 'yut' ||
+        gameId == 'strategy_yut' ||
+        gameId == 'strategy_yut_edition') {
+      art = _YutCoverArtwork(gameId: gameId, width: width, height: height);
+    } else if (gameId == 'holdem') {
+      // 빨간 카드 상자 표지(749×1050)를 코드로 그려 상자 비율에 맞춥니다.
       art = SizedBox(
+        key: const Key('holdem-cardbox-cover'),
         width: width,
         height: height,
-        child: ClipRect(
-          child: OverflowBox(
-            alignment: Alignment.centerLeft,
-            maxWidth: double.infinity,
-            maxHeight: double.infinity,
-            child: Image.asset(
-              'packages/game_kit/assets/images/covers/poker_cardbox.png',
-              key: const Key('holdem-cardbox-cover'),
-              width: source.width * scale,
-              height: source.height * scale,
-              fit: BoxFit.fill,
-              filterQuality: FilterQuality.high,
-            ),
+        child: const FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: 749,
+            height: 1050,
+            child: CustomPaint(painter: _HoldemCardboxPainter()),
           ),
         ),
       );
@@ -241,6 +298,258 @@ class MosiGameCover extends StatelessWidget {
   }
 }
 
+/// 윷놀이 표지는 게임 디자인(300×400)을 그대로 코드로 그립니다. 벡터 그림은
+/// 생성 파일 `mosi_game_art_yut_covers.dart`에 있고, 글자는 같은 좌표계에서
+/// 그려 상자 크기가 바뀌어도 배치가 유지됩니다. 언어가 바뀌면 제목만
+/// 번역하고, 길면 정해진 폭에 맞춰 줄입니다.
+class _YutCoverArtwork extends StatelessWidget {
+  const _YutCoverArtwork({
+    required this.gameId,
+    required this.width,
+    required this.height,
+  });
+
+  final String gameId;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: height,
+    child: CustomPaint(
+      painter: _YutCoverPainter(
+        gameId: gameId,
+        language: GameLocale.current.toLanguageTag(),
+      ),
+    ),
+  );
+}
+
+/// 300×400 디자인 좌표의 윷놀이 표지를 상자 크기에 맞춰 그립니다.
+class _YutCoverPainter extends CustomPainter {
+  const _YutCoverPainter({required this.gameId, required this.language});
+
+  final String gameId;
+
+  /// 언어가 바뀌면 다시 그리도록 비교에만 씁니다.
+  final String language;
+
+  static const _myeongjo = ['SongMyung', 'Noto Serif CJK KR', 'serif'];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.scale(size.width / 300, size.height / 400);
+    switch (gameId) {
+      case 'yut':
+        _paintYutClassicCover(canvas);
+        _classicTitle(canvas);
+      case 'strategy_yut_edition':
+        _paintStrategyYutEditionCover(canvas);
+        _strategyText(canvas, edition: true);
+      default:
+        _paintStrategyYutCover(canvas);
+        _strategyText(canvas, edition: false);
+    }
+    canvas.restore();
+  }
+
+  /// 표지 밖으로 넘칠 만큼 큰 붓글씨 제목(한글판 `윷`, 영어판 `YUT`)입니다.
+  void _classicTitle(Canvas canvas) {
+    final english = GameLocale.isEnglish;
+    final glyph = GameLocale.select(
+      ko: '윷',
+      en: 'YUT',
+      zhHans: '柶',
+      zhHant: '柶',
+    );
+    final style = english
+        ? MosiFonts.playfair(
+            size: 196,
+            color: const Color(0xFFF4F1EA),
+            height: 1,
+          ).copyWith(letterSpacing: -10, fontWeight: FontWeight.w700)
+        : const TextStyle(
+            fontFamily: 'SongMyung',
+            fontFamilyFallback: _myeongjo,
+            fontSize: 410,
+            height: 1,
+          );
+    final at = english ? const Offset(150, 300) : const Offset(128, 372);
+    _coverText(
+      canvas,
+      glyph,
+      at,
+      style.copyWith(
+        foreground: Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 14
+          ..strokeJoin = StrokeJoin.round
+          ..color = const Color(0xFF2B2A28),
+      ),
+      maxWidth: english ? 290 : 520,
+    );
+    _coverText(
+      canvas,
+      glyph,
+      at,
+      style.copyWith(color: const Color(0xFFF4F1EA)),
+      maxWidth: english ? 290 : 520,
+    );
+  }
+
+  void _strategyText(Canvas canvas, {required bool edition}) {
+    final ink = edition ? const Color(0xFF0B0A12) : const Color(0xFFEFE6D3);
+    final mark = TextStyle(
+      fontFamily: 'SongMyung',
+      fontFamilyFallback: _myeongjo,
+      fontSize: 13,
+      height: 1,
+      color: ink,
+    );
+    // 판 모서리의 팔각 말 두 개에는 팀 글자(백·청)가 새겨져 있습니다.
+    _coverText(canvas, '백', const Offset(40, 44.3), mark);
+    _coverText(
+      canvas,
+      '청',
+      const Offset(272, 152.3),
+      mark.copyWith(color: edition ? Colors.white : const Color(0xFF2A3654)),
+    );
+    final label = edition ? 'SPECIAL EDITION · 吉祥' : 'KOREAN TRADITIONAL GAME';
+    final caption = MosiFonts.playfair(
+      size: 9.5,
+      color: edition ? const Color(0xFFC9B8FF) : const Color(0xFF5C6478),
+      height: 1,
+    ).copyWith(letterSpacing: 4, fontWeight: FontWeight.w600);
+    _coverText(canvas, label, const Offset(150, 306), caption, maxWidth: 230);
+
+    // 제목은 언어에 맞추되 에디션도 `전략 윷놀이`만 씁니다.
+    final title = GameLocale.select(
+      ko: '전략 윷놀이',
+      en: 'Strategy Yut',
+      zhHans: '策略掷柶',
+      zhHant: '策略擲柶',
+    );
+    final gradient = edition
+        ? const LinearGradient(
+            colors: [
+              Color(0xFFC9B8FF),
+              Color(0xFFA9E8F0),
+              Color(0xFFF6C3DF),
+              Color(0xFFD9F2E4),
+              Color(0xFFB6C7FF),
+              Color(0xFFF3D2F0),
+            ],
+          )
+        : const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF2A3654), Color(0xFF1E2840)],
+          );
+    final titleStyle = GameLocale.isEnglish
+        ? MosiFonts.playfair(
+            size: 32,
+            color: Colors.white,
+            height: 1,
+          ).copyWith(letterSpacing: 1)
+        : const TextStyle(
+            fontFamily: 'SongMyung',
+            fontFamilyFallback: _myeongjo,
+            fontSize: 34,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 4,
+            height: 1,
+          );
+    _coverText(
+      canvas,
+      title,
+      const Offset(150, 342),
+      titleStyle.copyWith(
+        foreground: Paint()
+          ..shader = gradient.createShader(
+            const Rect.fromLTWH(60, 312, 180, 36),
+          ),
+      ),
+      maxWidth: 220,
+    );
+    _coverText(
+      canvas,
+      'STRATEGIC YUT',
+      const Offset(150, 366),
+      MosiFonts.playfair(
+        size: 10.5,
+        color: edition ? const Color(0xFFE6DCFF) : const Color(0xFF5C6478),
+        height: 1,
+      ).copyWith(letterSpacing: 5, fontWeight: FontWeight.w600),
+      maxWidth: 220,
+    );
+    if (!edition) return;
+    canvas.save();
+    canvas.translate(258, 42);
+    canvas.rotate(math.pi / 4);
+    _coverText(
+      canvas,
+      'LIMITED',
+      Offset.zero,
+      MosiFonts.playfair(
+        size: 11,
+        color: const Color(0xFF0B0A12),
+        height: 1,
+      ).copyWith(letterSpacing: 3, fontWeight: FontWeight.w600),
+    );
+    canvas.restore();
+    _coverText(
+      canvas,
+      'No. 001',
+      const Offset(268, 384),
+      MosiFonts.playfair(
+        size: 8.5,
+        color: const Color(0xFFB9B0D6),
+        height: 1,
+      ).copyWith(letterSpacing: 1.5),
+      align: TextAlign.right,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_YutCoverPainter old) =>
+      old.gameId != gameId || old.language != language;
+}
+
+/// SVG `<text>`처럼 [baseline] 위치에 글자를 놓습니다. [maxWidth]보다 길면
+/// 가로로 줄여 표지 디자인을 흐트러뜨리지 않습니다.
+void _coverText(
+  Canvas canvas,
+  String text,
+  Offset baseline,
+  TextStyle style, {
+  double? maxWidth,
+  TextAlign align = TextAlign.center,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final ascent = painter.computeDistanceToActualBaseline(
+    TextBaseline.alphabetic,
+  );
+  final scale = maxWidth != null && painter.width > maxWidth
+      ? maxWidth / painter.width
+      : 1.0;
+  canvas.save();
+  canvas.translate(baseline.dx, baseline.dy);
+  canvas.scale(scale, scale);
+  final dx = switch (align) {
+    TextAlign.right || TextAlign.end => -painter.width,
+    TextAlign.left || TextAlign.start => 0.0,
+    _ => -painter.width / 2,
+  };
+  painter.paint(canvas, Offset(dx, -ascent));
+  canvas.restore();
+}
+
 class _GenericCover extends StatelessWidget {
   const _GenericCover({required this.name, required this.width});
 
@@ -292,6 +601,10 @@ class _CoverPainter extends CustomPainter {
         _paintMafia(canvas, displayName, englishName);
       case 'holdem':
         _paintHoldem(canvas);
+      case 'yut':
+      case 'strategy_yut':
+      case 'strategy_yut_edition':
+        _paintYut(canvas, gameId, displayName, englishName);
     }
     canvas.restore();
   }
@@ -320,21 +633,15 @@ void _text(
   double y,
   TextStyle style, {
   TextAlign align = TextAlign.left,
-}) {
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-  )..layout();
-  final baseline = painter.computeDistanceToActualBaseline(
-    TextBaseline.alphabetic,
-  );
-  final dx = switch (align) {
-    TextAlign.center => x - painter.width / 2,
-    TextAlign.right || TextAlign.end => x - painter.width,
-    _ => x,
-  };
-  painter.paint(canvas, Offset(dx, y - baseline));
-}
+  double maxWidth = 276,
+}) => _coverText(
+  canvas,
+  text,
+  Offset(x, y),
+  style,
+  maxWidth: maxWidth,
+  align: align,
+);
 
 TextStyle _playfair(double size, Color color) =>
     MosiFonts.playfair(size: size, color: color, height: 1);
@@ -392,6 +699,7 @@ void _paintLiar(Canvas canvas, String displayName, String englishName) {
     24,
     88,
     _playfair(44, const Color(0xFFF8F4FA)),
+    maxWidth: 252,
   );
   if (displayName.toUpperCase() != englishName.toUpperCase()) {
     _text(canvas, displayName, 26, 118, _plex(14, const Color(0xFFC7B8CC)));
@@ -713,6 +1021,119 @@ void _paintHoldem(Canvas canvas) {
   );
 }
 
+void _paintYut(
+  Canvas canvas,
+  String gameId,
+  String displayName,
+  String englishName,
+) {
+  final edition = gameId == 'strategy_yut_edition';
+  final strategy = gameId != 'yut';
+  final art = MosiGameArt.of(gameId);
+  final ground = edition ? const Color(0xFF101747) : art.shelfTheme.ground;
+  final ink = edition ? const Color(0xFFF2D58F) : const Color(0xFFF5EEDC);
+  final line = edition ? const Color(0xFFC99A48) : const Color(0xFF203C42);
+  canvas.drawRect(const Rect.fromLTWH(0, 0, 300, 400), _fill(ground));
+
+  // Quiet Korean pattern around the title keeps the three covers related while
+  // the board geometry and palette distinguish the strategy edition.
+  for (var i = -1; i < 5; i++) {
+    final x = 28.0 + i * 62;
+    canvas.drawCircle(
+      Offset(x, 24),
+      22,
+      _stroke(line.withValues(alpha: .55), 1),
+    );
+    canvas.drawCircle(
+      Offset(x, 24),
+      13,
+      _stroke(line.withValues(alpha: .4), 1),
+    );
+  }
+  _text(
+    canvas,
+    displayName,
+    150,
+    104,
+    MosiFonts.sans(
+      size: displayName.length > 8 ? 25 : 32,
+      weight: FontWeight.w900,
+      color: ink,
+      letterSpacing: -1,
+      height: 1,
+    ),
+    align: TextAlign.center,
+  );
+  _text(
+    canvas,
+    englishName.toUpperCase(),
+    150,
+    132,
+    _grotesk(10, ink.withValues(alpha: .82), 2.2),
+    align: TextAlign.center,
+  );
+
+  final board = RRect.fromRectAndRadius(
+    const Rect.fromLTWH(35, 168, 230, 184),
+    const Radius.circular(16),
+  );
+  canvas.drawRRect(board, _fill(edition ? const Color(0xFF18235F) : ink));
+  canvas.drawRRect(board, _stroke(line, 3));
+  final track = Path()
+    ..moveTo(150, 194)
+    ..lineTo(236, 260)
+    ..lineTo(150, 326)
+    ..lineTo(64, 260)
+    ..close();
+  canvas.drawPath(track, _stroke(edition ? ink : line, 5));
+  canvas.drawLine(
+    const Offset(64, 260),
+    const Offset(236, 260),
+    _stroke(edition ? ink : line, 4),
+  );
+  canvas.drawLine(
+    const Offset(150, 194),
+    const Offset(150, 326),
+    _stroke(edition ? ink : line, 4),
+  );
+  for (final point in const [
+    Offset(150, 194),
+    Offset(236, 260),
+    Offset(150, 326),
+    Offset(64, 260),
+    Offset(150, 260),
+  ]) {
+    canvas.drawCircle(point, 9, _fill(edition ? line : art.accent));
+    canvas.drawCircle(point, 9, _stroke(edition ? ink : line, 2));
+  }
+
+  for (var i = 0; i < 4; i++) {
+    canvas.save();
+    canvas.translate(60 + i * 52, 365);
+    canvas.rotate((i - 1.5) * .08);
+    final stickColor = !strategy && i == 0
+        ? const Color(0xFFB83D37)
+        : edition
+        ? const Color(0xFFE6D2A2)
+        : const Color(0xFFD7B878);
+    final stick = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(0, -38, 16, 50),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(stick, _fill(stickColor));
+    canvas.drawRRect(stick, _stroke(line, 2));
+    canvas.restore();
+  }
+  _text(
+    canvas,
+    'MOSIGAME',
+    150,
+    397,
+    _grotesk(8, ink.withValues(alpha: .72), 3),
+    align: TextAlign.center,
+  );
+}
+
 //=======================선반 위 상자 옆면==============================
 /// 선반에 꽂힌 상자의 옆면입니다. 누르면 그 게임을 고릅니다.
 class MosiGameSpine extends StatelessWidget {
@@ -742,7 +1163,7 @@ class MosiGameSpine extends StatelessWidget {
     final art = MosiGameArt.of(gameId, fallbackName: fallbackName);
     final localizedTitle = displayName?.trim().isNotEmpty == true
         ? displayName!.trim()
-        : art.koreanName;
+        : _localizedGameTitle(art);
     final englishTitleValue = englishName?.trim().isNotEmpty == true
         ? englishName!.trim()
         : art.englishName;
@@ -850,6 +1271,55 @@ class MosiGameSpine extends StatelessWidget {
   }
 }
 
+/// New Yut covers can also appear in contexts without a GameInfo object.
+/// Keep those covers in sync with the app language instead of falling back to
+/// the Korean catalog label.
+String _localizedGameTitle(MosiGameArt art) => switch (art.id) {
+  'yut' => GameLocale.select(
+    ko: '윷놀이',
+    en: 'Yut Nori',
+    zhHans: '掷柶游戏',
+    zhHant: '擲柶遊戲',
+  ),
+  'strategy_yut' => GameLocale.select(
+    ko: '전략 윷놀이',
+    en: 'Strategy Yut',
+    zhHans: '策略掷柶',
+    zhHant: '策略擲柶',
+  ),
+  'strategy_yut_edition' => GameLocale.select(
+    ko: '전략 윷놀이 에디션',
+    en: 'Strategy Yut · Edition',
+    zhHans: '策略掷柶 · 特别版',
+    zhHant: '策略擲柶 · 特別版',
+  ),
+  'liars_poker' => GameLocale.select(
+    ko: '라이어스 포커',
+    en: "Liar's Poker",
+    zhHans: '骗子扑克',
+    zhHant: '騙子撲克',
+  ),
+  'final_call' => GameLocale.select(
+    ko: '파이널 콜',
+    en: 'Final Call',
+    zhHans: '最后叫牌',
+    zhHant: '最後叫牌',
+  ),
+  'mafia' => GameLocale.select(
+    ko: '마피아',
+    en: 'Mafia',
+    zhHans: '黑手党',
+    zhHant: '黑手黨',
+  ),
+  'holdem' => GameLocale.select(
+    ko: '텍사스 홀덤',
+    en: "Texas Hold'em",
+    zhHans: '德州扑克',
+    zhHant: '德州撲克',
+  ),
+  _ => art.koreanName,
+};
+
 class _SpineBadge extends StatelessWidget {
   const _SpineBadge({required this.gameId});
 
@@ -929,6 +1399,66 @@ class MosiEmptySpine extends StatelessWidget {
 }
 
 //=======================자리 배치 테마==============================
+/// 좌우 팀 자리배치에서 한 진영의 표시를 정의합니다.
+@immutable
+class MosiSeatTeamSide {
+  const MosiSeatTeamSide({
+    required this.nameKo,
+    required this.nameEn,
+    required this.nameZhHans,
+    required this.nameZhHant,
+    required this.markKo,
+    required this.markEn,
+    required this.markZhHans,
+    required this.markZhHant,
+    required this.accent,
+    required this.zone,
+    required this.badge,
+    required this.badgeFg,
+  });
+
+  final String nameKo;
+  final String nameEn;
+  final String nameZhHans;
+  final String nameZhHant;
+  final String markKo;
+  final String markEn;
+  final String markZhHans;
+  final String markZhHant;
+  final Color accent;
+  final Color zone;
+  final Color badge;
+  final Color badgeFg;
+
+  String get name => GameLocale.select(
+    ko: nameKo,
+    en: nameEn,
+    zhHans: nameZhHans,
+    zhHant: nameZhHant,
+  );
+
+  String get mark => GameLocale.select(
+    ko: markKo,
+    en: markEn,
+    zhHans: markZhHans,
+    zhHant: markZhHant,
+  );
+}
+
+/// 짝수 좌석은 왼쪽, 홀수 좌석은 오른쪽인 4인 팀전 자리배치입니다.
+@immutable
+class MosiSeatTeams {
+  const MosiSeatTeams({
+    required this.left,
+    required this.right,
+    required this.divider,
+  });
+
+  final MosiSeatTeamSide left;
+  final MosiSeatTeamSide right;
+  final Color divider;
+}
+
 /// 자리 배치 화면(시안 SeatSync)의 게임별 색입니다.
 @immutable
 class MosiSeatTheme {
@@ -943,6 +1473,7 @@ class MosiSeatTheme {
     required this.buttonFg,
     required this.selected,
     required this.ring,
+    this.teams,
     this.tableFit = 0.93,
     this.tableDy = -0.014,
   });
@@ -957,6 +1488,7 @@ class MosiSeatTheme {
   final Color buttonFg;
   final Color selected;
   final Color ring;
+  final MosiSeatTeams? teams;
 
   /// 플랫 테이블이 실제 테이블 그림의 '보이는 원'과 맞도록 하는 비율·위치입니다.
   final double tableFit;
@@ -1032,11 +1564,56 @@ class MosiSeatTheme {
     ring: Color(0x99A4D65E),
   );
 
+  static const strategyYut = MosiSeatTheme(
+    ground: MosiColors.navy,
+    deep: MosiColors.navyDeepest,
+    table: MosiColors.violet,
+    dots: Color(0x14FFFFFF),
+    pill: Color(0x14FFFFFF),
+    pillLine: Color(0x99A4D65E),
+    button: MosiColors.lime,
+    buttonFg: MosiColors.navy,
+    selected: MosiColors.lime,
+    ring: Color(0x99A4D65E),
+    teams: MosiSeatTeams(
+      left: MosiSeatTeamSide(
+        nameKo: '청군',
+        nameEn: 'Blue Team',
+        nameZhHans: '青军',
+        nameZhHant: '青軍',
+        markKo: '청',
+        markEn: 'B',
+        markZhHans: '青',
+        markZhHant: '青',
+        accent: Color(0xFF71B0FF),
+        zone: Color(0x323478DF),
+        badge: Color(0xFF397DE7),
+        badgeFg: MosiColors.white,
+      ),
+      right: MosiSeatTeamSide(
+        nameKo: '백군',
+        nameEn: 'White Team',
+        nameZhHans: '白军',
+        nameZhHant: '白軍',
+        markKo: '백',
+        markEn: 'W',
+        markZhHans: '白',
+        markZhHant: '白',
+        accent: Color(0xFFFFF9E9),
+        zone: Color(0x20F7F4EC),
+        badge: Color(0xFFEAE7DF),
+        badgeFg: MosiColors.navy,
+      ),
+      divider: MosiColors.lime,
+    ),
+  );
+
   static MosiSeatTheme of(String? gameId) => switch (gameId) {
     'liars_poker' => liarsPoker,
     'final_call' => finalCall,
     'mafia' => mafia,
     'holdem' => holdem,
+    'strategy_yut' || 'strategy_yut_edition' => strategyYut,
     _ => fallback,
   };
 }

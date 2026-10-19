@@ -1,14 +1,17 @@
-import 'package:project00/platform/localization/platform_localizations.dart';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project00/platform/auth/models/nickname_policy.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/home/room/services/player_room_session_store.dart';
+import 'package:project00/platform/localization/platform_localizations.dart';
+import 'package:project00/platform/profile/providers/profile_update_controller.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
 
 //=======================내 프로필 모달==============================
@@ -33,38 +36,48 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
   Uint8List? _pickedImage;
   String? _pickedImageName;
   String? _pickedImageType;
-  bool _isSaving = false;
-
-  /// 저장이 끝나 체크를 보여 주는 중입니다(로비 연출 9번).
-  bool _saved = false;
   bool _isPickingImage = false;
   bool _isDeletingAccount = false;
   bool _isLoggingOut = false;
 
-  User? get _user => FirebaseAuth.instance.currentUser;
+  final ProfileUpdateController _profileUpdates =
+      ProfileUpdateController.instance;
 
-  bool get _isBusy =>
-      _isSaving || _isPickingImage || _isDeletingAccount || _isLoggingOut;
+  User? get _user => FirebaseBackend.auth.currentUser;
+
+  bool get _isBusy => _isPickingImage || _isDeletingAccount || _isLoggingOut;
+
+  bool get _blocksProfileEdit => _isBusy || _profileUpdates.isSaving;
 
   @override
   void initState() {
     super.initState();
-    final name = profileDisplayName(_user);
+    final pending = _profileUpdates.pendingFor(_user?.uid);
+    final name = pending?.nickname ?? profileDisplayName(_user);
     _nicknameController = TextEditingController(
       text: name.length <= nicknameMaxLength
           ? name
           : name.substring(0, nicknameMaxLength),
     )..addListener(() => setState(() {}));
+    _pickedImage = pending?.imageBytes;
+    _pickedImageName = pending?.imageName;
+    _pickedImageType = pending?.imageType;
+    _profileUpdates.addListener(_handleProfileUpdate);
+  }
+
+  void _handleProfileUpdate() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _profileUpdates.removeListener(_handleProfileUpdate);
     _nicknameController.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage() async {
-    if (_isBusy) return;
+    if (_blocksProfileEdit) return;
     setState(() => _isPickingImage = true);
     try {
       final image = await _imagePicker.pickImage(
@@ -96,9 +109,9 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
     }
   }
 
-  /// 바뀐 사진과 닉네임만 저장하고 닫습니다. 바뀐 것이 있으면 true로 닫습니다.
+  /// 입력값을 화면에 즉시 반영하고 모달을 닫은 뒤 서버 저장을 이어갑니다.
   Future<void> _save() async {
-    if (_isBusy) return;
+    if (_blocksProfileEdit) return;
     final nickname = _nicknameController.text.trim();
     final nicknameChanged = nickname != profileDisplayName(_user);
     if (nicknameChanged && nickname.runes.length < nicknameMinLength) {
@@ -113,44 +126,63 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
       return;
     }
     final image = _pickedImage;
-    if (!nicknameChanged && image == null) {
+    if (!nicknameChanged && image == null && !_profileUpdates.hasFailed) {
       Navigator.of(context).pop(false);
       return;
     }
     FocusScope.of(context).unfocus();
-    setState(() => _isSaving = true);
-    try {
-      if (image != null) {
-        await _authService.uploadProfileImage(
-          imageBytes: image,
-          fileName: _pickedImageName ?? 'profile.jpg',
-          contentType: _pickedImageType,
-        );
-      }
-      if (nicknameChanged) await _authService.updateDisplayName(nickname);
-      await _authService.createUserDocument();
-      if (!mounted) return;
-      // 버튼 안에 체크를 그려 저장된 것을 보여 준 뒤 닫습니다.
-      setState(() {
-        _isSaving = false;
-        _saved = true;
-      });
-      await Future<void>.delayed(MosiMotion.of(context, MosiMotion.check));
-      if (mounted) Navigator.of(context).pop(true);
-    } on AuthServiceException catch (error) {
-      if (mounted) _showMessage(error.message);
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final savingMessage = GameLocale.select(
+      ko: '프로필을 저장하고 있어요.',
+      en: 'Saving your profile.',
+      zhHans: '正在保存个人资料。',
+      zhHant: '正在儲存個人資料。',
+    );
+    final savedMessage = GameLocale.select(
+      ko: '프로필이 저장됐어요.',
+      en: 'Profile saved.',
+      zhHans: '个人资料已保存。',
+      zhHant: '個人資料已儲存。',
+    );
+    final retryLabel = GameLocale.select(
+      ko: '다시 시도',
+      en: 'Retry',
+      zhHans: '重试',
+      zhHant: '重試',
+    );
+    final operation = _profileUpdates.save(
+      PendingProfileUpdate(
+        ownerUid: _user?.uid,
+        nickname: nickname,
+        nicknameChanged: nicknameChanged,
+        imageBytes: image,
+        imageName: _pickedImageName,
+        imageType: _pickedImageType,
+      ),
+      service: _authService,
+    );
+    _showProfileSaving(messenger, savingMessage);
+    navigator.pop(true);
+    unawaited(
+      _reportProfileSave(
+        operation,
+        messenger: messenger,
+        savingMessage: savingMessage,
+        savedMessage: savedMessage,
+        retryLabel: retryLabel,
+      ),
+    );
   }
 
   Future<void> _logout() async {
-    if (_isBusy) return;
+    if (_blocksProfileEdit) return;
     final navigator = Navigator.of(context);
     FocusScope.of(context).unfocus();
     setState(() => _isLoggingOut = true);
     try {
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
+      _profileUpdates.clear();
       // 상점 등에서 연 프로필도 로그인 위에 이전 route를 남기지 않습니다.
       if (navigator.mounted) navigator.popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (_) {
@@ -170,13 +202,14 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
   }
 
   Future<void> _deleteAccount() async {
-    if (_isBusy) return;
+    if (_blocksProfileEdit) return;
     if (await _confirmAccountDeletion() != true || !mounted) return;
 
     setState(() => _isDeletingAccount = true);
     try {
       await _authService.deleteAccount();
       await PlayerRoomSessionStore.instance.clear();
+      _profileUpdates.clear();
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on AuthServiceException catch (error) {
@@ -269,6 +302,79 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showProfileSaving(ScaffoldMessengerState messenger, String message) {
+    if (!messenger.mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(days: 1),
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      );
+  }
+
+  Future<void> _reportProfileSave(
+    Future<void> operation, {
+    required ScaffoldMessengerState messenger,
+    required String savingMessage,
+    required String savedMessage,
+    required String retryLabel,
+  }) async {
+    try {
+      await operation;
+      if (!messenger.mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(savedMessage)));
+    } on Object catch (error) {
+      if (!messenger.mounted) return;
+      final message = error is AuthServiceException
+          ? error.message
+          : _profileUpdates.errorMessage ??
+                GameLocale.select(
+                  ko: '프로필을 저장하지 못했습니다.',
+                  en: 'Could not save your profile.',
+                  zhHans: '无法保存个人资料。',
+                  zhHant: '無法儲存個人資料。',
+                );
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(message),
+            action: SnackBarAction(
+              label: retryLabel,
+              onPressed: () {
+                final retry = _profileUpdates.retry();
+                if (retry == null) return;
+                _showProfileSaving(messenger, savingMessage);
+                unawaited(
+                  _reportProfileSave(
+                    retry,
+                    messenger: messenger,
+                    savingMessage: savingMessage,
+                    savedMessage: savedMessage,
+                    retryLabel: retryLabel,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+    }
   }
 
   bool get _isGoogleAccount =>
@@ -426,7 +532,7 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _nicknameController,
-                      enabled: !_isBusy,
+                      enabled: !_blocksProfileEdit,
                       maxLength: nicknameMaxLength,
                       style: MosiFonts.sans(
                         locale: Localizations.maybeLocaleOf(context),
@@ -472,7 +578,7 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                             label: context.l10n.logout,
                             color: MosiColors.navy,
                             chevron: const Color(0xFF8C8AA8),
-                            onTap: _isBusy ? null : _logout,
+                            onTap: _blocksProfileEdit ? null : _logout,
                           ),
                           const Divider(
                             height: 1.5,
@@ -486,7 +592,7 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                                 : context.l10n.deleteAccount,
                             color: const Color(0xFFC2283C),
                             chevron: const Color(0xFFC9A0A8),
-                            onTap: _isBusy ? null : _deleteAccount,
+                            onTap: _blocksProfileEdit ? null : _deleteAccount,
                           ),
                         ],
                       ),
@@ -529,11 +635,9 @@ class _TabletProfileModalState extends State<TabletProfileModal> {
                         fontSize: 17,
                         radius: 12,
                         expand: true,
-                        loading: _isSaving,
+                        loading: _profileUpdates.isSaving,
                         loadingDots: true,
-                        success: _saved,
-                        successLabel: context.l10n.profileSaved,
-                        onPressed: _isBusy || _saved ? null : _save,
+                        onPressed: _blocksProfileEdit ? null : _save,
                       ),
                     ),
                   ],

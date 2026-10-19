@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/phone/models/room_join_feedback.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_nickname.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:game_kit/template_game.dart';
 
@@ -26,10 +27,12 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     gameCatalog: widget.gameCatalog,
   );
   final MobileScannerController _scannerController = MobileScannerController(
+    autoStart: false,
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _isOpeningNameInput = false;
   bool _codeMode = false;
+  bool _submittedFromCodeMode = false;
   RoomJoinFeedback? _feedback;
 
   /// 입장 확인이 끝나 체크를 보여 주는 중인지입니다(로비 연출 3번).
@@ -44,6 +47,18 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     _roomCodeController.addListener(_refreshCode);
     _codeFocusNode.addListener(_onCodeFocus);
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScannerIfVisible();
+    });
+  }
+
+  Future<void> _startScannerIfVisible() async {
+    if (!mounted || _codeMode || _isOpeningNameInput) return;
+    try {
+      await _scannerController.start();
+    } on MobileScannerException {
+      // 카메라를 시작하지 못해도 같은 화면의 수동 코드 입력은 유지합니다.
+    }
   }
 
   void _onCodeFocus() async {
@@ -62,7 +77,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
       if (state == AppLifecycleState.resumed &&
           !_codeMode &&
           !_isOpeningNameInput) {
-        await _scannerController.start();
+        await _startScannerIfVisible();
       } else if (state != AppLifecycleState.resumed) {
         await _scannerController.stop();
       }
@@ -75,7 +90,11 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     _codeFocusNode.unfocus();
     setState(() {
       _codeMode = false;
+      _submittedFromCodeMode = false;
       _feedback = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScannerIfVisible();
     });
   }
 
@@ -101,18 +120,40 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     final roomCode = _roomCodeController.text.trim().toUpperCase();
     if (roomCode.length != 5) return;
     if (_isOpeningNameInput) return;
+    final submittedFromCodeMode = _codeMode;
+    if (submittedFromCodeMode) _codeFocusNode.unfocus();
     setState(() {
       _isOpeningNameInput = true;
       _feedback = null;
+      if (submittedFromCodeMode) {
+        _submittedFromCodeMode = true;
+        _codeMode = false;
+      }
     });
+    // 전용 자판이 화면 아래로 완전히 빠진 다음 검증·다음 route를 시작합니다.
+    // 두 동작을 겹치면 다음 화면이 자판 높이만큼 밀렸다가 돌아오는 것처럼 보입니다.
+    if (submittedFromCodeMode) {
+      final keyboardExit = MosiMotion.of(context, MosiMotion.exit);
+      if (keyboardExit > Duration.zero) {
+        await Future<void>.delayed(keyboardExit);
+      }
+      if (!mounted) return;
+    }
     final validated = await _roomProvider.validateRoomJoin(roomCode);
     if (!mounted) return;
     if (!validated) {
       setState(() {
         _isOpeningNameInput = false;
+        _submittedFromCodeMode = false;
+        _codeMode = submittedFromCodeMode;
         _feedback = roomJoinFeedbackFor(_roomProvider.errorMessage);
         _codeShake++;
       });
+      if (submittedFromCodeMode) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _codeFocusNode.requestFocus();
+        });
+      }
       return;
     }
 
@@ -130,7 +171,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
 
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      PhoneFlowRoute<void>(
         builder: (_) =>
             PhoneRoomNickname(roomCode: roomCode, provider: _roomProvider),
       ),
@@ -140,18 +181,22 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
     setState(() {
       _isOpeningNameInput = false;
       _joinSucceeded = false;
+      _submittedFromCodeMode = false;
+      _codeMode = submittedFromCodeMode;
     });
-    if (_codeMode) return;
-    try {
-      await _scannerController.start();
-    } on MobileScannerException {
-      // 권한이 거부된 경우에도 수동 입력은 유지합니다.
+    if (submittedFromCodeMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _codeFocusNode.requestFocus();
+      });
     }
+    await _startScannerIfVisible();
   }
 
   @override
   Widget build(BuildContext context) {
     final canSubmit = _roomCodeController.text.length == 5;
+    // 완료를 누른 뒤에도 코드 화면 자체는 유지하고 자판만 먼저 내립니다.
+    final showCodeEntry = _codeMode || _submittedFromCodeMode;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: PopScope(
@@ -162,7 +207,7 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
         child: Scaffold(
           backgroundColor: MosiColors.violet,
           body: SafeArea(
-            bottom: !_codeMode,
+            bottom: !showCodeEntry,
             child: Column(
               children: [
                 Padding(
@@ -219,93 +264,47 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                         constraints: const BoxConstraints(maxWidth: 440),
                         child: Column(
                           children: [
-                            Text(
-                              _codeMode
-                                  ? '방 코드 입력'.localized
-                                  : '어느 방에 들어갈까요?'.localized,
-                              textAlign: TextAlign.center,
-                              style: MosiFonts.sans(
-                                size: 23,
-                                weight: FontWeight.w700,
-                                color: MosiColors.white,
+                            PhoneFlowContentSwap(
+                              stateKey: showCodeEntry
+                                  ? 'code-title'
+                                  : 'scanner-title',
+                              child: Text(
+                                showCodeEntry
+                                    ? '방 코드 입력'.localized
+                                    : '어느 방에 들어갈까요?'.localized,
+                                textAlign: TextAlign.center,
+                                style: MosiFonts.sans(
+                                  size: 23,
+                                  weight: FontWeight.w700,
+                                  color: MosiColors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              _codeMode
-                                  ? '태블릿 화면에 보이는 다섯 글자예요'.localized
-                                  : '태블릿에 뜬 QR을 네모 안에 비춰 주세요'.localized,
-                              textAlign: TextAlign.center,
-                              style: MosiFonts.sans(
-                                size: 12,
-                                color: const Color(0xBBFFFFFF),
+                            PhoneFlowContentSwap(
+                              stateKey: showCodeEntry
+                                  ? 'code-subtitle'
+                                  : 'scanner-subtitle',
+                              child: Text(
+                                showCodeEntry
+                                    ? '태블릿 화면에 보이는 다섯 글자예요'.localized
+                                    : '태블릿에 뜬 QR을 네모 안에 비춰 주세요'.localized,
+                                textAlign: TextAlign.center,
+                                style: MosiFonts.sans(
+                                  size: 12,
+                                  color: const Color(0xBBFFFFFF),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
-                            if (!_codeMode) ...[
-                              _buildScanner(),
-                              const SizedBox(height: 26),
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: Divider(color: Color(0x66FFFFFF)),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
-                                    child: Text(
-                                      '또는 방 코드 입력'.localized,
-                                      style: MosiFonts.sans(
-                                        size: 12,
-                                        color: MosiColors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const Expanded(
-                                    child: Divider(color: Color(0x66FFFFFF)),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                            ] else ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 9,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x22FFFFFF),
-                                  border: Border.all(
-                                    color: const Color(0x66FFFFFF),
-                                    width: 1.5,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.featured_video_outlined,
-                                      color: MosiColors.white,
-                                      size: 25,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        'QR 옆 ROOM 아래 글자'.localized,
-                                        style: MosiFonts.sans(
-                                          size: 11,
-                                          weight: FontWeight.w700,
-                                          color: MosiColors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 22),
-                            ],
+                            PhoneFlowContentSwap(
+                              stateKey: showCodeEntry
+                                  ? 'code-entry-step'
+                                  : 'scanner-entry-step',
+                              child: showCodeEntry
+                                  ? _buildCodeLead()
+                                  : _buildScannerLead(),
+                            ),
                             // 확인하는 동안에도 코드 칸은 그대로 두고, 틀리면 칸만
                             // 흔듭니다(로비 연출 3번).
                             MosiShake(
@@ -330,114 +329,127 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
                                       ),
                                     ),
                             ),
-                            if (_codeMode)
-                              TextButton.icon(
-                                onPressed: _isOpeningNameInput
-                                    ? null
-                                    : _showScanner,
-                                icon: const Icon(
-                                  Icons.qr_code_scanner,
-                                  size: 16,
-                                ),
-                                label: Text(
-                                  'QR로 찍기'.localized,
-                                  style: MosiFonts.sans(
-                                    size: 12,
-                                    weight: FontWeight.w700,
-                                  ),
-                                ),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: MosiColors.white,
-                                ),
-                              )
-                            else ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                '칸을 누르면 키보드가 올라와요'.localized,
-                                style: MosiFonts.sans(
-                                  size: 11,
-                                  color: const Color(0xBBFFFFFF),
-                                ),
-                              ),
-                            ],
+                            PhoneFlowContentSwap(
+                              stateKey: showCodeEntry
+                                  ? 'scan-again'
+                                  : 'keyboard-hint',
+                              child: showCodeEntry
+                                  ? TextButton.icon(
+                                      onPressed: _isOpeningNameInput
+                                          ? null
+                                          : _showScanner,
+                                      icon: const Icon(
+                                        Icons.qr_code_scanner,
+                                        size: 16,
+                                      ),
+                                      label: Text(
+                                        'QR로 찍기'.localized,
+                                        style: MosiFonts.sans(
+                                          size: 12,
+                                          weight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: MosiColors.white,
+                                      ),
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 10),
+                                      child: Text(
+                                        '칸을 누르면 키보드가 올라와요'.localized,
+                                        style: MosiFonts.sans(
+                                          size: 11,
+                                          color: const Color(0xBBFFFFFF),
+                                        ),
+                                      ),
+                                    ),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
-                if (_codeMode || canSubmit || _isOpeningNameInput)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: !canSubmit && !_isOpeningNameInput
-                        ? Semantics(
-                            button: true,
-                            enabled: false,
-                            child: Container(
-                              height: 52,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color(0x22FFFFFF),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0x77FFFFFF),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                GameLocale.select(
-                                  ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
-                                  en: 'Enter ${5 - _roomCodeController.text.length} more characters',
-                                  zhHans:
-                                      '还需输入 ${5 - _roomCodeController.text.length} 个字符',
-                                  zhHant:
-                                      '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
-                                ),
-                                style: MosiFonts.sans(
-                                  size: 15,
-                                  weight: FontWeight.w700,
-                                  color: const Color(0xCCFFFFFF),
-                                ),
-                              ),
-                            ),
-                          )
-                        : MosiButton(
-                            label: canSubmit
-                                ? '입력 완료'.localized
-                                : GameLocale.select(
-                                    ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
-                                    en: 'Enter ${5 - _roomCodeController.text.length} more characters',
-                                    zhHans:
-                                        '还需输入 ${5 - _roomCodeController.text.length} 个字符',
-                                    zhHant:
-                                        '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
+                PhoneFlowContentSwap(
+                  stateKey: showCodeEntry || canSubmit || _isOpeningNameInput,
+                  alignment: Alignment.bottomCenter,
+                  child: showCodeEntry || canSubmit || _isOpeningNameInput
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          child: !canSubmit && !_isOpeningNameInput
+                              ? Semantics(
+                                  button: true,
+                                  enabled: false,
+                                  child: Container(
+                                    height: 52,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x22FFFFFF),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0x77FFFFFF),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      GameLocale.select(
+                                        ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                        en: 'Enter ${5 - _roomCodeController.text.length} more characters',
+                                        zhHans:
+                                            '还需输入 ${5 - _roomCodeController.text.length} 个字符',
+                                        zhHant:
+                                            '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
+                                      ),
+                                      style: MosiFonts.sans(
+                                        size: 15,
+                                        weight: FontWeight.w700,
+                                        color: const Color(0xCCFFFFFF),
+                                      ),
+                                    ),
                                   ),
-                            height: 52,
-                            expand: true,
-                            fontSize: 16,
-                            background: canSubmit
-                                ? MosiColors.lime
-                                : const Color(0x33FFFFFF),
-                            foreground: canSubmit
-                                ? MosiColors.navy
-                                : MosiColors.white,
-                            loading: _isOpeningNameInput && !_joinSucceeded,
-                            loadingDots: true,
-                            success: _joinSucceeded,
-                            onPressed: canSubmit && !_isOpeningNameInput
-                                ? _openNameInput
-                                : null,
-                          ),
-                  ),
+                                )
+                              : MosiButton(
+                                  label: canSubmit
+                                      ? '입력 완료'.localized
+                                      : GameLocale.select(
+                                          ko: '${5 - _roomCodeController.text.length}글자 더 입력해 주세요',
+                                          en: 'Enter ${5 - _roomCodeController.text.length} more characters',
+                                          zhHans:
+                                              '还需输入 ${5 - _roomCodeController.text.length} 个字符',
+                                          zhHant:
+                                              '還需輸入 ${5 - _roomCodeController.text.length} 個字元',
+                                        ),
+                                  height: 52,
+                                  expand: true,
+                                  fontSize: 16,
+                                  background: canSubmit
+                                      ? MosiColors.lime
+                                      : const Color(0x33FFFFFF),
+                                  foreground: canSubmit
+                                      ? MosiColors.navy
+                                      : MosiColors.white,
+                                  loading:
+                                      _isOpeningNameInput && !_joinSucceeded,
+                                  loadingDots: true,
+                                  success: _joinSucceeded,
+                                  onPressed: canSubmit && !_isOpeningNameInput
+                                      ? _openNameInput
+                                      : null,
+                                ),
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
                 // 방 코드는 영문 대문자·숫자뿐이라 기기 키보드 대신 전용 자판을
                 // 띄웁니다. 숨은 입력칸은 실제 키보드·화면 읽기용으로만 남습니다.
-                if (_codeMode)
-                  _RoomCodeKeyboard(
+                _RoomCodeKeyboardTransition(
+                  visible: _codeMode,
+                  child: _RoomCodeKeyboard(
                     length: _roomCodeController.text.length,
                     enabled: !_isOpeningNameInput,
                     onKey: _typeCode,
                     onBackspace: _eraseCode,
                   ),
+                ),
               ],
             ),
           ),
@@ -467,6 +479,62 @@ class _PhoneRoomJoinState extends State<PhoneRoomJoin>
       selection: TextSelection.collapsed(offset: next.length),
     );
   }
+
+  Widget _buildScannerLead() => Column(
+    children: [
+      _buildScanner(),
+      const SizedBox(height: 26),
+      Row(
+        children: [
+          const Expanded(child: Divider(color: Color(0x66FFFFFF))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '또는 방 코드 입력'.localized,
+              style: MosiFonts.sans(size: 12, color: MosiColors.white),
+            ),
+          ),
+          const Expanded(child: Divider(color: Color(0x66FFFFFF))),
+        ],
+      ),
+      const SizedBox(height: 14),
+    ],
+  );
+
+  Widget _buildCodeLead() => Column(
+    children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0x22FFFFFF),
+          border: Border.all(color: const Color(0x66FFFFFF), width: 1.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.featured_video_outlined,
+              color: MosiColors.white,
+              size: 25,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'QR 옆 ROOM 아래 글자'.localized,
+                style: MosiFonts.sans(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: MosiColors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 22),
+    ],
+  );
 
   Widget _buildScanner() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -641,6 +709,53 @@ class _RoomCodeBoxes extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 코드 완료 시 전용 자판의 높이와 위치를 함께 아래로 접습니다.
+///
+/// 자판을 단순히 제거하면 Scaffold가 같은 프레임에 늘어나 화면 전체가 튑니다.
+/// 높이를 줄이는 동안 자판도 같은 비율로 아래로 이동시켜 실제 키보드가 내려가는
+/// 느낌을 유지합니다.
+class _RoomCodeKeyboardTransition extends StatelessWidget {
+  const _RoomCodeKeyboardTransition({
+    required this.visible,
+    required this.child,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = MosiMotion.of(context, MosiMotion.exit);
+    return TweenAnimationBuilder<double>(
+      key: const Key('room-code-keyboard-transition'),
+      tween: Tween<double>(begin: 0, end: visible ? 1 : 0),
+      duration: duration,
+      curve: visible ? Curves.easeOutCubic : Curves.easeInCubic,
+      builder: (context, progress, child) => ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: progress,
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: ExcludeSemantics(
+              excluding: progress < .5,
+              child: Opacity(
+                opacity: progress,
+                child: FractionalTranslation(
+                  key: const Key('room-code-keyboard-slide'),
+                  translation: Offset(0, 1 - progress),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      child: child,
     );
   }
 }

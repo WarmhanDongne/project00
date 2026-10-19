@@ -100,7 +100,7 @@ void main() {
       'working-tree-mutation',
     ]);
     expect(snapshotter.captureCount, 2);
-    expect(runner.invocations, hasLength(10));
+    expect(runner.invocations, hasLength(5 + packageTestTargets.length));
     _expectInvocation(runner.invocations[0], 'dart', <String>[
       'format',
       '--output=none',
@@ -134,17 +134,18 @@ void main() {
         ),
       );
     }
-    _expectInvocation(runner.invocations[8], 'npm', <String>[
-      '--prefix',
-      'functions',
-      'run',
-      'lint',
-    ], functionsLintTimeout);
-    _expectInvocation(runner.invocations[9], 'npm', <String>[
-      '--prefix',
-      'functions',
-      'test',
-    ], _remainingBudgetMatcher);
+    _expectInvocation(
+      runner.invocations[3 + packageTestTargets.length],
+      'npm',
+      <String>['--prefix', 'functions', 'run', 'lint'],
+      functionsLintTimeout,
+    );
+    _expectInvocation(
+      runner.invocations[4 + packageTestTargets.length],
+      'npm',
+      <String>['--prefix', 'functions', 'test'],
+      _remainingBudgetMatcher,
+    );
   });
 
   test('does not start a step after the FULL deadline is exhausted', () async {

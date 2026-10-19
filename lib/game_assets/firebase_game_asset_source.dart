@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,7 +16,8 @@ import 'package:game_kit/core/assets/game_asset_source.dart';
 /// 자격 증명을 사용합니다. 앱은 이 구현을 등록해도 자동 다운로드하지 않습니다.
 final class FirebaseGameAssetSource implements GameAssetSource {
   FirebaseGameAssetSource({FirebaseStorage? storage})
-    : _storage = storage ?? FirebaseStorage.instance;
+    : _storage =
+          storage ?? FirebaseStorage.instanceFor(app: FirebaseBackend.app);
 
   static const int _maxManifestBytes = 1024 * 1024;
   final FirebaseStorage _storage;

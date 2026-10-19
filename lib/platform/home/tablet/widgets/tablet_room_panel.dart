@@ -31,6 +31,9 @@ const _roomRevealDuration = Duration(milliseconds: 480);
 /// 자리 벌어짐은 들어오기보다 짧게 끝내 카드가 빈자리로 미끄러져 들어가게 합니다.
 const _playerSlotOpenDuration = Duration(milliseconds: 300);
 
+/// 인원이 부족할 때 시작 버튼이 붉게 물들었다가 원래 게임 색으로 돌아오는 시간입니다.
+const _insufficientPlayersFeedbackDuration = Duration(milliseconds: 1200);
+
 class TabletRoomPanel extends StatefulWidget {
   const TabletRoomPanel({
     super.key,
@@ -42,6 +45,7 @@ class TabletRoomPanel extends StatefulWidget {
     this.maxSlots,
     this.onStart,
     this.startLoading = false,
+    this.insufficientPlayersFeedback = 0,
     this.qrSize = 132,
   });
 
@@ -61,6 +65,9 @@ class TabletRoomPanel extends StatefulWidget {
   /// 시작 버튼을 눌렀을 때입니다. null이면 시작 버튼을 숨깁니다.
   final VoidCallback? onStart;
   final bool startLoading;
+
+  /// 값이 바뀔 때마다 시작 버튼의 인원 부족 피드백을 한 번 재생합니다.
+  final int insufficientPlayersFeedback;
   final double qrSize;
 
   @override
@@ -68,13 +75,18 @@ class TabletRoomPanel extends StatefulWidget {
 }
 
 class _TabletRoomPanelState extends State<TabletRoomPanel>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// 0이면 걷힌 상태, 1이면 방 목록 블록 전체가 덮인 상태입니다.
   late final AnimationController _cover = AnimationController(vsync: this);
+  late final AnimationController _insufficientPlayers = AnimationController(
+    vsync: this,
+    duration: _insufficientPlayersFeedbackDuration,
+  );
   Timer? _lastPlayerExitTimer;
   late bool _hadPlayers;
   late bool _showActiveRoom;
   late final Set<String> _staticUids;
+  bool _isResetting = false;
 
   RoomProvider get provider => widget.provider;
 
@@ -90,6 +102,10 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
   @override
   void didUpdateWidget(covariant TabletRoomPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.insufficientPlayersFeedback !=
+        widget.insufficientPlayersFeedback) {
+      _insufficientPlayers.forward(from: 0);
+    }
     if (identical(oldWidget.provider, provider)) return;
     oldWidget.provider.removeListener(_handleRoomChange);
     _lastPlayerExitTimer?.cancel();
@@ -113,6 +129,16 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
       if (mounted) {
         unawaited(_cover.animateTo(0, duration: _roomRevealDuration));
       }
+    }
+  }
+
+  Future<void> _resetRoom() async {
+    if (_isResetting || provider.isLoading) return;
+    setState(() => _isResetting = true);
+    try {
+      await _runCovered(provider.closeRoom);
+    } finally {
+      if (mounted) setState(() => _isResetting = false);
     }
   }
 
@@ -158,6 +184,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
     _lastPlayerExitTimer?.cancel();
     provider.removeListener(_handleRoomChange);
     _cover.dispose();
+    _insufficientPlayers.dispose();
     super.dispose();
   }
 
@@ -169,6 +196,8 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
       body = _EmptyRoom(
         provider: provider,
         runCovered: _runCovered,
+        resetting: _isResetting,
+        onReset: _resetRoom,
         primaryBackground: widget.startBackground,
         primaryForeground: widget.startForeground,
         primaryShadow: widget.deep,
@@ -182,20 +211,21 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
           .length;
       body = _RoomBody(
         provider: provider,
-        runCovered: _runCovered,
         roomCode: code,
         players: players,
         showActiveRoom: _showActiveRoom,
         maxSlots: widget.maxSlots,
         qrSize: widget.qrSize,
         staticUids: _staticUids,
+        resetting: _isResetting,
+        onReset: _resetRoom,
         start: widget.onStart == null
             ? null
             // 시작할 수 있게 되는 순간 한 번만 가볍게 들립니다(로비 연출 4번).
             : MosiReadyLift(
                 ready: activeCount > 0,
-                child: MosiButton(
-                  key: const Key('room-start-button'),
+                child: _StartButtonFeedback(
+                  animation: _insufficientPlayers,
                   label: activeCount == 0
                       ? context.l10n.waitingPlayers
                       : context.l10n.startWithPlayers(activeCount),
@@ -203,12 +233,7 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
                   loading: widget.startLoading,
                   background: widget.startBackground,
                   foreground: widget.startForeground,
-                  borderColor: MosiColors.ink,
                   shadowColor: widget.deep,
-                  shadowOffset: 5,
-                  height: 56,
-                  fontSize: 18,
-                  expand: true,
                 ),
               ),
       );
@@ -267,11 +292,139 @@ class _TabletRoomPanelState extends State<TabletRoomPanel>
   }
 }
 
+class _StartButtonFeedback extends StatelessWidget {
+  const _StartButtonFeedback({
+    required this.animation,
+    required this.label,
+    required this.onPressed,
+    required this.loading,
+    required this.background,
+    required this.foreground,
+    required this.shadowColor,
+  });
+
+  final Animation<double> animation;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final Color background;
+  final Color foreground;
+  final Color shadowColor;
+
+  double _enter(double value, double end) =>
+      Curves.easeOutCubic.transform((value / end).clamp(0.0, 1.0));
+
+  double _exit(double value, double begin) =>
+      1 -
+      Curves.easeInCubic.transform(
+        ((value - begin) / (1 - begin)).clamp(0.0, 1.0),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final insufficientLabel = GameLocale.select(
+      ko: '인원 부족',
+      en: 'Not enough players',
+      zhHans: '人数不足',
+      zhHant: '人數不足',
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final value = animation.value;
+        final redStrength = math.min(_enter(value, 0.2), _exit(value, 0.72));
+        final labelStrength = math.min(_enter(value, 0.26), _exit(value, 0.68));
+        final showingFeedback = labelStrength > 0.5;
+        final sweep = Curves.easeInOutCubic.transform(value);
+        return Stack(
+          children: [
+            MosiButton(
+              key: const Key('room-start-button'),
+              label: label,
+              semanticLabel: showingFeedback ? insufficientLabel : label,
+              onPressed: onPressed,
+              loading: loading,
+              background: background,
+              foreground: foreground.withValues(alpha: 1 - labelStrength),
+              borderColor: MosiColors.ink,
+              shadowColor: shadowColor,
+              shadowOffset: 5,
+              height: 56,
+              fontSize: 18,
+              expand: true,
+            ),
+            if (redStrength > 0.001)
+              Positioned(
+                left: 3,
+                top: 3,
+                right: 8,
+                bottom: 8,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: redStrength,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: DecoratedBox(
+                        key: const Key('room-start-insufficient-gradient'),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment(-1.8 + sweep, -1),
+                            end: Alignment(0.8 + sweep, 1),
+                            colors: const [
+                              Color(0xFFC91F3B),
+                              Color(0xFFFF6B62),
+                              Color(0xFFE72D42),
+                            ],
+                            stops: const [0, 0.52, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (labelStrength > 0.001)
+              Positioned(
+                left: 3,
+                top: 3,
+                right: 8,
+                bottom: 8,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Opacity(
+                      opacity: labelStrength,
+                      child: Transform.translate(
+                        offset: Offset(0, 3 * (1 - labelStrength)),
+                        child: Text(
+                          insufficientLabel,
+                          key: const Key('room-start-insufficient-label'),
+                          maxLines: 1,
+                          style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
+                            size: 18,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 //=======================방이 없을 때==============================
 class _EmptyRoom extends StatelessWidget {
   const _EmptyRoom({
     required this.provider,
     required this.runCovered,
+    required this.resetting,
+    required this.onReset,
     required this.primaryBackground,
     required this.primaryForeground,
     required this.primaryShadow,
@@ -279,6 +432,8 @@ class _EmptyRoom extends StatelessWidget {
 
   final RoomProvider provider;
   final Future<void> Function(Future<void> Function()) runCovered;
+  final bool resetting;
+  final VoidCallback onReset;
   final Color primaryBackground;
   final Color primaryForeground;
   final Color primaryShadow;
@@ -400,10 +555,8 @@ class _EmptyRoom extends StatelessWidget {
           const SizedBox(height: 8),
           MosiButton(
             key: const Key('close-unrestored-room'),
-            label: context.l10n.reset,
-            onPressed: provider.isLoading
-                ? null
-                : () => unawaited(runCovered(provider.closeRoom)),
+            label: resetting ? context.l10n.resetting : context.l10n.reset,
+            onPressed: provider.isLoading || resetting ? null : onReset,
             background: primaryBackground,
             foreground: primaryForeground,
             shadowColor: primaryShadow,
@@ -420,7 +573,6 @@ class _EmptyRoom extends StatelessWidget {
 class _RoomBody extends StatelessWidget {
   const _RoomBody({
     required this.provider,
-    required this.runCovered,
     required this.roomCode,
     required this.players,
     required this.showActiveRoom,
@@ -428,11 +580,14 @@ class _RoomBody extends StatelessWidget {
     required this.qrSize,
     required this.start,
     required this.staticUids,
+    required this.resetting,
+    required this.onReset,
   });
 
   final Set<String> staticUids;
+  final bool resetting;
+  final VoidCallback onReset;
   final RoomProvider provider;
-  final Future<void> Function(Future<void> Function()) runCovered;
   final String roomCode;
   final List<RoomPlayer> players;
   final bool showActiveRoom;
@@ -584,22 +739,20 @@ class _RoomBody extends StatelessWidget {
               ],
             ),
             MosiButton(
-              label: provider.isLoading
-                  ? context.l10n.resetting
-                  : context.l10n.reset,
+              key: const Key('room-reset-button'),
+              label: resetting ? context.l10n.resetting : context.l10n.reset,
               variant: MosiButtonVariant.outline,
               foreground: MosiColors.navy,
               height: 34,
               fontSize: 13,
               radius: 999,
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              onPressed: provider.isLoading
+              onPressed:
+                  provider.isLoading ||
+                      resetting ||
+                      provider.isRemovingAnyPlayer
                   ? null
-                  : () {
-                      if (!provider.isRemovingAnyPlayer) {
-                        unawaited(runCovered(provider.closeRoom));
-                      }
-                    },
+                  : onReset,
             ),
           ],
         ),

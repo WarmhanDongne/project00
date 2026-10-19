@@ -42,6 +42,166 @@ class GameExitInstantPageRoute<T> extends PageRouteBuilder<T> {
       );
 }
 
+/// 자리 배치 뒤 한지 창호문이 양옆에서 닫혔다가 열리며 게임을 공개합니다.
+///
+/// 윷놀이 디자인 `입장 연출 4 · 창호문`을 옮겼습니다. 문이 닫히는 동안에는
+/// 자리 배치 화면이 비치고, 닫힌 사이에 게임 화면으로 바뀝니다. 나갈 때는
+/// 다른 게임과 같은 무늬 덮개를 씁니다.
+class GameDoorEntryPageRoute<T> extends PageRouteBuilder<T> {
+  GameDoorEntryPageRoute({required super.pageBuilder})
+    : super(
+        transitionDuration: gameDoorEntryDuration,
+        reverseTransitionDuration: gameExitTransitionDuration,
+        transitionsBuilder: (_, animation, _, child) => _GameExitTransition(
+          animation: animation,
+          regularTransition: _DoorEntry(animation: animation, child: child),
+          child: child,
+        ),
+      );
+}
+
+/// 닫힘 0.84초 + 닫힌 채 1.08초 + 열림 1.08초입니다.
+const gameDoorEntryDuration = Duration(milliseconds: 3000);
+
+class _DoorEntry extends StatelessWidget {
+  const _DoorEntry({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      if (animation.status == AnimationStatus.completed) return child;
+      final ms = animation.value * gameDoorEntryDuration.inMilliseconds;
+      const curve = Cubic(.6, 0, .3, 1);
+      // 0 = 열림(화면 밖), 1 = 닫힘
+      final closed = ms < 840
+          ? curve.transform(ms / 840)
+          : ms < 1920
+          ? 1.0
+          : 1 - curve.transform(((ms - 1920) / 1080).clamp(0.0, 1.0));
+      // 닫힌 사이(시안 41~45%)에 게임 화면으로 바꿉니다.
+      final showGame = ms >= 1100;
+      return LayoutBuilder(
+        builder: (context, box) {
+          final half = box.maxWidth / 2;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Opacity(opacity: showGame ? 1 : 0, child: child),
+              Positioned(
+                left: -half * (1 - closed),
+                top: 0,
+                bottom: 0,
+                width: half + 2,
+                child: const IgnorePointer(child: _HanjiDoor(left: true)),
+              ),
+              Positioned(
+                left: half + half * (1 - closed),
+                top: 0,
+                bottom: 0,
+                width: half,
+                child: const IgnorePointer(child: _HanjiDoor(left: false)),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+/// 한지 창호문 한 짝: 크림 한지, 92px 격자 문살, 진갈색 테두리, 금색 고리.
+class _HanjiDoor extends StatelessWidget {
+  const _HanjiDoor({required this.left});
+
+  final bool left;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final unit = box.maxHeight / 1024;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4EEDF),
+          border: Border.all(color: const Color(0xFF6B3A12), width: 18 * unit),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CustomPaint(
+              painter: _LatticePainter(unit: unit, left: left),
+            ),
+            // 한지 안쪽 그늘
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  radius: 1.1,
+                  colors: [Color(0x00785028), Color(0x59785028)],
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment(left ? 1 : -1, 0),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8 * unit),
+                child: Container(
+                  width: 30 * unit,
+                  height: 80 * unit,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15 * unit),
+                    border: Border.all(
+                      color: const Color(0xFFC9A04A),
+                      width: 6 * unit,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _LatticePainter extends CustomPainter {
+  const _LatticePainter({required this.unit, required this.left});
+
+  final double unit;
+  final bool left;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bar = Paint()..color = const Color(0xFF8C5A2E);
+    final cell = 100 * unit;
+    final thick = 8 * unit;
+    for (var x = cell - thick; x < size.width; x += cell) {
+      canvas.drawRect(Rect.fromLTWH(x, 0, thick, size.height), bar);
+    }
+    for (var y = cell - thick; y < size.height; y += cell) {
+      canvas.drawRect(Rect.fromLTWH(0, y, size.width, thick), bar);
+    }
+    final band = Paint()..color = const Color(0xFF7A4A22);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 18 * unit), band);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        left ? size.width - 18 * unit : 0,
+        0,
+        18 * unit,
+        size.height,
+      ),
+      band,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LatticePainter old) =>
+      old.unit != unit || old.left != left;
+}
+
 /// 게임 퇴장 때 쓰는 마름모 무늬 대각선 덮개를 [coverage](0~1)만큼 그립니다.
 ///
 /// 0이면 아무것도 그리지 않고 1이면 전체를 덮습니다. 전체 화면 전환이 아니라

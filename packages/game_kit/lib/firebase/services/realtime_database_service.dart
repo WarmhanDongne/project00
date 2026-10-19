@@ -1,7 +1,7 @@
 // [realtime_database_service.dart] 는 여러 게임이 함께 사용하는 Firebase Realtime Database 접근을 공통으로 처리하는 파일이다.
 
 // ========================[ import ]==========================
-import 'package:firebase_core/firebase_core.dart';
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 // ============================================================
@@ -14,7 +14,7 @@ abstract final class RealtimeDatabaseService {
   static final FirebaseDatabase instance = _createInstance();
 
   static FirebaseDatabase _createInstance() {
-    final app = Firebase.app();
+    final app = FirebaseBackend.app;
     return FirebaseDatabase.instanceFor(
       app: app,
       // 별도 상수의 슬래시·리전 차이로 iOS 네이티브 인스턴스가 나뉘지 않도록

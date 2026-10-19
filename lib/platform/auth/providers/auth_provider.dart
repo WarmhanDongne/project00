@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -24,7 +25,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? get errorMessage => _errorMessage;
 
-  User? get currentUser => FirebaseAuth.instance.currentUser;
+  User? get currentUser => FirebaseBackend.auth.currentUser;
 
   bool get isSignedIn => currentUser != null;
 
@@ -171,6 +172,11 @@ class AuthProvider extends ChangeNotifier {
   /// Google 로그인
   Future<UserCredential?> signInWithGoogle() async {
     if (_isLoading) return null;
+    if (FirebaseBackend.isLocal) {
+      _errorMessage = '로컬 환경에서는 테스트 이메일 계정 또는 게스트 로그인을 사용해주세요.';
+      notifyListeners();
+      return null;
+    }
 
     _setLoading(true);
 
@@ -185,7 +191,7 @@ class AuthProvider extends ChangeNotifier {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+      final userCredential = await FirebaseBackend.auth.signInWithCredential(
         credential,
       );
 
@@ -224,6 +230,11 @@ class AuthProvider extends ChangeNotifier {
   /// Apple 로그인
   Future<UserCredential?> signInWithApple() async {
     if (_isLoading) return null;
+    if (FirebaseBackend.isLocal) {
+      _errorMessage = '로컬 환경에서는 테스트 이메일 계정 또는 게스트 로그인을 사용해주세요.';
+      notifyListeners();
+      return null;
+    }
 
     _setLoading(true);
 
@@ -264,7 +275,7 @@ class AuthProvider extends ChangeNotifier {
         ),
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+      final userCredential = await FirebaseBackend.auth.signInWithCredential(
         credential,
       );
 
@@ -341,7 +352,7 @@ class AuthProvider extends ChangeNotifier {
   /// 로그아웃
   Future<void> signOut() async {
     await GoogleSignIn.instance.signOut();
-    await FirebaseAuth.instance.signOut();
+    await FirebaseBackend.auth.signOut();
 
     notifyListeners();
   }

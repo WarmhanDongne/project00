@@ -3,10 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_core/firebase_core.dart';
+// ignore: depend_on_referenced_packages
+import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/template_game.dart';
+import 'package:game_kit/tablet/widgets/game_setup_back_button.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
+import 'package:game_kit/player_layouts/player_layout_editor.dart';
+import 'package:project00/games/game_registry.dart';
 import 'package:project00/platform/home/tablet/tablet_game_launcher.dart';
+import 'package:project00/platform/home/tablet/book_open_route.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/provider/game_list_provider.dart';
@@ -20,6 +29,7 @@ import 'package:project00/platform/home/tablet/tablet_lobby_selection.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_game_shelf.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_lobby_layout.dart';
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _game = GameInfo.fromJson({
   'id': 'liars_poker',
@@ -30,6 +40,20 @@ final _game = GameInfo.fromJson({
   'playTime': 15,
 });
 final _other = GameInfo.fromJson({'id': 'mafia', 'name': '마피아'});
+final _classicYut = GameInfo.fromJson({
+  'id': 'yut',
+  'name': '윷놀이',
+  'description': '두 명부터 할 수 있는 윷놀이',
+  'minPlayers': 4,
+  'maxPlayers': 4,
+  'playTime': 20,
+});
+final _strategyYut = GameInfo.fromJson({
+  'id': 'strategy_yut',
+  'name': '전략 윷놀이',
+  'minPlayers': 2,
+  'maxPlayers': 4,
+});
 const _players = [
   RoomPlayer(
     uid: 'one',
@@ -54,6 +78,26 @@ const _players = [
 ];
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  TestFirebaseCoreHostApi.setUp(MockFirebaseApp());
+  setUpAll(() async => Firebase.initializeApp());
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    FirebaseAuthPlatform.instanceFor(
+      app: Firebase.app(),
+      pluginConstants: {
+        'APP_CURRENT_USER': [
+          InternalUserInfo(
+            uid: 'controller',
+            isAnonymous: true,
+            isEmailVerified: false,
+          ).encode(),
+          <Map<Object?, Object?>>[],
+        ],
+      },
+    );
+  });
+
   group('게임 선택과 방 수명', () {
     late _RoomService service;
     late _RoomProvider provider;
@@ -183,6 +227,140 @@ void main() {
     expect(find.text('로비 시작'), findsOneWidget);
   });
 
+  testWidgets('두 명으로 일반 윷놀이 자리 배치를 시작한다', (tester) async {
+    final service = _RoomService();
+    final provider = _RoomProvider(service, gameCatalog: const GameRegistry())
+      ..roomCode = 'YUT2'
+      ..players = _players;
+    addTearDown(provider.dispose);
+    expect(isGamePlayableWith(_classicYut, 2, provider), isTrue);
+    expect(gamePlayerRangeLabel(_classicYut, provider), '2–4명');
+    expect(gameCannotStartMessage(_classicYut, 2, provider), isNull);
+    expect(isGamePlayableWith(_strategyYut, 2, provider), isFalse);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => unawaited(
+                launchTabletGame(
+                  context: context,
+                  game: _classicYut,
+                  provider: provider,
+                  ensureSelection: () async => true,
+                  isCurrent: () => context.mounted,
+                  onLaunched: () {},
+                ),
+              ),
+              child: const Text('일반 윷놀이 시작'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('일반 윷놀이 시작'));
+    await tester.pumpAndSettle();
+
+    expect(service.commands, ['YUT2:seating']);
+    final editor = tester.widget<PlayerLayoutEditor>(
+      find.byType(PlayerLayoutEditor),
+    );
+    expect(editor.initialLayout.playerCount, 2);
+  });
+
+  testWidgets('시작 인원이 부족하면 오류 메시지 대신 버튼 피드백을 요청한다', (tester) async {
+    final service = _RoomService();
+    final provider = _RoomProvider(service)
+      ..roomCode = 'FIRST'
+      ..players = [_players.first];
+    var insufficientFeedback = 0;
+    addTearDown(provider.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => unawaited(
+                launchTabletGame(
+                  context: context,
+                  game: _game,
+                  provider: provider,
+                  ensureSelection: () async => true,
+                  isCurrent: () => context.mounted,
+                  onLaunched: () {},
+                  onInsufficientPlayers: () => insufficientFeedback += 1,
+                ),
+              ),
+              child: const Text('시작'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('시작'));
+    await tester.pump();
+
+    expect(insufficientFeedback, 1);
+    expect(service.commands, isEmpty);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('자리 배치 복귀는 서버 선택 해제를 기다리지 않고 책 전환을 역재생한다', (tester) async {
+    final service = _RoomService()..clearWait = Completer<void>();
+    final provider = _RoomProvider(service)
+      ..roomCode = 'FIRST'
+      ..players = _players;
+    final selection = TabletLobbySelection(provider);
+    var returningTransitions = 0;
+    addTearDown(provider.dispose);
+    addTearDown(selection.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () {
+                selection.show(_game);
+                unawaited(
+                  launchTabletGame(
+                    context: context,
+                    game: _game,
+                    provider: provider,
+                    ensureSelection: selection.prepare,
+                    isCurrent: () => context.mounted,
+                    onLaunched: selection.didLaunch,
+                    onTransitionReturning: () => returningTransitions += 1,
+                    originRect: () => const Rect.fromLTWH(120, 120, 180, 240),
+                  ),
+                );
+              },
+              child: const Text('로비 시작'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('로비 시작'));
+    await tester.pumpAndSettle();
+    expect(find.text('자리 배치'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('test-setup-return')));
+    await tester.pump();
+    expect(returningTransitions, 1);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pump(bookOpenTransitionDuration);
+    await tester.pump();
+
+    expect(find.text('로비 시작'), findsOneWidget);
+    expect(service.commands, contains('FIRST:null'));
+    service.clearWait!.complete();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('활성 버튼은 접근성 실행을 지원하고 로딩 버튼은 실행하지 않는다', (tester) async {
     final semantics = tester.ensureSemantics();
     var calls = 0;
@@ -299,7 +477,7 @@ void main() {
     }
   }
 
-  testWidgets('시작 처리 중에도 방 버튼의 위치와 로딩 표시를 유지한다', (tester) async {
+  testWidgets('시작 처리 중에도 방 버튼 위치와 초기화 문구를 유지한다', (tester) async {
     final provider = _RoomProvider(_RoomService())
       ..roomCode = 'ABCDE'
       ..players = _players;
@@ -320,9 +498,15 @@ void main() {
     );
     await pump(false);
     final button = find.byKey(const Key('room-start-button'));
+    final reset = find.byKey(const Key('room-reset-button'));
     final position = tester.getTopLeft(button);
+    final resetPosition = tester.getTopLeft(reset);
+    provider.isLoading = true;
     await pump(true);
     expect(tester.getTopLeft(button), position);
+    expect(tester.getTopLeft(reset), resetPosition);
+    expect(find.text('초기화'), findsOneWidget);
+    expect(find.textContaining('초기화 중'), findsNothing);
     expect(
       find.descendant(
         of: button,
@@ -330,6 +514,132 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('인원 부족 피드백은 버튼에서 부드럽게 나타났다가 원래 상태로 돌아온다', (tester) async {
+    final provider = _RoomProvider(_RoomService())
+      ..roomCode = 'ABCDE'
+      ..players = _players;
+    var feedback = 0;
+    addTearDown(provider.dispose);
+    Future<void> pumpPanel() => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 372,
+            child: TabletRoomPanel(
+              provider: provider,
+              insufficientPlayersFeedback: feedback,
+              onStart: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await pumpPanel();
+    final button = find.byKey(const Key('room-start-button'));
+    final position = tester.getTopLeft(button);
+    feedback += 1;
+    await pumpPanel();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.byKey(const Key('room-start-insufficient-gradient')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('room-start-insufficient-label')),
+      findsOneWidget,
+    );
+    expect(find.text('인원 부족'), findsOneWidget);
+    expect(tester.getTopLeft(button), position);
+
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(
+      find.byKey(const Key('room-start-insufficient-gradient')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('room-start-insufficient-label')),
+      findsNothing,
+    );
+    expect(tester.getTopLeft(button), position);
+  });
+
+  test('책 전환은 진입과 대기실 복귀에 같은 시간을 사용한다', () {
+    final route = BookOpenRoute<void>(
+      origin: const Rect.fromLTWH(100, 100, 180, 240),
+      builder: (_) => const SizedBox.shrink(),
+    );
+    expect(route.transitionDuration, bookOpenTransitionDuration);
+    expect(route.reverseTransitionDuration, route.transitionDuration);
+  });
+
+  test('책 전환은 선택 위치의 비율을 유지하며 화면 중앙으로 모인다', () {
+    const viewport = Size(1280, 800);
+    const origin = Rect.fromLTWH(180, 210, 210, 280);
+
+    final centered = centeredBookRect(viewport, origin);
+
+    expect(centered.center, const Offset(640, 400));
+    expect(centered.width / centered.height, origin.width / origin.height);
+    expect(centered.width, greaterThan(origin.width));
+    expect(centered.height, lessThanOrEqualTo(viewport.height * 0.48));
+  });
+
+  testWidgets('책이 중앙에 모인 뒤 자리 배치 화면이 책 주변에서 커진다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const origin = Rect.fromLTWH(150, 220, 210, 280);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push<void>(
+              BookOpenRoute<void>(
+                origin: origin,
+                cover: const ColoredBox(color: Colors.purple),
+                builder: (_) => const ColoredBox(color: Colors.green),
+              ),
+            ),
+            child: const Text('전환'),
+          ),
+        ),
+      ),
+    );
+    final viewport = MediaQuery.sizeOf(tester.element(find.text('전환')));
+
+    await tester.tap(find.text('전환'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 310));
+
+    final cover = tester.getRect(
+      find.byKey(const Key('book-transition-cover')),
+    );
+    final firstReveal = tester.getRect(
+      find.byKey(const Key('book-screen-reveal')),
+    );
+    expect((cover.center - viewport.center(Offset.zero)).distance, lessThan(2));
+
+    await tester.pump(const Duration(milliseconds: 180));
+    final secondReveal = tester.getRect(
+      find.byKey(const Key('book-screen-reveal')),
+    );
+    expect(secondReveal.width, greaterThan(firstReveal.width));
+    expect(secondReveal.height, greaterThan(firstReveal.height));
+  });
+
+  testWidgets('준비 화면 뒤로가기는 처리 중에도 회전 로딩으로 바뀌지 않는다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GameSetupBackButton(onPressed: () {}, isBusy: true),
+        ),
+      ),
+    );
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('자리 대기 단절 모달은 복구 시 닫히며 실패한 퇴장은 재시도할 수 있다', (tester) async {
@@ -377,11 +687,11 @@ void main() {
 }
 
 class _RoomProvider extends RoomProvider {
-  _RoomProvider(_RoomService service)
+  _RoomProvider(_RoomService service, {GameCatalog? gameCatalog})
     : super(
         service: service,
         gameService: _GameService(),
-        gameCatalog: _Catalog(),
+        gameCatalog: gameCatalog ?? _Catalog(),
       );
   bool connected = true;
   @override
@@ -391,10 +701,15 @@ class _RoomProvider extends RoomProvider {
 class _RoomService implements RoomService {
   final commands = <String>[];
   Completer<void>? selectionWait;
+  Completer<void>? clearWait;
   @override
   Future<void> selectGame({required String roomCode, String? gameId}) async {
     commands.add('$roomCode:$gameId');
-    if (gameId != null) await selectionWait?.future;
+    if (gameId != null) {
+      await selectionWait?.future;
+    } else {
+      await clearWait?.future;
+    }
   }
 
   @override
@@ -436,7 +751,24 @@ class _TestGame extends TemplateGame {
     onPrepare,
     required void Function(PlayerLayoutModel) onComplete,
     required Future<bool> Function() onCancel,
-  }) => const Scaffold(body: Text('자리 배치'));
+  }) => Builder(
+    builder: (context) => Scaffold(
+      body: Column(
+        children: [
+          const Text('자리 배치'),
+          TextButton(
+            key: const Key('test-setup-return'),
+            onPressed: () => unawaited(() async {
+              if (await onCancel() && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            }()),
+            child: const Text('대기실'),
+          ),
+        ],
+      ),
+    ),
+  );
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

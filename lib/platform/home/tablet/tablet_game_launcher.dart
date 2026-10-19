@@ -1,5 +1,10 @@
 import 'dart:async';
 
+import 'package:game_kit/firebase/firebase_backend.dart';
+import 'package:game_kit/recovery/models/game_recovery_context.dart';
+import 'package:game_kit/recovery/services/room_session_identity_store.dart';
+import 'package:project00/platform/home/tablet/tablet_start_cleanup.dart';
+
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
@@ -32,6 +37,9 @@ Future<void> launchTabletGame({
   required bool Function() isCurrent,
   required VoidCallback onLaunched,
   Rect? Function()? originRect,
+  VoidCallback? onTransitionStarted,
+  VoidCallback? onTransitionReturning,
+  VoidCallback? onInsufficientPlayers,
 }) => _TabletGameLauncher(
   context,
   game,
@@ -40,6 +48,9 @@ Future<void> launchTabletGame({
   isCurrent,
   onLaunched,
   originRect,
+  onTransitionStarted,
+  onTransitionReturning,
+  onInsufficientPlayers,
 ).start();
 
 class _TabletGameLauncher {
@@ -51,6 +62,9 @@ class _TabletGameLauncher {
     this.isCurrent,
     this.onLaunched,
     this.originRect,
+    this.onTransitionStarted,
+    this.onTransitionReturning,
+    this.onInsufficientPlayers,
   );
   final BuildContext context;
   final GameInfo game;
@@ -58,14 +72,40 @@ class _TabletGameLauncher {
   final Future<bool> Function() ensureSelection;
   final bool Function() isCurrent;
   final VoidCallback onLaunched;
+  final VoidCallback? onTransitionStarted;
+  final VoidCallback? onTransitionReturning;
+  final VoidCallback? onInsufficientPlayers;
 
   /// 화면에서 고른 책의 자리입니다. 있으면 그 책이 열리며 자리 배치로 넘어갑니다.
   final Rect? Function()? originRect;
+  // Owned by the launch, not a route builder invocation (which may rebuild).
+  bool _startedGame = false;
+  bool _completingGame = false;
+  TabletStartCleanup? _cleanup;
+  bool _preparingGame = false;
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showInsufficientPlayers(String fallbackMessage) {
+    final feedback = onInsufficientPlayers;
+    if (feedback != null) {
+      feedback();
+      return;
+    }
+    _showMessage(context, fallbackMessage);
+  }
+
+  bool _isTooFewPlayers(int playerCount, List<int>? supportedCounts) {
+    if (supportedCounts != null) {
+      return !supportedCounts.contains(playerCount) &&
+          supportedCounts.any((count) => count > playerCount);
+    }
+    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
+    return playerCount < minPlayers;
   }
 
   Future<void> start() async {
@@ -75,8 +115,14 @@ class _TabletGameLauncher {
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
     final currentPlayerCount = players.length;
-    final minPlayers = game.minPlayers > 0 ? game.minPlayers : 2;
-    final maxPlayers = game.maxPlayers > 0
+    final minPlayers = game.id == 'yut'
+        ? 2
+        : game.minPlayers > 0
+        ? game.minPlayers
+        : 2;
+    final maxPlayers = game.id == 'yut'
+        ? 4
+        : game.maxPlayers > 0
         ? game.maxPlayers
         : RoomLimits.defaultMaxPlayers;
 
@@ -100,26 +146,31 @@ class _TabletGameLauncher {
       _showMessage(context, gameRequiresUpdateMessage);
       return;
     }
-    final supportedCounts = templateGame.supportedPlayerCounts;
+    // Classic Yut has a range, even if an older package build still advertises
+    // a fixed count. The strategy variants keep their exact four-player rule.
+    final supportedCounts = game.id == 'yut'
+        ? null
+        : templateGame.supportedPlayerCounts;
     if (supportedCounts != null &&
         !supportedCounts.contains(currentPlayerCount)) {
-      _showMessage(
-        context,
-        GameLocale.select(
-          ko: '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
-          en: 'This game starts with ${supportedCounts.join(' or ')} players. $currentPlayerCount are here now.',
-          zhHans:
-              '此游戏需要 ${supportedCounts.join(' 或 ')} 人才能开始。目前有 $currentPlayerCount 人。',
-          zhHant:
-              '此遊戲需要 ${supportedCounts.join(' 或 ')} 人才能開始。目前有 $currentPlayerCount 人。',
-        ),
+      final message = GameLocale.select(
+        ko: '이 게임은 ${supportedCounts.join(' 또는 ')}명이 모이면 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
+        en: 'This game starts with ${supportedCounts.join(' or ')} players. $currentPlayerCount are here now.',
+        zhHans:
+            '此游戏需要 ${supportedCounts.join(' 或 ')} 人才能开始。目前有 $currentPlayerCount 人。',
+        zhHant:
+            '此遊戲需要 ${supportedCounts.join(' 或 ')} 人才能開始。目前有 $currentPlayerCount 人。',
       );
+      if (_isTooFewPlayers(currentPlayerCount, supportedCounts)) {
+        _showInsufficientPlayers(message);
+      } else {
+        _showMessage(context, message);
+      }
       return;
     }
 
     if (supportedCounts == null && currentPlayerCount < minPlayers) {
-      _showMessage(
-        context,
+      _showInsufficientPlayers(
         GameLocale.select(
           ko: '이 게임은 최소 $minPlayers명부터 시작할 수 있어요. 현재 $currentPlayerCount명이 참여 중입니다.',
           en: 'This game needs at least $minPlayers players. $currentPlayerCount are here now.',
@@ -200,6 +251,21 @@ class _TabletGameLauncher {
     final seatingStarted = await provider.beginPlayerSeating();
     if (!context.mounted || !isCurrent()) return;
     if (!seatingStarted) {
+      final latestPlayerCount = provider.players
+          .where((player) => player.isActive && player.isPlayer)
+          .length;
+      if (_isTooFewPlayers(latestPlayerCount, supportedCounts)) {
+        _showInsufficientPlayers(
+          provider.errorMessage?.localized ??
+              GameLocale.select(
+                ko: '게임을 시작할 인원이 부족합니다.',
+                en: 'There are not enough players to start.',
+                zhHans: '开始游戏的人数不足。',
+                zhHant: '開始遊戲的人數不足。',
+              ),
+        );
+        return;
+      }
       _showMessage(
         context,
         provider.errorMessage?.localized ??
@@ -221,25 +287,61 @@ class _TabletGameLauncher {
     // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
     final origin = originRect?.call();
     unawaited(AppSystemUi.enterGameFullscreen());
-    onLaunched();
+    onTransitionStarted?.call();
     Widget buildSetup(BuildContext layoutContext) => _buildStartSetup(
       layoutContext,
       templateGame: templateGame,
       initialLayout: initialLayout,
       roomCode: roomCode,
     );
-    Navigator.of(context).push<void>(
-      origin == null
-          ? MaterialPageRoute(builder: buildSetup)
-          : BookOpenRoute(
-              origin: origin,
-              coverColor: MosiGameArt.of(
-                game.id,
+    final PageRoute<void> setupRoute = origin == null
+        ? MaterialPageRoute(builder: buildSetup)
+        : BookOpenRoute(
+            origin: origin,
+            coverColor: MosiGameArt.of(
+              game.id,
+              fallbackName: game.name,
+            ).spineColor,
+            cover: FittedBox(
+              fit: BoxFit.fill,
+              child: MosiGameCover(
+                gameId: game.id,
                 fallbackName: game.name,
-              ).spineColor,
-              builder: buildSetup,
+                displayName: game.localizedName(
+                  Localizations.localeOf(context),
+                ),
+                englishName: game.englishName,
+                fallbackImageUrl: game.imageUrl,
+                width: 240,
+                shadow: 0,
+              ),
             ),
-    );
+            builder: buildSetup,
+          );
+    Navigator.of(
+      context,
+    ).push<void>(setupRoute).whenComplete(() => _cleanup?.invalidate());
+
+    // 상세→선반 교체와 선택 상태 정리는 책이 화면을 완전히 덮은 뒤에만
+    // 수행합니다. 전환 중 뒤쪽 로비가 먼저 재배치되면 길이와 위치가 흔들려
+    // 보이고, 되돌아올 때 출발점도 달라집니다.
+    var markedAsLaunched = false;
+    void markAsLaunched(AnimationStatus status) {
+      if (status != AnimationStatus.completed || markedAsLaunched) return;
+      markedAsLaunched = true;
+      setupRoute.animation?.removeStatusListener(markAsLaunched);
+      if (isCurrent()) onLaunched();
+    }
+
+    final animation = setupRoute.animation;
+    if (animation == null || animation.status == AnimationStatus.completed) {
+      markAsLaunched(AnimationStatus.completed);
+    } else {
+      animation.addStatusListener(markAsLaunched);
+      setupRoute.completed.whenComplete(
+        () => animation.removeStatusListener(markAsLaunched),
+      );
+    }
   }
 
   /// 자리 배치 화면 자리에 무엇을 띄울지 정합니다.
@@ -256,7 +358,7 @@ class _TabletGameLauncher {
     // 게임 시작 명령이 서버에 닿은 뒤에는 참가자 변경으로 자리 배치를 되감지
     // 않습니다. 그 시점에는 이미 `game/public/status = playing`이라 선택 해제가
     // 서버에서 거부되고, 화면은 곧 게임 화면으로 교체됩니다.
-    var startedGame = false;
+    // _startedGame and _cleanup survive builder rebuilds.
 
     Future<bool> cancel() async {
       if (await hasPendingTabletGameStart(roomCode)) {
@@ -273,28 +375,52 @@ class _TabletGameLauncher {
         }
         return false;
       }
-      final cleared = await provider.clearSelectedGame();
-      if (!layoutContext.mounted) return false;
-      if (!cleared) {
-        _showMessage(
-          layoutContext,
-          provider.errorMessage?.localized ??
-              GameLocale.select(
-                ko: '게임 선택을 해제하지 못했습니다.',
-                en: 'Could not clear the game selection.',
-                zhHans: '无法取消游戏选择。',
-                zhHant: '無法取消遊戲選擇。',
-              ),
-        );
-      }
-      return cleared;
+      // route는 즉시 역재생하고 서버의 seating→waiting 전환은 그 애니메이션과
+      // 겹쳐 처리합니다. 실패하면 복귀한 로비에서 같은 해제를 재시도합니다.
+      _cleanup?.invalidate();
+      onTransitionReturning?.call();
+      unawaited(_clearSelectionAfterReturn(roomCode));
+      return true;
     }
 
     Future<bool> prepare(
       PlayerLayoutModel completedLayout, {
       Map<String, Object?>? options,
     }) async {
+      if (_preparingGame || _startedGame) return false;
+      _preparingGame = true;
       try {
+        await RoomSessionIdentityStore.instance.load();
+        if (!layoutContext.mounted || provider.roomCode != roomCode) {
+          return false;
+        }
+        final uid = FirebaseBackend.auth.currentUser?.uid;
+        final scope = tabletStartIdentityKey(roomCode);
+        // A previous game's cached context is not evidence about this new start.
+        final previousGame = uid == null
+            ? null
+            : GameRecoverySession.forRoom(
+                roomCode,
+                uid,
+              ).context?.gameInstanceId;
+        String? capturedGame;
+        bool sameAttempt() {
+          if (!layoutContext.mounted ||
+              provider.roomCode != roomCode ||
+              FirebaseBackend.auth.currentUser?.uid != uid ||
+              (scope != null && tabletStartIdentityKey(roomCode) != scope)) {
+            return false;
+          }
+          final observed = uid == null
+              ? null
+              : GameRecoverySession.forRoom(roomCode, uid).context;
+          return capturedGame == null ||
+              observed == null ||
+              !observed.valid ||
+              observed.gameInstanceId == previousGame ||
+              observed.gameInstanceId == capturedGame;
+        }
+
         final prepared = await prepareTabletGameStart(
           roomCode: roomCode,
           saveSeats: () => provider.savePlayerSeatIndexes({
@@ -302,8 +428,7 @@ class _TabletGameLauncher {
               player.uid: player.seatIndex,
           }),
           startGame: () => templateGame.startGame(roomCode, options: options),
-          isCurrent: () =>
-              layoutContext.mounted && provider.roomCode == roomCode,
+          isCurrent: sameAttempt,
         );
         if (!prepared) {
           if (layoutContext.mounted && provider.roomCode == roomCode) {
@@ -320,7 +445,44 @@ class _TabletGameLauncher {
           }
           return false;
         }
-        startedGame = true;
+        _startedGame = true;
+        _cleanup?.invalidate();
+        final identity = uid == null
+            ? null
+            : RoomSessionIdentityStore.instance.current(
+                uid,
+                'controller',
+                roomCode,
+              );
+        late final TabletStartCleanup lookup;
+        lookup = TabletStartCleanup(
+          isCurrent: sameAttempt,
+          capture: () async {
+            final target = await provider.captureGameTarget();
+            if (!sameAttempt() || target == null) return null;
+            if (identity != null &&
+                !identity.envelope.entries.every(
+                  (entry) => target[entry.key] == entry.value,
+                )) {
+              return null;
+            }
+            final observed = uid == null
+                ? null
+                : GameRecoverySession.forRoom(roomCode, uid).context;
+            if (observed != null &&
+                observed.valid &&
+                observed.gameInstanceId != previousGame &&
+                observed.gameInstanceId != target['gameInstanceId']) {
+              lookup.invalidate();
+              return null;
+            }
+            capturedGame = target['gameInstanceId'] as String?;
+            return target;
+          },
+        );
+        _cleanup = lookup;
+        // The start was accepted. The remaining seating/zoom continues now.
+        if (scope != null) _cleanup!.prefetch();
       } catch (error) {
         if (!layoutContext.mounted) return false;
         _showMessage(
@@ -333,6 +495,8 @@ class _TabletGameLauncher {
           ),
         );
         return false;
+      } finally {
+        _preparingGame = false;
       }
       return layoutContext.mounted;
     }
@@ -343,16 +507,17 @@ class _TabletGameLauncher {
     /// (`saveRealtimePlayerSeatIndexes`의 UID 집합 일치 검사) 진행자에게는
     /// 원인을 알 수 없는 문구만 보입니다.
     Future<void> handleRosterChanged() async {
-      if (startedGame || !layoutContext.mounted) return;
+      if (_startedGame || !layoutContext.mounted) return;
       if (await hasPendingTabletGameStart(roomCode)) return;
-      if (!layoutContext.mounted || startedGame) return;
+      if (!layoutContext.mounted || _startedGame) return;
+      _cleanup?.invalidate();
       // 화면을 닫기 전에 미리 잡아 둡니다. pop 뒤에는 이 context로 messenger를
       // 찾을 수 없어 안내가 사라진 화면과 함께 묻힙니다.
       final messenger = ScaffoldMessenger.of(layoutContext);
-      // 서버 상태를 먼저 waiting으로 되돌립니다. 실패해도 화면은 닫습니다.
-      // 낡은 배치를 들고 남아 있는 편이 더 나쁘고, 대기실에서 다시 고르면
-      // 같은 선택 해제가 재시도됩니다.
-      await provider.clearSelectedGame();
+      // 낡은 배치를 들고 남지 않도록 화면은 즉시 닫고, 서버 상태 복원은
+      // 같은 역방향 책 전환과 겹쳐 처리합니다.
+      onTransitionReturning?.call();
+      unawaited(_clearSelectionAfterReturn(roomCode));
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -364,8 +529,11 @@ class _TabletGameLauncher {
     }
 
     void complete(PlayerLayoutModel completedLayout) async {
-      final cleanupTarget = await provider.captureGameTarget();
-      if (!layoutContext.mounted) return;
+      final cleanup = _cleanup;
+      if (_completingGame || cleanup == null || !cleanup.current) return;
+      _completingGame = true;
+      final cleanupTarget = await cleanup.target();
+      if (!layoutContext.mounted || !cleanup.current) return;
       //=======================태블릿 게임 방향 불변 조건==============================
       // 모든 태블릿 게임은 게임별 휴대폰 정책과 관계없이 항상 가로입니다.
       unawaited(AppOrientation.lockTabletGameLandscape());
@@ -373,25 +541,32 @@ class _TabletGameLauncher {
       // 여기서 슬라이드·페이드 같은 전환 효과를 주면 오히려 화면이
       // 바뀌었다는 느낌이 들어 연출이 끊겨 보입니다. 전환 없이 즉시
       // 바꿔서 하나의 연출처럼 이어지게 합니다.
-      final gameRoute = GameExitInstantPageRoute<void>(
-        pageBuilder: (_, _, _) => templateGame.buildTabletScreen(
-          playerLayout: completedLayout,
-          provider: provider,
-          roomCode: roomCode,
-        ),
+      Widget buildGame(
+        BuildContext _,
+        Animation<double> _,
+        Animation<double> _,
+      ) => templateGame.buildTabletScreen(
+        playerLayout: completedLayout,
+        provider: provider,
+        roomCode: roomCode,
       );
+      // 윷놀이처럼 자기 입장 연출이 있는 게임은 창호문이 닫혔다 열리며 들어갑니다.
+      final PageRoute<void> gameRoute = templateGame.usesDoorEntrance
+          ? GameDoorEntryPageRoute<void>(pageBuilder: buildGame)
+          : GameExitInstantPageRoute<void>(pageBuilder: buildGame);
       Navigator.of(layoutContext).pushReplacement(gameRoute);
       // 게임 화면의 퇴장 연출까지 끝난 뒤에 게임 데이터를 정리합니다.
       // 먼저 지우면 덮이는 동안 결과 화면이 사라질 수 있습니다.
-      gameRoute.completed.then(
-        (_) => unawaited(
+      gameRoute.completed.then((_) {
+        onTransitionReturning?.call();
+        unawaited(
           restoreRoomToWaiting(
             provider,
             expectedTarget: cleanupTarget,
             captured: true,
           ),
-        ),
-      );
+        );
+      });
     }
 
     // 공용 자리 배치와 게임별 준비 화면을 **여기서 한 번** 감쌉니다. 두 화면을
@@ -413,10 +588,42 @@ class _TabletGameLauncher {
             tableImage: templateGame.layoutTableImage,
             chairImage: templateGame.layoutChairImage,
             seatTheme: MosiSeatTheme.of(templateGame.id),
+            zoomHandoff: !templateGame.usesDoorEntrance,
             onCancel: cancel,
             onPrepare: prepare,
             onComplete: complete,
           ),
     );
+  }
+
+  Future<void> _clearSelectionAfterReturn(String roomCode) async {
+    final cleared = await provider.clearSelectedGame();
+    if (cleared || !context.mounted || provider.roomCode != roomCode) {
+      return;
+    }
+    final message =
+        provider.errorMessage?.localized ??
+        GameLocale.select(
+          ko: '대기실 상태를 확인하지 못했습니다.',
+          en: 'Could not confirm the lobby state.',
+          zhHans: '无法确认大厅状态。',
+          zhHant: '無法確認大廳狀態。',
+        );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: SnackBarAction(
+            label: GameLocale.select(
+              ko: '다시 시도',
+              en: 'Retry',
+              zhHans: '重试',
+              zhHant: '重試',
+            ),
+            onPressed: () => unawaited(_clearSelectionAfterReturn(roomCode)),
+          ),
+        ),
+      );
   }
 }

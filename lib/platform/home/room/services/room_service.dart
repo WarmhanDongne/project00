@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
@@ -23,10 +24,8 @@ class RoomService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
   }) : realtime = database ?? RealtimeDatabaseService.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+       _auth = auth ?? FirebaseBackend.auth,
+       _functions = functions ?? FirebaseBackend.functions;
 
   final FirebaseDatabase realtime;
   final FirebaseAuth _auth;
@@ -124,11 +123,11 @@ class RoomService {
   );
 
   Future<User> ensureAuthenticated() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = FirebaseBackend.auth.currentUser;
     if (currentUser != null) {
       return currentUser;
     }
-    final credential = await FirebaseAuth.instance.signInAnonymously();
+    final credential = await FirebaseBackend.auth.signInAnonymously();
     final user = credential.user;
     if (user == null) {
       throw const RoomCommandException('사용자 인증에 실패했습니다.');
@@ -273,7 +272,7 @@ class RoomService {
     // 현재 연결 상태 갱신이 복구의 성공 기준입니다. 다음 단절 예약은 Android/iOS
     // native plugin에서 일시적인 `unknown`을 낼 수 있는 보조 기능이므로, 성공한
     // 복구와 네트워크 팝업 종료를 지연하거나 실패시키지 않습니다.
-    unawaited(_registerControllerDisconnectPresence(presenceRef));
+    unawaited(_registerControllerDisconnectPresence(presenceRef, identity));
   }
 
   Future<void> heartbeatController(String roomCode) async {
@@ -308,17 +307,10 @@ class RoomService {
       'local:close_identity',
       () => _sessionIdentity(roomCode, 'controller'),
     );
-    try {
-      await RoomActionTiming.measure(
-        'rtdb:disconnect_cancel',
-        () => _connectionReference(identity).onDisconnect().cancel(),
-      );
-    } catch (_) {
-      // 서버 close가 방 종료의 권위이므로 예약 취소 실패는 계속 진행합니다.
-    }
-    final session = GameRecoverySession.forRoom(roomCode, identity.uid);
-    session.leaving = true;
-    session.invalidate();
+    final oldConnection = _connectionReference(identity);
+    final closePayload = controllerCommandData(roomCode, {
+      'roomInstanceId': identity.roomInstanceId,
+    });
     await _operations.load();
     final confirmed = _operations
         .recordsFor(identity.uid)
@@ -330,6 +322,7 @@ class RoomService {
         )
         .firstOrNull;
     if (confirmed != null) {
+      unawaited(_cancelControllerDisconnect(oldConnection));
       await _identities.clear(
         identity.uid,
         "controller",
@@ -346,12 +339,18 @@ class RoomService {
       uid: identity.uid,
       kind: 'close',
       scope: identity.roomInstanceId,
-      payload: controllerCommandData(roomCode, {
-        'roomInstanceId': identity.roomInstanceId,
-      }),
+      payload: closePayload,
     );
     final needsResultLookup = operation['state'] != 'requested';
     await _operations.mark(operation, 'awaitingResult');
+    // Do not invalidate a newly replaced room/connection after a slow disk write.
+    if (_isCurrentController(identity)) {
+      final session = GameRecoverySession.forRoom(roomCode, identity.uid);
+      session.leaving = true;
+      session.invalidate();
+    }
+    // Intent is durable. This old reference cannot resolve to the current room.
+    unawaited(_cancelControllerDisconnect(oldConnection));
     final payload = Map<String, dynamic>.from(operation['payload'] as Map);
     var alreadyApplied = false;
     if (needsResultLookup) {
@@ -1478,11 +1477,51 @@ class RoomService {
     }
   }
 
-  Future<void> _registerControllerDisconnectPresence(
-    DatabaseReference presenceRef,
+  bool _isCurrentController(RoomSessionIdentity identity) {
+    final current = _identities.current(
+      identity.uid,
+      'controller',
+      identity.roomCode,
+    );
+    return _auth.currentUser?.uid == identity.uid &&
+        current?.roomInstanceId == identity.roomInstanceId &&
+        current?.controllerSessionId == identity.controllerSessionId &&
+        current?.connectionId == identity.connectionId &&
+        current?.connectionSeq == identity.connectionSeq;
+  }
+
+  Future<void> _cancelControllerDisconnect(
+    DatabaseReference oldConnection,
   ) async {
     try {
+      await RoomActionTiming.measure(
+        'rtdb:disconnect_cancel',
+        () => oldConnection.onDisconnect().cancel(),
+      );
+    } catch (_) {
+      // Auxiliary only. The durable close/status request owns the result.
+    }
+  }
+
+  Future<void> _registerControllerDisconnectPresence(
+    DatabaseReference presenceRef,
+    RoomSessionIdentity identity,
+  ) async {
+    bool active() =>
+        _isCurrentController(identity) &&
+        !_operations
+            .recordsFor(identity.uid)
+            .any(
+              (entry) =>
+                  entry['kind'] == 'close' &&
+                  entry['scope'] == identity.roomInstanceId,
+            );
+    if (!active()) return;
+    try {
       await presenceRef.onDisconnect().update({'connected': false});
+      // A registration started before close may finish after its cancellation.
+      // Retire only that old path; never look up a newer connection to cancel.
+      if (!active()) await _cancelControllerDisconnect(presenceRef);
     } catch (_) {
       // controller heartbeat와 scheduled cleanup이 최종 상태를 정리합니다.
     }

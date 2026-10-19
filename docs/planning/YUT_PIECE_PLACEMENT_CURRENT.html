@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>윷놀이 말 배치 · 현재 구현</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3ebdc;
+      --paper-light: #fbf6ea;
+      --ink: #2e2a26;
+      --muted: #6e6a62;
+      --edge: #8c7158;
+      --blue: #2b4c8c;
+      --blue-deep: #18305e;
+      --red: #c21f2e;
+      --jade: #3e7d5e;
+      --violet: #c9b8ff;
+      --night: #0b0a12;
+      --line: rgba(58, 42, 27, .14);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--ink);
+      background: #e9e4da;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    button, select { font: inherit; }
+    .page { width: min(1500px, 100%); margin: 0 auto; }
+    .heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 0 0 18px; }
+    .eyebrow { margin: 0 0 7px; color: var(--muted); font-size: 12px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(22px, 3vw, 34px); letter-spacing: -.04em; }
+    .subtitle { max-width: 570px; margin: 7px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .source-tag { flex: none; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; background: rgba(255,255,255,.52); }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 12px; }
+    .control-label { margin-right: 2px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .segmented { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.55); }
+    .segmented button, .action, .check-label { min-height: 38px; border: 0; border-radius: 8px; padding: 0 13px; color: var(--ink); background: transparent; cursor: pointer; font-size: 13px; font-weight: 700; }
+    .segmented button[aria-pressed="true"] { color: #fff; background: var(--blue); box-shadow: 0 2px 5px rgba(24,48,94,.22); }
+    .scenario button[aria-pressed="true"] { background: #5b4935; }
+    .action { border: 1px solid var(--line); background: rgba(255,255,255,.55); }
+    .action:hover, .check-label:hover { background: #fff; }
+    .check-label { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.55); }
+    .check-label input { width: 16px; height: 16px; accent-color: var(--blue); }
+    .game-shell { overflow: hidden; border: 1px solid rgba(55,37,20,.16); border-radius: 18px; background: var(--paper); box-shadow: 0 18px 50px rgba(43,34,23,.14); }
+    .game-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: rgba(255,250,240,.68); }
+    .game-name { font-weight: 850; letter-spacing: -.02em; }
+    .turn-copy { display: flex; align-items: center; gap: 8px; color: var(--blue); font-size: 13px; font-weight: 800; }
+    .turn-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px rgba(43,76,140,.12); }
+    .play-area { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(420px, 660px) minmax(210px, 1fr); align-items: center; gap: clamp(12px, 2vw, 28px); min-height: min(76vw, 760px); padding: clamp(18px, 3vw, 42px); }
+    .rail { display: flex; min-height: 380px; flex-direction: column; justify-content: space-between; gap: 18px; }
+    .rail-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+    .rail-title { font-size: 12px; font-weight: 850; letter-spacing: .04em; }
+    .seat-range { color: var(--muted); font-size: 11px; }
+    .player-list { display: flex; flex: 1; flex-direction: column; justify-content: space-evenly; gap: 12px; }
+    .player { position: relative; padding: 13px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,250,241,.72); transition: border-color .18s, box-shadow .18s; }
+    .player.active { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(43,76,140,.1); }
+    .player-head { display: flex; align-items: center; gap: 9px; }
+    .avatar { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border-radius: 50%; color: white; background: var(--blue); font-size: 13px; font-weight: 850; }
+    .player[data-team="red"] .avatar { background: var(--red); }
+    .player[data-team="green"] .avatar { background: var(--jade); }
+    .player[data-team="white"] .avatar { border: 1px solid #b6a58e; color: var(--ink); background: #fffdf7; }
+    .player-name { font-size: 13px; font-weight: 850; }
+    .player-team { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .piece-count { margin: 10px 0 6px; color: var(--muted); font-size: 11px; }
+    .ready-tray { display: flex; min-height: 58px; align-items: center; padding-left: 2px; }
+    .ready-piece { position: relative; width: 54px; height: 58px; margin-left: -15px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; transition: transform .18s, filter .18s; }
+    .ready-piece:first-child { margin-left: 0; }
+    .ready-piece:hover, .ready-piece.selected { z-index: 2; transform: translateY(-7px); filter: drop-shadow(0 4px 5px rgba(43,76,140,.45)); }
+    .ready-piece img { width: 48px; height: 54px; object-fit: contain; }
+    .ready-piece span { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 7px; color: #fff; font-size: 19px; font-weight: 900; text-shadow: 0 1px 3px #33251a; pointer-events: none; }
+    .game-chip-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 9px 11px; border: 1px dashed rgba(81,64,46,.28); border-radius: 11px; color: var(--muted); font-size: 11px; }
+    .chip-pills { display: flex; gap: 5px; }
+    .chip-pill { display: grid; width: 31px; height: 31px; place-items: center; border: 1px solid rgba(43,76,140,.25); border-radius: 8px; color: var(--blue); background: white; font-size: 12px; font-weight: 850; }
+    .board-wrap { position: relative; width: 100%; aspect-ratio: 1; justify-self: center; }
+    .board { position: absolute; inset: 0; overflow: visible; border-radius: 3.6%; background: #c58a4d url("../../packages/game_yut/assets/images/board_wood.webp") center / cover no-repeat; box-shadow: 0 12px 24px rgba(49,31,13,.24), inset 0 0 0 2px rgba(58,24,6,.4); }
+    .edition .board { border-radius: 2%; background-image: url("../../packages/game_yut/assets/images/board_holo.webp"); box-shadow: 0 12px 30px rgba(9,8,20,.35); }
+    .start-label { position: absolute; z-index: 4; transform: translate(-50%, -50%); color: #fff; font-size: clamp(11px, 1.1vw, 16px); font-weight: 850; text-shadow: 0 1px 3px rgba(50,15,4,.75); pointer-events: none; }
+    .node-marker { position: absolute; z-index: 1; display: grid; width: 22px; height: 22px; transform: translate(-50%,-50%); place-items: center; border: 1px solid transparent; border-radius: 50%; color: transparent; background: transparent; font-size: 10px; transition: .18s; }
+    .show-nodes .node-marker { border-color: rgba(43,76,140,.42); color: #fff; background: rgba(24,48,94,.8); box-shadow: 0 1px 3px #0005; }
+    .node-marker.path { z-index: 3; width: 26px; height: 26px; border: 2px solid #fff; color: white; background: var(--blue); box-shadow: 0 2px 7px #18120f88; }
+    .node-marker.destination { z-index: 3; width: 48px; height: 48px; border: 3px solid var(--blue); color: transparent; background: rgba(43,76,140,.2); box-shadow: 0 0 0 3px rgba(255,255,255,.88); }
+    .edition .node-marker.path { color: #191527; background: var(--violet); }
+    .edition .node-marker.destination { border-color: var(--violet); }
+    .board-piece { position: absolute; z-index: 4; display: grid; width: 9.7%; aspect-ratio: 1; transform: translate(-50%,-50%); place-items: center; padding: 0; border: 0; background: transparent; cursor: pointer; transition: left .34s ease, top .34s ease, filter .18s, transform .18s; }
+    .board-piece img { width: 100%; height: 112%; object-fit: contain; filter: drop-shadow(0 3px 2px #190f0870); }
+    .edition .board-piece img { filter: drop-shadow(0 0 6px #c9b8ff98); }
+    .board-piece .piece-initial { position: absolute; top: 36%; color: #fff; font-size: clamp(11px, 1.3vw, 17px); font-weight: 900; text-shadow: 0 1px 3px #382517; pointer-events: none; }
+    .board-piece.white .piece-initial { color: var(--ink); text-shadow: 0 1px 2px #fff; }
+    .board-piece .count { position: absolute; top: -3%; right: -12%; display: grid; width: 38%; min-width: 23px; aspect-ratio: 1; place-items: center; border: 2px solid var(--paper); border-radius: 50%; color: #fff; background: var(--red); font-size: clamp(9px, .9vw, 12px); font-weight: 900; box-shadow: 0 1px 4px #0005; }
+    .board-piece.selectable::after { position: absolute; inset: -22%; z-index: -1; border: 2px solid #82a6ef; border-radius: 50%; background: #7399e628; content: ""; animation: pulse 1.4s ease-in-out infinite; }
+    .board-piece.selected { z-index: 6; filter: drop-shadow(0 0 7px #476dc9); }
+    @keyframes pulse { 50% { transform: scale(1.1); opacity: .68; } }
+    .move-popover { position: absolute; z-index: 8; width: clamp(104px, 16%, 148px); padding: 9px; border: 2px solid var(--blue); border-radius: 12px; color: var(--ink); background: var(--paper-light); box-shadow: 6px 10px 22px #28141040; }
+    .edition .move-popover { border-color: var(--violet); color: #f5f0ff; background: #14121f; }
+    .popover-title { margin: 0 0 7px; text-align: center; font-size: 11px; font-weight: 850; white-space: pre-line; }
+    .result-list { display: grid; gap: 4px; }
+    .result-option { display: flex; min-height: 28px; align-items: center; justify-content: space-between; border: 1px solid transparent; border-radius: 7px; padding: 3px 7px; color: inherit; background: transparent; cursor: pointer; font-size: 11px; font-weight: 800; }
+    .result-option:hover, .result-option.selected { border-color: #738fc5; background: rgba(43,76,140,.12); }
+    .edition .result-option:hover, .edition .result-option.selected { border-color: var(--violet); background: #c9b8ff22; }
+    .result-option:disabled { opacity: .34; cursor: not-allowed; }
+    .confirm { width: 100%; min-height: 33px; margin-top: 7px; border: 0; border-radius: 8px; color: white; background: var(--blue); cursor: pointer; font-size: 11px; font-weight: 850; }
+    .confirm:disabled { opacity: .45; cursor: not-allowed; }
+    .edition .confirm { color: #191527; background: var(--violet); }
+    .capture-flag, .home-flag { position: absolute; z-index: 7; transform: translate(-50%, 12%); padding: 4px 8px; border-radius: 5px; color: #fff; background: var(--red); font-size: 10px; font-weight: 900; white-space: nowrap; }
+    .home-flag { background: var(--blue); }
+    .edition .home-flag { color: #191527; background: var(--violet); }
+    .bottom-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 9px 18px; border-top: 1px solid var(--line); color: var(--muted); background: rgba(255,250,240,.68); font-size: 11px; }
+    .implementation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .fact { padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.48); }
+    .fact strong { display: block; margin-bottom: 4px; font-size: 12px; }
+    .fact p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .focus-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+    .focus-list li { padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: rgba(255,255,255,.42); font-size: 11px; }
+    .focus-list b { color: var(--ink); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    @media (max-width: 1050px) {
+      body { padding: 16px; }
+      .play-area { grid-template-columns: minmax(150px, .7fr) minmax(360px, 1.8fr) minmax(150px, .7fr); gap: 12px; padding: 18px; }
+      .player { padding: 10px 8px; }
+      .player-name { font-size: 12px; }
+    }
+    @media (max-width: 760px) {
+      body { padding: 12px; }
+      .heading { align-items: start; flex-direction: column; gap: 9px; }
+      .play-area { grid-template-columns: 1fr; min-height: 0; gap: 14px; }
+      .board-wrap { grid-row: 1; width: min(100%, 600px); }
+      .rail { min-height: 0; }
+      .player-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .game-chip-row { display: none; }
+      .implementation { grid-template-columns: 1fr; }
+      .source-tag { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="page" id="yut-current">
+    <header class="heading">
+      <div>
+        <p class="eyebrow">Mosigame · Yutnori board</p>
+        <h1>윷놀이 말 배치 · 현재 구현</h1>
+        <p class="subtitle">게임 코드의 보드 칸, 대기 말, 같은 칸 업기, 윷 선택 팝오버와 이동 경로를 기준으로 만든 검토 화면입니다.</p>
+      </div>
+      <div class="source-tag">Flutter UI 동작을 옮긴 샘플 상태 · 실제 게임 데이터 아님</div>
+    </header>
+
+    <div class="controls" aria-label="보드 예시 설정">
+      <span class="control-label">게임</span>
+      <div class="segmented mode" role="group" aria-label="게임 종류">
+        <button type="button" data-mode="classic" aria-pressed="true">윷놀이</button>
+        <button type="button" data-mode="strategy" aria-pressed="false">전략 윷놀이</button>
+        <button type="button" data-mode="edition" aria-pressed="false">전략 에디션</button>
+      </div>
+      <span class="control-label">상태 예시</span>
+      <div class="segmented scenario" role="group" aria-label="말 배치 상태">
+        <button type="button" data-scenario="waiting" aria-pressed="false">출발 전</button>
+        <button type="button" data-scenario="entry" aria-pressed="true">새 말 놓기</button>
+        <button type="button" data-scenario="stack" aria-pressed="false">업기</button>
+        <button type="button" data-scenario="capture" aria-pressed="false">잡기</button>
+        <button type="button" data-scenario="shortcut" aria-pressed="false">갈림길</button>
+        <button type="button" data-scenario="home" aria-pressed="false">완주</button>
+      </div>
+      <label class="check-label"><input type="checkbox" id="node-toggle"> 칸 번호</label>
+    </div>
+
+    <section class="game-shell" aria-label="현재 윷놀이 태블릿 말 배치">
+      <div class="game-topbar">
+        <span class="game-name" id="game-title">윷놀이 · 4인 플레이 예시</span>
+        <span class="turn-copy" id="turn-copy" aria-live="polite"><i class="turn-dot"></i>동 플레이어 차례 · 말을 누르고 윷을 골라요</span>
+      </div>
+      <div class="play-area">
+        <aside class="rail" id="left-rail" aria-label="왼쪽 진영"></aside>
+        <div class="board-wrap" role="group" aria-label="윷놀이 판, 말과 이동 경로">
+          <div class="board" id="board">
+            <div class="start-label" id="start-label">출발</div>
+          </div>
+        </div>
+        <aside class="rail" id="right-rail" aria-label="오른쪽 진영"></aside>
+      </div>
+      <div class="bottom-note">
+        <span id="status-note" aria-live="polite">파란 고리를 누르면 윷 결과를 고르고, 확정 시 선택한 경로를 따라 이동합니다.</span>
+        <span id="coordinate-note">나무판 · 바깥 19칸 + 대각선 9칸</span>
+      </div>
+    </section>
+
+    <section class="implementation" aria-label="현재 구현된 방식">
+      <div class="fact"><strong>1 · 말 선택</strong><p>낼 수 있는 말에는 파란 고리가 표시됩니다. 대기 말은 옆 진영에서 고릅니다.</p></div>
+      <div class="fact"><strong>2 · 윷 선택과 경로</strong><p>말을 누르면 가까운 쪽에 결과 팝오버가 뜨고, 결과를 고르면 도착 칸까지 경로 번호가 보입니다.</p></div>
+      <div class="fact"><strong>3 · 같은 칸에 놓인 말</strong><p>같은 소유자의 말은 한 토큰으로 포개고 `×개수` 배지를 붙입니다. 이동 확정 후에는 한 묶음으로 움직입니다.</p></div>
+    </section>
+    <ul class="focus-list" aria-label="함께 확인할 부분">
+      <li><b>확인 1</b> 어느 말이 선택됐는지 잘 보이는가</li>
+      <li><b>확인 2</b> 윷 선택창이 말·경로를 가리지 않는가</li>
+      <li><b>확인 3</b> 업은 말의 개수와 소유자가 충분히 읽히는가</li>
+      <li><b>확인 4</b> 갈림길 이동 경로가 명확한가</li>
+    </ul>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById('yut-current');
+      const board = document.getElementById('board');
+      const scenarios = ['waiting', 'entry', 'stack', 'capture', 'shortcut', 'home'];
+      const resultNames = { '-1': '빽도', 1: '도', 2: '개', 3: '걸', 4: '윷', 5: '모' };
+      const resultLabels = { '-1': '−1칸', 1: '+1칸', 2: '+2칸', 3: '+3칸', 4: '+4칸', 5: '+5칸' };
+      const styleByTeam = { blue: 'blue', east: 'blue', red: 'red', south: 'red', green: 'green', west: 'green', white: 'white', north: 'white' };
+      const asset = name => `../../packages/game_yut/assets/images/${name}.webp`;
+      const state = { mode: 'classic', scenario: 'entry', selected: null, result: null, showNodes: false, players: [], owners: {}, pool: [] };
+
+      function nodes(edition) {
+        const lo = edition ? .08128 : .124;
+        const hi = 1 - lo;
+        const step = (hi - lo) / 5;
+        const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const tr = [hi, lo], tl = [lo, lo], bl = [lo, hi], br = [hi, hi], mid = [.5, .5];
+        return [br,
+          ...[1,2,3,4].map(k => [hi, hi - step * k]), tr,
+          ...[1,2,3,4].map(k => [hi - step * k, lo]), tl,
+          ...[1,2,3,4].map(k => [lo, lo + step * k]), bl,
+          ...[1,2,3,4].map(k => [lo + step * k, hi]),
+          lerp(tr, mid, 1/3), lerp(tr, mid, 2/3), mid,
+          lerp(mid, bl, 1/3), lerp(mid, bl, 2/3),
+          lerp(tl, mid, 1/3), lerp(tl, mid, 2/3),
+          lerp(mid, br, 1/3), lerp(mid, br, 2/3)];
+      }
+
+      function advance(path, steps) {
+        const next = [...path];
+        if (steps < 0) {
+          if (next.length > 1) next.pop();
+          else if (next.length && next[0] === 0) next[0] = 19;
+          else if (next.length === 1) next[0] = 0;
+          return next;
+        }
+        const startNode = next.length ? next[next.length - 1] : null;
+        for (let i = 0; i < steps; i++) {
+          if (!next.length) { next.push(1); continue; }
+          const position = next[next.length - 1];
+          if (position === 29) break;
+          const previous = next.length > 1 ? next[next.length - 2] : null;
+          let value;
+          if (position === 0) value = 29;
+          else if (position === 5) value = i === 0 && position === startNode ? 20 : 6;
+          else if (position === 10) value = i === 0 && position === startNode ? 25 : 11;
+          else if (position === 19) value = 0;
+          else if (position === 20) value = 21;
+          else if (position === 21) value = 22;
+          else if (position === 22) value = i === 0 && position === startNode || previous !== 21 ? 27 : 23;
+          else if (position === 23) value = 24;
+          else if (position === 24) value = 15;
+          else if (position === 25) value = 26;
+          else if (position === 26) value = 22;
+          else if (position === 27) value = 28;
+          else if (position === 28) value = 0;
+          else value = position + 1;
+          next.push(value);
+          if (value === 29) break;
+        }
+        return next;
+      }
+
+      function basePlayers() {
+        if (state.mode === 'classic') return [
+          { id: 'p0', name: '동 플레이어', initial: '동', team: 'east', side: 'left', pieces: [] },
+          { id: 'p1', name: '남 플레이어', initial: '남', team: 'south', side: 'left', pieces: [] },
+          { id: 'p2', name: '서 플레이어', initial: '서', team: 'west', side: 'right', pieces: [] },
+          { id: 'p3', name: '북 플레이어', initial: '북', team: 'north', side: 'right', pieces: [] },
+        ];
+        return [
+          { id: 'blue', name: '청군', team: 'blue', side: 'left', members: ['청 플레이어', '청 플레이어'], pieces: [] },
+          { id: 'white', name: '백군', team: 'white', side: 'right', members: ['백 플레이어', '백 플레이어'], pieces: [] },
+        ];
+      }
+
+      function makePiece(owner, id, team, initial, path = []) {
+        const done = path.includes(29);
+        return { id, owner, team, initial, path, position: path.length ? path[path.length - 1] : -1, status: done ? 'finished' : path.length ? 'onBoard' : 'ready' };
+      }
+
+      function seed() {
+        state.players = basePlayers();
+        state.owners = Object.fromEntries(state.players.map(p => [p.id, p]));
+        for (const player of state.players) {
+          const ids = state.mode === 'classic' ? [0,1,2,3] : [0,1,2,3];
+          player.pieces = ids.map(id => makePiece(player.id, id, player.team, state.mode === 'classic' ? player.initial[0] : (player.id === 'blue' ? '청' : '백')));
+        }
+        state.pool = state.scenario === 'waiting' ? [] : [1];
+        state.selected = null;
+        state.result = null;
+        const active = state.players[0];
+        if (state.scenario === 'entry') {
+          state.pool = [1];
+          state.selected = { owner: active.id, id: 0 };
+          state.result = 1;
+        } else if (state.scenario === 'stack') {
+          state.pool = [2, 1];
+          const path = [1,2,3,4,5,6];
+          active.pieces[0] = makePiece(active.id, 0, active.team, active.initial?.[0] || '청', path);
+          active.pieces[1] = makePiece(active.id, 1, active.team, active.initial?.[0] || '청', path);
+          state.selected = { owner: active.id, id: 0 };
+        } else if (state.scenario === 'capture') {
+          state.pool = [2];
+          const ourPath = Array.from({length: 16}, (_, i) => i + 1);
+          active.pieces[0] = makePiece(active.id, 0, active.team, active.initial?.[0] || '청', ourPath);
+          const enemy = state.players[1];
+          enemy.pieces[0] = makePiece(enemy.id, 0, enemy.team, enemy.initial?.[0] || '남', Array.from({length: 18}, (_, i) => i + 1));
+          state.selected = { owner: active.id, id: 0 };
+          state.result = 2;
+        } else if (state.scenario === 'shortcut') {
+          state.pool = [2];
+          active.pieces[0] = makePiece(active.id, 0, active.team, active.initial?.[0] || '청', [1,2,3,4,5]);
+          state.selected = { owner: active.id, id: 0 };
+          state.result = 2;
+        } else if (state.scenario === 'home') {
+          state.pool = [1];
+          active.pieces[0] = makePiece(active.id, 0, active.team, active.initial?.[0] || '청', [...Array.from({length: 19}, (_, i) => i + 1), 0]);
+          state.selected = { owner: active.id, id: 0 };
+          state.result = 1;
+        }
+      }
+
+      function activeOwner() { return state.players[0]?.id; }
+      function selectedPiece() { return state.selected ? state.owners[state.selected.owner]?.pieces.find(p => p.id === state.selected.id) : null; }
+      function pathPreview() {
+        const piece = selectedPiece();
+        if (!piece || state.result == null) return [];
+        const from = piece.status === 'onBoard' ? piece.path : [];
+        const next = advance(from, state.result);
+        return state.result < 0 ? [next.length ? next[next.length - 1] : 0] : next.slice(from.length);
+      }
+
+      function renderRails() {
+        for (const side of ['left', 'right']) {
+          const rail = document.getElementById(`${side}-rail`);
+          const players = state.players.filter(p => p.side === side);
+          rail.innerHTML = `<div class="rail-head"><span class="rail-title">${state.mode === 'classic' ? `${side === 'left' ? '왼쪽' : '오른쪽'} 진영` : (side === 'left' ? '청군 진영' : '백군 진영')}</span><span class="seat-range">${state.mode === 'classic' ? (side === 'left' ? '자리 1–2' : '자리 3–4') : '2인 팀'}</span></div><div class="player-list">${players.map(p => {
+            const ready = p.pieces.filter(q => q.status === 'ready');
+            const home = p.pieces.filter(q => q.status === 'finished').length;
+            const active = p.id === activeOwner();
+            return `<article class="player ${active ? 'active' : ''}" data-team="${styleByTeam[p.team]}"><div class="player-head"><span class="avatar">${p.initial || p.name[0]}</span><div><div class="player-name">${p.name}</div><div class="player-team">${state.mode === 'classic' ? `말 ${p.pieces.length}개` : `${p.id === 'blue' ? '청' : '백'}팀 · 4개`}</div></div></div><div class="piece-count">대기 ${ready.length} · 완주 ${home}</div><div class="ready-tray">${ready.map(piece => `<button type="button" class="ready-piece ${state.selected?.owner === p.id && state.selected.id === piece.id ? 'selected' : ''}" aria-label="${p.name} 대기 말 ${piece.id + 1} 선택" data-owner="${p.id}" data-piece="${piece.id}" ${active ? '' : 'disabled'}><img src="${asset(`piece_${styleByTeam[p.team]}`)}" alt=""><span>${piece.initial}</span></button>`).join('') || '<span class="seat-range">대기 말 없음</span>'}</div></article>`;
+          }).join('')}</div><div class="game-chip-row"><span>이번 차례 결과</span><span class="chip-pills">${state.pool.map(n => `<span class="chip-pill">${resultNames[n]}</span>`).join('') || '아직 없음'}</span></div>`;
+        }
+        document.querySelectorAll('.ready-piece').forEach(button => button.addEventListener('click', () => choosePiece(button.dataset.owner, Number(button.dataset.piece))));
+      }
+
+      function tokenImage(team) { return `piece_${styleByTeam[team] || 'blue'}`; }
+      function renderBoard() {
+        board.innerHTML = '<div class="start-label" id="start-label">출발</div>';
+        board.classList.toggle('show-nodes', state.showNodes);
+        const edition = state.mode === 'edition';
+        const points = nodes(edition);
+        const startLabel = document.getElementById('start-label');
+        startLabel.style.left = `${points[0][0] * 100}%`;
+        startLabel.style.top = `${points[0][1] * 100}%`;
+        startLabel.textContent = state.scenario === 'home' && !state.selected ? '완주!' : '출발';
+        const path = pathPreview();
+        const finalNode = path.at(-1);
+        for (let i = 0; i < points.length; i++) {
+          const node = document.createElement('span');
+          node.className = `node-marker${path.includes(i) && i !== finalNode ? ' path' : ''}${i === finalNode && i !== 29 ? ' destination' : ''}`;
+          node.style.left = `${points[i][0] * 100}%`;
+          node.style.top = `${points[i][1] * 100}%`;
+          node.textContent = path.includes(i) && i !== finalNode ? String(path.indexOf(i) + 1) : String(i);
+          node.setAttribute('aria-label', `칸 ${i}`);
+          board.append(node);
+        }
+        if (state.showNodes) {
+          document.querySelectorAll('.node-marker').forEach(node => { if (!node.classList.contains('path') && !node.classList.contains('destination')) node.textContent = node.getAttribute('aria-label').replace('칸 ', ''); });
+        }
+        const groups = new Map();
+        for (const owner of Object.values(state.owners)) {
+          for (const piece of owner.pieces) {
+            if (piece.status !== 'onBoard') continue;
+            const key = `${piece.owner}:${piece.position}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(piece);
+          }
+        }
+        const offsetByNode = new Map();
+        for (const [key, stack] of groups) {
+          const lead = stack[0];
+          const [x, y] = points[lead.position];
+          const offset = offsetByNode.get(lead.position) || 0;
+          offsetByNode.set(lead.position, offset + 1);
+          const button = document.createElement('button');
+          const selected = state.selected?.owner === lead.owner && stack.some(p => p.id === state.selected.id);
+          button.type = 'button';
+          button.className = `board-piece ${styleByTeam[lead.team]} ${lead.owner === activeOwner() ? 'selectable' : ''} ${selected ? 'selected' : ''}`;
+          button.style.left = `${x * 100 + (offset ? offset * 3.5 : 0)}%`;
+          button.style.top = `${y * 100 - (offset ? offset * 4 : 0)}%`;
+          button.dataset.owner = lead.owner;
+          button.dataset.piece = lead.id;
+          button.setAttribute('aria-label', `${lead.initial} 말 ${stack.length > 1 ? `업은 말 ${stack.length}개, ` : ''}칸 ${lead.position} 선택`);
+          button.innerHTML = `<img src="${asset(tokenImage(lead.team))}" alt=""><span class="piece-initial">${lead.initial}</span>${stack.length > 1 ? `<span class="count">×${stack.length}</span>` : ''}`;
+          button.addEventListener('click', () => choosePiece(lead.owner, lead.id));
+          board.append(button);
+        }
+        const destination = path.at(-1);
+        const canCapture = destination != null && destination !== 29 && Object.values(state.owners).some(owner => owner.id !== state.selected?.owner && owner.pieces.some(piece => piece.status === 'onBoard' && piece.position === destination));
+        if (canCapture) addFlag(destination, '잡기', 'capture-flag', points);
+        if (destination === 29) addFlag(0, '완주!', 'home-flag', points);
+        const piece = selectedPiece();
+        if (piece && state.selected) renderPopover(piece, points);
+      }
+
+      function addFlag(nodeIndex, text, className, points) {
+        const flag = document.createElement('span');
+        flag.className = className;
+        flag.textContent = text;
+        flag.style.left = `${points[nodeIndex][0] * 100}%`;
+        flag.style.top = `${points[nodeIndex][1] * 100}%`;
+        board.append(flag);
+      }
+
+      function renderPopover(piece, points) {
+        const usable = state.pool.filter(result => result >= 0 || piece.status === 'onBoard');
+        if (!usable.length) return;
+        const pop = document.createElement('div');
+        pop.className = 'move-popover';
+        const side = board.clientWidth;
+        const size = side * .097;
+        const anchor = piece.status === 'onBoard' ? points[piece.position] : [points[0][0] - .145, points[0][1] - .116];
+        const popWidth = Math.min(148, Math.max(104, side * .16));
+        const left = anchor[0] * side + size + popWidth > side ? anchor[0] * side - size * .9 - popWidth : anchor[0] * side + size * .9;
+        const height = Math.min(side - 8, 96 + usable.length * 42);
+        const top = Math.max(4, Math.min(side - height - 4, anchor[1] * side - height / 2));
+        pop.style.left = `${Math.max(3, Math.min(side - popWidth - 3, left))}px`;
+        pop.style.top = `${top}px`;
+        pop.style.width = `${popWidth}px`;
+        const ownerName = state.owners[piece.owner]?.name || '팀';
+        pop.innerHTML = `<p class="popover-title">${ownerName}<br>몇 칸?</p><div class="result-list">${usable.map(result => `<button type="button" class="result-option ${state.result === result ? 'selected' : ''}" data-result="${result}"><span>${resultNames[result]}</span><span>${resultLabels[result]}</span></button>`).join('')}</div><button type="button" class="confirm" ${state.result == null ? 'disabled' : ''}>✓　이동 확정</button>`;
+        pop.querySelectorAll('.result-option').forEach(button => button.addEventListener('click', () => { state.result = Number(button.dataset.result); render(); }));
+        pop.querySelector('.confirm').addEventListener('click', confirmMove);
+        board.append(pop);
+      }
+
+      function choosePiece(owner, id) {
+        if (owner !== activeOwner()) return;
+        if (state.selected?.owner === owner && state.selected.id === id) state.selected = null;
+        else state.selected = { owner, id };
+        const piece = selectedPiece();
+        const usable = piece ? state.pool.filter(result => result >= 0 || piece.status === 'onBoard') : [];
+        state.result = usable.length === 1 ? usable[0] : null;
+        render();
+      }
+
+      function confirmMove() {
+        const piece = selectedPiece();
+        if (!piece || state.result == null) return;
+        const from = piece.status === 'onBoard' ? piece.path : [];
+        const next = advance(from, state.result);
+        piece.path = next;
+        piece.position = next.at(-1) ?? -1;
+        piece.status = piece.position === 29 ? 'finished' : piece.position < 0 ? 'ready' : 'onBoard';
+        state.pool = state.pool.filter((value, index) => index !== state.pool.indexOf(state.result));
+        if (state.pool.length === 0) state.pool = [];
+        state.selected = null;
+        state.result = null;
+        const movingOwner = piece.owner;
+        for (const owner of Object.values(state.owners)) {
+          if (owner.id === movingOwner) continue;
+          for (const victim of owner.pieces) {
+            if (victim.status === 'onBoard' && victim.position === piece.position && piece.position !== 29) {
+              victim.path = [];
+              victim.position = -1;
+              victim.status = 'ready';
+            }
+          }
+        }
+        document.getElementById('status-note').textContent = piece.status === 'finished' ? '말이 완주했습니다. 보드의 시작점 배너가 완주 표시로 바뀝니다.' : '이동을 확정했습니다. 같은 소유자 말이 도착 칸에 있으면 한 토큰으로 업힙니다.';
+        render();
+      }
+
+      function render() {
+        root.classList.toggle('edition', state.mode === 'edition');
+        document.getElementById('game-title').textContent = state.mode === 'classic' ? '윷놀이 · 4인 플레이 예시' : state.mode === 'strategy' ? '전략 윷놀이 · 4명 / 2팀 예시' : '전략 윷놀이 에디션 · 같은 규칙';
+        document.getElementById('turn-copy').innerHTML = `<i class="turn-dot"></i>${state.mode === 'classic' ? '동 플레이어' : '청군'} 차례 · ${state.selected ? '말을 누르고 윷을 골라요' : '말을 선택하세요'}`;
+        document.getElementById('start-label').textContent = state.scenario === 'home' && !selectedPiece() ? '완주!' : '출발';
+        document.getElementById('coordinate-note').textContent = `${state.mode === 'edition' ? '홀로그램판' : '나무판'} · 29개 칸 · 시작 0번`;
+        renderRails();
+        renderBoard();
+      }
+
+      document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+        state.mode = button.dataset.mode;
+        document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        seed(); render();
+      }));
+      document.querySelectorAll('[data-scenario]').forEach(button => button.addEventListener('click', () => {
+        state.scenario = button.dataset.scenario;
+        document.querySelectorAll('[data-scenario]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        seed();
+        document.getElementById('status-note').textContent = '예시 상태를 바꿨습니다. 말·결과 선택과 이동 경로를 눌러 확인해 보세요.';
+        render();
+      }));
+      document.getElementById('node-toggle').addEventListener('change', event => { state.showNodes = event.target.checked; renderBoard(); });
+      seed();
+      render();
+    })();
+  </script>
+</body>
+</html>

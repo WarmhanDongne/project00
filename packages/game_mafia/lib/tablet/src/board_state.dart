@@ -105,7 +105,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
       }
     });
 
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = FirebaseBackend.auth.currentUser?.uid ?? '';
     final args = MafiaSessionArgs(
       roomCode: widget.roomCode,
       uid: uid,
@@ -142,7 +142,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
     _countdownTick.stop();
     _subscription?.close();
     unawaited(AppOrientation.restorePlatform());
-    unawaited(AppSystemUi.showPlatformSystemBars());
+    unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     super.dispose();
   }
 
@@ -491,7 +491,7 @@ class _MafiaTabletGameState extends ConsumerState<MafiaTabletGame> {
           ),
           interruption: GameInterruptionRecovery(
             state: game.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
             presentation: GameInterruptionPresentation.tabletController,
             isSubmitting: game.commandInFlight,
             failureMessage: game.errorMessage,

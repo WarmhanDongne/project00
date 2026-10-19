@@ -6,6 +6,7 @@
 // 즉, 문제가 난 시점과 원인을 개발 화면에서 바로 확인하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -33,9 +34,11 @@ import 'package:game_kit/core/diagnostics/dev_error_log.dart';
 abstract final class CrashReporting {
   /// 앱 시작 때 한 번 부릅니다. Firebase 초기화 **뒤**에 불러야 합니다.
   static Future<void> initialize() async {
-    final crashlytics = FirebaseCrashlytics.instance;
+    final crashlytics = FirebaseBackend.isLocal
+        ? null
+        : FirebaseCrashlytics.instance;
     // 개발 중 오류는 보내지 않습니다.
-    await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    await crashlytics?.setCrashlyticsCollectionEnabled(!kDebugMode);
 
     // 1. 위젯·프레임워크 오류
     FlutterError.onError = (details) {
@@ -45,7 +48,7 @@ abstract final class CrashReporting {
         context: details.library ?? '프레임워크',
         time: DateTime.now(),
       );
-      if (!kDebugMode) crashlytics.recordFlutterFatalError(details);
+      if (!kDebugMode) crashlytics?.recordFlutterFatalError(details);
     };
 
     // 2. 놓친 비동기 오류(`unawaited`로 흘린 Future 등)
@@ -59,18 +62,20 @@ abstract final class CrashReporting {
       if (kDebugMode) {
         // DevErrorLog.add가 원문 없이 구조화된 한 줄을 출력합니다.
       } else {
-        unawaited(crashlytics.recordError(error, stack, fatal: true));
+        unawaited(crashlytics?.recordError(error, stack, fatal: true));
       }
       // true를 돌려주면 앱이 죽지 않고 계속 돕니다.
       return true;
     };
 
     // 누가 겪은 오류인지 알면 재현이 쉬워집니다(닉네임·이메일은 보내지 않습니다).
-    _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((
-      user,
-    ) {
-      unawaited(crashlytics.setUserIdentifier(user?.uid ?? ''));
-    });
+    if (crashlytics != null) {
+      _authSubscription ??= FirebaseBackend.auth.authStateChanges().listen((
+        user,
+      ) {
+        unawaited(crashlytics.setUserIdentifier(user?.uid ?? ''));
+      });
+    }
   }
 
   static StreamSubscription<User?>? _authSubscription;

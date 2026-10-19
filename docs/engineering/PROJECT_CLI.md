@@ -94,7 +94,7 @@ not lost. Fix the evidenced failure, rerun only its relevant check while iterati
 then run FULL once for the next final candidate.
 
 The ordered process steps are root Dart formatting, root Flutter analysis, root
-Flutter tests (excluding `invocation-guard`), the five package test targets, then
+Flutter tests (excluding `invocation-guard`), the six package test targets, then
 Functions lint and tests. Package targets are explicitly listed in
 [`package_test_manifest.dart`](../../tool/mosigame_cli/package_test_manifest.dart):
 
@@ -105,6 +105,7 @@ Functions lint and tests. Package targets are explicitly listed in
 | game_final_call | `packages/game_final_call` | `flutter-test-game-final-call` |
 | game_mafia | `packages/game_mafia` | `flutter-test-game-mafia` |
 | game_holdem | `packages/game_holdem` | `flutter-test-game-holdem` |
+| game_yut | `packages/game_yut` | `flutter-test-game-yut` |
 
 Each package runs `flutter test --no-pub` in its own directory. A package failure,
 timeout, or missing capability stops FULL and is included in its overall result;

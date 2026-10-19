@@ -13,6 +13,8 @@ import {HoldemGameState} from "../holdem/types.js";
 import {assertControllerSession} from "../room/controller-session.js";
 import {completeGameInterruption, InterruptibleRoom} from "./state.js";
 import {InterruptibleGameState} from "./types.js";
+import {finishForInsufficientPlayers} from "../yut/game.js";
+import {YutGameState} from "../yut/types.js";
 
 /**
  * 인원 부족 종료를 지원하는 게임 표입니다. **게임을 추가하면 여기에 한 줄
@@ -41,6 +43,9 @@ const FINISH_FOR_INSUFFICIENT_PLAYERS: Record<
     finishMafiaForInsufficientPlayers(game as unknown as MafiaGameState, now),
   holdem: (game, now) =>
     finishHoldemForInsufficientPlayers(game as unknown as HoldemGameState, now),
+  yut: (game, now) => finishForInsufficientPlayers(game as unknown as YutGameState, now),
+  strategy_yut: (game, now) => finishForInsufficientPlayers(game as unknown as YutGameState, now),
+  strategy_yut_edition: (game, now) => finishForInsufficientPlayers(game as unknown as YutGameState, now),
 };
 
 export interface FinishNowRoom extends InterruptibleRoom {

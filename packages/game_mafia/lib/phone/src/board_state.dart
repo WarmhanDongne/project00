@@ -29,7 +29,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
     // 서버 에셋 도입 대비 훅입니다. 실패해도 번들 폴백으로 진행합니다.
     unawaited(GameAssetStore.instance.prepareGame('mafia').catchError((_) {}));
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid == null) {
       initializationError = GameFlowCopy.authenticationRequired;
       return;
@@ -180,7 +180,7 @@ class _MafiaPhoneGameState extends ConsumerState<MafiaPhoneGame> {
           ),
           interruption: GameInterruptionRecovery(
             state: game.interruption,
-            currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
             isSubmitting: game.commandInFlight,
             failureMessage: game.errorMessage,
 

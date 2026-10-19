@@ -65,7 +65,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     unawaited(
       GameAssetStore.instance.prepareGame('final_call').catchError((_) {}),
     );
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid == null) {
       initializationError = GameLocale.select(
         ko: '게임 진행 기기 인증을 확인할 수 없습니다.',
@@ -468,7 +468,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
     // 게임 종료 후 플랫폼 화면 정책 복원
     // ---------------------------------------------------------------------------
     unawaited(AppOrientation.restorePlatform());
-    unawaited(AppSystemUi.showPlatformSystemBars());
+    unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     super.dispose();
   }
 
@@ -518,7 +518,7 @@ class _FinalCallTabletGameState extends ConsumerState<FinalCallTabletGame> {
         ),
         interruption: GameInterruptionRecovery(
           state: game.interruption,
-          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
           presentation: GameInterruptionPresentation.tabletController,
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,

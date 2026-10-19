@@ -1,0 +1,20 @@
+name: game_yut
+description: 윷놀이와 전략 윷놀이 게임 패키지입니다.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.12.2
+dependencies:
+  flutter:
+    sdk: flutter
+  game_kit: any
+  firebase_database: ^12.5.0
+  flutter_riverpod: ^3.4.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  assets:
+    - assets/images/
+    - assets/games/yut/sounds/

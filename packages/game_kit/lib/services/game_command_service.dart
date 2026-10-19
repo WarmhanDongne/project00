@@ -6,9 +6,9 @@
 // 즉, 화면에서 발생한 행동을 정해진 서버 쓰기 경계로 전달하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:game_kit/core/diagnostics/game_communication_log.dart';
@@ -42,8 +42,7 @@ abstract class GameCommandService {
   GameCommandService({
     FirebaseFunctions? functions,
     this.retryPolicy = const CallableRetryPolicy(),
-  }) : functions =
-           functions ?? FirebaseFunctions.instanceFor(region: functionsRegion);
+  }) : functions = functions ?? FirebaseBackend.functions;
 
   /// 게임 callable이 배포된 리전입니다.
   static const String functionsRegion = 'asia-northeast3';
@@ -119,7 +118,7 @@ abstract class GameCommandService {
         retained['role'] as String,
         roomCode as String,
       );
-      if (FirebaseAuth.instance.currentUser?.uid != boundUid ||
+      if (FirebaseBackend.auth.currentUser?.uid != boundUid ||
           latest == null ||
           latest.roomInstanceId != retained['roomInstanceId'] ||
           latest.membershipId != retained['membershipId']) {
@@ -144,14 +143,14 @@ abstract class GameCommandService {
     }
 
     if (roomCode is String && data['warmup'] != true) {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = FirebaseBackend.auth.currentUser?.uid;
       if (uid == null || (capturedUid != null && capturedUid != uid)) {
         throw StateError('로그인 상태를 확인해주세요.');
       }
       boundUid = uid;
       final store = RoomSessionIdentityStore.instance;
       await store.load();
-      if (FirebaseAuth.instance.currentUser?.uid != uid) {
+      if (FirebaseBackend.auth.currentUser?.uid != uid) {
         throw StateError('로그인 상태가 변경되었습니다.');
       }
       final identity =
@@ -363,7 +362,7 @@ abstract class GameCommandService {
         remainingBudget: remainingBudget(),
         isCurrent: () =>
             (boundUid == null ||
-                FirebaseAuth.instance.currentUser?.uid == boundUid) &&
+                FirebaseBackend.auth.currentUser?.uid == boundUid) &&
             (session == null ||
                 !session.leaving ||
                 functionName.endsWith('_leave_game')),
