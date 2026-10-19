@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,11 +18,10 @@ class FirebaseAuthService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
-  }) : _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
-       _storage = storage ?? FirebaseStorage.instance;
+  }) : _auth = auth ?? FirebaseBackend.auth,
+       _functions = functions ?? FirebaseBackend.functions,
+       _storage =
+           storage ?? FirebaseStorage.instanceFor(app: FirebaseBackend.app);
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
@@ -87,6 +87,19 @@ class FirebaseAuthService {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
     } on FirebaseAuthException catch (error) {
+      throw _toServiceException(error);
+    }
+  }
+
+  /// Firebase가 제공하는 웹 화면에서 새 비밀번호를 설정할 수 있는 메일을 보냅니다.
+  ///
+  /// 계정 존재 여부를 로그인 화면에서 추측할 수 없도록, Firebase가 구버전 설정에서
+  /// `user-not-found`를 반환하더라도 정상 발송 안내와 같은 결과로 처리합니다.
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'user-not-found') return;
       throw _toServiceException(error);
     }
   }

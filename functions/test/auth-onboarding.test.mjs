@@ -283,13 +283,9 @@ test("signup consents require every mandatory agreement at the current version",
     terms: true,
     privacy: true,
   };
-  assert.deepEqual(parseSignupConsents({...base, marketing: true}), {
-    ...base,
-    marketing: true,
-  });
-  // 선택 항목은 빠지거나 다른 값이면 동의하지 않은 것으로 남깁니다.
-  assert.equal(parseSignupConsents(base).marketing, false);
-  assert.equal(parseSignupConsents({...base, marketing: "yes"}).marketing, false);
+  assert.deepEqual(parseSignupConsents(base), base);
+  // 예전 앱이 보낸 마케팅 항목은 기록하지 않습니다.
+  assert.deepEqual(parseSignupConsents({...base, marketing: true}), base);
   for (const field of ["age14", "terms", "privacy"]) {
     assert.equal(parseSignupConsents({...base, [field]: false}), undefined);
     assert.equal(parseSignupConsents({...base, [field]: undefined}), undefined);

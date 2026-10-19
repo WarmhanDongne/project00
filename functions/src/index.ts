@@ -45,10 +45,6 @@ export {syncGoogleUserProfile} from "./auth/sync-google-profile.js";
 export {syncAppleUserProfile} from "./auth/sync-apple-profile.js";
 export {completeGuestOnboarding} from "./auth/complete-guest-onboarding.js";
 
-// 클라이언트에서 호출하는 곳이 없는 공개 HTTP 엔드포인트입니다. 회원 정보 저장은
-// syncGoogleUserProfile이 담당합니다. 삭제 여부는 따로 결정한 뒤 정리하세요.
-export {registerProfile} from "./auth/register-profile.js";
-
 export {
   advanceOnboarding,
   beginOnboarding,
@@ -128,6 +124,17 @@ export {
   game_mafia_complete_vote_result,
 } from "./mafia/vote.js";
 export {game_mafia_end_game, game_mafia_leave_game} from "./mafia/end-game.js";
+
+// ---------------------------------------------- 게임: 윷놀이
+export {
+  game_yut_start_game,
+  game_yut_roll,
+  game_yut_submit_choice,
+  game_yut_move_piece,
+  game_yut_timeout_turn,
+  game_yut_end_game,
+  game_yut_leave_game,
+} from "./yut/callables.js";
 
 // ---------------------------------------------- 게임 공용: 중단·재접속
 export {

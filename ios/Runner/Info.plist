@@ -45,6 +45,13 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>개발용 로컬 Firebase 에뮬레이터에 연결합니다.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>그룹 참여 QR 코드를 스캔하기 위해 카메라에 접근합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -78,6 +85,8 @@
 	<string>Main</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
+	<key>UIRequiresFullScreenIgnoredStartingWithVersion</key>
+	<string>26.0</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

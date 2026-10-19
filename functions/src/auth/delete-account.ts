@@ -1,13 +1,11 @@
 import {getAuth} from "firebase-admin/auth";
-import {getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
 import {logger} from "firebase-functions";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {closeAccountHostedRoom} from "./account-room-cleanup.js";
 
 const REGION = "asia-northeast3";
-// realtime-room-lifecycle.ts의 closeRoom과 같은 보존 시간입니다.
-const CLOSED_ROOM_RETENTION_MS = 60 * 1000;
 
 export type AccountDeletionResult = {
   /** 함께 닫은 대기방 코드. 진행 중인 방이 없으면 null입니다. */
@@ -67,29 +65,7 @@ export async function deleteAccountResources(
  */
 function adminPorts(): AccountDeletionPorts {
   return {
-    async closeHostedRoom(uid, now) {
-      const database = getDatabase();
-      const controllerRoomRef = database.ref(`controllerRooms/${uid}`);
-      const mappedRoom = await controllerRoomRef.get();
-      const roomCode = mappedRoom.val();
-
-      if (typeof roomCode === "string" && roomCode.length > 0) {
-        const roomRef = database.ref(`rooms/${roomCode}`);
-        if ((await roomRef.get()).exists()) {
-          await roomRef.update({
-            status: "closed",
-            controllerConnected: false,
-            controllerPresence: {connected: false, lastSeen: now},
-            cleanupAt: now + CLOSED_ROOM_RETENTION_MS,
-          });
-        }
-        await controllerRoomRef.remove();
-      }
-
-      // 방 생성 재시도용 기록도 uid로 묶여 있어 함께 지웁니다.
-      await database.ref(`roomCreateRequests/${uid}`).remove();
-      return typeof roomCode === "string" ? roomCode : null;
-    },
+    closeHostedRoom: closeAccountHostedRoom,
 
     async deleteUserDocuments(uid) {
       const db = getFirestore();

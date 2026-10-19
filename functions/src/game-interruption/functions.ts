@@ -22,6 +22,7 @@ import {
   excludeRecoveryPlayer,
 } from "./game-adapters.js";
 import {finalizeGameMutation} from "./game-mutation.js";
+import {currentPresence} from "../room/current-presence.js";
 
 const REGION = "asia-northeast3";
 type Data = Record<string, unknown>;
@@ -37,7 +38,7 @@ async function execute(uid: string | undefined, data: Data, kind: string, contro
   const code = roomCodeOf(data.roomCode);
   const operationId = parseSessionId(data.commandId ?? data.operationId, "작업 ID");
   const payload = Object.fromEntries(Object.entries(data).filter(([key]) =>
-    !["controllerSessionId", "connectionId", "connectionSeq"].includes(key)));
+    !["controllerSessionId", "connectionId", "connectionSeq", "presenceProtocol"].includes(key)));
   const seed = transactionRandomSeed();
   const now = Date.now();
   let response: Record<string, unknown> | null = null;
@@ -45,7 +46,7 @@ async function execute(uid: string | undefined, data: Data, kind: string, contro
     response = null;
     if (!raw) return;
     const room = raw as RecoveryRoom;
-    assertRoomTarget(room, data.roomInstanceId);
+    assertRoomTarget(room, data.roomInstanceId, data.presenceProtocol);
     const saved = roomOperationResult(room, uid, operationId, kind, payload);
     if (saved) {
       response = saved; return room;
@@ -108,7 +109,7 @@ export const game_common_interruption_report_stale_player = onCall<Data>({region
   execute(request.auth?.uid, request.data, "stalePlayer", true, (room, _uid, now) => {
     const uid = request.data.playerUid as string;
     const player = room.players?.[uid];
-    const connection = player?.currentConnectionId ? room.connections?.[uid]?.[player.currentConnectionId] : undefined;
+    const connection = currentPresence(room, uid, "player");
     if (!player || !connection || player.currentConnectionId !== request.data.playerConnectionId ||
         player.connectionSeq !== request.data.playerConnectionSeq || connection.lastSeen !== request.data.observedLastSeen) {
       return {status: "staleContext"};
@@ -123,7 +124,7 @@ export const game_common_interruption_report_stale_player = onCall<Data>({region
 
 export const game_common_interruption_report_stale_controller = onCall<Data>({region: REGION}, (request) =>
   execute(request.auth?.uid, request.data, "staleController", false, (room, _uid, now) =>
-    reportStaleController(room, request.data.observedLastSeen, now)));
+    reportStaleController(room, request.data.observedLastSeen, now, request.data.controllerConnectionId, request.data.controllerConnectionSeq)));
 
 /** Presence is a loss signal; connected=true never supplies readiness. */
 export const game_common_interruption_on_connection_changed = onValueWritten({
@@ -136,9 +137,11 @@ export const game_common_interruption_on_connection_changed = onValueWritten({
     const room = raw as RecoveryRoom;
     const player = room.players?.[event.params.uid];
     if (player?.isConnected !== false) return;
+    const current = currentPresence(room, event.params.uid, "player");
+    if (room.presenceProtocol === 2 && (!current || current.connected !== false)) return;
     registerRecoveryFailure(
       room, event.params.uid, "player", now, "disconnected",
-      typeof player.lastSeen === "number" ? player.lastSeen : now,
+      current?.lastSeen ?? (typeof player.lastSeen === "number" ? player.lastSeen : now),
     );
     decorateRecoveryCauses(room, now);
     return room;

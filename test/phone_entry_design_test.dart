@@ -11,12 +11,125 @@ import 'package:game_kit/template_game.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_join.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
 import 'package:project00/platform/home/phone/widgets/phone_own_game_list.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   TestFirebaseCoreHostApi.setUp(MockFirebaseApp());
   setUpAll(() async => Firebase.initializeApp());
+
+  testWidgets('휴대폰 로비 단계는 기존 화면을 밀지 않고 대각선 그라데이션으로 덮는다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            key: const ValueKey('phone-flow-origin'),
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).push<void>(
+                  PhoneFlowRoute<void>(
+                    builder: (_) => const Scaffold(
+                      key: ValueKey('phone-flow-next'),
+                      body: SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                child: const Text('다음'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final originBefore = tester.getRect(
+      find.byKey(const ValueKey('phone-flow-origin')),
+    );
+
+    await tester.tap(find.text('다음'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    final next = find.byKey(const ValueKey('phone-flow-next'));
+    expect(
+      find.ancestor(
+        of: next,
+        matching: find.byKey(const Key('phone-flow-background-reveal')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(of: next, matching: find.byType(FadeTransition)),
+      findsNothing,
+    );
+    expect(
+      find.ancestor(of: next, matching: find.byType(SlideTransition)),
+      findsNothing,
+    );
+    expect(
+      tester.getRect(find.byKey(const ValueKey('phone-flow-origin'))),
+      originBefore,
+    );
+
+    await tester.pumpAndSettle();
+    expect(next, findsOneWidget);
+  });
+
+  testWidgets('빠른 연속 배경 변경은 진행 중 경계를 튀게 하지 않고 마지막 색을 이어서 덮는다', (tester) async {
+    var color = MosiColors.violet;
+    late StateSetter changeColor;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            changeColor = setState;
+            return PhoneBackgroundWipe(
+              color: color,
+              child: const SizedBox.expand(),
+            );
+          },
+        ),
+      ),
+    );
+
+    changeColor(() => color = MosiColors.lime);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final firstReveal = tester.widget<PhoneBackgroundReveal>(
+      find.byKey(const Key('phone-background-wipe-reveal')),
+    );
+    expect(firstReveal.color, MosiColors.lime);
+    expect(firstReveal.progress, inExclusiveRange(0, 1));
+
+    changeColor(() => color = MosiColors.coral);
+    await tester.pump();
+    expect(
+      tester
+          .widget<PhoneBackgroundReveal>(
+            find.byKey(const Key('phone-background-wipe-reveal')),
+          )
+          .color,
+      MosiColors.lime,
+    );
+    await tester.pump(const Duration(milliseconds: 460));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final queuedReveal = tester.widget<PhoneBackgroundReveal>(
+      find.byKey(const Key('phone-background-wipe-reveal')),
+    );
+    expect(queuedReveal.color, MosiColors.coral);
+    expect(queuedReveal.progress, inExclusiveRange(0, 1));
+    expect(
+      tester
+          .widget<ColoredBox>(
+            find.byKey(const Key('phone-background-wipe-base')),
+          )
+          .color,
+      MosiColors.lime,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(tester.takeException(), isNull);
+  });
 
   for (final width in [320.0, 390.0]) {
     testWidgets('책장은 $width 폭에서 순서대로 스와이프·점 선택한다', (tester) async {
@@ -53,8 +166,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('2 / 3'), findsOneWidget);
-      expect(find.text('파이널콜'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('mafia 선택'));
+      expect(find.text('final_call'), findsOneWidget);
+      // 옆 책등도 같은 이름표를 가지므로 마지막(점 버튼)을 누릅니다.
+      await tester.tap(find.bySemanticsLabel('mafia 선택').last);
       await tester.pumpAndSettle();
       expect(find.text('3 / 3'), findsOneWidget);
       await tester.drag(
@@ -91,6 +205,7 @@ void main() {
       requests++;
       expect(((call as List).first as Map)['parameters'], {
         'roomCode': 'K7Q2M',
+        'presenceProtocol': 2,
       });
       return response.future;
     });
@@ -105,6 +220,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(camera.starts, 1);
     expect(find.text('어느 방에 들어갈까요?'), findsOneWidget);
+    expect(find.byType(PhoneFlowContentSwap), findsWidgets);
     await tester.tap(find.byType(TextField));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'k7q');
@@ -141,8 +257,21 @@ void main() {
     expect(tester.getRect(keyboard).bottom, 700);
     await tester.tap(find.byType(MosiButton));
     await tester.pump();
+    expect(requests, 0);
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(
+      tester
+          .widget<FractionalTranslation>(
+            find.byKey(const Key('room-code-keyboard-slide')),
+          )
+          .translation
+          .dy,
+      inExclusiveRange(0, 1),
+    );
+    expect(find.text('방 코드 입력'), findsOneWidget);
+    expect(requests, 0);
     await tester.tap(find.byType(MosiButton));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 160));
     expect(requests, 1);
     response.complete(['not-found', '존재하지 않는 방입니다.', null]);
     await tester.pumpAndSettle();

@@ -48,16 +48,13 @@ GameFlowConfig<TemplateTabletStage> buildTemplateTabletFlowConfig({
       // 1. 서버 데이터 연결 (CONNECTING)
       // ======================================================================
       // - status/phase: 첫 공개 상태를 아직 받지 못함
-      // - 화면: 배경과 준비 문구만 표시
+      // - 화면: 정상 준비는 게임 배경만 표시
       // - Animation/Delay/Scrim: 없음
       // - 다음 단계: 서버 상태 수신을 기다림
       TemplateTabletStage.connecting: const GameFlowStep<TemplateTabletStage>(
         stage: TemplateTabletStage.connecting,
         showScreen: false,
-        showAnnouncement: true,
-        announcementId: 'template-preparing',
-        announcementKind: GameAnnouncementKind.persistent,
-        announcement: GameFlowCopy.preparingGame,
+        showAnnouncement: false,
         animation: GameFlowAnimationConfig.disabled(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),

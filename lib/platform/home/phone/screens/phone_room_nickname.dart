@@ -1,6 +1,6 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:math' as math;
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/localization/game_locale.dart';
@@ -8,10 +8,12 @@ import 'package:project00/platform/auth/models/nickname_policy.dart';
 import 'package:project00/platform/auth/widgets/auth_design.dart';
 import 'package:flutter/services.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
+import 'package:project00/platform/profile/providers/profile_update_controller.dart';
 
 //=======================닉네임과 방 캐릭터 설정==============================
 class PhoneRoomNickname extends StatefulWidget {
@@ -42,8 +44,14 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    final accountNickname = user?.displayName?.trim().isNotEmpty == true
+    final user = FirebaseBackend.auth.currentUser;
+    final pendingNickname = ProfileUpdateController.instance
+        .pendingFor(user?.uid)
+        ?.nickname
+        .trim();
+    final accountNickname = pendingNickname?.isNotEmpty == true
+        ? pendingNickname!
+        : user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
         : user?.email?.split('@').first ??
               GameLocale.select(
@@ -62,7 +70,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
   }
 
   Set<String> get _occupiedCharacterIds {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = FirebaseBackend.auth.currentUser?.uid;
     return _roomProvider.players
         .where((player) => player.uid != currentUid)
         // 예전 동물 id도 같은 포커페이스로 그려지므로 그 얼굴로 맞춰 비교합니다.
@@ -138,7 +146,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
       return;
     }
 
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = FirebaseBackend.auth.currentUser?.uid;
     final duplicateNickname = _roomProvider.players.any(
       (player) => player.uid != currentUid && player.nickname == nickname,
     );
@@ -178,7 +186,7 @@ class _PhoneRoomNicknameState extends State<PhoneRoomNickname> {
 
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      PhoneFlowRoute<void>(
         builder: (_) => PhoneRoomWaiting(provider: _roomProvider),
       ),
     );

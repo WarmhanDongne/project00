@@ -41,7 +41,10 @@ class _RulePage {
 }
 
 /// 맨 윗단계 제목(`# `)마다 항목을 나눕니다. 태블릿 룰북과 같은 기준입니다.
+/// `# ` 제목이 하나도 없는 규칙(마피아처럼 `## `만 쓰는 문서)은 `## `로 나눕니다.
 List<_RulePage> _splitPages(String markdown) {
+  final lines = markdown.trim().split('\n');
+  final marker = lines.any((line) => line.startsWith('# ')) ? '# ' : '## ';
   final pages = <_RulePage>[];
   String? title;
   final body = StringBuffer();
@@ -53,10 +56,10 @@ List<_RulePage> _splitPages(String markdown) {
     body.clear();
   }
 
-  for (final line in markdown.trim().split('\n')) {
-    if (line.startsWith('# ')) {
+  for (final line in lines) {
+    if (line.startsWith(marker)) {
       flush();
-      title = line.substring(2).trim();
+      title = line.substring(marker.length).trim();
     } else {
       body.writeln(line);
     }

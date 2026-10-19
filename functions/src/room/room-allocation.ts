@@ -7,6 +7,9 @@ export interface RoomReservation {roomCode: string; roomInstanceId: string;
   expectedAllocationGeneration: number; allocationGeneration: number;
   controllerSessionId: string; connectionId: string; createdAt: number;
   status: "reserved" | "created" | "terminal"}
+/** Completed intent retains replay protection without transport credentials. */
+export interface TerminalRoomReservation {roomCode: string; roomInstanceId: string;
+  allocationGeneration: number; status: "terminal"; createdAt?: number}
 
 /** An old writer can never change a terminal or a newer allocation to waiting. */
 export function allocateRoom(current: RoomAllocation | null, reservation: RoomReservation,

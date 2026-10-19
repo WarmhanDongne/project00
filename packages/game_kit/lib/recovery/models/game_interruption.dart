@@ -32,6 +32,7 @@ class GameInterruption {
     required this.canContinue,
     this.causes = const [],
     this.pauseId,
+    this.purpose,
     this.extended = false,
     this.awaitingDecision = false,
   });
@@ -59,6 +60,7 @@ class GameInterruption {
             map['pauseId']?.toString() ??
             '',
         pauseId: map['pauseId']?.toString(),
+        purpose: map['purpose']?.toString(),
         causes: causes,
         playerUid: cause?['key'].toString().substring(7) ?? '',
         playerNickname: '플레이어',
@@ -110,6 +112,9 @@ class GameInterruption {
   final bool canContinue;
   final List<Map<String, dynamic>> causes;
   final String? pauseId;
+  final String? purpose;
+  bool get isInitialReadiness =>
+      purpose == 'initialReadiness' && causes.isEmpty && playerUid.isEmpty;
   final bool extended, awaitingDecision;
 
   int get voteCount => voterUids.length;
@@ -138,6 +143,7 @@ class GameInterruption {
         minimumPlayerCount == other.minimumPlayerCount &&
         canContinue == other.canContinue &&
         pauseId == other.pauseId &&
+        purpose == other.purpose &&
         extended == other.extended &&
         awaitingDecision == other.awaitingDecision &&
         jsonEncode(causes) == jsonEncode(other.causes);

@@ -310,6 +310,40 @@ void main() {
     },
   );
   testWidgets(
+    'reopened game screen does not reuse an exhausted preparation owner',
+    (tester) async {
+      start(watchPrivate: false);
+      final old = container.read(provider.notifier);
+      query.pub.add(_Event(public(1)));
+      await tester.pump();
+      old.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      final expired = RoomRecoveryBatch(
+        elapsed: () => const Duration(seconds: 31),
+      );
+      old.recoverySession.preparationBatch = expired;
+      final room = old.roomCode;
+      container.dispose();
+      container = ProviderContainer();
+      provider = NotifierProvider(
+        () => _Controller(query, commands, room, false),
+      );
+      container.listen(provider, (_, _) {});
+      final game = container.read(provider.notifier);
+      // The private/screen callback can observe retained public data before
+      // the first stream event of the reopened screen arrives.
+      game.reportScreenReady(assetsReady: false);
+      await tester.pump();
+      query.pub.add(_Event(public(1)));
+      await tester.pump();
+      game.reportScreenReady(assetsReady: true);
+      await tester.pump();
+      expect(game.recoverySession.preparationBatch, isNot(same(expired)));
+      expect(container.read(provider).errorMessage, isNull);
+      expect(commands.reports.last['ready'], true);
+    },
+  );
+  testWidgets(
     'first game does not inherit an expired lobby preparation budget',
     (tester) async {
       start();

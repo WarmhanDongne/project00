@@ -10,7 +10,7 @@ import {createRealtimeRoom, validateRealtimeRoom, joinRealtimeRoom}
 
 initializeApp({projectId: "demo-guest-onboarding"});
 const auth = {uid: "guest-test", token: {firebase: {sign_in_provider: "anonymous"}}};
-const consents = {version: SIGNUP_TERMS_VERSION, age14: true, terms: true, privacy: true, marketing: false};
+const consents = {version: SIGNUP_TERMS_VERSION, age14: true, terms: true, privacy: true};
 const roomFunctions = [createRealtimeRoom, validateRealtimeRoom, joinRealtimeRoom];
 
 function stub(t, account = {}) {
@@ -33,7 +33,7 @@ function stub(t, account = {}) {
 test("anonymous login alone cannot create, validate or join a room; consented guests pass those gates", async (t) => {
   const {docs} = stub(t);
   for (const fn of roomFunctions) {
-    await assert.rejects(fn.run({auth, data: {}}), (e) => e.code === "failed-precondition");
+    await assert.rejects(fn.run({auth, data: {presenceProtocol: 2}}), (e) => e.code === "failed-precondition");
   }
   assert.deepEqual(await completeGuestOnboarding.run({auth, data: {consents}}), {status: "complete"});
   assert.equal(docs.get("userOnboarding").provider, "anonymous");
@@ -41,11 +41,12 @@ test("anonymous login alone cannot create, validate or join a room; consented gu
   assert.match(docs.get("users").nickname, /^게스트[0-9a-f]{6}$/);
   assert.equal(docs.get("users").email, null);
   assert.equal(docs.get("users").ownedGames, undefined);
-  assert.equal(docs.get("users").consents.marketing, false);
+  assert.equal(docs.get("users").consents.marketing, undefined);
   for (const fn of roomFunctions) {
     // Reaches payload validation after the real shared authorization guard.
+    // B1 capability must pass before create can reach that guard.
     // Invalid input deliberately avoids any production RTDB access.
-    await assert.rejects(fn.run({auth, data: {}}), (e) => e.code === "invalid-argument");
+    await assert.rejects(fn.run({auth, data: {presenceProtocol: 2}}), (e) => e.code === "invalid-argument");
   }
 });
 

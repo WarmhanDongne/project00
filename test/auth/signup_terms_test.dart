@@ -40,10 +40,10 @@ void main() {
 
     await tester.tap(find.text('동의하고 계속하기'));
     expect(agreed?.requiredAgreed, isTrue);
-    expect(agreed?.marketing, isFalse);
+    expect(find.byKey(const ValueKey('terms-marketing')), findsNothing);
   });
 
-  testWidgets('전체 동의는 선택 항목까지 한 번에 켜고 다시 누르면 모두 끈다', (tester) async {
+  testWidgets('전체 동의는 필수 항목을 한 번에 켜고 다시 누르면 모두 끈다', (tester) async {
     _phone(tester);
     SignupConsents? agreed;
     await tester.pumpWidget(
@@ -52,7 +52,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('terms-all')));
     await tester.pump();
     await tester.tap(find.text('동의하고 계속하기'));
-    expect(agreed?.allAgreed, isTrue);
+    expect(agreed?.requiredAgreed, isTrue);
 
     await tester.tap(find.byKey(const ValueKey('terms-all')));
     await tester.pump();
@@ -65,7 +65,7 @@ void main() {
     await tester.tap(find.byTooltip('이용약관 동의 전문 보기'));
     await tester.pumpAndSettle();
     expect(find.text('모시겜 이용약관'), findsOneWidget);
-    expect(find.text('검토 전 초안'), findsOneWidget);
+    expect(find.text('검토 전 초안'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('legal-document-agree')));
     await tester.pumpAndSettle();
     expect(find.text('필수 항목 2개에 동의해 주세요'), findsOneWidget);
@@ -87,7 +87,6 @@ void main() {
     );
     final saved = await store.read();
     expect(saved?.requiredAgreed, isTrue);
-    expect(saved?.marketing, isFalse);
 
     SharedPreferences.setMockInitialValues({
       'auth.signupConsents':
@@ -124,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('모시겜을 시작하기 전에\n약관을 확인해 주세요'), findsNothing);
-    expect((await store.read())?.allAgreed, isTrue);
+    expect((await store.read())?.requiredAgreed, isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -156,12 +155,7 @@ void main() {
     );
     await service.completeProfile(
       nickname: '모시',
-      consents: const SignupConsents(
-        age14: true,
-        terms: true,
-        privacy: true,
-        marketing: true,
-      ),
+      consents: const SignupConsents(age14: true, terms: true, privacy: true),
     );
     expect(functions.name, 'completeOnboardingProfile');
     expect(functions.data?['consents'], {
@@ -169,7 +163,6 @@ void main() {
       'age14': true,
       'terms': true,
       'privacy': true,
-      'marketing': true,
     });
   });
 }

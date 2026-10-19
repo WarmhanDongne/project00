@@ -1,6 +1,220 @@
 # 2026-10-11 네트워크 실기기 후속 구현 진행 기록
 
-## 범위와 소스
+## 2026-10-12 00:37 Final Call·00:40 LP 후속 조사 및 구현
+
+사용자가 A/B/T 로그 우선 수집, 서버 로그 시간·건수 제한 없는 조회, 원인 조사와
+계획·구현을 승인했다. LP 보고 시각은 00:40 KST이며 조회용 두 역할 유지도 확인했다.
+기기 변경마다 연결 확인을 받고 A(SM-A356E), B(SM-A325N), T(SM-P610) 순으로 읽었다.
+세 기기 모두 debug이며 설치 APK SHA256은
+`69561913E206C89392805AAA06A786B965B3FE80574323DD2D89891D71C9BEC8`이다.
+원시 로그는 저장하지 않고 정제한 메타데이터만 ignored build 아래에 보관했다.
+
+### 근거와 원인
+
+- 00:25~00:55 KST의 관련 함수10개를 조회했다. Final Call 시작4건은 HTTP200이며
+  complete_dealing 요청은0건이다. LP 시작2건/분배 완료1건, recovery_report20건,
+  접속 sync570건도 HTTP200이다. 관련 함수 ERROR 로그는0건이다. HTTP200은 ready의
+  accepted 판정을 대신하지 않는다. B/T의 ready_report_returned accepted를 기기에서 확인했다.
+- Final Call 분배 연출 완료는 interruption이 있으면 false만 반환하며, 진행 명령의
+  네 차례 재시도 뒤 전체 ready 해제를 다시 관찰하지 않았다. 최초 준비 pause에서도
+  완료 요청이 전송되지 않는 경로가 있어 서버 오류 없이 dealing에 남을 수 있다.
+- A는 00:39:35와00:42:23의 첫 공개 상태 수신 직후 준비 timeout/ready=false를 기록했다.
+  방 단위 GameRecoverySession은 화면보다 오래 유지되는데 새 controller 생성 시 이전
+  preparationBatch를 재사용했다. 같은 게임 재진입/첫 private·screen 콜백이 보존된 공개
+  상태를 먼저 보면 이미 소진된 예산으로 즉시 실패할 수 있다. 회귀 테스트로 재현했다.
+  이전 접속의 쓰기 권한 거부도 수집됐지만 이것만으로 이번 timeout의 서버 원인으로
+  확정하지 않았다. 앱 재시작·새 방 이후00:44의 정상 LP 시작/분배 완료도 기록돼 있다.
+- 초기 방향은 Firebase 초기화 전 화면 크기로 isTablet을 저장하고 나중에 적용했다.
+  초기 크기가 아직0이면 phone으로 분류하고, 게임 진입에서 가로 잠금이 재적용된다.
+  코드 경로는 확인했으나 실패 당시 최초 metrics 수치는 로그에 없어 실기기 재확인이 필요하다.
+
+### 계획과 반영
+
+1. 초기 방향: resumed와 유효한 view 크기를 함께 확인한 시점에 판별한다. 첫 프레임과
+   metrics 변경에서도 재확인하며, 방향 적용 전의 임시0 크기를 캐시하지 않는다.
+2. 준비 예산: 새 controller는 새 화면 예산을 사용하되 진행 중인 방 복구의 기존30초
+   예산을 공유한다. 같은 화면의 sticky failure·ready·입력 잠금은 유지한다.
+3. Final Call: 연출 완료를 시작 시각/라운드로 기억하고 canSend가 열린 뒤 완료 명령을
+   보낸다. 준비 대기는 전송 재시도 예산을 소모하지 않고 새 판/라운드·dispose는 옛 완료를
+   무효화한다. 회귀2개를 기존 session suite에도 등록했다.
+
+이번 추가 수정은 클라이언트만 바꾸며 새 Functions 배포 대상은 없다. 기존 사용자 변경,
+운영 시험 문서 체크와 서버 변경은 보존한다. 홀덤 전용 조사/16번/FULL 보류는 유지하고
+이번 요청으로 Final Call 조사·수정·관련 자동 검증은 재개했다.
+
+### 검증 및 실기기 확인
+
+- 준비 회귀23개 PASS/exit0, Final Call 완료 대기·옛 라운드 배제2개 PASS/exit0.
+- 최초 분석에서 새 테스트의 unused import1건을 확인해 제거했다. 변경5파일의
+  `flutter analyze --no-pub`는 문제0/PASS/exit0이다. 최종 guarded
+  `test session`은 Flutter199/Functions123와 working-tree-mutation 모두 PASS/exit0이다.
+  `git diff --check`도 exit0이다. 기존 변경은 보존했고 예상 밖 mutation은 없다.
+  FULL은 아직 실행하지 않았고 최종 후보에 대한 승인 여부를 요청했다.
+- `flutter build apk --debug` PASS/exit0, 결과는
+  `build/app/outputs/flutter-apk/app-debug.apk`, SHA256
+  `1BFA8D63CA3A59FD47BC2C0A3F6426C90BFC4A07593F6B7872081ED34E2F3E3D`이다.
+  기기에는 설치하지 않았다. branch `codex/e01-validation-wiring`, HEAD `3247b20` 유지,
+  staged0·수정23·untracked2이며 시작 전 수정19·untracked1을 보존했다. commit/push 없음.
+- 새 APK로 갤럭시 탭 cold start부터 가로인지 확인하고, 같은 방에서 FC→LP→FC를 반복한다.
+  설정 완료 뒤 모든 준비가 끝나면 FC 첫 턴이 열리고 LP 준비 실패가 발생하지 않아야 한다.
+  FC 분배 중 단절→복구는 같은 판을 유지하고 준비 전 입력 금지·준비 후 완료 전송을 확인한다.
+  이전 라운드/게임의 늦은 연출 완료가 새 판을 진행시키지 않아야 한다.
+
+## 2026-10-12 02:25 이후 — B 준비 실패·제외 후 LP 고착 조사
+
+사용자가 B/태블릿 로그 수집과 관련 서버 조회를 승인하고 조회 계정의 두 읽기 권한을
+확인했다. B는 다른 기기와 Google 계정을 공유하지 않았다. 태블릿 가로 시작은 사용자가
+성공을 확인했다. 이번 요청은 원인 조사이며 제품 코드를 추가 수정하지 않았다.
+
+### 설치·조회 범위
+
+- B(SM-A325N)와 태블릿(SM-P610)은 모두 debug APK이며 SHA256이
+  `1BFA8D63CA3A59FD47BC2C0A3F6426C90BFC4A07593F6B7872081ED34E2F3E3D`로 일치한다.
+  설치 갱신은 B 02:16:11, 태블릿 02:13:44다. 이전 release APK 착오와 구분한다.
+- 기기 버퍼는 메모리에서 정제했고 02:25~03:00 범위의 수집 당시 남은 기록만 저장했다.
+  서버는 02:25~02:40 KST의 관련 함수 실행 메타데이터와 오류 분류를 조회했다.
+  정제 evidence는 ignored `build/device-test/lp-b-0225-20261012/`에 있다.
+- LP 시작3/분배 완료2/종료3, ready13, 게임 내 제외1건은 HTTP200이다.
+  fetchRealtimeRoomSession은 성공2/HTTP403 5건이다. sync는 최대100건에서 잘렸으므로
+  전체 건수로 해석하지 않는다. HTTP200만으로 ready accepted를 판정하지 않는다.
+
+### 시간순 근거와 원인 구분
+
+1. B는 02:25:02부터 게임 시작 전에도 heartbeat 쓰기 권한 거부를 반복했다.
+   Firebase transport connected 기록과 쓰기 권한 회복은 별개다. 02:25:56.444 첫 공개
+   dealing 상태 수신 직후 56.511 local_data timeout, 56.524 failed_report timeout이
+   발생했다. assets 완료는 02:26:09.871로 뒤에 있어 단순 이미지 로딩30초 초과가 아니다.
+   진행 중인 transport 복구의 기존 준비 예산을 게임 진입에서도 공유하는 경로와 일치한다.
+   접속 권한 거부를 먼저 해결해야 하며 예산만 반복 초기화하면 복구 제한을 무력화한다.
+2. 태블릿은 02:25:57.944 최초 ready accepted였다. 제외 요청은 02:26:26.343에 시작해
+   29.199 성공했고 29.212 dealing revision8을 수신했다. 29.354 ready=true 재보고를
+   시작했으나 29.364 ready_report timeout, 29.386 failed_report timeout이 발생했다.
+   제외 자체의 실패가 아니라 남은 태블릿의 준비 재확인 실패가 직접 확인됐다.
+3. 서버 finalizeGameMutation은 pause 중 변경 때 dataSeq/resumeEpoch를 바꾸고 ready를
+   비운다. 클라이언트는 새 게임 또는 새 pauseId에서만 준비 예산을 갱신하므로 같은 pause의
+   제외 후에는 소진된 최초 예산을 재사용할 수 있다. GameInterruptionCommandService도
+   같은 preparationBatch를 사용하며 잔여0이면 전송 전에 timeout한다. 태블릿의 10ms 실패와
+   실제 ready callable 미전송이 이 경로와 일치한다.
+4. LP _onDealCompleted는 interruption 동안 false를 반환하고 짧은 진행 명령 재시도를
+   소진한다. 연출 완료를 유지한 채 ready 해제를 다시 관찰하는 FC 수정은 LP에 없었다.
+   첫 게임의 complete_dealing 요청은 없고, 방으로 돌아온 다음 두 게임에서는 ready accepted
+   후 complete_dealing/playing이 확인된다. 예산 문제 해결 뒤에도 이 전송 고착 경로는 남는다.
+5. B는 02:26:29.742 wasKicked=true로 방을 정리했다. 제외 후 참가 자격 거절 자체는 정상이다.
+   이후 서버 세션 조회403이5건 반복된다. pending join 복구는 예전 join 성공을 재생한 뒤
+   현재 세션을 조회하지만 membership 거절 때 pending을 정리하지 않아 같은 요청을
+   반복할 수 있다. HTTP200 join은 새 참가 성공의 증거가 아니다. 서버 실행 메타데이터에는
+   사용자 식별자가 없어 각403을 B 요청으로 개별 확정하지는 않았다.
+
+### 재현된 결함과 남은 확인
+
+RoomSessionIdentityStore.save의 순번 비교는 roomInstanceId만 같으면 실행된다. 같은 방의
+새 membership이 seq1로 시작해도 옛 membership seq3이 있으면 새 신원 저장과 완료된
+pending join 정리가 함께 건너뛰어진다. synthetic old/new membership을 사용한 실제 저장소
+probe로 old identity와 pending이 남는 현상을 재현했다. `flutter test --no-pub
+build/device-test/lp-b-0225-20261012/identity_generation_probe_test.dart`는 PASS/exit0이다.
+이는 현재 결함을 확인하는 probe이며 수정 회귀가 통과했다는 의미가 아니다.
+
+B의 실제 로컬·서버 membership/connection 값을 최초 조사에서는 비교하지 않았으므로
+저장 결함을 당시 권한 거부의 유일한 직접 원인으로 확정하지 않았다. 같은 계정 충돌은
+사용자 답변으로 배제됐고, 신원 저장·미확정 join 정리 결함은 재현과 코드로 확인했다.
+
+### 02:51 B 추가 수집 — 실제 저장 상태 확인
+
+사용자가 B를 다시 연결해 장애 전 02:10 이후 로그와 앱의 방 신원 진단 키를 읽었다.
+Auth 저장소는 조회하지 않았으며 raw 기기 버퍼·참가 신원·계정 식별자를 저장하지 않았다.
+02:14:54에도 이전 앱 프로세스의 쓰기 거절/seq3 준비 실패가 있었고, 최신 설치 후
+02:24:52부터 같은 방의 다른 접속 경로가 거절됐다. 따라서 최초 발생을 02:25로 한정하지
+않는다. 추가 수집에는 02:46/02:48의 seq1 ready accepted도 있어 B의 영구 기기 장애로
+해석하지 않는다.
+
+실제 로컬 기록에서 권한 거부 경로와 일치하는 player 신원은 connectionSeq3이고,
+같은 roomInstanceId의 pending join(expectedConnectionSeq0, membershipId 없음,
+preserveProfile=false)이 남아 있다. 이는 신원 저장·완료 요청 정리 결함의 실제 발생을
+뒷받침한다. 다만 요청 생성만으로 서버 성공을 확정하지 않으므로 해당 operation의 결과
+connectionSeq 숫자 한 개를 별도 경로 승인 후 비교해야 한다. 새 요청의 서버 결과가1인데
+로컬은3이라면 synthetic probe에서 확인한 세대 간 순번 비교 결함을 실제 사고와 연결한다.
+사용자가 단일 값 조회를 승인했다. 노출 Firebase 도구는 project 조회와 RTDB 읽기 두 개이며
+project0000-ec01e/mosigame/ACTIVE를 확인했다. 승인된 operation 결과 connectionSeq 경로를
+정확히 한 번 읽은 결과는 null이다. 당시 숫자를 복원하지 못했으며 null을1로 해석하지
+않는다. 방 삭제 여부를 판정하거나 다른 경로를 추가 조회하지 않았다.
+
+추가 네이티브 분류에서 02:24:52.166과02:25:03.191은 onDisconnect update 거절이고,
+그 뒤 주기적인 일반 update 거절은 heartbeat다. RoomService는 join/restore의
+_joinRoomWithRetry가 끝난 뒤 저장 신원을 다시 읽어 onDisconnect를 등록한다. 따라서
+참가 호출이 끝난 뒤에도 허용되지 않는 저장 접속을 사용한 흐름이 실제 B에서 확인된다.
+local seq3·같은 방의 최초 참가 pending·참가 후 접속 등록 거절은 save의 낮은 순번 무시와
+완료 pending 누락 경로를 강하게 뒷받침한다. 서버의 당시 반환 순번 자체와 정확한
+membership 값은 직접 관측하지 못했으므로 관측 사실과 코드로 추론한 부분을 구분한다.
+
+02:10~02:25 서버 함수5개를 최대100건씩 추가 조회한 결과 join4/fetch1/leave1/remove1/
+connection_changed7은 HTTP200이며 limit에 도달하지 않았다. 조회와 B 추가 수집 exit0.
+정제 evidence는 ignored `build/device-test/lp-b-identity-20261012/`에 있다.
+
+후속 수정 후보는 membership 범위에서만 순번 역행을 막는 저장 처리, 확정된 참가 자격
+상실과 미확정 통신 오류를 구분한 pending 정리, 제외 후 새 ready context의 예산 처리,
+LP 연출 완료 보존과 준비 해제 후 전송이다. 자동 복귀로 추방을 뒤집지 않으며 동일 복구의
+30초 제한을 보존해야 한다. 새로운 복구 상태 계약이 필요하면 구현 전 별도 승인한다.
+이번 조사에서 배포·앱 조작·RTDB 직접 조회·commit/push·FULL 실행은 하지 않았다.
+
+## 2026-10-12 정리 기준 요약
+
+### 2026-10-12 — B 재참가 신원 저장 수정 계획과 실행
+
+사용자가 개발 계획 수립과 실행을 요청했다. 시작 branch는 codex/e01-validation-wiring,
+HEAD4bbd31eca6dee73d16b86fbdbca963f8245fcf24, staged0·기존 수정4개(시험 문서·작업 목록·
+월별 기록·본 상세 기록)였다. 기존 실기기 문서의 사용자 편집을 보존하고38번만 추가했다.
+
+계획은 (1) membership별 순번 비교와 완료 pending 정리, (2) 확정된 자격 상실 이후 직접
+join의 새 요청 허용, (3) 실제 서비스 heartbeat 경로·자동 복귀 금지·늦은 응답 회귀다.
+공개 API·저장 형식·서버 권한·복구30초 제한은 변경하지 않는다. 태블릿의 게임 내 제외 후
+ready 예산과 LP 완료 전송 문제는 이번 B 신원 수정과 분리해 미해결로 유지한다.
+
+- RoomSessionIdentityStore는 같은 방+같은 membership일 때만 낮은 connectionSeq를
+  무시한다. 새 membership은 seq1이라도 저장하며 완료 join과 옛 시작 intent를 정리한다.
+  같은 membership의 옛 성공 응답은 최신 접속을 유지하고 정확히 일치하는 완료 pending만
+  정리한다. 다른 pending과 owner가 무효화된 늦은 응답은 덮어쓰지 않는다.
+- RoomService는 pending join 성공 재생 후 현재 참가 lookup이 permission-denied이고
+  직접 join 요청일 때만 현재 방을 다시 읽어 새 참가 요청을 저장한다. 기존 pending은
+  새 요청 저장이 성공하기 전까지 보존한다. 자동 복구·프로필 편집·join 자체의 거절과
+  unknown 오류는 이 경로로 새 참가를 만들지 않는다.
+- 서비스 수준에서 old seq3→new membership seq1→새 경로 heartbeat를 확인한다.
+  저장 후 앱 재시작, 같은 membership의 최신 접속 보존, 완료 pending 선택 정리,
+  자동 참가 금지·프로필 편집 금지·unknown 결과 보존·owner 만료도 검증한다.
+  저장소 회귀를 기존 Project CLI session suite에 추가했다.
+
+수정 전 신규 저장소2개와 직접 재참가 회귀는 FAIL이었다. 최초 서비스 시험에서 누락된
+없는 참가자 snapshot/onDisconnect Fake를 보완했고 수정 후 관련16개 PASS/exit0을
+확인했다. 추가 안전성3개까지 포함한 guarded `test session`은 Flutter212/Functions123/
+working-tree-mutation 모두 PASS/exit0이다. 변경5파일 `flutter analyze --no-pub`도
+문제0/exit0이다. `flutter build apk --debug`는 PASS/exit0이며 새 debug APK SHA256은
+`4D9BA7F4DE8F923BC476CDFEA7484D08DEF8E0FD8D43A8B437C0A91A19675AFA`다.
+설치하지 않았다. 최종 Git 상태는 staged0·수정10개·untracked0이며 기존4개 문서 변경을
+보존했다. git diff --check exit0. FULL은 승인 요청 후 미실행이고38번 실기기도 미실행이다.
+따라서 구현 후보 검증과 최종 해결 확인을 구분한다.
+이 변경은 클라이언트만 해당하므로 추가 Functions 배포 대상은 없다. commit/push 없음.
+
+현재 상태·다음 행동의 원본은 [작업 목록](../TASKS.md)의 SESSION-RECONNECT-02다.
+아래 조사·미검증·미배포 설명은 각 기록 시점의 이력이며 최신 판정과 구분한다.
+
+- 유효한 수정: controller/player 역할 분리·저장 방 복구 우선·동일 계정 세션 조회 구분,
+  정상 최초 준비의 recovery.purpose 표시 분리. 서버 대상14개는 10/11 배포 성공했다.
+- 최신 사용자 관찰: `11:57` 동일 계정 A/T에서 A만 탈퇴 성공, `11:59` LP 준비 안내 없이
+  정상 시작 성공. 사용자가 실기기 문서37번의 추방·마지막 참가자·저장 방 복구 세 체크를
+  완료로 갱신했다. 이어36번 LP 체크도 완료로 갱신했다. [실기기37 기록](../../operations/NETWORK_SESSION_REAL_DEVICE_TEST.md#37-동일-계정-휴대폰-추방-후-태블릿-방-유지복구)을 사용자 확인 근거로 보존한다.
+  LP 정상 시작 성공은 채팅/문서 보고를 근거로 하며 다른 게임36의 통과로 확대하지 않는다.
+- 앞선 `23:44~23:48` 실패 재조사는 실제 태블릿에 이전 release APK가 설치된 사실을
+  확인한 뒤 사용자 요청으로 중단했다. 보고한 debug hash를 설치 hash로 취급하지 않는다.
+  그 재시험은 최신 debug 수정의 실패 증거로 사용하지 않는다.
+- 이번 정리: debug 종료 계측은 실제 clearRoom에서 사유/역할/접속을 한 번 기록한다.
+  기능·재시도·DB 계약은 변경하지 않는다. 이번 클라이언트 계측 정리는 서버 배포 대상이 없다.
+- 남은 범위: 다른 게임36, 기존 응답 유실·옛 cleanup 등의 서버 진단은 37번 체크 통과로
+  대체하지 않는다. FULL/Final Call 전용/16번 보류 및 홀덤 단일 기기 조사 제외 유지.
+- 정리 검증: guarded session2회 모두 Flutter196/Functions123 통과, RoomProvider 분석 문제0/exit0.
+  두 실행 중 사용자 시험 문서가 각각00:06:15/00:08:38에 저장되어 mutation 검사는 FAIL,
+  전체 exit1이었다. 두 번째 문서 갱신에서36번 LP 체크도 완료됨을 확인했다. 변경을 보존하고
+  반복 실행은 중단했다. 문서 편집 종료 후 mutation 재확인 필요. FULL은 실행하지 않았다.
+
+## 2026-10-11 최초 착수 범위와 소스
 
 사용자의 개발 진행 요청으로 테스트 9–20 조사 후 수정 계획을 시작했다.
 branch `codex/e01-validation-wiring`, HEAD `c8b6a74`이며 fetch 후
@@ -543,3 +757,319 @@ planning 문서만 수정했으며 stage/commit/배포/새 APK/운영 조회 없
 27/34번을 새 APK에서 확인해야 하며 서버 수정의 기존 14개 배포 목록에는 추가 대상이 없다.
 이전 기록의 준비 UI 미해결 표시는 당시 판단으로 보존한다. 현재 로비 문구는 수정 후보이며
 실기기 전체 시작 흐름은 확인 대기, 최초 heartbeat/접속 거절/expire 403은 계속 미확인이다.
+
+## 2026-10-11 — 설정 완료 후 배경 대기·동일 계정 추방·홀덤 단일 기기 보호 개발 계획
+
+사용자 요청의 세 항목을 후속 범위로 설계한다. 계획 시점 HEAD3247b20/working tree clean.
+이 절에서는 제품 수정·테스트·배포를 실행하지 않는다. 이전 로비 책 badge 제거와 이번
+설정 완료 뒤 준비 화면 제거는 서로 다른 구간이다. 보고된 정확한 문장은 현재 소스 검색에서
+찾지 못했으므로 실제 사용 빌드·공용 shell·setup 완료 대기의 표시 경로를 먼저 확인한다.
+
+### 1. 모든 게임의 설정 확정 이후 정상 준비는 게임 배경에서 대기
+
+- 공용 PlayerLayoutEditor onPrepare/onComplete, tablet_game_launcher의 route 교체,
+  phone waiting→game 진입, 각 게임의 초기 connecting/loading presentation을 추적한다.
+  마피아 역할 설정 완료 경로도 포함하고 로비 다운로드/선택 표시와 구분한다.
+- 설정 확정 연출이 끝난 뒤 서버 시작 결과를 기다리거나 첫 공개/개인 데이터를 기다리는
+  정상 경로에는 게임 배경을 유지한다. 별도 준비 문구·전체 화면 loading/scrim을 제거한다.
+  서버 결과가 미확정이면 배경에서 결과 확인을 계속하며 새 시작 요청 ID를 만들지 않는다.
+- 실제 단절·ready 실패·시작 거절은 기존 보호/오류 안내를 유지한다. 화면 표시를 제거해도
+  canSend/ready barrier는 유지하고, 거절 시 명단 수정·설정 복귀/재시도가 가능해야 한다.
+- 각 게임의 초기 데이터 지연, 시작 응답 지연/유실, 실제 단절/실패 회귀를 구분한다.
+  테스트는 배경 유지·정상 준비 문구 미노출·입력 차단·동일 시작 재생을 확인한다.
+  Final Call 전용 실행은 기존 보류를 유지하고 변경된 공용 경로와 기존 공용 회귀를 검증한다.
+
+### 2. 같은 계정의 휴대폰 추방은 태블릿 controller 방을 유지
+
+- RoomProvider의 players subscription에서 controller를 내 참가자로 채택하지 않는다.
+  기존 _ownsControllerSession을 기준으로 player removal 확인을 제외하고, 확인 함수의
+  시작/await 결과 적용 직전에도 역할·방·session epoch를 확인해 늦은 응답을 차단한다.
+- 휴대폰의 실제 강퇴 정리와 서버 close/delete 판정은 유지한다. 같은 UID의 player 삭제가
+  controller의 roomCode·구독·heartbeat·저장 신원을 정리하지 않게 한다.
+- 이미 로컬 방을 잃은 상태에서는 저장된 controller 세션의 존재를 새 생성 전에 확인해
+  기존 방 복구를 우선한다. 복구 실패는 재시도/명시 종료로 처리하고 서버 종료 확인 전에는
+  신규 할당이나 매핑 삭제를 하지 않는다. 필요 시 권한/서버 종료 판정은 추가 승인 경계를 검토한다.
+- controller/player 같은 UID, 다른 UID, 마지막 참가자 추방, 진행 중 removal 확인의 역할 전환,
+  실제 방 종료·삭제, 로컬 roomCode 부재+저장 세션 존재를 회귀로 확인한다.
+  controller 유지·휴대폰 퇴장·재참가·명시 종료 뒤 새 생성이 각각 정상이어야 한다.
+- 3247b20과 d9a61f8의 해당 client/추방/생성 경로는 같다. 서버 추방은 player만 지우고,
+  local clearRoom은 server close를 보내지 않아 controllerRooms와 활성 방이 남는다.
+  이후 새 operation 생성은 서버의 기존 활성 방 guard에 거절되는 공통 결함이다.
+
+### 3. 홀덤 내 턴에 한 휴대폰만 보호 화면에 가린 원인 조사 후 수정
+
+- 테스트 날짜/시각·APK commit/hash·기기·연결 방식·같은 계정 여부·실제 문구를 확보한다.
+  문제 휴대폰부터 로그를 확보하고 필요한 태블릿/다른 휴대폰을 차례로 요청한다.
+  서버 조회가 필요하면 관련 함수·시간·최대 건수를 합의한 뒤 read-only 절차를 따른다.
+- 하나의 시간축에 transport, controller presence/heartbeat 판정, 현재 membership/connection,
+  public/private context, ready 수락·barrier, pause 전이, turn deadline/timeout을 맞춘다.
+  private 카드 payload·계정 식별자는 기록하지 않고 고정 사유와 최소 상태만 사용한다.
+- 단일 기기 실제 단절, controller 오판, 늦은 private/ready 불일치, 옛 접속 이벤트,
+  서버 중단 감지 전 timeout을 분리한다. 게임 전체가 진행됐다는 이유만으로 서버 pause 결함으로
+  확정하지 않으며 실제 원인 fixture를 먼저 재현한다.
+- 확정 원인에 한해 수정한다. 잘못된 controller 판정은 현재 접속과 최신 근거로 재확인하고,
+  실제 단절은 기존 실패 보고/heartbeat 중단 계약을 따라 서버 중단으로 전달한다.
+  표시를 숨기거나 ready 없이 입력을 열거나 타이머를 임의 초기화하지 않는다.
+- 내 턴 초반/마감 직전 단절, controller 정상+phone 단절, reconnect 뒤 context/ready 지연,
+  실제 pause 이후 timeout 거절과 잔여 시간 복원, pause 이전 정상 만료를 회귀로 구분한다.
+  원인 확인 전 서버 deadline/pause 계약 변경은 구현하지 않는다.
+
+### 작업 순서와 검증·반영
+
+첫째 동일 계정 추방 회귀/수정, 둘째 전체 게임 설정 완료 이후 배경 대기 회귀/수정,
+셋째 확보한 홀덤 로그의 원인 fixture와 수정 순서로 진행한다. 홀덤 증거 수집은 앞선
+두 구현과 병행할 수 있다. 게임 시작 중 서버 상태 전이/ID 계약은 변경하지 않는다.
+구현 때 Mosigame Implement and Validate skill을 적용하고 관련 회귀·분석 뒤 Windows
+guarded test session을 실행한다. auth/API 변경이 생기면 영향과 추가 검증을 별도 검토한다.
+FULL/Final Call 전용 시험/16번은 기존 보류 유지; FULL 재개 없이 전체 완료로 표시하지 않는다.
+클라이언트만 수정되면 새 APK가 필요하며, 홀덤 서버 수정이 확인되면 실제 공유 호출 경로의
+함수 목록을 확정해 별도 배포 승인을 받는다. 현재 서버 변경 필요 여부는 미확정이다.
+실기기 문서에 전체 게임 설정 완료 후 배경 대기, 동일 계정 추방/기존 방 복구, 홀덤 단일
+휴대폰 보호의 독립 항목을 추가한다. 기존 사용자 시험 기록은 보존한다.
+
+## 2026-10-11 — 홀덤 제외 후 배경 대기·동일 계정 방 유지 구현 후보
+
+사용자가 홀덤을 이번 개발에서 제외했다. 홀덤 관련 제품/테스트/로그 수집은 추가하지 않고
+기존 session manifest의 공용 게임 회귀는 유지했다. 이전 계획의 홀덤 조사 단계는 보류한다.
+
+동일 계정 추방은 controller 역할을 players membership 감시에서 제외하고, player removal
+확인의 시작 및 응답 반영 시 역할/UID/dispose/session epoch를 검증하도록 수정했다.
+휴대폰만 강퇴되며 태블릿 roomCode·구독·controller 신원이 유지된다. 로컬 방이 없어도 저장된
+controller 방이 있으면 createRoom이 복구를 우선하고 신규 할당을 하지 않는다.
+서버 추방·활성 방 생성 guard·persistent shape와 public API는 변경하지 않았다.
+
+정상 설정 완료 대기는 공용 editor의 기존 게임 배경으로 유지되는 것을 pixel 회귀로
+확인했다. LP/마피아·공용 phone connecting은 이미 정상 준비 안내를 숨긴다. Final Call과
+게임 템플릿의 connecting에는 빈 GameFlowCopy.preparingGame을 표시하는 설정이 남아 있어
+showAnnouncement 자체를 false로 정리했다. 보고된 정확한 문장 `게임 시작 전 게임을 준비
+중입니다`는 현재 소스에 없으므로 실제 설치 APK의 전체 흐름은 확인 대기다. 단절·실패 안내와
+ready/입력 보호는 그대로 유지한다. 홀덤 화면/네트워크 원인은 이번에 변경하거나 판정하지 않았다.
+
+- `flutter test --no-pub test/controller_room_lobby_recovery_test.dart test/controller_room_lifecycle_test.dart test/table_background_transition_test.dart packages/game_kit/test/recovery/widgets/game_recovery_layer_test.dart`:
+  중간 후보 29개 PASS/exit0.
+- `flutter test --no-pub test/controller_room_lobby_recovery_test.dart test/table_background_transition_test.dart test/tablet_room_reset_test.dart`:
+  최종 신규 늦은 추방 확인 회귀 포함 26개 PASS/exit0. 동일 UID controller 유지, player 강퇴 유지,
+  저장 방 복구 우선, 늦은 player 결과 무시를 추가했고 배경 대기 무스피너/무문구도 확인했다.
+- `flutter analyze --no-pub lib/platform/home/room/providers/room_provider.dart test/controller_room_lobby_recovery_test.dart test/table_background_transition_test.dart packages/game_final_call/lib/tablet/tablet_board.dart packages/game_template/lib/tablet/tablet_board.dart`:
+  5개 경로 PASS/exit0.
+- `.\tool\invoke_mosigame.ps1 test session`: 최종 Flutter191/Functions116, manifest/preflight/
+  working-tree-mutation 포함 5단계 PASS/exit0. table_background_transition을 session manifest에 추가했다.
+  별도 auth/FULL/Final Call 전용 suite는 실행하지 않았다. 서버 소스 변경이 없어 별도 lint를 반복하지 않았다.
+
+실기기 체크리스트 36/37번 추가, 계약 문서 갱신. 기존 planning 계획 변경을 보존했다.
+시작/종료 develop/HEAD3247b201f5f5f0ed73ec38c6273557e4a8f03e4c, staged 없음,
+제품3개/회귀2개/manifest1개와 문서만 수정했으며 마지막 검증 뒤 문서만 갱신했다.
+FULL·Final Call 전용 시험·16번 보류 유지. 이번 클라이언트 후보의 추가 Functions 배포 대상 없음.
+새 APK 빌드·설치·실기기 재시험/commit/push/merge/운영 조회는 실행하지 않았다.
+
+## 2026-10-11 — 초기화·초대 지연, 생성 요청 보존, 로비 감지, 16:54 LP 조사
+
+읽기 전용 코드·이력 검토이며 제품 소스는 추가 수정하지 않았다. 사용자에게서 LP 장애 날짜
+2026-10-11 16:54 KST와 갤럭시 로그 수집 가능 여부를 확인했다. 설치 APK와 로컬 release
+artifact의 일치는 아래 후속 수집으로 확인했다. 빌드 commit·장애 화면의 정확한 문구와
+각 시작의 방/게임 대응은 아직 미확인이다.
+
+- 초기화: closeRoom은 방 전체 사전 읽기와 primed 방 루트 transaction을 순차 실행한다.
+  참가자를 한 명씩 퇴장시키거나 physical cleanup을 기다리는 구조는 아니다. 참가자·게임
+  데이터 증가와 같은 루트에 대한 heartbeat/presence 쓰기의 transaction 경합은 지연 후보다.
+  최신 버전에서 인원별 시간을 측정하지 않았으므로 확정 병목으로 표현하지 않는다.
+  최초 close의 operation-status 생략은 이미 구현되어 있어 추가 최적화로 중복 제안하지 않는다.
+- 초대: 생성 서버는 onboarding, 이전 매핑, 슬롯/예약/방 할당, 예약 확정, 매핑 검증/확정,
+  최종 방 확인, 슬롯 확정을 순차 수행한다. primed transaction마다 초기 값 확인도 필요하다.
+  앱은 durable intent/신원 저장과 presence/onDisconnect 설정을 마친 뒤 성공한다.
+  최초 생성의 불필요한 resume 제거는 이미 구현되었다. room_action_timing의 단계별 시간과
+  앱 전체 완료·표시 애니메이션을 분리해 측정한 후 중복 읽기/경합을 줄일 범위를 정한다.
+- 생성 기록: reconcileTerminal은 roomCreateRequests와 roomCreateSlots를 지우지 않고
+  같은 roomInstanceId/allocationGeneration의 기록만 terminal로 바꾼다. controllerRooms는
+  같은 target일 때 지운다. terminal 기록의 별도 TTL 삭제는 없으며 늦은 재전송 방지를 위한
+  잔존 기록과 실제 활성 방을 구분해야 한다. 방 할당 전 reserved 슬롯이 남으면 rooms 기반
+  cleanup만으로는 회수되지 않을 수 있다. 실제 운영 요청의 나이·상태는 조회하지 않았다.
+  realtime-room-lifecycle의 요청 삭제 backstop 주석은 현재 terminal 보존 구현과 다르다.
+- 로비 연결 감지: controller의 20초 stale heartbeat 보고는 playing에만 켜진다.
+  로비 카드는 lastSeen 대신 player.isConnected만 표시한다. waiting/seating은 onDisconnect
+  감지 → syncRealtimeRoomConnection의 방 루트 transaction → players 요약 → 앱 구독에
+  의존하므로 transport 감지가 지연되면 표시도 늦어진다. 로비 freshness 표시와 게임 pause
+  계약을 구분해서 보완해야 한다.
+- 하단 5-5: a0ee1eb(2026-10-10 01:58:51 KST)에서 공용 게임 LED 띠를 추가했다.
+  ConnectionNoticeHost의 1.5초 유예/3초 끊김 표시 뒤 [0,1,3,7,15]초에 표시 단계가 오른다.
+  실제 Firebase 재시도 횟수나 5회 실패 한도가 아니다. 연결 복구 전에는 5-5에 머문다.
+
+### 승인된 16:50~17:05 KST 서버 조회
+
+사용자가 이번 시간/관련 함수/함수별 최대100건 조회를 승인했다. 기존 사람 확인 조회용
+계정과 고정 project0000-ec01e를 사용했다. SDK launcher의 sandbox 접근 거부 후 승인된
+실행 경로로 bundled Python -S gcloud.py logging read를 호출했다. probe는 metadata1건,
+requests/errors는 각각 함수별 limit100·order asc로 실행했고 모두 exit0이다.
+정제 결과만 ignored build/device-test/lp-1654-20261011에 저장했다. 원문 오류·사용자 식별자·
+게임 payload·credential은 저장하지 않았다. RTDB 조회·쓰기·배포는 하지 않았다.
+
+- game_liars_poker_start_game: 16:50:07, 16:52:49, 16:53:23의 HTTP200 3건,
+  서버 HTTP latency 약605~631ms. 각 시작 직후 game_common_recovery_report4건씩 총12건,
+  HTTP200·약367~923ms. HTTP200은 ready accepted와 staleContext/dataMissing을 구분하지 않는다.
+- game_liars_poker_complete_dealing, resumeRealtimeControllerRoom,
+  resumeRealtimePlayerConnection: 해당 범위 요청 기록0건. 미발견이며 정상/미호출 확정은 아니다.
+- interruption_on_connection_changed5건, controller_presence_changed18건은 HTTP200.
+  syncRealtimeRoomConnection은 limit100에 도달해 16:50:01~16:53:14만 포함한다.
+  이 제한된 표본은 평균184ms·최대395ms이며 16:54 이후 전체를 대표하지 않는다.
+- 위8개 함수에서 severity>=ERROR의 비HTTP 실행 오류는0건. 예외 미발견으로만 판정한다.
+
+시작 함수에서 1분을 소비한 근거는 발견하지 못했다. 현재 LP는 dealing으로 시작하고
+태블릿 배분 연출 뒤 complete_dealing이 손패를 공개하므로 그 이전의 화면/에셋 준비,
+ready 수락과 모든 필수 접속의 barrier, 배분 연출 완료 callback을 우선 확인한다.
+기기5대 대비 보고4건의 묶음은 의심 근거지만 요청 수는 고유 기기 수가 아니며 이번 방과
+대응도 미확인이다. 누락 기기·서버 barrier 고착·배포 버전 불일치로 확정하지 않는다.
+갤럭시 연결 후 scoped 정제 로그와 설치 metadata를 추가 수집했다.
+
+### 갤럭시 추가 수집과 APK 비교
+
+연결한 SM-S931N의 versionName1.0.0/versionCode2, DEBUGGABLE=false,
+lastUpdateTime2026-10-11 15:04:43을 확인했다. 설치 APK의 SHA-256은 로컬
+build/app/outputs/flutter-apk/app-release.apk(수정 시각15:03:03)와 일치한다.
+APK의 대응 commit 및 다른4대 설치 버전은 미확인이다.
+
+capture_device.py galaxy/capture_native.py는 각각 exit0. 전체 Android buffer에 다른 날짜
+기록이 있더라도 대상16:50~17:05의 앱 구조화 이벤트0건·식별 가능한 앱 프로세스 로그0줄로
+당시 장애 증거는 확보하지 못했다. 준비 보고 진단은 kDebugMode에서만 출력되므로 이번
+release 앱에서는 ready_report_returned를 얻지 못한다. 오류/종료 기록의 미발견을 정상
+동작 증거로 취급하지 않는다. 앱 실행·재설치·데이터 변경·로그 삭제는 하지 않았다.
+추가 재현에서는 동일 source의 진단 가능한 APK 또는 승인된 최소 release 진단과
+controller/player별 ready 상태·배분 완료 callback을 수집해야 한다.
+
+## 2026-10-11 — 36·37번 실패 재조사와 개발 계획
+
+사용자는 Functions 배포 후 debug APK에서 36번 LP 시작 준비 화면과 37번 동일 계정
+휴대폰 추방 시 태블릿 방 소실/A 추방/B 단절이 다시 발생했다고 보고했다. 시험 문서의
+10시02분/04분 AM/PM 및 16개 배포 성공 여부는 확인 요청했다. 사용자 시험 기록을
+보존하며 기존 로컬 검사 PASS를 이 실기기 실패의 통과 근거로 확대하지 않는다.
+
+### APK와 현재 코드 대조
+
+보고 hash6FD148826B995C469C2DA391C8E4F69A4CE595BA1AC1741DFD444F5F434880E5는
+로컬 app-debug.apk(21:55:33)와 일치한다. debug APK의 kernel_blob.bin을 읽어 현재
+room_provider, tablet_book_carousel, LP/Final Call tablet_board, GameRecoveryLayer의
+전체 소스가 내장됨을 확인했다(exit0). controller membership/removal 가드와 LP badge
+제외를 확인했으므로 해당 APK의 수정 코드 누락을 원인으로 단정하지 않는다.
+실제 태블릿 설치 hash는 USB 연결 후 별도로 확인한다. 제품 소스 수정·새 빌드·배포 없음.
+
+### 36번 — 정상 최초 ready barrier도 중단 화면으로 분류되는 코드 경로
+
+finalizeGameMutation은 새 게임을 만들 때 beginRecoveryPause를 호출한다. 실제 단절이
+없어도 recovery.paused=true/pauseId/빈 causes가 생성된다. GameRecoveryLayer는
+pauseId가 있으면 interrupted=true로 보고 tabletController의 GameInterruptionLayer를
+그린다. 따라서 LP waiting의 showAnnouncement=false와 공용 editor 배경 시험만으로는
+실제 시작의 공용 중단 화면을 제거하지 못한다. 화면의 정확한 문구/로그 대응은 확인 대기다.
+
+기존 game_recovery_layer_test의 원인이 해소된 복구 barrier 시험도 빈 causes/pauseId를
+사용해 안내 유지를 기대한다. 실제 단절 후 원인이 사라진 복구 대기의 보호는 유지해야
+하므로 빈 causes만으로 모든 pause를 숨기는 수정은 금지한다.
+
+개발 계획:
+
+1. 실제 정상 생성(public 초기 context+paused/pauseId/빈 causes)을 전달하는 실패 회귀를
+   추가한다. 설정 완료→서버 시작→게임 라우트→ready 지연을 포함해 최초 준비 화면을 검증한다.
+2. 정상 최초 준비와 실제 단절/준비 실패 뒤 복구 대기를 식별하는 근거를 정한다.
+   기존 context/세션 이력으로 안전하게 구분할 수 있는지 우선 검토한다. 서버 public pause
+   목적 필드가 필요하면 하위 호환과 모든 소비자 영향 및 별도 계약 변경 승인을 받는다.
+3. 정상 최초 준비에는 게임 배경을 유지하며 canSend/ready/timer barrier를 그대로 유지한다.
+   실제 cause, 준비 실패, 원인 해소 후 복구 barrier는 기존 보호·재시도 안내를 보존한다.
+4. LP의 실제 시작과 공용 layer 양쪽에서 정상/지연/실제 실패를 확인한다. 마피아·템플릿과
+   Final Call 공유 표시 회귀를 유지하되 Final Call 전용 실기기 시험과 홀덤 네트워크 조사는 보류한다.
+
+### 37번 — 아직 정확한 종료 경로 미확정
+
+현재 removeRealtimeRoomPlayer는 players[playerUid]만 삭제하고 membershipRevision을
+올린다. controllerUid/controller session/방 status/방 루트를 지우지 않는다. 수정된
+RoomProvider는 controller를 본인 player 삭제 감시에서 제외한다. 따라서 실기기 실패를
+이 가드 경로만으로 설명할 근거는 부족하다.
+
+기존 Fake는 참가자 목록 삭제만 전달하며 roomExists=true/status·presence·방 마커 구독은
+실제 연쇄 이벤트를 전달하지 않는다. 이 검사 PASS는 세 기기의 실제 접속/종료 동작 보장이 아니다.
+추가 코드 문제 후보로 fetchRealtimeRoomSession/roomSessionContext가 요청 역할 대신
+controllerUid==uid만으로 controller를 우선 선택한다. 같은 UID player의 신원 재조회/미확정
+join 복구에 영향이 있지만 이번 태블릿 방 소실의 원인으로 확정하지 않는다.
+
+개발 계획:
+
+1. 태블릿 설치 hash/추방 시각·앱 로그를 우선 수집하고 필요하면 A, B를 차례로 요청한다.
+   clearRoom/terminate/dispose/heartbeat 중단과 remove/close/cleanup 시간축을 맞춘다.
+2. 서버 방이 실제 closed/terminal로 전이했는지, controller 접속만 끊겼는지, 태블릿 로컬
+   상태만 비었는지를 구분한다. 서버 조회는 날짜·함수·시간·최대 건수 승인 후 진행한다.
+3. 같은 UID의 controller/player에 서로 다른 connectionId·sequence·membership을 둔 회귀를
+   구성한다. 추방 직후 phone onDisconnect/늦은 heartbeat/권한 오류/옛 구독 callback을 넣어
+   controller 신원·heartbeat·B 참가·방 마커가 유지되는지 검사한다. 마지막 참가자 삭제도 포함한다.
+4. 확정된 종료 경로만 수정한다. controller 역할 획득·복구·초기화와 late callback에서 같은
+   identity 근거를 사용하고 UID만으로 controller/player를 선택하는 분기를 함께 검토한다.
+   정상 player 강퇴·명시 방 종료·현재 allocation cleanup을 약화하지 않는다.
+5. 서로 다른 계정, 재참가, 저장 방 복구, 종료 후 재생성, 옛 접속 이벤트를 회귀 확인한다.
+
+구현 착수 때 implement-and-validate skill을 적용하고 Windows guarded test session,
+역할/auth 경로 변경 시 test auth, 변경 서버 build/lint를 수행한다. FULL/Final Call/16번의
+기존 보류는 유지하며 전체 완료로 표시하지 않는다. 클라이언트 수정은 새 APK, 서버 수정은
+실제 import closure를 산정한 배포 목록으로 인계한다. 36/37번 실패 원문을 보존하고 후속
+APK hash·배포 함수·기기별 결과를 별도 기록한다.
+
+### 2026-10-11 — 후속 구현과 검증
+
+사용자가 개발 진행 및 public recovery.purpose 선택 필드 추가를 승인했다.
+실제 작업 시작 branch는 codex/e01-validation-wiring, HEAD3247b201f5f5f0ed73ec38c6273557e4a8f03e4c였다.
+이전 조사에 기록된 develop과 이름이 달라 현재 값을 다시 확인했으며 branch/HEAD/index를
+변경하지 않았다. 시작 시 기존 미커밋11개 파일을 보존했다.
+
+- 정상 새 게임만 purpose=initialReadiness로 생성한다. 단절/preparationFailed가 등록되면
+  recovery로 바꾸고 원인이 해소돼도 전체 ready 전까지 유지한다. 타이머·pause·ready 및
+  서버 입력 검증은 보존했다. GameInterruption은 purpose를 파싱하고 값 동등성에 포함한다.
+  공용 layer는 최초 준비만 배경에서 기다리고 기존/알 수 없는 데이터와 실제 cause는 보호한다.
+- roomSessionContext는 유효한 controller 토큰으로 controller를 선택하고 나머지 요청은
+  active player를 조회한다. 같은 UID phone의 세션 조회/operation status에서 태블릿 신원으로
+  오인하던 결함을 수정했다. 잘못된 토큰은 player로 우회하지 않고 추방 phone은 거절한다.
+- 동일 UID 추방 후 늦은 phone 단절이 controller 접속·방 status·B 참가를 유지하는 서버 회귀를
+  추가했다. 태블릿의 room_terminated/room_cleared debug 기록은 UID·방 코드·토큰 없이
+  역할·종료 사유만 남긴다. 37번 실기기 방 소실의 직접 원인은 아직 미확정이다.
+
+검증 명령과 결과:
+
+- npm run build; node --test test/room-session-context.test.mjs: 수정 전 신규 회귀3 FAIL/1 PASS(exit1),
+  수정 후4 PASS(exit0). 최종 B 유지 assertion 추가 후4 PASS(exit0).
+- node --test test/room-session-context.test.mjs test/game-recovery-state.test.mjs:23 PASS(exit0).
+- .\\tool\\invoke_mosigame.ps1 test session: PASS(exit0), Functions123개 및 Flutter 관련 선택 시험 통과,
+  실행 전후 tracked/untracked mutation 없음.
+- .\\tool\\invoke_mosigame.ps1 test auth: Flutter52/Functions13 PASS(exit0), mutation 없음.
+- npm run lint: PASS(exit0). 변경5개 Dart 경로 flutter analyze --no-pub: 문제0/exit0.
+- flutter test --no-pub test/controller_room_lobby_recovery_test.dart
+  packages/game_kit/test/recovery/widgets/game_recovery_layer_test.dart:21 PASS(exit0).
+  추가 purpose 동등성 시험은 --plain-name으로 단독 실행해1 PASS(exit0)를 확인했다.
+- git diff --check: PASS(exit0). FULL/Final Call 전용/16번 및 홀덤 단일 기기 조사 보류 유지.
+
+새 빌드·기기 설치·배포·production 조회·commit/push는 실행하지 않았다. 실제 시작 라우트 전체의
+실기기36 및 태블릿/A/B37을 재판정해야 하며 자동 회귀가 이를 대체하지 않는다.
+
+배포 인계: 새 purpose 생성은 각 게임 start_game4개, 실제 장애 전환은 joinRealtimeRoom,
+resumeRealtimeControllerRoom, syncRealtimeRoomConnection, game_common_controller_presence_changed,
+game_common_recovery_report, game_common_interruption_report_stale_player,
+game_common_interruption_report_stale_controller, game_common_interruption_on_connection_changed에
+반영되어야 한다. 동일 계정 조회 수정은 fetchRealtimeRoomSession/game_common_operation_status다.
+이14개는 변경 동작별 검토 대상이며 전체 파일 import closure는70개로 보수적으로 산정했다
+(ignored build/device-test/network-36-37-20261011/deploy-import-closure.json).
+70개를 최소 배포 목록으로 취급하지 않는다. 실제 배포 전 목록/혼합 버전 영향을 검토하고
+승인된 명령으로만 진행한다. 공유 홀덤 start의 필드 호환은 포함하되 독립 홀덤 오류 수정은 없다.
+
+### 2026-10-11 — 사용자 승인 후 Functions14개 배포
+
+사용자 `펑션 배포 해줘` 요청에 따라 project0000-ec01e에 위 변경 동작14개만 배포했다.
+Node22.23.2, Firebase CLI의 `deploy --project project0000-ec01e --only`에 아래 함수별
+`functions:` 목록을 전달하고 `--non-interactive`로 실행했다. predeploy eslint/tsc PASS,
+14개 모두 Successful update operation 및 Deploy complete, 최종 exit0을 확인했다.
+
+- asia-northeast3: game_liars_poker_start_game, game_final_call_start_game,
+  game_mafia_start_game, game_holdem_start_game, joinRealtimeRoom,
+  resumeRealtimeControllerRoom, game_common_recovery_report,
+  game_common_interruption_report_stale_player, game_common_interruption_report_stale_controller,
+  fetchRealtimeRoomSession, game_common_operation_status.
+- asia-southeast1: syncRealtimeRoomConnection, game_common_controller_presence_changed,
+  game_common_interruption_on_connection_changed.
+
+정제 결과는 ignored build/device-test/network-36-37-20261011/deployment-result.json에 기록했다.
+배포 전후 제품 소스와 branch/HEAD/index 변경 없음, 기존 미커밋 상태 보존. 문서만 배포 결과를
+갱신했다. DB/rules/Auth/IAM 직접 변경·함수 삭제·기기 조작·APK build/install은 실행하지 않았다.
+CLI 배포 성공은 실제 게임 통과를 의미하지 않는다. 새 APK와 36/37 재시험, 37번 태블릿
+종료 경로 로그 확인은 남아 있다. FULL/Final Call 전용/16번 보류는 유지한다.

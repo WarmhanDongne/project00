@@ -34,7 +34,7 @@ export function finalizeGameMutation(room: RecoveryRoom, before: RecoveryGame | 
     game.public.turnSeq = 1;
     game.public.dataSeq = 1;
     game.public.resumeEpoch = 0;
-    beginRecoveryPause(room, now);
+    beginRecoveryPause(room, now, now, "initialReadiness");
   } else {
     game.public.gameInstanceId = before!.public.gameInstanceId;
     game.public.phaseSeq = (before!.public.phaseSeq ?? 0) + (phaseKey(before!) !== phaseKey(game) ? 1 : 0);

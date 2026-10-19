@@ -207,8 +207,9 @@ class OverflowSweep {
         Offset.zero & (tester.view.physicalSize / tester.view.devicePixelRatio);
     for (final element in find.byType(RichText).evaluate()) {
       final render = element.renderObject;
-      if (render is! RenderParagraph || !render.hasSize || !render.attached)
+      if (render is! RenderParagraph || !render.hasSize || !render.attached) {
         continue;
+      }
       final text = render.text.toPlainText().replaceAll('\n', ' ');
       if (text.trim().isEmpty || _invisible(render)) continue;
       final short = text.length > 30 ? '${text.substring(0, 30)}…' : text;
@@ -271,8 +272,9 @@ class OverflowSweep {
   static bool _invisible(RenderObject render) {
     for (RenderObject? node = render; node != null; node = node.parent) {
       if (node is RenderOpacity && node.opacity < .05) return true;
-      if (node is RenderAnimatedOpacity && node.opacity.value < .05)
+      if (node is RenderAnimatedOpacity && node.opacity.value < .05) {
         return true;
+      }
       if (node is RenderOffstage && node.offstage) return true;
     }
     return false;

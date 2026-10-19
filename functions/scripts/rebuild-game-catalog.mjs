@@ -12,6 +12,7 @@ import {
   localizedGameGenres,
 } from "./game-catalog-translations.mjs";
 import {gameRules, localizedGameRules} from "./update-game-rules.mjs";
+import {yutGameCatalog} from "./yut-game-catalog.mjs";
 
 const PROJECT = "project0000-ec01e";
 
@@ -85,6 +86,7 @@ export const minimalGameCatalog = Object.freeze({
     storeVisible: true,
     minAppVersion: "1.0.0",
   }),
+  ...yutGameCatalog,
 });
 
 const catalogIds = Object.freeze(Object.keys(minimalGameCatalog));

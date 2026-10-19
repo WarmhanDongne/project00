@@ -17,8 +17,11 @@ function requestTarget(uid: string | undefined, data: Record<string, unknown>): 
   return {uid, roomCode};
 }
 
-export function roomSessionContext(room: SessionRoom, uid: string): Record<string, unknown> {
-  const controller = room.controllerUid === uid;
+export function roomSessionContext(room: SessionRoom, uid: string, controllerSessionId?: unknown): Record<string, unknown> {
+  // The same account can own the tablet and an independent phone membership.
+  // Only a controller credential selects the controller context.
+  const controller = controllerSessionId !== undefined && controllerSessionId !== null;
+  if (controller) assertControllerSession(room, uid, controllerSessionId);
   const player = room.players?.[uid];
   if (!controller && player?.status !== "active") {
     throw new HttpsError("permission-denied", "현재 방 참가 자격이 없습니다.");
@@ -36,8 +39,7 @@ export const fetchRealtimeRoomSession = onCall({region: "asia-northeast3"}, asyn
   const {uid, roomCode} = requestTarget(request.auth?.uid, request.data ?? {});
   const room = (await getDatabase().ref(`rooms/${roomCode}`).get()).val() as SessionRoom | null;
   if (!room) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
-  if (room.controllerUid === uid) assertControllerSession(room, uid, request.data?.controllerSessionId);
-  return roomSessionContext(room, uid);
+  return roomSessionContext(room, uid, request.data?.controllerSessionId);
 });
 
 /** A missing result never cancels an already transmitted request. */
@@ -53,18 +55,19 @@ export const game_common_operation_status = onCall({region: "asia-northeast3"}, 
   if (request.data?.membershipId && player?.membershipId !== request.data.membershipId) {
     return {status: "stale"};
   }
-  if (room.controllerUid === uid) assertControllerSession(room, uid, request.data?.controllerSessionId);
-  return {status: "notApplied", context: roomSessionContext(room, uid)};
+  return {status: "notApplied", context: roomSessionContext(room, uid, request.data?.controllerSessionId)};
 }));
 
 /** Only the server-selected current connection can update presence summaries. */
 export const syncRealtimeRoomConnection = onValueWritten({
-  ref: "/rooms/{roomCode}/connections/{uid}/{connectionId}", region: "asia-southeast1",
+  ref: "/rooms/{roomCode}/connections/{uid}/{connectionId}/connected", region: "asia-southeast1", retry: true,
 }, async (event) => {
+  if (event.data.after.val() !== false) return;
   const now = Date.now();
   await runPrimedTransaction(getDatabase().ref(`rooms/${event.params.roomCode}`), (raw) => {
     if (!raw) return;
     const room = raw as SessionRoom;
+    if (room.connections?.[event.params.uid]?.[event.params.connectionId]?.connected !== false) return;
     if (!applyRoomPresence(room, event.params.uid, event.params.connectionId, (role, observedAt) => {
       registerRecoveryFailure(
         room as unknown as RecoveryRoom,

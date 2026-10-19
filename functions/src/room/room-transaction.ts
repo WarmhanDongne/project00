@@ -2,6 +2,8 @@ import {
   DataSnapshot,
   Reference,
 } from "firebase-admin/database";
+import {refreshCleanupSignal} from "./cleanup-signal.js";
+import type {CleanupSignal} from "./cleanup-signal.js";
 
 /**
  * Admin RTDB가 서버 값을 로컬 캐시에 받은 뒤에만 트랜잭션을 시작합니다.
@@ -30,7 +32,12 @@ export async function runPrimedTransaction(
     const result = await ref.transaction((current) => {
       if (failed) return;
       try {
-        return update(current);
+        const previous = (current as {cleanupSignal?: CleanupSignal} | null)
+          ?.cleanupSignal;
+        const next = update(current);
+        // Lifecycle writers share this atomic boundary.
+        return ref.parent?.key === "rooms" ?
+          refreshCleanupSignal(next, previous) : next;
       } catch (error) {
         failed = true;
         updateError = error;

@@ -16,6 +16,28 @@ type RoomSeatingState = {
 };
 
 /**
+ * Resolves the allowed room size, pinning the bundled classic Yut contract so
+ * a stale catalog cannot prevent its supported 2–4 player setup.
+ * @param {string} gameId Selected game ID.
+ * @param {unknown} catalogMin Catalog minimum player count.
+ * @param {unknown} catalogMax Catalog maximum player count.
+ * @return {{minPlayers: number, maxPlayers: number}} Effective player range.
+ */
+export function resolveRoomPlayerRange(
+  gameId: string,
+  catalogMin: unknown,
+  catalogMax: unknown,
+): {minPlayers: number; maxPlayers: number} {
+  if (gameId === "yut") return {minPlayers: 2, maxPlayers: 4};
+  return {
+    minPlayers: typeof catalogMin === "number" && catalogMin > 0 ?
+      catalogMin : 2,
+    maxPlayers: typeof catalogMax === "number" && catalogMax > 0 ?
+      catalogMax : 12,
+  };
+}
+
+/**
  * 자리 배치 시작 트랜잭션 안에서 현재 서버 상태를 다시 판정합니다.
  * @param {RoomSeatingState} state 현재 방·게임·인원 상태입니다.
  * @return {RoomSeatingDecision} 트랜잭션이 적용할 결정입니다.

@@ -6,9 +6,9 @@
 /// 실제 턴 제한시간·승패 규칙은 서버가 결정하며 연출 시간과 구분합니다.
 library;
 
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_final_call/game_copy.dart';
@@ -107,7 +107,7 @@ GameFlowConfig<FinalCallTabletStage> buildFinalCallTabletFlowConfig({
     steps: {
       // ── 1. 서버 데이터 연결 ──────────────────────────────────────────
       // - status/phase: 첫 public game 상태를 아직 받지 못한 시점
-      // - 문구: persistent라 시간 제한 없이 서버 상태가 올 때까지 유지
+      // - 정상 준비는 게임 배경만 유지하고 별도 문구를 표시하지 않음
       // - 입력: 게임 Screen을 그리지 않아 조작할 수 없음
       // - 다음 단계: 서버 phase 수신을 기다림
       FinalCallTabletStage.connecting: const GameFlowStep<FinalCallTabletStage>(
@@ -115,10 +115,7 @@ GameFlowConfig<FinalCallTabletStage> buildFinalCallTabletFlowConfig({
         description: '첫 서버 상태를 기다린다',
         screenWidget: GameAnnouncementLayer,
         showScreen: false,
-        showAnnouncement: true,
-        announcementId: 'final-call-preparing',
-        announcementKind: GameAnnouncementKind.persistent,
-        announcement: GameFlowCopy.preparingGame,
+        showAnnouncement: false,
         animation: GameFlowAnimationConfig.disabled(),
         advancePolicy: GameFlowAdvancePolicy.waitsForServer,
       ),

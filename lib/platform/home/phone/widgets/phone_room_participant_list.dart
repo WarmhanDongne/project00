@@ -15,7 +15,7 @@ class PhoneRoomParticipantList extends StatelessWidget {
   final List<RoomPlayer> players;
   final bool compact;
 
-  /// 이 휴대폰 사용자의 UID입니다. 해당 줄에 '나' 표시를 붙입니다.
+  /// 이 휴대폰 사용자의 UID입니다. 해당 얼굴 오른쪽 아래에 '나' 표시를 붙입니다.
   final String? myUid;
 
   @override
@@ -84,16 +84,24 @@ class PhoneRoomParticipantList extends StatelessWidget {
                 height: compact ? 36 : 46,
                 child: Row(
                   children: [
-                    MosiFace(
-                      characterId: player.characterId,
-                      size: compact ? 30 : 38,
-                      ring: true,
+                    Stack(
+                      key: ValueKey('participant-avatar-${player.uid}'),
+                      clipBehavior: Clip.none,
+                      children: [
+                        MosiFace(
+                          characterId: player.characterId,
+                          size: compact ? 30 : 38,
+                          ring: true,
+                        ),
+                        if (player.uid == myUid)
+                          const Positioned(
+                            right: -4,
+                            bottom: -3,
+                            child: _MeBadge(),
+                          ),
+                      ],
                     ),
                     SizedBox(width: compact ? 10 : 12),
-                    if (player.uid == myUid) ...[
-                      const _MeBadge(),
-                      const SizedBox(width: 6),
-                    ],
                     Expanded(
                       child: Text(
                         player.nickname,
@@ -125,7 +133,7 @@ class PhoneRoomParticipantList extends StatelessWidget {
   }
 }
 
-/// 목록에서 내 줄을 알려 주는 작은 표시입니다.
+/// 목록에서 내 얼굴 오른쪽 아래에 겹치는 작은 표시입니다.
 class _MeBadge extends StatelessWidget {
   const _MeBadge();
 
@@ -135,6 +143,7 @@ class _MeBadge extends StatelessWidget {
     label: '나'.localized,
     color: MosiColors.ink,
     background: MosiColors.lime,
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    fontSize: 9,
+    padding: const EdgeInsets.symmetric(horizontal: 5),
   );
 }

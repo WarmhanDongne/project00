@@ -31,6 +31,7 @@ interface RoomOperation {
 }
 
 export interface SessionRoom {
+  presenceProtocol?: number;
   roomInstanceId?: string;
   membershipRevision?: number;
   status?: string;
@@ -52,7 +53,10 @@ export function parseSessionId(value: unknown, label: string): string {
   return value;
 }
 
-export function assertRoomTarget(room: SessionRoom, roomInstanceId: unknown): void {
+export function assertRoomTarget(room: SessionRoom, roomInstanceId: unknown, presenceProtocol?: unknown): void {
+  if (room.presenceProtocol === 2 && presenceProtocol !== 2) {
+    throw new HttpsError("failed-precondition", "앱 업데이트가 필요합니다.", {reason: "upgradeRequired"});
+  }
   if (!room.roomInstanceId || room.roomInstanceId !== roomInstanceId) {
     throw new HttpsError("failed-precondition", "다른 방 세션입니다.", {reason: "staleContext"});
   }
@@ -98,6 +102,7 @@ export function recordRoomOperation(
 }
 
 export interface AllocateConnectionInput {
+  presenceProtocol?: unknown;
   uid: string;
   role: "player" | "controller";
   operationId: string;
@@ -114,7 +119,7 @@ export function allocateRoomConnection(
   room: SessionRoom, input: AllocateConnectionInput,
 ): Record<string, unknown> {
   const {uid, role, operationId, now} = input;
-  assertRoomTarget(room, input.roomInstanceId);
+  assertRoomTarget(room, input.roomInstanceId, input.presenceProtocol);
   const payload = input.operationPayload ?? {
     roomInstanceId: input.roomInstanceId, membershipId: input.membershipId,
     expectedConnectionSeq: input.expectedConnectionSeq, role,
@@ -187,9 +192,10 @@ export function applyRoomPresence(room: SessionRoom, uid: string, connectionId: 
 }
 
 export function leaveRoomMembership(room: SessionRoom, input: {
+  presenceProtocol?: unknown;
   uid: string; roomInstanceId: string; membershipId: string; operationId: string; now: number;
 }, beforeRemove?: () => void): Record<string, unknown> {
-  assertRoomTarget(room, input.roomInstanceId);
+  assertRoomTarget(room, input.roomInstanceId, input.presenceProtocol);
   const payload = {roomInstanceId: input.roomInstanceId, membershipId: input.membershipId};
   const saved = roomOperationResult(room, input.uid, input.operationId, "leave", payload);
   if (saved) return saved;

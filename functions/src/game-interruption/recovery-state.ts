@@ -3,6 +3,7 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {assertRoomTarget, SessionRoom} from "../room/session-contract.js";
 import {TURN_DURATION_MS, LAST_CARD_CHALLENGE_DURATION_MS} from "../liars-poker/common/types.js";
 import {FINAL_CALL_TURN_MS} from "../final-call/types.js";
+import {YUT_TURN_MS} from "../yut/game.js";
 
 export interface GameContext {
   gameInstanceId: string;
@@ -26,6 +27,7 @@ export interface RecoveryCause {
 
 export interface RecoveryPublic {
   paused: boolean;
+  purpose?: "initialReadiness" | "recovery";
   pauseId: string;
   pausedAt: number;
   causes: Record<string, RecoveryCause>;
@@ -104,6 +106,7 @@ function touch(game: RecoveryGame, now: number): void {
 
 export function beginRecoveryPause(
   room: RecoveryRoom, now: number, observedAt: number = now,
+  purpose: "initialReadiness" | "recovery" = "recovery",
 ): void {
   const game = room.game;
   if (!game || game.public.status !== "playing" || game.public.recovery?.paused) return;
@@ -116,7 +119,8 @@ export function beginRecoveryPause(
   const turnLimit = game.public.gameType === "liars_poker" ?
     (game.public.phase === "playing" ? TURN_DURATION_MS :
       game.public.phase === "lastCardChallenge" ? LAST_CARD_CHALLENGE_DURATION_MS : undefined) :
-    game.public.gameType === "final_call" ? FINAL_CALL_TURN_MS : undefined;
+    game.public.gameType === "final_call" ? FINAL_CALL_TURN_MS :
+      ["yut", "strategy_yut", "strategy_yut_edition"].includes(String(game.public.gameType)) ? YUT_TURN_MS : undefined;
   if (turnLimit !== undefined && typeof deadline === "number" && Number.isFinite(deadline)) {
     timerReferenceAt = Math.max(timerReferenceAt, deadline - turnLimit);
   }
@@ -125,7 +129,7 @@ export function beginRecoveryPause(
     timer: recoveryTimer(deadline, timerReferenceAt, game.public.phaseSeq ?? 0, game.public.turnSeq ?? 0),
     ready: {},
   };
-  game.public.recovery = {paused: true, pauseId, pausedAt: now, causes: {}};
+  game.public.recovery = {paused: true, purpose, pauseId, pausedAt: now, causes: {}};
   game.public.turnDeadlineAt = null;
   touch(game, now);
 }
@@ -141,6 +145,8 @@ export function registerRecoveryFailure(
   if (!requiredRecoveryKeys(room).includes(key)) return "localOnly";
   beginRecoveryPause(room, now, observedAt);
   const recovery = game.public.recovery!;
+  // Remain a recovery pause even after its last cause is cleared by a report.
+  recovery.purpose = "recovery";
   recovery.causes ??= {};
   delete game.server.recovery?.ready?.[key];
   if (!recovery.causes[key]) {
@@ -156,6 +162,7 @@ export function registerRecoveryFailure(
 
 export function reportStaleController(
   room: RecoveryRoom, observedLastSeen: unknown, now: number,
+  observedConnectionId?: unknown, observedConnectionSeq?: unknown,
 ): Record<string, unknown> {
   if (!Number.isSafeInteger(observedLastSeen) || (observedLastSeen as number) < 0) {
     throw new HttpsError("invalid-argument", "올바른 진행 기기 heartbeat 시각이 필요합니다.");
@@ -166,12 +173,13 @@ export function reportStaleController(
   const connection = uid && connectionId ? room.connections?.[uid]?.[connectionId] : undefined;
   if (!uid || !connectionId || !Number.isSafeInteger(connectionSeq) || !connection ||
       connection.connectionSeq !== connectionSeq ||
-      room.controllerPresence?.lastSeen !== observedLastSeen ||
+      (room.presenceProtocol === 2 && (connectionId !== observedConnectionId || connectionSeq !== observedConnectionSeq)) ||
+      connection.roomInstanceId !== room.roomInstanceId ||
       connection.lastSeen !== observedLastSeen) {
     return {status: "staleContext"};
   }
-  if (connection.connected !== true || room.controllerPresence?.connected === false ||
-      room.controllerConnected === false) {
+  if (connection.connected !== true || (room.presenceProtocol !== 2 &&
+      (room.controllerPresence?.connected === false || room.controllerConnected === false))) {
     return {status: "alreadyDisconnected"};
   }
   if (now - (observedLastSeen as number) <= 20000) return {status: "notStale"};
@@ -191,6 +199,7 @@ export function clearFinishedRecovery(game: RecoveryGame): void {
 }
 
 export interface RecoveryReportInput extends Partial<GameContext> {
+  presenceProtocol?: unknown;
   uid: string;
   role: "player" | "controller";
   roomInstanceId: string;
@@ -224,7 +233,7 @@ export function assertRecoveryConnection(room: RecoveryRoom, input: {
 
 /** Failed reports deliberately do not require current public/private data. */
 export function applyRecoveryReport(room: RecoveryRoom, input: RecoveryReportInput, now: number): Record<string, unknown> {
-  assertRoomTarget(room, input.roomInstanceId);
+  assertRoomTarget(room, input.roomInstanceId, input.presenceProtocol);
   assertRecoveryConnection(room, input);
   const game = room.game;
   if (!game || game.public.status !== "playing") return {status: "stale"};

@@ -158,7 +158,11 @@ void main() {
         final original = Map<String, dynamic>.from(h.payloads.single);
         final persisted = DurableRoomOperationStore();
         await persisted.load();
-        expect(persisted.pendingFor(h.uid).single['payload'], original);
+        // presenceProtocol은 전송 시점에만 붙는 값이라 저장된 payload에는 없습니다.
+        expect(
+          persisted.pendingFor(h.uid).single['payload'],
+          Map.of(original)..remove('presenceProtocol'),
+        );
         h.failClose = false;
         h.status = result;
         await h.newService().closeControllerRoom('ABCDE');

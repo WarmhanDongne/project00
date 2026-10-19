@@ -9,6 +9,8 @@ import {excludeHoldemPlayer} from "../holdem/game.js";
 import {HoldemGameState} from "../holdem/types.js";
 import {RecoveryRoom} from "./recovery-state.js";
 import {withTransactionRandom} from "../common/transaction-random.js";
+import {markPlayerEliminated} from "../yut/game.js";
+import {YutGameState} from "../yut/types.js";
 
 export function excludeRecoveryPlayer(room: RecoveryRoom, uid: string, now: number): void {
   const game = room.game;
@@ -18,6 +20,8 @@ export function excludeRecoveryPlayer(room: RecoveryRoom, uid: string, now: numb
   case "final_call": excludeFinalCallPlayer(game as unknown as FinalCallGameState, uid, now); break;
   case "mafia": excludeMafiaPlayer(game as unknown as MafiaGameState, uid, now); break;
   case "holdem": excludeHoldemPlayer(game as unknown as HoldemGameState, uid, now); break;
+  case "yut": case "strategy_yut": case "strategy_yut_edition":
+    markPlayerEliminated(game as unknown as YutGameState, uid, now); break;
   default: throw new Error("Unsupported recovery adapter");
   }
 }

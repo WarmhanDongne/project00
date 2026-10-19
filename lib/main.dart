@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
@@ -5,10 +6,11 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
+import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/localization/game_locale.dart';
 import 'package:game_kit/core/time/server_clock.dart';
 import 'package:game_kit/core/layout/device_layout.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:project00/firebase/firebase_bootstrap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // Google Sign-In SDK 패키지
 import 'package:project00/app.dart';
@@ -27,19 +29,17 @@ void main() async {
   final appLinks = AppLinks();
 
   //=======================[ 플랫폼 기본 방향 ]==============================
-  // 게임이 직접 방향을 변경하기 전까지 플랫폼 화면은 휴대폰에서 세로,
-  // 태블릿에서 가로입니다.
+  // 게임이 직접 방향을 변경하기 전까지 플랫폼 화면은 휴대폰에서 세로입니다.
+  // Android 태블릿은 가로를 유지하고, iPad는 iPadOS 26의 전체 scene을 사용할 수
+  // 있도록 현재 기기 방향을 따릅니다.
   //
   // 중요: runApp 전이나 첫 화면 initState에서 적용하면 안 됩니다. iOS scene이
   // 기기 판별은 DeviceLayout 한 곳에서 합니다(게임 종료 후 방향 복원과 같은
   // 기준을 써야 로비 방향이 어긋나지 않습니다).
-  final isTablet = DeviceLayout.isTabletDevice();
   // 2. Firebase 네이티브 SDK 인스턴스 초기화
   // 빌드 실패 시 오류 전송
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await initializeFirebaseBackend();
   } catch (error, stack) {
     debugPrint('Firebase 초기화 실패: $error\n$stack');
     runApp(const _StartupFailureApp());
@@ -65,14 +65,16 @@ void main() async {
   // 요청 비율을 확인한 뒤 Functions/RTDB/Storage enforcement를 단계적으로
   // 켜야 구버전 앱과 설정 누락 기기를 한꺼번에 차단하지 않습니다.
   try {
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode
-          ? const AndroidDebugProvider()
-          : const AndroidPlayIntegrityProvider(),
-      providerApple: kDebugMode
-          ? const AppleDebugProvider()
-          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
-    );
+    if (!FirebaseBackend.isLocal) {
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: kDebugMode
+            ? const AndroidDebugProvider()
+            : const AndroidPlayIntegrityProvider(),
+        providerApple: kDebugMode
+            ? const AppleDebugProvider()
+            : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+      );
+    }
   } catch (error, stack) {
     CrashReporting.recordError(error, stack, reason: 'Firebase App Check 초기화');
   }
@@ -90,9 +92,11 @@ void main() async {
 
   //========================[ 구글 SDK 초기화 ]==================================
   // 3. Google Sign-In SDK 초기화 및 Client ID 주입 (최신 API 필수 전제 조건)
-  await GoogleSignIn.instance.initialize(
-    clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
-  );
+  if (!FirebaseBackend.isLocal) {
+    await GoogleSignIn.instance.initialize(
+      clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
+    );
+  }
 
   //===============[ 앱 실행 그리고 소리 관리 객체 생성 및 공유 ]======================
   final soundProvider = SoundProvider();
@@ -109,7 +113,7 @@ void main() async {
   );
 
   //=======================[ iOS scene 연결 이후 초기 방향 ]==============================
-  _InitialOrientationApplier(isTablet: isTablet).start();
+  _InitialOrientationApplier().start();
 
   //=======================[ 첫 프레임 이후 네이티브 초기화 ]==============================
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -184,14 +188,14 @@ class _StartupFailureApp extends StatelessWidget {
 /// 있으므로 `addPostFrameCallback`만으로는 충분하지 않습니다. lifecycle의
 /// `resumed`를 기준으로 해야 실제 창에 방향 요청이 전달됩니다.
 class _InitialOrientationApplier with WidgetsBindingObserver {
-  _InitialOrientationApplier({required this.isTablet});
-
-  final bool isTablet;
   bool _completed = false;
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
     _applyIfReady(WidgetsBinding.instance.lifecycleState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyIfReady(WidgetsBinding.instance.lifecycleState);
+    });
   }
 
   @override
@@ -199,16 +203,32 @@ class _InitialOrientationApplier with WidgetsBindingObserver {
     _applyIfReady(state);
   }
 
+  @override
+  void didChangeMetrics() {
+    _applyIfReady(WidgetsBinding.instance.lifecycleState);
+  }
+
   void _applyIfReady(AppLifecycleState? state) {
     if (_completed || state != AppLifecycleState.resumed) return;
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    final view = dispatcher.implicitView ?? dispatcher.views.firstOrNull;
+    if (view == null || view.physicalSize.isEmpty) return;
+    final isTablet = DeviceLayout.isTabletDevice();
     _completed = true;
     WidgetsBinding.instance.removeObserver(this);
 
     // scene 연결 전 요청이 남아 있어도 활성 scene에는 반드시 다시 전달합니다.
     AppOrientation.invalidate();
+    if (isTablet) {
+      // 첫 Flutter frame 전에 태블릿 viewport를 전체 화면으로 확정합니다.
+      // 이후 로비→자리 배치에서 시스템 UI가 바뀌지 않아 요소가 재배치되지 않습니다.
+      unawaited(AppSystemUi.enterTabletPlatformFullscreen());
+    }
     unawaited(
       isTablet
-          ? AppOrientation.lockPlatformLandscape()
+          ? defaultTargetPlatform == TargetPlatform.iOS
+                ? AppOrientation.allowPlatformRotation()
+                : AppOrientation.lockPlatformLandscape()
           : AppOrientation.lockPlatformPortrait(),
     );
   }

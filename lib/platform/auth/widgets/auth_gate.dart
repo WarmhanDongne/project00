@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -76,7 +77,7 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _onboardingService = widget.onboardingService ?? OnboardingService();
-    _userChanges = widget.userChanges ?? FirebaseAuth.instance.userChanges();
+    _userChanges = widget.userChanges ?? FirebaseBackend.auth.userChanges();
     final initialLink = widget.initialEmailLink;
     if (initialLink != null &&
         _onboardingService.isEmailSignInLink(initialLink.toString())) {
@@ -287,7 +288,7 @@ class _AuthGateState extends State<AuthGate> {
       onTimeout();
       return;
     }
-    unawaited(FirebaseAuth.instance.signOut());
+    unawaited(FirebaseBackend.auth.signOut());
   }
 
   void _retryOnboardingWatch() {
@@ -495,7 +496,7 @@ class _GateErrorView extends StatelessWidget {
         TextButton(
           // 누를 때 찾습니다. 빌드할 때 찾으면 Firebase 준비가 늦거나 실패한
           // 상황에서 **이 오류 화면 자체가 다시 터집니다.**
-          onPressed: () => unawaited(FirebaseAuth.instance.signOut()),
+          onPressed: () => unawaited(FirebaseBackend.auth.signOut()),
           child: Text('로그아웃'.localized),
         ),
       ],

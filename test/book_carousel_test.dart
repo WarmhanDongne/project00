@@ -100,6 +100,57 @@ void main() {
     expect(cover.englishName, 'Liars');
   });
 
+  testWidgets('무한 순환 선반은 같은 게임 책을 한 권만 그린다', (tester) async {
+    final books = [..._books, _books.first, _books[1]];
+    var selected = books.first;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) => SizedBox(
+              width: 700,
+              child: TabletBookCarousel(
+                games: books,
+                selected: selected,
+                coverWidth: 200,
+                deep: Colors.black,
+                onSelect: (game) => setState(() => selected = game),
+                onOpenDetail: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    void expectOneCopyPerGame() {
+      final bookKeys = tester
+          .widgetList<Positioned>(find.byType(Positioned))
+          .map((book) => book.key)
+          .whereType<ValueKey<String>>()
+          .map((key) => key.value)
+          .where((value) => value.startsWith('book-'));
+      for (final game in _books) {
+        expect(
+          bookKeys
+              .where((value) => value.startsWith('book-${game.id}-'))
+              .length,
+          1,
+          reason: '${game.id} should appear once',
+        );
+      }
+    }
+
+    expectOneCopyPerGame();
+    final carousel = find.byKey(const Key('book-carousel'));
+    for (var i = 0; i < _books.length + 2; i++) {
+      await tester.drag(carousel, const Offset(-100, 0));
+      await tester.pumpAndSettle();
+      expectOneCopyPerGame();
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   test('선택 가능한 캐릭터는 이전 서버의 ID를 유지하며 새 그림 파일이 존재한다', () {
     // 리디자인 이전에 배포된 room character 계약. 새 그림 이름을 보내면 안 됩니다.
     const serverIds = {
@@ -193,7 +244,7 @@ void main() {
     expect(nextRect.height, 288);
     expect(
       tester.getRect(find.byKey(const ValueKey('shelf-spine-mafia'))).left,
-      greaterThan(nextRect.right),
+      lessThan(selectedRect.left),
     );
 
     Future<void> slowlySwipe(double dx) async {
@@ -212,10 +263,11 @@ void main() {
     await slowlySwipe(80);
     expect(selected.id, 'liars_poker');
     await slowlySwipe(80);
+    expect(selected.id, 'mafia');
+    await slowlySwipe(-80);
     expect(selected.id, 'liars_poker');
     await slowlySwipe(-80);
-    await slowlySwipe(-80);
-    expect(selected.id, 'mafia');
+    expect(selected.id, 'final_call');
     await slowlySwipe(-80);
     expect(selected.id, 'mafia');
     await tester.tap(find.byKey(const ValueKey('shelf-spine-final_call')));
@@ -311,14 +363,6 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('shelf-spine-holdem')));
     await tester.pumpAndSettle();
-    await tester.runAsync(() async {
-      await precacheImage(
-        const AssetImage(
-          'packages/game_kit/assets/images/covers/poker_cardbox.png',
-        ),
-        tester.element(find.byKey(const Key('holdem-cardbox-cover'))),
-      );
-    });
     await tester.pump();
 
     final smaller = tester.getRect(
@@ -379,7 +423,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 40));
       await tester.drag(carousel, const Offset(100, 0));
       await tester.pumpAndSettle();
-      expect(selected.id, books[count <= 2 ? 0 : 1].id);
+      expect(selected.id, books[count == 1 ? 0 : 1].id);
+      if (count > 1) {
+        await tester.drag(carousel, const Offset(100, 0));
+        await tester.pumpAndSettle();
+        expect(selected.id, books.first.id);
+        await tester.drag(carousel, const Offset(100, 0));
+        await tester.pumpAndSettle();
+        expect(selected.id, books.last.id);
+        await tester.drag(carousel, const Offset(-100, 0));
+        await tester.pumpAndSettle();
+        expect(selected.id, books.first.id);
+      }
       expect(tester.takeException(), isNull);
     });
   }

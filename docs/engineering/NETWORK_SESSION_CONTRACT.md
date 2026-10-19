@@ -16,8 +16,15 @@
 | 준비 barrier | resumeEpoch | 최초 pause·중단 중 의미 상태/필수 집합 변경, ready 보고 대응 |
 | 요청 | operationId 또는 commandId, UID·종류·정규화 domain fingerprint | 서버 sessionOperations, 재전송과 결과 조회 |
 
-클라이언트는 자신의 현재 connections 노드의 connected/lastSeen만 갱신한다.
-서버 선택 접속과 membership/room이 일치해야 rules와 syncRealtimeRoomConnection이 반영한다.
+B1-C 신규 방은 presenceProtocol=2다. 정상 10초 heartbeat는 현재 connection의 lastSeen만
+서버 timestamp로 덮어쓴다. connected=true와 현재 접속 seed/요약은 서버 CAS만 갱신한다.
+현재 false에서 heartbeat·client true 복원은 Rules가 거절한다. background는 false+timestamp
+일회 update, onDisconnect는 false만 예약한다. room/member/current id·seq 검증을 유지한다.
+로컬 connectionSeq 역행 방지는 같은 roomInstanceId와 membershipId 안에서만 적용한다.
+새 membership은 순번이 작아도 저장한다. 같은 membership의 옛 성공 결과는 최신 접속을
+유지하면서 해당 completedOperationId의 pending만 정리한다. 미확정 결과는 유지한다.
+pending join 재생 후 현재 참가 조회에서 자격 상실이 확정되면 직접 join만 새 요청을
+만들 수 있다. 자동 복구·프로필 편집·통신 오류는 새 참가를 생성하지 않는다.
 옛 onDisconnect와 늦은 presence 이벤트는 현재 접속을 끊지 않는다.
 controllerSessionId는 UID별 controller identity에 보존하며 기존 저장소는 호환 조회에 사용한다.
 
@@ -188,9 +195,39 @@ pause에서 보존하고 회전 callback은 scope를 캡처한다. 중단 중 �
 바꾸지 못한다. 서버 권위·pause 검사를 유지한다. [후속 반영 기록](../planning/NETWORK_SESSION_LP_DEVICE_FOLLOWUP_IMPLEMENTATION.md)에 따라 기존 Functions 63개 반영은 완료했다. FULL은 사용자 지시로 보류했고 새 APK의 실기기 결과는 아직 미확인이다.
 ## 생성·정리·debug 기록
 
+### B1-C 생존 관찰·정리 신호 (2026-10-13 로컬 후보)
+
+태블릿은 playing일 때 현재 참가자 N개의 connected/lastSeen scalar leaf를 구독한다.
+휴대폰은 controller 현재 tuple metadata와 그 leaf, 본인 현재 leaf를 구독한다.
+players는 profile·membership·접속 상태 전환용이고 정상 heartbeat 시각은 복제하지 않는다.
+room/member/id/seq 변경 시 기존 scope를 취소하고 시각을 unknown으로 비운다.
+peer 권한 오류는 unknown과 한 번의 10초 재구독으로 처리하며 본인 transport 복구로 승격하지 않는다.
+본인 current false는 foreground에서 한 회차 CAS 복구를 시작하지만 의도적으로 paused/detached한
+동안에는 자동 복구·heartbeat를 시작하지 않는다. 로비 heartbeat는 계속 10초다.
+playing player의 1초 검사, controller의 10초 검사와 age > 20초 조건을 유지한다.
+신고는 관찰 당시 current id/seq/lastSeen을 함께 보내고 서버가 같은 root CAS에서 재검증한다.
+presence true 자체는 ready가 아니다. timer의 last-normal/first pause/none/0/턴 상한과 ready barrier를 유지한다.
+
+room root runPrimedTransaction은 room parent가 rooms인 경우에만 cleanupSignal을 함께 갱신한다.
+신호 계획은 instance/generation/status/current controller tuple·connected/명시 기한/terminal pending이다.
+lastSeen·카드·ready·profile 변화는 계획 revision을 바꾸지 않는다. 신호는 advisory index다.
+큐는 동일 세대에서 낮은 signal revision을 거절하고, due callback은 자신이 읽은 job의 revision·due·
+failure를 비교해 더 새 작업과 backoff를 덮어쓰지 않는다. 최종 삭제는 현재 root CAS에서 판정한다.
+현재 leaf만 fresh인 참가자·controller를 frozen 요약 때문에 삭제하지 않는다.
+B1 canonical이 없으면 파괴적 정리는 보류하며 legacy 방만 요약 fallback을 사용한다.
+controller true라도 3/15분 시각 기한은 적용하고 closed cleanupAt/finished retainUntil을 우선한다.
+100개 cursor 순회는 누락된 false projection을 현재 root CAS로 보완한다.
+
+신규 create는 capability 2를 요구하고 room presenceProtocol=2를 server seed한다.
+이 방의 join/resume/leave/게임·ready·stale/방 변경은 capability 2가 없으면 upgradeRequired다.
+capability는 보안 신원의 증명이 아니며 기존 인증·소유·membership·세대 CAS가 별도로 적용된다.
+operation domain fingerprint에서 capability를 제외해 미확정 요청의 의미를 유지한다.
+legacy 활성 방을 강제 전환하지 않는다. 기존 APK 호환은 보장하지 않으며 배포 전 drain과
+서버·Rules·새 APK의 순서를 별도 승인한다. 정상 HB 호출 0은 두 broad trigger 제거/retarget 후의 계약이다.
+
 roomCreateSlots/roomCreateRequests의 reserved/created/terminal, generation CAS와 tombstone이
 늦은 생성 부활과 새 generation의 삭제를 막는다. 부분 매핑 실패는 자신의 방만 terminal로 보상한다.
-syncRoomCleanupQueue는 현재 방을 재조회한다. cleanupStaleRealtimeRooms는 due index 최대 300개와
+syncRoomCleanupQueue는 현재 cleanupSignal만 재조회한다. cleanupStaleRealtimeRooms는 due index 최대 300개와
 지속 key cursor 100개를 함께 처리한다. waiting 유예는 heartbeat 후 3분, playing/finished는 15분,
 명시 close의 물리 정리는 cleanupAt을 따른다. 매핑·예약·slot은 원래 room/generation일 때만 정리한다.
 새 생성은 기존 controller 매핑/방의 UID·instance·generation·closed/terminal을 확인한 경우
@@ -202,6 +239,19 @@ syncRoomCleanupQueue는 현재 방을 재조회한다. cleanupStaleRealtimeRooms
 정리 첫 key page에는 빈 문자열 경계를 넣지 않고 저장된 cursor가 있을 때만 startAt을 적용한다.
 transaction update 예외는 첫 예외를 보관하고 undefined로 abort한다. SDK의 완료·rollback
 경로를 await한 뒤 원래 예외를 전파하며 listener는 finally에서 제거한다.
+
+2026-10-12 정리 후보: 같은 allocation의 실패 backoff를 trigger/순회가 앞당기지 않는다.
+두 순회 cursor는 읽은 값과 같을 때만 갱신한다. 유령 참가자는 별도
+`roomCleanupScan/ghostCursor`로 회당 500개 방을 순회하고 최대 10개 transaction을 병행한다.
+기존 5분 주기·유예와 playing 보호는 유지하고 transaction에서 최신 연결·게임 상태를
+재판정한다. 일부 실패는 요약하고 다음 전체 순회에서 재처리한다.
+
+같은 terminal allocation이 확인된 created/terminal 생성 요청은 roomCode·instance·generation·
+terminal 상태·기존 createdAt만 남긴다. 예약 상태의 직접 축약과 terminal marker 삭제는 하지 않는다.
+계정 탈퇴는 신원·세대가 확인된 현재 소유 방을 조건부로 닫고 해당 요청·슬롯을 정리한다.
+새 매핑·새 슬롯과 미확정 다른 예약은 보존하며, UID 전체 요청 삭제는 하지 않는다.
+고아 예약 해제와 접속/명령 결과 TTL은 보류다. 과거 기록 일괄 축약·배포는 별도 범위이며
+[관찰·검증 기록](../operations/RTDB_RETENTION_REVIEW.md)을 따른다.
 
 RecoveryMetrics는 단조 episode/batch와 연결·인증·identity·구독·public/private·에셋·프레임·
 ready·barrier·입력 단계를 기록한다. debug event 200개와 독립 요약 50개로 제한한다.
@@ -246,3 +296,39 @@ ready 보호는 유지한다. 띠의 연결 소스가 해제/교체되면 이전
 LP 정상 시작은 로비 책 위의 `게임 준비 중` 표시를 생략하고, 게임 진입 후 첫 서버 상태는
 기존 게임 배경에서 기다린다. 시작 중 입력 잠금·책의 전환 시작 위치 계산과 실제 단절/
 준비 실패 안내는 유지한다. 다른 게임의 로비 준비 표시는 변경하지 않는다.
+
+controller는 같은 UID의 player가 방에 참가해 있어도 자신의 phone membership로
+채택하지 않는다. player 삭제 확인은 player 역할에만 적용하며, 늦은 확인 결과는
+역할·UID·방/session epoch가 유지될 때만 반영한다. controller의 방은 실제 종료/삭제
+확인으로 정리한다. 로컬 roomCode가 없더라도 저장된 controller 세션이 남아 있으면
+새 생성보다 기존 방 복구를 먼저 시도한다. 서버 활성 방 생성 guard는 유지한다.
+
+설정 완료 뒤 정상 시작 대기는 공용 자리 배치의 게임 배경에서 유지한다. LP/마피아와
+공용 phone connecting 단계는 이미 별도 정상 준비 안내를 표시하지 않는다. Final Call과
+게임 템플릿의 connecting도 준비 announcement를 명시적으로 끈다. 실제 단절/실패와
+ready 입력 보호는 유지한다. 홀덤 단일 기기 보호 문제는 이번 후속 범위에서 제외했다.
+
+### 2026-10-11 최초 준비와 실제 복구 구분 후보
+
+사용자 승인에 따라 `game/public/recovery.purpose`를 선택 필드로 추가한다.
+새 게임의 최초 barrier는 `initialReadiness`이며 게임 배경을 유지한다. 필수 기기의
+단절·준비 실패가 등록되면 `recovery`로 전환하고, 원인이 해소돼도 전체 ready 완료 전까지
+그 목적을 유지한다. 필드 부재·알 수 없는 값·실제 cause가 있는 데이터는 기존 중단
+안내를 유지한다. pause/ready/CAS/입력·타이머 계약은 변경하지 않는다. 구버전 앱은 새
+필드를 무시하므로 최초 준비 안내가 남을 수 있고, 신버전 앱과 구 서버 조합도 기존
+안내를 유지한다. 서버와 앱 모두 반영한 뒤 36번을 다시 판정한다.
+
+현재 세션 조회는 UID만으로 controller를 우선 선택하지 않는다. 유효한 controller
+토큰을 제공한 요청만 controller context를 얻고, 나머지는 현재 active player membership을
+조회한다. 동일 계정의 두 역할은 각 connectionId/sequence를 유지하며 추방된 phone은
+controller context를 얻지 못한다. 잘못된 controller 토큰은 player로 우회하지 않는다.
+
+게임 화면의 controller가 새로 만들어지면 준비 확인은 새 화면의 예산을 사용한다.
+방 단위로 보존된 세션의 이전 화면 예산을 재사용해 첫 데이터 수신 즉시 실패시키지
+않는다. 진행 중인 방 복구가 있으면 그 복구의 기존 30초 예산은 공유하며, 같은 화면의
+데이터 갱신이나 늦은 ready로 실패를 자동 해제하거나 예산을 계속 연장하지 않는다.
+
+Final Call 태블릿은 분배 연출 완료를 시작 시각·라운드로 기억한다. 전체 ready와
+pause 해제가 확인된 뒤 분배 완료 명령을 전송하며, 준비 대기 자체는 진행 명령의
+재시도 횟수를 소모하지 않는다. 같은 완료는 한 번만 처리하고 새 판·라운드나 화면
+종료 후에는 옛 완료를 전송하지 않는다. 서버의 단계·세션 검증은 그대로 적용한다.

@@ -60,6 +60,106 @@ void main() {
   });
 
   test(
+    'new membership replaces an older higher sequence and completes join',
+    () async {
+      final store = RoomSessionIdentityStore();
+      final old = RoomSessionIdentity.fromJson({
+        ...identity.toJson(),
+        'connectionSeq': 3,
+      });
+      await store.save(old);
+      await store.savePending(identity.uid, 'player', 'ABCDE', {
+        'operationId': 'new-join',
+        'expectedConnectionSeq': 0,
+      });
+      await store.retainGameStart(old, 'start', {}, {
+        'roomInstanceId': old.roomInstanceId,
+        'membershipId': old.membershipId,
+        'commandId': 'old-start',
+      });
+      await store.save(
+        RoomSessionIdentity.fromJson({
+          ...identity.toJson(),
+          'membershipId': 'new-member',
+          'connectionId': 'new-connection',
+        }),
+        completedOperationId: 'new-join',
+      );
+      final restarted = RoomSessionIdentityStore();
+      await restarted.load();
+      expect(
+        restarted.current('user-a', 'player', 'ABCDE')!.membershipId,
+        'new-member',
+      );
+      expect(restarted.current('user-a', 'player', 'ABCDE')!.connectionSeq, 1);
+      expect(restarted.pending('user-a', 'player', 'ABCDE'), isNull);
+      expect(restarted.pendingGameStart('user-a', 'player', 'ABCDE'), isNull);
+    },
+  );
+
+  test(
+    'acknowledging an older connection keeps current identity and clears only its pending',
+    () async {
+      final store = RoomSessionIdentityStore();
+      await store.save(
+        RoomSessionIdentity.fromJson({
+          ...identity.toJson(),
+          'connectionSeq': 3,
+          'connectionId': 'current',
+        }),
+      );
+      await store.savePending('user-a', 'player', 'ABCDE', {
+        'operationId': 'join',
+      });
+      await store.save(identity, completedOperationId: 'other-join');
+      expect(
+        store.pending('user-a', 'player', 'ABCDE')!['operationId'],
+        'join',
+      );
+      await store.save(identity, completedOperationId: 'join');
+      expect(
+        store.current('user-a', 'player', 'ABCDE')!.connectionId,
+        'current',
+      );
+      expect(store.pending('user-a', 'player', 'ABCDE'), isNull);
+    },
+  );
+
+  test(
+    'late old membership response cannot replace a new membership after owner invalidation',
+    () async {
+      final store = RoomSessionIdentityStore();
+      final fresh = RoomSessionIdentity.fromJson({
+        ...identity.toJson(),
+        'membershipId': 'new-member',
+        'connectionId': 'new-connection',
+      });
+      await store.save(fresh);
+      await store.savePending('user-a', 'player', 'ABCDE', {
+        'operationId': 'new-join',
+      });
+      await expectLater(
+        store.save(
+          identity,
+          completedOperationId: 'new-join',
+          isCurrent: () =>
+              store.current('user-a', 'player', 'ABCDE')!.membershipId ==
+              identity.membershipId,
+        ),
+        throwsStateError,
+      );
+      expect(
+        store.current('user-a', 'player', 'ABCDE')!.membershipId,
+        'new-member',
+      );
+      expect(
+        store.pending('user-a', 'player', 'ABCDE')!['operationId'],
+        'new-join',
+      );
+    },
+  );
+
+  test(
     'serialized writes preserve different accounts and clear pending on acknowledgment',
     () async {
       final store = RoomSessionIdentityStore();

@@ -32,7 +32,9 @@ class PhoneRoomLeaveButton extends StatelessWidget {
           height: 44,
           expand: false,
           style: PlatformButtonStyle.secondary,
-          loading: provider.isLeaving,
+          // 응답 유실 뒤에는 leave intent를 유지하지만 요청 자체는 끝났습니다.
+          // 그 상태까지 계속 spinner로 보이면 사용자가 재시도할 수 없습니다.
+          loading: provider.isLeaving && provider.isLoading,
           onPressed: onPressed,
         );
       },

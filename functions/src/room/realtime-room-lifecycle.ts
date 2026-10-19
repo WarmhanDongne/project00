@@ -5,7 +5,7 @@ import {assertRoomGroupMember, RoomAllocation} from "./room-allocation.js";
 
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
-import {getGameCatalog} from "./game-catalog.js";
+import {getGameCatalog, isCatalogGameEnabled} from "./game-catalog.js";
 import {leaveSessionRequest} from "../game-interruption/leave-request.js";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
@@ -18,6 +18,7 @@ import {
 import {
   applyWaitingGameSelection,
   decideRoomSeating,
+  resolveRoomPlayerRange,
 } from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
 import {RecoveryRoom, registerRecoveryFailure} from "../game-interruption/recovery-state.js";
@@ -77,6 +78,7 @@ const FINISHED_ROOM_RETENTION_MS = 15 * 60 * 1000;
 const CLOSED_ROOM_RETENTION_MS = 60 * 1000;
 
 type RoomData = {
+  presenceProtocol?: unknown;
   gameInstanceId?: unknown;
   roomCode?: unknown;
   controllerSessionId?: unknown;
@@ -220,7 +222,7 @@ async function assertGameAccessible(
 ): Promise<void> {
   const firestore = getFirestore();
   const game = await getGameCatalog(gameId);
-  if (!game.exists || game.data()?.enabled === false) {
+  if (!game.exists || !isCatalogGameEnabled(game.data())) {
     throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
   }
   const accessType = game.data()?.accessType;
@@ -280,7 +282,7 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
       if (raw === null) return;
       const room = raw as RealtimeRoom;
       assertControllerSession(room, uid, request.data?.controllerSessionId);
-      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
       if ((room.status === "closed" || room.status === "terminal")) {
         throw new HttpsError("failed-precondition", "이미 종료된 방입니다.");
       }
@@ -290,7 +292,7 @@ export const resumeRealtimeControllerRoom = onCall<RoomData>(
       const connection = allocateRoomConnection(room as SessionRoom, {
         uid, role: "controller", operationId, roomInstanceId,
         expectedConnectionSeq: request.data?.expectedConnectionSeq as number,
-        connectionId, now,
+        connectionId, now, presenceProtocol: request.data?.presenceProtocol,
       });
       if (connection.connectionId === connectionId) {
         if (room.status === "seating") room.status = "waiting";
@@ -328,7 +330,7 @@ export const closeRoom = onCall<RoomData>(
 
     const room = roomSnapshot.val() as RealtimeRoom;
     assertControllerSession(room, uid, request.data?.controllerSessionId);
-    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
 
     const operationId = parseSessionId(request.data?.operationId, "작업 ID");
     const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
@@ -336,7 +338,7 @@ export const closeRoom = onCall<RoomData>(
       if (!raw) return;
       const current = raw as RealtimeRoom & SessionRoom;
       assertControllerSession(current, uid, request.data?.controllerSessionId);
-      assertRoomTarget(current, roomInstanceId);
+      assertRoomTarget(current, roomInstanceId, request.data?.presenceProtocol);
       const payload = {roomInstanceId};
       if (roomOperationResult(current, uid, operationId, "close", payload)) return current;
       current.status = "closed";
@@ -377,7 +379,7 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
 
       const room = roomSnapshot.val() as RealtimeRoom;
       assertControllerSession(room, uid, request.data?.controllerSessionId);
-      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
       if (
         room.status === "playing" ||
         (room.status === "closed" || room.status === "terminal") ||
@@ -392,10 +394,10 @@ export const selectRealtimeRoomGame = onCall<SelectGameData>(
       if (gameId !== null) await assertGameAccessible(room, uid, gameId);
       // 접근 권한 확인 뒤에도 게임 시작과 경합할 수 있으므로, 최종 선택 변경은
       // controller session과 진행 상태를 다시 확인하는 트랜잭션으로 처리합니다.
-      const result = await roomRef.transaction((raw) => {
+      const result = await runPrimedTransaction(roomRef, (raw) => {
         if (raw === null) return;
         const currentRoom = raw as RealtimeRoom;
-        assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId);
+        assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
         if ((currentRoom.membershipRevision ?? 0) !== membershipRevision) throw new HttpsError("aborted", "그룹 구성이 변경되었습니다.");
         if (gameId === null && currentRoom.game?.public?.status === "finished" &&
             (currentRoom.game.public as Record<string, unknown>).gameInstanceId !== request.data?.gameInstanceId) {
@@ -443,22 +445,23 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
     }
     const room = roomSnapshot.val() as RealtimeRoom;
     assertControllerSession(room, uid, request.data?.controllerSessionId);
-    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
     const selectedGame = room.selectedGame;
     if (!selectedGame) {
       throw new HttpsError("failed-precondition", "선택된 게임이 없습니다.");
     }
 
     const gameSnapshot = await getGameCatalog(selectedGame);
-    if (!gameSnapshot.exists || gameSnapshot.data()?.enabled === false) {
+    if (!gameSnapshot.exists || !isCatalogGameEnabled(gameSnapshot.data())) {
       throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
     }
     const rawMinPlayers = gameSnapshot.data()?.minPlayers;
     const rawMaxPlayers = gameSnapshot.data()?.maxPlayers;
-    const minPlayers = typeof rawMinPlayers === "number" && rawMinPlayers > 0 ?
-      rawMinPlayers : 2;
-    const maxPlayers = typeof rawMaxPlayers === "number" && rawMaxPlayers > 0 ?
-      rawMaxPlayers : 12;
+    const {minPlayers, maxPlayers} = resolveRoomPlayerRange(
+      selectedGame,
+      rawMinPlayers,
+      rawMaxPlayers,
+    );
 
     let rejection: HttpsError | null = null;
     const result = await runPrimedTransaction(roomRef, (raw) => {
@@ -470,7 +473,7 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
         uid,
         request.data?.controllerSessionId,
       );
-      assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId);
+      assertRoomTarget(currentRoom as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
       const count = activePlayerCount(currentRoom);
       const decision = decideRoomSeating({
         roomStatus: currentRoom.status,
@@ -548,11 +551,11 @@ export const removeRealtimeRoomPlayer = onCall<RemovePlayerData>(
       if (!roomSnapshot.exists()) {
         throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
       }
-      const result = await roomRef.transaction((raw) => {
+      const result = await runPrimedTransaction(roomRef, (raw) => {
         if (raw === null) return;
         const room = raw as RealtimeRoom;
         assertControllerSession(room, uid, request.data?.controllerSessionId);
-        assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId);
+        assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
         if (room.status === "playing" || room.game?.public?.status === "playing") {
           throw new HttpsError("failed-precondition", "게임 중에는 게임 퇴장 절차를 사용해주세요.");
         }

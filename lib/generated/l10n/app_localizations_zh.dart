@@ -87,6 +87,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guestLogin => '以访客身份开始';
 
   @override
+  String get forgotPassword => '忘记密码？';
+
+  @override
+  String get resetPasswordTitle => '重置密码';
+
+  @override
+  String get resetPasswordDescription => '我们会向您的账号邮箱发送密码重置链接。';
+
+  @override
+  String get sendResetEmail => '发送重置邮件';
+
+  @override
+  String get resetEmailSentTitle => '邮件已发送';
+
+  @override
+  String get resetEmailSentDescription => '请打开邮箱中的重置链接并设置新密码。';
+
+  @override
+  String get resendResetEmail => '重新发送邮件';
+
+  @override
+  String get backToLogin => '返回登录';
+
+  @override
+  String get tooManyRequests => '请求过多，请稍后重试。';
+
+  @override
+  String get passwordResetFailed => '无法发送重置邮件，请重试。';
+
+  @override
   String get checkCredentials => '请检查邮箱和密码。';
 
   @override
@@ -513,6 +543,36 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get guestLogin => '以访客身份开始';
 
   @override
+  String get forgotPassword => '忘记密码？';
+
+  @override
+  String get resetPasswordTitle => '重置密码';
+
+  @override
+  String get resetPasswordDescription => '我们会向您的账号邮箱发送密码重置链接。';
+
+  @override
+  String get sendResetEmail => '发送重置邮件';
+
+  @override
+  String get resetEmailSentTitle => '邮件已发送';
+
+  @override
+  String get resetEmailSentDescription => '请打开邮箱中的重置链接并设置新密码。';
+
+  @override
+  String get resendResetEmail => '重新发送邮件';
+
+  @override
+  String get backToLogin => '返回登录';
+
+  @override
+  String get tooManyRequests => '请求过多，请稍后重试。';
+
+  @override
+  String get passwordResetFailed => '无法发送重置邮件，请重试。';
+
+  @override
   String get checkCredentials => '请检查邮箱和密码。';
 
   @override
@@ -937,6 +997,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get guestLogin => '以訪客身分開始';
+
+  @override
+  String get forgotPassword => '忘記密碼？';
+
+  @override
+  String get resetPasswordTitle => '重設密碼';
+
+  @override
+  String get resetPasswordDescription => '我們會向您的帳號電子郵件傳送密碼重設連結。';
+
+  @override
+  String get sendResetEmail => '傳送重設郵件';
+
+  @override
+  String get resetEmailSentTitle => '郵件已傳送';
+
+  @override
+  String get resetEmailSentDescription => '請開啟信箱中的重設連結並設定新密碼。';
+
+  @override
+  String get resendResetEmail => '重新傳送郵件';
+
+  @override
+  String get backToLogin => '返回登入';
+
+  @override
+  String get tooManyRequests => '要求過多，請稍後再試。';
+
+  @override
+  String get passwordResetFailed => '無法傳送重設郵件，請再試一次。';
 
   @override
   String get checkCredentials => '請檢查電子郵件和密碼。';

@@ -144,6 +144,8 @@ void main() {
           );
           await tester.pump(const Duration(milliseconds: 1000));
           await _expectEdges(tester, key, useImage ? _imageColor : _gameColor);
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(find.textContaining('게임을 준비 중'), findsNothing);
           await tester.pump(const Duration(milliseconds: 700));
           await tester.pump(const Duration(milliseconds: 300));
           expect(prepared, 1);
@@ -203,5 +205,32 @@ void main() {
     expect(completed, 1);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('대기실 복귀 확인 중에도 버튼은 회전 로딩으로 바뀌지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final pending = Completer<bool>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayerLayoutEditor(
+          initialLayout: _layout,
+          tableColor: _gameColor,
+          onPrepare: (_) async => false,
+          onComplete: (_) {},
+          onCancel: () => pending.future,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.widgetWithText(MosiButton, '대기실'));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.widgetWithText(MosiButton, '대기실'), findsOneWidget);
+    pending.complete(false);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 }

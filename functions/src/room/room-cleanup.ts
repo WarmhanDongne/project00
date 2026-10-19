@@ -1,34 +1,37 @@
 /* eslint-disable require-jsdoc, valid-jsdoc, max-len */
-import {getDatabase} from "firebase-admin/database";
+import {getDatabase, Reference} from "firebase-admin/database";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {logger} from "firebase-functions";
 import {RoomAllocation, terminalRoom} from "./room-allocation.js";
 import {runPrimedTransaction} from "./room-transaction.js";
+import {applyRoomPresence, SessionRoom} from "./session-contract.js";
+import {CleanupSignal, cleanupDeadline} from "./cleanup-signal.js";
+import {unprojectedLosses} from "./current-presence.js";
+import {RecoveryRoom, registerRecoveryFailure} from "../game-interruption/recovery-state.js";
 
 export interface CleanupRoom extends RoomAllocation {
-  controllerPresence?: {lastSeen?: number}; retainUntil?: number; cleanupAt?: number;
+  controllerPresence?: {connected?: boolean; lastSeen?: number}; retainUntil?: number; cleanupAt?: number;
   cleanupPending?: boolean; terminalAt?: number;
+  cleanupSignal?: CleanupSignal;
 }
-export interface CleanupJob {roomInstanceId: string; allocationGeneration: number; nextCheckAt: number; failures: number}
+export interface CleanupJob {roomInstanceId: string; allocationGeneration: number; nextCheckAt: number; failures: number; signalRevision?: number}
 
 export function roomCleanupDeadline(room: CleanupRoom): number | null {
-  if (room.status === "terminal") return room.cleanupPending ? room.terminalAt ?? 0 : null;
-  if (room.status === "closed") return room.cleanupAt ?? 0;
-  if (room.status === "finished") {
-    return room.retainUntil ??
-    (room.controllerPresence?.lastSeen ? room.controllerPresence.lastSeen + 15 * 60000 : null);
-  }
-  const seen = room.controllerPresence?.lastSeen;
-  return typeof seen === "number" ? seen + (room.status === "playing" ? 15 : 3) * 60000 : null;
+  return cleanupDeadline(room as SessionRoom & {allocationGeneration: number});
 }
 export function sameCleanupTarget(left: {roomInstanceId?: string; allocationGeneration?: number} | null,
   right: {roomInstanceId?: string; allocationGeneration?: number}): boolean {
   return typeof right.roomInstanceId === "string" && Number.isSafeInteger(right.allocationGeneration) && left?.roomInstanceId === right.roomInstanceId && left?.allocationGeneration === right.allocationGeneration;
 }
-export function cleanupScanPage(entries: Array<{code: string; room: CleanupRoom}>, cursor: string | null) {
-  const page = entries.filter((entry) => entry.code !== cursor).slice(0, 100);
-  return {page, nextCursor: page.length === 100 ? page[page.length - 1].code : null};
+export function cleanupScanPage<T>(entries: Array<{code: string; room: T}>, cursor: string | null, limit = 100) {
+  const page = entries.filter((entry) => entry.code !== cursor).slice(0, limit);
+  return {page, nextCursor: page.length === limit ? page[page.length - 1].code : null};
+}
+/** An overlapping scan cannot overwrite a cursor advanced by a newer run. */
+export async function advanceCleanupCursor(ref: Reference, observed: string | null, next: string | null): Promise<boolean> {
+  const result = await runPrimedTransaction(ref, (raw) => raw === observed ? next : undefined);
+  return result.committed;
 }
 async function enqueue(code: string, room: CleanupRoom): Promise<void> {
   const due = roomCleanupDeadline(room);
@@ -36,16 +39,23 @@ async function enqueue(code: string, room: CleanupRoom): Promise<void> {
   await runPrimedTransaction(getDatabase().ref(`roomCleanupQueue/${code}`), (value) => {
     const raw = value as CleanupJob | null;
     if (raw && raw.allocationGeneration > room.allocationGeneration) return;
+    const same = sameCleanupTarget(raw, room);
+    const revision = room.cleanupSignal?.revision ?? 0;
+    if (same && (raw!.signalRevision ?? 0) > revision) return;
     return {roomInstanceId: room.roomInstanceId, allocationGeneration: room.allocationGeneration,
-      nextCheckAt: due, failures: sameCleanupTarget(raw, room) ? raw!.failures ?? 0 : 0};
+      nextCheckAt: same && (raw!.failures ?? 0) > 0 ? Math.max(raw!.nextCheckAt, due) : due,
+      failures: same ? raw!.failures ?? 0 : 0, signalRevision: revision};
   });
 }
 
 /** Re-read the current allocation: a late event can never enqueue a prior generation. */
-export const syncRoomCleanupQueue = onValueWritten({ref: "/rooms/{roomCode}",
+export const syncRoomCleanupQueue = onValueWritten({ref: "/rooms/{roomCode}/cleanupSignal",
   region: "asia-southeast1", retry: true}, async (event) => {
-  const room = (await getDatabase().ref(`rooms/${event.params.roomCode}`).get()).val() as CleanupRoom | null;
-  if (room) await enqueue(event.params.roomCode, room);
+  const signal = (await getDatabase().ref(`rooms/${event.params.roomCode}/cleanupSignal`).get()).val() as CleanupSignal | null;
+  if (!signal || typeof signal.nextCheckAt !== "number") return;
+  // Advisory index only: the due worker still validates identity and canonical time in R CAS.
+  await enqueue(event.params.roomCode, {roomInstanceId: signal.roomInstanceId,
+    allocationGeneration: signal.allocationGeneration, status: "closed", cleanupAt: signal.nextCheckAt, cleanupSignal: signal});
 });
 
 export async function reconcileTerminal(code: string, room: CleanupRoom): Promise<void> {
@@ -53,15 +63,25 @@ export async function reconcileTerminal(code: string, room: CleanupRoom): Promis
   if (room.controllerUid && room.creationOperationId) {
     const uid = room.controllerUid;
     const op = room.creationOperationId;
+    const observed = (await database.ref(`rooms/${code}`).get()).val() as CleanupRoom | null;
+    const confirmedTerminal = sameCleanupTarget(observed, room) && observed?.status === "terminal";
     await runPrimedTransaction(database.ref(`roomCreateRequests/${uid}/${op}`), (value) => {
       const raw = value as RoomAllocation | null;
-      return sameCleanupTarget(raw, room) ? {...raw, status: "terminal"} : undefined;
+      if (!sameCleanupTarget(raw, room)) return;
+      // Keep the durable replay marker. Unknown reserved intent is never compacted.
+      if (!confirmedTerminal || !["created", "terminal"].includes(raw!.status)) {
+        return {...raw, status: "terminal"};
+      }
+      return {roomCode: code, roomInstanceId: raw!.roomInstanceId,
+        allocationGeneration: raw!.allocationGeneration, status: "terminal",
+        ...(typeof raw!.createdAt === "number" ? {createdAt: raw!.createdAt} : {})};
     });
-    await runPrimedTransaction(database.ref(`controllerRooms/${uid}`), (raw) => sameCleanupTarget(raw as RoomAllocation | null, room) ? null : undefined);
     await runPrimedTransaction(database.ref(`roomCreateSlots/${uid}`), (value) => {
       const raw = value as {operationId: string; roomInstanceId?: string; allocationGeneration?: number} | null;
       return raw?.operationId === op && (!raw.roomInstanceId || sameCleanupTarget(raw, room)) ? {...raw, status: "terminal"} : undefined;
     });
+    // Preserve the recovery locator until request/slot reconciliation has succeeded.
+    await runPrimedTransaction(database.ref(`controllerRooms/${uid}`), (raw) => sameCleanupTarget(raw as RoomAllocation | null, room) ? null : undefined);
   }
   await runPrimedTransaction(database.ref(`rooms/${code}`), (raw) => {
     if (!sameCleanupTarget(raw as CleanupRoom | null, room) || (raw as CleanupRoom).status !== "terminal") return;
@@ -86,10 +106,25 @@ export const cleanupStaleRealtimeRooms = onSchedule({region: "asia-northeast3",
     if (child.key && child.key !== cursor) scans.push({code: child.key, room: child.val()});
   });
   const page = cleanupScanPage(scans, cursor);
-  for (const entry of page.page) await enqueue(entry.code, entry.room);
-  await cursorRef.set(page.nextCursor);
+  for (const entry of page.page) {
+    if (unprojectedLosses(entry.room as SessionRoom).length > 0) {
+      await runPrimedTransaction(database.ref(`rooms/${entry.code}`), (raw) => {
+        if (!sameCleanupTarget(raw as CleanupRoom | null, entry.room)) return;
+        const room = raw as SessionRoom;
+        let changed = false;
+        for (const {uid, id} of unprojectedLosses(room)) {
+          changed = applyRoomPresence(room, uid, id, (role, seen) =>
+            registerRecoveryFailure(room as RecoveryRoom, uid, role, now, "disconnected", seen)) || changed;
+        }
+        return changed ? room : undefined;
+      });
+    }
+    await enqueue(entry.code, entry.room);
+  }
+  const cursorAdvanced = await advanceCleanupCursor(cursorRef, cursor, page.nextCursor);
   const due = await database.ref("roomCleanupQueue").orderByChild("nextCheckAt").endAt(now).limitToFirst(300).get();
   let completed = 0; let deferred = 0; let failed = 0;
+  let terminalReconciliations = 0; let staleJobs = 0;
   const jobs: Array<{code: string; job: CleanupJob}> = [];
   due.forEach((child) => {
     if (child.key) jobs.push({code: child.key, job: child.val()});
@@ -110,10 +145,14 @@ export const cleanupStaleRealtimeRooms = onSchedule({region: "asia-northeast3",
         terminal = terminalRoom(room, now) as CleanupRoom;
         return terminal;
       });
-      if (terminal) await reconcileTerminal(code, terminal);
+      if (terminal) {
+        await reconcileTerminal(code, terminal);
+        terminalReconciliations++;
+      } else if (future === null) staleJobs++;
       await runPrimedTransaction(database.ref(`roomCleanupQueue/${code}`), (value) => {
         const raw = value as CleanupJob | null;
-        if (!sameCleanupTarget(raw, job)) return;
+        if (!sameCleanupTarget(raw, job) || (raw!.signalRevision ?? 0) !== (job.signalRevision ?? 0) ||
+          raw!.nextCheckAt !== job.nextCheckAt || raw!.failures !== job.failures) return;
         return future !== null && future > now ? {...raw, nextCheckAt: future} : null;
       });
       if (future !== null && future > now) deferred++; else completed++;
@@ -121,11 +160,15 @@ export const cleanupStaleRealtimeRooms = onSchedule({region: "asia-northeast3",
       failed++;
       await runPrimedTransaction(database.ref(`roomCleanupQueue/${code}`), (value) => {
         const raw = value as CleanupJob | null;
-        return sameCleanupTarget(raw, job) ?
+        return sameCleanupTarget(raw, job) && (raw!.signalRevision ?? 0) === (job.signalRevision ?? 0) &&
+          raw!.nextCheckAt === job.nextCheckAt && raw!.failures === job.failures ?
           {...raw, failures: (raw!.failures ?? 0) + 1,
             nextCheckAt: now + Math.min(30, 2 ** Math.min(raw!.failures ?? 0, 5)) * 60000} : undefined;
       });
     }
   }
-  logger.info("Room cleanup", {completed, deferred, failed, scanned: scans.length});
+  logger.info("Room cleanup", {completed, deferred, failed, scanned: page.page.length,
+    terminalReconciliations, staleJobs, cursorAdvanced, queueLimitReached: jobs.length === 300,
+    oldestDueAgeMs: jobs.reduce((age, {job}) => Math.max(age, now - job.nextCheckAt), 0),
+    durationMs: Date.now() - now});
 });

@@ -38,12 +38,15 @@ NON_GAME_IMPLEMENTATION_PACKAGES = (
     | {"game_contract"}
 )
 
-# 앱 바이너리에 코드와 에셋을 함께 넣는 무료 게임입니다.
+# 앱 바이너리에 코드와 에셋을 함께 넣는 게임입니다. 2026-10-19 결정으로
+# 패치·다운로드로 추가하는 게임 구분을 없앴습니다. 모든 게임 package는 이
+# 목록에 있어야 하며 자기 에셋을 앱에 함께 넣습니다.
 BUNDLED_GAME_PACKAGES = {
     "game_liars_poker",
     "game_final_call",
     "game_holdem",
     "game_mafia",
+    "game_yut",
 }
 
 REQUIRED_WORKSPACE_PACKAGES = FIXED_APP_PACKAGES | BUNDLED_GAME_PACKAGES
@@ -133,12 +136,12 @@ def delivery_role_violations(
     if not (root / "lib" / "main.dart").is_file():
         violations.append(("app", "missing-app-entrypoint", "lib/main.dart", ""))
 
-    downloadable_game_packages = {
-        package
-        for package in package_dirs
-        if is_game_implementation_package(package)
-        and package not in BUNDLED_GAME_PACKAGES
-    }
+    downloadable_game_packages: set[str] = set()
+    for package in sorted(package_dirs):
+        if is_game_implementation_package(package) and package not in BUNDLED_GAME_PACKAGES:
+            violations.append(
+                (package, "unbundled-game-package", f"packages/{package}/pubspec.yaml", "")
+            )
 
     for package, directory in sorted(package_dirs.items()):
         relative_pubspec = f"packages/{package}/pubspec.yaml"
@@ -301,10 +304,6 @@ def main() -> int:
     print("=== 배포 역할 ===")
     print(f"  고정 앱 모듈       {', '.join(sorted(FIXED_APP_PACKAGES))}")
     print(f"  기본 번들 게임     {', '.join(sorted(BUNDLED_GAME_PACKAGES))}")
-    print(
-        "  패치 추가 게임     "
-        + (", ".join(sorted(downloadable_game_packages)) or "(없음)")
-    )
 
     print("\n=== 물리 패키지별 Dart 파일 수 ===")
     for package, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {finalizeGameMutation} from "../lib/game-interruption/game-mutation.js";
 import {applyRecoveryReport, beginRecoveryPause, expireRecoveryCauses, extendRecoveryCause,
   registerRecoveryFailure, reportStaleController,
   tryResumeRecovery} from "../lib/game-interruption/recovery-state.js";
@@ -31,6 +32,36 @@ function report(room, uid, seq = 1, state = "ready", context = true) {
     gameInstanceId: pub.gameInstanceId,
     ...(context ? {gameInstanceId: pub.gameInstanceId, phaseSeq: pub.phaseSeq,
       turnSeq: pub.turnSeq, dataSeq: pub.dataSeq, resumeEpoch: pub.resumeEpoch} : {})}, 5000);
+}
+
+test("최초 게임 준비는 모든 기기 ready까지 입력을 막고 initialReadiness로 표시한다", () => {
+  const room = fixture(null);
+  room.game.public.phase = "dealing";
+  room.game.private = {};
+  finalizeGameMutation(room, undefined, 1000, "new-game");
+  assert.equal(room.game.public.recovery.purpose, "initialReadiness");
+  report(room, "t"); report(room, "a");
+  assert.equal(room.game.public.recovery.paused, true);
+  report(room, "b");
+  assert.equal(room.game.public.recovery.paused, false);
+});
+
+for (const reason of ["disconnected", "preparationFailed"]) {
+  test(`최초 준비 중 ${reason} 이후 원인이 해소돼도 recovery 목적은 보존한다`, () => {
+    let room = fixture(null);
+    room.game.public.phase = "dealing";
+    room.game.private = {};
+    finalizeGameMutation(room, undefined, 1000, "new-game");
+    room = rtdbRoundTrip(room);
+    registerRecoveryFailure(room, "a", "player", 2000, reason);
+    assert.equal(room.game.public.recovery.purpose, "recovery");
+    report(room, "a");
+    assert.deepEqual(room.game.public.recovery.causes, {});
+    assert.equal(room.game.public.recovery.paused, true);
+    assert.equal(room.game.public.recovery.purpose, "recovery");
+    report(room, "t"); report(room, "b");
+    assert.equal(room.game.public.recovery.paused, false);
+  });
 }
 
 test("다중 단절은 시간·마감을 한 번만 보관하고 마지막 필수 준비 뒤 재개한다", () => {

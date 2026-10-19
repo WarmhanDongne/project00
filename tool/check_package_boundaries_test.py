@@ -47,20 +47,16 @@ class PackageDeliveryBoundaryTest(unittest.TestCase):
             )
             self.assertFalse(declares_flutter_assets(pubspec))
 
-    def test_downloadable_game_rejects_bundled_assets_and_native_code(self) -> None:
+    def test_every_game_package_must_be_registered_as_bundled(self) -> None:
+        """패치·다운로드 게임 구분이 없으므로 미등록 게임 package는 위반입니다."""
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             (root / "lib").mkdir()
             (root / "lib" / "main.dart").write_text("void main() {}\n", encoding="utf-8")
             game_dir = root / "packages" / "game_future_round"
-            (game_dir / "lib" / "gen").mkdir(parents=True)
-            (game_dir / "ios").mkdir()
+            (game_dir / "lib").mkdir(parents=True)
             (game_dir / "pubspec.yaml").write_text(
                 "name: game_future_round\nflutter:\n  assets:\n    - assets/\n",
-                encoding="utf-8",
-            )
-            (game_dir / "lib" / "gen" / "assets.gen.dart").write_text(
-                "// generated\n",
                 encoding="utf-8",
             )
 
@@ -69,14 +65,10 @@ class PackageDeliveryBoundaryTest(unittest.TestCase):
                 {"game_future_round": game_dir},
             )
 
-            self.assertEqual(downloadable, {"game_future_round"})
+            self.assertEqual(downloadable, set())
             self.assertEqual(
                 {kind for _, kind, _, _ in violations},
-                {
-                    "downloadable-game-bundled-assets",
-                    "downloadable-game-generated-assets",
-                    "downloadable-game-native-code",
-                },
+                {"unbundled-game-package"},
             )
 
     def test_platform_is_a_library_module_not_an_app_entrypoint(self) -> None:

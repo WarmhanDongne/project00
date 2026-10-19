@@ -89,6 +89,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guestLogin => 'Continue as guest';
 
   @override
+  String get forgotPassword => 'Forgot your password?';
+
+  @override
+  String get resetPasswordTitle => 'Reset password';
+
+  @override
+  String get resetPasswordDescription =>
+      'We\'ll email a password reset link to your account.';
+
+  @override
+  String get sendResetEmail => 'Send reset email';
+
+  @override
+  String get resetEmailSentTitle => 'Email sent';
+
+  @override
+  String get resetEmailSentDescription =>
+      'Open the reset link in your inbox to choose a new password.';
+
+  @override
+  String get resendResetEmail => 'Send email again';
+
+  @override
+  String get backToLogin => 'Back to login';
+
+  @override
+  String get tooManyRequests => 'Too many requests. Please try again later.';
+
+  @override
+  String get passwordResetFailed =>
+      'Could not send the reset email. Please try again.';
+
+  @override
   String get checkCredentials => 'Check your email and password.';
 
   @override

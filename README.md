@@ -11,6 +11,9 @@
 후속 계획은 [`Development environment plan`](docs/development/DEVELOPMENT_ENVIRONMENT_PLAN.md)에
 계속 갱신합니다.
 
+앱을 운영 Firebase와 분리된 로컬 Auth·RTDB·Firestore·Functions·Storage에서 실행하려면
+[`Local Firebase`](docs/development/LOCAL_FIREBASE.md)의 실행 옵션과 테스트 계정을 사용합니다.
+
 Firebase Functions를 개발할 때는 Node.js 22를 사용합니다.
 
 ```bash
@@ -43,8 +46,8 @@ Firebase 플랫폼 설정 파일은 다음 위치에 있어야 합니다.
 [`Firebase MCP RTDB Read-only Pilot`](docs/operations/FIREBASE_MCP.md)의 별도 계정, 승인 및 최소 경로
 규칙을 따릅니다. 이 파일럿은 Project CLI와 자동화된 테스트를 대체하지 않습니다.
 
-Android 1~3기기 Firebase Emulator 자동화는 조사 후 보류했습니다. 구현·검증 결과와
-재개 조건은 [`Emulator pilot record`](docs/operations/EMULATOR_PILOT.md)에 남겨 두었습니다.
+과거 Android 1~3기기 조작 자동화 파일럿의 결과와 현재 로컬 환경에 남은 한계는
+[`Emulator pilot record`](docs/operations/EMULATOR_PILOT.md)에 보존합니다.
 
 ## 자주 사용하는 명령어
 
