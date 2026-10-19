@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -452,6 +453,7 @@ class _TabletGameLauncher {
       final cleanup = _cleanup;
       if (_completingGame || cleanup == null || !cleanup.current) return;
       _completingGame = true;
+      StartupMeasurements.instance.record('startup_transition_wait');
       final cleanupTarget = await cleanup.target();
       if (!layoutContext.mounted || !cleanup.current) return;
       //=======================태블릿 게임 방향 불변 조건==============================
@@ -468,6 +470,7 @@ class _TabletGameLauncher {
           roomCode: roomCode,
         ),
       );
+      StartupMeasurements.instance.record('startup_route_replaced');
       Navigator.of(layoutContext).pushReplacement(gameRoute);
       // 게임 화면의 퇴장 연출까지 끝난 뒤에 게임 데이터를 정리합니다.
       // 먼저 지우면 덮이는 동안 결과 화면이 사라질 수 있습니다.

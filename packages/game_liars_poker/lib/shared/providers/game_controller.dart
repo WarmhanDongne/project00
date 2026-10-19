@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [game_controller.dart] RTDB의 라이어스 포커 상태를 게임 상태 객체로 변환하고,
 // 휴대폰·태블릿 화면과 서버 명령 사이의 진행을 조율하는 파일이다.
 
@@ -411,6 +412,9 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
     // 빈 스냅샷 처리와 방 삭제 확인은 공용 뼈대가 먼저 합니다.
     if (value is! Map) return;
 
+    final measurement = StartupMeasurements.instance;
+    measurement.bindGame(recoverySession.context?.gameInstanceId ?? '');
+    measurement.record('public_received');
     final hadPublicSnapshot = _hasPublicSnapshot;
     final data = Map<Object?, Object?>.from(value);
     final nextStatus = liarsPokerString(data['status'], fallback: 'playing');
@@ -616,12 +620,26 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
         ),
       );
     }
+    measurement.record('public_applied', value: revision);
+    if (nextRound == 1) {
+      measurement.state('participant_count', nextPlayers.length);
+    }
+    measurement.sessionState(
+      localUsable: recoverySession.localUsable,
+      transportConnected: recoverySession.transportConnected,
+      transportRecovering: recoverySession.transportRecovering,
+      controllerAvailable: recoverySession.controllerAvailable,
+      serverConfirmed: recoverySession.serverConfirmed,
+      paused: recoverySession.paused,
+      leaving: recoverySession.leaving,
+    );
     // 발행한 뒤에 검사해야 새 상태를 기준으로 판단합니다.
     _completeInitialDataIfReady();
   }
 
   @override
   void handlePrivateEvent(DatabaseEvent event) {
+    StartupMeasurements.instance.record('private_received');
     final hadHandSnapshot = _hasHandSnapshot;
     _hasHandSnapshot = true;
     final parsedCards = parseLiarsPokerHand(
@@ -664,6 +682,7 @@ class LiarsPokerController extends GameSessionController<LiarsPokerGameState> {
       );
     }
 
+    StartupMeasurements.instance.record('private_applied');
     // 진입 대기 완료 신호는 화면 갱신 여부와 무관하게 항상 검사해야
     // waitForInitialData()가 영구 대기하지 않습니다. 발행한 뒤에 검사해야
     // 새 손패를 기준으로 판단합니다.

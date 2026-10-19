@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,7 +34,12 @@ Future<bool> prepareTabletGameStart({
 }) async {
   final pending = await hasPendingTabletGameStart(roomCode);
   if (!isCurrent()) return false;
-  if (!pending && !await saveSeats()) return false;
+  if (!pending) {
+    StartupMeasurements.instance.record('seat_save_start');
+    final saved = await saveSeats();
+    StartupMeasurements.instance.record('seat_save_end', value: saved ? 1 : 0);
+    if (!saved) return false;
+  }
   if (!isCurrent()) return false;
   await startGame();
   return isCurrent();

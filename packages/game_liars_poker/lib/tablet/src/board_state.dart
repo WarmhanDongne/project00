@@ -402,6 +402,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   // 화면 애니메이션 완료 이벤트
   // ---------------------------------------------------------------------------
   void _onDealCompleted() {
+    StartupMeasurements.instance.once('tablet_deal_completed');
     final game = _controller;
     if (game == null) return;
     // 기존 playing 스냅샷으로 화면을 복구한 경우에는 서버 분배 명령이 필요 없습니다.
@@ -425,6 +426,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   }
 
   void _onRoundRevealCompleted() {
+    StartupMeasurements.instance.once('tablet_round_reveal_completed');
     if (_stage == LiarsPokerTabletStage.roundStarting) {
       _changeStage(LiarsPokerTabletStage.playing);
     }
@@ -461,6 +463,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   }
 
   void _changeStage(LiarsPokerTabletStage nextStage) {
+    StartupMeasurements.instance.state('tablet_stage', nextStage.index);
     if (_stage == nextStage || !mounted || _isExitingToLobby) return;
     setState(() => _stage = nextStage);
   }
@@ -468,7 +471,10 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
   // ---------------------------------------------------------------------------
   // 설정 및 결과 화면 명령
   // ---------------------------------------------------------------------------
-  void _restartGame() {
+  void _restartGame({String source = 'menu_restart'}) {
+    if (source == 'result_restart') {
+      StartupMeasurements.instance.beginAction(source);
+    }
     unawaited(_controller?.restartGame());
   }
 
@@ -526,6 +532,13 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
         ? null
         : ref.read(liarsPokerSessionProvider(args).notifier);
     _controller = controller;
+    if (controller != null &&
+        StartupMeasurements.instance.enabled &&
+        !identical(_measurementSession, controller.recoverySession)) {
+      _measurementSession?.removeListener(_measureTabletFrame);
+      _measurementSession = controller.recoverySession;
+      _measurementSession!.addListener(_measureTabletFrame);
+    }
     if (controller == null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -580,7 +593,60 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     _backgroundMusic.attach(context);
   }
 
+  Listenable? _measurementSession;
+  bool _measurementFramePending = false;
+
+  void _measureTabletFrame() {
+    final game = _controller;
+    final measurement = StartupMeasurements.instance;
+    final measurementGame = measurement.game;
+    if (!mounted ||
+        game == null ||
+        measurementGame == null ||
+        _measurementFramePending) {
+      return;
+    }
+    _measurementFramePending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurementFramePending = false;
+      if (!mounted || measurement.game != measurementGame) return;
+      measurement.sessionState(
+        localUsable: game.recoverySession.localUsable,
+        transportConnected: game.recoverySession.transportConnected,
+        transportRecovering: game.recoverySession.transportRecovering,
+        controllerAvailable: game.recoverySession.controllerAvailable,
+        serverConfirmed: game.recoverySession.serverConfirmed,
+        paused: game.recoverySession.paused,
+        leaving: game.recoverySession.leaving,
+      );
+      measurement.state(
+        'startup_uncovered',
+        ModalRoute.isCurrentOf(context) == true &&
+                !_isExitingToLobby &&
+                !game.isFinished &&
+                game.interruption == null
+            ? 1
+            : 0,
+      );
+
+      final ready =
+          measurement.foreground &&
+          _stage == LiarsPokerTabletStage.playing &&
+          game.recoverySession.canSend &&
+          game.interruption == null &&
+          !_isExitingToLobby &&
+          !game.isFinished &&
+          ModalRoute.isCurrentOf(context) == true;
+      measurement.state('tablet_gate', ready ? 1 : 0, game: measurementGame);
+      if (ready) {
+        measurement.once('tablet_playing_frame', game: measurementGame);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
   Widget _buildGameContent(LiarsPokerController game) {
+    _measureTabletFrame();
     final rouletteScope = game.rouletteScope;
     _startBackgroundMusicOnDeal();
     final flowConfig = buildLiarsPokerTabletFlowConfig(roundNumber: game.round);
@@ -642,7 +708,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
                     currentTurnPlayerIndex: _currentTurnPlayerIndex,
                     onDealCompleted: _onDealCompleted,
                     onRoundRevealCompleted: _onRoundRevealCompleted,
-                    onRestartGame: _restartGame,
+                    onRestartGame: () => _restartGame(source: 'result_restart'),
                     onExitToLobby: _endGame,
                   ),
                 ),
@@ -825,6 +891,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
 
   @override
   void dispose() {
+    _measurementSession?.removeListener(_measureTabletFrame);
     _dealingCommand.dispose();
     _timeoutCommand.dispose();
     // 배경음악은 반복 재생이라 화면을 떠날 때 반드시 멈춥니다.

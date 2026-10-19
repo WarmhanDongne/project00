@@ -2,6 +2,7 @@ import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'dart:async';
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -273,6 +274,11 @@ class RoomService {
     // 현재 연결 상태 갱신이 복구의 성공 기준입니다. 다음 단절 예약은 Android/iOS
     // native plugin에서 일시적인 `unknown`을 낼 수 있는 보조 기능이므로, 성공한
     // 복구와 네트워크 팝업 종료를 지연하거나 실패시키지 않습니다.
+    StartupMeasurements.instance.diagnostic(
+      'room_connected',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+    );
     unawaited(_registerControllerDisconnectPresence(presenceRef, identity));
   }
 
@@ -304,11 +310,18 @@ class RoomService {
     if (RoomRecoveryBatch.current == null) {
       return _withRoomBatch(() => closeControllerRoom(roomCode));
     }
+    final measurementEpoch = StartupMeasurements.instance.captureEpoch ?? -1;
     final identity = await RoomActionTiming.measure(
       'local:close_identity',
       () => _sessionIdentity(roomCode, 'controller'),
     );
     final oldConnection = _connectionReference(identity);
+    StartupMeasurements.instance.diagnostic(
+      'close_identity',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+      epoch: measurementEpoch,
+    );
     final closePayload = controllerCommandData(roomCode, {
       'roomInstanceId': identity.roomInstanceId,
     });
@@ -323,7 +336,7 @@ class RoomService {
         )
         .firstOrNull;
     if (confirmed != null) {
-      unawaited(_cancelControllerDisconnect(oldConnection));
+      unawaited(_cancelControllerDisconnect(oldConnection, identity));
       await _identities.clear(
         identity.uid,
         "controller",
@@ -344,6 +357,12 @@ class RoomService {
     );
     final needsResultLookup = operation['state'] != 'requested';
     await _operations.mark(operation, 'awaitingResult');
+    StartupMeasurements.instance.diagnostic(
+      'close_intent_persisted',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+      epoch: measurementEpoch,
+    );
     // Do not invalidate a newly replaced room/connection after a slow disk write.
     if (_isCurrentController(identity)) {
       final session = GameRecoverySession.forRoom(roomCode, identity.uid);
@@ -351,20 +370,38 @@ class RoomService {
       session.invalidate();
     }
     // Intent is durable. This old reference cannot resolve to the current room.
-    unawaited(_cancelControllerDisconnect(oldConnection));
+    unawaited(_cancelControllerDisconnect(oldConnection, identity));
     final payload = Map<String, dynamic>.from(operation['payload'] as Map);
     var alreadyApplied = false;
     if (needsResultLookup) {
-      final status = await _call('game_common_operation_status', payload);
+      final status = await StartupMeasurements.instance.measureSpan(
+        'close_status',
+        () => _call('game_common_operation_status', payload),
+        room: identity.roomInstanceId,
+        subject: identity.connectionId,
+        epoch: measurementEpoch,
+      );
       alreadyApplied = const {
         'applied',
         'stale',
       }.contains(status.data['status']);
     }
     if (!alreadyApplied) {
-      await _call('closeRoom', payload);
+      await StartupMeasurements.instance.measureSpan(
+        'close_request',
+        () => _call('closeRoom', payload),
+        room: identity.roomInstanceId,
+        subject: identity.connectionId,
+        epoch: measurementEpoch,
+      );
     }
     await _operations.mark(operation, 'confirmed');
+    StartupMeasurements.instance.diagnostic(
+      'close_confirmed',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+      epoch: measurementEpoch,
+    );
     await _identities.clear(
       identity.uid,
       "controller",
@@ -1493,13 +1530,21 @@ class RoomService {
 
   Future<void> _cancelControllerDisconnect(
     DatabaseReference oldConnection,
+    RoomSessionIdentity identity,
   ) async {
+    final span = StartupMeasurements.instance.beginSpan(
+      'disconnect_cancel',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+    );
     try {
       await RoomActionTiming.measure(
         'rtdb:disconnect_cancel',
         () => oldConnection.onDisconnect().cancel(),
       );
+      span.end(1);
     } catch (_) {
+      span.end(3);
       // Auxiliary only. The durable close/status request owns the result.
     }
   }
@@ -1518,12 +1563,26 @@ class RoomService {
                   entry['scope'] == identity.roomInstanceId,
             );
     if (!active()) return;
+    final span = StartupMeasurements.instance.beginSpan(
+      'disconnect_registration',
+      room: identity.roomInstanceId,
+      subject: identity.connectionId,
+    );
     try {
       await presenceRef.onDisconnect().update({'connected': false});
+      span.end(1);
       // A registration started before close may finish after its cancellation.
       // Retire only that old path; never look up a newer connection to cancel.
-      if (!active()) await _cancelControllerDisconnect(presenceRef);
+      if (!active()) {
+        StartupMeasurements.instance.diagnostic(
+          'disconnect_registration_late',
+          room: identity.roomInstanceId,
+          subject: identity.connectionId,
+        );
+        await _cancelControllerDisconnect(presenceRef, identity);
+      }
     } catch (_) {
+      span.end(3);
       // controller heartbeat와 scheduled cleanup이 최종 상태를 정리합니다.
     }
   }

@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [hand_card_stack.dart] 휴대폰 손패의 분배·공개·선택·제출
 // 애니메이션과 선택 상태를 관리하는 파일이다.
 
@@ -177,6 +178,34 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
   static const Duration _submitExitDuration = Duration(milliseconds: 420);
   static const Duration _submitReturnDuration = Duration(milliseconds: 380);
 
+  final _measurementGame = StartupMeasurements.instance.game;
+  final _measurementEpoch = StartupMeasurements.instance.captureEpoch;
+  Set<int> _measuredSelectedIds = {};
+  int _measurementSelection = 0;
+  bool get _measurementActive =>
+      _measurementGame != null &&
+      StartupMeasurements.instance.active &&
+      StartupMeasurements.instance.game == _measurementGame &&
+      StartupMeasurements.instance.captureEpoch == _measurementEpoch;
+
+  void _measureSelectionChange(String input) {
+    if (!_measurementActive) return;
+    if (_measuredSelectedIds.length == _selectedCardIds.length &&
+        _measuredSelectedIds.containsAll(_selectedCardIds)) {
+      return;
+    }
+    _measuredSelectedIds = Set<int>.of(_selectedCardIds);
+    final metrics = StartupMeasurements.instance;
+    _measurementSelection = metrics.nextInputId();
+    metrics.record(
+      'card_selection_changed',
+      game: _measurementGame,
+      selection: _measurementSelection,
+      value: _selectedCardIds.length,
+      input: input,
+    );
+  }
+
   final Set<int> _selectedCardIds = <int>{};
   late List<_HandCardEntry> _renderCards;
 
@@ -315,7 +344,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
         _selectedCardIds.add(cardId);
       }
     });
-    _notifySelectionChanged();
+    _notifySelectionChanged(input: 'tap');
   }
 
   void _startDragging(int cardId) {
@@ -341,7 +370,7 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     });
 
     if (selectionChanged) {
-      _notifySelectionChanged();
+      _notifySelectionChanged(input: 'drag');
     }
   }
 
@@ -387,6 +416,20 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
       return;
     }
 
+    final measuredSubmission = _measurementActive
+        ? StartupMeasurements.instance.nextInputId()
+        : 0;
+    final measuredSelection = _measurementSelection;
+    if (measuredSubmission != 0) {
+      StartupMeasurements.instance.record(
+        'submit_handler',
+        game: _measurementGame,
+        selection: measuredSelection == 0 ? null : measuredSelection,
+        submission: measuredSubmission,
+        value: _selectedCardIds.length,
+      );
+    }
+
     final submittedIndexes = List<int>.unmodifiable(_selectedIndexes);
     final submittedIds = Set<int>.of(_selectedCardIds);
     final cardsBeforeSubmission = List<_HandCardEntry>.of(_renderCards);
@@ -424,6 +467,15 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _notifySelectionChanged();
 
     final accepted = await submitFuture;
+    if (measuredSubmission != 0 && _measurementActive) {
+      StartupMeasurements.instance.record(
+        'submit_result',
+        game: _measurementGame,
+        selection: measuredSelection == 0 ? null : measuredSelection,
+        submission: measuredSubmission,
+        value: accepted ? 1 : 0,
+      );
+    }
     if (!mounted) return;
 
     // 함수 응답을 잃었더라도 RTDB 손패가 먼저 바뀌었다면 제출 성공으로
@@ -485,7 +537,8 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
     _notifySelectionChanged();
   }
 
-  void _notifySelectionChanged() {
+  void _notifySelectionChanged({String input = 'state'}) {
+    _measureSelectionChange(input);
     final indexes = List<int>.unmodifiable(_selectedIndexes);
     widget.controller?._setSelection(this, indexes);
     widget.onSelectionChanged?.call(indexes);
@@ -510,6 +563,22 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
 
   @override
   Widget build(BuildContext context) {
+    if (StartupMeasurements.instance.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final ready =
+            !_isDealing &&
+            !_isSubmitting &&
+            !_isReturningSubmittedCards &&
+            _renderCards.isNotEmpty &&
+            widget.enabled;
+        StartupMeasurements.instance.handGate(
+          _measurementGame,
+          selectable: ready,
+          submittable: ready && widget.submissionEnabled,
+        );
+      });
+    }
     if (_isDealing) {
       return LayoutBuilder(
         builder: (context, constraints) {

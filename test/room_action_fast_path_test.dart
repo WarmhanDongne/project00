@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
@@ -80,6 +81,18 @@ void main() {
       h.calls.clear();
       h.cancelGate = Completer<void>();
       h.closeGate = Completer<void>();
+      final measurement = StartupMeasurements(enabled: true);
+      StartupMeasurements.testInstance = measurement;
+      addTearDown(() => StartupMeasurements.testInstance = null);
+      measurement.control({
+        'op': 'arm',
+        'capture': 'test',
+        'trial': 'one',
+        'scenario': 'room_reset',
+        'role': 'tablet',
+        'key': 'a' * 64,
+      });
+      measurement.beginAction('room_reset');
       final log = GameCommunicationLog.instance;
       log.clear();
       final closing = RoomActionTiming.run(RoomTimedAction.close, () async {
@@ -96,6 +109,12 @@ void main() {
       h.closeGate!.complete();
       await closing.timeout(const Duration(seconds: 2));
       final entries = log.entries.length;
+      expect(
+        (measurement.control({'op': 'drain'})['events'] as List).where(
+          (e) => e['event'] == 'disconnect_cancel_end',
+        ),
+        isEmpty,
+      );
       await h.replaceIdentity('new-room', 'new-connection');
       final session = GameRecoverySession.forRoom('ABCDE', h.uid)
         ..leaving = false;
@@ -109,7 +128,18 @@ void main() {
         'new-room',
       );
       expect(session.leaving, false);
-      expect(log.entries.length, entries); // no late successful timing sample
+      expect(log.entries.length, entries);
+      final journal = (measurement.control({'op': 'drain'})['events'] as List);
+      expect(
+        journal.where((e) => e['event'] == 'disconnect_cancel_end'),
+        hasLength(1),
+      );
+      expect(
+        journal.singleWhere(
+          (e) => e['event'] == 'disconnect_cancel_end',
+        )['value'],
+        1,
+      ); // no late successful timing sample
     },
   );
 

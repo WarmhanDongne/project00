@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [game_command_service.dart] 는 여러 게임이 함께 사용하는 서버의 게임 상태를 변경하는 명령을 모아둔 파일이다.
 //
 // - [Package] : 게임 공통 기반
@@ -74,13 +75,31 @@ abstract class GameCommandService {
     bool retryTransientFailure = false,
     Map<String, dynamic>? capturedPayload,
     String? capturedUid,
+  }) => StartupMeasurements.instance.measureCommand(
+    functionName,
+    warmup: data['warmup'] == true,
+    send: () => _invokeUnmeasured(
+      functionName,
+      data,
+      retryTransientFailure: retryTransientFailure,
+      capturedPayload: capturedPayload,
+      capturedUid: capturedUid,
+    ),
+  );
+
+  Future<Map<String, dynamic>> _invokeUnmeasured(
+    String functionName,
+    Map<String, dynamic> data, {
+    bool retryTransientFailure = false,
+    Map<String, dynamic>? capturedPayload,
+    String? capturedUid,
   }) async {
     if (GameCommandBatch.current == null &&
         RoomRecoveryBatch.current == null &&
         data['roomCode'] is String &&
         data['warmup'] != true) {
       return GameCommandBatch(ownsAttempts: false).run(
-        () => invoke(
+        () => _invokeUnmeasured(
           functionName,
           data,
           retryTransientFailure: retryTransientFailure,
@@ -310,6 +329,7 @@ abstract class GameCommandService {
       session.retryCommand = retryCommand;
       _unresolved[logicalKey] = retained;
     }
+    StartupMeasurements.instance.linkRequest(payload['commandId']);
     final traceId = 'local_${++_traceSequence}';
     final operation = _commandLabel(functionName);
     final totalElapsed = Stopwatch()..start();
@@ -338,13 +358,33 @@ abstract class GameCommandService {
           );
           try {
             payload = refreshEnvelope(payload);
+            StartupMeasurements.instance.record(
+              'attempt_start',
+              request: StartupMeasurements.instance.currentRequest,
+              value: attempt,
+            );
+
             final response = await functions
                 .httpsCallable(functionName)
                 .call(payload);
+            StartupMeasurements.instance.record(
+              'attempt_end',
+              request: StartupMeasurements.instance.currentRequest,
+              value: 1,
+            );
             return response.data is Map
                 ? Map<String, dynamic>.from(response.data as Map)
                 : const <String, dynamic>{};
           } catch (error) {
+            StartupMeasurements.instance.recordError(
+              error,
+              request: StartupMeasurements.instance.currentRequest,
+            );
+            StartupMeasurements.instance.record(
+              'attempt_end',
+              request: StartupMeasurements.instance.currentRequest,
+              value: 3,
+            );
             GameCommunicationLog.instance.add(
               level: GameCommunicationLevel.warning,
               title: '서버 시도 실패',

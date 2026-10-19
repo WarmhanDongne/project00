@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [player_layout_editor.dart] 는 태블릿에서 플레이어 자리 배치를 편집하는 화면을 구성하는 파일이다.
 //
 // - [Package] : 게임 공통 기반
@@ -374,6 +375,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   Future<void> _completeSetting() async {
     if (_isCompleting) return;
+    StartupMeasurements.instance.beginAction('initial_start');
     var handedOffToGame = false;
 
     final completedLayout = widget.initialLayout.updateSeats(
@@ -389,6 +391,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     try {
       // 게임 화면의 첫 프레임에서 배경 디코딩을 기다리며 검게 보이지 않도록,
       // 자리 배치 연출과 동시에 다음 화면 배경을 메모리에 준비합니다.
+      StartupMeasurements.instance.record('seating_prepare_start');
       final backgroundReady = _precacheGameBackground();
 
       // 확정한 좌석의 서버 준비를 착석 연출과 함께 시작합니다. 두 작업의 오류를
@@ -409,6 +412,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
       // 교체합니다. 줌 완료 프레임에서는 네트워크 작업을 절대 기다리지 않습니다.
       await _zoomController.forward(from: 0).orCancel;
       if (!mounted) return;
+      StartupMeasurements.instance.record('seating_prepare_end');
       handedOffToGame = true;
       _handedOffToGame = true;
       widget.onComplete(completedLayout);

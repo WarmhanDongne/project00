@@ -1,3 +1,4 @@
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 // [game_screen.dart] 휴대폰에서 보이는 손패, 턴 정보,
 // LIAR·FOLD·SUBMIT 버튼과 벌칙 표시를 배치하는 실제 게임 화면 파일이다.
 
@@ -83,6 +84,70 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   bool _isRevealInProgress = false;
   bool _hasCompletedGameStart = false;
 
+  void _measurePhoneFrame(LiarsPokerController? controller) {
+    final measurement = StartupMeasurements.instance;
+    final game = measurement.game;
+    if (game == null || controller == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || measurement.game != game) return;
+      final stage = resolveLiarsPokerPhoneStage(
+        game: controller,
+        gameStartCompleted: _hasCompletedGameStart,
+        revealInProgress: _isRevealInProgress,
+        showSpectatorTopBar: widget.showSpectatorTopBar,
+      );
+      final regions = widget.flowConfig.stepFor(stage).phoneRegions;
+      measurement.state('phone_stage', stage.index, game: game);
+      measurement.sessionState(
+        localUsable: controller.recoverySession.localUsable,
+        transportConnected: controller.recoverySession.transportConnected,
+        transportRecovering: controller.recoverySession.transportRecovering,
+        controllerAvailable: controller.recoverySession.controllerAvailable,
+        serverConfirmed: controller.recoverySession.serverConfirmed,
+        paused: controller.recoverySession.paused,
+        leaving: controller.recoverySession.leaving,
+      );
+      measurement.state(
+        'startup_uncovered',
+        ModalRoute.isCurrentOf(context) == true &&
+                controller.interruption == null &&
+                !controller.isInitialLoading &&
+                !widget.showSpectatorTopBar
+            ? 1
+            : 0,
+      );
+      measurement.state(
+        'phone_waiting_for_deal',
+        stage == LiarsPokerPhoneStage.dealing &&
+                !_isRevealInProgress &&
+                !_controlsEntryController.isAnimating
+            ? 1
+            : 0,
+      );
+
+      measurement.phoneGate(
+        game: game,
+        selectable:
+            regions?.showHand == true &&
+            _hasCompletedGameStart &&
+            !_isRevealInProgress &&
+            !controller.showPenaltyHandOverlay &&
+            controller.canSelectCards,
+        submittable: controller.canSubmitCards,
+        firstTurn:
+            controller.round == 1 &&
+            controller.isMyTurn &&
+            controller.lastPlayId == null,
+        uncovered:
+            ModalRoute.isCurrentOf(context) == true &&
+            controller.recoverySession.canSend &&
+            controller.interruption == null &&
+            !controller.isInitialLoading &&
+            !widget.showSpectatorTopBar,
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +155,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
       vsync: this,
       duration: LiarsPokerPhoneTiming.phoneControlsEntry,
     );
+    _controlsEntryController.addStatusListener(_measureControlsStatus);
     if (widget.showSpectatorTopBar ||
         widget.controller?.hasRevealedHand == true) {
       _controlsEntryController.value = 1;
@@ -119,12 +185,19 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
     _showGameControls();
   }
 
+  void _measureControlsStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      StartupMeasurements.instance.once('controls_completed');
+    }
+  }
+
   void _showGameControls() {
     if (_controlsEntryController.isAnimating ||
         _controlsEntryController.isCompleted) {
       return;
     }
     _controlsEntryController.forward();
+    StartupMeasurements.instance.once('controls_started');
   }
 
   GameAnnouncementStyle _announcementStyle(
@@ -175,6 +248,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   void _handleGameStartCompleted() {
     if (!mounted || _hasCompletedGameStart) return;
     setState(() => _hasCompletedGameStart = true);
+    StartupMeasurements.instance.once('phone_game_intro_completed');
   }
 
   Future<void> _showExitModal({Offset? origin}) async {
@@ -217,6 +291,7 @@ class _LiarsPokerPhoneGameScreenState extends State<LiarsPokerPhoneGameScreen>
   Widget _buildGameScreen(LiarsPokerController? controller) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
+    _measurePhoneFrame(controller);
     final turnPlayer = controller?.players[controller.turnUid];
     final showFoldPrompt = controller?.showFoldPrompt ?? false;
     final showPenaltyHandOverlay = controller?.showPenaltyHandOverlay ?? false;

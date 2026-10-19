@@ -4,6 +4,7 @@ import 'package:game_kit/recovery/models/game_recovery_context.dart';
 import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
+import 'package:game_kit/core/diagnostics/startup_measurements.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -39,6 +40,18 @@ enum ControllerPresenceState { unknown, connected, reconnecting }
 enum RoomTerminationReason { closed, deleted }
 
 class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
+  // Diagnostic-only cache of an already accepted identity. No extra DB read.
+  String? _measurementRoom, _measurementRoomCode;
+  String? _measurementIdentity(String code) {
+    if (!StartupMeasurements.instance.enabled) return null;
+    final uid = _currentUid();
+    if (uid == null) return null;
+    final store = RoomSessionIdentityStore.instance;
+    return (store.current(uid, 'controller', code) ??
+            store.current(uid, 'player', code))
+        ?.roomInstanceId;
+  }
+
   RoomProvider({
     RoomService? service,
     GameService? gameService,
@@ -282,26 +295,44 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     if (currentCode == null || isLoading || _controllerRestoreInFlight) return;
     final uid = _currentUid();
 
-    await RoomActionTiming.run(RoomTimedAction.close, () async {
-      _isLeaving = true;
-      _controllerHeartbeatTimer?.cancel();
-      _playerHeartbeatTimer?.cancel();
-      // 방 종료 요청
-      final success = await _runCommand<bool>(() async {
-        await _service.closeControllerRoom(currentCode);
-        return true;
-      });
+    StartupMeasurements.instance.beginAction('room_reset');
+    final measurement = StartupMeasurements.instance.beginSpan(
+      'room_reset',
+      room: _measurementIdentity(currentCode),
+    );
+    measurement.event(
+      'room_reset_members',
+      value: players.where((p) => p.isActive && p.isPlayer).length,
+    );
+    var measuredSuccess = false;
+    try {
+      await RoomActionTiming.run(RoomTimedAction.close, () async {
+        _isLeaving = true;
+        _controllerHeartbeatTimer?.cancel();
+        _playerHeartbeatTimer?.cancel();
+        // 방 종료 요청
+        final success = await _runCommand<bool>(() async {
+          await _service.closeControllerRoom(currentCode);
+          return true;
+        });
 
-      //앱 내부 상태 초기화
-      if (success == true && !_isDisposed && _currentUid() == uid) {
-        if (roomCode == currentCode) {
-          clearRoom(expectedRoomCode: currentCode);
-        } else if (roomCode == null && _pendingControllerRestore) {
-          clearRoom();
+        //앱 내부 상태 초기화
+        if (success == true && !_isDisposed && _currentUid() == uid) {
+          if (roomCode == currentCode) {
+            clearRoom(expectedRoomCode: currentCode);
+          } else if (roomCode == null && _pendingControllerRestore) {
+            clearRoom();
+          }
         }
-      }
-      return success == true;
-    });
+        measuredSuccess = success == true;
+        if (measuredSuccess) measurement.event('room_reset_local_done');
+        return success == true;
+      });
+      measurement.end(measuredSuccess ? 1 : 2);
+    } catch (_) {
+      measurement.end(3);
+      rethrow;
+    }
   }
 
   Future<bool> selectGame(String gameId) async {
@@ -751,6 +782,10 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   void listenRoom() {
     final listenedRoomCode = roomCode;
     if (listenedRoomCode == null) return;
+    if (StartupMeasurements.instance.enabled) {
+      _measurementRoom = _measurementIdentity(listenedRoomCode);
+      _measurementRoomCode = listenedRoomCode;
+    }
     final uid = _currentUid();
     if (uid != null) {
       final session = GameRecoverySession.forRoom(listenedRoomCode, uid);
@@ -868,6 +903,10 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
       (event) {
         if (roomCode != listenedRoomCode) return;
         final gameId = event.snapshot.value as String?;
+        StartupMeasurements.instance.diagnostic(
+          'room_observed',
+          room: _measurementRoom,
+        );
 
         if (gameId != selectedGameId) {
           selectedGameId = gameId;
@@ -900,6 +939,11 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
           (roomPlayer) {
             if (roomCode != listenedRoomCode) return;
             players = roomPlayer;
+            StartupMeasurements.instance.diagnostic(
+              'room_participants',
+              room: _measurementRoom,
+              value: roomPlayer.where((p) => p.isActive && p.isPlayer).length,
+            );
             if (!_ownsControllerSession &&
                 roomPlayer.any(
                   (p) =>
@@ -2045,6 +2089,13 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     // 못하게 구독을 시작한 방 identity를 검증합니다.
     if (expectedRoomCode != null && roomCode != expectedRoomCode) return;
 
+    final measurementEpoch = StartupMeasurements.instance.captureEpoch ?? -1;
+    final measuredCode = roomCode;
+    final measuredRoom = measuredCode == null
+        ? null
+        : _measurementRoomCode == measuredCode
+        ? _measurementRoom
+        : _measurementIdentity(measuredCode);
     if (kDebugMode && roomCode != null) {
       debugPrint(
         '[room_connection] event=room_cleared '
@@ -2110,6 +2161,13 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
     roomStatus = null;
     if (!preserveTerminationReason) roomTerminationReason = null;
     notifyListeners();
+    if (measuredCode != null) {
+      StartupMeasurements.instance.diagnostic(
+        'room_cleared',
+        room: measuredRoom,
+        epoch: measurementEpoch,
+      );
+    }
   }
 
   @override

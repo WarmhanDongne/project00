@@ -1,0 +1,1187 @@
+{
+  "stats": {
+    "initial_start": {
+      "n": 5,
+      "valid": 5,
+      "total_low_s": {
+        "n": 5,
+        "median": 14.90685,
+        "min": 14.693358,
+        "max": 20.539709
+      },
+      "wait_excluded_low_s": {
+        "n": 5,
+        "median": 14.47427,
+        "min": 13.455855,
+        "max": 20.405562
+      },
+      "ready_to_submit_user_s": {
+        "n": 5,
+        "median": 1.191046,
+        "min": 0.722022,
+        "max": 2.496365
+      },
+      "total_mid_s": {
+        "n": 5,
+        "median": 14.930183,
+        "min": 14.709066,
+        "max": 20.563701
+      },
+      "total_high_s": {
+        "n": 5,
+        "median": 14.953516,
+        "min": 14.724774,
+        "max": 20.587693
+      },
+      "transition_wait_s": {
+        "n": 5,
+        "median": 0.000326,
+        "min": 0.000321,
+        "max": 0.000344
+      },
+      "wait_excluded_mid_s": {
+        "n": 5,
+        "median": 14.5078905,
+        "min": 13.479479,
+        "max": 20.429581
+      },
+      "lookup_s": {
+        "n": 5,
+        "median": 0.243363,
+        "min": 0.158053,
+        "max": 0.317551
+      },
+      "lookup_overlap_s": {
+        "n": 5,
+        "median": 0.243363,
+        "min": 0.158053,
+        "max": 0.317551
+      },
+      "submit_response_s": {
+        "n": 5,
+        "median": 0.427919,
+        "min": 0.421066,
+        "max": 0.659368
+      },
+      "wait_excluded_width_ms": {
+        "n": 5,
+        "median": 48.038,
+        "min": 42.546,
+        "max": 67.241
+      },
+      "total_width_ms": {
+        "n": 5,
+        "median": 42.234,
+        "min": 30.702,
+        "max": 47.984
+      },
+      "wait_excluded_high_s": {
+        "n": 5,
+        "median": 14.541511,
+        "min": 13.503103,
+        "max": 20.4536
+      },
+      "lookup_residual_s": {
+        "n": 5,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "menu_restart": {
+      "n": 5,
+      "valid": 5,
+      "total_low_s": {
+        "n": 5,
+        "median": 10.387993,
+        "min": 9.976693,
+        "max": 11.143617
+      },
+      "wait_excluded_low_s": {
+        "n": 5,
+        "median": 9.354627,
+        "min": 9.217549,
+        "max": 10.07734
+      },
+      "ready_to_submit_user_s": {
+        "n": 5,
+        "median": 1.276696,
+        "min": 0.754185,
+        "max": 1.539352
+      },
+      "total_mid_s": {
+        "n": 5,
+        "median": 10.4040945,
+        "min": 9.991946,
+        "max": 11.160479
+      },
+      "total_high_s": {
+        "n": 5,
+        "median": 10.420196,
+        "min": 10.007199,
+        "max": 11.177341
+      },
+      "wait_excluded_mid_s": {
+        "n": 5,
+        "median": 9.4006405,
+        "min": 9.237829,
+        "max": 10.094416
+      },
+      "submit_response_s": {
+        "n": 5,
+        "median": 0.422839,
+        "min": 0.421066,
+        "max": 0.423885
+      },
+      "wait_excluded_width_ms": {
+        "n": 5,
+        "median": 40.425,
+        "min": 32.603,
+        "max": 92.027
+      },
+      "total_width_ms": {
+        "n": 5,
+        "median": 33.724,
+        "min": 30.506,
+        "max": 40.104
+      },
+      "wait_excluded_high_s": {
+        "n": 5,
+        "median": 9.420523,
+        "min": 9.258109,
+        "max": 10.111492
+      }
+    },
+    "result_restart": {
+      "n": 5,
+      "valid": 4,
+      "total_low_s": {
+        "n": 4,
+        "median": 12.054179999999999,
+        "min": 11.252042,
+        "max": 14.125433
+      },
+      "wait_excluded_low_s": {
+        "n": 4,
+        "median": 11.2717065,
+        "min": 10.62829,
+        "max": 11.891405
+      },
+      "ready_to_submit_user_s": {
+        "n": 5,
+        "median": 1.355127,
+        "min": 0.912325,
+        "max": 1.601653
+      },
+      "total_mid_s": {
+        "n": 4,
+        "median": 12.0763405,
+        "min": 11.2682255,
+        "max": 14.1406595
+      },
+      "total_high_s": {
+        "n": 4,
+        "median": 12.098501,
+        "min": 11.284409,
+        "max": 14.155886
+      },
+      "wait_excluded_mid_s": {
+        "n": 4,
+        "median": 11.291353749999999,
+        "min": 10.6445985,
+        "max": 11.912419
+      },
+      "submit_response_s": {
+        "n": 5,
+        "median": 0.427912,
+        "min": 0.421423,
+        "max": 0.45085
+      },
+      "wait_excluded_width_ms": {
+        "n": 4,
+        "median": 37.3225,
+        "min": 31.467,
+        "max": 47.122
+      },
+      "total_width_ms": {
+        "n": 4,
+        "median": 37.1375,
+        "min": 30.453,
+        "max": 46.734
+      },
+      "wait_excluded_high_s": {
+        "n": 4,
+        "median": 11.311001,
+        "min": 10.660907,
+        "max": 11.933433
+      }
+    },
+    "room_reset": {
+      "n": 5,
+      "valid": 5,
+      "total_low_s": {
+        "n": 5,
+        "median": 0.769958,
+        "min": 0.514873,
+        "max": 3.329291
+      },
+      "cancel_s": {
+        "n": 5,
+        "median": 0.005426,
+        "min": 0.004468,
+        "max": 0.021537
+      },
+      "close_s": {
+        "n": 5,
+        "median": 0.775309,
+        "min": 0.386377,
+        "max": 3.119986
+      },
+      "cancel_close_overlap_s": {
+        "n": 5,
+        "median": 0.004051,
+        "min": 0.003191,
+        "max": 0.019807
+      },
+      "total_mid_s": {
+        "n": 5,
+        "median": 0.78914,
+        "min": 0.531751,
+        "max": 3.3508605
+      },
+      "total_high_s": {
+        "n": 5,
+        "median": 0.808322,
+        "min": 0.548629,
+        "max": 3.37243
+      },
+      "reset_callback_s": {
+        "n": 5,
+        "median": 0.904863,
+        "min": 0.585441,
+        "max": 3.446892
+      },
+      "joined_hold_lower_s": {
+        "n": 5,
+        "median": 44.174363,
+        "min": 42.866282,
+        "max": 66.332885
+      },
+      "total_width_ms": {
+        "n": 5,
+        "median": 33.863,
+        "min": 33.704,
+        "max": 43.139
+      }
+    }
+  },
+  "trials": [
+    {
+      "capture": "debug-game-start-20261019-162841-6876562d",
+      "scenario": "initial_start",
+      "trial": 1,
+      "condition": "unspecified",
+      "pilot": true,
+      "events": 272,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 20.539709,
+      "total_high_s": 20.587693,
+      "total_mid_s": 20.563701,
+      "total_width_ms": 47.984,
+      "wait_excluded_low_s": 20.405562,
+      "wait_excluded_high_s": 20.4536,
+      "wait_excluded_mid_s": 20.429581,
+      "wait_excluded_width_ms": 48.038,
+      "lookup_s": 0.243363,
+      "lookup_overlap_s": 0.243363,
+      "lookup_residual_s": 0.0,
+      "transition_wait_s": 0.000344,
+      "fallback_count": 0,
+      "lookup_success": true,
+      "ready_to_submit_user_s": 2.496365,
+      "submit_response_s": 0.659368
+    },
+    {
+      "capture": "debug-game-start-20261019-163434-1e59481a",
+      "scenario": "initial_start",
+      "trial": 2,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 260,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 14.888605,
+      "total_high_s": 14.930839,
+      "total_mid_s": 14.909722,
+      "total_width_ms": 42.234,
+      "wait_excluded_low_s": 14.112309,
+      "wait_excluded_high_s": 14.154855,
+      "wait_excluded_mid_s": 14.133582,
+      "wait_excluded_width_ms": 42.546,
+      "lookup_s": 0.317551,
+      "lookup_overlap_s": 0.317551,
+      "lookup_residual_s": 0.0,
+      "transition_wait_s": 0.000326,
+      "fallback_count": 0,
+      "lookup_success": true,
+      "ready_to_submit_user_s": 0.97654,
+      "submit_response_s": 0.422216
+    },
+    {
+      "capture": "debug-game-start-20261019-164026-e1d8ce9c",
+      "scenario": "initial_start",
+      "trial": 3,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 259,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 14.90685,
+      "total_high_s": 14.953516,
+      "total_mid_s": 14.930183,
+      "total_width_ms": 46.666,
+      "wait_excluded_low_s": 13.455855,
+      "wait_excluded_high_s": 13.503103,
+      "wait_excluded_mid_s": 13.479479,
+      "wait_excluded_width_ms": 47.248,
+      "lookup_s": 0.158053,
+      "lookup_overlap_s": 0.158053,
+      "lookup_residual_s": 0.0,
+      "transition_wait_s": 0.000321,
+      "fallback_count": 0,
+      "lookup_success": true,
+      "ready_to_submit_user_s": 0.722022,
+      "submit_response_s": 0.437647
+    },
+    {
+      "capture": "debug-game-start-20261019-164142-21f601d2",
+      "scenario": "initial_start",
+      "trial": 4,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 263,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 14.964022,
+      "total_high_s": 14.994724,
+      "total_mid_s": 14.979373,
+      "total_width_ms": 30.702,
+      "wait_excluded_low_s": 14.67833,
+      "wait_excluded_high_s": 14.736788,
+      "wait_excluded_mid_s": 14.707559,
+      "wait_excluded_width_ms": 58.458,
+      "lookup_s": 0.270251,
+      "lookup_overlap_s": 0.270251,
+      "lookup_residual_s": 0.0,
+      "transition_wait_s": 0.000322,
+      "fallback_count": 0,
+      "lookup_success": true,
+      "ready_to_submit_user_s": 1.605086,
+      "submit_response_s": 0.421066
+    },
+    {
+      "capture": "debug-game-start-20261019-164234-757bf668",
+      "scenario": "initial_start",
+      "trial": 5,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 253,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 14.693358,
+      "total_high_s": 14.724774,
+      "total_mid_s": 14.709066,
+      "total_width_ms": 31.416,
+      "wait_excluded_low_s": 14.47427,
+      "wait_excluded_high_s": 14.541511,
+      "wait_excluded_mid_s": 14.5078905,
+      "wait_excluded_width_ms": 67.241,
+      "lookup_s": 0.241164,
+      "lookup_overlap_s": 0.241164,
+      "lookup_residual_s": 0.0,
+      "transition_wait_s": 0.00034,
+      "fallback_count": 0,
+      "lookup_success": true,
+      "ready_to_submit_user_s": 1.191046,
+      "submit_response_s": 0.427919
+    },
+    {
+      "capture": "debug-game-start-20261019-164407-ac20aa14",
+      "scenario": "menu_restart",
+      "trial": 1,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 232,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 10.387993,
+      "total_high_s": 10.420196,
+      "total_mid_s": 10.4040945,
+      "total_width_ms": 32.203,
+      "wait_excluded_low_s": 9.38792,
+      "wait_excluded_high_s": 9.420523,
+      "wait_excluded_mid_s": 9.4042215,
+      "wait_excluded_width_ms": 32.603,
+      "ready_to_submit_user_s": 1.276696,
+      "submit_response_s": 0.421066
+    },
+    {
+      "capture": "debug-game-start-20261019-164531-d00f9ce1",
+      "scenario": "menu_restart",
+      "trial": 2,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 239,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 10.357248,
+      "total_high_s": 10.397352,
+      "total_mid_s": 10.3773,
+      "total_width_ms": 40.104,
+      "wait_excluded_low_s": 9.217549,
+      "wait_excluded_high_s": 9.258109,
+      "wait_excluded_mid_s": 9.237829,
+      "wait_excluded_width_ms": 40.56,
+      "ready_to_submit_user_s": 0.754185,
+      "submit_response_s": 0.422839
+    },
+    {
+      "capture": "debug-game-start-20261019-164604-59a8b0a3",
+      "scenario": "menu_restart",
+      "trial": 3,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 234,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 9.976693,
+      "total_high_s": 10.007199,
+      "total_mid_s": 9.991946,
+      "total_width_ms": 30.506,
+      "wait_excluded_low_s": 9.354627,
+      "wait_excluded_high_s": 9.446654,
+      "wait_excluded_mid_s": 9.4006405,
+      "wait_excluded_width_ms": 92.027,
+      "ready_to_submit_user_s": 1.260991,
+      "submit_response_s": 0.421787
+    },
+    {
+      "capture": "debug-game-start-20261019-164648-b521dbf4",
+      "scenario": "menu_restart",
+      "trial": 4,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 237,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 11.143617,
+      "total_high_s": 11.177341,
+      "total_mid_s": 11.160479,
+      "total_width_ms": 33.724,
+      "wait_excluded_low_s": 10.07734,
+      "wait_excluded_high_s": 10.111492,
+      "wait_excluded_mid_s": 10.094416,
+      "wait_excluded_width_ms": 34.152,
+      "ready_to_submit_user_s": 1.539352,
+      "submit_response_s": 0.423885
+    },
+    {
+      "capture": "debug-game-start-20261019-164724-6de83b15",
+      "scenario": "menu_restart",
+      "trial": 5,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 234,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 10.556938,
+      "total_high_s": 10.596863,
+      "total_mid_s": 10.5769005,
+      "total_width_ms": 39.925,
+      "wait_excluded_low_s": 9.310668,
+      "wait_excluded_high_s": 9.351093,
+      "wait_excluded_mid_s": 9.3308805,
+      "wait_excluded_width_ms": 40.425,
+      "ready_to_submit_user_s": 1.339626,
+      "submit_response_s": 0.422994
+    },
+    {
+      "capture": "debug-game-start-20261019-165158-7cbc9452",
+      "scenario": "result_restart",
+      "trial": 1,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 251,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 14.125433,
+      "total_high_s": 14.155886,
+      "total_mid_s": 14.1406595,
+      "total_width_ms": 30.453,
+      "wait_excluded_low_s": 11.593622,
+      "wait_excluded_high_s": 11.625089,
+      "wait_excluded_mid_s": 11.6093555,
+      "wait_excluded_width_ms": 31.467,
+      "ready_to_submit_user_s": 1.198586,
+      "submit_response_s": 0.45085
+    },
+    {
+      "capture": "debug-game-start-20261019-165256-8626d8e7",
+      "scenario": "result_restart",
+      "trial": 2,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 240,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 12.188754,
+      "total_high_s": 12.230662,
+      "total_mid_s": 12.209708,
+      "total_width_ms": 41.908,
+      "wait_excluded_low_s": 11.891405,
+      "wait_excluded_high_s": 11.933433,
+      "wait_excluded_mid_s": 11.912419,
+      "wait_excluded_width_ms": 42.028,
+      "ready_to_submit_user_s": 1.355127,
+      "submit_response_s": 0.427912
+    },
+    {
+      "capture": "debug-game-start-20261019-165425-fa0f2ad4",
+      "scenario": "result_restart",
+      "trial": 3,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 244,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_A",
+      "total_low_s": 11.252042,
+      "total_high_s": 11.284409,
+      "total_mid_s": 11.2682255,
+      "total_width_ms": 32.367,
+      "wait_excluded_low_s": 10.62829,
+      "wait_excluded_high_s": 10.660907,
+      "wait_excluded_mid_s": 10.6445985,
+      "wait_excluded_width_ms": 32.617,
+      "ready_to_submit_user_s": 1.528029,
+      "submit_response_s": 0.438125
+    },
+    {
+      "capture": "debug-game-start-20261019-165703-6e50d9dc",
+      "scenario": "result_restart",
+      "trial": 4,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 756,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "INCOMPLETE_OR_INVALID",
+      "problems": [
+        "trial_invalid"
+      ],
+      "first_turn_phone": "phone_B",
+      "ready_to_submit_user_s": 1.601653,
+      "submit_response_s": 0.421423
+    },
+    {
+      "capture": "debug-game-start-20261019-170326-b81efb66",
+      "scenario": "result_restart",
+      "trial": 5,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 251,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": "phone_B",
+      "total_low_s": 11.919606,
+      "total_high_s": 11.96634,
+      "total_mid_s": 11.942973,
+      "total_width_ms": 46.734,
+      "wait_excluded_low_s": 10.949791,
+      "wait_excluded_high_s": 10.996913,
+      "wait_excluded_mid_s": 10.973352,
+      "wait_excluded_width_ms": 47.122,
+      "ready_to_submit_user_s": 0.912325,
+      "submit_response_s": 0.421943
+    },
+    {
+      "capture": "debug-game-start-20261019-170529-133d5002",
+      "scenario": "room_reset",
+      "trial": 1,
+      "condition": "repeated",
+      "pilot": true,
+      "events": 63,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": null,
+      "total_low_s": 0.752967,
+      "total_high_s": 0.78683,
+      "total_mid_s": 0.7698985,
+      "total_width_ms": 33.863,
+      "joined_hold_lower_s": 44.174363,
+      "strict_followup_passed": true,
+      "cancel_s": 0.021537,
+      "close_s": 0.588835,
+      "cancel_close_overlap_s": 0.019807,
+      "reset_callback_s": 0.824918,
+      "cancel_outcomes": [
+        1
+      ],
+      "old_new_generation_distinct": true
+    },
+    {
+      "capture": "debug-game-start-20261019-171152-538fa429",
+      "scenario": "room_reset",
+      "trial": 2,
+      "condition": "repeated",
+      "pilot": false,
+      "events": 67,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": null,
+      "total_low_s": 1.333131,
+      "total_high_s": 1.366835,
+      "total_mid_s": 1.349983,
+      "total_width_ms": 33.704,
+      "joined_hold_lower_s": 43.866048,
+      "strict_followup_passed": true,
+      "cancel_s": 0.005351,
+      "close_s": 1.246323,
+      "cancel_close_overlap_s": 0.004051,
+      "reset_callback_s": 1.364868,
+      "cancel_outcomes": [
+        1
+      ],
+      "old_new_generation_distinct": true
+    },
+    {
+      "capture": "debug-game-start-20261019-195235-d8c96236",
+      "scenario": "room_reset",
+      "trial": 3,
+      "condition": "repeated",
+      "pilot": false,
+      "events": 67,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": null,
+      "total_low_s": 0.514873,
+      "total_high_s": 0.548629,
+      "total_mid_s": 0.531751,
+      "total_width_ms": 33.756,
+      "joined_hold_lower_s": 51.942804,
+      "strict_followup_passed": true,
+      "cancel_s": 0.005426,
+      "close_s": 0.386377,
+      "cancel_close_overlap_s": 0.003573,
+      "reset_callback_s": 0.585441,
+      "cancel_outcomes": [
+        1
+      ],
+      "old_new_generation_distinct": true
+    },
+    {
+      "capture": "debug-game-start-20261019-195407-ebe5a60d",
+      "scenario": "room_reset",
+      "trial": 4,
+      "condition": "repeated",
+      "pilot": false,
+      "events": 70,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": null,
+      "total_low_s": 0.769958,
+      "total_high_s": 0.808322,
+      "total_mid_s": 0.78914,
+      "total_width_ms": 38.364,
+      "joined_hold_lower_s": 66.332885,
+      "strict_followup_passed": true,
+      "cancel_s": 0.004468,
+      "close_s": 0.775309,
+      "cancel_close_overlap_s": 0.003191,
+      "reset_callback_s": 0.904863,
+      "cancel_outcomes": [
+        1
+      ],
+      "old_new_generation_distinct": true
+    },
+    {
+      "capture": "debug-game-start-20261019-203148-c93c1ef8",
+      "scenario": "room_reset",
+      "trial": 5,
+      "condition": "repeated",
+      "pilot": false,
+      "events": 66,
+      "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+      "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+      "status": "VALID_OBSERVED_TRIAL",
+      "problems": [],
+      "first_turn_phone": null,
+      "total_low_s": 3.329291,
+      "total_high_s": 3.37243,
+      "total_mid_s": 3.3508605,
+      "total_width_ms": 43.139,
+      "joined_hold_lower_s": 42.866282,
+      "strict_followup_passed": true,
+      "cancel_s": 0.010565,
+      "close_s": 3.119986,
+      "cancel_close_overlap_s": 0.004606,
+      "reset_callback_s": 3.446892,
+      "cancel_outcomes": [
+        1
+      ],
+      "old_new_generation_distinct": true
+    }
+  ],
+  "source_hashes": [
+    {
+      "capture": "debug-game-start-20261019-162841-6876562d",
+      "file": "events.sanitized.jsonl",
+      "sha256": "66616d8f300498d6b13e827182b40cfc30a8801a623c605597bae4a100fcdaeb"
+    },
+    {
+      "capture": "debug-game-start-20261019-162841-6876562d",
+      "file": "manifest.json",
+      "sha256": "1e572409442f23798bcaafea1109633fb590aca9ebb770465c63ce682e744c7b"
+    },
+    {
+      "capture": "debug-game-start-20261019-162841-6876562d",
+      "file": "REPORT.md",
+      "sha256": "186e92ec5684354610d6f4dd7d89f4f69bd7fb9096661b5b9c84693d079a1a7e"
+    },
+    {
+      "capture": "debug-game-start-20261019-162841-6876562d",
+      "file": "summary.json",
+      "sha256": "9294eef3e608239cbb1cc93dd6f77e2b5217df77799dd55bdbcda560b4a2ff56"
+    },
+    {
+      "capture": "debug-game-start-20261019-163434-1e59481a",
+      "file": "events.sanitized.jsonl",
+      "sha256": "d2f0520c266db530a329d57b25aacf4cf1bd53ea168af3dd1bcc28e65b555af6"
+    },
+    {
+      "capture": "debug-game-start-20261019-163434-1e59481a",
+      "file": "manifest.json",
+      "sha256": "907acdbeb16b668a8fd22ccfdb0ceccc9acaa1d30d6c9e04e063d489b02258cf"
+    },
+    {
+      "capture": "debug-game-start-20261019-163434-1e59481a",
+      "file": "REPORT.md",
+      "sha256": "740b56335981d8172b3e70bb45bf8bec653643d6dbea0a22dde2ea6d36849feb"
+    },
+    {
+      "capture": "debug-game-start-20261019-163434-1e59481a",
+      "file": "summary.json",
+      "sha256": "37632bc07bd4d5f7bcddedc28b10ae6a2f1ff56dbdbd576bb37e7dde6d2514c5"
+    },
+    {
+      "capture": "debug-game-start-20261019-164026-e1d8ce9c",
+      "file": "events.sanitized.jsonl",
+      "sha256": "e6424d0c96241e83dd90f51ae93bfd30b0e8f9ba08415be870ab70ae7f713cf1"
+    },
+    {
+      "capture": "debug-game-start-20261019-164026-e1d8ce9c",
+      "file": "manifest.json",
+      "sha256": "9add716d2510c339750c367b30c8240167fe399bf2f265eaa1f5c968fec4ae55"
+    },
+    {
+      "capture": "debug-game-start-20261019-164026-e1d8ce9c",
+      "file": "REPORT.md",
+      "sha256": "cd6e41287ae0aafa7f7830b652f0daa581b58c8d8adfcb5c710b58e7983f0f60"
+    },
+    {
+      "capture": "debug-game-start-20261019-164026-e1d8ce9c",
+      "file": "summary.json",
+      "sha256": "ea45bfc626d6ad8eb4330bf8edff98064c0e208f3f0c46c75ec3f00aefadfbb6"
+    },
+    {
+      "capture": "debug-game-start-20261019-164142-21f601d2",
+      "file": "events.sanitized.jsonl",
+      "sha256": "9734bdb677d0004f805ce04ae8bdb4b7869c398d5abd529fc37f56f6761e9e75"
+    },
+    {
+      "capture": "debug-game-start-20261019-164142-21f601d2",
+      "file": "manifest.json",
+      "sha256": "3584ec27b93a0964c307804f13321589394cfda52e011eb8021171fdb4039d05"
+    },
+    {
+      "capture": "debug-game-start-20261019-164142-21f601d2",
+      "file": "REPORT.md",
+      "sha256": "7ebd16abd5a83a65e9893c5503ed214ba8524a77c081040d65fa5e4a292f70fc"
+    },
+    {
+      "capture": "debug-game-start-20261019-164142-21f601d2",
+      "file": "summary.json",
+      "sha256": "4aea22ae1b455d57f233e49ed185eaeeaec10fcfbcfa4e792871d59d40e75cd9"
+    },
+    {
+      "capture": "debug-game-start-20261019-164234-757bf668",
+      "file": "events.sanitized.jsonl",
+      "sha256": "27ceafa969d4f7f7f8176d8c700d3f75bd0a3a1a6bbf5e5765be3f193a99cfc5"
+    },
+    {
+      "capture": "debug-game-start-20261019-164234-757bf668",
+      "file": "manifest.json",
+      "sha256": "18fb7f1e1dadf8037f14b25743121284c33367dcdc099ca82c5b7248bf618973"
+    },
+    {
+      "capture": "debug-game-start-20261019-164234-757bf668",
+      "file": "REPORT.md",
+      "sha256": "30a523f97d91af49b39bbdc27d33d5d93df8359646a7bee21182f77439eb883d"
+    },
+    {
+      "capture": "debug-game-start-20261019-164234-757bf668",
+      "file": "summary.json",
+      "sha256": "f01b45447eb254a32db55d47614cab262a8d70ca4fec3be34d76632740af46f0"
+    },
+    {
+      "capture": "debug-game-start-20261019-164407-ac20aa14",
+      "file": "events.sanitized.jsonl",
+      "sha256": "36e2c03f50643f85e86a3cd146681cc6e770fdb2659c2c0aef8943a6d7aa133e"
+    },
+    {
+      "capture": "debug-game-start-20261019-164407-ac20aa14",
+      "file": "manifest.json",
+      "sha256": "e38444da723fcb0425ce499cce9f34997ad8db0716c08e27c012839408be53bc"
+    },
+    {
+      "capture": "debug-game-start-20261019-164407-ac20aa14",
+      "file": "REPORT.md",
+      "sha256": "a49ce89a32d0311b0542621fb3751a47f68105acc5e99f87ca592ffd3e05aa77"
+    },
+    {
+      "capture": "debug-game-start-20261019-164407-ac20aa14",
+      "file": "summary.json",
+      "sha256": "1a0f091ed098bb440c95fa81967fc176aab5d8972b37766a11517de69668f8dc"
+    },
+    {
+      "capture": "debug-game-start-20261019-164531-d00f9ce1",
+      "file": "events.sanitized.jsonl",
+      "sha256": "edbc655a2c0ddcc53e864e7cbbd14dae8f635c9f8d12dcdb29ce2ce76726a7f1"
+    },
+    {
+      "capture": "debug-game-start-20261019-164531-d00f9ce1",
+      "file": "manifest.json",
+      "sha256": "43de9a84e8139b7fa5db55b6b6925d35bf1eeba64616116c9c956ea804e1e29f"
+    },
+    {
+      "capture": "debug-game-start-20261019-164531-d00f9ce1",
+      "file": "REPORT.md",
+      "sha256": "14b722aed46e5bf9afb019468eb721eb53e2ab76c61eeadf8bedf5e743291a6a"
+    },
+    {
+      "capture": "debug-game-start-20261019-164531-d00f9ce1",
+      "file": "summary.json",
+      "sha256": "fddb2816c2cb9101c00839c39926651f4546258431f21de823a1a8b861233c98"
+    },
+    {
+      "capture": "debug-game-start-20261019-164604-59a8b0a3",
+      "file": "events.sanitized.jsonl",
+      "sha256": "42bcb96f90bfb87e94657b271a0271f07e05a0eaa5c73bfed900163aa60003ed"
+    },
+    {
+      "capture": "debug-game-start-20261019-164604-59a8b0a3",
+      "file": "manifest.json",
+      "sha256": "3de941d1af94c71bc09b3045f598111574883d44c8696029cc5626b78a7bfa9f"
+    },
+    {
+      "capture": "debug-game-start-20261019-164604-59a8b0a3",
+      "file": "REPORT.md",
+      "sha256": "ab74303dbbac8546eb19f9d91ba3835f303826610ca3b58720f93dcca425b450"
+    },
+    {
+      "capture": "debug-game-start-20261019-164604-59a8b0a3",
+      "file": "summary.json",
+      "sha256": "2b003ca248bb015a0a295575151782c5dd1585dfb7e4fa96c34683e9225c849b"
+    },
+    {
+      "capture": "debug-game-start-20261019-164648-b521dbf4",
+      "file": "events.sanitized.jsonl",
+      "sha256": "a55a1fb6f219d1503c4df47fde9c4ff49ffe2707f226e182f8109ad9137831d3"
+    },
+    {
+      "capture": "debug-game-start-20261019-164648-b521dbf4",
+      "file": "manifest.json",
+      "sha256": "4fc8a7e247e67ed6389076515f35bbc760a195bcb21f8b9b115ced89526b2745"
+    },
+    {
+      "capture": "debug-game-start-20261019-164648-b521dbf4",
+      "file": "REPORT.md",
+      "sha256": "46c56cae8c3aa18aef76bb3c67d42aacfe48edee6a32219f81e0ab3e34e32472"
+    },
+    {
+      "capture": "debug-game-start-20261019-164648-b521dbf4",
+      "file": "summary.json",
+      "sha256": "5b87e50373d842df3f31c2842e9bb3b8d38557ce7671ec5a3553abcaf14a9f18"
+    },
+    {
+      "capture": "debug-game-start-20261019-164724-6de83b15",
+      "file": "events.sanitized.jsonl",
+      "sha256": "7c72eb9ebf2e8a5b3145fc05129f7b171970e4a8264d8d04e4a0011ec3fbd092"
+    },
+    {
+      "capture": "debug-game-start-20261019-164724-6de83b15",
+      "file": "manifest.json",
+      "sha256": "c722c7dab86f484b99601a165a2463b4e85e9e2d3384cc80c2296dada1924ae4"
+    },
+    {
+      "capture": "debug-game-start-20261019-164724-6de83b15",
+      "file": "REPORT.md",
+      "sha256": "3063b55fb399a5b03f23ef06eb742a8593ff75ef2c0deb53826fc8fdec4985e3"
+    },
+    {
+      "capture": "debug-game-start-20261019-164724-6de83b15",
+      "file": "summary.json",
+      "sha256": "93f40bdf4920433c8c78af275edc3575fdf6a27e8d67ddfc46ae92068fe23cfd"
+    },
+    {
+      "capture": "debug-game-start-20261019-165158-7cbc9452",
+      "file": "events.sanitized.jsonl",
+      "sha256": "c8287e5aeb0178faf39038d89e356ba001791ca71d026290eedd5e36ecf94153"
+    },
+    {
+      "capture": "debug-game-start-20261019-165158-7cbc9452",
+      "file": "manifest.json",
+      "sha256": "fcc729e06c1e7d023e700f223a29472fc1d464d985ec788d71fec4910bec206e"
+    },
+    {
+      "capture": "debug-game-start-20261019-165158-7cbc9452",
+      "file": "REPORT.md",
+      "sha256": "6b15158b2a58ceefdede833de9ff58bc88b3d20058e1200cad1308e2283eb13d"
+    },
+    {
+      "capture": "debug-game-start-20261019-165158-7cbc9452",
+      "file": "summary.json",
+      "sha256": "1cd4ae438c8af479040bfb04e8be320534a97197935838372210d94e61971df6"
+    },
+    {
+      "capture": "debug-game-start-20261019-165256-8626d8e7",
+      "file": "events.sanitized.jsonl",
+      "sha256": "d3caa93a56efa7a90fecb4bbfd9249c23eaf00024f22db3cb668cafea01a02f8"
+    },
+    {
+      "capture": "debug-game-start-20261019-165256-8626d8e7",
+      "file": "manifest.json",
+      "sha256": "b40d0b6b848f7e3bf49e2a694457a7a881998ed32106e1c07b6692da34af6d40"
+    },
+    {
+      "capture": "debug-game-start-20261019-165256-8626d8e7",
+      "file": "REPORT.md",
+      "sha256": "06ae0d4b1f0662c509bdc916bf30f219d5362a1bf6f09c67e2a179eabb2b9d7e"
+    },
+    {
+      "capture": "debug-game-start-20261019-165256-8626d8e7",
+      "file": "summary.json",
+      "sha256": "e12614821b280a42eaf7ad8d91bc7f5b864b59e4c19c090e04ee6af066c632f3"
+    },
+    {
+      "capture": "debug-game-start-20261019-165425-fa0f2ad4",
+      "file": "events.sanitized.jsonl",
+      "sha256": "366d23711174da20613f08bbe547d82b0db30daad72b8b4718bedeb1a80a9ff7"
+    },
+    {
+      "capture": "debug-game-start-20261019-165425-fa0f2ad4",
+      "file": "manifest.json",
+      "sha256": "2373522ebbf7192e838d792c09e9c254a3e8de255fc693e332231af824ea9cc0"
+    },
+    {
+      "capture": "debug-game-start-20261019-165425-fa0f2ad4",
+      "file": "REPORT.md",
+      "sha256": "ee863c716f2904458474e3afa92c6954bcd365d94049928cab19731a245e686f"
+    },
+    {
+      "capture": "debug-game-start-20261019-165425-fa0f2ad4",
+      "file": "summary.json",
+      "sha256": "9e25de860ac4b57db2b1b04ac2bea580002fb574949b85f27ad29d0331186776"
+    },
+    {
+      "capture": "debug-game-start-20261019-165703-6e50d9dc",
+      "file": "events.sanitized.jsonl",
+      "sha256": "ea50efb8ef340c9b1040bafe4f67e744d53ea9954ee110b32f7de7b9116e41db"
+    },
+    {
+      "capture": "debug-game-start-20261019-165703-6e50d9dc",
+      "file": "manifest.json",
+      "sha256": "4dfe72d5e8423a47fed285cf26027e09a4e00a4c4f77f58d8d17a9b50eff8929"
+    },
+    {
+      "capture": "debug-game-start-20261019-165703-6e50d9dc",
+      "file": "REPORT.md",
+      "sha256": "d6972139e2c74ab452f4d0e5a41758f2ed1e4b403eef5ea49b70a18860e6b230"
+    },
+    {
+      "capture": "debug-game-start-20261019-165703-6e50d9dc",
+      "file": "summary.json",
+      "sha256": "05247e4e1b2550f1bb028427ad5c7ba7faf2679634eed3730b4f85a5ae7f2b1d"
+    },
+    {
+      "capture": "debug-game-start-20261019-170326-b81efb66",
+      "file": "events.sanitized.jsonl",
+      "sha256": "4df1c68e8167fd194f4788259ffb705d0c0d73c85914a0f4bf880a2b3e761360"
+    },
+    {
+      "capture": "debug-game-start-20261019-170326-b81efb66",
+      "file": "manifest.json",
+      "sha256": "6c6372ea2f843dae92adf7273ce502ac0738970b94a67cf549306145d7b14fd0"
+    },
+    {
+      "capture": "debug-game-start-20261019-170326-b81efb66",
+      "file": "REPORT.md",
+      "sha256": "8ce0ad45fc808c2416e49202a94a78540939f635371ecf6b758aae10874b9453"
+    },
+    {
+      "capture": "debug-game-start-20261019-170326-b81efb66",
+      "file": "summary.json",
+      "sha256": "fd953b92b90896e1de69c14a8a45bf98e21260132b1ef8f2a3e60356a2ae040d"
+    },
+    {
+      "capture": "debug-game-start-20261019-170529-133d5002",
+      "file": "events.sanitized.jsonl",
+      "sha256": "6a23f8a6010ba1fc24eb4041dda9bbee6afb590cfc37bb2056a64a42c271a6c1"
+    },
+    {
+      "capture": "debug-game-start-20261019-170529-133d5002",
+      "file": "manifest.json",
+      "sha256": "e863ac8f331b958895497c19d6fcce2ade97ce335c65635a07a8bc153e89be80"
+    },
+    {
+      "capture": "debug-game-start-20261019-170529-133d5002",
+      "file": "REPORT.md",
+      "sha256": "037f204ba2ac1eb278015b0f453b2b231fa297f01e9cf728b305270b67c5699c"
+    },
+    {
+      "capture": "debug-game-start-20261019-170529-133d5002",
+      "file": "summary.json",
+      "sha256": "64379cbe901b0ae723f53d386550b9c6d0de73b1d0c8ea269f22812ac040a1d9"
+    },
+    {
+      "capture": "debug-game-start-20261019-171152-538fa429",
+      "file": "events.sanitized.jsonl",
+      "sha256": "e65f1ce1b5648f95278f841a7efb8cca8b75615350a43b0088483a5b21b54dbe"
+    },
+    {
+      "capture": "debug-game-start-20261019-171152-538fa429",
+      "file": "manifest.json",
+      "sha256": "7e0f3d6d55134726b29ebbea325ad34bfa634c1dff3b82b2de1f1f8d0501c6be"
+    },
+    {
+      "capture": "debug-game-start-20261019-171152-538fa429",
+      "file": "REPORT.md",
+      "sha256": "5a598b3311d6c485de0a539f7a48c1ccdeb2be8cea48a1fa72eae461ed9b4791"
+    },
+    {
+      "capture": "debug-game-start-20261019-171152-538fa429",
+      "file": "summary.json",
+      "sha256": "3a70a710e657aaa80b45877ab30116548143f0cf0e598d720307a2814a86860c"
+    },
+    {
+      "capture": "debug-game-start-20261019-195235-d8c96236",
+      "file": "events.sanitized.jsonl",
+      "sha256": "04bf28edbe63050ddac6e0cc54354ace42fe9364ea60a093c78020602a00360b"
+    },
+    {
+      "capture": "debug-game-start-20261019-195235-d8c96236",
+      "file": "manifest.json",
+      "sha256": "214c59eae03cd7f61feec36c570b5d945cb07997d520c781ce82990176d135fd"
+    },
+    {
+      "capture": "debug-game-start-20261019-195235-d8c96236",
+      "file": "REPORT.md",
+      "sha256": "6f7512468620094f54907a9581c6220546311008ed267dd90cb9ca4adf5ecdc9"
+    },
+    {
+      "capture": "debug-game-start-20261019-195235-d8c96236",
+      "file": "summary.json",
+      "sha256": "871f7e2a2d0933189b34ca47ec70ca73f694e326d6e77c7e55a9d36a02bace1a"
+    },
+    {
+      "capture": "debug-game-start-20261019-195407-ebe5a60d",
+      "file": "events.sanitized.jsonl",
+      "sha256": "0bd657ab8ca54e55d933b65a8245b5ddf8cd127f422ce0b6eaedf9d3096ba546"
+    },
+    {
+      "capture": "debug-game-start-20261019-195407-ebe5a60d",
+      "file": "manifest.json",
+      "sha256": "6b96725e883347bf5bb7828dbfea488ad3355d03de5ae77a9f887e2be6557d3e"
+    },
+    {
+      "capture": "debug-game-start-20261019-195407-ebe5a60d",
+      "file": "REPORT.md",
+      "sha256": "2b5b6a6798fcfe37933ce623325ba847fdfb4b941a674b4b2409accd7f0a8d07"
+    },
+    {
+      "capture": "debug-game-start-20261019-195407-ebe5a60d",
+      "file": "summary.json",
+      "sha256": "bb17c9a922cb2a9742b5b05437805654ddd826fa4c4dcbfb43df7197b14a962f"
+    },
+    {
+      "capture": "debug-game-start-20261019-203148-c93c1ef8",
+      "file": "events.sanitized.jsonl",
+      "sha256": "021b4501033e2ecc09aaa413b747df6cc087944a777269a129a375af9f1c2513"
+    },
+    {
+      "capture": "debug-game-start-20261019-203148-c93c1ef8",
+      "file": "manifest.json",
+      "sha256": "f0df24f75d47b9e8a6a7fdf7853958584b42c6b3ed1ec3ba2faa01e74a85be60"
+    },
+    {
+      "capture": "debug-game-start-20261019-203148-c93c1ef8",
+      "file": "REPORT.md",
+      "sha256": "49c38df09b76b98397c0a11ad98763616b620e81c84b17f0147a97a95ece24d3"
+    },
+    {
+      "capture": "debug-game-start-20261019-203148-c93c1ef8",
+      "file": "summary.json",
+      "sha256": "d679584bb74211e9f94ed638ba924d747ccfa7256bd2a53b8a900438ab174165"
+    }
+  ],
+  "source_head": "ea08181a1d1ca6f51588a87fc3731fba06b84da2"
+}
