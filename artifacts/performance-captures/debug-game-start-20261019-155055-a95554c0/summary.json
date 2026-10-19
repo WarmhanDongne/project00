@@ -1,0 +1,88 @@
+{
+  "protocol": 4,
+  "status": "INCOMPLETE_OR_INVALID",
+  "quality_limit_us": 250000,
+  "actual_scenario": null,
+  "issues": [
+    "ambiguous_root_start_command",
+    "collector_failed_or_incomplete",
+    "collector_internal_error",
+    "device_missing_target_game",
+    "expected_one_action",
+    "failed_phase_connecting",
+    "missing_actual_action_source",
+    "missing_or_ambiguous_completion",
+    "missing_or_duplicate_armed_phone_A",
+    "missing_or_duplicate_armed_phone_B",
+    "missing_or_duplicate_armed_tablet",
+    "missing_or_duplicate_capture_stopped_phone_A",
+    "missing_or_duplicate_capture_stopped_phone_B",
+    "missing_or_duplicate_capture_stopped_tablet",
+    "missing_or_duplicate_tablet_deal_animation_completed",
+    "missing_or_duplicate_tablet_deal_completed",
+    "missing_or_duplicate_tablet_deal_started",
+    "missing_or_duplicate_tablet_deck_entry_completed",
+    "missing_or_duplicate_tablet_deck_entry_started",
+    "missing_or_duplicate_tablet_deck_tap_accepted",
+    "missing_or_duplicate_tablet_deck_tappable_frame",
+    "missing_or_duplicate_tablet_playing_frame",
+    "missing_or_replaced_process",
+    "missing_successful_game_liars_poker_complete_dealing",
+    "missing_successful_game_liars_poker_start_game",
+    "participant_phone_coverage_unconfirmed",
+    "unmatched_or_multiple_games"
+  ],
+  "warnings": [],
+  "progress": {
+    "tablet_completed": false,
+    "first_turn_phone": null,
+    "input_validation": {
+      "selection_seen": false,
+      "submission_seen": false,
+      "submission_succeeded": false
+    },
+    "input_validation_status": "AWAITING_INPUT_READY"
+  },
+  "input_validation_details": {
+    "status": "AWAITING_INPUT_READY",
+    "issues": [],
+    "submission": null,
+    "selection": null
+  },
+  "total_elapsed_estimated_range_us": null,
+  "observed_total_reference_range_us": null,
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Only observed joint quiescence with a pending user tap is excluded; not CPU time or a simulated instant-tap run",
+  "clock_offset_estimates_us": {
+    "tablet": [
+      2009499943,
+      2009518105
+    ],
+    "phone_A": [
+      2007053046,
+      2007070043
+    ],
+    "phone_B": null
+  },
+  "logical_command_totals": [],
+  "transport_attempt_round_trips": [],
+  "card_pack_waits": [],
+  "local_milestones": [],
+  "session_blocker_changes": [],
+  "command_errors": [],
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing",
+  "diagnostic_spans": [],
+  "pending_spans": [],
+  "capture_complete": false,
+  "timing_quality_passed": false,
+  "collector_diagnostics": [
+    {
+      "phase": "connecting",
+      "code": "collector_internal_error"
+    }
+  ],
+  "stop_reason": "not_started",
+  "pilot_requested": true,
+  "pilot_passed": false
+}

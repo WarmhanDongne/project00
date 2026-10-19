@@ -1,0 +1,638 @@
+{
+  "protocol": 3,
+  "status": "VALID_OBSERVED_TRIAL",
+  "quality_limit_us": 250000,
+  "actual_scenario": "initial_start",
+  "issues": [],
+  "warnings": [],
+  "progress": {
+    "tablet_completed": true,
+    "first_turn_phone": "phone_B",
+    "input_validation": {
+      "selection_seen": true,
+      "submission_seen": true,
+      "submission_succeeded": true
+    }
+  },
+  "total_elapsed_estimated_range_us": [
+    23112458,
+    23164791
+  ],
+  "observed_total_reference_range_us": [
+    23112458,
+    23164791
+  ],
+  "exclusive_user_wait_estimated_range_us": [
+    277670,
+    277782
+  ],
+  "user_wait_excluded_total_estimated_range_us": [
+    22834676,
+    22887121
+  ],
+  "user_wait_excluded_reason": "Only observed joint quiescence with a pending user tap is excluded; not CPU time or a simulated instant-tap run",
+  "clock_offset_estimates_us": {
+    "tablet": [
+      213946939803,
+      213946979757
+    ],
+    "phone_A": [
+      213944470941,
+      213944507593
+    ],
+    "phone_B": [
+      213944484685,
+      213944530058
+    ]
+  },
+  "logical_command_totals": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "game": null,
+      "action": 1,
+      "command": "game_liars_poker_start_game",
+      "start_us": 6418421,
+      "end_us": 9488517,
+      "elapsed_us": 3070096,
+      "outcome": 1,
+      "request_alias": "fc1b711672ed9c465ecc574a54e394dc"
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 1,
+      "command": "game_liars_poker_complete_dealing",
+      "start_us": 16177619,
+      "end_us": 19300835,
+      "elapsed_us": 3123216,
+      "outcome": 1,
+      "request_alias": "abf5284ce2c5bf15ff44c8c1f1fc4fef"
+    },
+    {
+      "role": "phone_B",
+      "request": 1,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 0,
+      "command": "game_liars_poker_ready_turn",
+      "start_us": 26423823,
+      "end_us": 30184366,
+      "elapsed_us": 3760543,
+      "outcome": 1,
+      "request_alias": "282e1f3d8883e02deb88fe6d2935a1f2"
+    },
+    {
+      "role": "phone_B",
+      "request": 2,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 0,
+      "command": "game_liars_poker_submit_cards",
+      "start_us": 31373281,
+      "end_us": 32112624,
+      "elapsed_us": 739343,
+      "outcome": 1,
+      "request_alias": "a4e60bf7282e16d4d8f96d50bd34c4a0"
+    },
+    {
+      "role": "phone_B",
+      "request": 3,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 0,
+      "command": "game_liars_poker_submit_cards",
+      "start_us": 43739167,
+      "end_us": 44091187,
+      "elapsed_us": 352020,
+      "outcome": 1,
+      "request_alias": "26b68446b7561b90a574ef1500a3a3e0"
+    },
+    {
+      "role": "phone_A",
+      "request": 1,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 0,
+      "command": "game_liars_poker_submit_cards",
+      "start_us": 38804661,
+      "end_us": 39550540,
+      "elapsed_us": 745879,
+      "outcome": 1,
+      "request_alias": "b85ae877ee70fe2dc977ec4ee13eb69d"
+    },
+    {
+      "role": "phone_A",
+      "request": 2,
+      "game": "92f5df3c9dd5a0c7587b7ea99a3595a2",
+      "action": 0,
+      "command": "game_liars_poker_submit_cards",
+      "start_us": 51549645,
+      "end_us": 51881948,
+      "elapsed_us": 332303,
+      "outcome": 1,
+      "request_alias": "63a8aeff2e1236c2436257455a0d4b69"
+    }
+  ],
+  "transport_attempt_round_trips": [
+    {
+      "role": "tablet",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 2916357,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 3118381,
+      "outcome": 1
+    },
+    {
+      "role": "phone_B",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 3750916,
+      "outcome": 1
+    },
+    {
+      "role": "phone_B",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 735582,
+      "outcome": 1
+    },
+    {
+      "role": "phone_B",
+      "request": 3,
+      "attempt": 1,
+      "elapsed_us": 347959,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 1,
+      "attempt": 1,
+      "elapsed_us": 739197,
+      "outcome": 1
+    },
+    {
+      "role": "phone_A",
+      "request": 2,
+      "attempt": 1,
+      "elapsed_us": 330459,
+      "outcome": 1
+    }
+  ],
+  "card_pack_waits": [
+    {
+      "role": "tablet",
+      "elapsed_us": 1351114,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    },
+    {
+      "role": "phone_B",
+      "elapsed_us": 277726,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    },
+    {
+      "role": "phone_A",
+      "elapsed_us": 214011,
+      "classification": "raw_prompt_wait_including_parallel_work"
+    }
+  ],
+  "local_milestones": [
+    {
+      "role": "tablet",
+      "from": "tablet_deck_tappable_frame",
+      "to": "tablet_deck_entry_started",
+      "elapsed_us": 99
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_entry_started",
+      "to": "tablet_deck_entry_completed",
+      "elapsed_us": 684786
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_entry_completed",
+      "to": "tablet_deck_tap_accepted",
+      "elapsed_us": 666229
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deck_tap_accepted",
+      "to": "tablet_deal_started",
+      "elapsed_us": 1367
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_started",
+      "to": "tablet_deal_animation_completed",
+      "elapsed_us": 2892786
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_animation_completed",
+      "to": "tablet_deal_completed",
+      "elapsed_us": 1272
+    },
+    {
+      "role": "tablet",
+      "from": "tablet_deal_completed",
+      "to": "tablet_playing_frame",
+      "elapsed_us": 4958126
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_entry_started",
+      "to": "pack_tappable_frame",
+      "elapsed_us": 740309
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_tappable_frame",
+      "to": "pack_tap_accepted",
+      "elapsed_us": 277726
+    },
+    {
+      "role": "phone_B",
+      "from": "pack_tap_accepted",
+      "to": "reveal_completed",
+      "elapsed_us": 1461112
+    },
+    {
+      "role": "tablet",
+      "from": "action_accepted",
+      "to": "tablet_deck_tappable_frame",
+      "elapsed_us": 8677729
+    },
+    {
+      "role": "tablet",
+      "from": "action_accepted",
+      "to": "tablet_playing_frame",
+      "elapsed_us": 17882394
+    },
+    {
+      "role": "phone_B",
+      "from": "controls_started",
+      "to": "controls_completed",
+      "elapsed_us": 915695
+    },
+    {
+      "role": "phone_A",
+      "from": "controls_started",
+      "to": "controls_completed",
+      "elapsed_us": 931881
+    }
+  ],
+  "session_blocker_changes": [
+    {
+      "role": "phone_A",
+      "mono_us": 12434086,
+      "mask": 49
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 12977466,
+      "mask": 49
+    },
+    {
+      "role": "tablet",
+      "mono_us": 11028605,
+      "mask": 49
+    },
+    {
+      "role": "tablet",
+      "mono_us": 11856129,
+      "mask": 48
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 18185544,
+      "mask": 48
+    },
+    {
+      "role": "tablet",
+      "mono_us": 15813369,
+      "mask": 32
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 18269625,
+      "mask": 48
+    },
+    {
+      "role": "tablet",
+      "mono_us": 16098639,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 18533296,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 18560237,
+      "mask": 16
+    },
+    {
+      "role": "tablet",
+      "mono_us": 19320747,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 19420309,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 21753289,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 21814224,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 21703436,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 21913762,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 30030304,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 30178942,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 27707646,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 27755055,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 30050665,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 30099482,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 32094606,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 32134845,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 32053651,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 32109428,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 29658876,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 29734871,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 39528363,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 39610057,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 37129228,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 37172627,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 39544330,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 39575523,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 44169510,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 44203486,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 44082225,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 44120146,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 41838360,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 41896711,
+      "mask": 0
+    },
+    {
+      "role": "tablet",
+      "mono_us": 49417474,
+      "mask": 1
+    },
+    {
+      "role": "tablet",
+      "mono_us": 49453126,
+      "mask": 0
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 51874287,
+      "mask": 1
+    },
+    {
+      "role": "phone_A",
+      "mono_us": 51906033,
+      "mask": 0
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 51849529,
+      "mask": 1
+    },
+    {
+      "role": "phone_B",
+      "mono_us": 51926708,
+      "mask": 0
+    }
+  ],
+  "command_errors": [],
+  "clock_assumptions": "200ppm drift allowance, 5ms margin per device; estimated, not certified physical timing",
+  "diagnostic_spans": [
+    {
+      "role": "tablet",
+      "span": 1,
+      "kind": "cleanup_scope",
+      "action": 1,
+      "parent": null,
+      "room": null,
+      "subject": null,
+      "events": [
+        {
+          "schema": 3,
+          "capture": "debug-game-start-20261019-002440-a6286307",
+          "trial": "trial-1",
+          "scenario": "initial_start",
+          "role": "tablet",
+          "process": "6523fa69ae1b",
+          "seq": 16,
+          "mono_us": 9496863,
+          "action": 1,
+          "event": "cleanup_scope_start",
+          "game": null,
+          "command": "cleanup_scope",
+          "span": 1
+        },
+        {
+          "schema": 3,
+          "capture": "debug-game-start-20261019-002440-a6286307",
+          "trial": "trial-1",
+          "scenario": "initial_start",
+          "role": "tablet",
+          "process": "6523fa69ae1b",
+          "seq": 17,
+          "mono_us": 9499529,
+          "action": 1,
+          "event": "cleanup_prefetch",
+          "game": null,
+          "command": "cleanup_scope",
+          "span": 1
+        },
+        {
+          "schema": 3,
+          "capture": "debug-game-start-20261019-002440-a6286307",
+          "trial": "trial-1",
+          "scenario": "initial_start",
+          "role": "tablet",
+          "process": "6523fa69ae1b",
+          "seq": 22,
+          "mono_us": 10531993,
+          "action": 1,
+          "event": "cleanup_scope_end",
+          "game": null,
+          "value": 1,
+          "command": "cleanup_scope",
+          "span": 1
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 1035130,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "span": 2,
+      "kind": "cleanup_lookup",
+      "action": 1,
+      "parent": 1,
+      "room": null,
+      "subject": null,
+      "events": [
+        {
+          "schema": 3,
+          "capture": "debug-game-start-20261019-002440-a6286307",
+          "trial": "trial-1",
+          "scenario": "initial_start",
+          "role": "tablet",
+          "process": "6523fa69ae1b",
+          "seq": 18,
+          "mono_us": 9501903,
+          "action": 1,
+          "event": "cleanup_lookup_start",
+          "game": null,
+          "command": "cleanup_lookup",
+          "span": 2,
+          "parent": 1
+        },
+        {
+          "schema": 3,
+          "capture": "debug-game-start-20261019-002440-a6286307",
+          "trial": "trial-1",
+          "scenario": "initial_start",
+          "role": "tablet",
+          "process": "6523fa69ae1b",
+          "seq": 19,
+          "mono_us": 9652081,
+          "action": 1,
+          "event": "cleanup_lookup_end",
+          "game": null,
+          "value": 1,
+          "command": "cleanup_lookup",
+          "span": 2,
+          "parent": 1
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 150178,
+      "outcome": 1
+    }
+  ],
+  "pending_spans": [],
+  "capture_complete": true,
+  "timing_quality_passed": true,
+  "collector_diagnostics": [],
+  "stop_reason": "keyboard_interrupt",
+  "pilot_requested": true,
+  "pilot_passed": true
+}

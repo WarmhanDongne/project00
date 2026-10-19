@@ -1,0 +1,417 @@
+{
+  "protocol": 4,
+  "quality_limit_us": 250000,
+  "pilot": true,
+  "capture": "debug-game-start-20261019-164604-59a8b0a3",
+  "scenario": "menu_restart",
+  "status": "COLLECTED",
+  "stop_reason": "keyboard_interrupt",
+  "collector_diagnostics": [],
+  "condition": "repeated",
+  "build_id": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+  "apk_sha256": "5955a961dd0303255fd79645bd5496fa933f1a9ae3c0e58fc65811a14bb1bd56",
+  "device_build_ids": {
+    "tablet": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+    "phone_A": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e",
+    "phone_B": "b4874c569062687022afa18562ba6b723fd55881f0ef28effcedc64fb820907e"
+  },
+  "started_at": "2026-10-19T16:46:04.854056+09:00",
+  "roles": [
+    "tablet",
+    "phone_A",
+    "phone_B"
+  ],
+  "events": 234,
+  "clocks": {
+    "tablet": [
+      {
+        "h0": 5318541365,
+        "h1": 5318548164,
+        "process": "c08c345a0da3",
+        "mono_us": 3309039831
+      },
+      {
+        "h0": 5318548181,
+        "h1": 5318554282,
+        "process": "c08c345a0da3",
+        "mono_us": 3309046000
+      },
+      {
+        "h0": 5318554313,
+        "h1": 5318561534,
+        "process": "c08c345a0da3",
+        "mono_us": 3309053164
+      },
+      {
+        "h0": 5318561552,
+        "h1": 5318567427,
+        "process": "c08c345a0da3",
+        "mono_us": 3309059357
+      },
+      {
+        "h0": 5318567447,
+        "h1": 5318572515,
+        "process": "c08c345a0da3",
+        "mono_us": 3309064718
+      },
+      {
+        "h0": 5318667515,
+        "h1": 5318674538,
+        "process": "c08c345a0da3",
+        "mono_us": 3309165346
+      },
+      {
+        "h0": 5318674563,
+        "h1": 5318682924,
+        "process": "c08c345a0da3",
+        "mono_us": 3309173429
+      },
+      {
+        "h0": 5320803646,
+        "h1": 5320813418,
+        "process": "c08c345a0da3",
+        "mono_us": 3311303451
+      },
+      {
+        "h0": 5320813440,
+        "h1": 5320821239,
+        "process": "c08c345a0da3",
+        "mono_us": 3311312166
+      },
+      {
+        "h0": 5322912694,
+        "h1": 5322923285,
+        "process": "c08c345a0da3",
+        "mono_us": 3313413049
+      },
+      {
+        "h0": 5322923306,
+        "h1": 5322934341,
+        "process": "c08c345a0da3",
+        "mono_us": 3313424592
+      },
+      {
+        "h0": 5325051188,
+        "h1": 5325063327,
+        "process": "c08c345a0da3",
+        "mono_us": 3315553466
+      },
+      {
+        "h0": 5325063398,
+        "h1": 5325079200,
+        "process": "c08c345a0da3",
+        "mono_us": 3315569201
+      },
+      {
+        "h0": 5327117920,
+        "h1": 5327130275,
+        "process": "c08c345a0da3",
+        "mono_us": 3317620272
+      },
+      {
+        "h0": 5327130344,
+        "h1": 5327141021,
+        "process": "c08c345a0da3",
+        "mono_us": 3317630776
+      },
+      {
+        "h0": 5329390211,
+        "h1": 5329401285,
+        "process": "c08c345a0da3",
+        "mono_us": 3319889467
+      },
+      {
+        "h0": 5329401317,
+        "h1": 5329416627,
+        "process": "c08c345a0da3",
+        "mono_us": 3319902158
+      },
+      {
+        "h0": 5331508296,
+        "h1": 5331515965,
+        "process": "c08c345a0da3",
+        "mono_us": 3322006498
+      },
+      {
+        "h0": 5331515976,
+        "h1": 5331523689,
+        "process": "c08c345a0da3",
+        "mono_us": 3322014582
+      },
+      {
+        "h0": 5332563776,
+        "h1": 5332572335,
+        "process": "c08c345a0da3",
+        "mono_us": 3323063640
+      }
+    ],
+    "phone_A": [
+      {
+        "h0": 5316186994,
+        "h1": 5316196130,
+        "process": "8889ef20464a",
+        "mono_us": 3309121360
+      },
+      {
+        "h0": 5316196312,
+        "h1": 5316205937,
+        "process": "8889ef20464a",
+        "mono_us": 3309129989
+      },
+      {
+        "h0": 5316205977,
+        "h1": 5316212627,
+        "process": "8889ef20464a",
+        "mono_us": 3309137430
+      },
+      {
+        "h0": 5316212655,
+        "h1": 5316222287,
+        "process": "8889ef20464a",
+        "mono_us": 3309146030
+      },
+      {
+        "h0": 5316222308,
+        "h1": 5316230592,
+        "process": "8889ef20464a",
+        "mono_us": 3309154905
+      },
+      {
+        "h0": 5318667996,
+        "h1": 5318680384,
+        "process": "8889ef20464a",
+        "mono_us": 3311602701
+      },
+      {
+        "h0": 5318680418,
+        "h1": 5318690916,
+        "process": "8889ef20464a",
+        "mono_us": 3311614023
+      },
+      {
+        "h0": 5320804084,
+        "h1": 5320824857,
+        "process": "8889ef20464a",
+        "mono_us": 3313743508
+      },
+      {
+        "h0": 5320824878,
+        "h1": 5320841116,
+        "process": "8889ef20464a",
+        "mono_us": 3313762735
+      },
+      {
+        "h0": 5322913175,
+        "h1": 5322934516,
+        "process": "8889ef20464a",
+        "mono_us": 3315854752
+      },
+      {
+        "h0": 5322934529,
+        "h1": 5322951310,
+        "process": "8889ef20464a",
+        "mono_us": 3315871793
+      },
+      {
+        "h0": 5325051960,
+        "h1": 5325073102,
+        "process": "8889ef20464a",
+        "mono_us": 3317992977
+      },
+      {
+        "h0": 5325073127,
+        "h1": 5325086724,
+        "process": "8889ef20464a",
+        "mono_us": 3318009817
+      },
+      {
+        "h0": 5327118652,
+        "h1": 5327124441,
+        "process": "8889ef20464a",
+        "mono_us": 3320050645
+      },
+      {
+        "h0": 5327124453,
+        "h1": 5327128717,
+        "process": "8889ef20464a",
+        "mono_us": 3320055345
+      },
+      {
+        "h0": 5329390870,
+        "h1": 5329400873,
+        "process": "8889ef20464a",
+        "mono_us": 3322324539
+      },
+      {
+        "h0": 5329400907,
+        "h1": 5329407978,
+        "process": "8889ef20464a",
+        "mono_us": 3322333371
+      },
+      {
+        "h0": 5331508862,
+        "h1": 5331515204,
+        "process": "8889ef20464a",
+        "mono_us": 3324440419
+      },
+      {
+        "h0": 5331515219,
+        "h1": 5331521196,
+        "process": "8889ef20464a",
+        "mono_us": 3324446140
+      },
+      {
+        "h0": 5332616076,
+        "h1": 5332631952,
+        "process": "8889ef20464a",
+        "mono_us": 3325552709
+      }
+    ],
+    "phone_B": [
+      {
+        "h0": 5316889171,
+        "h1": 5316917790,
+        "process": "98d737a4205a",
+        "mono_us": 2182759297
+      },
+      {
+        "h0": 5316917810,
+        "h1": 5316944541,
+        "process": "98d737a4205a",
+        "mono_us": 2182791069
+      },
+      {
+        "h0": 5316944556,
+        "h1": 5316962231,
+        "process": "98d737a4205a",
+        "mono_us": 2182810234
+      },
+      {
+        "h0": 5316962253,
+        "h1": 5316988336,
+        "process": "98d737a4205a",
+        "mono_us": 2182830865
+      },
+      {
+        "h0": 5316988363,
+        "h1": 5317005643,
+        "process": "98d737a4205a",
+        "mono_us": 2182855566
+      },
+      {
+        "h0": 5318668334,
+        "h1": 5318690073,
+        "process": "98d737a4205a",
+        "mono_us": 2184537495
+      },
+      {
+        "h0": 5318690107,
+        "h1": 5318710059,
+        "process": "98d737a4205a",
+        "mono_us": 2184557657
+      },
+      {
+        "h0": 5320804737,
+        "h1": 5320826814,
+        "process": "98d737a4205a",
+        "mono_us": 2186673389
+      },
+      {
+        "h0": 5320826835,
+        "h1": 5320849057,
+        "process": "98d737a4205a",
+        "mono_us": 2186695213
+      },
+      {
+        "h0": 5322913686,
+        "h1": 5322934713,
+        "process": "98d737a4205a",
+        "mono_us": 2188782697
+      },
+      {
+        "h0": 5322934724,
+        "h1": 5322955748,
+        "process": "98d737a4205a",
+        "mono_us": 2188804071
+      },
+      {
+        "h0": 5325053091,
+        "h1": 5325074603,
+        "process": "98d737a4205a",
+        "mono_us": 2190922198
+      },
+      {
+        "h0": 5325074632,
+        "h1": 5325089102,
+        "process": "98d737a4205a",
+        "mono_us": 2190940140
+      },
+      {
+        "h0": 5327119226,
+        "h1": 5327140722,
+        "process": "98d737a4205a",
+        "mono_us": 2192991765
+      },
+      {
+        "h0": 5327140794,
+        "h1": 5327153743,
+        "process": "98d737a4205a",
+        "mono_us": 2193004356
+      },
+      {
+        "h0": 5329391475,
+        "h1": 5329412773,
+        "process": "98d737a4205a",
+        "mono_us": 2195261281
+      },
+      {
+        "h0": 5329412795,
+        "h1": 5329469832,
+        "process": "98d737a4205a",
+        "mono_us": 2195316876
+      },
+      {
+        "h0": 5331509264,
+        "h1": 5331527968,
+        "process": "98d737a4205a",
+        "mono_us": 2197376369
+      },
+      {
+        "h0": 5331527987,
+        "h1": 5331545992,
+        "process": "98d737a4205a",
+        "mono_us": 2197394723
+      },
+      {
+        "h0": 5332696418,
+        "h1": 5332717764,
+        "process": "98d737a4205a",
+        "mono_us": 2198564487
+      }
+    ]
+  },
+  "privacy": "No service URIs, keys, serials, identifiers, raw logs or payloads",
+  "working_copy_sources_sha256": {
+    "lib/platform/home/tablet/tablet_start_cleanup.dart": "488114795fb649aba6e376ad887beef5c8e0c7153697e9d675a927bf2d32c482",
+    "lib/platform/home/tablet/tablet_game_launcher.dart": "71a05fcd5861cacb64da5f0542e352cba581603048223ca54c774daed3592913",
+    "lib/platform/home/room/providers/room_provider.dart": "97e3628c05ecc8737b991a2531a4646a84f12de779d5a1820ee64aa15fb212fd",
+    "lib/platform/home/room/services/room_service.dart": "3ecab807afa53a81fecf27156a0500c661ee364af4b2207d781e930509716291",
+    "lib/main.dart": "5a676276f7164035cf96c0df67beadd088717350a05599a083b046f77100bd2b",
+    "lib/platform/home/tablet/tablet_game_start.dart": "50da60840ef9afce0f4436f56b25f5b0bff1eca1f0be4d868a176e8d3d23578d",
+    "packages/game_kit/lib/core/diagnostics/startup_measurements.dart": "3c64abe438e5590f9bcfa7a38fb6cb44630725ea5fe51a77dff2a1233d97a0eb",
+    "packages/game_kit/lib/phone/animations/card_receive_animation.dart": "16122cff302f5e9b14fcfa24e28c772772d6f4c434ae8887138988d1e2061470",
+    "packages/game_kit/lib/player_layouts/widgets/player_layout_editor.dart": "781a8da230b23d5b1fcd04c23c6e1e835a251314f5842324afcb60650410ddb1",
+    "packages/game_kit/lib/recovery/providers/game_session_controller.dart": "230b1aec54bf4b48bef50c701e0a242ba7732f4e7476fd8d38b33de0da01d0b4",
+    "packages/game_kit/lib/services/game_command_service.dart": "5a8aa4bb62587b711fa9ea480e2398ab41d98675d8aa662af12bc9a91a9b5762",
+    "packages/game_kit/lib/tablet/widgets/game_settings_dialog.dart": "0fbc169b1c5f2d41cc3ffd176b056416ad83a8cff15fc58e76ab5e7b8e2234ed",
+    "packages/game_liars_poker/lib/phone/screens/game_screen.dart": "9e35dd5dadeae7d064e28aad6c8f37c1271552008ec48c695c6d72399d810dda",
+    "packages/game_liars_poker/lib/phone/widgets/hand_card_stack.dart": "7fd65cc29ff066c8f3000a4499360dc1dec757812d9610ebc9fe355a66f6d757",
+    "packages/game_liars_poker/lib/shared/providers/game_controller.dart": "2bf973bf43fd815df1653130200581128a7d7d278ffa2c8dd7a5f2aeb4574be3",
+    "packages/game_liars_poker/lib/tablet/src/board_state.dart": "baa5b6545aafb7415e2262f2f7946dd1e31808adb3d0efedd0d720938a118c11",
+    "tool/startup_measurements/collect.py": "aab6c97372bdcd5b6b2a4224dc4b0442413ff139e0f526940595fdf1d03430a0",
+    "tool/startup_measurements/measurement_analysis.py": "313990b795363cdff5b19eb09819a94a0cfd86aa0226e4a7a90eaf1aa2a47a7d",
+    "packages/game_kit/lib/tablet/animations/card_deal_animation.dart": "22b28240ab0eb14cc5c40c6b25c0613c02a4c2b5cc6b3b7b973e411573571575"
+  },
+  "source_note": "Collector working copy snapshot; not an attestation of the installed APK",
+  "working_copy_head": "ea08181a1d1ca6f51588a87fc3731fba06b84da2"
+}

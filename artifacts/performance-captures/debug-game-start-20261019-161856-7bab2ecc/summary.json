@@ -1,0 +1,304 @@
+{
+  "protocol": 4,
+  "status": "VALID_OBSERVED_TRIAL",
+  "quality_limit_us": 250000,
+  "actual_scenario": "room_reset",
+  "issues": [],
+  "warnings": [],
+  "progress": {
+    "tablet_completed": true,
+    "first_turn_phone": null,
+    "input_validation": {},
+    "reset_followup_passed": true
+  },
+  "reset_followup_passed": true,
+  "total_elapsed_estimated_range_us": [
+    588307,
+    632810
+  ],
+  "observed_total_reference_range_us": [
+    588307,
+    632810
+  ],
+  "exclusive_user_wait_estimated_range_us": null,
+  "user_wait_excluded_total_estimated_range_us": null,
+  "user_wait_excluded_reason": "Not applicable to room reset; local clear is not proof of an interactive frame",
+  "local_milestones": [
+    {
+      "role": "tablet",
+      "from": "room_reset_start",
+      "to": "room_reset_end",
+      "elapsed_us": 661100
+    },
+    {
+      "role": "tablet",
+      "from": "disconnect_cancel_start",
+      "to": "disconnect_cancel_end",
+      "elapsed_us": 77720
+    },
+    {
+      "role": "tablet",
+      "from": "close_request_start",
+      "to": "close_request_end",
+      "elapsed_us": 508361
+    },
+    {
+      "role": "tablet",
+      "from": "disconnect_registration_start",
+      "to": "disconnect_registration_end",
+      "elapsed_us": 5119
+    }
+  ],
+  "logical_command_totals": [],
+  "transport_attempt_round_trips": [],
+  "clock_offset_estimates_us": {
+    "tablet": [
+      2009485286,
+      2009529246
+    ],
+    "phone_A": [
+      2007043927,
+      2007088626
+    ],
+    "phone_B": [
+      3134116865,
+      3134166683
+    ]
+  },
+  "diagnostic_spans": [
+    {
+      "role": "tablet",
+      "span": 1,
+      "kind": "room_reset",
+      "action": 1,
+      "parent": null,
+      "room": "47ab31d2d7aec400b73e919d98487012",
+      "subject": null,
+      "events": [
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 5,
+          "mono_us": 1687275987,
+          "action": 1,
+          "event": "room_reset_start",
+          "game": null,
+          "command": "room_reset",
+          "span": 1,
+          "room": "47ab31d2d7aec400b73e919d98487012"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 6,
+          "mono_us": 1687276143,
+          "action": 1,
+          "event": "room_reset_members",
+          "game": null,
+          "value": 2,
+          "command": "room_reset",
+          "span": 1,
+          "room": "47ab31d2d7aec400b73e919d98487012"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 15,
+          "mono_us": 1687936629,
+          "action": 1,
+          "event": "room_reset_local_done",
+          "game": null,
+          "command": "room_reset",
+          "span": 1,
+          "room": "47ab31d2d7aec400b73e919d98487012"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 16,
+          "mono_us": 1687937087,
+          "action": 1,
+          "event": "room_reset_end",
+          "game": null,
+          "value": 1,
+          "command": "room_reset",
+          "span": 1,
+          "room": "47ab31d2d7aec400b73e919d98487012"
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 661100,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "span": 2,
+      "kind": "disconnect_cancel",
+      "action": 1,
+      "parent": null,
+      "room": "47ab31d2d7aec400b73e919d98487012",
+      "subject": "944dfc90f9afcd3569063e555807e57f",
+      "events": [
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 9,
+          "mono_us": 1687350443,
+          "action": 1,
+          "event": "disconnect_cancel_start",
+          "game": null,
+          "command": "disconnect_cancel",
+          "span": 2,
+          "room": "47ab31d2d7aec400b73e919d98487012",
+          "subject": "944dfc90f9afcd3569063e555807e57f"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 11,
+          "mono_us": 1687428163,
+          "action": 1,
+          "event": "disconnect_cancel_end",
+          "game": null,
+          "value": 1,
+          "command": "disconnect_cancel",
+          "span": 2,
+          "room": "47ab31d2d7aec400b73e919d98487012",
+          "subject": "944dfc90f9afcd3569063e555807e57f"
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 77720,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "span": 3,
+      "kind": "close_request",
+      "action": 1,
+      "parent": null,
+      "room": "47ab31d2d7aec400b73e919d98487012",
+      "subject": "944dfc90f9afcd3569063e555807e57f",
+      "events": [
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 10,
+          "mono_us": 1687353982,
+          "action": 1,
+          "event": "close_request_start",
+          "game": null,
+          "command": "close_request",
+          "span": 3,
+          "room": "47ab31d2d7aec400b73e919d98487012",
+          "subject": "944dfc90f9afcd3569063e555807e57f"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 12,
+          "mono_us": 1687862343,
+          "action": 1,
+          "event": "close_request_end",
+          "game": null,
+          "value": 1,
+          "command": "close_request",
+          "span": 3,
+          "room": "47ab31d2d7aec400b73e919d98487012",
+          "subject": "944dfc90f9afcd3569063e555807e57f"
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 508361,
+      "outcome": 1
+    },
+    {
+      "role": "tablet",
+      "span": 4,
+      "kind": "disconnect_registration",
+      "action": 1,
+      "parent": null,
+      "room": "5412ef52f6e14874a6ca22253b4ee193",
+      "subject": "65cb6efdd63cd312dc05ab3680754f70",
+      "events": [
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 18,
+          "mono_us": 1692157675,
+          "action": 1,
+          "event": "disconnect_registration_start",
+          "game": null,
+          "command": "disconnect_registration",
+          "span": 4,
+          "room": "5412ef52f6e14874a6ca22253b4ee193",
+          "subject": "65cb6efdd63cd312dc05ab3680754f70"
+        },
+        {
+          "schema": 4,
+          "capture": "debug-game-start-20261019-161856-7bab2ecc",
+          "trial": "trial-1",
+          "scenario": "room_reset",
+          "role": "tablet",
+          "process": "c08c345a0da3",
+          "seq": 19,
+          "mono_us": 1692162794,
+          "action": 1,
+          "event": "disconnect_registration_end",
+          "game": null,
+          "value": 1,
+          "command": "disconnect_registration",
+          "span": 4,
+          "room": "5412ef52f6e14874a6ca22253b4ee193",
+          "subject": "65cb6efdd63cd312dc05ab3680754f70"
+        }
+      ],
+      "pending_at_stop": false,
+      "elapsed_us": 5119,
+      "outcome": 1
+    }
+  ],
+  "pending_spans": [],
+  "capture_complete": true,
+  "timing_quality_passed": true,
+  "collector_diagnostics": [],
+  "stop_reason": "keyboard_interrupt",
+  "pilot_requested": true,
+  "pilot_passed": true
+}
