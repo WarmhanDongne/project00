@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -44,7 +45,7 @@ class _GuestSetupScreenState extends State<GuestSetupScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await FirebaseAuth.instance.signOut();
+      await FirebaseBackend.auth.signOut();
     } on FirebaseAuthException catch (_) {
       if (mounted) {
         setState(

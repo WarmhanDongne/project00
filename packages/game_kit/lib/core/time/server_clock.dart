@@ -6,6 +6,7 @@
 // 즉, 여러 기기에서 타이머와 진행 시점을 동일하게 계산하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -38,7 +39,7 @@ abstract final class ServerClock {
   /// 앱 시작 시 한 번 호출해 서버 시각 보정을 시작합니다.
   static void start([FirebaseDatabase? database]) {
     if (_subscription != null) return;
-    final ref = (database ?? FirebaseDatabase.instance).ref(
+    final ref = (database ?? FirebaseBackend.database).ref(
       '.info/serverTimeOffset',
     );
     _subscription = ref.onValue.listen(

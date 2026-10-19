@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전략 윷놀이 · 태블릿 화면 디자인 콘셉트 20안</title>
+<style>
+  :root { color-scheme: light; font-family: Inter, Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #29251f; background: #f2f0eb; }
+  .page { max-width: 1560px; margin: 0 auto; padding: 42px 34px 72px; }
+  .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 0 auto 26px; max-width: 1500px; }
+  .eyebrow { margin: 0 0 10px; color: #8c4b39; font-size: 12px; font-weight: 800; letter-spacing: .18em; }
+  h1 { margin: 0; font-size: clamp(28px, 4vw, 48px); letter-spacing: -.055em; line-height: 1.08; }
+  .intro p { max-width: 630px; margin: 12px 0 0; color: #6d665d; font-size: 15px; line-height: 1.65; }
+  .legend { flex: 0 0 auto; padding: 12px 15px; border: 1px solid #d9d2c7; border-radius: 14px; color: #6d665d; background: rgba(255,255,255,.55); font-size: 12px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .concept { min-width: 0; overflow: hidden; border: 1px solid #dedbd4; border-radius: 20px; background: #fbfaf7; box-shadow: 0 8px 28px rgba(55,43,28,.06); }
+  .caption { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 18px 13px; }
+  .caption h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+  .caption p { margin: 4px 0 0; color: #827a70; font-size: 12px; }
+  .number { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border: 1px solid #ddd5ca; border-radius: 50%; color: #74695c; font-size: 12px; font-weight: 800; }
+  .series-title { display:flex; align-items:baseline; gap:12px; margin:34px 2px 14px; color:#29251f; font-size:22px; letter-spacing:-.035em; }
+  .series-title span { color:#978b7d; font-size:11px; font-weight:800; letter-spacing:.14em; }
+  .screen { --paper:#f3ead9; --ink:#30291f; --muted:#817666; --accent:#a84132; --accent2:#255d69; --line:#c9b99f; --panel:#fffaf0; --board:#e5d4b7; --node:#7a5941; --edge:#6a4a32; --shadow:rgba(59,39,22,.17); --radius:18px; position:relative; isolation:isolate; display:grid; grid-template-rows:52px minmax(0,1fr); gap:12px; width:100%; aspect-ratio: 16 / 10; overflow:hidden; padding:18px 20px 20px; color:var(--ink); background:var(--paper); }
+  .screen::before,.screen::after { content:""; position:absolute; z-index:-1; pointer-events:none; }
+  .screen::before { inset:0; opacity:.32; background-image:radial-gradient(var(--accent) .65px,transparent .8px); background-size:14px 14px; mask-image:linear-gradient(135deg,#000,transparent 55%); }
+  .screen::after { width:190px; height:190px; right:-70px; top:-95px; border:1px solid color-mix(in srgb,var(--accent) 45%,transparent); border-radius:50%; box-shadow:0 0 0 16px color-mix(in srgb,var(--accent) 5%,transparent),0 0 0 34px color-mix(in srgb,var(--accent) 4%,transparent); }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:16px; min-width:0; border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent); }
+  .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+  .seal { display:grid; flex:0 0 31px; width:31px; height:31px; place-items:center; border:1px solid var(--accent); border-radius:9px; color:var(--accent); font-size:15px; font-weight:900; transform:rotate(-4deg); }
+  .brand strong { display:block; font-size:15px; line-height:1.1; letter-spacing:-.035em; }
+  .brand small { display:block; margin-top:3px; color:var(--muted); font-size:9px; letter-spacing:.11em; }
+  .meta { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:10px; }
+  .pill { padding:6px 9px; border:1px solid color-mix(in srgb,var(--line) 80%,transparent); border-radius:999px; background:color-mix(in srgb,var(--panel) 80%,transparent); }
+  .exit { display:grid; width:28px; height:28px; place-items:center; border:1px solid var(--line); border-radius:9px; color:var(--muted); font-size:15px; }
+  .layout { display:grid; grid-template-columns:minmax(112px,.78fr) minmax(230px,1.75fr) minmax(116px,.82fr); align-items:stretch; gap:12px; min-height:0; }
+  .team-col { display:flex; flex-direction:column; justify-content:space-between; gap:10px; min-width:0; }
+  .team { padding:11px 10px; border:1px solid color-mix(in srgb,var(--line) 74%,transparent); border-radius:var(--radius); background:color-mix(in srgb,var(--panel) 91%,transparent); box-shadow:0 5px 14px color-mix(in srgb,var(--shadow) 35%,transparent); }
+  .team.active { border:2px solid var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent),0 8px 18px color-mix(in srgb,var(--shadow) 45%,transparent); }
+  .team-head { display:flex; align-items:center; gap:7px; }
+  .avatar { display:grid; flex:0 0 27px; width:27px; height:27px; place-items:center; border-radius:50%; color:#fff; font-size:13px; font-weight:900; background:var(--accent); box-shadow:0 2px 0 color-mix(in srgb,var(--accent) 65%,#000); }
+  .team.red .avatar { background:#315e87; box-shadow:0 2px 0 #203e5c; }
+  .team-head b { font-size:11px; }
+  .team-head small { display:block; margin-top:2px; color:var(--muted); font-size:8px; }
+  .progress { height:5px; margin:10px 0 6px; overflow:hidden; border-radius:9px; background:color-mix(in srgb,var(--line) 45%,transparent); }
+  .progress i { display:block; width:54%; height:100%; border-radius:inherit; background:var(--accent); }
+  .team.red .progress i { width:36%; background:#315e87; }
+  .scores { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:8px; }
+  .scores b { color:var(--ink); font-size:11px; }
+  .turn-card { display:flex; flex-direction:column; justify-content:center; gap:4px; min-height:56px; padding:9px 10px; border-radius:var(--radius); background:var(--accent); color:#fff; box-shadow:0 5px 0 color-mix(in srgb,var(--accent) 72%,#000); }
+  .turn-card small { font-size:8px; opacity:.8; letter-spacing:.12em; }
+  .turn-card strong { font-size:13px; }
+  .board-shell { position:relative; display:grid; min-width:0; min-height:0; place-items:center; padding:8px; border:1px solid color-mix(in srgb,var(--line) 85%,transparent); border-radius:calc(var(--radius) + 4px); background:color-mix(in srgb,var(--panel) 86%,transparent); box-shadow:0 7px 18px color-mix(in srgb,var(--shadow) 38%,transparent); }
+  .board { position:relative; width:min(100%, min(100cqh - 130px, 350px)); aspect-ratio:1; border:7px solid var(--edge); border-radius:22px; background:var(--board); box-shadow:inset 0 0 0 2px color-mix(in srgb,#fff 38%,transparent),inset 0 0 0 8px color-mix(in srgb,var(--edge) 16%,transparent),0 7px 0 color-mix(in srgb,var(--edge) 82%,#000),0 13px 20px var(--shadow); container-type:size; }
+  .board::before { content:""; position:absolute; inset:11%; border:1px solid color-mix(in srgb,var(--edge) 44%,transparent); border-radius:50%; }
+  .track { position:absolute; inset:8%; width:84%; height:84%; overflow:visible; }
+  .track path { fill:none; stroke:var(--edge); stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; opacity:.7; }
+  .track path.diag { stroke-dasharray:1 0; opacity:.55; }
+  .track circle { fill:var(--panel); stroke:var(--edge); stroke-width:1.6; }
+  .track circle.corner { fill:var(--accent2); stroke:var(--panel); stroke-width:2.5; }
+  .track circle.center { fill:var(--accent); stroke:var(--panel); stroke-width:2.5; }
+  .stone { position:absolute; z-index:2; display:grid; width:12%; aspect-ratio:1; place-items:center; border:2px solid #fff; border-radius:50%; color:#fff; font-size:clamp(8px,1.1cqw,12px); font-weight:900; background:var(--accent); box-shadow:0 3px 0 color-mix(in srgb,var(--accent) 65%,#000),0 4px 9px var(--shadow); }
+  .stone.blue { background:#315e87; box-shadow:0 3px 0 #203e5c,0 4px 9px var(--shadow); }
+  .stone.s1 { left:1%; top:47%; }.stone.s2 { left:12%; top:47%; }.stone.s3 { right:1%; top:47%; }.stone.s4 { right:12%; top:47%; }
+  .center-mark { position:absolute; z-index:1; left:50%; top:50%; display:grid; width:22%; aspect-ratio:1; place-items:center; border:1px solid color-mix(in srgb,var(--panel) 80%,transparent); border-radius:50%; color:var(--panel); background:color-mix(in srgb,var(--accent) 87%,transparent); font-size:clamp(11px,2cqw,19px); transform:translate(-50%,-50%); }
+  .board-label { position:absolute; left:9px; bottom:8px; color:var(--muted); font-size:8px; letter-spacing:.08em; }
+  .action-col { display:flex; flex-direction:column; justify-content:space-between; gap:9px; min-width:0; }
+  .result { padding:11px 10px; border:1px solid color-mix(in srgb,var(--line) 74%,transparent); border-radius:var(--radius); text-align:center; background:color-mix(in srgb,var(--panel) 91%,transparent); }
+  .result small { display:block; color:var(--muted); font-size:8px; letter-spacing:.12em; }
+  .result strong { display:block; margin:2px 0 0; color:var(--accent); font-size:29px; line-height:1.05; }
+  .result span { display:block; margin-top:3px; color:var(--muted); font-size:8px; }
+  .sticks { display:flex; align-items:center; justify-content:center; gap:5px; padding:7px; }
+  .stick { width:10px; height:42px; border:1px solid color-mix(in srgb,var(--edge) 70%,#000); border-radius:8px; background:linear-gradient(90deg,color-mix(in srgb,var(--board) 80%,#fff),var(--board) 48%,color-mix(in srgb,var(--edge) 20%,var(--board))); box-shadow:0 3px 0 var(--edge); transform:rotate(10deg); }
+  .stick:nth-child(2){transform:rotate(-13deg);}.stick:nth-child(3){transform:rotate(7deg);}.stick:nth-child(4){transform:rotate(-8deg);}.stick.back{background:var(--accent);}
+  .history { padding:9px 10px; border:1px solid color-mix(in srgb,var(--line) 74%,transparent); border-radius:var(--radius); background:color-mix(in srgb,var(--panel) 91%,transparent); }
+  .history b { display:block; margin-bottom:5px; color:var(--muted); font-size:8px; letter-spacing:.1em; }
+  .history p { display:flex; justify-content:space-between; gap:8px; margin:3px 0; font-size:9px; }
+  .history p span:last-child { color:var(--accent); font-weight:800; }
+  .roll { min-height:39px; border:0; border-radius:12px; color:#fff; background:var(--accent); box-shadow:0 4px 0 color-mix(in srgb,var(--accent) 72%,#000); font:800 12px inherit; font-size:12px; }
+  .hint { padding-top:3px; color:var(--muted); font-size:8px; line-height:1.45; text-align:center; }
+  .screen.ink { --paper:#f1e8d7; --ink:#26231f; --muted:#776e62; --accent:#a7332c; --accent2:#324f58; --line:#c7b99f; --panel:#faf5e9; --board:#e7d8bd; --node:#786348; --edge:#634c38; --radius:9px; }
+  .screen.ink::before { opacity:.24; background-image:radial-gradient(#584b3a .7px,transparent .8px); background-size:5px 5px; }
+  .screen.festival { --paper:#fff0cc; --ink:#241d17; --muted:#675b4b; --accent:#d52f45; --accent2:#165b99; --line:#1f1d1a; --panel:#fffaf0; --board:#f3c84e; --node:#34302a; --edge:#34302a; --radius:22px; }
+  .screen.festival::before { inset:0 0 auto; height:12px; opacity:1; background:linear-gradient(90deg,#d73340 0 20%,#2f69ab 20% 40%,#f2c43e 40% 60%,#25754f 60% 80%,#242424 80%); mask:none; }
+  .screen.festival .team,.screen.festival .result,.screen.festival .board-shell { border:2px solid var(--ink); box-shadow:4px 4px 0 var(--ink); }
+  .screen.festival .roll { color:var(--ink); background:#f3c84e; box-shadow:0 4px 0 #b5881f; }
+  .screen.wood { --paper:#76523a; --ink:#30241a; --muted:#79634d; --accent:#bb543d; --accent2:#336b6d; --line:#c4a67e; --panel:#f6ead5; --board:#c99157; --node:#75492c; --edge:#633d24; --radius:15px; }
+  .screen.wood::before { opacity:.55; background:repeating-linear-gradient(2deg,transparent 0 8px,rgba(85,49,26,.12) 9px,transparent 11px); mask:none; }
+  .screen.wood .board { background:repeating-linear-gradient(3deg,#c89359 0 9px,#bf8750 10px 11px,#d09b62 12px 20px); }
+  .screen.minhwa { --paper:#173a4f; --ink:#f7edda; --muted:#b9c6c7; --accent:#dd653e; --accent2:#2a806e; --line:#d1bd8b; --panel:#214e5c; --board:#cfb578; --node:#365e51; --edge:#293e43; --radius:16px; }
+  .screen.minhwa::before { inset:auto 0 0; height:50%; opacity:.95; background:linear-gradient(166deg,transparent 0 31%,#245c62 31% 39%,#e1c77f 39% 41%,transparent 41%),linear-gradient(12deg,transparent 0 45%,#2c7465 45% 53%,#d7bf77 53% 55%,transparent 55%),linear-gradient(170deg,transparent 0 63%,#153d56 63%); mask:none; }
+  .screen.minhwa .team,.screen.minhwa .result,.screen.minhwa .board-shell { backdrop-filter:blur(3px); }
+  .screen.crane { --paper:#112653; --ink:#f8f1dc; --muted:#b5bfd1; --accent:#d5a94c; --accent2:#315f9f; --line:#8f764d; --panel:#1b3260; --board:#e5d1a2; --node:#173e68; --edge:#7b633c; --radius:9px; }
+  .screen.crane::before { opacity:.5; background:radial-gradient(ellipse at 15% 20%,transparent 0 8%,#b48a45 8.4% 9%,transparent 9.5%),radial-gradient(ellipse at 88% 79%,transparent 0 13%,#b48a45 13.3% 14%,transparent 14.4%); mask:none; }
+  .screen.crane .seal { border-radius:50%; }
+  .screen.calligraphy { --paper:#f0dfbc; --ink:#201b19; --muted:#776654; --accent:#bd2734; --accent2:#202020; --line:#cab38a; --panel:#fbf2df; --board:#ddc89e; --node:#34302c; --edge:#3c3028; --radius:4px; }
+  .screen.calligraphy .brand strong,.screen.calligraphy .turn-card strong,.screen.calligraphy .result strong { letter-spacing:-.08em; }
+  .screen.calligraphy .seal { border-radius:1px; transform:rotate(3deg); }
+  .screen.seoul { --paper:#25243a; --ink:#f5f2f8; --muted:#b4b4c9; --accent:#fb6882; --accent2:#62d7dc; --line:#5e5876; --panel:#323149; --board:#d8c9b5; --node:#353346; --edge:#80668c; --radius:18px; }
+  .screen.seoul::before { inset:auto 0 0; height:43%; opacity:.65; background:linear-gradient(0deg,#343049 0 20%,transparent 20%),repeating-linear-gradient(90deg,transparent 0 5%,#45415e 5% 8%,transparent 8% 10%),linear-gradient(0deg,transparent 0 42%,#fb6882 42% 43%,transparent 43%); mask:none; }
+  .screen.seoul .seal { box-shadow:0 0 14px color-mix(in srgb,var(--accent) 55%,transparent); }
+  .screen.cosmos { --paper:#132b78; --ink:#fff5de; --muted:#c4d1eb; --accent:#f04532; --accent2:#fbf5df; --line:#6179bd; --panel:#203b8c; --board:#e5cc92; --node:#193875; --edge:#54477f; --radius:18px; }
+  .screen.cosmos::before { top:8%; left:78%; width:50px; height:50px; border-radius:50%; background:#fff9df; opacity:1; box-shadow:-405px 22px 0 #ef4131; mask:none; }
+  .screen.cosmos::after { right:16%; top:auto; bottom:-74px; width:300px; height:160px; border:0; border-radius:0; background:repeating-linear-gradient(135deg,#315caa 0 8px,#1d438d 8px 15px); clip-path:polygon(0 100%,50% 0,100% 100%); box-shadow:none; }
+  .screen.paperfold { --paper:#e7eee8; --ink:#1d3e3a; --muted:#6c827a; --accent:#e66a58; --accent2:#347c72; --line:#a9c6ba; --panel:#f8fbf7; --board:#bed9cd; --node:#34655b; --edge:#42766a; --radius:20px; }
+  .screen.paperfold::before { opacity:.52; background:linear-gradient(135deg,transparent 49.5%,#83afa2 50%,transparent 50.7%),linear-gradient(45deg,transparent 49.5%,#d8a79a 50%,transparent 50.7%); background-size:44px 44px; mask:none; }
+  .screen.modern { --paper:#f7f5f0; --ink:#252c30; --muted:#7d8988; --accent:#315b57; --accent2:#c57855; --line:#d8ded9; --panel:#fff; --board:#f0e8d8; --node:#657f76; --edge:#a58b67; --radius:24px; }
+  .screen.modern::before { width:250px; height:250px; inset:auto auto -150px -80px; border:0; border-radius:50%; background:#e7d9be; box-shadow:300px -400px 0 -60px #dce7e1,690px -20px 0 -55px #f1d6ca; mask:none; }
+  .screen.modern .team,.screen.modern .result,.screen.modern .board-shell { box-shadow:0 8px 22px rgba(31,49,43,.08); }
+  .screen.dancheong { --paper:#e9e2d0; --ink:#26332d; --muted:#64736a; --accent:#a94c3a; --accent2:#24756e; --line:#b5a578; --panel:#f6f1e5; --board:#d9c28e; --node:#45594d; --edge:#315047; --radius:10px; }
+  .screen.dancheong::before { inset:0 0 auto; height:14px; opacity:1; background:repeating-linear-gradient(90deg,#b34938 0 16px,#d8b653 16px 24px,#286f65 24px 40px,#e9e2d0 40px 45px); mask:none; }
+  .screen.dancheong .seal { border-radius:4px 4px 12px 4px; }
+  .screen.jogakbo { --paper:#f4efe4; --ink:#30302b; --muted:#777166; --accent:#ab5350; --accent2:#657d6b; --line:#c9bda4; --panel:#faf7ee; --board:#e7d7b9; --node:#65594a; --edge:#7d7769; --radius:5px; }
+  .screen.jogakbo::before { inset:0 0 auto auto; width:115px; height:100%; opacity:.68; background:linear-gradient(90deg,transparent 48%,#d0b995 49% 51%,transparent 52%),linear-gradient(0deg,transparent 48%,#d0b995 49% 51%,transparent 52%),linear-gradient(135deg,#d7b59c 0 49%,transparent 50%),linear-gradient(45deg,#93a99b 0 49%,transparent 50%); background-size:42px 42px; mask:none; }
+  .screen.jogakbo .team,.screen.jogakbo .result,.screen.jogakbo .history,.screen.jogakbo .board-shell { border-style:dashed; border-width:1.5px; }
+  .screen.onggi { --paper:#e9e2d4; --ink:#332b25; --muted:#77695d; --accent:#74513e; --accent2:#53736e; --line:#b8a998; --panel:#f7f2e9; --board:#c7b49a; --node:#604638; --edge:#715744; --radius:28px; }
+  .screen.onggi::before { inset:auto -45px -110px auto; width:270px; height:270px; border:15px solid rgba(119,83,59,.10); border-radius:47% 53% 43% 57%; opacity:1; box-shadow:inset 0 0 0 14px rgba(119,83,59,.07),inset 0 0 0 30px rgba(119,83,59,.06); mask:none; }
+  .screen.onggi .board { border-radius:30px 30px 45px 45px; }
+  .screen.najeon { --paper:#171b23; --ink:#f5f0e7; --muted:#c1b9aa; --accent:#8fd0bc; --accent2:#b89450; --line:#55505a; --panel:#242832; --board:#2d3038; --node:#b6dfd0; --edge:#98805b; --radius:13px; }
+  .screen.najeon::before { opacity:.67; background:radial-gradient(ellipse at 16% 25%,transparent 0 9%,#83c9b6 9.4% 10%,transparent 10.5%),radial-gradient(ellipse at 80% 82%,transparent 0 14%,#b99553 14.4% 15%,transparent 15.5%),linear-gradient(135deg,transparent 49%,rgba(126,177,181,.18) 50%,transparent 51%); background-size:auto,auto,32px 32px; mask:none; }
+  .screen.najeon .board { background:linear-gradient(135deg,#353944,#242832 62%,#3a3540); }
+  .screen.giwa { --paper:#e6e5df; --ink:#29333a; --muted:#68757b; --accent:#b86242; --accent2:#54737d; --line:#aab0af; --panel:#f4f3ed; --board:#c8c3b5; --node:#53666a; --edge:#49575b; --radius:6px; }
+  .screen.giwa::before { inset:auto 0 0; height:34%; opacity:.28; background:repeating-radial-gradient(ellipse at 50% 100%,transparent 0 14px,#5d6968 15px 17px,transparent 18px 29px); mask:none; }
+  .screen.giwa .board { border-radius:14px 14px 5px 5px; }
+  .screen.talchum { --paper:#eee5d7; --ink:#28211d; --muted:#756961; --accent:#c23b31; --accent2:#377367; --line:#c6b5a0; --panel:#faf4e8; --board:#d9c9ac; --node:#4d4138; --edge:#453a34; --radius:8px; }
+  .screen.talchum::before { inset:10% auto auto 45%; width:105px; height:125px; border:3px solid rgba(66,48,40,.09); border-radius:48% 48% 42% 42%; opacity:1; box-shadow:inset 0 19px 0 -15px rgba(194,59,49,.16),inset 0 -24px 0 -19px rgba(55,115,103,.19); mask:none; }
+  .screen.talchum .seal { border-radius:48% 48% 42% 42%; }
+  .screen.market { --paper:#f2e8d1; --ink:#382921; --muted:#806a55; --accent:#d25937; --accent2:#287e70; --line:#c3a577; --panel:#fff7e5; --board:#e4c888; --node:#684d37; --edge:#785a3d; --radius:12px; }
+  .screen.market::before { inset:0 0 auto; height:9px; opacity:1; background:repeating-linear-gradient(90deg,#d25937 0 22px,#f2e8d1 22px 27px,#287e70 27px 49px,#f2e8d1 49px 54px); mask:none; }
+  .screen.market .brand strong { text-decoration:underline wavy color-mix(in srgb,var(--accent) 55%,transparent); text-underline-offset:3px; }
+  .screen.maedeup { --paper:#f4e9e1; --ink:#342322; --muted:#806c67; --accent:#ad4052; --accent2:#326c74; --line:#d3b8ad; --panel:#fff8f3; --board:#e8d2bd; --node:#66524b; --edge:#765459; --radius:19px; }
+  .screen.maedeup::before { inset:7% 8% auto auto; width:155px; height:155px; border:7px double color-mix(in srgb,var(--accent2) 34%,transparent); border-radius:43% 57% 50% 50%; opacity:.55; transform:rotate(45deg); mask:none; }
+  .screen.maedeup::after { right:4%; top:10%; width:48px; height:70px; border:0; border-right:3px solid var(--accent); border-bottom:3px solid var(--accent); border-radius:0 0 35px 0; box-shadow:12px 10px 0 -8px var(--accent2); transform:rotate(25deg); }
+  .screen.print { --paper:#e9e4d8; --ink:#252522; --muted:#68665d; --accent:#31564e; --accent2:#9b3d35; --line:#aaa79a; --panel:#f6f3e9; --board:#d4c9ac; --node:#373a32; --edge:#40453d; --radius:2px; }
+  .screen.print::before { opacity:.28; background-image:radial-gradient(#343a31 .55px,transparent .7px); background-size:4px 4px; mask:none; }
+  .screen.print .top { border-bottom:2px solid var(--ink); }
+  .screen.print .team,.screen.print .result,.screen.print .history,.screen.print .board-shell { box-shadow:none; }
+  .screen.hip { --paper:#faf1df; --ink:#202526; --muted:#69716c; --accent:#f05c49; --accent2:#355f56; --line:#d6c6a4; --panel:#fffaf0; --board:#e8d6b0; --node:#415248; --edge:#41372e; --radius:14px; }
+  .screen.hip::before { inset:0; opacity:.8; background:linear-gradient(90deg,transparent 0 69%,#d7e2d5 69% 70%,transparent 70%),linear-gradient(0deg,transparent 0 68%,#e7c2a4 68% 69%,transparent 69%),linear-gradient(135deg,transparent 49.5%,rgba(53,95,86,.15) 50%,transparent 51%); background-size:auto,auto,38px 38px; mask:none; }
+  .screen.hip .seal { border:2px solid var(--accent); border-radius:50%; font-size:13px; transform:rotate(8deg); }
+  .screen.hip .roll { border-radius:5px; letter-spacing:.05em; }
+  @media (max-width: 980px) { .page{padding:26px 16px 46px}.intro{align-items:start;flex-direction:column}.legend{max-width:100%}.grid{grid-template-columns:1fr} }
+  @media print { body{background:#fff}.page{max-width:none;padding:12px}.grid{gap:10px}.concept{break-inside:avoid;box-shadow:none}.caption{padding:9px 12px}.screen{print-color-adjust:exact;-webkit-print-color-adjust:exact} }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <div>
+      <p class="eyebrow">MOSIGAME · TABLET CONCEPT STUDY</p>
+      <h1>전략 윷놀이<br>태블릿 화면 디자인 20안</h1>
+      <p>같은 플레이 상태와 정보 배치를 두고, 시각 언어를 비교하는 콘셉트 시트입니다. 추가 10안은 첨부 이미지의 색이나 그림체를 가져오지 않고, 단청·조각보·옹기·나전·기와·탈춤·매듭 등 한국 전통의 소재와 조형 원리를 새로 해석했습니다.</p>
+    </div>
+    <div class="legend">가로 태블릿 진행 화면 · 상태 표시는 시각화용 예시<br>규칙·점수·게임 흐름은 아직 확정하지 않았습니다.</div>
+  </header>
+  <h2 class="series-title"><span>01 — 10</span>기존 콘셉트</h2>
+  <section class="grid" id="concepts" aria-label="기존 디자인 콘셉트 10안"></section>
+  <h2 class="series-title"><span>11 — 20</span>전통 요소를 새로 해석한 추가 콘셉트</h2>
+  <section class="grid" id="more-concepts" aria-label="추가 디자인 콘셉트 10안"></section>
+</main>
+<script>
+const concepts = [
+  ['한지와 먹','담백한 여백 · 붓글씨 · 인장','ink','韓'],
+  ['오방색 놀이마당','명확한 팀 색 · 잔치의 활기','festival','놀이'],
+  ['원목 보드게임','따뜻한 나뭇결 · 손에 잡히는 말','wood','木'],
+  ['민화 산수화','청록 산수 · 파도와 산 능선','minhwa','山'],
+  ['청화와 금박','궁중 문양 · 학과 매화의 격식','crane','鶴'],
+  ['한글 서책','훈민정음 · 붉은 인주 · 서책','calligraphy','ᄒᆞᆫ'],
+  ['서울의 밤','서울 야경 · 네온 포인트 · 현대적 리듬','seoul','SEOUL'],
+  ['해와 달의 길','청색 산수 · 해와 달 · 상징적 보드','cosmos','☼'],
+  ['종이접기','접힌 면 · 민트 종이 · 산뜻한 입체감','paperfold','折'],
+  ['차분한 모던','절제된 장식 · 높은 대비 · 보드 우선','modern','윷']
+];
+const moreConcepts = [
+  ['단청의 선','기둥과 공포의 색띠 · 반복되는 건축 문양','dancheong','丹'],
+  ['조각보의 판','천 조각의 분할 · 솔기와 비대칭 그리드','jogakbo','襆'],
+  ['옹기의 곡선','옹기 표면 · 둥근 형태 · 소박한 흙빛','onggi','甕'],
+  ['나전의 빛','칠기 바탕 · 자개 조각 · 절제된 무지갯빛','najeon','螺'],
+  ['기와의 리듬','기와 골과 처마선 · 단정한 건축 실루엣','giwa','瓦'],
+  ['탈춤의 한판','탈의 과장된 표정 · 장단감 있는 그래픽','talchum','탈'],
+  ['장터 목판','옛 장터 간판 · 목판 인쇄 · 활기찬 정보 위계','market','場'],
+  ['전통 매듭','매듭의 고리와 술 · 흐름을 잇는 선형 장식','maedeup','結'],
+  ['민화 목판 인쇄','판화의 굵은 윤곽 · 제한된 잉크 · 찍어낸 질감','print','印'],
+  ['힙한 한글 민속','전통 문양의 단순화 · 현대 한글 타이포그래피','hip','한']
+];
+const circlePoints = [[50,5],[72,5],[95,5],[95,28],[95,50],[95,72],[95,95],[72,95],[50,95],[28,95],[5,95],[5,72],[5,50],[5,28],[5,5],[27,27],[50,50],[73,73],[73,27],[50,50],[27,73]];
+function svgBoard(){
+  const points = circlePoints.map(([x,y],i)=>`<circle class="${[0,4,8,12,14,16,18,20].includes(i)?'corner ':''}${i===16?'center':''}" cx="${x}" cy="${y}" r="${i===16?3.6:2.2}"/>`).join('');
+  return `<svg class="track" viewBox="0 0 100 100" aria-hidden="true"><path d="M5 5H95V95H5Z"/><path class="diag" d="M5 5L50 50L95 95M95 5L50 50L5 95"/>${points}</svg>`;
+}
+function makeConcept([name,subtitle,theme,seal],i){
+  const n=String(i+1).padStart(2,'0');
+  return `<article class="concept"><header class="caption"><div><h2>${n}. ${name}</h2><p>${subtitle}</p></div><span class="number">${n}</span></header><section class="screen ${theme}" aria-label="${name} 태블릿 게임 진행 화면">
+    <div class="top"><div class="brand"><span class="seal">${seal}</span><div><strong>전략 윷놀이</strong><small>모시겜 · TABLE ${n}</small></div></div><div class="meta"><span class="pill">4라운드</span><span class="pill">팀 대결</span><span class="exit">×</span></div></div>
+    <div class="layout"><aside class="team-col"><div class="team active"><div class="team-head"><span class="avatar">청</span><div><b>청팀</b><small>민준 · 서연</small></div></div><div class="progress"><i></i></div><div class="scores"><span>완주 말</span><b>2 / 4</b></div></div><div class="turn-card"><small>NOW PLAYING</small><strong>청팀 차례</strong></div><div class="team red"><div class="team-head"><span class="avatar">홍</span><div><b>홍팀</b><small>지우 · 도윤</small></div></div><div class="progress"><i></i></div><div class="scores"><span>완주 말</span><b>1 / 4</b></div></div></aside>
+    <div class="board-shell"><div class="board">${svgBoard()}<span class="stone s1">청</span><span class="stone blue s2">홍</span><span class="stone s3">청</span><span class="stone blue s4">홍</span><span class="center-mark">윷</span></div><span class="board-label">YUT BOARD · 진행 경로</span></div>
+    <aside class="action-col"><div class="result"><small>최근 결과</small><strong>도</strong><span>말 이동을 선택하세요</span></div><div class="sticks"><i class="stick"></i><i class="stick"></i><i class="stick back"></i><i class="stick"></i></div><div class="history"><b>최근 기록</b><p><span>청팀</span><span>도 · 이동</span></p><p><span>홍팀</span><span>걸 · 이동</span></p></div><button class="roll" type="button">윷 던지기</button><div class="hint">차례와 이동 상태를<br>큰 글자로 안내합니다</div></aside></div>
+  </section></article>`;
+}
+document.getElementById('concepts').innerHTML=concepts.map(makeConcept).join('');
+document.getElementById('more-concepts').innerHTML=moreConcepts.map((concept,i)=>makeConcept(concept,i+10)).join('');
+</script>
+</body>
+</html>

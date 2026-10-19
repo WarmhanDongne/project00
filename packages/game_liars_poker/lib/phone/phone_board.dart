@@ -5,8 +5,8 @@
 library;
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,8 +1,8 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'package:game_kit/recovery/widgets/game_connection_led.dart';
 import 'package:game_kit/recovery/services/required_image.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_holdem/game_assets.dart';
@@ -67,7 +67,7 @@ class _HoldemPhoneGameState extends ConsumerState<HoldemPhoneGame> {
   @override
   void initState() {
     super.initState();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid != null) {
       _args = HoldemSessionArgs(
         roomCode: widget.roomCode,

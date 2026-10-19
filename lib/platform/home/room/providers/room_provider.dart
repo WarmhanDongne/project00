@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:game_kit/recovery/services/room_session_identity_store.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
@@ -5,7 +6,6 @@ import 'package:game_kit/core/diagnostics/recovery_metrics.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
 import 'package:flutter/material.dart';
@@ -64,7 +64,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   /// 그대로 실행되도록, 현재 UID 조회를 한곳으로 모읍니다.
   static String? _firebaseUid() {
     try {
-      return FirebaseAuth.instance.currentUser?.uid;
+      return FirebaseBackend.auth.currentUser?.uid;
     } catch (_) {
       return null;
     }

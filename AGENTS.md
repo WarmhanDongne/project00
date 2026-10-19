@@ -13,7 +13,7 @@ router다.
 | 구조, 게임, 플랫폼, Firebase, auth/session | [`Architecture Reference`](docs/engineering/ARCHITECTURE.md)와 관련 코드·테스트 |
 | 패키지 분리·게임 다운로드·Shorebird 패치 | [`Package Migration`](docs/engineering/PACKAGE_MIGRATION.md), `tool/check_package_boundaries.py` |
 | Cloud Functions 조사·추가·배포 | [`Cloud Functions`](docs/engineering/CLOUD_FUNCTIONS.md), `functions/src/index.ts` |
-| 새 게임 | [`game_kit 채택 규칙`](docs/engineering/GAME_KIT_ADOPTION.md), [`게임 스켈레톤`](packages/game_template/lib/game_template.dart), [`패키지·다운로드 기준`](docs/engineering/PACKAGE_MIGRATION.md), `functions/src/<game>/` |
+| 새 게임 | [`새 게임 제작·연결 가이드`](docs/engineering/NEW_GAME_GUIDE.md), [`game_kit 채택 규칙`](docs/engineering/GAME_KIT_ADOPTION.md), [`게임 스켈레톤`](packages/game_template/lib/game_template.dart), [`패키지·다운로드 기준`](docs/engineering/PACKAGE_MIGRATION.md), `functions/src/<game>/` |
 | Project CLI | [`Project CLI`](docs/engineering/PROJECT_CLI.md), `bin/mosigame.dart`, `tool/mosigame_cli/`, `test/mosigame_cli/` |
 | 작업 계획·진행·완료·기록 정리 | [`작업 목록`](docs/planning/TASKS.md), [`작업 관리 방법`](docs/planning/TASK_MANAGEMENT.md), 해당 작업 ID의 [상세 설명](docs/planning/tasks/), [`완료 작업`](docs/planning/COMPLETED_TASKS.md), 해당 월의 [`작업 기록`](docs/planning/logs/) |
 

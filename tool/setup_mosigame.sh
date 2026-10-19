@@ -74,7 +74,7 @@ functions/package.json
 functions/package-lock.json
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
-lib/firebase/firebase_options.dart
+packages/game_kit/lib/firebase/firebase_options.dart
 "
 while IFS= read -r required_file; do
   [ -z "$required_file" ] && continue

@@ -99,6 +99,10 @@ abstract class TemplateGame implements GameGateway {
   //[테이블이미지]
   ImageProvider? get layoutTableImage => null;
 
+  /// true면 자리 배치 뒤 테이블 확대 대신 한지 창호문이 닫혔다 열리며
+  /// 게임 화면을 공개합니다(윷놀이 디자인의 입장 연출).
+  bool get usesDoorEntrance => false;
+
   //[의자이미지]
   ImageProvider? get layoutChairImage => null;
 

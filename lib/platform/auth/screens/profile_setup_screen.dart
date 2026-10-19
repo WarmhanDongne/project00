@@ -1,6 +1,6 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:game_kit/localization/game_locale.dart';
 import 'package:flutter/services.dart';
@@ -63,7 +63,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _consentStore = widget.consentStore ?? SignupConsentStore();
     unawaited(_loadConsents());
     _nicknameController.text =
-        FirebaseAuth.instance.currentUser?.displayName ?? '';
+        FirebaseBackend.auth.currentUser?.displayName ?? '';
   }
 
   Future<void> _loadConsents() async {
@@ -150,7 +150,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _errorMessage = null;
     });
     try {
-      String? profileImageUrl = FirebaseAuth.instance.currentUser?.photoURL;
+      String? profileImageUrl = FirebaseBackend.auth.currentUser?.photoURL;
       if (_profileImageBytes != null) {
         profileImageUrl = await _authService.uploadProfileImage(
           imageBytes: _profileImageBytes!,
@@ -191,7 +191,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
     if (shouldLeave != true) return;
     await _consentStore.clear();
-    await FirebaseAuth.instance.signOut();
+    await FirebaseBackend.auth.signOut();
   }
 
   @override
@@ -230,7 +230,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               RegisterStepTwo(
                 nicknameController: _nicknameController,
                 isLoading: isBusy,
-                googlePhotoURL: FirebaseAuth.instance.currentUser?.photoURL,
+                googlePhotoURL: FirebaseBackend.auth.currentUser?.photoURL,
                 profileImageBytes: _profileImageBytes,
                 onPickProfileImage: _pickProfileImage,
                 onCheckNickname: _completeProfile,

@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,11 +10,9 @@ class GameService {
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+  }) : _firestore = firestore ?? FirebaseBackend.firestore,
+       _auth = auth ?? FirebaseBackend.auth,
+       _functions = functions ?? FirebaseBackend.functions;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -31,7 +30,21 @@ class GameService {
   }
 
   /// 전체 게임 목록을 불러오고 현재 사용자의 보유 여부를 함께 반환
-  Future<List<GameInfo>> fetchGames() async {
+  Future<List<GameInfo>> fetchGames() => _fetchPersonalCatalog(
+    include: (game) => game.enabled && game.isAccessible,
+  );
+
+  /// 상점에 진열할 전체 카탈로그를 보유 여부와 함께 반환합니다.
+  ///
+  /// 내 게임 목록과 달리 유료 미보유 게임과 아직 비활성화된 예고 게임도
+  /// `storeVisible`이면 포함합니다. 실제 실행 가능 여부는 [GameInfo.isAccessible]과
+  /// [GameInfo.enabled]를 별도로 확인합니다.
+  Future<List<GameInfo>> fetchStoreGames() =>
+      _fetchPersonalCatalog(include: (game) => game.storeVisible);
+
+  Future<List<GameInfo>> _fetchPersonalCatalog({
+    required bool Function(GameInfo game) include,
+  }) async {
     final user = _auth.currentUser;
 
     late QuerySnapshot<Map<String, dynamic>> gameSnapshot;
@@ -57,7 +70,7 @@ class GameService {
             isOwned: ownedGameIds.contains(runtimeGameId(doc.id)),
           ),
         )
-        .where((game) => game.enabled && game.isAccessible)
+        .where(include)
         .toList(growable: false);
 
     games.sort((left, right) => left.order.compareTo(right.order));

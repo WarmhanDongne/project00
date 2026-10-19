@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 // ignore: depend_on_referenced_packages
@@ -12,17 +14,33 @@ import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:project00/platform/home/gamelist/models/game_info.dart';
 import 'package:project00/platform/home/gamelist/service/game_list_service.dart';
 import 'package:project00/platform/home/phone/screens/phone_room_waiting.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
 import 'package:project00/platform/home/room/models/room_player.dart';
 import 'package:project00/platform/home/room/providers/room_provider.dart';
+import 'package:project00/platform/home/room/services/player_room_session_store.dart';
 import 'package:project00/platform/home/room/services/room_service.dart';
+import 'package:project00/platform/home/room/services/room_leave_intent.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _Rooms extends Fake implements RoomService {
+  Completer<void>? leaveGate;
+  Object? leaveError;
+  int leaveCalls = 0;
+
   @override
   Stream<bool> watchServerConnection() =>
       Stream.multi((sink) => sink.add(true));
   @override
   Stream<String?> watchGameStatus(String roomCode) => const Stream.empty();
+
+  @override
+  Future<void> leaveRoom(String roomCode) async {
+    leaveCalls++;
+    await leaveGate?.future;
+    final error = leaveError;
+    if (error != null) throw error;
+  }
 }
 
 class _Games extends Fake implements GameService {}
@@ -68,6 +86,8 @@ void main() {
   TestFirebaseCoreHostApi.setUp(MockFirebaseApp());
   setUpAll(() async => Firebase.initializeApp());
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    RoomLeaveIntent.resetForTesting();
     FirebaseAuthPlatform.instanceFor(
       app: Firebase.app(),
       pluginConstants: {
@@ -81,6 +101,134 @@ void main() {
         ],
       },
     );
+  });
+
+  testWidgets('그룹 나가기는 즉시 테마 전환을 열고 실패 복귀 뒤 같은 요청을 재시도한다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(() async {
+      RoomLeaveIntent.resetForTesting();
+      await PlayerRoomSessionStore.instance.clear();
+    });
+    final roomService = _Rooms()
+      ..leaveGate = Completer<void>()
+      ..leaveError = StateError('offline');
+    final provider = RoomProvider(service: roomService, gameService: _Games())
+      ..roomCode = 'ABCDE'
+      ..roomStatus = 'waiting'
+      ..selectedGameId = 'holdem'
+      ..selectedGame = GameInfo.fromJson({
+        'id': 'holdem',
+        'name': '홀덤',
+        'description': '게임 설명',
+        'rules': '게임 규칙',
+      })
+      ..selectedGameLoadStatus = RoomDataLoadStatus.loaded;
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: PhoneRoomWaiting(provider: provider),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('그룹 나가기'));
+    await tester.pump();
+
+    expect(roomService.leaveCalls, 1);
+    expect(find.byKey(const Key('phone-room-leaving')), findsOneWidget);
+    expect(find.text('그룹에서 나가는 중이에요'), findsOneWidget);
+    expect(
+      tester
+          .widget<PhoneBackgroundReveal>(
+            find.byKey(const Key('phone-room-leaving-background')),
+          )
+          .color,
+      MosiGameArt.holdem.shelfTheme.ground,
+    );
+
+    roomService.leaveGate!.complete();
+    await tester.pump(const Duration(milliseconds: 260));
+    await tester.pump(const Duration(milliseconds: 260));
+    expect(find.byKey(const Key('phone-room-leave-failed')), findsOneWidget);
+    expect(find.text('그룹에서 나가지 못했어요'), findsOneWidget);
+    expect(find.text('대기실로 돌아가기'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+
+    roomService
+      ..leaveGate = Completer<void>()
+      ..leaveError = null;
+    await tester.tap(find.text('다시 시도'));
+    await tester.pump();
+    expect(roomService.leaveCalls, 2);
+    expect(find.text('그룹에서 나가는 중이에요'), findsOneWidget);
+    roomService.leaveGate!.complete();
+    await tester.pump(const Duration(milliseconds: 260));
+    await tester.pump();
+    expect(provider.roomCode, isNull);
+    expect(find.byKey(const Key('phone-room-leave-failed')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('강퇴되면 최상단 배경 전환으로 화면을 덮은 뒤 홈으로 돌아간다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = _provider();
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PlatformTheme.light(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                PhoneFlowRoute<void>(
+                  builder: (_) => PhoneRoomWaiting(provider: provider),
+                ),
+              ),
+              child: const Text('홈'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('홈'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    provider
+      ..roomCode = null
+      ..wasKicked = true
+      ..notifyListeners();
+    await tester.pump();
+    expect(
+      find.byKey(const Key('phone-room-forced-exit-overlay')),
+      findsOneWidget,
+    );
+    expect(find.text('방에서 나왔어요'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(
+      find.byKey(const Key('phone-room-leaving-background')),
+      findsOneWidget,
+    );
+    expect(find.text('그룹 나가기'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 220));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('홈'), findsOneWidget);
+    expect(
+      find.byKey(const Key('phone-room-forced-exit-overlay')),
+      findsNothing,
+    );
+    expect(find.text('방에서 추방되었습니다.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   for (final gameId in ['liars_poker', 'final_call', 'mafia', 'holdem']) {
@@ -103,8 +251,14 @@ void main() {
       );
       await tester.pump();
       expect(
-        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        tester
+            .widget<PhoneBackgroundWipe>(find.byType(PhoneBackgroundWipe))
+            .color,
         MosiSeatTheme.of(gameId).table,
+      );
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        Colors.transparent,
       );
       expect(find.text('태블릿에서 내 자리 찾기'), findsNothing);
       expect(find.byType(PhoneProfile), findsNothing);
@@ -116,6 +270,51 @@ void main() {
       provider.dispose();
     });
   }
+
+  testWidgets('게임 소개에서 자리 배치로 갈 때 같은 배경 레이어가 테이블색을 대각선으로 덮는다', (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = _provider();
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(_app(provider));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    final background = find.byType(PhoneBackgroundWipe);
+    final backgroundElement = tester.element(background);
+
+    provider.roomStatus = 'seating';
+    provider.notifyListeners();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(tester.element(background), same(backgroundElement));
+    expect(
+      tester.widget<PhoneBackgroundWipe>(background).color,
+      MosiSeatTheme.holdem.table,
+    );
+    expect(
+      tester
+          .widget<ColoredBox>(
+            find.byKey(const Key('phone-background-wipe-base')),
+          )
+          .color,
+      MosiGameArt.holdem.shelfTheme.ground,
+    );
+    final reveal = tester.widget<PhoneBackgroundReveal>(
+      find.byKey(const Key('phone-background-wipe-reveal')),
+    );
+    expect(reveal.direction, PhoneBackgroundWipeDirection.topRightToBottomLeft);
+    expect(reveal.color, MosiSeatTheme.holdem.table);
+    expect(reveal.progress, inExclusiveRange(0, 1));
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      Colors.transparent,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('참여자 목록은 내 줄에만 나 표시를 붙인다', (tester) async {
     RoomPlayer player(String uid, String name) => RoomPlayer(
@@ -140,13 +339,16 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 1));
     final badge = find.byKey(const Key('participant-me-badge'));
+    final avatar = find.byKey(const ValueKey('participant-avatar-me'));
     expect(badge, findsOneWidget);
-    // 표시는 내 닉네임과 같은 줄에 있습니다.
-    expect(
-      (tester.getCenter(badge).dy - tester.getCenter(find.text('나의닉')).dy)
-          .abs(),
-      lessThan(4),
-    );
+    final avatarRect = tester.getRect(avatar);
+    final badgeRect = tester.getRect(badge);
+    expect(badgeRect.center.dx, greaterThan(avatarRect.center.dx));
+    expect(badgeRect.center.dy, greaterThan(avatarRect.center.dy));
+    expect(badgeRect.left, lessThan(avatarRect.right));
+    expect(badgeRect.top, lessThan(avatarRect.bottom));
+    expect(badgeRect.width, lessThan(avatarRect.width));
+    expect(badgeRect.height, lessThan(avatarRect.height));
     expect(tester.takeException(), isNull);
   });
 
@@ -226,7 +428,9 @@ void main() {
     final headerElement = tester.element(header);
     final headerBounds = tester.getRect(header);
     expect(
-      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      tester
+          .widget<PhoneBackgroundWipe>(find.byType(PhoneBackgroundWipe))
+          .color,
       MosiColors.violet,
     );
     provider
@@ -244,11 +448,26 @@ void main() {
       find.byKey(const ValueKey('phone-game-loading-holdem')),
       findsNothing,
     );
-    final midColor = tester
-        .widget<Scaffold>(find.byType(Scaffold))
-        .backgroundColor;
-    expect(midColor, isNot(MosiColors.violet));
-    expect(midColor, isNot(MosiGameArt.holdem.shelfTheme.ground));
+    expect(
+      tester
+          .widget<PhoneBackgroundWipe>(find.byType(PhoneBackgroundWipe))
+          .color,
+      MosiGameArt.holdem.shelfTheme.ground,
+    );
+    expect(
+      tester
+          .widget<ColoredBox>(
+            find.byKey(const Key('phone-background-wipe-base')),
+          )
+          .color,
+      MosiColors.violet,
+    );
+    final reveal = tester.widget<PhoneBackgroundReveal>(
+      find.byKey(const Key('phone-background-wipe-reveal')),
+    );
+    expect(reveal.direction, PhoneBackgroundWipeDirection.topRightToBottomLeft);
+    expect(reveal.color, MosiGameArt.holdem.shelfTheme.ground);
+    expect(reveal.progress, inExclusiveRange(0, 1));
     expect(tester.element(header), same(headerElement));
     expect(tester.getRect(header), headerBounds);
     final enteringFade = find
@@ -269,7 +488,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const ValueKey('phone-group-waiting')), findsNothing);
     expect(
-      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      tester
+          .widget<PhoneBackgroundWipe>(find.byType(PhoneBackgroundWipe))
+          .color,
       MosiGameArt.holdem.shelfTheme.ground,
     );
     expect(tester.takeException(), isNull);
@@ -367,7 +588,9 @@ void main() {
       findsOneWidget,
     );
     expect(
-      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      tester
+          .widget<PhoneBackgroundWipe>(find.byType(PhoneBackgroundWipe))
+          .color,
       MosiGameArt.holdem.shelfTheme.ground,
     );
     expect(tester.takeException(), isNull);
@@ -444,6 +667,16 @@ void main() {
     );
     expect(marker().background, MosiGameArt.holdem.shelfTheme.btnBg);
     expect(marker().color, MosiGameArt.holdem.shelfTheme.btnFg);
+    final avatarRect = tester.getRect(
+      find.byKey(const ValueKey('waiting-player-avatar-player-0')),
+    );
+    final markerRect = tester.getRect(
+      find.byKey(const Key('waiting-player-me-badge')),
+    );
+    expect(markerRect.center.dx, greaterThan(avatarRect.center.dx));
+    expect(markerRect.center.dy, greaterThan(avatarRect.center.dy));
+    expect(markerRect.left, lessThan(avatarRect.right));
+    expect(markerRect.top, lessThan(avatarRect.bottom));
 
     provider
       ..selectedGameId = 'mafia'

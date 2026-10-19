@@ -28,6 +28,7 @@ workspace:
   - packages/game_final_call
   - packages/game_mafia
   - packages/game_holdem
+  - packages/game_yut
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -45,6 +46,7 @@ dependencies:
   game_final_call: any
   game_mafia: any
   game_holdem: any
+  game_yut: any
 
   firebase_core: ^4.14.0
   firebase_database: ^12.5.0
@@ -162,6 +164,12 @@ flutter:
     - family: BlackHanSans
       fonts:
         - asset: assets/fonts/BlackHanSans-Regular.ttf
+    - family: DoHyeon
+      fonts:
+        - asset: assets/fonts/DoHyeon-Regular.ttf
+    - family: SongMyung
+      fonts:
+        - asset: assets/fonts/SongMyung-Regular.ttf
 
 flutter_gen: 
   output: lib/gen/

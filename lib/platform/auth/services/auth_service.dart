@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,11 +18,10 @@ class FirebaseAuthService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
     FirebaseStorage? storage,
-  }) : _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
-       _storage = storage ?? FirebaseStorage.instance;
+  }) : _auth = auth ?? FirebaseBackend.auth,
+       _functions = functions ?? FirebaseBackend.functions,
+       _storage =
+           storage ?? FirebaseStorage.instanceFor(app: FirebaseBackend.app);
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;

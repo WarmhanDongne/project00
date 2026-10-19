@@ -81,7 +81,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
       duration: LiarsPokerTabletTiming.gameEntry,
       reverseDuration: LiarsPokerTabletTiming.gameExit,
     );
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid == null) {
       _initializationError = GameFlowCopy.authenticationRequired;
       return;
@@ -609,7 +609,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
             ),
             interruption: GameInterruptionRecovery(
               state: game.interruption,
-              currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+              currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
               presentation: GameInterruptionPresentation.tabletController,
               isSubmitting: game.isMenuCommandInFlight,
               // failureMessage를 넘기지 않습니다. 이 화면은 컨트롤러의
@@ -838,7 +838,7 @@ class _LiarsPokerTabletGameState extends ConsumerState<LiarsPokerTabletGame>
     // 게임 종료 후 플랫폼 화면 정책 복원
     // ---------------------------------------------------------------------------
     unawaited(AppOrientation.restorePlatform());
-    unawaited(AppSystemUi.showPlatformSystemBars());
+    unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     super.dispose();
   }
 }

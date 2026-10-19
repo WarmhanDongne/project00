@@ -6,10 +6,10 @@
 // 즉, 화면에서 발생한 행동을 정해진 서버 쓰기 경계로 전달하기 위해 필요한 파일이다.
 
 // ========================[ import ]==========================
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/services/game_command_service.dart';
 import 'package:game_kit/recovery/models/game_interruption.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
@@ -30,7 +30,7 @@ class GameInterruptionCommandService extends GameCommandService {
     required int reportSeq,
     required bool ready,
   }) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     final session = GameRecoverySession.forRoom(roomCode, uid ?? '');
     final data = {
       'roomCode': roomCode,
@@ -47,7 +47,7 @@ class GameInterruptionCommandService extends GameCommandService {
     return batch.run(
       () => invoke('game_common_recovery_report', data, capturedUid: uid),
       isCurrent: () =>
-          FirebaseAuth.instance.currentUser?.uid == uid &&
+          FirebaseBackend.auth.currentUser?.uid == uid &&
           !session.leaving &&
           session.transportConnected &&
           !session.transportRecovering &&
@@ -73,7 +73,7 @@ class GameInterruptionCommandService extends GameCommandService {
   }
 
   Map<String, dynamic> _causeData(String roomCode, String incidentId) {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = FirebaseBackend.auth.currentUser?.uid ?? '';
     final pub = GameRecoverySession.forRoom(roomCode, uid).publicValue;
     final raw = pub?['recovery'];
     final recovery = raw is Map ? GameInterruption.fromMap(raw) : null;

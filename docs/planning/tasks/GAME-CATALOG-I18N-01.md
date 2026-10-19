@@ -4,6 +4,10 @@ Firestore 게임 카탈로그의 이름·소개·규칙·장르를 앱 locale에
 
 ## 데이터 계약
 
+새 게임 등록의 전체 필드와 공개 순서는
+[새 게임 제작·연결 가이드](../../engineering/NEW_GAME_GUIDE.md)를 따른다. 새 문서는 네
+locale 정보를 모두 포함하고 `enabled: false`, `storeVisible: false`로 시작한다.
+
 - `games/{catalogId}.name`: 이전 앱 호환용 한국어 이름
 - `games/{catalogId}.localizedNames.ko`: 한국어
 - `games/{catalogId}.localizedNames.en`: 영어

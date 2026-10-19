@@ -6,9 +6,9 @@
 /// 실제 턴 제한시간·승패 규칙은 서버가 결정하며 연출 시간과 구분합니다.
 library;
 
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_final_call/game_copy.dart';

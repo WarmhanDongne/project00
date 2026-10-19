@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/models/game_room_context.dart';
 import 'package:game_kit/player_layouts/player_layout_model.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
@@ -33,7 +33,7 @@ const _identity = RoomSessionIdentity(
 );
 void _user(String uid) {
   FirebaseAuthPlatform.instanceFor(
-    app: Firebase.app(),
+    app: FirebaseBackend.app,
     pluginConstants: {
       'APP_CURRENT_USER': [
         InternalUserInfo(
@@ -45,13 +45,26 @@ void _user(String uid) {
       ],
     },
   );
-  expect(FirebaseAuth.instance.currentUser?.uid, uid);
+  expect(FirebaseBackend.auth.currentUser?.uid, uid);
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  TestFirebaseCoreHostApi.setUp(MockFirebaseApp());
-  setUpAll(() async => Firebase.initializeApp());
+  TestFirebaseCoreHostApi.setUp(_Core());
+  setUpAll(() async {
+    await Firebase.initializeApp();
+    if (FirebaseBackend.isLocal) {
+      await Firebase.initializeApp(
+        name: FirebaseBackend.appName,
+        options: const FirebaseOptions(
+          apiKey: 'local-emulator-only',
+          appId: '1:1:ios:1',
+          messagingSenderId: '1',
+          projectId: FirebaseBackend.projectId,
+        ),
+      );
+    }
+  });
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     _user(_identity.uid);
@@ -68,7 +81,15 @@ void main() {
     );
   });
 
-  for (final id in ['liars_poker', 'final_call', 'holdem', 'mafia']) {
+  for (final id in [
+    'liars_poker',
+    'final_call',
+    'holdem',
+    'mafia',
+    'yut',
+    'strategy_yut',
+    'strategy_yut_edition',
+  ]) {
     testWidgets(
       '$id uses successful start lookup during remaining setup and survives rebuild',
       (tester) async {
@@ -330,6 +351,8 @@ class _Game extends TemplateGame {
   _Game(this.id);
   @override
   final String id;
+  @override
+  bool get usesDoorEntrance => id.contains('yut');
   int starts = 0;
   final startGate = Completer<void>.sync();
   PlayerLayoutModel? layout;
@@ -372,3 +395,15 @@ class _Game extends TemplateGame {
 class _Service extends Fake implements RoomService {}
 
 class _GameService extends Fake implements GameService {}
+
+class _Core extends MockFirebaseApp {
+  @override
+  Future<CoreInitializeResponse> initializeApp(
+    String appName,
+    CoreFirebaseOptions initializeAppRequest,
+  ) async => CoreInitializeResponse(
+    name: appName,
+    options: initializeAppRequest,
+    pluginConstants: {},
+  );
+}

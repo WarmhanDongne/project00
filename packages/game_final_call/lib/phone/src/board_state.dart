@@ -55,7 +55,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
     unawaited(
       GameAssetStore.instance.prepareGame('final_call').catchError((_) {}),
     );
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     if (uid == null) {
       initializationError = GameFlowCopy.authenticationRequired;
       return;
@@ -329,7 +329,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
         onExit: () => unawaited(_leaveRoom()),
         interruption: GameInterruptionRecovery(
           state: game.interruption,
-          currentUid: FirebaseAuth.instance.currentUser?.uid ?? '',
+          currentUid: FirebaseBackend.auth.currentUser?.uid ?? '',
           isSubmitting: game.commandInFlight,
           failureMessage: game.errorMessage,
 

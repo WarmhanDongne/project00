@@ -17,6 +17,7 @@ import 'package:game_holdem/shared/widgets/table_ui.dart';
 import 'package:game_mafia/game_theme.dart';
 import 'package:game_mafia/shared/models/role_catalog.dart';
 import 'package:game_mafia/shared/widgets/noir.dart';
+import 'package:game_yut/ui.dart' as yut;
 import 'package:game_kit/core/constants/room_character.dart';
 import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:project00/platform/localization/platform_localizations.dart';
@@ -37,6 +38,9 @@ Widget? buildGamePlayPreview(String gameId) => switch (gameId) {
   'final_call' => const _FinalPlayScene(),
   'mafia' => const _MafiaPlayScene(),
   'holdem' => const _HoldemPlayScene(),
+  'yut' => const _YutPlayScene(edition: false),
+  'strategy_yut' => const _YutPlayScene(edition: false, strategy: true),
+  'strategy_yut_edition' => const _YutPlayScene(edition: true, strategy: true),
   _ => null,
 };
 
@@ -3455,6 +3459,764 @@ class _HoldemPlayScene extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+//=======================윷놀이 3종 · 플레이 미리보기==============================
+// 시안 `게임 상세 · 플레이 미리보기 (8초 반복)`을 옮겼습니다. 가운데 태블릿에
+// 나무 윷판, 양옆에 네 명의 휴대폰을 둡니다. 전략판은 네 명이 윷가락 하나씩
+// 뒤집어 동시에 공개하고, 일반판은 한 명이 휴대폰을 흔들어 네 윷을 던집니다.
+// 에디션은 같은 흐름을 홀로그램 민화 스킨으로 그립니다. 그림은 게임 화면과
+// 같은 부품(`package:game_yut/ui.dart`)을 씁니다.
+
+/// 미리보기 속 네 사람입니다(왼쪽 위·아래, 오른쪽 위·아래).
+List<({String name, String character, yut.YutTeam team, bool front})>
+_yutPreviewPlayers(bool strategy) {
+  String name(String ko, String en) =>
+      GameLocale.select(ko: ko, en: en, zhHans: en, zhHant: en);
+  return [
+    (
+      name: name('지민', 'Jimin'),
+      character: 'frog',
+      team: strategy ? yut.YutTeam.blue : yut.YutTeam.east,
+      front: true,
+    ),
+    (
+      name: name('서준', 'Seojun'),
+      character: 'cat',
+      team: strategy ? yut.YutTeam.blue : yut.YutTeam.south,
+      front: true,
+    ),
+    (
+      name: name('하린', 'Harin'),
+      character: 'crab',
+      team: strategy ? yut.YutTeam.white : yut.YutTeam.west,
+      front: false,
+    ),
+    (
+      name: name('태오', 'Taeo'),
+      character: 'whale',
+      team: strategy ? yut.YutTeam.white : yut.YutTeam.north,
+      front: true,
+    ),
+  ];
+}
+
+class _YutPlayScene extends StatelessWidget {
+  const _YutPlayScene({this.edition = false, this.strategy = false});
+
+  final bool edition;
+  final bool strategy;
+
+  static const _phoneSpots = [
+    Offset(14, 40),
+    Offset(14, 290),
+    Offset(566, 40),
+    Offset(566, 290),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final players = _yutPreviewPlayers(strategy);
+    final nodes = yut.YutBoard.nodes(
+      lo: edition ? .08128 : .124,
+      hi: edition ? 1 - .08128 : .876,
+    );
+    // 일반판은 개(2칸), 전략판은 걸(3칸)입니다.
+    final result = strategy ? yut.YutResult.geol : yut.YutResult.gae;
+    final route = strategy ? [2, 3, 4, 5] : [16, 17, 18];
+    return _Loop(
+      period: const Duration(seconds: 8),
+      builder: (context, p) {
+        const inner = 282.0;
+        Offset at(int node) => nodes[node] * inner;
+        // 말은 60%에서 칸마다 폴짝 뛰고 94%~100%에 처음 자리로 돌아갑니다.
+        final hops = route.length - 1;
+        final step = ((p - 60) / 4.6).clamp(0.0, hops.toDouble());
+        final index = step.floor().clamp(0, hops - 1);
+        final local = step - index;
+        var mover = Offset.lerp(at(route[index]), at(route[index + 1]), local)!;
+        final lift = step >= hops ? 0.0 : math.sin(local * math.pi) * 14;
+        if (p >= 94) {
+          mover = Offset.lerp(
+            at(route.last),
+            at(route.first),
+            Curves.ease.transform((p - 94) / 6),
+          )!;
+        }
+        final pieceSize = inner * (edition ? .1 : .106);
+        // 일반판 말은 주인 얼굴이 들어간 자리 색 원판입니다.
+        String? face(yut.YutTeam team) => strategy
+            ? null
+            : players.firstWhere((player) => player.team == team).character;
+        Widget token(yut.YutTeam team, Offset c, {double up = 0}) => Positioned(
+          left: c.dx - pieceSize / 2,
+          top: c.dy - pieceSize / 2 - up,
+          child: yut.YutPieceToken(
+            team: team,
+            label: '',
+            size: pieceSize,
+            edition: edition,
+            characterId: face(team),
+          ),
+        );
+        final moverTeam = players.first.team;
+        final others = strategy
+            ? [
+                (yut.YutTeam.white, at(11)),
+                (yut.YutTeam.blue, at(21)),
+                (yut.YutTeam.white, at(14)),
+              ]
+            : [
+                (yut.YutTeam.south, at(7)),
+                (yut.YutTeam.west, at(25)),
+                (yut.YutTeam.north, at(12)),
+              ];
+        final stampOpacity = _kf(p, [(42, 0), (46, 1), (58, 1), (62, 0)]);
+        final stampScale = _kf(p, [(42, 1.8), (46, 1)]);
+        final hidden = _kf(p, [(0, 1), (34, 1), (38, 0), (96, 0), (100, 1)]);
+        final caption = _kf(p, [(62, 0), (66, 1), (92, 1), (96, 0)]);
+
+        final board = _YutPreviewTablet(
+          edition: edition,
+          strategy: strategy,
+          children: [
+            for (final (team, c) in others) token(team, c),
+            token(moverTeam, mover, up: lift),
+            if (!strategy) _ThrownSticks(p: p, edition: edition),
+            Positioned.fill(
+              child: Center(
+                child: _fade(
+                  stampOpacity,
+                  Transform.scale(
+                    scale: stampScale,
+                    child: _YutPreviewStamp(result: result, edition: edition),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 10,
+              child: Center(
+                child: _fade(
+                  hidden,
+                  _YutPill(
+                    text: strategy
+                        ? GameLocale.select(
+                            ko: '고르는 중…',
+                            en: 'Choosing…',
+                            zhHans: '选择中…',
+                            zhHant: '選擇中…',
+                          )
+                        : GameLocale.select(
+                            ko: '흔드는 중…',
+                            en: 'Shaking…',
+                            zhHans: '摇动中…',
+                            zhHant: '搖動中…',
+                          ),
+                    edition: edition,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final steps = result.steps;
+        final captionText = strategy
+            ? GameLocale.select(
+                ko: '앞면 3개 → 걸! ${yut.YutCopy.teamName(moverTeam)} 말이 세 칸',
+                en: '3 fronts → Geol! Blue moves 3',
+                zhHans: '3个正面 → 杰！青军走3格',
+                zhHant: '3個正面 → 傑！青軍走3格',
+              )
+            : GameLocale.select(
+                ko: '앞면 2개 → 개! ${players.first.name} 말이 두 칸',
+                en: '2 fronts → Gae! ${players.first.name} moves $steps',
+                zhHans: '2个正面 → 开！${players.first.name}走$steps格',
+                zhHant: '2個正面 → 開！${players.first.name}走$steps格',
+              );
+        return _SceneBackdrop(
+          band: edition ? const Color(0xFF2A1F45) : const Color(0xFF5A3214),
+          stage: [
+            _at(190, 40, board),
+            for (var i = 0; i < 4; i++)
+              _at(
+                _phoneSpots[i].dx,
+                _phoneSpots[i].dy,
+                _YutPreviewPhone(
+                  player: players[i],
+                  p: p,
+                  index: i,
+                  strategy: strategy,
+                  edition: edition,
+                  hidden: hidden,
+                ),
+              ),
+            _at(
+              190,
+              470,
+              _fade(
+                caption,
+                Transform.translate(
+                  offset: Offset(0, 8 * (1 - caption)),
+                  child: _YutPreviewCaption(
+                    text: captionText,
+                    highlight: yut.YutCopy.result(result),
+                    edition: edition,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 흰 테두리 태블릿(300×300) 안의 나무판 또는 홀로그램판입니다.
+class _YutPreviewTablet extends StatelessWidget {
+  const _YutPreviewTablet({
+    required this.edition,
+    required this.strategy,
+    required this.children,
+  });
+
+  final bool edition;
+
+  /// 전략 윷놀이 여부입니다. 에디션이 아니면 게임과 같은 오크 판(E안)을 그립니다.
+  final bool strategy;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 300,
+    height: 300,
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: edition ? yut.YutColors.nightPanel : MosiColors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: edition ? yut.YutColors.lilac : MosiColors.ink,
+        width: 3,
+      ),
+      boxShadow: const [BoxShadow(color: _deepest, offset: Offset(10, 10))],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: edition
+                ? ColoredBox(
+                    color: yut.YutColors.night,
+                    child: Image(
+                      image: yut.YutImages.boardHolo,
+                      fit: BoxFit.fill,
+                    ),
+                  )
+                : LayoutBuilder(
+                    builder: (context, box) =>
+                        yut.YutOakBoard(side: box.biggest.shortestSide),
+                  ),
+          ),
+          ...children,
+        ],
+      ),
+    ),
+  );
+}
+
+/// 휴대폰 카드(110×200): 이름, 뒤집히는 윷가락, 공개 전 `?`와 공개 뒤 앞·뒤.
+class _YutPreviewPhone extends StatelessWidget {
+  const _YutPreviewPhone({
+    required this.player,
+    required this.p,
+    required this.index,
+    required this.strategy,
+    required this.edition,
+    required this.hidden,
+  });
+
+  final ({String name, String character, yut.YutTeam team, bool front}) player;
+  final double p;
+  final int index;
+  final bool strategy;
+  final bool edition;
+  final double hidden;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = yut.YutTeamStyle.of(player.team);
+    final blueLike = style.piece != 'piece_white';
+    final active = !strategy && index == 0;
+    // 시안 flip/flipB: 4%~28%에 두 바퀴(또는 두 바퀴 반) 돌고 멈춥니다.
+    final delay = index * 0.15 / 8 * 100;
+    final q = ((p - delay) % 100 + 100) % 100;
+    final turns = player.front ? 720.0 : 900.0;
+    final angle = strategy
+        ? _kf(q, [
+                (4, 0),
+                (10, 180),
+                (16, 360),
+                (22, 540),
+                (28, turns),
+                (94, turns),
+                (100, player.front ? turns : 1080),
+              ]) *
+              math.pi /
+              180
+        : 0.0;
+    final front = math.cos(angle) >= 0;
+    final label = _kf(p, [(36, 0), (40, 1), (92, 1), (96, 0)]);
+    final shake = active ? _kf(p, [(0, 0), (4, 1), (30, 1), (34, 0)]) : 0.0;
+    final wobble = math.sin(p * 2.4) * shake;
+    final card = edition ? yut.YutColors.nightPanel : const Color(0xFFF4F2EE);
+    final ink = edition ? yut.YutColors.moon : MosiColors.ink;
+    final resultLabel = strategy
+        ? (player.front ? yut.YutCopy.front : yut.YutCopy.back)
+        : active
+        ? GameLocale.select(
+            ko: '던짐!',
+            en: 'Thrown!',
+            zhHans: '掷出！',
+            zhHant: '擲出！',
+          )
+        : GameLocale.select(ko: '대기', en: 'Wait', zhHans: '等待', zhHant: '等待');
+    return SizedBox(
+      width: 110,
+      height: 230,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 110,
+            height: 200,
+            decoration: BoxDecoration(
+              color: card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: edition ? yut.YutColors.lilac : MosiColors.ink,
+                width: 3,
+              ),
+              boxShadow: const [
+                BoxShadow(color: _deepest, offset: Offset(8, 8)),
+              ],
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: edition ? yut.YutColors.nightEdge : MosiColors.white,
+                  width: 4,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    right: 4,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: ink, width: 1.5),
+                          ),
+                          child: ClipOval(
+                            child: MosiFace(
+                              characterId: player.character,
+                              size: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            player.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MosiFonts.sans(
+                              size: 10,
+                              weight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (strategy)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 22,
+                      child: Center(
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, .002)
+                            ..rotateY(angle),
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: front
+                                ? Matrix4.identity()
+                                : (Matrix4.identity()..rotateY(math.pi)),
+                            child: yut.YutStick(
+                              front: front,
+                              width: 40,
+                              edition: edition,
+                              characterId: player.character,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 34,
+                      child: Opacity(
+                        // 던진 뒤에는 윷이 태블릿으로 넘어가 휴대폰에서 사라집니다.
+                        opacity: active
+                            ? _kf(p, [(30, 1), (36, 0), (94, 0), (100, 1)])
+                            : .45,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            for (var k = 0; k < 4; k++)
+                              Transform.rotate(
+                                angle:
+                                    (k.isEven ? 1 : -1) * (.06 + .25 * wobble),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 1.5,
+                                  ),
+                                  child: yut.YutStick(
+                                    front: true,
+                                    width: 19,
+                                    edition: edition,
+                                    characterId: player.character,
+                                    marked: k == 0,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 144,
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          _fade(
+                            strategy ? hidden : (active ? hidden : 1),
+                            _YutPreviewChip(
+                              text: strategy
+                                  ? '?'
+                                  : active
+                                  ? GameLocale.select(
+                                      ko: '흔들기',
+                                      en: 'Shake',
+                                      zhHans: '摇动',
+                                      zhHant: '搖動',
+                                    )
+                                  : resultLabel,
+                              color: edition
+                                  ? yut.YutColors.nightRaised
+                                  : const Color(0xFF0E0A3D),
+                              edition: edition,
+                            ),
+                          ),
+                          if (strategy || active)
+                            _fade(
+                              label,
+                              Transform.scale(
+                                scale: .6 + .4 * label,
+                                child: _YutPreviewChip(
+                                  text: resultLabel,
+                                  color: !strategy || player.front
+                                      ? (edition
+                                            ? yut.YutColors.holoBlue
+                                            : yut.YutColors.blue)
+                                      : yut.YutColors.muted,
+                                  edition: edition,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 188,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                decoration: BoxDecoration(
+                  color: edition
+                      ? (blueLike
+                            ? yut.YutColors.holoBlue
+                            : const Color(0xFFFFFDF7))
+                      : style.fill == yut.YutColors.paperLight
+                      ? MosiColors.white
+                      : style.fill,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: edition ? yut.YutColors.lilac : MosiColors.ink,
+                    width: 2,
+                  ),
+                ),
+                child: Text(
+                  '${yut.YutCopy.teamName(player.team)} · ${player.name}',
+                  style: MosiFonts.sans(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: edition
+                        ? (blueLike ? Colors.white : const Color(0xFF14121C))
+                        : (style.piece == 'piece_white'
+                              ? MosiColors.ink
+                              : Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 일반판: 지민 쪽에서 날아온 네 윷이 판 위에 흩어졌다 결과가 찍힙니다.
+class _ThrownSticks extends StatelessWidget {
+  const _ThrownSticks({required this.p, required this.edition});
+
+  final double p;
+  final bool edition;
+
+  // 개: 앞면 둘(빨간 표시 윷은 뒤).
+  static const _faces = [false, true, true, false];
+
+  @override
+  Widget build(BuildContext context) {
+    final fly = _kf(p, [(30, 0), (40, 1)]);
+    final show = _kf(p, [(29, 0), (31, 1), (60, 1), (64, 0)]);
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: _fade(
+          show,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < 4; i++)
+                Positioned(
+                  left: -160 + (66 + i * 42 + 160) * fly,
+                  top: 30 + (60 + math.sin(i * 1.7) * 18 - 30) * fly,
+                  child: Transform.rotate(
+                    angle: (1 - fly) * -3 + (i - 1.5) * .18,
+                    child: yut.YutStick(
+                      front: _faces[i],
+                      width: 30,
+                      edition: edition,
+                      characterId: 'frog',
+                      marked: i == 0,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _YutPreviewChip extends StatelessWidget {
+  const _YutPreviewChip({
+    required this.text,
+    required this.color,
+    required this.edition,
+  });
+
+  final String text;
+  final Color color;
+  final bool edition;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 56,
+    height: 24,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(6),
+      border: edition ? Border.all(color: yut.YutColors.lilac) : null,
+    ),
+    child: Text(
+      text,
+      maxLines: 1,
+      style: MosiFonts.sans(
+        size: 13,
+        weight: FontWeight.w700,
+        color: Colors.white,
+      ),
+    ),
+  );
+}
+
+class _YutPill extends StatelessWidget {
+  const _YutPill({required this.text, required this.edition});
+
+  final String text;
+  final bool edition;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    decoration: BoxDecoration(
+      color: edition ? null : yut.YutColors.blue,
+      gradient: edition ? yut.YutColors.holoGradient : null,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      text,
+      style: MosiFonts.sans(
+        size: 13,
+        weight: FontWeight.w700,
+        color: edition ? yut.YutColors.night : Colors.white,
+      ),
+    ),
+  );
+}
+
+/// 판 가운데 찍히는 결과 도장(92×92)입니다.
+class _YutPreviewStamp extends StatelessWidget {
+  const _YutPreviewStamp({required this.result, required this.edition});
+
+  final yut.YutResult result;
+  final bool edition;
+
+  @override
+  Widget build(BuildContext context) => Transform.rotate(
+    angle: -8 * math.pi / 180,
+    child: Container(
+      width: 92,
+      height: 92,
+      decoration: BoxDecoration(
+        color: edition ? null : const Color(0xFFFBF6EA),
+        gradient: edition ? yut.YutColors.holoGradient : null,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: edition ? yut.YutColors.night : const Color(0xFFC21F2E),
+          width: 4,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            yut.YutCopy.result(result),
+            style: yut.YutFonts.stamp(
+              48,
+              color: edition ? yut.YutColors.night : const Color(0xFFC21F2E),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            yut.YutCopy.steps(result),
+            style: MosiFonts.sans(
+              size: 13,
+              weight: FontWeight.w700,
+              color: edition ? yut.YutColors.night : const Color(0xFFC21F2E),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// 아래 설명 띠(300px)입니다. 결과 이름만 붉게(에디션은 무지개빛) 칠합니다.
+class _YutPreviewCaption extends StatelessWidget {
+  const _YutPreviewCaption({
+    required this.text,
+    required this.highlight,
+    required this.edition,
+  });
+
+  final String text;
+  final String highlight;
+  final bool edition;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = MosiFonts.sans(
+      size: 16,
+      weight: FontWeight.w500,
+      color: edition ? yut.YutColors.moon : const Color(0xFF0E0A3D),
+    );
+    // `앞면 2개 → 개!`처럼 결과 이름이 앞에도 나올 수 있어 화살표 뒤를 찾습니다.
+    final arrow = text.indexOf('→');
+    final at = text.indexOf(highlight, arrow < 0 ? 0 : arrow);
+    final emphasis = base.copyWith(
+      fontWeight: FontWeight.w700,
+      color: edition ? null : const Color(0xFFC21F2E),
+      foreground: edition
+          ? (Paint()
+              ..shader = yut.YutColors.holoGradient.createShader(
+                const Rect.fromLTWH(0, 0, 40, 20),
+              ))
+          : null,
+    );
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: edition ? yut.YutColors.nightPanel : MosiColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: edition ? yut.YutColors.lilac : MosiColors.ink,
+          width: 3,
+        ),
+        boxShadow: const [BoxShadow(color: _deepest, offset: Offset(5, 5))],
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text.rich(
+          at < 0
+              ? TextSpan(text: text, style: base)
+              : TextSpan(
+                  style: base,
+                  children: [
+                    TextSpan(text: text.substring(0, at)),
+                    TextSpan(text: highlight, style: emphasis),
+                    TextSpan(text: text.substring(at + highlight.length)),
+                  ],
+                ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {readGameCatalog} from "../lib/room/game-catalog.js";
+import {
+  isCatalogGameEnabled,
+  readGameCatalog,
+} from "../lib/room/game-catalog.js";
 import {resolveCatalogDocument} from "../scripts/catalog-document.mjs";
 import {migrateLiarsCatalog} from "../scripts/migrate-liars-catalog.mjs";
 
@@ -14,6 +17,12 @@ for (const id of ["liars", "liars_poker"]) {
     assert.equal(result.enabled, false);
   });
 }
+test("catalog availability requires an explicit enabled true", () => {
+  assert.equal(isCatalogGameEnabled({enabled: true}), true);
+  assert.equal(isCatalogGameEnabled({enabled: false}), false);
+  assert.equal(isCatalogGameEnabled({}), false);
+  assert.equal(isCatalogGameEnabled(null), false);
+});
 test("legacy fallback only for absence, not permission/network failure", async () => {
   const calls = [];
   assert.equal((await readGameCatalog("liars_poker", async (id) => {

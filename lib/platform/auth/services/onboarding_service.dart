@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,11 +13,9 @@ class OnboardingService {
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
     EmailLinkConfig? emailLinkConfig,
-  }) : _auth = auth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
+  }) : _auth = auth ?? FirebaseBackend.auth,
+       _firestore = firestore ?? FirebaseBackend.firestore,
+       _functions = functions ?? FirebaseBackend.functions,
        _emailLinkConfig = emailLinkConfig ?? EmailLinkConfig.fromEnvironment();
 
   final FirebaseAuth _auth;

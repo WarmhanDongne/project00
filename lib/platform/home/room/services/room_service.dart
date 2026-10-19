@@ -1,3 +1,4 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/recovery/services/durable_room_operation_store.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:game_kit/recovery/models/game_recovery_context.dart';
@@ -23,10 +24,8 @@ class RoomService {
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
   }) : realtime = database ?? RealtimeDatabaseService.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ??
-           FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+       _auth = auth ?? FirebaseBackend.auth,
+       _functions = functions ?? FirebaseBackend.functions;
 
   final FirebaseDatabase realtime;
   final FirebaseAuth _auth;
@@ -124,11 +123,11 @@ class RoomService {
   );
 
   Future<User> ensureAuthenticated() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = FirebaseBackend.auth.currentUser;
     if (currentUser != null) {
       return currentUser;
     }
-    final credential = await FirebaseAuth.instance.signInAnonymously();
+    final credential = await FirebaseBackend.auth.signInAnonymously();
     final user = credential.user;
     if (user == null) {
       throw const RoomCommandException('사용자 인증에 실패했습니다.');

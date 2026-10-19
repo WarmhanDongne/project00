@@ -5,7 +5,7 @@ import {assertRoomGroupMember, RoomAllocation} from "./room-allocation.js";
 
 import {DataSnapshot, getDatabase} from "firebase-admin/database";
 import {getFirestore} from "firebase-admin/firestore";
-import {getGameCatalog} from "./game-catalog.js";
+import {getGameCatalog, isCatalogGameEnabled} from "./game-catalog.js";
 import {leaveSessionRequest} from "../game-interruption/leave-request.js";
 import {onValueWritten} from "firebase-functions/v2/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
@@ -18,6 +18,7 @@ import {
 import {
   applyWaitingGameSelection,
   decideRoomSeating,
+  resolveRoomPlayerRange,
 } from "./room-seating-policy.js";
 import {runPrimedTransaction} from "./room-transaction.js";
 import {RecoveryRoom, registerRecoveryFailure} from "../game-interruption/recovery-state.js";
@@ -221,7 +222,7 @@ async function assertGameAccessible(
 ): Promise<void> {
   const firestore = getFirestore();
   const game = await getGameCatalog(gameId);
-  if (!game.exists || game.data()?.enabled === false) {
+  if (!game.exists || !isCatalogGameEnabled(game.data())) {
     throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
   }
   const accessType = game.data()?.accessType;
@@ -451,15 +452,16 @@ export const beginRealtimeRoomSeating = onCall<RoomData>(
     }
 
     const gameSnapshot = await getGameCatalog(selectedGame);
-    if (!gameSnapshot.exists || gameSnapshot.data()?.enabled === false) {
+    if (!gameSnapshot.exists || !isCatalogGameEnabled(gameSnapshot.data())) {
       throw new HttpsError("not-found", "선택할 수 없는 게임입니다.");
     }
     const rawMinPlayers = gameSnapshot.data()?.minPlayers;
     const rawMaxPlayers = gameSnapshot.data()?.maxPlayers;
-    const minPlayers = typeof rawMinPlayers === "number" && rawMinPlayers > 0 ?
-      rawMinPlayers : 2;
-    const maxPlayers = typeof rawMaxPlayers === "number" && rawMaxPlayers > 0 ?
-      rawMaxPlayers : 12;
+    const {minPlayers, maxPlayers} = resolveRoomPlayerRange(
+      selectedGame,
+      rawMinPlayers,
+      rawMaxPlayers,
+    );
 
     let rejection: HttpsError | null = null;
     const result = await runPrimedTransaction(roomRef, (raw) => {

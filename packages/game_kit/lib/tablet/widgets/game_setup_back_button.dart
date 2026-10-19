@@ -18,8 +18,8 @@ import 'package:game_kit/localization/game_locale.dart';
 /// 준비 화면마다 따로 만들면 위치·모양·누르는 동안의 표시가 조금씩 달라져,
 /// 화면을 옮겨 다닐 때 같은 버튼이 아닌 것처럼 보입니다.
 ///
-/// 누르는 동안에는 동그라미가 돌고 다시 눌리지 않습니다. 뒤로 가기는 서버에
-/// 게임 선택 해제를 알리는 일이라 두 번 보내면 안 됩니다.
+/// 누른 뒤에도 화살표 모양을 유지하고 중복 입력만 막습니다. 실제 서버 선택
+/// 해제는 로비 복귀 전환과 겹쳐 처리하므로 회전 로딩을 표시하지 않습니다.
 class GameSetupBackButton extends StatelessWidget {
   const GameSetupBackButton({
     super.key,
@@ -43,13 +43,7 @@ class GameSetupBackButton extends StatelessWidget {
     return IconButton.filledTonal(
       tooltip: '뒤로가기'.localized,
       onPressed: isBusy ? null : onPressed,
-      icon: isBusy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.arrow_back),
+      icon: const Icon(Icons.arrow_back),
     );
   }
 }

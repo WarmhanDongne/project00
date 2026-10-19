@@ -209,20 +209,28 @@ class _TabletGameShelfState extends State<TabletGameShelf> {
 
 /// 지금 인원으로 이 게임을 시작할 수 있는지 판단합니다.
 bool isGamePlayableWith(GameInfo game, int count, RoomProvider roomProvider) {
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) return supported.contains(count);
-  final min = game.minPlayers > 0 ? game.minPlayers : 2;
-  final max = game.maxPlayers > 0 ? game.maxPlayers : 99;
+  final min = game.id == 'yut'
+      ? 2
+      : game.minPlayers > 0
+      ? game.minPlayers
+      : 2;
+  final max = game.id == 'yut'
+      ? 4
+      : game.maxPlayers > 0
+      ? game.maxPlayers
+      : 99;
   return count >= min && count <= max;
 }
 
 /// 시안의 인원 표기('2–6명', '4명 · 6명')입니다.
 String gamePlayerRangeLabel(GameInfo game, RoomProvider roomProvider) {
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) {
     return supported
         .map(
@@ -235,12 +243,14 @@ String gamePlayerRangeLabel(GameInfo game, RoomProvider roomProvider) {
         )
         .join(' · ');
   }
-  if (game.minPlayers > 0 && game.maxPlayers > 0) {
+  final minPlayers = game.id == 'yut' ? 2 : game.minPlayers;
+  final maxPlayers = game.id == 'yut' ? 4 : game.maxPlayers;
+  if (minPlayers > 0 && maxPlayers > 0) {
     return GameLocale.select(
-      ko: '${game.minPlayers}–${game.maxPlayers}명',
-      en: '${game.minPlayers}–${game.maxPlayers} players',
-      zhHans: '${game.minPlayers}–${game.maxPlayers} 人',
-      zhHant: '${game.minPlayers}–${game.maxPlayers} 人',
+      ko: '$minPlayers–$maxPlayers명',
+      en: '$minPlayers–$maxPlayers players',
+      zhHans: '$minPlayers–$maxPlayers 人',
+      zhHant: '$minPlayers–$maxPlayers 人',
     );
   }
   if (game.minPlayers > 0) {
@@ -269,9 +279,9 @@ String? gameCannotStartMessage(
   RoomProvider roomProvider,
 ) {
   if (isGamePlayableWith(game, count, roomProvider)) return null;
-  final supported = roomProvider.gameCatalog
-      .find(game.id)
-      ?.supportedPlayerCounts;
+  final supported = game.id == 'yut'
+      ? null
+      : roomProvider.gameCatalog.find(game.id)?.supportedPlayerCounts;
   if (supported != null) {
     return GameLocale.select(
       ko: '${supported.join('명이나 ')}명이 모이면 시작할 수 있어요 · 지금 $count명',
@@ -280,7 +290,11 @@ String? gameCannotStartMessage(
       zhHant: '需要 ${supported.join(' 或 ')} 人開始 · 目前 $count 人',
     );
   }
-  final min = game.minPlayers > 0 ? game.minPlayers : 2;
+  final min = game.id == 'yut'
+      ? 2
+      : game.minPlayers > 0
+      ? game.minPlayers
+      : 2;
   if (count < min) {
     return GameLocale.select(
       ko: '$min명부터 시작할 수 있어요 · 지금 $count명',
@@ -290,10 +304,10 @@ String? gameCannotStartMessage(
     );
   }
   return GameLocale.select(
-    ko: '최대 ${game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명',
-    en: 'Supports up to ${game.maxPlayers} players · $count now',
-    zhHans: '最多支持 ${game.maxPlayers} 人 · 当前 $count 人',
-    zhHant: '最多支援 ${game.maxPlayers} 人 · 目前 $count 人',
+    ko: '최대 ${game.id == 'yut' ? 4 : game.maxPlayers}명까지 함께할 수 있어요 · 지금 $count명',
+    en: 'Supports up to ${game.id == 'yut' ? 4 : game.maxPlayers} players · $count now',
+    zhHans: '最多支持 ${game.id == 'yut' ? 4 : game.maxPlayers} 人 · 当前 $count 人',
+    zhHant: '最多支援 ${game.id == 'yut' ? 4 : game.maxPlayers} 人 · 目前 $count 人',
   );
 }
 
@@ -444,13 +458,20 @@ class _ShelfBody extends StatelessWidget {
       builder: (context, constraints) {
         final compact = constraints.maxHeight < 640;
         final coverWidth = compact ? 200.0 : 240.0;
-        // 아래 소개(이름·설명·안내·버튼)가 기기 글자 크기에서 차지할 높이를
-        // 먼저 남기고, 선반 그림은 남은 높이에 맞춰 통째로 줄입니다. 그래도
-        // 모자라면 소개 전체를 살짝 줄입니다(스크롤·잘림 없음).
+        final titleSize = compact ? 32.0 : 40.0;
+        final englishSize = compact ? 14.0 : 16.0;
+        final descriptionSize = compact ? 16.0 : 18.0;
+        final pillSize = compact ? 14.0 : 15.0;
+        final buttonHeight = compact ? 52.0 : 56.0;
+        final buttonSize = compact ? 17.0 : 18.0;
+        // 아래 소개를 먼저 크게 확보하고 선반 그림이 남은 높이에 맞춰 줄어들게
+        // 합니다. 글자가 큰 기기에서는 책보다 읽을 문구를 우선합니다. 마지막
+        // 안전장치인 MosiFitHeight는 아주 작은 창이나 긴 번역에서만 작동합니다.
         final textScale = MediaQuery.textScalerOf(context).scale(100) / 100;
-        final infoHeight = 92 + 120 * textScale;
+        final infoHeight =
+            (compact ? 240.0 : 270.0) * textScale.clamp(1.0, 1.3).toDouble();
         final shelfHeight = math.max(
-          (coverWidth * 4 / 3 + 24) * .6,
+          (coverWidth * 4 / 3 + 24) * .42,
           constraints.maxHeight - infoHeight - 20,
         );
         return Column(
@@ -501,59 +522,85 @@ class _ShelfBody extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      displayName,
-                      style: MosiFonts.sans(
-                        locale: Localizations.maybeLocaleOf(context),
-                        size: compact ? 26 : 32,
-                        weight: FontWeight.w700,
-                        color: theme.fg,
-                        letterSpacing: -1,
-                        height: 1.1,
+                    SizedBox(
+                      width: double.infinity,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          displayName,
+                          key: const Key('shelf-info-title'),
+                          maxLines: 1,
+                          style: MosiFonts.sans(
+                            locale: Localizations.maybeLocaleOf(context),
+                            size: titleSize,
+                            weight: FontWeight.w700,
+                            color: theme.fg,
+                            letterSpacing: -1,
+                            height: 1.08,
+                          ),
+                        ),
                       ),
                     ),
                     if (englishName.toUpperCase() !=
                         displayName.toUpperCase()) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        englishName,
-                        style: MosiFonts.grotesk(
-                          locale: Localizations.maybeLocaleOf(context),
-                          size: 12,
-                          color: art.id == 'liars_poker'
-                              ? theme.accA
-                              : theme.accB,
-                          letterSpacing: 3,
+                      const SizedBox(height: 7),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            englishName,
+                            key: const Key('shelf-info-english-name'),
+                            maxLines: 1,
+                            style: MosiFonts.grotesk(
+                              locale: Localizations.maybeLocaleOf(context),
+                              size: englishSize,
+                              color: art.id == 'liars_poker'
+                                  ? theme.accA
+                                  : theme.accB,
+                              letterSpacing: compact ? 2.4 : 3,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                     if (selected
                         .localizedDescription(Localizations.localeOf(context))
                         .isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       // 줄 수를 막지 않고 칸에 맞춰 함께 줄여 끝까지 보여 줍니다.
                       Text(
                         selected.localizedDescription(
                           Localizations.localeOf(context),
                         ),
+                        key: const Key('shelf-info-description'),
                         textAlign: TextAlign.center,
                         style: MosiFonts.sans(
                           locale: Localizations.maybeLocaleOf(context),
-                          size: 14,
+                          size: descriptionSize,
                           color: theme.fg,
+                          height: 1.3,
                         ),
                       ),
                     ],
                     GameStartHint(message: cannotStart),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Wrap(
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
-                      runSpacing: 10,
+                      spacing: 10,
+                      runSpacing: 12,
                       children: [
                         if (range.isNotEmpty) ...[
-                          MosiPill(label: range, color: theme.fg),
-                          const SizedBox(width: 8),
+                          MosiPill(
+                            label: range,
+                            color: theme.fg,
+                            fontSize: pillSize,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 13,
+                              vertical: 7,
+                            ),
+                          ),
                         ],
                         if (selected.playTime > 0) ...[
                           MosiPill(
@@ -564,18 +611,21 @@ class _ShelfBody extends StatelessWidget {
                               zhHant: '${selected.playTime} 分鐘',
                             ),
                             color: theme.fg,
+                            fontSize: pillSize,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 13,
+                              vertical: 7,
+                            ),
                           ),
-                          const SizedBox(width: 8),
                         ],
-                        const SizedBox(width: 6),
                         MosiButton(
                           label: context.l10n.viewDescription,
                           onPressed: () => onOpenDetail(selected),
                           background: theme.btnBg,
                           foreground: theme.btnFg,
                           shadowColor: theme.deep,
-                          height: 48,
-                          fontSize: 15,
+                          height: buttonHeight,
+                          fontSize: buttonSize,
                           radius: 6,
                         ),
                       ],
@@ -670,14 +720,19 @@ class _GameStartHintState extends State<GameStartHint>
               offset: Offset(0, 12 * (1 - pill)),
               child: Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: MosiPill(
-                  label: shown,
-                  background: MosiColors.sun,
-                  borderColor: MosiColors.ink,
-                  fontSize: 13,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                // 지원 인원 문구가 긴 언어·큰 글자 설정에서도 한 줄을 유지하되,
+                // 가용 폭을 넘는 경우에만 알약 전체를 비율로 줄입니다.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: MosiPill(
+                    label: shown,
+                    background: MosiColors.sun,
+                    borderColor: MosiColors.ink,
+                    fontSize: 15,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                   ),
                 ),
               ),

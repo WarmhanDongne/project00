@@ -1,5 +1,5 @@
+import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:project00/platform/localization/lobby_connection_band.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,8 @@ import 'package:game_kit/mosi_ui/mosi_design.dart';
 import 'package:game_kit/mosi_ui/mosi_game_art.dart';
 import 'package:game_kit/localization/game_locale.dart';
 import 'package:project00/platform/home/phone/widgets/phone_game_card.dart';
+import 'package:project00/platform/home/phone/widgets/phone_flow_transition.dart';
+import 'package:project00/platform/home/phone/widgets/phone_room_leave_transition.dart';
 import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/core/layout/app_orientation.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
@@ -41,12 +43,24 @@ class PhoneRoomWaiting extends StatefulWidget {
   State<PhoneRoomWaiting> createState() => _PhoneRoomWaitingState();
 }
 
-class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
+class _PhoneRoomWaitingState extends State<PhoneRoomWaiting>
+    with TickerProviderStateMixin {
   StreamSubscription<String?>? _gameStatusSubscription;
   String? _subscribedRoomCode;
   String? _latestGameStatus;
   bool _isOpeningGame = false;
   bool _isHandlingForcedExit = false;
+  OverlayEntry? _forcedExitOverlay;
+  PhoneRoomLeaveStage _leaveStage = PhoneRoomLeaveStage.idle;
+  String? _leaveError;
+  late final AnimationController _leaveTransition = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+  );
+  late final AnimationController _forcedExitTransition = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
 
   @override
   void initState() {
@@ -74,42 +88,120 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       if (!mounted) return;
       _isHandlingForcedExit = true;
       final terminationReason = widget.provider.roomTerminationReason;
-      widget.provider.acknowledgeRoomExit();
+      unawaited(
+        _handleForcedExit(
+          wasKicked: wasKicked,
+          terminationReason: terminationReason,
+        ),
+      );
+    }
+  }
 
-      ScaffoldMessenger.of(context)
+  Future<void> _handleForcedExit({
+    required bool wasKicked,
+    required RoomTerminationReason? terminationReason,
+  }) async {
+    if (!mounted) return;
+    final message = wasKicked
+        ? GameLocale.select(
+            ko: '방에서 추방되었습니다.',
+            en: 'You were removed from the room.',
+            zhHans: '你已被移出房间。',
+            zhHant: '你已被移出房間。',
+          )
+        : terminationReason == RoomTerminationReason.closed
+        ? GameLocale.select(
+            ko: '방장이 방을 종료했습니다.',
+            en: 'The host closed the room.',
+            zhHans: '房主已关闭房间。',
+            zhHant: '房主已關閉房間。',
+          )
+        : GameLocale.select(
+            ko: '방을 찾을 수 없습니다',
+            en: 'Room not found',
+            zhHans: '找不到房间',
+            zhHant: '找不到房間',
+          );
+    final transitionTitle = wasKicked
+        ? GameLocale.select(
+            ko: '방에서 나왔어요',
+            en: 'You left the room',
+            zhHans: '你已离开房间',
+            zhHant: '你已離開房間',
+          )
+        : GameLocale.select(
+            ko: '방이 종료되었어요',
+            en: 'The room has closed',
+            zhHans: '房间已关闭',
+            zhHant: '房間已關閉',
+          );
+    final transitionSubtitle = GameLocale.select(
+      ko: '홈으로 돌아갑니다',
+      en: 'Returning home',
+      zhHans: '正在返回首页',
+      zhHant: '正在返回首頁',
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final motion = MosiMotion.of(context, const Duration(milliseconds: 320));
+    final routeExitMotion = MosiMotion.of(context, MosiMotion.exit);
+    _forcedExitTransition.value = 0;
+
+    late final OverlayEntry overlay;
+    overlay = OverlayEntry(
+      builder: (_) => Material(
+        key: const Key('phone-room-forced-exit-overlay'),
+        type: MaterialType.transparency,
+        child: AbsorbPointer(
+          child: PhoneRoomLeaveTransition(
+            stage: PhoneRoomLeaveStage.leaving,
+            progress: _forcedExitTransition,
+            // 홈과 같은 바탕을 먼저 완전히 칠해 여러 route를 닫는 동안
+            // 기본 canvas가 한 프레임 드러나지 않게 합니다.
+            gameId: null,
+            transitionTitle: transitionTitle,
+            transitionSubtitle: transitionSubtitle,
+            onRetry: () {},
+            onReturn: () {},
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+    _forcedExitOverlay = overlay;
+    Overlay.of(context, rootOverlay: true).insert(overlay);
+
+    try {
+      if (motion == Duration.zero) {
+        _forcedExitTransition.value = 1;
+      } else {
+        await _forcedExitTransition
+            .animateTo(1, duration: motion)
+            .orCancel
+            .catchError((_) {});
+      }
+      if (!mounted) return;
+      widget.provider.acknowledgeRoomExit();
+      unawaited(AppSystemUi.showPlatformSystemBars());
+      // 게임 화면 위에서 추방되어도 최상단 overlay는 유지됩니다. 홈까지
+      // route를 정리한 뒤 걷어 중간 화면이나 빈 canvas가 보이지 않게 합니다.
+      navigator.popUntil((route) => route.isFirst);
+      messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              wasKicked
-                  ? GameLocale.select(
-                      ko: '방에서 추방되었습니다.',
-                      en: 'You were removed from the room.',
-                      zhHans: '你已被移出房间。',
-                      zhHant: '你已被移出房間。',
-                    )
-                  : terminationReason == RoomTerminationReason.closed
-                  ? GameLocale.select(
-                      ko: '방장이 방을 종료했습니다.',
-                      en: 'The host closed the room.',
-                      zhHans: '房主已关闭房间。',
-                      zhHant: '房主已關閉房間。',
-                    )
-                  : GameLocale.select(
-                      ko: '방을 찾을 수 없습니다',
-                      en: 'Room not found',
-                      zhHans: '找不到房间',
-                      zhHant: '找不到房間',
-                    ),
-            ),
+            content: Text(message),
             duration: const Duration(seconds: 2),
           ),
         );
-      //================상태바 표시=================
-      unawaited(AppSystemUi.showPlatformSystemBars());
-      // 게임 라우트가 현재 화면이어도 대기 화면의 context는 같은 Navigator에
-      // 남아 있습니다. 종료 신호를 버리지 않고 게임·대기 경로를 한 번에 닫습니다.
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      if (routeExitMotion > Duration.zero) {
+        await Future<void>.delayed(routeExitMotion);
+      }
+    } finally {
+      if (overlay.mounted) overlay.remove();
+      if (identical(_forcedExitOverlay, overlay)) {
+        _forcedExitOverlay = null;
+      }
     }
   }
 
@@ -147,7 +239,12 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
   /// 순서가 보장되지 않습니다. 두 값 중 어느 것이 먼저 와도 마지막 값을 보관했다가
   /// 모두 준비되는 순간 한 번만 게임 화면을 엽니다.
   void _openGameIfReady(String roomCode) {
-    if (_latestGameStatus != 'playing' || _isOpeningGame || !mounted) return;
+    if (_latestGameStatus != 'playing' ||
+        _isOpeningGame ||
+        widget.provider.isLeaving ||
+        !mounted) {
+      return;
+    }
     // 방이 이미 끝났으면 낡은 playing 값입니다. 종료된 게임을 다시 열지 않습니다.
     if (widget.provider.isRoomFinished) return;
     final selectedGameId = widget.provider.selectedGameId;
@@ -249,10 +346,75 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
     Navigator.of(gameContext).pop(true);
   }
 
+  Future<bool> _leaveRoomWithTransition() async {
+    if (_leaveStage == PhoneRoomLeaveStage.leaving || !mounted) return false;
+    setState(() {
+      _leaveStage = PhoneRoomLeaveStage.leaving;
+      _leaveError = null;
+    });
+    final motion = MosiMotion.of(context, const Duration(milliseconds: 240));
+    final transition = _leaveTransition.animateTo(1, duration: motion);
+    bool left;
+    try {
+      left = await widget.provider.leaveRoom();
+    } catch (_) {
+      left = false;
+    }
+    await transition.orCancel.catchError((_) {});
+    if (!mounted) return left;
+    if (left) {
+      unawaited(AppSystemUi.showPlatformSystemBars());
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      // 위젯 테스트처럼 대기실 자체가 첫 route면 popUntil로 제거되지 않습니다.
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+        _leaveTransition.value = 0;
+        setState(() => _leaveStage = PhoneRoomLeaveStage.idle);
+      }
+      return true;
+    }
+
+    setState(() {
+      _leaveStage = PhoneRoomLeaveStage.failed;
+      _leaveError = widget.provider.errorMessage;
+    });
+    await _leaveTransition
+        .animateBack(0, duration: motion)
+        .orCancel
+        .catchError((_) {});
+    return false;
+  }
+
+  void _dismissLeaveFailure() {
+    if (_leaveStage != PhoneRoomLeaveStage.failed) return;
+    setState(() {
+      _leaveStage = PhoneRoomLeaveStage.idle;
+      _leaveError = null;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            GameLocale.select(
+              ko: '퇴장 결과가 아직 확인되지 않았어요. 나가기를 눌러 다시 확인할 수 있어요.',
+              en: 'The leave result is still pending. Tap Leave again to retry.',
+              zhHans: '尚未确认离开结果。可再次点击离开重试。',
+              zhHant: '尚未確認離開結果。可再次點擊離開重試。',
+            ),
+          ),
+        ),
+      );
+  }
+
   @override
   void dispose() {
     widget.provider.removeListener(_onRoomProviderChanged);
     _gameStatusSubscription?.cancel();
+    final forcedExitOverlay = _forcedExitOverlay;
+    _forcedExitOverlay = null;
+    if (forcedExitOverlay?.mounted ?? false) forcedExitOverlay!.remove();
+    _forcedExitTransition.dispose();
+    _leaveTransition.dispose();
     super.dispose();
   }
 
@@ -294,7 +456,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       .watchServerConnection();
 
   Widget _buildBody(BuildContext context) {
-    return CriticalNetworkGuard(
+    final guarded = CriticalNetworkGuard(
       provider: widget.provider,
       onExit: () {
         unawaited(AppSystemUi.showPlatformSystemBars());
@@ -303,11 +465,7 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
       child: LobbyReconnectGuard(
         provider: widget.provider,
         onExit: () async {
-          final left = await widget.provider.leaveRoom();
-          if (!context.mounted || !left) return left;
-          unawaited(AppSystemUi.showPlatformSystemBars());
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          return true;
+          return _leaveRoomWithTransition();
         },
         child: AnimatedBuilder(
           animation: widget.provider,
@@ -336,105 +494,106 @@ class _PhoneRoomWaitingState extends State<PhoneRoomWaiting> {
                 hasSelectedGame &&
                 (widget.provider.roomStatus == 'playing' ||
                     _latestGameStatus == 'playing');
-            if (isSeating || isStarting) {
-              return _PhoneSeatingView(
-                key: ValueKey(isStarting ? 'phone-starting' : 'phone-seating'),
-                starting: isStarting,
-                provider: widget.provider,
-                header:
-                    widget.headerForTesting ??
-                    _PhoneRoomHeader(
-                      provider: widget.provider,
-                      dark: true,
-                      onPressed: () async {
-                        final left = await widget.provider.leaveRoom();
-                        if (!context.mounted || !left) return;
-                        unawaited(AppSystemUi.showPlatformSystemBars());
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      },
+            final isArrangingSeats = isSeating || isStarting;
+            final background = isArrangingSeats
+                ? MosiSeatTheme.of(selectedGameId).table
+                : hasSelectedGame
+                ? _WaitingGameColors.of(selectedGameId).ground
+                : MosiColors.violet;
+            final content = isArrangingSeats
+                ? _PhoneSeatingView(
+                    key: ValueKey(
+                      isStarting ? 'phone-starting' : 'phone-seating',
                     ),
-              );
-            }
-
-            final scaffold = TweenAnimationBuilder<Color?>(
-              tween: ColorTween(
-                end: hasSelectedGame
-                    ? _WaitingGameColors.of(selectedGameId).ground
-                    : MosiColors.violet,
-              ),
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : const Duration(milliseconds: 400),
-              curve: Curves.easeInOutCubic,
-              builder: (context, color, child) =>
-                  Scaffold(backgroundColor: color, body: child),
-              child: SafeArea(
-                // 흰 시트와 참여자 바는 화면 아래 끝까지 이어집니다.
-                bottom: false,
-                child: Column(
-                  children: [
-                    widget.headerForTesting ??
+                    starting: isStarting,
+                    provider: widget.provider,
+                    header:
+                        widget.headerForTesting ??
                         _PhoneRoomHeader(
                           provider: widget.provider,
                           dark: true,
-                          onPressed: () async {
-                            final left = await widget.provider.leaveRoom();
-                            if (!context.mounted || !left) return;
-                            //================상태바 표시=================
-                            unawaited(AppSystemUi.showPlatformSystemBars());
-                            Navigator.of(
-                              context,
-                            ).popUntil((route) => route.isFirst);
-                          },
+                          onPressed: () =>
+                              unawaited(_leaveRoomWithTransition()),
                         ),
-                    Expanded(
-                      child: _PhoneWaitingTransition(
-                        child: hasSelectedGame
-                            ? Column(
-                                key: const ValueKey('phone-selected-game'),
-                                children: [
-                                  Expanded(
-                                    child: _SelectedGameContent(
-                                      provider: widget.provider,
-                                    ),
-                                  ),
-                                  _WaitingPlayersBar(
-                                    gameId: selectedGameId,
-                                    myUid:
-                                        FirebaseAuth.instance.currentUser?.uid,
-                                    players: players
-                                        .where((player) => player.isPlayer)
-                                        .toList(growable: false),
-                                  ),
-                                ],
-                              )
-                            : KeyedSubtree(
-                                key: const ValueKey('phone-group-waiting'),
-                                child: _GroupWaitingContent(
-                                  provider: widget.provider,
-                                  players: players,
-                                ),
+                  )
+                : Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: SafeArea(
+                      // 흰 시트와 참여자 바는 화면 아래 끝까지 이어집니다.
+                      bottom: false,
+                      child: Column(
+                        children: [
+                          widget.headerForTesting ??
+                              _PhoneRoomHeader(
+                                provider: widget.provider,
+                                dark: true,
+                                onPressed: () =>
+                                    unawaited(_leaveRoomWithTransition()),
                               ),
+                          Expanded(
+                            child: _PhoneWaitingTransition(
+                              child: hasSelectedGame
+                                  ? Column(
+                                      key: const ValueKey(
+                                        'phone-selected-game',
+                                      ),
+                                      children: [
+                                        Expanded(
+                                          child: _SelectedGameContent(
+                                            provider: widget.provider,
+                                          ),
+                                        ),
+                                        _WaitingPlayersBar(
+                                          gameId: selectedGameId,
+                                          myUid: FirebaseBackend
+                                              .auth
+                                              .currentUser
+                                              ?.uid,
+                                          players: players
+                                              .where(
+                                                (player) => player.isPlayer,
+                                              )
+                                              .toList(growable: false),
+                                        ),
+                                      ],
+                                    )
+                                  : KeyedSubtree(
+                                      key: const ValueKey(
+                                        'phone-group-waiting',
+                                      ),
+                                      child: _GroupWaitingContent(
+                                        provider: widget.provider,
+                                        players: players,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-            final lightBars =
-                !hasSelectedGame ||
-                _WaitingGameColors.of(selectedGameId).darkGround;
+                  );
+            final lightBars = isArrangingSeats
+                ? background.computeLuminance() < .4
+                : !hasSelectedGame ||
+                      _WaitingGameColors.of(selectedGameId).darkGround;
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: lightBars
                   ? SystemUiOverlayStyle.light
                   : SystemUiOverlayStyle.dark,
-              child: scaffold,
+              child: PhoneBackgroundWipe(color: background, child: content),
             );
           },
         ),
       ),
+    );
+    return PhoneRoomLeaveTransition(
+      stage: _leaveStage,
+      progress: _leaveTransition,
+      gameId: widget.provider.selectedGameId,
+      errorMessage: _leaveError,
+      onRetry: () => unawaited(_leaveRoomWithTransition()),
+      onReturn: _dismissLeaveFailure,
+      child: guarded,
     );
   }
 }
@@ -589,7 +748,7 @@ class _GroupWaitingContent extends StatelessWidget {
                     children: [
                       PhoneRoomParticipantList(
                         players: players,
-                        myUid: FirebaseAuth.instance.currentUser?.uid,
+                        myUid: FirebaseBackend.auth.currentUser?.uid,
                       ),
                       const SizedBox(height: 28),
                       _SheetSectionTitle(
@@ -1317,8 +1476,10 @@ class _WaitingPlayersBar extends StatelessWidget {
                       child: Column(
                         children: [
                           Stack(
+                            key: ValueKey(
+                              'waiting-player-avatar-${player.uid}',
+                            ),
                             clipBehavior: Clip.none,
-                            alignment: Alignment.bottomCenter,
                             children: [
                               Opacity(
                                 opacity: player.isConnected ? 1 : .45,
@@ -1342,16 +1503,16 @@ class _WaitingPlayersBar extends StatelessWidget {
                               ),
                               if (player.uid == myUid)
                                 Positioned(
-                                  bottom: -6,
+                                  right: -4,
+                                  bottom: -3,
                                   child: MosiPill(
                                     key: const Key('waiting-player-me-badge'),
                                     label: '나'.localized,
                                     color: colors.buttonFg,
                                     background: colors.button,
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 0,
+                                      horizontal: 5,
                                     ),
                                   ),
                                 ),
@@ -1427,7 +1588,7 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
     final gameName =
         game?.localizedName(Localizations.localeOf(context)) ??
         GameLocale.select(ko: '게임', en: 'Game', zhHans: '游戏', zhHant: '遊戲');
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseBackend.auth.currentUser?.uid;
     final me = provider.players
         .where((player) => player.uid == uid)
         .firstOrNull;
@@ -1435,7 +1596,9 @@ class _PhoneSeatingViewState extends State<_PhoneSeatingView>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: darkTable ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: theme.table,
+        // 바탕은 대기→소개→자리 배치에서 살아 있는 공통 레이어가 칠합니다.
+        // 여기서 새 불투명 Scaffold를 만들면 상태 경계에서 한 프레임 튑니다.
+        backgroundColor: Colors.transparent,
         body: CustomPaint(
           painter: _DotGridPainter(color: foreground.withValues(alpha: .07)),
           child: SafeArea(
