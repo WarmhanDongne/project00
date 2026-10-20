@@ -1,11 +1,11 @@
 {
-    "name": "project00",
-    "short_name": "project00",
+    "name": "모시겜: 모이면 시작하는 게임",
+    "short_name": "모시겜",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F4EC",
+    "theme_color": "#5B47E0",
+    "description": "모이면 시작하는 게임",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
