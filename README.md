@@ -18,7 +18,6 @@
 |---|---|---|
 | 라이어스 | 상대의 선언이 거짓인지 가려내는 카드 심리전 게임 | 공개 |
 | 파이널 콜 | 4명 또는 6명이 팀을 나눠 겨루는 카드 게임 | 공개 |
-| 마피아 | 역할을 숨기고 진행하는 추리 게임 | 다듬는 중 |
 
 게임은 패키지 단위로 분리되어 있어, 앱 구조를 바꾸지 않고 새 장르를 계속 추가할 수
 있습니다.
@@ -138,8 +137,7 @@ validation을 실행합니다. Windows guard와 macOS/Linux raw CLI의 사용 �
 ## 현재 구현 상태
 
 현재 앱에는 인증·온보딩, 방 생성/참가와 session lifecycle, 휴대폰·태블릿 플랫폼
-화면이 구현되어 있습니다. 게임은 `GameRegistry`를 통해 라이어스포커, 파이널콜,
-마피아를 등록하며, 게임 command와 중요한 상태 전이는 Firebase Functions가
+화면이 구현되어 있습니다. 게임은 `GameRegistry`를 통해 등록하며, 게임 command와 중요한 상태 전이는 Firebase Functions가
 server-authoritative하게 처리합니다. 정확한 현재 contract는 코드와 테스트를
 우선하고, 구조 변경 전에는 Architecture Reference를 확인합니다.
 
