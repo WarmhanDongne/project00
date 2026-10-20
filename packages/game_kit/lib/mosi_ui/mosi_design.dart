@@ -59,6 +59,9 @@ abstract final class MosiFonts {
   static const display = 'SpaceGrotesk';
   static const serif = 'PlayfairDisplay';
 
+  /// 로고 워드마크 전용 글꼴입니다. 본문에는 쓰지 않습니다.
+  static const logo = 'DoHyeon';
+
   // Fully-qualified bundled families keep native fallbacks out of the package
   // namespace. Flutter can then choose a system CJK font for the active script.
   static List<String> fallbacks(Locale? locale) {
@@ -690,29 +693,37 @@ class MosiFace extends StatelessWidget {
 }
 
 //=======================로고==============================
-/// 라임 사각형 위 계단 모양 로고와 `모시겜 / MOSIGAME` 글자입니다.
+/// 네 막대가 모여 ㅁ을 이루는 마크와 도현체 `모시겜` 글자입니다.
+///
+/// 마크와 글자 모두 [color]를 따르므로 보라 띠 위에서는 흰색, 밝은 면 위에서는
+/// 남색처럼 배경에 맞는 한 가지 색만 넘기면 됩니다. 글자 크기는 마크 크기에서
+/// 정해집니다(글자 높이 = 마크의 약 93%).
 class MosiLogo extends StatelessWidget {
   const MosiLogo({
     super.key,
     this.color = MosiColors.white,
     this.markSize = 34,
-    this.titleSize = 22,
     this.showText = true,
   });
 
   final Color color;
   final double markSize;
-  final double titleSize;
   final bool showText;
+
+  // 도현체 '모시겜' 글자 높이(0.757em)와 줄 상자 안 위치(위로 0.0555em 치우침).
+  static const _glyphHeightEm = 0.757;
+  static const _glyphCenterShiftEm = 0.0555;
+  static const _sideBearingEm = 0.04;
 
   @override
   Widget build(BuildContext context) {
     final mark = SizedBox(
       width: markSize,
       height: markSize,
-      child: const CustomPaint(painter: _MosiLogoPainter()),
+      child: CustomPaint(painter: _MosiLogoPainter(color)),
     );
     if (!showText) return mark;
+    final fontSize = markSize / 1.08 / _glyphHeightEm;
     return Semantics(
       label: '모시겜',
       excludeSemantics: true,
@@ -720,34 +731,18 @@ class MosiLogo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           mark,
-          SizedBox(width: markSize * 0.3),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '모시겜',
-                style: MosiFonts.sans(
-                  locale: Localizations.maybeLocaleOf(context),
-                  size: titleSize,
-                  weight: FontWeight.w700,
-                  color: color,
-                  height: 1,
-                  letterSpacing: -0.5,
-                ),
+          SizedBox(width: markSize * 0.24 - fontSize * _sideBearingEm),
+          Transform.translate(
+            offset: Offset(0, fontSize * _glyphCenterShiftEm),
+            child: Text(
+              '모시겜',
+              style: TextStyle(
+                fontFamily: 'packages/${MosiFonts.package}/${MosiFonts.logo}',
+                fontSize: fontSize,
+                color: color,
+                height: 1,
               ),
-              SizedBox(height: titleSize * 0.14),
-              Text(
-                'MOSIGAME',
-                style: MosiFonts.grotesk(
-                  locale: Localizations.maybeLocaleOf(context),
-                  size: titleSize * 0.46,
-                  color: color,
-                  letterSpacing: titleSize * 0.11,
-                  height: 1,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -755,27 +750,37 @@ class MosiLogo extends StatelessWidget {
   }
 }
 
+/// 84×84 격자 위 네 막대(위·오른쪽·아래·왼쪽)를 바람개비 모양으로 그립니다.
 class _MosiLogoPainter extends CustomPainter {
-  const _MosiLogoPainter();
+  const _MosiLogoPainter(this.color);
+
+  final Color color;
+
+  static const _bars = <Rect>[
+    Rect.fromLTWH(0, 0, 60, 20),
+    Rect.fromLTWH(64, 0, 20, 60),
+    Rect.fromLTWH(24, 64, 60, 20),
+    Rect.fromLTWH(0, 24, 20, 60),
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final s = size.width / 34;
-    RRect r(double x, double y, double w, double h, double rad) =>
+    final s = size.width / 84;
+    final paint = Paint()..color = color;
+    for (final bar in _bars) {
+      canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(x * s, y * s, w * s, h * s),
-          Radius.circular(rad * s),
-        );
-    final navy = Paint()..color = MosiColors.navy;
-    canvas.drawRRect(r(5, 5, 26, 26, 5), navy);
-    canvas.drawRRect(r(2, 2, 26, 26, 5), Paint()..color = MosiColors.lime);
-    canvas.drawRRect(r(7.5, 6.5, 3.5, 6, 1.2), navy);
-    canvas.drawRRect(r(11.5, 12.8, 7, 5, 1.2), navy);
-    canvas.drawRRect(r(19, 17.5, 3.5, 6, 1.2), navy);
+          (bar.topLeft * s) & (bar.size * s),
+          Radius.circular(6 * s),
+        ),
+        paint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MosiLogoPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 //=======================모달 프레임==============================

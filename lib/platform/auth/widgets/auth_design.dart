@@ -123,7 +123,7 @@ class MosiAuthScaffold extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(24, showTagline ? 30 : 20, 24, 24),
               child: Column(
                 children: [
-                  const MosiLogo(markSize: 46, titleSize: 32),
+                  const MosiLogo(markSize: 40),
                   if (showTagline) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -261,7 +261,7 @@ class _TabletHeroState extends State<_TabletHero>
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MosiLogo(markSize: 72, titleSize: 52),
+        const MosiLogo(markSize: 64),
         const SizedBox(height: 16),
         Text(
           GameLocale.select(

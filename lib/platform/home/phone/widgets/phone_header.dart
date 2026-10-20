@@ -29,7 +29,7 @@ class PhoneHeader extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: MosiLogo(markSize: 26, titleSize: 18),
+                  child: MosiLogo(markSize: 26),
                 ),
               ),
             ),
