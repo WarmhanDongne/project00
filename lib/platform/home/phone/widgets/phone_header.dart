@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/mosigame_logo.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
 class PhoneHeader extends StatelessWidget {
@@ -29,14 +30,7 @@ class PhoneHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            '모시겜',
-            style: TextStyle(
-              color: colors.primary,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          const MosigameLogo(height: 26),
           const Spacer(),
           SizedBox(
             width: 108,

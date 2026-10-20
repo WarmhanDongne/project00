@@ -89,6 +89,7 @@ flutter:
     # - .env.dev
     - assets/images/
     - assets/images/button/
+    - assets/images/logo/
     - assets/images/others/
     - assets/images/widgets/layout/
     - assets/images/widgets/roulette/
