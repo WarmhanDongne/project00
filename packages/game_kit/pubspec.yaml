@@ -56,6 +56,9 @@ flutter:
       fonts:
         - asset: assets/fonts/PlayfairDisplay-Black.ttf
           weight: 900
+    - family: DoHyeon
+      fonts:
+        - asset: assets/fonts/DoHyeon-Regular.ttf
 flutter_gen:
   output: lib/gen/
   assets:
