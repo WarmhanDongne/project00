@@ -5,7 +5,6 @@ import 'package:project00/platform/auth/providers/auth_provider.dart';
 import 'package:project00/platform/auth/screens/register_screen.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
-import 'package:project00/platform/widgets/mosigame_logo.dart';
 import 'package:project00/platform/widgets/platform_components.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -192,7 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const MosigameLogo(height: 36),
+          Text(
+            '모시겜',
+            style: TextStyle(
+              color: colors.primary,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             '모이면 시작되는 게임',
