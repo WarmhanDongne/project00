@@ -13,6 +13,7 @@ import 'package:project00/platform/home/tablet/widgets/tablet_game_search_bar.da
 import 'package:project00/platform/home/tablet/widgets/tablet_room_panel.dart';
 import 'package:project00/platform/profile/widgets/tablet_profile.dart';
 import 'package:project00/platform/theme/platform_theme.dart';
+import 'package:project00/platform/widgets/mosigame_logo.dart';
 
 //=======================태블릿 플랫폼 홈==============================
 class TabletHome extends StatefulWidget {
@@ -206,22 +207,17 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.platformColors;
     return SizedBox(
       height: 78,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 170,
-              child: Text(
-                '모시겜',
-                style: TextStyle(
-                  color: colors.primary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: MosigameLogo(height: 30),
               ),
             ),
             Expanded(
