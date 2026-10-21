@@ -15,8 +15,7 @@ import 'package:flutter/foundation.dart';
 /// 앱 전체에서 사용하는 공용 사운드 서비스.
 ///
 /// - BGM은 하나의 플레이어를 계속 재사용합니다.
-/// - 효과음은 동시에 여러 개가 재생될 수 있도록
-///   재생할 때마다 별도의 AudioPlayer를 생성합니다.
+/// - 효과음은 미리 준비한 플레이어를 돌려쓰며 BGM과 함께 재생합니다.
 class SoundService {
   SoundService._();
 
@@ -113,7 +112,7 @@ class SoundService {
     AudioCache.instance.prefix = '';
     await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
     await _bgmPlayer.setVolume(_bgmVolume);
-    await _sustainedEffectPlayer.setReleaseMode(ReleaseMode.stop);
+    await _configureEffectPlayer(_sustainedEffectPlayer);
     await _sustainedEffectPlayer.setVolume(_effectVolume);
 
     // 효과음 플레이어를 미리 만들어 둡니다. 재생 시점에 네이티브 플레이어를
@@ -123,7 +122,7 @@ class SoundService {
       for (var index = 0; index < _effectPlayerPoolSize; index += 1) {
         final player = AudioPlayer();
         newEffectPlayers.add(player);
-        await player.setReleaseMode(ReleaseMode.stop);
+        await _configureEffectPlayer(player);
       }
     } catch (_) {
       await Future.wait(newEffectPlayers.map(_disposeQuietly));
@@ -132,6 +131,21 @@ class SoundService {
 
     _effectPlayers.addAll(newEffectPlayers);
     _initialized = true;
+  }
+
+  Future<void> _configureEffectPlayer(AudioPlayer player) async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      // 기본 gain 포커스를 효과음마다 요청하면 재생 중인 BGM이 포커스를
+      // 잃고 멈춥니다. 효과음은 포커스를 요청하지 않고 BGM 위에 섞습니다.
+      await player.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.none,
+          ),
+        ),
+      );
+    }
+    await player.setReleaseMode(ReleaseMode.stop);
   }
 
   /// 효과음 에셋을 미리 준비해 첫 재생이 늦지 않게 합니다.
@@ -202,7 +216,7 @@ class SoundService {
   Future<AudioPlayer> _prepareEffectPlayer(String assetPath) async {
     final player = AudioPlayer();
     try {
-      await player.setReleaseMode(ReleaseMode.stop);
+      await _configureEffectPlayer(player);
       await player.setVolume(_effectVolume);
       // setSource는 네이티브 준비가 끝날 때까지 기다립니다. 이 비용을
       // 재생 시점이 아니라 지금 치릅니다.
