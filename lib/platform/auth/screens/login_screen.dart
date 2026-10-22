@@ -34,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isRegistering = false;
   bool _isResettingPassword = false;
   bool _passwordResetSent = false;
+  bool _obscurePassword = true;
   String? _resetTargetEmail;
 
   @override
@@ -291,12 +292,42 @@ class _LoginScreenState extends State<LoginScreen> {
         MosiLabeledField(
           label: context.l10n.password,
           child: TextField(
+            key: const Key('login-password-field'),
             controller: _passwordController,
             enabled: !isBusy,
-            obscureText: true,
+            obscureText: _obscurePassword,
             onSubmitted: (_) => _signIn(),
             style: mosiFieldTextStyle(),
-            decoration: mosiInputDecoration(hintText: context.l10n.password),
+            decoration: mosiInputDecoration(
+              hintText: context.l10n.password,
+              suffix: IconButton(
+                key: const Key('login-password-visibility-button'),
+                tooltip: _obscurePassword
+                    ? GameLocale.select(
+                        ko: '비밀번호 보기',
+                        en: 'Show password',
+                        zhHans: '显示密码',
+                        zhHant: '顯示密碼',
+                      )
+                    : GameLocale.select(
+                        ko: '비밀번호 숨기기',
+                        en: 'Hide password',
+                        zhHans: '隐藏密码',
+                        zhHant: '隱藏密碼',
+                      ),
+                onPressed: isBusy
+                    ? null
+                    : () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 18,
+                  color: MosiColors.navy,
+                ),
+              ),
+            ),
           ),
         ),
         Align(
