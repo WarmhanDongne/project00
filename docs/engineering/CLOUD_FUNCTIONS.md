@@ -1,5 +1,16 @@
 # Cloud Functions 정리
 
+## 2026-10-22 — 생성·추방·초기화 효율 개선 배포
+
+사용자 승인으로 `createRealtimeRoom`, `removeRealtimeRoomPlayer`, `closeRoom`만
+project0000-ec01e에 선택 배포했다. predeploy eslint/tsc 및 Firebase CLI 배포는
+PASS/exit0이다. 세 함수 모두 `asia-northeast3`·Node.js22·2세대·ACTIVE를 확인했다.
+이름·Rules·DB shape·보존 기한 변경이나 다른 함수 배포는 없다.
+확인된 package source hash는 `afcd42519d1c438316f0c5d68742fc0b7f205811`이다.
+[배포·측정용 release 기록](../operations/ROOM_ACTION_RELEASE_20261022.md)과
+[영상 비교 지시문](../operations/PERFORMANCE_CAPTURE_CHECKLIST_20261022.md)을 따른다.
+실제 기기 설치·성능 측정 결과는 아직 확보하지 않았다.
+
 2026-10-13 B1·디벨럽1 통합 후보 index.ts export 81개: onCall 71, RTDB trigger 5, onSchedule 4, HTTP 1.
 production 배포 상태를 조회한 수치가 아니다. 게임 규칙·승패·턴·방 수명은 서버가 결정한다.
 [현재 네트워크·세션 계약](NETWORK_SESSION_CONTRACT.md)을 함께 따른다.

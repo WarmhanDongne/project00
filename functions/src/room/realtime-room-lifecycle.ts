@@ -323,22 +323,15 @@ export const closeRoom = onCall<RoomData>(
     const roomCode = parseRoomCode(request.data?.roomCode);
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
     const now = Date.now();
-    const roomSnapshot = await timing.measure("room_read", () => roomRef.get());
-    if (!roomSnapshot.exists()) {
-      throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
-    }
-
-    const room = roomSnapshot.val() as RealtimeRoom;
-    assertControllerSession(room, uid, request.data?.controllerSessionId);
-    assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
-
-    const operationId = parseSessionId(request.data?.operationId, "작업 ID");
-    const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
-    await timing.measure("close_transaction", () => runPrimedTransaction(roomRef, (raw) => {
-      if (!raw) return;
+    // The transaction helper owns the server-value listener. A separate get
+    // would repeat preparation without protecting the subsequent mutation.
+    const result = await timing.measure("close_transaction", () => runPrimedTransaction(roomRef, (raw) => {
+      if (!raw) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
       const current = raw as RealtimeRoom & SessionRoom;
       assertControllerSession(current, uid, request.data?.controllerSessionId);
-      assertRoomTarget(current, roomInstanceId, request.data?.presenceProtocol);
+      assertRoomTarget(current, request.data?.roomInstanceId, request.data?.presenceProtocol);
+      const operationId = parseSessionId(request.data?.operationId, "작업 ID");
+      const roomInstanceId = parseSessionId(request.data?.roomInstanceId, "방 세션");
       const payload = {roomInstanceId};
       if (roomOperationResult(current, uid, operationId, "close", payload)) return current;
       current.status = "closed";
@@ -349,6 +342,9 @@ export const closeRoom = onCall<RoomData>(
       recordRoomOperation(current, uid, operationId, "close", payload, {status: "applied"}, now);
       return current;
     }));
+    if (!result.committed) {
+      throw new HttpsError("aborted", "방을 종료하지 못했습니다.");
+    }
     return {success: true, roomCode};
   }),
 );
@@ -538,40 +534,25 @@ export const removeRealtimeRoomPlayer = onCall<RemovePlayerData>(
       throw new HttpsError("invalid-argument", "플레이어 정보가 필요합니다.");
     }
     const roomRef = getDatabase().ref(`rooms/${roomCode}`);
-    // transaction의 최초 로컬 null이 서버 확인 전 취소로 이어지지 않도록
-    // value 리스너로 완전한 방 스냅샷을 캐시에 유지합니다.
-    let roomValueListener!: (snapshot: DataSnapshot) => void;
-    const firstRoomValue = new Promise<DataSnapshot>((resolve, reject) => {
-      roomValueListener = (snapshot) => resolve(snapshot);
-      roomRef.on("value", roomValueListener, reject);
+    // runPrimedTransaction keeps one server-value listener through completion.
+    const result = await runPrimedTransaction(roomRef, (raw) => {
+      if (raw === null) throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
+      const room = raw as RealtimeRoom;
+      assertControllerSession(room, uid, request.data?.controllerSessionId);
+      assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
+      if (room.status === "playing" || room.game?.public?.status === "playing") {
+        throw new HttpsError("failed-precondition", "게임 중에는 게임 퇴장 절차를 사용해주세요.");
+      }
+      if (room.players?.[playerUid]) {
+        delete room.players[playerUid];
+        room.membershipRevision = (room.membershipRevision ?? 0) + 1;
+      }
+      return room;
     });
-
-    try {
-      const roomSnapshot = await firstRoomValue;
-      if (!roomSnapshot.exists()) {
-        throw new HttpsError("not-found", "방을 찾을 수 없습니다.");
-      }
-      const result = await runPrimedTransaction(roomRef, (raw) => {
-        if (raw === null) return;
-        const room = raw as RealtimeRoom;
-        assertControllerSession(room, uid, request.data?.controllerSessionId);
-        assertRoomTarget(room as SessionRoom, request.data?.roomInstanceId, request.data?.presenceProtocol);
-        if (room.status === "playing" || room.game?.public?.status === "playing") {
-          throw new HttpsError("failed-precondition", "게임 중에는 게임 퇴장 절차를 사용해주세요.");
-        }
-        if (room.players?.[playerUid]) {
-          delete room.players[playerUid];
-          room.membershipRevision = (room.membershipRevision ?? 0) + 1;
-        }
-        return room;
-      });
-      if (!result.committed) {
-        throw new HttpsError("aborted", "플레이어를 내보내지 못했습니다.");
-      }
-      return {success: true, playerUid};
-    } finally {
-      roomRef.off("value", roomValueListener);
+    if (!result.committed) {
+      throw new HttpsError("aborted", "플레이어를 내보내지 못했습니다.");
     }
+    return {success: true, playerUid};
   },
 );
 

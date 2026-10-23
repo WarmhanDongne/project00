@@ -29,12 +29,25 @@ export const createRealtimeRoom = onCall({region: "asia-northeast3"}, async (req
   if (request.data?.presenceProtocol !== 2) {
     throw new HttpsError("failed-precondition", "앱 업데이트가 필요합니다.", {reason: "upgradeRequired"});
   }
-  await timing.measure("onboarding", () => assertOnboardingComplete(uid));
+  // Overlap the mapping read with onboarding (including legacy backfill).
+  // Settle both results to retain error priority before any room creation writes.
+  const [onboarding, mapping] = await Promise.allSettled([
+    timing.measure("onboarding", () => assertOnboardingComplete(uid)),
+    timing.measure("previous_mapping", async () => {
+      // SDK initialization can throw synchronously. Keep it inside the settled
+      // mapping result so it cannot take precedence over authorization/input.
+      const database = getDatabase();
+      const snapshot = await database.ref(`controllerRooms/${uid}`).get();
+      return {database, snapshot};
+    }),
+  ]);
+  if (onboarding.status === "rejected") throw onboarding.reason;
   const operationId = parseSessionId(request.data?.operationId, "생성 작업 ID");
-  const database = getDatabase();
+  if (mapping.status === "rejected") throw mapping.reason;
+  const {database, snapshot: previousMappingSnapshot} = mapping.value;
   const now = Date.now();
   let closedAllocation: RoomAllocation | null = null;
-  const previousMapping = (await timing.measure("previous_mapping", () => database.ref(`controllerRooms/${uid}`).get())).val();
+  const previousMapping = previousMappingSnapshot.val();
   if (previousMapping?.roomCode) {
     const previous = (await timing.measure("previous_room", () => database.ref(`rooms/${previousMapping.roomCode}`).get())).val();
     if (previous?.controllerUid === uid && sameCleanupTarget(previous, previousMapping) &&

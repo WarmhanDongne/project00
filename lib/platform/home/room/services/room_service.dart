@@ -941,10 +941,16 @@ class RoomService {
   }
 
   Future<void> removePlayer(String roomCode, String userUid) async {
-    await _call('removeRealtimeRoomPlayer', {
-      ...await _controllerEnvelope(roomCode),
-      'playerUid': userUid,
-    });
+    // Lobby removal is scoped to the room; game context is checked by the server.
+    final identity = await _sessionIdentity(roomCode, 'controller');
+    await _call(
+      'removeRealtimeRoomPlayer',
+      controllerCommandData(roomCode, {
+        ...identity.envelope,
+        'operationId': newRecoveryOperationId('room'),
+        'playerUid': userUid,
+      }),
+    );
   }
 
   /// 태블릿이 발견한 stale 후보를 서버가 최신 heartbeat와 함께 재검증합니다.

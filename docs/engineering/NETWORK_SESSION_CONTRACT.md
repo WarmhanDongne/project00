@@ -57,6 +57,25 @@ join/resume 재생은 최신 접속을 되돌리지 않는다. 현재 sequence�
 화면 전환은 준비/연출/배경이 모두 끝난 후다. [개발팀 공유 문서](NETWORK_LATENCY_IMPROVEMENTS.md)에
 원인, 변경 전후, 회귀 및 배포·실측 한계를 정리한다.
 
+### 2026-10-22 로비 요청 효율 개선 후보
+
+방 생성의 onboarding 확인과 기존 controller 매핑 읽기는 병행하되 두 선행 조건이
+성공하기 전에는 방 생성 관련 RTDB 쓰기를 시작하지 않는다. 기존 onboarding 내부의
+legacy 계정 Firestore backfill은 유지한다. onboarding·작업 ID·매핑의 기존 오류
+우선순위를 유지한다. 로비 추방은 방/controller 신원만 보내고 게임 public 문맥을
+사전 조회하지 않는다. 서버는 transaction에서 최신 권한·방 세대·protocol·게임 중
+추방 금지를 계속 검증한다.
+
+추방·명시 초기화의 서버 준비는 기존 runPrimedTransaction의 value listener 하나가
+소유한다. 초기화의 별도 root get과 추방의 중복 listener를 제거하되 cold cache 보호와
+callback 재실행 시 검증을 유지한다. close 미적용은 성공으로 반환하지 않는다.
+공개 callable·데이터 형식·보존 기한·재시도 계약은 유지하며 배포 완료를 뜻하지 않는다.
+[점검·설계·검증 보고](../planning/ROOM_ACTION_EFFICIENCY_20261022.md)를 따른다.
+
+후속 사용자 승인으로 createRealtimeRoom·removeRealtimeRoomPlayer·closeRoom의 위
+개선은10/22 선택 배포를 완료했다. 세 함수 ACTIVE를 확인했으며 앱의 설치·실측은 별도다.
+[배포 및 APK 기록](../operations/ROOM_ACTION_RELEASE_20261022.md)을 참조한다.
+
 ## 공용 게임 중단과 명령
 
 네 게임 실제 reducer를 game-command-transaction과 game-mutation에 연결한다.

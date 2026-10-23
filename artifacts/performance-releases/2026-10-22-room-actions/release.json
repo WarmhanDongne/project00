@@ -1,0 +1,121 @@
+{
+  "releaseId": "android-release-room-actions-cc293dff-wip-20261022",
+  "source": {
+    "branch": "codex/room-action-efficiency-20261022",
+    "head": "cc293dffc35111e0b65ea2aa87e46d7c2347a3eb",
+    "workingTree": "uncommitted room action changes",
+    "validatedFiles": [
+      {
+        "Path": "C:\\workspace\\git\\project00\\lib\\platform\\home\\room\\services\\room_service.dart",
+        "Hash": "2532DAA028F9EC8E850DCAE8BA6500C425DABE5B7D71D44682A5D5BFCD193709"
+      },
+      {
+        "Path": "C:\\workspace\\git\\project00\\functions\\src\\room\\create-room.ts",
+        "Hash": "FA6A5889265EF255212568398195E7DE5DE7EA9E6E509ABE16726BFDC76DCBE4"
+      },
+      {
+        "Path": "C:\\workspace\\git\\project00\\functions\\src\\room\\realtime-room-lifecycle.ts",
+        "Hash": "FA885B24C4752D613DA2783521E180FF2AC2BCFB2FFAB0DEA16F83BC827304BC"
+      },
+      {
+        "Path": "C:\\workspace\\git\\project00\\test\\room_player_removal_fast_path_test.dart",
+        "Hash": "B61BE4185CF683387C16697FBFEF51BD0CBF5B0F61D82D2A2B53703BDD7790A5"
+      },
+      {
+        "Path": "C:\\workspace\\git\\project00\\functions\\test\\room-allocation-sdk-cache.test.mjs",
+        "Hash": "6CE1B6CC0C36C2380CC25F66E3A54AAF973041EBEB4EA0D00B686117FB58A887"
+      }
+    ],
+    "buildInputFiles": 1076,
+    "buildSourceUnchanged": true
+  },
+  "application": {
+    "applicationId": "com.warmhandongne.msg",
+    "versionName": "1.0.0",
+    "versionCode": 6,
+    "mode": "release",
+    "debuggable": false,
+    "backend": "server",
+    "distribution": "local performance APK",
+    "signing": "existing debug fallback",
+    "signerCertificateSha256": "c0b6b3a2eb965e6d8eb9b8dd047d2a1e9505e895fd2c580f3bd171f49895256c",
+    "certificateMatchesBaseline": true,
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ]
+  },
+  "apk": {
+    "path": "C:\\workspace\\git\\project00\\artifacts\\performance-releases\\2026-10-22-room-actions\\mosigame-1.0.0-build6-release-room-actions.apk",
+    "sizeBytes": 142738926,
+    "sha256": "00cce44392295beab6b2c818facca715e48888732b3ae4fed0c8009b8feb1cbf",
+    "copyHashMatches": true,
+    "badgingExitCode": 0,
+    "signatureExitCode": 0
+  },
+  "validation": {
+    "fullStatus": "PASS",
+    "fullAttempt": 2,
+    "fullExitCode": 0,
+    "fullSteps": 13,
+    "testCount": 1370,
+    "buildExitCode": 0,
+    "badgingExitCode": 0,
+    "signatureExitCode": 0
+  },
+  "deployment": {
+    "project": "project0000-ec01e",
+    "deployExitCode": 0,
+    "metadataExitCode": 0,
+    "verifiedAtUtc": "2026-10-22T09:40:04.027Z",
+    "functions": [
+      {
+        "name": "closeRoom",
+        "entryPoint": "closeRoom",
+        "region": "asia-northeast3",
+        "runtime": "nodejs22",
+        "platform": "gcfv2",
+        "state": "ACTIVE",
+        "sourceHash": "afcd42519d1c438316f0c5d68742fc0b7f205811"
+      },
+      {
+        "name": "createRealtimeRoom",
+        "entryPoint": "createRealtimeRoom",
+        "region": "asia-northeast3",
+        "runtime": "nodejs22",
+        "platform": "gcfv2",
+        "state": "ACTIVE",
+        "sourceHash": "afcd42519d1c438316f0c5d68742fc0b7f205811"
+      },
+      {
+        "name": "removeRealtimeRoomPlayer",
+        "entryPoint": "removeRealtimeRoomPlayer",
+        "region": "asia-northeast3",
+        "runtime": "nodejs22",
+        "platform": "gcfv2",
+        "state": "ACTIVE",
+        "sourceHash": "afcd42519d1c438316f0c5d68742fc0b7f205811"
+      }
+    ]
+  },
+  "build": {
+    "command": ".\\android\\gradlew.bat -p android -q -Ptarget-platform=android-arm,android-arm64,android-x64 -Ptarget=lib/main.dart -Pbase-application-name=android.app.Application -Pdart-obfuscation=false -Ptrack-widget-creation=false -Ptree-shake-icons=true :app:assembleRelease -x :app:uploadCrashlyticsMappingFileRelease",
+    "startedAtUtc": "2026-10-22T18:37:01.6711565+09:00",
+    "finishedAtUtc": "2026-10-22T18:43:07.1013246+09:00",
+    "durationMs": 365432,
+    "exitCode": 0,
+    "timedOut": false,
+    "sourceFiles": 1076,
+    "sourceUnchanged": true
+  },
+  "baseline": {
+    "releaseId": "android-release-develop-b921f53-20261016",
+    "version": "1.0.0+4",
+    "apkSha256": "1db19a2366017308ba917df0c72d8c4e825ba19059bdcb12250ec953d84cc71c",
+    "performanceSource": "user-provided 2026-10-17 videos/analysis",
+    "newDeviceInstallation": "NOT VERIFIED",
+    "newVideoCollection": "NOT RUN",
+    "improvement": "NOT MEASURED"
+  }
+}
