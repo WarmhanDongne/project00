@@ -2,8 +2,9 @@
 
 작성일: 2026-10-22 (Asia/Seoul). 관련 작업: [NET-RECOVERY-01](tasks/NET-RECOVERY-01.md).
 
-**최종 판정: 요청한 점검·설계·개발·자동 검증 완료. FULL 2차에서 13단계 PASS/exit 0.**
-최대 3회 한도 안에서 총 2회 실행했으며 develop에는 머지하지 않았다.
+**10/22 개발 판정: 점검·설계·개발·자동 검증 완료. FULL 2차에서 13단계 PASS/exit 0.**
+10/22에는 총2회 실행하고 develop에 머지하지 않았다. 10/23 사용자 머지 승인 후 최신
+develop 통합 후보의 FULL3도 PASS했으며, 아래8절에 후속 병합 근거를 남긴다.
 
 ## 기준과 범위
 
@@ -132,3 +133,27 @@ Android `1.0.0+6` release APK 생성·서명/버전 검증도 PASS/exit0이다.
 [사용자 촬영 및 AI 비교 지시문](../operations/PERFORMANCE_CAPTURE_CHECKLIST_20261022.md)에
 근거를 남겼다. 앞선 10파일 상태는 개발 검증 완료 시점이며 이 후속에서는 문서·산출물이
 추가됐다. 기기 설치·촬영·개선율 산출은 아직 미실행이다. develop 병합·commit·push는 없다.
+
+## 8. 10/23 사용자 승인 — 최신 develop 통합·병합
+
+사용자가 앞선 병합 보류를 해제하고 develop 머지를 요청했다. 기존 사용자 미추적2파일과
+ignored APK를 제외한 이번 작업16파일만 `d33a6194`로 커밋했다. 최신 origin/develop은
+`7feae1ca`(로그인 비밀번호 표시 전환 포함)였으며 `82189949`에서 작업 브랜치에 통합했다.
+충돌은 월별 기록의 목차/같은 위치 추가뿐이어서 양쪽 기록을 모두 보존했다. 최신 로그인
+코드·테스트는 origin/develop과, 이번 제품·테스트는 d33a6194와 각각 동일함을 확인했다.
+
+최종 통합 후보 `82189949`에서 다음 명령을 실행했다.
+
+```powershell
+powershell.exe -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -File tool/invoke_mosigame.ps1 validate --full --json
+```
+
+**FULL3/최대3회: PASS/exit0, 322.623초, 13단계 전부 PASS.**
+앱576 + 패키지261 + Functions534 = **총1,371개 테스트 통과**다.
+실행 전후 status 동일, CLI mutation PASS, 기존 미추적2파일 해시 동일이다.
+ignored 근거는 `build/room_action_efficiency_20261022/full-3.json`이다.
+
+검증 뒤 변경은 결과를 기록하는 문서뿐이며, 그 문서 커밋까지 포함한 후보를 로컬 develop에
+fast-forward로 반영한다. 원격 push·추가 배포·APK 재빌드는 하지 않는다. 기존 release
+APK는10/22의 cc293dff+최적화 후보로 유지되며, 이후 로그인 변경까지 포함해 새로 빌드한
+APK라고 표현하지 않는다. 실기기 속도·복구 측정은 계속 미실행이며 그 판정을 확대하지 않는다.
