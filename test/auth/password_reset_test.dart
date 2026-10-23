@@ -75,6 +75,36 @@ void main() {
     });
   }
 
+  testWidgets('로그인 비밀번호를 눈 버튼으로 표시하고 다시 숨긴다', (tester) async {
+    final service = _ResetService();
+    await _pumpLogin(tester, service: service);
+
+    const fieldKey = Key('login-password-field');
+    const visibilityKey = Key('login-password-visibility-button');
+    await tester.enterText(find.byKey(fieldKey), 'LocalPassword123!');
+
+    expect(tester.widget<TextField>(find.byKey(fieldKey)).obscureText, isTrue);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+    expect(find.byTooltip('비밀번호 보기'), findsOneWidget);
+
+    await tester.tap(find.byKey(visibilityKey));
+    await tester.pump();
+
+    var field = tester.widget<TextField>(find.byKey(fieldKey));
+    expect(field.obscureText, isFalse);
+    expect(field.controller?.text, 'LocalPassword123!');
+    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    expect(find.byTooltip('비밀번호 숨기기'), findsOneWidget);
+
+    await tester.tap(find.byKey(visibilityKey));
+    await tester.pump();
+
+    field = tester.widget<TextField>(find.byKey(fieldKey));
+    expect(field.obscureText, isTrue);
+    expect(field.controller?.text, 'LocalPassword123!');
+    expect(tester.takeException(), isNull);
+  });
+
   for (final size in [const Size(390, 844), const Size(1194, 834)]) {
     testWidgets('메일 발송·중복 방지·재전송·로그인 복귀가 작동한다 ($size)', (tester) async {
       final service = _ResetService();

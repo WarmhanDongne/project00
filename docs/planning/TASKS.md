@@ -73,7 +73,7 @@ E02~E12의 [구현 후보와 관련 검사](NETWORK_SESSION_E02_E12_IMPLEMENTATI
 
 | ID | 작업 | 상태 | 다음 행동 |
 | --- | --- | --- | --- |
-| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 진행 중 | 10/16 휴대폰 참가자 목록의 `나` 표시를 얼굴 오른쪽 아래 작은 중첩 배지로 통일. 관련 GUI 37개 PASS. 방향성 배경 전환의 GUI69·session Flutter219/Functions155 근거도 유지. 다음 체감 항목 결정 후 사용자 승인 FULL·실기기 확인 |
+| [LOBBY-DESIGN-01](tasks/LOBBY-DESIGN-01.md#lobby-design-01) | 로비 전체 디자인 개선 | 진행 중 | 10/22 로그인 비밀번호 눈 아이콘 표시·숨김 추가. 단일9·auth Flutter81/Functions38·scoped FULL 13단계 PASS. 기존 로비 개선 근거 유지. 다음 체감 항목 결정 후 실기기 확인 |
 | [STORE-ENTITLEMENT-01](tasks/STORE-ENTITLEMENT-01.md#store-entitlement-01) | 게임 상점과 소유권·구매 기반 구조 | 검증 대기 — 비과금 gateway·상점/library 분리 targeted PASS | 사용자 승인 FULL. 실제 과금은 별도 승인 후 서버 검증·entitlement·스토어 sandbox 구현 |
 | [GAME-DESIGN-01](tasks/GAME-DESIGN-01.md#game-design-01) | 게임 디자인 개선 | 요구사항 확인 | 대상 게임·화면·우선순위 결정 |
 | [LOBBY-TUTORIAL-01](tasks/LOBBY-TUTORIAL-01.md#lobby-tutorial-01) | 로비 첫 입장 튜토리얼 | 요구사항 확인 | 첫 사용 안내 범위 결정 |
