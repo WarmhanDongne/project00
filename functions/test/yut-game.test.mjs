@@ -60,7 +60,7 @@ test("back-do retraces one step and wraps from the first node", () => {
 test("strategy: geol is pooled, moved on the tablet, then the turn passes", () => {
   const game = strategyGame();
   assert.equal(game.public.turnTeam, "blue");
-  reveal(game, 3);
+  reveal(game, 1); // 앞면 1 · 뒷면 3 → 걸
   assert.equal(game.public.phase, "moving");
   assert.deepEqual(game.public.pool, [{name: "geol", steps: 3}]);
   const result = moveYutPiece(game, 0, 0, 3000);
@@ -71,9 +71,9 @@ test("strategy: geol is pooled, moved on the tablet, then the turn passes", () =
   assert.equal(game.public.turnUid, "b");
 });
 
-test("strategy: one front is back-do and is dropped with nothing on the board", () => {
+test("strategy: one flat back (three fronts) is back-do and is dropped with nothing on the board", () => {
   const game = strategyGame();
-  reveal(game, 1);
+  reveal(game, 3);
   assert.equal(game.public.lastRoll.name, "backDo");
   assert.equal(game.public.turnTeam, "white", "unusable back-do ends the turn");
   assert.equal(game.public.pool.length, 0);
@@ -81,11 +81,11 @@ test("strategy: one front is back-do and is dropped with nothing on the board", 
 
 test("yut and mo throw again and keep the pooled results", () => {
   const game = strategyGame();
-  reveal(game, 4);
+  reveal(game, 0); // 뒷면 4 → 윷
   assert.equal(game.public.phase, "selecting");
   assert.equal(game.public.turnTeam, "blue");
   assert.deepEqual(game.public.pool.map((entry) => entry.name), ["yut"]);
-  reveal(game, 0, 2500);
+  reveal(game, 4, 2500); // 앞면 4 → 모
   assert.equal(game.public.phase, "selecting");
   reveal(game, 2, 2600);
   assert.equal(game.public.phase, "moving");
@@ -113,10 +113,10 @@ test("stacked pieces move together and a capture earns another throw", () => {
   assert.deepEqual(pub.pool.map((entry) => entry.name), ["do"]);
 });
 
-test("four pieces home wins for the team", () => {
+test("two pieces home wins for the team", () => {
   const game = strategyGame();
   const pub = game.public;
-  for (const id of [0, 1, 2]) pub.pieces.blue[id] = {id, position: YUT_HOME, path: [YUT_HOME], status: "finished"};
+  pub.pieces.blue[0] = {id: 0, position: YUT_HOME, path: [YUT_HOME], status: "finished"};
   pub.pieces.blue[3] = {id: 3, position: 19, path: [...Array(19).keys()].map((n) => n + 1), status: "onBoard"};
   pub.phase = "moving";
   pub.pool = [{name: "gae", steps: 2}];
@@ -124,6 +124,18 @@ test("four pieces home wins for the team", () => {
   assert.equal(result.type, "winner");
   assert.equal(pub.status, "finished");
   assert.equal(pub.winningTeam, "blue");
+});
+
+test("one piece home is not yet a win", () => {
+  const game = strategyGame();
+  const pub = game.public;
+  pub.pieces.blue[3] = {id: 3, position: 19, path: [...Array(19).keys()].map((n) => n + 1), status: "onBoard"};
+  pub.phase = "moving";
+  pub.pool = [{name: "gae", steps: 2}];
+  const result = moveYutPiece(game, 3, 0, 3000);
+  assert.notEqual(result.type, "winner");
+  assert.equal(pub.status, "playing");
+  assert.equal(pub.pieces.blue[3].status, "finished");
 });
 
 test("timeouts choose randomly, then move the leading piece automatically", () => {

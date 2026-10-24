@@ -14,6 +14,91 @@ function snapshot(value) {
     isNumber: () => typeof value === "number" && Number.isFinite(value),
   };
 }
+
+const memberRead = ({
+  field,
+  auth = {uid: "player"},
+  controllerUid = "controller",
+  players = {player: {status: "active"}},
+}) => vm.runInNewContext(
+  String(rules.rules.rooms.$roomCode[field][".read"]),
+  {
+    auth,
+    $roomCode: "ABCDE",
+    root: snapshot({rooms: {ABCDE: {controllerUid, players}}}),
+  },
+);
+
+test("방 메타데이터와 참가자 목록은 controller와 참가자만 읽는다", () => {
+  const protectedFields = [
+    "createdAt",
+    "membershipRevision",
+    "controllerCurrentConnectionId",
+    "controllerConnectionSeq",
+    "controllerConnected",
+    "maxPlayers",
+    "selectedGame",
+    "players",
+    "presenceProtocol",
+  ];
+  for (const field of protectedFields) {
+    assert.equal(memberRead({field}), true, `${field}: 참가자`);
+    assert.equal(
+      memberRead({field, auth: {uid: "controller"}}),
+      true,
+      `${field}: controller`,
+    );
+    assert.equal(
+      memberRead({field, auth: {uid: "outsider"}}),
+      false,
+      `${field}: 방 밖 사용자`,
+    );
+    assert.equal(memberRead({field, auth: null}), false, `${field}: 비로그인`);
+  }
+});
+
+test("roomCode 존재 마커는 방 삭제·강퇴 뒤에도 로그인 사용자가 읽는다", () => {
+  // 방이 지워지거나 강퇴되면 참가자 근거가 사라지므로, 존재 확인은 멤버십과
+  // 무관하게 허용해야 클라이언트가 삭제·강퇴를 권한 오류와 구분할 수 있습니다.
+  assert.equal(memberRead({field: "roomCode", auth: {uid: "outsider"}}), true);
+  assert.equal(
+    memberRead({
+      field: "roomCode",
+      auth: {uid: "player"},
+      controllerUid: undefined,
+      players: {},
+    }),
+    true,
+  );
+  assert.equal(memberRead({field: "roomCode", auth: null}), false);
+});
+
+test("입장 전에는 방 세션과 자기 참가 기록만 확인할 수 있다", () => {
+  const roomInstanceRead = rules.rules.rooms.$roomCode.roomInstanceId[".read"];
+  assert.equal(
+    vm.runInNewContext(String(roomInstanceRead), {auth: {uid: "outsider"}}),
+    true,
+  );
+  assert.equal(vm.runInNewContext(String(roomInstanceRead), {auth: null}), false);
+
+  const ownPlayerRead =
+    rules.rules.rooms.$roomCode.players.$playerUid[".read"];
+  assert.equal(
+    vm.runInNewContext(String(ownPlayerRead), {
+      auth: {uid: "outsider"},
+      $playerUid: "outsider",
+    }),
+    true,
+  );
+  assert.equal(
+    vm.runInNewContext(String(ownPlayerRead), {
+      auth: {uid: "outsider"},
+      $playerUid: "other",
+    }),
+    false,
+  );
+});
+
 for (const field of ["isConnected", "lastSeen"]) {
   test(`${field}: 요약 presence 직접 쓰기는 모든 세션에서 거부한다`, () => {
     const expression = rules.rules.rooms.$roomCode.players.$playerUid[field][".write"];

@@ -18,11 +18,14 @@ abstract final class YutImages {
   static final boardOak = of('board_oak');
   static final holoTablet = of('bg_holo_tablet');
   static final holoPhone = of('bg_holo_phone');
+  /// 둥근 앞면(× 세 개)입니다.
   static final stickFront = of('stick_front');
 
-  /// 일반 윷놀이 빽도 표시 윷: 가운데 ×를 붉게 칠한 앞면입니다.
-  static final stickFrontBackDo = of('stick_front_backdo');
+  /// 평평한 뒷면(배)입니다.
   static final stickBack = of('stick_back');
+
+  /// 일반 윷놀이 빽도 윷의 뒷면: 평평한 면에 모시겜 로고가 찍혀 있습니다.
+  static final stickBackBackDo = of('stick_back_backdo');
   static final book = of('button_book');
   static final coin = of('button_coin');
 
@@ -33,8 +36,8 @@ abstract final class YutImages {
           if (edition) holoTablet,
           if (edition) holoPhone,
           stickFront,
-          stickFrontBackDo,
           stickBack,
+          stickBackBackDo,
           book,
           coin,
           for (final piece in [
@@ -485,7 +488,8 @@ class _HoloPiecePainter extends CustomPainter {
 
 /// 윷가락 하나입니다. 위쪽 구멍에 주인 얼굴이 보입니다.
 ///
-/// [front]가 true면 평평한 앞면(× 세 개), false면 둥근 뒷면입니다.
+/// [front]가 true면 둥근 앞면(× 세 개), false면 평평한 뒷면(배)입니다.
+/// 결과는 평평한 뒷면이 위로 나온 개수로 셉니다(배 1 = 도 … 4 = 윷, 0 = 모).
 class YutStick extends StatelessWidget {
   const YutStick({
     super.key,
@@ -501,7 +505,7 @@ class YutStick extends StatelessWidget {
   final bool edition;
   final String? characterId;
 
-  /// 일반 윷놀이의 빽도 판정용 표시 윷입니다. 앞면 가운데 ×가 붉습니다.
+  /// 일반 윷놀이의 빽도 판정용 표시 윷입니다. 평평한 뒷면에 로고가 보입니다.
   final bool marked;
   final bool dim;
 
@@ -510,7 +514,8 @@ class YutStick extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final height = width * aspect;
-    final hole = width * 87 / 316;
+    // 일반판 윷은 몸통 폭(240/316)에 맞춰 구멍이 작습니다.
+    final hole = width * (edition ? 87 : 70) / 316;
     final face = Positioned(
       left: width * 157.5 / 316 - hole,
       top: height * 172.5 / 850 - hole,
@@ -532,8 +537,8 @@ class YutStick extends StatelessWidget {
           )
         : Image(
             image: front
-                ? (marked ? YutImages.stickFrontBackDo : YutImages.stickFront)
-                : YutImages.stickBack,
+                ? YutImages.stickFront
+                : (marked ? YutImages.stickBackBackDo : YutImages.stickBack),
             width: width,
             height: height,
             fit: BoxFit.fill,

@@ -243,65 +243,65 @@ abstract final class YutCopy {
 - 윷·모가 나오거나 상대 말을 잡으면 한 번 더 던져요.
 - 태블릿에서 말을 꾹 누르면 갈 수 있는 칸이 빛나요. 끌어다 놓으면 한 칸씩 이동해요. 남은 말은 더미에서 바로 끌어 놓아요.
 - 모서리에 멈추면 다음에 지름길(대각선)로 가요.
-- 빨간 표시 윷 하나만 앞면이면 빽도(1칸 뒤로)예요.
-- 내 말 4개를 먼저 모두 내보내면 이겨요.''',
+- 평평한 뒷면이 하나만 나왔는데 그게 로고 윷이면 빽도(1칸 뒤로)예요.
+- 내 말 중 2개를 먼저 내보내면 이겨요.''',
           '''## How to play
 - Two to four players each start with four pieces and use the matching number of board seats.
 - On your turn, shake your phone to throw four sticks onto the tablet.
 - Yut, Mo or a capture gives you another throw.
 - Press and hold a piece on the tablet to light up where it can go, then drag it there. Drag new pieces straight from your stack.
 - Stopping on a corner sends the next move down the diagonal.
-- Only the red-marked stick face up is Back-do (one step back).
-- The first to bring all four pieces home wins.''',
+- If only one flat side shows and it is the logo stick, it is Back-do (one step back).
+- The first to bring two pieces home wins.''',
           '''## 玩法
 - 2至4名玩家各自带着4枚棋子出发，并按人数使用棋盘座位。
 - 轮到自己时摇动手机，四根柶会掷到平板上。
 - 掷出柶、模或吃掉对方棋子可再掷一次。
 - 在平板上长按棋子会显示可走的格子，拖过去即可移动；新棋子直接从棋堆拖出。
 - 停在角上时，下一步走对角线捷径。
-- 只有红色标记的柶朝上时为退道（后退1格）。
-- 最先让4枚棋子全部回家者获胜。''',
+- 只有一根平面朝上且是带标志的柶时为退道（后退1格）。
+- 最先让2枚棋子回家者获胜。''',
           '''## 玩法
 - 2至4名玩家各自帶著4枚棋子出發，並按人數使用棋盤座位。
 - 輪到自己時搖動手機，四根柶會擲到平板上。
 - 擲出柶、模或吃掉對方棋子可再擲一次。
 - 在平板上長按棋子會顯示可走的格子，拖過去即可移動；新棋子直接從棋堆拖出。
 - 停在角上時，下一步走對角線捷徑。
-- 只有紅色標記的柶朝上時為退道（後退1格）。
-- 最先讓4枚棋子全部回家者獲勝。''',
+- 只有一根平面朝上且是帶標誌的柶時為退道（後退1格）。
+- 最先讓2枚棋子回家者獲勝。''',
         )
       : yutText(
           '''## 이렇게 해요
 - 청군 2명과 백군 2명이 각 팀 말 4개로 겨뤄요.
 - 매 차례 네 명 모두 휴대폰에서 윷가락 하나의 앞·뒤를 골라요. 공개 전까지 서로 볼 수 없어요.
-- 네 명이 고르면 한꺼번에 공개되고 앞면 개수로 결과가 정해져요. (앞면 1개 빽도 · 2개 개 · 3개 걸 · 4개 윷 · 0개 모)
+- 네 명이 고르면 한꺼번에 공개되고 평평한 뒷면 개수로 결과가 정해져요. (뒷면 1개 빽도 · 2개 개 · 3개 걸 · 4개 윷 · 0개 모)
 - 상대 팀도 함께 고르기 때문에 상대 차례에 결과를 막을 수 있어요.
 - 윷·모가 나오거나 상대 말을 잡으면 한 번 더 골라요.
 - 태블릿에서 말을 꾹 누르면 갈 수 있는 칸이 빛나요. 끌어다 놓으면 한 칸씩 이동해요. 남은 말은 더미에서 바로 끌어 놓아요.
-- 팀 말 4개를 먼저 모두 내보내는 팀이 이겨요.''',
+- 팀 말 중 2개를 먼저 내보내는 팀이 이겨요.''',
           '''## How to play
 - Two players in Blue and two in White race four team pieces.
 - Each turn all four players secretly pick front or back on one stick.
-- When everyone has chosen, the sides are revealed together. Fronts decide the result (1 Back-do · 2 Gae · 3 Geol · 4 Yut · 0 Mo).
+- When everyone has chosen, the sides are revealed together. Flat backs decide the result (1 Back-do · 2 Gae · 3 Geol · 4 Yut · 0 Mo).
 - The other team chooses too, so you can block their turn.
 - Yut, Mo or a capture gives another round.
 - Press and hold a piece on the tablet to light up where it can go, then drag it there. Drag new pieces straight from your stack.
-- The first team to bring all four pieces home wins.''',
+- The first team to bring two pieces home wins.''',
           '''## 玩法
 - 青军2人与白军2人用各队4枚棋子比赛。
 - 每回合四人都在手机上秘密选择一根柶的正反面。
-- 四人选好后同时公开，按正面数量决定结果（1个退道 · 2个开 · 3个杰 · 4个柶 · 0个模）。
+- 四人选好后同时公开，按平面（反面）数量决定结果（1个退道 · 2个开 · 3个杰 · 4个柶 · 0个模）。
 - 对方队伍也一起选择，所以可以在对方回合阻挡结果。
 - 掷出柶、模或吃掉对方棋子可再来一轮。
 - 在平板上长按棋子会显示可走的格子，拖过去即可移动；新棋子直接从棋堆拖出。
-- 最先让本队4枚棋子全部回家的一队获胜。''',
+- 最先让本队2枚棋子回家的一队获胜。''',
           '''## 玩法
 - 青軍2人與白軍2人用各隊4枚棋子比賽。
 - 每回合四人都在手機上秘密選擇一根柶的正反面。
-- 四人選好後同時公開，按正面數量決定結果（1個退道 · 2個開 · 3個傑 · 4個柶 · 0個模）。
+- 四人選好後同時公開，按平面（反面）數量決定結果（1個退道 · 2個開 · 3個傑 · 4個柶 · 0個模）。
 - 對方隊伍也一起選擇，所以可以在對方回合阻擋結果。
 - 擲出柶、模或吃掉對方棋子可再來一輪。
 - 在平板上長按棋子會顯示可走的格子，拖過去即可移動；新棋子直接從棋堆拖出。
-- 最先讓本隊4枚棋子全部回家的一隊獲勝。''',
+- 最先讓本隊2枚棋子回家的一隊獲勝。''',
         );
 }

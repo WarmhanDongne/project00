@@ -13,6 +13,9 @@ export const YUT_TURN_MS = 30000;
 export const YUT_START_NODE = 0;
 export const YUT_CENTER_NODE = 22;
 export const YUT_HOME = 29;
+
+/** 이만큼 말이 나면(집에 들어오면) 승리합니다. 말은 그대로 4개씩 씁니다. */
+export const YUT_WIN_PIECES = 2;
 const STRATEGY_TEAMS = ["blue", "white"] as const;
 const CLASSIC_TEAMS = ["east", "south", "west", "north"] as const;
 
@@ -108,9 +111,14 @@ function makeRoll(
   stickUps: boolean[], now: number, actorUid: string | null,
   strategy: boolean, choices?: Record<string, boolean>,
 ): YutRoll {
+  // stickUps[i] === true → 둥근 앞면(× 세 개)이 위, false → 평평한 뒷면(배)이 위.
+  // 전통 규칙대로 결과는 위로 나온 '평평한 뒷면' 개수로 셉니다.
+  //   배 1 = 도, 2 = 개, 3 = 걸, 4 = 윷, 0(둥근 앞면 4개) = 모
   const upCount = stickUps.filter(Boolean).length;
-  const backDo = upCount === 1 && (strategy || stickUps[0] === true);
-  const name: YutResultName = backDo ? "backDo" : resultForUpCount(upCount);
+  const flatCount = stickUps.length - upCount;
+  // 빽도: 배가 하나만 나왔고, 일반판은 그게 로고가 찍힌 첫 번째 윷일 때입니다.
+  const backDo = flatCount === 1 && (strategy || stickUps[0] === false);
+  const name: YutResultName = backDo ? "backDo" : resultForFlatCount(flatCount);
   return {
     name,
     steps: stepsFor(name),
@@ -128,7 +136,7 @@ function stepsFor(name: YutResultName): number {
     name === "geol" ? 3 : name === "gae" ? 2 : 1;
 }
 
-function resultForUpCount(count: number): YutResultName {
+function resultForFlatCount(count: number): YutResultName {
   return count === 0 ? "mo" : count === 1 ? "do" : count === 2 ? "gae" :
     count === 3 ? "geol" : "yut";
 }
@@ -287,7 +295,7 @@ export function moveYutPiece(
   };
   touch(game, now);
 
-  if (ownPieces.every((piece) => piece.status === "finished")) {
+  if (ownPieces.filter((piece) => piece.status === "finished").length >= YUT_WIN_PIECES) {
     const strategy = pub.gameType !== "yut";
     const winnerUid = strategy ? null : ownerKey;
     const team = strategy ? ownerKey as YutTeam : pub.players[ownerKey]?.team ?? null;

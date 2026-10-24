@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:game_kit/models/game_room_context.dart';
@@ -38,6 +40,9 @@ class _YutPhoneScreenState extends ConsumerState<YutPhoneScreen>
   static const _motionChannel = EventChannel('mosigame/yut_motion/events');
   late final _service = YutService();
   StreamSubscription<dynamic>? _motionSubscription;
+
+  /// 흔들 때 화면 속 윷을 움직이기 위한 가속도 흐름입니다.
+  final _motionKicks = StreamController<Offset>.broadcast();
   Timer? _shakeStopTimer;
   DateTime? _shakeStartedAt;
   DateTime? _lastHapticAt;
@@ -91,6 +96,7 @@ class _YutPhoneScreenState extends ConsumerState<YutPhoneScreen>
     WidgetsBinding.instance.removeObserver(this);
     _shakeStopTimer?.cancel();
     _motionSubscription?.cancel();
+    _motionKicks.close();
     super.dispose();
   }
 
@@ -128,6 +134,9 @@ class _YutPhoneScreenState extends ConsumerState<YutPhoneScreen>
     final y = (event[1] as num?)?.toDouble();
     final z = (event[2] as num?)?.toDouble();
     if (x == null || y == null || z == null) return;
+    // iOS(CoreMotion)는 안드로이드와 부호가 반대라 맞춰서 보냅니다.
+    final ios = defaultTargetPlatform == TargetPlatform.iOS;
+    _motionKicks.add(ios ? Offset(-x, -y) : Offset(x, y));
     final acceleration = (math.sqrt(x * x + y * y + z * z) - 9.81).abs();
     if (acceleration < 2.2) return;
     final now = DateTime.now();
@@ -384,6 +393,7 @@ class _YutPhoneScreenState extends ConsumerState<YutPhoneScreen>
         motionAvailable: _motionAvailable,
         busy: _busy,
         onThrow: _submitRoll,
+        motion: _motionKicks.stream,
       );
     }
     return _WaitStage(game: game, meUid: _uid);
@@ -878,6 +888,7 @@ class _ShakeStage extends StatefulWidget {
     required this.motionAvailable,
     required this.busy,
     required this.onThrow,
+    required this.motion,
   });
   final YutGameView game;
   final YutPlayerView? me;
@@ -887,31 +898,191 @@ class _ShakeStage extends StatefulWidget {
   final bool busy;
   final VoidCallback onThrow;
 
+  /// 휴대폰 가속도(화면 기준으로 정리한 x, y, m/s²)입니다.
+  final Stream<Offset> motion;
+
   @override
   State<_ShakeStage> createState() => _ShakeStageState();
 }
 
-class _ShakeStageState extends State<_ShakeStage>
-    with SingleTickerProviderStateMixin {
+class _ShakeStageState extends State<_ShakeStage> with TickerProviderStateMixin {
   late final _wobble = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 220),
   );
 
+  // ── 흔들기 물리: 윷 네 개가 흔드는 방향을 따라 화면 안을 돌아다니며
+  //    벽·서로에 부딪힙니다. 서 있는 채로 ±43°까지만 기울어집니다. ──
+  final _random = math.Random();
+  final List<Offset> _pos = List.filled(4, Offset.zero);
+  final List<Offset> _vel = List.filled(4, Offset.zero);
+  final List<double> _angle = List.filled(4, 0);
+  final List<double> _spin = List.filled(4, 0);
+  final _frame = ValueNotifier<int>(0);
+  late final Ticker _ticker = createTicker(_step);
+  StreamSubscription<Offset>? _motionSub;
+  Duration _lastTick = Duration.zero;
+  Offset _gravity = Offset.zero;
+  bool _gravityReady = false;
+  DateTime _lastWallHaptic = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// 레이아웃에서 받은 무대 크기와 윷 크기입니다.
+  Size _stage = Size.zero;
+  double _stickW = 0;
+  double get _stickH => _stickW * YutStick.aspect;
+  double _slotX(int i) => (i - 1.5) * (_stickW + 12);
+  double _restAngle(int i) => (i.isEven ? 1 : -1) * .05;
+
+  @override
+  void initState() {
+    super.initState();
+    _motionSub = widget.motion.listen(_onMotion);
+  }
+
   @override
   void didUpdateWidget(covariant _ShakeStage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((widget.shaking || widget.throwing) && !_wobble.isAnimating) {
+    if (oldWidget.motion != widget.motion) {
+      _motionSub?.cancel();
+      _motionSub = widget.motion.listen(_onMotion);
+    }
+    if (widget.throwing && !_wobble.isAnimating) {
       _wobble.repeat(reverse: true);
-    } else if (!widget.shaking && !widget.throwing && _wobble.isAnimating) {
+    } else if (!widget.throwing && _wobble.isAnimating) {
       _wobble
         ..stop()
         ..value = 0;
+    }
+    if (widget.shaking) _wake();
+  }
+
+  /// 가속도에서 중력을 걸러 낸 '흔든 힘'만큼 윷을 반대쪽으로 밀어 줍니다.
+  /// 휴대폰이 오른쪽으로 움직이면 안의 윷은 관성으로 왼쪽 벽에 부딪힙니다.
+  void _onMotion(Offset raw) {
+    if (!_gravityReady) {
+      _gravity = raw;
+      _gravityReady = true;
+      return;
+    }
+    _gravity = _gravity * .82 + raw * .18;
+    final linear = raw - _gravity;
+    final force = linear.distance;
+    if (force < 1.2 || widget.throwing) return;
+    // 기기 좌표(오른쪽 +x, 위 +y) → 화면 좌표(오른쪽 +x, 아래 +y), 관성이라 반대로.
+    final push = Offset(-linear.dx, linear.dy);
+    for (var i = 0; i < 4; i++) {
+      final scatter = .65 + _random.nextDouble() * .7;
+      final jitter = Offset(
+        _random.nextDouble() * 2 - 1,
+        _random.nextDouble() * 2 - 1,
+      );
+      _vel[i] += push * (80 * scatter) + jitter * (force * 12);
+      _spin[i] += (_random.nextDouble() - .5) * force * .5;
+    }
+    _wake();
+  }
+
+  void _wake() {
+    if (!_ticker.isActive) {
+      _lastTick = Duration.zero;
+      _ticker.start();
+    }
+  }
+
+  void _step(Duration elapsed) {
+    final dt = _lastTick == Duration.zero
+        ? 1 / 60
+        : ((elapsed - _lastTick).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
+    _lastTick = elapsed;
+    if (_stickW <= 0 || _stage.isEmpty) return;
+    final loose = widget.shaking;
+    // 흔드는 동안은 느슨하게 돌아다니고, 멈추면 제자리로 모입니다.
+    final k = loose ? 5.0 : 38.0;
+    final damp = loose ? 1.6 : 8.5;
+    final ak = loose ? 10.0 : 30.0;
+    final adamp = loose ? 3.0 : 7.0;
+    var moving = false;
+    var hit = 0.0;
+    for (var i = 0; i < 4; i++) {
+      _vel[i] += (-_pos[i] * k - _vel[i] * damp) * dt;
+      _pos[i] += _vel[i] * dt;
+      final da = _angle[i];
+      _spin[i] += (-da * ak - _spin[i] * adamp) * dt;
+      _angle[i] = (da + _spin[i] * dt).clamp(-.75, .75);
+
+      // 화면(무대) 벽에 부딪히면 튕깁니다. 기울어진 만큼 차지하는 폭을 계산합니다.
+      final a = _restAngle(i) + _angle[i];
+      final halfW =
+          (_stickW * math.cos(a)).abs() / 2 + (_stickH * math.sin(a)).abs() / 2;
+      final halfH =
+          (_stickW * math.sin(a)).abs() / 2 + (_stickH * math.cos(a)).abs() / 2;
+      final maxX = _stage.width / 2 - halfW;
+      final maxY = _stage.height / 2 - halfH;
+      final cx = _slotX(i) + _pos[i].dx;
+      final cy = _pos[i].dy;
+      if (maxX > 0 && cx.abs() > maxX) {
+        _pos[i] = Offset(cx.sign * maxX - _slotX(i), _pos[i].dy);
+        hit = math.max(hit, _vel[i].dx.abs());
+        _vel[i] = Offset(-_vel[i].dx * .55, _vel[i].dy * .9);
+        _spin[i] += (_random.nextDouble() - .5) * 2;
+      }
+      if (maxY > 0 && cy.abs() > maxY) {
+        _pos[i] = Offset(_pos[i].dx, cy.sign * maxY);
+        hit = math.max(hit, _vel[i].dy.abs());
+        _vel[i] = Offset(_vel[i].dx * .9, -_vel[i].dy * .55);
+        _spin[i] += (_random.nextDouble() - .5) * 2;
+      }
+      if (_pos[i].distance > .5 ||
+          _vel[i].distance > 2 ||
+          _angle[i].abs() > .005 ||
+          _spin[i].abs() > .02) {
+        moving = true;
+      }
+    }
+    // 윷끼리 부딪히면 옆으로 밀어내고 속도를 나눠 가집니다.
+    for (var i = 0; i < 4; i++) {
+      for (var j = i + 1; j < 4; j++) {
+        final dx = (_slotX(j) + _pos[j].dx) - (_slotX(i) + _pos[i].dx);
+        final dy = _pos[j].dy - _pos[i].dy;
+        final overlap = _stickW * 1.05 - dx.abs();
+        if (overlap <= 0 || dy.abs() >= _stickH * .75) continue;
+        final sign = dx >= 0 ? 1.0 : -1.0;
+        _pos[i] -= Offset(sign * overlap / 2, 0);
+        _pos[j] += Offset(sign * overlap / 2, 0);
+        final relative = _vel[j].dx - _vel[i].dx;
+        if (relative * sign < 0) {
+          final impulse = -relative * .4;
+          _vel[i] -= Offset(impulse, 0);
+          _vel[j] += Offset(impulse, 0);
+          hit = math.max(hit, relative.abs());
+        }
+      }
+    }
+    // 벽에 세게 부딪힐 때마다 짧게 '딱' 진동합니다.
+    if (hit > 260) {
+      final now = DateTime.now();
+      if (now.difference(_lastWallHaptic) > const Duration(milliseconds: 70)) {
+        _lastWallHaptic = now;
+        HapticFeedback.lightImpact();
+      }
+    }
+    _frame.value++;
+    if (!moving && !loose) {
+      for (var i = 0; i < 4; i++) {
+        _pos[i] = Offset.zero;
+        _vel[i] = Offset.zero;
+        _angle[i] = 0;
+        _spin[i] = 0;
+      }
+      _ticker.stop();
     }
   }
 
   @override
   void dispose() {
+    _motionSub?.cancel();
+    _ticker.dispose();
+    _frame.dispose();
     _wobble.dispose();
     super.dispose();
   }
@@ -952,20 +1123,23 @@ class _ShakeStageState extends State<_ShakeStage>
                 ),
         ),
         Expanded(
-          child: AnimatedBuilder(
-            animation: _wobble,
-            builder: (context, _) => LayoutBuilder(
-              builder: (context, box) {
-                final width = math.min(
-                  64.0,
-                  (box.maxHeight - 40) / YutStick.aspect,
-                );
-                return TweenAnimationBuilder<double>(
-                  tween: Tween(end: widget.throwing ? 1 : 0),
-                  duration: const Duration(milliseconds: 420),
-                  curve: Curves.easeInOutCubic,
-                  builder: (context, launch, _) => Stack(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final width = math.min(
+                64.0,
+                (box.maxHeight - 40) / YutStick.aspect,
+              );
+              _stickW = width;
+              _stage = Size(box.maxWidth, box.maxHeight);
+              return TweenAnimationBuilder<double>(
+                tween: Tween(end: widget.throwing ? 1 : 0),
+                duration: const Duration(milliseconds: 420),
+                curve: Curves.easeInOutCubic,
+                builder: (context, launch, _) => AnimatedBuilder(
+                  animation: Listenable.merge([_wobble, _frame]),
+                  builder: (context, _) => Stack(
                     alignment: Alignment.center,
+                    clipBehavior: Clip.none,
                     children: [
                       Opacity(
                         opacity: launch,
@@ -978,46 +1152,37 @@ class _ShakeStageState extends State<_ShakeStage>
                           ),
                         ),
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          for (var i = 0; i < 4; i++)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                              ),
-                              child: Opacity(
-                                opacity: 1 - launch,
-                                child: Transform.translate(
-                                  offset: Offset(
-                                    (i - 1.5) * 18 * launch,
-                                    -launch * box.maxHeight * .6 -
-                                        _wobble.value * 18 * (i % 2 + 1),
-                                  ),
-                                  child: Transform.rotate(
-                                    angle:
-                                        (i.isEven ? 1 : -1) *
-                                        (.05 +
-                                            _wobble.value * .22 +
-                                            launch * .7),
-                                    child: YutStick(
-                                      front: i.isEven,
-                                      width: width,
-                                      edition: edition,
-                                      characterId: widget.me?.characterId,
-                                      marked: i == 0,
-                                    ),
-                                  ),
+                      for (var i = 0; i < 4; i++)
+                        Opacity(
+                          opacity: 1 - launch,
+                          child: Transform.translate(
+                            offset:
+                                Offset(_slotX(i), 0) +
+                                _pos[i] +
+                                Offset(
+                                  (i - 1.5) * 18 * launch,
+                                  -launch * box.maxHeight * .6,
                                 ),
+                            child: Transform.rotate(
+                              angle:
+                                  _restAngle(i) +
+                                  _angle[i] +
+                                  (i.isEven ? 1 : -1) * launch * .7,
+                              child: YutStick(
+                                front: i.isEven,
+                                width: width,
+                                edition: edition,
+                                characterId: widget.me?.characterId,
+                                marked: i == 1,
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
         if (!widget.motionAvailable)
@@ -1485,14 +1650,14 @@ class _PhoneResultState extends State<_PhoneResult>
           )
         : won
         ? yutText(
-            '말 4개가 모두 났어요',
-            'All four pieces are home',
-            '4枚棋子全部到家',
-            '4枚棋子全部到家',
+            '말 2개가 났어요',
+            'Two pieces are home',
+            '2枚棋子已到家',
+            '2枚棋子已到家',
           )
         : yutText(
-            '$winnerName이 먼저 말 4개를 냈어요 · 우리는 $mine개',
-            '$winnerName finished first · we had $mine',
+            '$winnerName이 먼저 말 2개를 냈어요 · 우리는 $mine개',
+            '$winnerName got two home first · we had $mine',
             '$winnerName先完成 · 我们$mine枚',
             '$winnerName先完成 · 我們$mine枚',
           );

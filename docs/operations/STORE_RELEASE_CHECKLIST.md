@@ -1,6 +1,6 @@
 # Mosigame mobile store release checklist
 
-이 문서는 `1.0.0` 모바일 첫 출시(현재 빌드 `1.0.0+4`)의 코드 밖 작업과 안전한 배포 순서를 기록한다.
+이 문서는 `1.0.0` 모바일 첫 출시(현재 빌드 `1.0.0+6`)의 코드 밖 작업과 안전한 배포 순서를 기록한다.
 production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인해 수행한다.
 
 ## 0. 현재 출시 후보 상태
@@ -9,8 +9,12 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
   둘 다 PASS했다. Android AAB는 target SDK 36, 서명, 64비트 16KB ELF
   정렬을 통과했고 iOS archive는 번들 ID, iOS 15, Privacy Manifest,
   Firebase App Check, Shorebird asset 포함을 확인했다.
-- Flutter analyze와 648개 테스트, Functions build·lint·276개 테스트는
-  PASS했다.
+- 2026-10-24 현재 Project CLI FULL 검증 13단계와 Functions 537개 테스트가
+  PASS했다. 검증은 제품 소스와 기존 작업 트리를 변경하지 않았다.
+- 2026-10-24 `1.0.0+6` 로컬 출시 빌드에서 Android AAB 생성·서명 검증과
+  iOS device Release 무서명 컴파일을 통과했다. Android는 Crashlytics 매핑 업로드를
+  제외한 오프라인 빌드이며, iOS는 App Store 제출용 archive/서명 검증이 아닌
+  컴파일 검증이다.
 - 저장소 공식 auth/session 검증과 FULL 검증은 Node 22에서 PASS했다. FULL 검증은
   Flutter 3.44 분석 서버의 한글/NFD 작업 경로 오류를 피하기 위해 HEAD, 전체 diff,
   tracked/untracked 상태 해시가 같은 임시 영문 경로 복제본에서 실행했다.
@@ -47,7 +51,7 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
    - `fetchRealtimeRoomGroupEntitlements`
    - `cleanupDeletedRoomCreationRequest`
 3. 배포된 callable을 개발/내부 테스트 앱에서 확인한다.
-4. `1.0.0+4` 앱을 내부 테스트에 배포한다.
+4. `1.0.0+6` 앱을 내부 테스트에 배포한다.
 5. 새 앱에서 무료·그룹 유료 게임 목록과 방 삭제 재시도를 확인한다.
 6. 새 클라이언트 전환이 확인된 뒤 `firestore.rules`와 `storage.rules`를 배포한다.
 7. 다른 UID의 `/users/{uid}` 읽기와 다른 사용자의 Storage 쓰기가 거부되는지 확인한다.
@@ -85,17 +89,19 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
 
 ## 5. Shorebird base release
 
-- 저장소 버전과 두 스토어 빌드를 `1.0.0+4`로 일치시킨다.
+- 저장소 버전과 두 스토어 빌드를 `1.0.0+6`으로 일치시킨다.
 - 버전 규칙: `pubspec.yaml`의 `x.y.z`는 `AppConstants.appVersion`과 같아야 하고
   (`app_version_constant_test.dart`), `+N` 빌드 번호는 스토어·Shorebird에 올린 적 있는
-  번호보다 항상 커야 한다. `1.0.0+2`는 2026-08-31 Shorebird Android 릴리스로, `1.0.0+3`은
-  저장소 밖 빌드로 이미 사용했으므로 다음 스토어 바이너리는 `1.0.0+4`이다. 새 바이너리를 올릴 때마다 `+N`만 1씩 올린다.
+  번호보다 항상 커야 한다. `1.0.0+2`는 2026-08-31 Shorebird Android 릴리스로,
+  `1.0.0+3`은 저장소 밖 빌드로 이미 사용했다. 현재 저장소의 출시 후보는
+  `1.0.0+6`이며, 실제 업로드 직전 두 스토어와 Shorebird에서 이미 사용된 최대
+  빌드 번호보다 큰지 다시 확인한다. 새 바이너리를 올릴 때마다 `+N`만 1씩 올린다.
 - Shorebird CLI를 업데이트한 경우 doctor와 두 플랫폼 dry-run을 다시 실행한다.
 - 실제 스토어 바이너리는 일반 `flutter build`가 아니라 아래 release에서 생성한다.
 
 ```text
-shorebird release android --build-name=1.0.0 --build-number=4 --flutter-version=3.47.5
-shorebird release ios --build-name=1.0.0 --build-number=4 --flutter-version=3.47.5 --export-method=app-store
+shorebird release android --build-name=1.0.0 --build-number=6 --flutter-version=3.47.5
+shorebird release ios --build-name=1.0.0 --build-number=6 --flutter-version=3.47.5 --export-method=app-store
 ```
 
 Android 운영 릴리스 기록(2026-08-31 17:06 KST):
@@ -123,18 +129,18 @@ Android 운영 릴리스 기록(2026-08-31 17:06 KST):
 3. 먼저 staging track으로 패치한다.
 
 ```text
-shorebird patch android --release-version=1.0.0+4 --track=staging
-shorebird patch ios --release-version=1.0.0+4 --track=staging
+shorebird patch android --release-version=1.0.0+6 --track=staging
+shorebird patch ios --release-version=1.0.0+6 --track=staging
 ```
 
-4. 실제 기기에서 `shorebird preview --release-version=1.0.0+4 --track=staging`으로
+4. 실제 기기에서 `shorebird preview --release-version=1.0.0+6 --track=staging`으로
    확인한다. 이 앱은 첫 실행에 패치를 받고 “업데이트를 마쳤어요”를
    보여 준 뒤, 앱을 완전히 종료하고 다시 실행할 때 적용한다.
 5. 패치 번호를 확인한 후 stable로 승격한다.
 
 ```text
-shorebird patches list --release-version=1.0.0+4
-shorebird patches promote --release-version=1.0.0+4 --patch-number=<확인한 번호>
+shorebird patches list --release-version=1.0.0+6
+shorebird patches promote --release-version=1.0.0+6 --patch-number=<확인한 번호>
 ```
 
 - Dart 로직·UI·문구 수정은 patch 후보다.
@@ -147,6 +153,10 @@ shorebird patches promote --release-version=1.0.0+4 --patch-number=<확인한 �
 
 ## 7. 스토어 콘솔과 실제 기기
 
+- iOS `Info.plist`에는 개발용 Firebase 에뮬레이터를 설명하는
+  `NSLocalNetworkUsageDescription`과 `NSAllowsLocalNetworking`이 남아 있다.
+  이번 네트워크 변경 제외 범위에서는 수정하지 않았다. 출시 앱에서 로컬 네트워크를
+  쓰지 않는 것이 확정되면 제거하고 iPhone/iPad에서 다시 검증한다.
 - App Store: 최신 연령 등급 질문, 앱 개인정보, 수출 규정, 지원 URL, 심사 진입
   방법, iPhone/iPad 스크린샷과 실제 Distribution 서명을 확인한다.
 - Google Play: target API, Data safety, account deletion URL, 콘텐츠 등급, 광고 여부,

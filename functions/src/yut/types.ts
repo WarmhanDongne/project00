@@ -29,7 +29,9 @@ export interface YutPiece {
 export interface YutRoll {
   name: YutResultName;
   steps: number;
+  /** 둥근 앞면(× 세 개)이 위로 나온 윷 수. 결과는 4 - upCount(평평한 뒷면 수)로 정합니다. */
   upCount: number;
+  /** 윷마다 true = 둥근 앞면, false = 평평한 뒷면. 일반판 [0]은 뒷면에 로고가 찍힌 빽도 윷입니다. */
   stickUps: boolean[];
   backDo: boolean;
   createdAt: number;
