@@ -181,15 +181,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final credential = await _authProvider.signInWithGoogle();
     if (!mounted) return;
     setState(() {
-      if (credential == null) {
-        _errorMessage =
-            _authProvider.errorMessage?.localized ??
-            GameLocale.select(
-              ko: '구글 로그인을 완료하지 못했습니다.',
-              en: 'Google sign-in could not be completed.',
-              zhHans: '无法完成 Google 登录。',
-              zhHant: '無法完成 Google 登入。',
-            );
+      // 사용자가 계정 선택 창을 닫으면 errorMessage가 비어 있어 문구를 띄우지
+      // 않습니다. 그 밖의 실패는 원인별 문구를 보여 줍니다.
+      if (credential == null && _authProvider.errorMessage != null) {
+        _errorMessage = _authProvider.errorMessage!.localized;
       }
       _action = null;
     });

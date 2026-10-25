@@ -1,6 +1,6 @@
 # Mosigame mobile store release checklist
 
-이 문서는 `1.0.0` 모바일 첫 출시(현재 빌드 `1.0.0+6`)의 코드 밖 작업과 안전한 배포 순서를 기록한다.
+이 문서는 `1.0.0` 모바일 첫 출시(현재 빌드 `1.0.0+7`)의 코드 밖 작업과 안전한 배포 순서를 기록한다.
 production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인해 수행한다.
 
 ## 0. 현재 출시 후보 상태
@@ -22,6 +22,9 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
   AASA와 `assetlinks.json`이 HTTP 200·`application/json`이며 로컬 JSON과 의미상
   일치함을 확인했다. Android 파일에는 `com.warmhandongne.msg`와 로컬/Play App
   Signing SHA-256이 모두 들어 있다.
+- 2026-10-24 현재 Play Console 앱 서명 키 SHA-256(`3C:B5:84:EC:…:1B:DB:FF:D3`)이
+  `assetlinks.json`에 없어 추가했다. 기존 두 값은 유지했다. Hosting 재배포 전까지는
+  Play 설치본에서 이메일 인증 링크가 앱 대신 브라우저로 열릴 수 있다.
 - 공개 `/privacy/`와 `/account-deletion/`은 양쪽 Hosting 도메인에서 HTTP 200이며
   운영자명과 지원 이메일이 포함된 것을 확인했다.
 - `google-services.json`은 `com.warmhandongne.msg` 단일 Android 앱과 로컬/Play App
@@ -51,7 +54,7 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
    - `fetchRealtimeRoomGroupEntitlements`
    - `cleanupDeletedRoomCreationRequest`
 3. 배포된 callable을 개발/내부 테스트 앱에서 확인한다.
-4. `1.0.0+6` 앱을 내부 테스트에 배포한다.
+4. `1.0.0+7` 앱을 내부 테스트에 배포한다.
 5. 새 앱에서 무료·그룹 유료 게임 목록과 방 삭제 재시도를 확인한다.
 6. 새 클라이언트 전환이 확인된 뒤 `firestore.rules`와 `storage.rules`를 배포한다.
 7. 다른 UID의 `/users/{uid}` 읽기와 다른 사용자의 Storage 쓰기가 거부되는지 확인한다.
@@ -80,8 +83,10 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
 - App Store Connect Privacy Policy URL과 Google Play 개인정보처리방침 URL에
   공개 HTTPS 주소를 등록한다.
 - App Store 개인정보 응답과 Google Play Data safety에 이메일, 닉네임/이름,
-  UID, 선택 프로필 사진, 기존 전화번호, 게임 데이터와 UID에 연결된 Crash Data를
-  실제 코드와 동일하게 신고한다.
+  UID, 선택 프로필 사진(Google 로그인 시 Google 사진 URL 포함), 게임 데이터, 약관 동의 기록,
+  UID에 연결된 Crash Data·진단 정보·Firebase 설치 ID를 실제 코드와 동일하게 신고한다.
+  전화번호는 수집하지 않는다(전화번호 저장 함수는 2026-10-13 삭제, iOS 개인정보 선언에서도
+  2026-10-24 삭제).
 - Apple 계정으로 로그인한 실제 iPhone/iPad에서 회원탈퇴 시 Apple 재확인,
   token revoke, Firebase 계정 삭제가 순서대로 완료되는지 확인한다.
 - 앱을 사용할 수 없는 계정의 삭제 이메일 요청을 수신·본인 확인·처리하는 운영
@@ -89,19 +94,20 @@ production 접근·배포·스토어 제출은 사람이 각 콘솔에서 승인
 
 ## 5. Shorebird base release
 
-- 저장소 버전과 두 스토어 빌드를 `1.0.0+6`으로 일치시킨다.
+- 저장소 버전과 두 스토어 빌드를 `1.0.0+7`로 일치시킨다.
 - 버전 규칙: `pubspec.yaml`의 `x.y.z`는 `AppConstants.appVersion`과 같아야 하고
   (`app_version_constant_test.dart`), `+N` 빌드 번호는 스토어·Shorebird에 올린 적 있는
   번호보다 항상 커야 한다. `1.0.0+2`는 2026-08-31 Shorebird Android 릴리스로,
-  `1.0.0+3`은 저장소 밖 빌드로 이미 사용했다. 현재 저장소의 출시 후보는
-  `1.0.0+6`이며, 실제 업로드 직전 두 스토어와 Shorebird에서 이미 사용된 최대
+  `1.0.0+3`은 저장소 밖 빌드로, `1.0.0+4`~`1.0.0+6`은 Play 비공개 테스트 빌드로
+  이미 사용했다. 현재 저장소의 출시 후보는 `1.0.0+7`이며, 실제 업로드 직전
+  두 스토어와 Shorebird에서 이미 사용된 최대
   빌드 번호보다 큰지 다시 확인한다. 새 바이너리를 올릴 때마다 `+N`만 1씩 올린다.
 - Shorebird CLI를 업데이트한 경우 doctor와 두 플랫폼 dry-run을 다시 실행한다.
 - 실제 스토어 바이너리는 일반 `flutter build`가 아니라 아래 release에서 생성한다.
 
 ```text
-shorebird release android --build-name=1.0.0 --build-number=6 --flutter-version=3.47.5
-shorebird release ios --build-name=1.0.0 --build-number=6 --flutter-version=3.47.5 --export-method=app-store
+shorebird release android --build-name=1.0.0 --build-number=7 --flutter-version=3.47.5
+shorebird release ios --build-name=1.0.0 --build-number=7 --flutter-version=3.47.5 --export-method=app-store
 ```
 
 Android 운영 릴리스 기록(2026-08-31 17:06 KST):
@@ -129,18 +135,18 @@ Android 운영 릴리스 기록(2026-08-31 17:06 KST):
 3. 먼저 staging track으로 패치한다.
 
 ```text
-shorebird patch android --release-version=1.0.0+6 --track=staging
-shorebird patch ios --release-version=1.0.0+6 --track=staging
+shorebird patch android --release-version=1.0.0+7 --track=staging
+shorebird patch ios --release-version=1.0.0+7 --track=staging
 ```
 
-4. 실제 기기에서 `shorebird preview --release-version=1.0.0+6 --track=staging`으로
+4. 실제 기기에서 `shorebird preview --release-version=1.0.0+7 --track=staging`으로
    확인한다. 이 앱은 첫 실행에 패치를 받고 “업데이트를 마쳤어요”를
    보여 준 뒤, 앱을 완전히 종료하고 다시 실행할 때 적용한다.
 5. 패치 번호를 확인한 후 stable로 승격한다.
 
 ```text
-shorebird patches list --release-version=1.0.0+6
-shorebird patches promote --release-version=1.0.0+6 --patch-number=<확인한 번호>
+shorebird patches list --release-version=1.0.0+7
+shorebird patches promote --release-version=1.0.0+7 --patch-number=<확인한 번호>
 ```
 
 - Dart 로직·UI·문구 수정은 patch 후보다.

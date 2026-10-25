@@ -1,7 +1,9 @@
+import 'package:game_kit/core/diagnostics/crash_reporting.dart';
 import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:project00/platform/auth/models/google_sign_in_error_message.dart';
 import 'package:project00/platform/auth/services/auth_service.dart';
 import 'package:project00/platform/auth/services/apple_auth_utils.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -54,17 +56,6 @@ class AuthProvider extends ChangeNotifier {
   // ============================================================
   // Email
   // ============================================================
-
-  /// 이메일 중복 확인
-  Future<bool> isEmailDuplicate(String email) async {
-    try {
-      return await _authService.isEmailDuplicate(email);
-    } on AuthServiceException catch (e) {
-      _errorMessage = e.message;
-      notifyListeners();
-      rethrow;
-    }
-  }
 
   /// 이메일 회원가입
   Future<void> createEmailAccount({
@@ -204,7 +195,32 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       return userCredential;
-    } on GoogleSignInException {
+    } on GoogleSignInException catch (error, stack) {
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        // 사용자가 계정 선택 창을 닫은 경우라 화면에는 아무것도 띄우지
+        // 않습니다. 다만 Android는 앱 서명 지문(SHA) 미등록 같은 설정 오류도
+        // 취소로 알려 주는 경우가 있어, 원인을 찾을 수 있게 기록만 남깁니다.
+        CrashReporting.log('구글 로그인 취소: ${error.description ?? '-'}');
+        return null;
+      }
+      CrashReporting.recordError(
+        error,
+        stack,
+        reason: '구글 로그인 실패 (${error.code.name})',
+      );
+      _errorMessage = GoogleSignInErrorMessage.fromGoogle(error.code);
+      notifyListeners();
+
+      return null;
+    } on FirebaseAuthException catch (error, stack) {
+      CrashReporting.recordError(
+        error,
+        stack,
+        reason: '구글 로그인 Firebase 인증 실패 (${error.code})',
+      );
+      _errorMessage = GoogleSignInErrorMessage.fromFirebase(error.code);
+      notifyListeners();
+
       return null;
     } on AuthServiceException catch (e) {
       // 인증은 끝났지만 프로필 동기화가 실패한 경우입니다. AuthGate가 온보딩을
@@ -213,8 +229,9 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       return null;
-    } catch (e) {
-      _errorMessage = e.toString();
+    } catch (error, stack) {
+      CrashReporting.recordError(error, stack, reason: '구글 로그인 실패');
+      _errorMessage = GoogleSignInErrorMessage.generic;
       notifyListeners();
 
       return null;
@@ -350,8 +367,15 @@ class AuthProvider extends ChangeNotifier {
   // ============================================================
 
   /// 로그아웃
+  ///
+  /// 구글 로그아웃이 실패해도(로컬 환경처럼 구글 SDK를 초기화하지 않은 경우
+  /// 포함) Firebase 로그아웃은 반드시 진행해야 사용자가 실제로 로그아웃됩니다.
   Future<void> signOut() async {
-    await GoogleSignIn.instance.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (error, stack) {
+      CrashReporting.recordError(error, stack, reason: '구글 로그아웃 실패');
+    }
     await FirebaseBackend.auth.signOut();
 
     notifyListeners();

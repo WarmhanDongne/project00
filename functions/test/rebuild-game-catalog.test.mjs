@@ -61,6 +61,11 @@ test("dry-run reports the replacement without changing Firestore", async () => {
     accessType: "paid",
     storeVisible: true,
   });
+  assert.deepEqual(result.availability.holdem, {
+    enabled: false,
+    accessType: "free",
+    storeVisible: false,
+  });
   assert.deepEqual(Object.fromEntries(db.records), before);
 });
 

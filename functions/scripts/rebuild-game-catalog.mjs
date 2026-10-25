@@ -75,7 +75,8 @@ export const minimalGameCatalog = Object.freeze({
     localizedDescriptions: localizedGameDescriptions.holdem,
     rules: gameRules.holdem,
     localizedRules: localizedGameRules.holdem,
-    enabled: true,
+    // 1차 출시에서는 홀덤을 공개하지 않습니다. 다시 실행해도 켜지지 않게 둡니다.
+    enabled: false,
     genres: localizedGameGenres.holdem.ko,
     localizedGenres: localizedGameGenres.holdem,
     minPlayers: 2,
@@ -83,7 +84,7 @@ export const minimalGameCatalog = Object.freeze({
     playTime: 30,
     order: 4,
     accessType: "free",
-    storeVisible: true,
+    storeVisible: false,
     minAppVersion: "1.0.0",
   }),
   ...yutGameCatalog,

@@ -2,6 +2,7 @@
 
 import {CallableRequest, HttpsError} from "firebase-functions/v2/https";
 
+import {isSafeRecordKey} from "../common/own-entry.js";
 import {assertControllerSession} from "../room/controller-session.js";
 import {FinalCallGameState, FinalCallRoom} from "./types.js";
 
@@ -25,7 +26,7 @@ export function finalCallRoomCode(value: unknown): string {
 
 export function finalCallCommandId(value: unknown): string {
   const id = typeof value === "string" ? value.trim() : "";
-  if (!COMMAND_ID.test(id)) {
+  if (!COMMAND_ID.test(id) || !isSafeRecordKey(id)) {
     throw new HttpsError("invalid-argument", "올바른 commandId가 필요합니다.");
   }
   return id;

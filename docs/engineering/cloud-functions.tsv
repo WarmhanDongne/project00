@@ -17,7 +17,6 @@ beginOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	가입 절차 
 advanceOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	다음 단계로 진행
 completeOnboardingProfile	onCall	인증	asia-northeast3		auth/onboarding.ts	닉네임·프로필 확정하고 온보딩 완료
 recoverLegacyOnboarding	onCall	인증	asia-northeast3		auth/onboarding.ts	온보딩 문서가 없는 구버전 계정을 현재 스키마로 복구
-checkEmailDuplicate	onCall	인증	asia-northeast3		auth/check-email.ts	가입 전 이메일 중복 확인
 syncGoogleUserProfile	onCall	인증	asia-northeast3		auth/sync-google-profile.ts	구글 로그인 사용자의 닉네임·사진을 Firestore에 병합
 syncAppleUserProfile	onCall	인증	asia-northeast3		auth/sync-apple-profile.ts	애플용. 애플은 이름을 최초 승인 때 한 번만 주고 사진은 아예 안 줘서, 비어 있는 값이 기존 값을 덮지 않도록 병합
 deleteAccount	onCall	인증	asia-northeast3		auth/delete-account.ts	계정 삭제

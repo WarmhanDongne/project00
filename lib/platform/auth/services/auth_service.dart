@@ -39,22 +39,6 @@ class FirebaseAuthService {
     }
   }
 
-  //이메일 중복확인
-  Future<bool> isEmailDuplicate(String email) async {
-    try {
-      final callable = _functions.httpsCallable('checkEmailDuplicate');
-      final result = await callable.call<Map<String, dynamic>>({
-        'email': email,
-      });
-      return result.data['isDuplicate'] == true;
-    } on FirebaseFunctionsException catch (error) {
-      throw AuthServiceException(
-        error.code,
-        error.message ?? '이메일 중복확인에 실패했습니다.',
-      );
-    }
-  }
-
   //회원가입
   Future<void> createEmailAccount({
     required String email,

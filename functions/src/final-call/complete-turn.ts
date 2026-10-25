@@ -6,6 +6,7 @@ import {
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {ownEntry} from "../common/own-entry.js";
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
 import {
   nextFinalCallPlayer,
@@ -50,7 +51,7 @@ export const game_final_call_complete_turn = onCall<Data>(
 
       let discarded: FinalCallCard = drawnCard;
       if (replaceCardId !== null) {
-        const replaced = privatePlayer.hand[replaceCardId];
+        const replaced = ownEntry(privatePlayer.hand, replaceCardId);
         if (!replaced) throw new HttpsError("invalid-argument", "교체할 손패가 없습니다.");
         delete privatePlayer.hand[replaceCardId];
         privatePlayer.hand[drawnCard.id] = drawnCard;

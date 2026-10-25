@@ -176,9 +176,12 @@ test("중복 Scheduler 평가는 이미 삭제된 방을 다시 변경하지 않
 test("무료 게임은 항상 허용하고 유료 게임은 그룹 보유자에게만 허용한다", () => {
   assert.equal(isGameAccessibleToGroup(undefined, "mafia", []), true);
   assert.equal(isGameAccessibleToGroup("free", "final_call", []), true);
-  for (const gameId of ["liars_poker", "final_call", "holdem"]) {
+  for (const gameId of ["liars_poker", "final_call"]) {
     assert.equal(isGameAccessibleToGroup("paid", gameId, []), true);
   }
+  // 홀덤은 기본 무료 게임 목록에서 빠졌으므로 카탈로그 accessType을 따릅니다.
+  assert.equal(isGameAccessibleToGroup("paid", "holdem", []), false);
+  assert.equal(isGameAccessibleToGroup("free", "holdem", []), true);
   assert.equal(
     isGameAccessibleToGroup("paid", "paid_game", [[], ["paid_game"]]),
     true,

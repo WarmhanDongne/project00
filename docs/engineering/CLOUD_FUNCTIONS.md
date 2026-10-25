@@ -35,9 +35,10 @@ fetchRealtimeRoomGroupEntitlements, resumeRealtimeControllerRoom, removeRealtime
 leaveRealtimeRoom, closeRoom, fetchRealtimeRoomSession.
 같은 operation 재생, room/member/current connection와 sequence CAS, 요청 방의 구매 자격을 검증한다.
 
-auth/ callable 9개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
-recoverLegacyOnboarding, checkEmailDuplicate, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount,
-completeGuestOnboarding.
+auth/ callable 8개: beginOnboarding, advanceOnboarding, completeOnboardingProfile,
+recoverLegacyOnboarding, syncGoogleUserProfile, syncAppleUserProfile, deleteAccount,
+completeGuestOnboarding. `checkEmailDuplicate`는 앱에서 쓰지 않고 로그인 없이 가입 여부를
+조회할 수 있어 2026-10-24 소스에서 지웠다. 배포할 때 Firebase CLI가 운영 함수 삭제를 물으면 승인한다.
 추가로 `completeGuestOnboarding`은 Firebase 익명 토큰과 provider 없는 Auth 계정을
 함께 검증하고, 현재 약관 동의·자동 닉네임·`anonymous/complete` 온보딩을 한 transaction에
 저장한다. 이 완료 문서가 생기기 전에는 기존 방 생성·검증·참가 가드가 게스트를 거절한다.

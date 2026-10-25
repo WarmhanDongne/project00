@@ -92,10 +92,16 @@ void main() async {
 
   //========================[ 구글 SDK 초기화 ]==================================
   // 3. Google Sign-In SDK 초기화 및 Client ID 주입 (최신 API 필수 전제 조건)
+  // 실패해도 앱은 시작합니다. 구글 로그인만 실패하고 게스트·이메일·Apple
+  // 로그인은 쓸 수 있어야 하므로, 여기서 멈추지 않고 기록만 남깁니다.
   if (!FirebaseBackend.isLocal) {
-    await GoogleSignIn.instance.initialize(
-      clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
-    );
+    try {
+      await GoogleSignIn.instance.initialize(
+        clientId: DefaultFirebaseOptions.currentPlatform.iosClientId,
+      );
+    } catch (error, stack) {
+      CrashReporting.recordError(error, stack, reason: '구글 로그인 SDK 초기화');
+    }
   }
 
   //===============[ 앱 실행 그리고 소리 관리 객체 생성 및 공유 ]======================
