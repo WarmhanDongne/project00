@@ -1,4 +1,6 @@
 import {initializeApp} from "firebase-admin/app";
+// 함수 정의보다 먼저 전역 옵션(maxInstances)을 적용해야 하므로 맨 위에 둡니다.
+import "./global-options.js";
 
 initializeApp();
 
@@ -39,7 +41,6 @@ export {
 } from "./room/session-functions.js";
 
 // ---------------------------------------------- 인증
-export {checkEmailDuplicate} from "./auth/check-email.js";
 export {deleteAccount} from "./auth/delete-account.js";
 export {syncGoogleUserProfile} from "./auth/sync-google-profile.js";
 export {syncAppleUserProfile} from "./auth/sync-apple-profile.js";

@@ -247,7 +247,7 @@ export function isGameAccessibleToGroup(
   gameId: string,
   ownedGamesByUser: unknown[],
 ): boolean {
-  if (["liars_poker", "final_call", "holdem"].includes(gameId)) return true;
+  if (["liars_poker", "final_call"].includes(gameId)) return true;
   if (accessType !== "paid") return true;
   return ownedGamesByUser.some((ownedGames) =>
     Array.isArray(ownedGames) && ownedGames.includes(gameId));

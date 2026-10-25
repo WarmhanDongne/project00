@@ -5,6 +5,7 @@ import {
   HttpsError,
 } from "firebase-functions/v2/https";
 
+import {isSafeRecordKey} from "../../common/own-entry.js";
 import {assertControllerSession} from "../../room/controller-session.js";
 import {LiarsPokerGameState, RealtimeRoom} from "./types.js";
 
@@ -32,7 +33,7 @@ export function parseRoomCode(value: unknown): string {
 /** 재시도 중복 처리를 위한 명령 ID를 검증합니다. */
 export function parseCommandId(value: unknown): string {
   const commandId = typeof value === "string" ? value.trim() : "";
-  if (!COMMAND_ID_PATTERN.test(commandId)) {
+  if (!COMMAND_ID_PATTERN.test(commandId) || !isSafeRecordKey(commandId)) {
     throw new HttpsError("invalid-argument", "올바른 commandId가 필요합니다.");
   }
   return commandId;
@@ -47,7 +48,8 @@ export function parseCardIds(value: unknown): string[] {
     );
   }
   const cardIds = value.map((cardId) => {
-    if (typeof cardId !== "string" || !COMMAND_ID_PATTERN.test(cardId)) {
+    if (typeof cardId !== "string" || !COMMAND_ID_PATTERN.test(cardId) ||
+        !isSafeRecordKey(cardId)) {
       throw new HttpsError("invalid-argument", "올바르지 않은 카드 ID입니다.");
     }
     return cardId;

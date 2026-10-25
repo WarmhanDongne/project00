@@ -123,7 +123,7 @@ class LegalDocument {
 /// [SignupTermsVersion.current]와 서버 버전을 함께 올립니다.
 const _termsOfServiceKo = LegalDocument(
   title: '모시겜 이용약관',
-  effectiveDate: '2026-10-12',
+  effectiveDate: '2026-10-25',
   sections: [
     (
       '제1조 (목적)',
@@ -136,8 +136,7 @@ const _termsOfServiceKo = LegalDocument(
           '3. "게스트"란 이메일이나 Google·Apple 계정 없이 [게스트로 시작하기]를 선택해, 운영자가 자동으로 만든 닉네임과 임시 계정으로 서비스를 이용하는 이용자를 말합니다.\n'
           '4. "방"이란 태블릿 등 호스트 기기에서 생성되고, 참가자가 방 코드 또는 QR 코드로 입장하여 함께 게임을 진행하는 실시간 게임 공간을 말합니다.\n'
           '5. "호스트"란 방을 생성하고 관리하는 이용자를, "참가자"란 방에 입장한 이용자를 말합니다.\n'
-          '6. "게시물"이란 이용자가 서비스에 등록하는 닉네임과 프로필 사진을 말합니다.\n'
-          '7. "게임 칩"이란 홀덤 등 게임 진행을 위해 게임 안에서만 표시되는 점수 단위를 말합니다.',
+          '6. "게시물"이란 이용자가 서비스에 등록하는 닉네임과 프로필 사진을 말합니다.',
     ),
     (
       '제3조 (약관의 게시와 개정)',
@@ -158,7 +157,7 @@ const _termsOfServiceKo = LegalDocument(
           '3. 운영자는 다음에 해당하는 신청은 승낙하지 않거나 사후에 계약을 해지할 수 있습니다.\n'
           '  1) 타인의 명의나 계정을 도용한 경우\n'
           '  2) 제7조의 이용 연령에 해당하지 않는 경우\n'
-          '  3) 이전에 제20조에 따라 이용계약이 해지된 적이 있는 경우. 단, 운영자가 재가입을 승낙한 경우는 제외합니다.',
+          '  3) 이전에 제19조에 따라 이용계약이 해지된 적이 있는 경우. 단, 운영자가 재가입을 승낙한 경우는 제외합니다.',
     ),
     (
       '제6조 (가입 동의와 확인)',
@@ -189,20 +188,19 @@ const _termsOfServiceKo = LegalDocument(
       '제11조 (서비스의 내용)',
       '1. 서비스는 한 자리에 모인 이용자들이 호스트 기기(태블릿 등)와 각자의 휴대폰으로 함께 즐기는 파티 게임을 제공합니다.\n'
           '2. 운영자가 제공하는 게임은 서비스 내에 표시된 목록을 따르며, 운영자는 제13조에 따라 게임을 추가하거나 변경할 수 있습니다.\n'
-          '3. 게임 진행과 승패 판정은 운영자의 서버가 처리하며, 서버의 처리 결과를 기준으로 합니다.\n'
-          '4. 서비스 내 "게임 상점"은 현재 준비 중이며 구매 기능을 제공하지 않습니다.',
+          '3. 게임 진행과 승패 판정은 운영자의 서버가 처리하며, 서버의 처리 결과를 기준으로 합니다.',
     ),
     (
       '제12조 (방의 생성과 참여)',
       '1. 호스트는 방을 만들고 방 코드 또는 QR 코드를 참가자에게 알려 방에 초대합니다. 방 코드를 아는 사람은 누구나 입장할 수 있으므로, 호스트는 코드를 함께 할 사람에게만 알려야 합니다.\n'
           '2. 한 방의 최대 인원은 12명이며, 게임별로 참가 인원이 따로 정해질 수 있습니다.\n'
-          '3. 호스트는 게임 시작 전 대기방에서 참가자를 내보낼 수 있습니다. 이는 해당 방에만 적용되며, 운영자의 이용 제한(제20조)과는 별개입니다.\n'
+          '3. 호스트는 게임 시작 전 대기방에서 참가자를 내보낼 수 있습니다. 이는 해당 방에만 적용되며, 운영자의 이용 제한(제19조)과는 별개입니다.\n'
           '4. 대기방에서 연결이 5분 이상 끊긴 참가자는 자동으로 방에서 나가게 됩니다. 게임 중 연결이 끊기면 서비스가 정한 유예 시간 안에 다시 접속할 수 있습니다.\n'
           '5. 게임이 끝난 방의 정보는 일정 시간이 지나면 자동으로 삭제되며, 게임 기록은 별도로 보관되지 않습니다.',
     ),
     (
       '제13조 (서비스의 변경과 중단)',
-      '1. 서비스는 연중무휴 제공하는 것을 원칙으로 하나, 점검·장애·통신 두절이나 외부 서비스(제23조)의 장애가 있으면 일시 중단될 수 있습니다.\n'
+      '1. 서비스는 연중무휴 제공하는 것을 원칙으로 하나, 점검·장애·통신 두절이나 외부 서비스(제22조)의 장애가 있으면 일시 중단될 수 있습니다.\n'
           '2. 운영자는 게임의 추가·변경·종료 등 서비스 내용을 변경할 수 있으며, 중요한 변경은 사전에 서비스 내에 공지합니다.\n'
           '3. 운영자가 서비스 전체를 종료하는 경우 종료일 30일 전까지 서비스 내에 공지합니다.',
     ),
@@ -213,25 +211,19 @@ const _termsOfServiceKo = LegalDocument(
           '3. 서비스 이용에 따른 데이터 통신료는 이용자가 가입한 통신사의 요금제에 따릅니다.',
     ),
     (
-      '제15조 (게임 칩)',
-      '1. 게임 칩은 게임 진행을 위한 점수 표시일 뿐이며 재산적 가치가 없습니다.\n'
-          '2. 게임 칩은 현금으로 충전하거나 환전할 수 없고, 다른 이용자에게 양도하거나 판매할 수 없으며, 게임이 끝나면 소멸합니다.\n'
-          '3. 이용자는 게임 결과나 게임 칩을 돈이나 재물을 건 내기에 이용해서는 안 됩니다.',
-    ),
-    (
-      '제16조 (앱 업데이트)',
+      '제15조 (앱 업데이트)',
       '1. 운영자는 기능 개선, 오류 수정, 보안을 위해 앱을 업데이트할 수 있으며, 일부 수정사항은 앱 실행 시 자동으로 받아 적용될 수 있습니다.\n'
           '2. 이용자가 필수 업데이트를 설치하지 않으면 일부 기능이 제한될 수 있습니다.\n'
           '3. 기기의 루팅·탈옥 등 운영체제를 임의로 변경한 환경에서는 서비스가 정상 작동하지 않을 수 있습니다.',
     ),
     (
-      '제17조 (운영자의 의무)',
+      '제16조 (운영자의 의무)',
       '1. 운영자는 관련 법령과 이 약관을 지키며, 안정적으로 서비스를 제공하기 위해 노력합니다.\n'
           '2. 운영자는 개인정보처리방침을 공개하고 이를 따릅니다.\n'
           '3. 운영자는 이용자의 문의와 불만이 정당하다고 판단되면 지체 없이 처리하고, 처리에 시간이 걸리면 그 사유와 일정을 알립니다.',
     ),
     (
-      '제18조 (이용자의 의무)',
+      '제17조 (이용자의 의무)',
       '이용자는 다음 행위를 해서는 안 됩니다.\n'
           '1. 타인의 계정을 도용하거나 타인을 사칭하는 행위\n'
           '2. 서비스를 복제·변경·역설계·디컴파일하거나, 비정상적인 방법(변조된 앱, 자동화 프로그램 등)으로 서버에 접속하는 행위. 단, 법령이 허용하는 범위는 제외합니다.\n'
@@ -239,22 +231,22 @@ const _termsOfServiceKo = LegalDocument(
           '4. 다른 사람의 방에 무단으로 입장하여 게임을 방해하는 행위\n'
           '5. 욕설, 비하, 음란·폭력적 표현, 차별·혐오 표현, 타인의 개인정보를 담은 닉네임이나 프로필 사진을 사용하는 행위\n'
           '6. 타인의 저작권·초상권 등 권리를 침해하는 사진을 올리는 행위\n'
-          '7. 게임 결과나 게임 칩을 도박·사행 행위에 이용하는 행위\n'
+          '7. 게임 결과를 도박·사행 행위에 이용하는 행위\n'
           '8. 벌칙(패널티 룰렛 등)을 이유로 다른 사람에게 음주, 신체적 위험, 수치심을 주는 행동을 강요하는 행위\n'
           '9. 운영자의 상표·로고를 무단으로 사용하거나 운영자를 사칭하는 행위\n'
           '10. 그 밖에 관련 법령에 위반되는 행위',
     ),
     (
-      '제19조 (게시물)',
+      '제18조 (게시물)',
       '1. 게시물의 권리와 책임은 이를 등록한 이용자에게 있습니다.\n'
           '2. 닉네임은 같은 방의 참가자와 호스트 기기 화면에 표시되며, 프로필 사진은 다른 이용자에게 표시되지 않습니다.\n'
           '3. 이용자는 운영자가 서비스를 제공하는 데 필요한 범위(저장, 화면 표시, 크기 조정 등)에서 게시물을 이용하는 것을 허락합니다. 운영자는 이를 다른 목적으로 사용하거나 제3자에게 제공하지 않습니다.\n'
-          '4. 운영자는 게시물이 제18조에 해당하면 사전 통지 없이 삭제하거나 기본값으로 바꿀 수 있으며, 조치 후 그 사실과 사유를 알립니다.\n'
+          '4. 운영자는 게시물이 제17조에 해당하면 사전 통지 없이 삭제하거나 기본값으로 바꿀 수 있으며, 조치 후 그 사실과 사유를 알립니다.\n'
           '5. 권리를 침해당한 사람은 warmhandongne@gmail.com으로 신고할 수 있으며, 운영자는 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」에 따라 임시조치 등을 취합니다.',
     ),
     (
-      '제20조 (이용 제한)',
-      '1. 운영자는 이용자가 제18조를 위반하면 위반의 정도에 따라 경고, 일시 이용 정지, 이용계약 해지 순으로 이용을 제한할 수 있습니다.\n'
+      '제19조 (이용 제한)',
+      '1. 운영자는 이용자가 제17조를 위반하면 위반의 정도에 따라 경고, 일시 이용 정지, 이용계약 해지 순으로 이용을 제한할 수 있습니다.\n'
           '2. 다음의 경우에는 단계를 거치지 않고 즉시 이용계약을 해지할 수 있습니다.\n'
           '  1) 타인의 계정을 도용한 경우\n'
           '  2) 서비스를 변조하거나 서버에 중대한 장애를 일으킨 경우\n'
@@ -264,17 +256,17 @@ const _termsOfServiceKo = LegalDocument(
           '4. 이용자는 이용 제한에 이의가 있으면 통지를 받은 날부터 14일 안에 warmhandongne@gmail.com으로 이의를 신청할 수 있으며, 운영자는 이를 검토해 결과를 알립니다.',
     ),
     (
-      '제21조 (개인정보 보호)',
+      '제20조 (개인정보 보호)',
       '운영자는 이용자의 개인정보를 「개인정보 보호법」 등 관련 법령과 별도의 개인정보처리방침에 따라 보호합니다. 수집 항목, 이용 목적, 보관 기간, 위탁 및 국외 이전에 관한 사항은 개인정보처리방침에서 정합니다.',
     ),
     (
-      '제22조 (지식재산권)',
+      '제21조 (지식재산권)',
       '1. 서비스와 그에 포함된 프로그램, 디자인, 캐릭터 아이콘, 게임 규칙 표현, 상표·로고에 대한 권리는 운영자 또는 정당한 권리자에게 있습니다.\n'
           '2. 운영자는 이용자에게 서비스를 개인적·비상업적으로 이용할 수 있는 양도 불가능한 권한만을 부여합니다.\n'
           '3. 이용자는 운영자의 사전 동의 없이 서비스의 콘텐츠를 복제·배포·방송하거나 영리 목적으로 이용할 수 없습니다.',
     ),
     (
-      '제23조 (외부 서비스)',
+      '제22조 (외부 서비스)',
       '1. 서비스는 다음 외부 서비스를 이용합니다. 각 서비스의 이용에는 해당 제공자의 약관과 개인정보처리방침이 함께 적용될 수 있습니다.\n'
           '  • Google Firebase (인증, 데이터 저장, 서버 기능, 앱 무결성 확인, 오류 보고)\n'
           '  • Google 로그인, Apple 로그인\n'
@@ -282,7 +274,7 @@ const _termsOfServiceKo = LegalDocument(
           '2. 운영자는 외부 서비스의 장애나 정책 변경으로 서비스 이용에 문제가 생기면 이를 알리고 복구를 위해 노력합니다.',
     ),
     (
-      '제24조 (손해배상과 면책)',
+      '제23조 (손해배상과 면책)',
       '1. 운영자 또는 이용자가 이 약관을 위반하여 상대방에게 손해를 입히면 그 손해를 배상해야 합니다.\n'
           '2. 운영자는 다음의 경우 책임을 지지 않습니다. 단, 운영자의 고의 또는 중대한 과실이 있는 경우는 제외합니다.\n'
           '  1) 천재지변 등 불가항력으로 서비스를 제공할 수 없는 경우\n'
@@ -292,19 +284,19 @@ const _termsOfServiceKo = LegalDocument(
           '3. 서비스는 무료로 제공되므로, 운영자는 법령에 특별한 규정이 없는 한 무료 서비스 이용과 관련하여 고의 또는 중대한 과실이 없는 손해를 배상하지 않습니다.',
     ),
     (
-      '제25조 (준거법과 관할)',
+      '제24조 (준거법과 관할)',
       '1. 이 약관과 서비스 이용에는 대한민국 법을 적용합니다.\n'
           '2. 운영자와 이용자 사이의 분쟁에 관한 소송은 「민사소송법」에 따른 관할 법원에 제기합니다.',
     ),
     (
-      '제26조 (문의처)',
+      '제25조 (문의처)',
       '서비스와 이 약관에 관한 문의는 아래로 해 주세요.\n'
           '• 운영자: 따스한동네 / 대표자: 윤유원\n'
           '• 사업자등록번호: 해당 없음\n'
           '• 주소: 경상북도 포항시 북구 한동로 558 한동대학교\n'
           '• 이메일: warmhandongne@gmail.com',
     ),
-    ('부칙', '이 약관은 2026년 10월 12일부터 시행합니다.'),
+    ('부칙', '이 약관은 2026년 10월 25일부터 시행합니다.'),
   ],
 );
 
@@ -461,7 +453,7 @@ String get _legalLanguage {
 
 const _termsOfServiceEn = LegalDocument(
   title: 'Mosigame Terms of Service',
-  effectiveDate: '2026-10-12',
+  effectiveDate: '2026-10-25',
   intro:
       'This is a translation. If it differs from the Korean version, the Korean version prevails.',
   sections: [
@@ -476,8 +468,7 @@ const _termsOfServiceEn = LegalDocument(
           '3. "Guest" means a user who chose [Start as guest] without email or a Google or Apple account and uses the Service with a temporary account and a nickname created automatically by the Operator.\n'
           '4. "Room" means a real-time game space created on a host device such as a tablet, which participants join with a room code or QR code to play together.\n'
           '5. "Host" means the user who creates and manages a room, and "participant" means a user who joins a room.\n'
-          '6. "Posts" means the nickname and profile photo a user registers in the Service.\n'
-          '7. "Game chips" means score units shown only inside games such as Hold\'em.',
+          '6. "Posts" means the nickname and profile photo a user registers in the Service.',
     ),
     (
       'Article 3 (Posting and amendment)',
@@ -498,7 +489,7 @@ const _termsOfServiceEn = LegalDocument(
           '3. The Operator may refuse or later terminate an application if:\n'
           '  1) another person\'s name or account is used;\n'
           '  2) the applicant does not meet the age requirement in Article 7; or\n'
-          '  3) the applicant\'s agreement was previously terminated under Article 20, unless the Operator approves re-registration.',
+          '  3) the applicant\'s agreement was previously terminated under Article 19, unless the Operator approves re-registration.',
     ),
     (
       'Article 6 (Consent at sign-up)',
@@ -532,20 +523,19 @@ const _termsOfServiceEn = LegalDocument(
       'Article 11 (The Service)',
       '1. The Service provides party games played together by people in the same place, using a host device such as a tablet and their own phones.\n'
           '2. The games offered follow the list shown in the Service, and the Operator may add or change games under Article 13.\n'
-          '3. Game progress and results are processed by the Operator\'s server, and the server\'s result is final.\n'
-          '4. The in-app "game store" is in preparation and does not offer purchases.',
+          '3. Game progress and results are processed by the Operator\'s server, and the server\'s result is final.',
     ),
     (
       'Article 12 (Creating and joining rooms)',
       '1. The host creates a room and invites participants by sharing the room code or QR code. Anyone with the code can join, so hosts should share it only with people they want to play with.\n'
           '2. A room holds up to 12 people, and each game may set its own number of players.\n'
-          '3. The host may remove participants from the waiting room before a game starts. This applies only to that room and is separate from the Operator\'s restrictions under Article 20.\n'
+          '3. The host may remove participants from the waiting room before a game starts. This applies only to that room and is separate from the Operator\'s restrictions under Article 19.\n'
           '4. A participant disconnected from the waiting room for 5 minutes or more leaves the room automatically. A participant disconnected during a game may reconnect within the grace period set by the Service.\n'
           '5. Room information is deleted automatically some time after a game ends, and game records are not kept separately.',
     ),
     (
       'Article 13 (Changes and interruptions)',
-      '1. The Service is provided around the clock in principle, but may be interrupted for maintenance, failures, network outages, or failures of external services (Article 23).\n'
+      '1. The Service is provided around the clock in principle, but may be interrupted for maintenance, failures, network outages, or failures of external services (Article 22).\n'
           '2. The Operator may add, change, or end games and other features, and announces important changes in the Service in advance.\n'
           '3. If the Operator ends the whole Service, it announces this in the Service at least 30 days before.',
     ),
@@ -556,25 +546,19 @@ const _termsOfServiceEn = LegalDocument(
           '3. Data charges follow the user\'s mobile plan.',
     ),
     (
-      'Article 15 (Game chips)',
-      '1. Game chips are only scores for game play and have no monetary value.\n'
-          '2. Game chips cannot be bought or cashed out, transferred or sold to others, and disappear when the game ends.\n'
-          '3. Users must not use game results or chips for betting money or property.',
-    ),
-    (
-      'Article 16 (App updates)',
+      'Article 15 (App updates)',
       '1. The Operator may update the app to improve features, fix errors, or improve security, and some fixes may be downloaded and applied automatically when the app starts.\n'
           '2. Some features may be limited if a required update is not installed.\n'
           '3. The Service may not work properly on rooted, jailbroken, or otherwise modified operating systems.',
     ),
     (
-      'Article 17 (Operator obligations)',
+      'Article 16 (Operator obligations)',
       '1. The Operator complies with applicable law and these terms and strives to provide the Service reliably.\n'
           '2. The Operator publishes and follows its Privacy Policy.\n'
           '3. The Operator handles legitimate inquiries and complaints without delay and explains the reason and schedule if handling takes time.',
     ),
     (
-      'Article 18 (User obligations)',
+      'Article 17 (User obligations)',
       'Users must not:\n'
           '1. use another person\'s account or impersonate others;\n'
           '2. copy, modify, reverse engineer, or decompile the Service, or access the server by abnormal means such as modified apps or automation tools, except as permitted by law;\n'
@@ -582,22 +566,22 @@ const _termsOfServiceEn = LegalDocument(
           '4. join other people\'s rooms without permission to disrupt their games;\n'
           '5. use nicknames or profile photos with profanity, insults, obscene or violent content, discrimination or hate, or other people\'s personal information;\n'
           '6. upload photos that infringe copyrights, portrait rights, or other rights;\n'
-          '7. use game results or chips for gambling;\n'
+          '7. use game results for gambling;\n'
           '8. force others to drink, take physical risks, or do humiliating things as a penalty, such as a penalty roulette;\n'
           '9. use the Operator\'s trademarks or logos without permission or impersonate the Operator; or\n'
           '10. otherwise violate applicable law.',
     ),
     (
-      'Article 19 (Posts)',
+      'Article 18 (Posts)',
       '1. Rights and responsibility for posts belong to the user who registered them.\n'
           '2. Nicknames are shown to participants in the same room and on the host device. Profile photos are not shown to other users.\n'
           '3. Users allow the Operator to use posts as needed to provide the Service, such as storing, displaying, and resizing them. The Operator does not use them for other purposes or provide them to third parties.\n'
-          '4. If a post falls under Article 18, the Operator may delete it or reset it to the default without prior notice, and will notify the user of the action and reason afterward.\n'
+          '4. If a post falls under Article 17, the Operator may delete it or reset it to the default without prior notice, and will notify the user of the action and reason afterward.\n'
           '5. Anyone whose rights are infringed may report it to warmhandongne@gmail.com, and the Operator takes measures such as temporary blocking under the Network Act.',
     ),
     (
-      'Article 20 (Restrictions)',
-      '1. If a user violates Article 18, the Operator may restrict use by warning, temporary suspension, and termination, depending on the severity.\n'
+      'Article 19 (Restrictions)',
+      '1. If a user violates Article 17, the Operator may restrict use by warning, temporary suspension, and termination, depending on the severity.\n'
           '2. The Operator may terminate the agreement immediately if the user:\n'
           '  1) used another person\'s account;\n'
           '  2) modified the Service or caused serious server failures;\n'
@@ -607,17 +591,17 @@ const _termsOfServiceEn = LegalDocument(
           '4. Users may appeal a restriction to warmhandongne@gmail.com within 14 days of the notice, and the Operator reviews it and responds.',
     ),
     (
-      'Article 21 (Privacy)',
+      'Article 20 (Privacy)',
       'The Operator protects users\' personal information under the Personal Information Protection Act, other applicable law, and its separate Privacy Policy, which sets out the items collected, purposes, retention, processors, and international transfers.',
     ),
     (
-      'Article 22 (Intellectual property)',
+      'Article 21 (Intellectual property)',
       '1. Rights to the Service and its software, design, character icons, game rule expressions, trademarks, and logos belong to the Operator or the rightful owners.\n'
           '2. The Operator grants users only a non-transferable right to use the Service for personal, non-commercial purposes.\n'
           '3. Users may not copy, distribute, broadcast, or commercially use content from the Service without the Operator\'s prior consent.',
     ),
     (
-      'Article 23 (External services)',
+      'Article 22 (External services)',
       '1. The Service uses the following external services, whose own terms and privacy policies may also apply:\n'
           '  • Google Firebase (authentication, data storage, server functions, app integrity checks, crash reporting)\n'
           '  • Google sign-in, Apple sign-in\n'
@@ -625,7 +609,7 @@ const _termsOfServiceEn = LegalDocument(
           '2. If a failure or policy change in an external service affects the Service, the Operator informs users and works to restore it.',
     ),
     (
-      'Article 24 (Damages and disclaimers)',
+      'Article 23 (Damages and disclaimers)',
       '1. If the Operator or a user violates these terms and causes damage to the other, they must compensate for it.\n'
           '2. The Operator is not liable in the following cases, except for intentional misconduct or gross negligence:\n'
           '  1) force majeure such as natural disasters;\n'
@@ -635,25 +619,25 @@ const _termsOfServiceEn = LegalDocument(
           '3. Because the Service is free, the Operator does not compensate damage related to free use that is not caused by its intentional misconduct or gross negligence, unless the law provides otherwise.',
     ),
     (
-      'Article 25 (Governing law and jurisdiction)',
+      'Article 24 (Governing law and jurisdiction)',
       '1. These terms and the use of the Service are governed by the laws of the Republic of Korea.\n'
           '2. Lawsuits between the Operator and users are filed in the court with jurisdiction under the Korean Civil Procedure Act.',
     ),
     (
-      'Article 26 (Contact)',
+      'Article 25 (Contact)',
       'For questions about the Service or these terms:\n'
           '• Operator: Warm Neighborhood / Representative: Yoon Yuwon\n'
           '• Business registration number: none\n'
           '• Address: Handong Global University, 558 Handong-ro, Buk-gu, Pohang, Gyeongsangbuk-do, Korea\n'
           '• Email: warmhandongne@gmail.com',
     ),
-    ('Addendum', 'These terms take effect on October 12, 2026.'),
+    ('Addendum', 'These terms take effect on October 25, 2026.'),
   ],
 );
 
 const _termsOfServiceZhHans = LegalDocument(
   title: 'Mosigame 使用条款',
-  effectiveDate: '2026-10-12',
+  effectiveDate: '2026-10-25',
   intro: '本文为译文。如与韩文版本不一致，以韩文版本为准。',
   sections: [
     (
@@ -667,8 +651,7 @@ const _termsOfServiceZhHans = LegalDocument(
           '3. “游客”是指不使用电子邮箱或 Google、Apple 账号，选择［以游客身份开始］，使用运营方自动生成的昵称和临时账号使用服务的用户。\n'
           '4. “房间”是指在平板等主机设备上创建、参与者通过房间代码或二维码加入并共同进行游戏的实时游戏空间。\n'
           '5. “房主”是指创建并管理房间的用户，“参与者”是指加入房间的用户。\n'
-          '6. “发布内容”是指用户在服务中登记的昵称和头像。\n'
-          '7. “游戏筹码”是指仅在德州扑克等游戏内显示、用于游戏进行的分数单位。',
+          '6. “发布内容”是指用户在服务中登记的昵称和头像。',
     ),
     (
       '第3条（条款的公示与修改）',
@@ -689,7 +672,7 @@ const _termsOfServiceZhHans = LegalDocument(
           '3. 有下列情形之一的，运营方可不予承诺或事后解除合同：\n'
           '  1) 冒用他人名义或账号的；\n'
           '  2) 不符合第7条使用年龄的；\n'
-          '  3) 曾依第20条被解除使用合同的，但运营方同意重新注册的除外。',
+          '  3) 曾依第19条被解除使用合同的，但运营方同意重新注册的除外。',
     ),
     (
       '第6条（注册同意与确认）',
@@ -720,20 +703,19 @@ const _termsOfServiceZhHans = LegalDocument(
       '第11条（服务内容）',
       '1. 服务提供聚在一起的用户使用主机设备（平板等）和各自手机共同游玩的派对游戏。\n'
           '2. 运营方提供的游戏以服务内显示的列表为准，运营方可依第13条新增或变更游戏。\n'
-          '3. 游戏进行和胜负判定由运营方服务器处理，以服务器的处理结果为准。\n'
-          '4. 服务内的“游戏商店”目前正在准备中，不提供购买功能。',
+          '3. 游戏进行和胜负判定由运营方服务器处理，以服务器的处理结果为准。',
     ),
     (
       '第12条（房间的创建与加入）',
       '1. 房主创建房间，并将房间代码或二维码告知参与者以邀请其加入。任何知道房间代码的人都可以加入，因此房主应只告知一起游戏的人。\n'
           '2. 每个房间最多12人，各游戏可另行规定参与人数。\n'
-          '3. 房主可在游戏开始前将参与者移出等待房间。此措施仅适用于该房间，与运营方的使用限制（第20条）无关。\n'
+          '3. 房主可在游戏开始前将参与者移出等待房间。此措施仅适用于该房间，与运营方的使用限制（第19条）无关。\n'
           '4. 在等待房间断线5分钟以上的参与者将自动离开房间。游戏中断线时，可在服务规定的宽限时间内重新连接。\n'
           '5. 游戏结束后，房间信息会在一定时间后自动删除，游戏记录不会另行保存。',
     ),
     (
       '第13条（服务的变更与中断）',
-      '1. 服务原则上全年无休，但可能因维护、故障、通信中断或外部服务（第23条）故障而暂时中断。\n'
+      '1. 服务原则上全年无休，但可能因维护、故障、通信中断或外部服务（第22条）故障而暂时中断。\n'
           '2. 运营方可新增、变更或结束游戏等服务内容，重要变更将提前在服务内公告。\n'
           '3. 运营方终止全部服务时，将至少提前30天在服务内公告。',
     ),
@@ -744,25 +726,19 @@ const _termsOfServiceZhHans = LegalDocument(
           '3. 使用服务产生的数据流量费用依用户所签约的通信套餐计算。',
     ),
     (
-      '第15条（游戏筹码）',
-      '1. 游戏筹码仅为游戏进行所用的分数显示，不具有财产价值。\n'
-          '2. 游戏筹码不能用现金充值或兑换，不能转让或出售给其他用户，游戏结束后即消失。\n'
-          '3. 用户不得将游戏结果或游戏筹码用于以金钱或财物为赌注的打赌。',
-    ),
-    (
-      '第16条（应用更新）',
+      '第15条（应用更新）',
       '1. 运营方可为改进功能、修复错误和保障安全而更新应用，部分修复可能在应用启动时自动下载并应用。\n'
           '2. 用户未安装必要更新时，部分功能可能受到限制。\n'
           '3. 在已 root、越狱等擅自修改操作系统的环境中，服务可能无法正常运行。',
     ),
     (
-      '第17条（运营方的义务）',
+      '第16条（运营方的义务）',
       '1. 运营方遵守相关法律和本条款，努力稳定地提供服务。\n'
           '2. 运营方公开并遵守隐私政策。\n'
           '3. 运营方认为用户的咨询和投诉正当时将立即处理；处理需要时间时，将告知原因和日程。',
     ),
     (
-      '第18条（用户的义务）',
+      '第17条（用户的义务）',
       '用户不得有下列行为：\n'
           '1. 盗用他人账号或冒充他人；\n'
           '2. 复制、修改、逆向工程或反编译服务，或以非正常方式（篡改的应用、自动化程序等）访问服务器，但法律允许的范围除外；\n'
@@ -770,22 +746,22 @@ const _termsOfServiceZhHans = LegalDocument(
           '4. 擅自进入他人房间妨碍游戏；\n'
           '5. 使用含辱骂、贬低、淫秽暴力、歧视仇恨内容或他人个人信息的昵称或头像；\n'
           '6. 上传侵犯他人著作权、肖像权等权利的照片；\n'
-          '7. 将游戏结果或游戏筹码用于赌博或投机行为；\n'
+          '7. 将游戏结果用于赌博或投机行为；\n'
           '8. 以惩罚（惩罚转盘等）为由强迫他人饮酒、从事危险行为或做出令人羞耻的行为；\n'
           '9. 擅自使用运营方的商标、标志或冒充运营方；\n'
           '10. 其他违反相关法律的行为。',
     ),
     (
-      '第19条（发布内容）',
+      '第18条（发布内容）',
       '1. 发布内容的权利和责任归登记该内容的用户所有。\n'
           '2. 昵称会显示给同一房间的参与者并显示在主机设备画面上，头像不会显示给其他用户。\n'
           '3. 用户允许运营方在提供服务所需范围内（保存、显示、调整大小等）使用发布内容。运营方不会将其用于其他目的或提供给第三方。\n'
-          '4. 发布内容属于第18条情形时，运营方可不经事先通知予以删除或恢复为默认值，并在处理后告知事实和原因。\n'
+          '4. 发布内容属于第17条情形时，运营方可不经事先通知予以删除或恢复为默认值，并在处理后告知事实和原因。\n'
           '5. 权利受到侵害者可发送邮件至 warmhandongne@gmail.com 举报，运营方将依《信息通信网法》采取临时措施等。',
     ),
     (
-      '第20条（使用限制）',
-      '1. 用户违反第18条时，运营方可视违反程度依次采取警告、暂停使用、解除使用合同等限制措施。\n'
+      '第19条（使用限制）',
+      '1. 用户违反第17条时，运营方可视违反程度依次采取警告、暂停使用、解除使用合同等限制措施。\n'
           '2. 有下列情形之一的，运营方可不经上述步骤立即解除使用合同：\n'
           '  1) 盗用他人账号的；\n'
           '  2) 篡改服务或造成服务器严重故障的；\n'
@@ -795,17 +771,17 @@ const _termsOfServiceZhHans = LegalDocument(
           '4. 用户对使用限制有异议的，可在收到通知之日起14天内发送邮件至 warmhandongne@gmail.com 提出异议，运营方将审核并告知结果。',
     ),
     (
-      '第21条（个人信息保护）',
+      '第20条（个人信息保护）',
       '运营方依照《个人信息保护法》等相关法律及另行制定的隐私政策保护用户的个人信息。收集项目、使用目的、保存期间、委托处理及境外传输等事项由隐私政策规定。',
     ),
     (
-      '第22条（知识产权）',
+      '第21条（知识产权）',
       '1. 服务及其包含的程序、设计、角色图标、游戏规则表述、商标和标志的权利归运营方或合法权利人所有。\n'
           '2. 运营方仅授予用户以个人、非商业目的使用服务的不可转让的权利。\n'
           '3. 未经运营方事先同意，用户不得复制、传播、播放服务内容或将其用于营利目的。',
     ),
     (
-      '第23条（外部服务）',
+      '第22条（外部服务）',
       '1. 服务使用下列外部服务，使用时可能同时适用各提供方的条款和隐私政策：\n'
           '  • Google Firebase（认证、数据存储、服务器功能、应用完整性检查、错误报告）\n'
           '  • Google 登录、Apple 登录\n'
@@ -813,7 +789,7 @@ const _termsOfServiceZhHans = LegalDocument(
           '2. 因外部服务故障或政策变更影响服务使用时，运营方将告知用户并努力恢复。',
     ),
     (
-      '第24条（损害赔偿与免责）',
+      '第23条（损害赔偿与免责）',
       '1. 运营方或用户违反本条款给对方造成损害的，应赔偿该损害。\n'
           '2. 有下列情形之一的，运营方不承担责任，但运营方存在故意或重大过失的除外：\n'
           '  1) 因自然灾害等不可抗力无法提供服务的；\n'
@@ -823,25 +799,25 @@ const _termsOfServiceZhHans = LegalDocument(
           '3. 由于服务免费提供，除法律另有特别规定外，运营方对与免费服务使用相关、且非因其故意或重大过失造成的损害不予赔偿。',
     ),
     (
-      '第25条（准据法与管辖）',
+      '第24条（准据法与管辖）',
       '1. 本条款及服务的使用适用大韩民国法律。\n'
           '2. 运营方与用户之间的纠纷诉讼，向依韩国《民事诉讼法》具有管辖权的法院提起。',
     ),
     (
-      '第26条（联系方式）',
+      '第25条（联系方式）',
       '关于服务和本条款的咨询，请通过以下方式联系：\n'
           '• 运营方：温暖社区 / 代表：尹裕元\n'
           '• 营业执照号码：无\n'
           '• 地址：韩国庆尚北道浦项市北区韩东路558 韩东大学\n'
           '• 邮箱：warmhandongne@gmail.com',
     ),
-    ('附则', '本条款自2026年10月12日起施行。'),
+    ('附则', '本条款自2026年10月25日起施行。'),
   ],
 );
 
 const _termsOfServiceZhHant = LegalDocument(
   title: 'Mosigame 使用條款',
-  effectiveDate: '2026-10-12',
+  effectiveDate: '2026-10-25',
   intro: '本文為譯文。如與韓文版本不一致，以韓文版本為準。',
   sections: [
     (
@@ -855,8 +831,7 @@ const _termsOfServiceZhHant = LegalDocument(
           '3. 「遊客」是指不使用電子郵件信箱或 Google、Apple 帳號，選擇［以遊客身份開始］，使用營運方自動生成的暱稱和臨時帳號使用服務的使用者。\n'
           '4. 「房間」是指在平板等主機裝置上建立、參與者透過房間代碼或QR Code加入並共同進行遊戲的即時遊戲空間。\n'
           '5. 「房主」是指建立並管理房間的使用者，「參與者」是指加入房間的使用者。\n'
-          '6. 「發布內容」是指使用者在服務中登記的暱稱和頭像。\n'
-          '7. 「遊戲籌碼」是指僅在德州撲克等遊戲內顯示、用於遊戲進行的分數單位。',
+          '6. 「發布內容」是指使用者在服務中登記的暱稱和頭像。',
     ),
     (
       '第3條（條款的公示與修改）',
@@ -877,7 +852,7 @@ const _termsOfServiceZhHant = LegalDocument(
           '3. 有下列情形之一的，營運方可不予承諾或事後解除合同：\n'
           '  1) 冒用他人名義或帳號的；\n'
           '  2) 不符合第7條使用年齡的；\n'
-          '  3) 曾依第20條被解除使用合同的，但營運方同意重新註冊的除外。',
+          '  3) 曾依第19條被解除使用合同的，但營運方同意重新註冊的除外。',
     ),
     (
       '第6條（註冊同意與確認）',
@@ -908,20 +883,19 @@ const _termsOfServiceZhHant = LegalDocument(
       '第11條（服務內容）',
       '1. 服務提供聚在一起的使用者使用主機裝置（平板等）和各自手機共同遊玩的派對遊戲。\n'
           '2. 營運方提供的遊戲以服務內顯示的列表為準，營運方可依第13條新增或變更遊戲。\n'
-          '3. 遊戲進行和勝負判定由營運方伺服器處理，以伺服器的處理結果為準。\n'
-          '4. 服務內的「遊戲商店」目前正在準備中，不提供購買功能。',
+          '3. 遊戲進行和勝負判定由營運方伺服器處理，以伺服器的處理結果為準。',
     ),
     (
       '第12條（房間的建立與加入）',
       '1. 房主建立房間，並將房間代碼或QR Code告知參與者以邀請其加入。任何知道房間代碼的人都可以加入，因此房主應只告知一起遊戲的人。\n'
           '2. 每個房間最多12人，各遊戲可另行規定參與人數。\n'
-          '3. 房主可在遊戲開始前將參與者移出等待房間。此措施僅適用於該房間，與營運方的使用限制（第20條）無關。\n'
+          '3. 房主可在遊戲開始前將參與者移出等待房間。此措施僅適用於該房間，與營運方的使用限制（第19條）無關。\n'
           '4. 在等待房間斷線5分鐘以上的參與者將自動離開房間。遊戲中斷線時，可在服務規定的寬限時間內重新連線。\n'
           '5. 遊戲結束後，房間資訊會在一定時間後自動刪除，遊戲記錄不會另行儲存。',
     ),
     (
       '第13條（服務的變更與中斷）',
-      '1. 服務原則上全年無休，但可能因維護、故障、通訊中斷或外部服務（第23條）故障而暫時中斷。\n'
+      '1. 服務原則上全年無休，但可能因維護、故障、通訊中斷或外部服務（第22條）故障而暫時中斷。\n'
           '2. 營運方可新增、變更或結束遊戲等服務內容，重要變更將提前在服務內公告。\n'
           '3. 營運方終止全部服務時，將至少提前30天在服務內公告。',
     ),
@@ -932,25 +906,19 @@ const _termsOfServiceZhHant = LegalDocument(
           '3. 使用服務產生的資料流量費用依使用者所簽約的通訊套餐計算。',
     ),
     (
-      '第15條（遊戲籌碼）',
-      '1. 遊戲籌碼僅為遊戲進行所用的分數顯示，不具有財產價值。\n'
-          '2. 遊戲籌碼不能用現金充值或兌換，不能轉讓或出售給其他使用者，遊戲結束後即消失。\n'
-          '3. 使用者不得將遊戲結果或遊戲籌碼用於以金錢或財物為賭注的打賭。',
-    ),
-    (
-      '第16條（應用更新）',
+      '第15條（應用更新）',
       '1. 營運方可為改進功能、修復錯誤和保障安全而更新應用，部分修復可能在應用啟動時自動下載並應用。\n'
           '2. 使用者未安裝必要更新時，部分功能可能受到限制。\n'
           '3. 在已 root、越獄等擅自修改作業系統的環境中，服務可能無法正常執行。',
     ),
     (
-      '第17條（營運方的義務）',
+      '第16條（營運方的義務）',
       '1. 營運方遵守相關法律和本條款，努力穩定地提供服務。\n'
           '2. 營運方公開並遵守隱私權政策。\n'
           '3. 營運方認為使用者的諮詢和投訴正當時將立即處理；處理需要時間時，將告知原因和日程。',
     ),
     (
-      '第18條（使用者的義務）',
+      '第17條（使用者的義務）',
       '使用者不得有下列行為：\n'
           '1. 盜用他人帳號或冒充他人；\n'
           '2. 複製、修改、逆向工程或反編譯服務，或以非正常方式（篡改的應用、自動化程式等）存取伺服器，但法律允許的範圍除外；\n'
@@ -958,22 +926,22 @@ const _termsOfServiceZhHant = LegalDocument(
           '4. 擅自進入他人房間妨礙遊戲；\n'
           '5. 使用含辱罵、貶低、淫穢暴力、歧視仇恨內容或他人個人資訊的暱稱或頭像；\n'
           '6. 上傳侵犯他人著作權、肖像權等權利的照片；\n'
-          '7. 將遊戲結果或遊戲籌碼用於賭博或投機行為；\n'
+          '7. 將遊戲結果用於賭博或投機行為；\n'
           '8. 以懲罰（懲罰轉盤等）為由強迫他人飲酒、從事危險行為或做出令人羞恥的行為；\n'
           '9. 擅自使用營運方的商標、標誌或冒充營運方；\n'
           '10. 其他違反相關法律的行為。',
     ),
     (
-      '第19條（發布內容）',
+      '第18條（發布內容）',
       '1. 發布內容的權利和責任歸登記該內容的使用者所有。\n'
           '2. 暱稱會顯示給同一房間的參與者並顯示在主機裝置畫面上，頭像不會顯示給其他使用者。\n'
           '3. 使用者允許營運方在提供服務所需範圍內（儲存、顯示、調整大小等）使用發布內容。營運方不會將其用於其他目的或提供給第三方。\n'
-          '4. 發布內容屬於第18條情形時，營運方可不經事先通知予以刪除或恢復為預設值，並在處理後告知事實和原因。\n'
+          '4. 發布內容屬於第17條情形時，營運方可不經事先通知予以刪除或恢復為預設值，並在處理後告知事實和原因。\n'
           '5. 權利受到侵害者可傳送郵件至 warmhandongne@gmail.com 舉報，營運方將依《資訊通訊網法》採取臨時措施等。',
     ),
     (
-      '第20條（使用限制）',
-      '1. 使用者違反第18條時，營運方可視違反程度依次採取警告、暫停使用、解除使用合同等限制措施。\n'
+      '第19條（使用限制）',
+      '1. 使用者違反第17條時，營運方可視違反程度依次採取警告、暫停使用、解除使用合同等限制措施。\n'
           '2. 有下列情形之一的，營運方可不經上述步驟立即解除使用合同：\n'
           '  1) 盜用他人帳號的；\n'
           '  2) 篡改服務或造成伺服器嚴重故障的；\n'
@@ -983,17 +951,17 @@ const _termsOfServiceZhHant = LegalDocument(
           '4. 使用者對使用限制有異議的，可在收到通知之日起14天內傳送郵件至 warmhandongne@gmail.com 提出異議，營運方將稽核並告知結果。',
     ),
     (
-      '第21條（個人資訊保護）',
+      '第20條（個人資訊保護）',
       '營運方依照《個人資訊保護法》等相關法律及另行制定的隱私權政策保護使用者的個人資訊。收集項目、使用目的、儲存期間、委託處理及境外傳輸等事項由隱私權政策規定。',
     ),
     (
-      '第22條（智慧財產權）',
+      '第21條（智慧財產權）',
       '1. 服務及其包含的程式、設計、角色圖示、遊戲規則表述、商標和標誌的權利歸營運方或合法權利人所有。\n'
           '2. 營運方僅授予使用者以個人、非商業目的使用服務的不可轉讓的權利。\n'
           '3. 未經營運方事先同意，使用者不得複製、傳播、播放服務內容或將其用於營利目的。',
     ),
     (
-      '第23條（外部服務）',
+      '第22條（外部服務）',
       '1. 服務使用下列外部服務，使用時可能同時適用各提供方的條款和隱私權政策：\n'
           '  • Google Firebase（認證、資料儲存、伺服器功能、應用完整性檢查、錯誤報告）\n'
           '  • Google 登入、Apple 登入\n'
@@ -1001,7 +969,7 @@ const _termsOfServiceZhHant = LegalDocument(
           '2. 因外部服務故障或政策變更影響服務使用時，營運方將告知使用者並努力恢復。',
     ),
     (
-      '第24條（損害賠償與免責）',
+      '第23條（損害賠償與免責）',
       '1. 營運方或使用者違反本條款給對方造成損害的，應賠償該損害。\n'
           '2. 有下列情形之一的，營運方不承擔責任，但營運方存在故意或重大過失的除外：\n'
           '  1) 因自然災害等不可抗力無法提供服務的；\n'
@@ -1011,19 +979,19 @@ const _termsOfServiceZhHant = LegalDocument(
           '3. 由於服務免費提供，除法律另有特別規定外，營運方對與免費服務使用相關、且非因其故意或重大過失造成的損害不予賠償。',
     ),
     (
-      '第25條（準據法與管轄）',
+      '第24條（準據法與管轄）',
       '1. 本條款及服務的使用適用大韓民國法律。\n'
           '2. 營運方與使用者之間的糾紛訴訟，向依韓國《民事訴訟法》具有管轄權的法院提起。',
     ),
     (
-      '第26條（聯絡方式）',
+      '第25條（聯絡方式）',
       '關於服務和本條款的諮詢，請透過以下方式聯絡：\n'
           '• 營運方：溫暖社區 / 代表：尹裕元\n'
           '• 營業執照號碼：無\n'
           '• 地址：韓國慶尚北道浦項市北區韓東路558 韓東大學\n'
           '• 電子郵件信箱：warmhandongne@gmail.com',
     ),
-    ('附則', '本條款自2026年10月12日起施行。'),
+    ('附則', '本條款自2026年10月25日起施行。'),
   ],
 );
 

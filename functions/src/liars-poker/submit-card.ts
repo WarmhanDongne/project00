@@ -5,6 +5,7 @@ import {
 import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {ownEntry} from "../common/own-entry.js";
 import {processedResult, recordCommand} from "./common/commands.js";
 import {
   countPlayersWithCards,
@@ -90,13 +91,17 @@ export const game_liars_poker_submit_cards = onCall<SubmitCardsData>(
         if (!hand) {
           throw new HttpsError("data-loss", "플레이어 손패가 없습니다.");
         }
-        const submittedCards = cardIds.map((cardId) => hand[cardId]);
-        if (submittedCards.some((card) => !card)) {
-          throw new HttpsError(
-            "failed-precondition",
-            "보유하지 않은 카드가 포함되어 있습니다.",
-          );
-        }
+        // 손패 객체가 직접 가진 카드만 인정합니다(`__proto__` 같은 키 차단).
+        const submittedCards = cardIds.map((cardId) => {
+          const card = ownEntry(hand, cardId);
+          if (!card) {
+            throw new HttpsError(
+              "failed-precondition",
+              "보유하지 않은 카드가 포함되어 있습니다.",
+            );
+          }
+          return card;
+        });
 
         for (const cardId of cardIds) delete hand[cardId];
         const remainingCardCount = Object.keys(hand).length;
