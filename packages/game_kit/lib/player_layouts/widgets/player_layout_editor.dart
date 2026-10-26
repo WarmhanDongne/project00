@@ -8,6 +8,7 @@
 // ========================[ import ]==========================
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/player_layouts/models/player_layout.dart';
@@ -61,12 +62,17 @@ class PlayerLayoutEditor extends StatefulWidget {
     this.chairImage,
     this.seatTheme = MosiSeatTheme.fallback,
     this.zoomHandoff = true,
+    this.previousLayout,
   }) : assert(
          initialLayout.playerCount >= 2 && initialLayout.playerCount <= 12,
          '지원하는 플레이어 수는 2~12명입니다.',
        );
 
   final PlayerLayoutModel initialLayout;
+
+  /// 지난 게임에서 쓴 자리 배치입니다. 지금 참가자와 같은 사람들이면 상단에
+  /// '이전 자리' 버튼이 생겨 한 번에 불러올 수 있습니다.
+  final PlayerLayoutModel? previousLayout;
   final PlayerLayoutPrepared onPrepare;
   final PlayerLayoutCompleted onComplete;
   final PlayerLayoutCancelled onCancel;
@@ -156,6 +162,10 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
 
   late List<int> _playerSlotIndexes;
 
+  /// [PlayerLayoutEditor.previousLayout]을 지금 플레이어 순서에 맞춘 좌석표입니다.
+  /// 참가자가 다르면 null이고, 그때는 '이전 자리' 버튼을 보이지 않습니다.
+  List<int>? _previousSlotIndexes;
+
   /// 자리를 바꿀 때마다 올라가는 카드별 도착 번호입니다. 번호가 바뀐 카드는
   /// 새 자리에 닿는 순간 테두리가 한 번 반짝입니다(로비 연출 7번).
   final Map<int, int> _arrivals = {};
@@ -181,6 +191,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
   void initState() {
     super.initState();
     _playerSlotIndexes = List<int>.from(widget.initialLayout.seatIndexes);
+    _previousSlotIndexes = _resolvePreviousSlots();
     _entranceController = AnimationController(
       vsync: this,
       // 테이블 뒤에 의자가 좌석 순서대로 충분한 시간차를 두고 들어옵니다.
@@ -204,6 +215,7 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     if (oldWidget.initialLayout.playerCount !=
         widget.initialLayout.playerCount) {
       _playerSlotIndexes = List<int>.from(widget.initialLayout.seatIndexes);
+      _previousSlotIndexes = _resolvePreviousSlots();
       _draggingPositions.clear();
       _draggingPlayerIndex = null;
       _hoveredSlotIndex = null;
@@ -251,6 +263,42 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
     setState(() {
       if (selectedPlayer != -1) _playerSlotIndexes[selectedPlayer] = slot;
       _playerSlotIndexes[playerIndex] = selected;
+      _selectedSlotIndex = null;
+    });
+  }
+
+  List<int>? _resolvePreviousSlots() {
+    final previous = widget.previousLayout;
+    if (previous == null || previous.playerCount != _playerCount) return null;
+    final slots = <int>[];
+    for (final player in widget.initialLayout.players) {
+      final seat = previous.playerByUid(player.uid)?.seatIndex;
+      if (seat == null) return null;
+      slots.add(seat);
+    }
+    final unique = slots.toSet();
+    if (unique.length != _playerCount ||
+        unique.any((seat) => seat < 0 || seat >= _playerCount)) {
+      return null;
+    }
+    return List<int>.unmodifiable(slots);
+  }
+
+  bool get _isPreviousApplied {
+    final previous = _previousSlotIndexes;
+    return previous != null && listEquals(previous, _playerSlotIndexes);
+  }
+
+  /// 지난 게임 자리로 되돌립니다. 자리가 바뀐 카드는 도착 반짝임을 줍니다.
+  void _applyPreviousSeats() {
+    final previous = _previousSlotIndexes;
+    if (_isCompleting || previous == null) return;
+    setState(() {
+      for (var player = 0; player < previous.length; player++) {
+        if (_playerSlotIndexes[player] == previous[player]) continue;
+        _arrivals.update(player, (n) => n + 1, ifAbsent: () => 1);
+      }
+      _playerSlotIndexes = List<int>.from(previous);
       _selectedSlotIndex = null;
     });
   }
@@ -571,7 +619,9 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
             // 시안: 최대 696 알약 안에 19px 안내 문구. 좌우 버튼과 겹치지 않게
             // 비워 둡니다.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 120),
+              padding: EdgeInsets.symmetric(
+                horizontal: _previousSlotIndexes == null ? 120 : 240,
+              ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 696),
                 child: AnimatedContainer(
@@ -615,15 +665,35 @@ class _PlayerLayoutEditorState extends State<PlayerLayoutEditor>
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: MosiButton(
-                label: '섞기'.localized,
-                variant: MosiButtonVariant.outline,
-                foreground: MosiColors.white,
-                height: 44,
-                fontSize: 15,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                leading: const Icon(Icons.shuffle_rounded),
-                onPressed: _shuffle,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_previousSlotIndexes != null) ...[
+                    MosiButton(
+                      label: '이전 자리'.localized,
+                      variant: MosiButtonVariant.outline,
+                      foreground: MosiColors.white,
+                      height: 44,
+                      fontSize: 15,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      leading: const Icon(Icons.history_rounded),
+                      onPressed: _isPreviousApplied
+                          ? null
+                          : _applyPreviousSeats,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  MosiButton(
+                    label: '섞기'.localized,
+                    variant: MosiButtonVariant.outline,
+                    foreground: MosiColors.white,
+                    height: 44,
+                    fontSize: 15,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    leading: const Icon(Icons.shuffle_rounded),
+                    onPressed: _shuffle,
+                  ),
+                ],
               ),
             ),
           ],

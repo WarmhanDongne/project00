@@ -8,9 +8,9 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
 import {
+  continueFinalCallTurn,
   orderedAlivePlayers,
   resolveFinalCallRound,
-  startTurn,
 } from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {assertFinalCallTurn, FINAL_CALL_REGION, finalCallCommandId,
@@ -53,9 +53,8 @@ export const game_final_call_declare = onCall<Data>({region: FINAL_CALL_REGION},
     if (pending.length === 0) {
       resolveFinalCallRound(game, now, false);
     } else {
-      game.public.phase = "callerSubmit";
-      startTurn(game, uid, now);
-      game.public.revision += 1;
+      // CALL과 선언자의 최종 조합 선택도 한 턴이라 남은 시간을 이어 씁니다.
+      continueFinalCallTurn(game, "callerSubmit", uid, now);
     }
     response = {success: true, type: "called", callerUid: uid,
       turnUid: game.public.turnUid};

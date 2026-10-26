@@ -42,7 +42,25 @@ export function requireFinalCallGame(
   if (room.game.public.interruption && !options.allowInterruption) {
     throw new HttpsError("failed-precondition", "플레이어 연결 확인 중에는 게임을 진행할 수 없습니다.");
   }
-  return room.game;
+  return restoreEmptyFinalCallLists(room.game);
+}
+
+/**
+ * Realtime Database가 지운 빈 배열 필드를 빈 배열로 되돌립니다.
+ *
+ * RTDB는 빈 배열을 저장하지 않아 다시 읽으면 필드 자체가 사라집니다. 덱의
+ * 마지막 카드를 가져오면 `server.deck`이 없어져, 다음 카드 교체와 시간 초과
+ * 처리가 `deck.length`에서 오류로 멈추고 게임 전체가 진행되지 않았습니다.
+ * @param {FinalCallGameState} game 데이터베이스에서 읽은 게임 상태
+ * @return {FinalCallGameState} 배열 필드가 채워진 같은 게임 상태
+ */
+export function restoreEmptyFinalCallLists(
+  game: FinalCallGameState,
+): FinalCallGameState {
+  game.server.deck ??= [];
+  game.public.finalTurnPendingUids ??= [];
+  game.public.winnerUids ??= [];
+  return game;
 }
 
 export function assertFinalCallController(

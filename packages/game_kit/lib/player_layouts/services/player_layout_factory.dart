@@ -32,4 +32,36 @@ class PlayerLayoutFactory {
       ),
     );
   }
+
+  //[이전배치] 지난 게임 시작 때 저장한 좌석 순서를 지금 참가자에게 다시 적용
+  //
+  // 서버는 게임을 시작할 때마다 각 참가자의 seatIndex를 저장하고 대기실로
+  // 돌아와도 지우지 않습니다. 새로 들어온 사람(-1)이 있거나 번호가 겹치면
+  // 지난 배치를 그대로 쓸 수 없으므로 null입니다. 누가 나가 번호가 비면
+  // 남은 사람의 순서만 유지해 0부터 다시 매깁니다.
+  static PlayerLayoutModel? fromSavedSeats(List<GameRoomPlayer> players) {
+    final seats = players.map((player) => player.seatIndex).toSet();
+    if (players.length < 2 ||
+        seats.length != players.length ||
+        seats.any((seat) => seat < 0)) {
+      return null;
+    }
+    final bySeat = [...players]
+      ..sort((left, right) => left.seatIndex.compareTo(right.seatIndex));
+    final seatByUid = {
+      for (var seat = 0; seat < bySeat.length; seat++) bySeat[seat].uid: seat,
+    };
+    return PlayerLayoutModel(
+      players: List<PlayerLayoutPlayer>.unmodifiable(
+        players.map(
+          (player) => PlayerLayoutPlayer(
+            uid: player.uid,
+            nickname: player.nickname,
+            characterId: player.characterId,
+            seatIndex: seatByUid[player.uid]!,
+          ),
+        ),
+      ),
+    );
+  }
 }

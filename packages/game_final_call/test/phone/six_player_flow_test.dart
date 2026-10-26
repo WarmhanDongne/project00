@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:game_final_call/phone/providers/game_stage.dart';
 import 'package:game_final_call/phone/widgets/spectator_view.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
+import 'package:game_final_call/shared/models/round_reveal.dart';
 import 'package:game_final_call/shared/providers/game_controller.dart';
 import 'package:game_kit/player_layouts/services/player_slot_positions.dart';
 
@@ -11,6 +12,9 @@ class _Game extends Fake implements FinalCallController {
   bool get loading => false;
   @override
   bool isEliminated = true;
+  @override
+  bool get showsEliminated => isEliminated && !revealPending;
+  bool revealPending = false;
   @override
   bool isFinished = false;
   @override
@@ -23,6 +27,8 @@ class _Game extends Fake implements FinalCallController {
   List<FinalCallCard> get hand => const [];
   @override
   int? resultRevealCompletedAt;
+  @override
+  bool get isFinalSubmitPhase => false;
 }
 
 void main() {
@@ -68,6 +74,63 @@ void main() {
     expect(stage(), FinalCallPhoneStage.roundResultWaiting);
     game.resultRevealCompletedAt = 100;
     expect(stage(), FinalCallPhoneStage.result);
+  });
+
+  test('이번 라운드 탈락자는 태블릿 공개가 끝나기 전 관전 화면을 보지 않는다', () {
+    final game = _Game()
+      ..phase = 'roundResult'
+      ..revealPending = true;
+    expect(
+      resolveFinalCallPhoneStage(
+        game: game,
+        gameStartCompleted: true,
+        announcedRound: 3,
+        handRevealed: true,
+      ),
+      isNot(FinalCallPhoneStage.spectating),
+    );
+  });
+
+  test('공개 전에는 이번 라운드 하트 손실과 팀 탈락을 되돌려 보여 준다', () {
+    FinalCallPlayer player(String uid, int seat, int lives, String status) =>
+        FinalCallPlayer(
+          uid: uid,
+          nickname: uid,
+          characterId: 'frog',
+          seatIndex: seat,
+          team: seat.isEven ? FinalCallTeam.red : FinalCallTeam.blue,
+          status: status,
+          lives: lives,
+        );
+    final players = {
+      // 레드팀 a가 마지막 하트를 잃어 파트너 c까지 탈락했습니다.
+      'a': player('a', 0, 0, 'eliminated'),
+      'b': player('b', 1, 2, 'alive'),
+      'c': player('c', 2, 3, 'eliminated'),
+      'd': player('d', 3, 1, 'alive'),
+    };
+    const result = FinalCallRoundResult(
+      scores: {},
+      lifeLosses: {'a': 1, 'd': 1},
+      revealedHands: {},
+      automaticCall: false,
+    );
+    FinalCallPlayer? shown(String uid, {bool pending = true}) =>
+        displayedFinalCallPlayer(
+          players: players,
+          roundResult: result,
+          revealPending: pending,
+          uid: uid,
+        );
+
+    expect(shown('a')!.status, 'alive');
+    expect(shown('a')!.lives, 1);
+    expect(shown('c')!.status, 'alive');
+    expect(shown('c')!.lives, 3);
+    expect(shown('d')!.lives, 2);
+    expect(shown('b'), same(players['b']));
+    // 공개가 끝나면 서버 값을 그대로 보여 줍니다.
+    expect(shown('a', pending: false), same(players['a']));
   });
 
   test('생존자는 기존 분배 대기를 유지한다', () {

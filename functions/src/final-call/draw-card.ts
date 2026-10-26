@@ -7,7 +7,7 @@ import {getDatabase} from "firebase-admin/database";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
-import {resolveFinalCallRound} from "./game.js";
+import {applyFinalCallDraw, resolveFinalCallRound} from "./game.js";
 import {FinalCallRoom} from "./types.js";
 import {
   assertFinalCallTurn,
@@ -64,13 +64,7 @@ export const game_final_call_draw_card = onCall<Data>(
       }
       const card = source === "deck" ? game.server.deck.pop() : game.public.discardCard;
       if (!card) throw new HttpsError("data-loss", "가져올 카드가 없습니다.");
-      privatePlayer.pendingDraw = card;
-      game.public.pendingDrawUid = uid;
-      game.public.pendingDrawSource = source;
-      game.public.deckRemainingCount = game.server.deck.length;
-      game.public.turnDeadlineAt = transactionNow + 30000;
-      game.public.revision += 1;
-      game.public.updatedAt = transactionNow;
+      applyFinalCallDraw(game, uid, source, card, transactionNow);
       response = {success: true, type: "cardDrawn", source, card};
       recordFinalCallCommand(game, commandId, uid, "cardDrawn", transactionNow, response);
       return room;

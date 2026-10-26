@@ -385,6 +385,92 @@ export function createInitialFinalCallGame(
   return game;
 }
 
+/**
+ * 가져온 카드를 플레이어의 대기 카드로 둡니다.
+ *
+ * 턴 제한 시간은 카드를 가져오기 전부터 버릴 카드를 고를 때까지 이어지는
+ * 턴 전체 시간입니다. 가져온 뒤 다시 30초를 주면 화면에서 시간이 갑자기
+ * 늘어난 것처럼 보이므로, 턴을 시작할 때 정한 마감을 그대로 둡니다.
+ * @param {FinalCallGameState} game 현재 게임 상태
+ * @param {string} uid 카드를 가져온 플레이어
+ * @param {"deck"|"discard"} source 카드를 가져온 위치
+ * @param {FinalCallCard} card 가져온 카드
+ * @param {number} now 서버 시각
+ */
+export function applyFinalCallDraw(
+  game: FinalCallGameState,
+  uid: string,
+  source: "deck" | "discard",
+  card: FinalCallCard,
+  now: number,
+): void {
+  const privatePlayer = game.private[uid];
+  if (!privatePlayer) throw new HttpsError("data-loss", "손패가 없습니다.");
+  privatePlayer.pendingDraw = card;
+  game.public.pendingDrawUid = uid;
+  game.public.pendingDrawSource = source;
+  game.public.deckRemainingCount = game.server.deck.length;
+  // RTDB는 null을 저장하지 않으므로 마감이 비어 있을 때만 새로 정합니다.
+  game.public.turnDeadlineAt ??= now + FINAL_CALL_TURN_MS;
+  game.public.revision += 1;
+  game.public.updatedAt = now;
+}
+
+/**
+ * 같은 플레이어의 턴 안에서 최종 조합 선택 단계로 넘깁니다.
+ *
+ * CALL 뒤 선언자의 조합 선택과 마지막 바퀴의 교체 뒤 조합 선택도 같은 턴의
+ * 일부라서, 턴을 시작할 때 정한 30초 마감을 그대로 이어 씁니다.
+ * @param {FinalCallGameState} game 현재 게임 상태
+ * @param {"callerSubmit"|"finalSubmit"} phase 넘어갈 선택 단계
+ * @param {string} uid 계속 턴을 가진 플레이어
+ * @param {number} now 서버 시각
+ */
+export function continueFinalCallTurn(
+  game: FinalCallGameState,
+  phase: "callerSubmit" | "finalSubmit",
+  uid: string,
+  now: number,
+): void {
+  game.public.phase = phase;
+  game.public.turnUid = uid;
+  // RTDB는 null을 저장하지 않으므로 마감이 비어 있을 때만 새로 정합니다.
+  game.public.turnDeadlineAt ??= now + FINAL_CALL_TURN_MS;
+  game.public.revision += 1;
+  game.public.updatedAt = now;
+}
+
+/**
+ * 시간이 끝난 플레이어의 손패에서 가장 좋은 조합을 대신 제출하고 넘깁니다.
+ *
+ * 남은 마지막 바퀴 플레이어가 없으면 라운드를 판정하고, 있으면 다음
+ * 플레이어의 30초 턴을 시작합니다. CALL 선언자는 대기 목록에 없으므로
+ * 목록에서 빼는 것은 아무 영향이 없습니다.
+ * @param {FinalCallGameState} game 현재 게임 상태
+ * @param {string} uid 시간이 끝난 플레이어
+ * @param {number} now 서버 시각
+ */
+export function autoSubmitFinalCallHand(
+  game: FinalCallGameState,
+  uid: string,
+  now: number,
+): void {
+  game.server.finalSubmissions ??= {};
+  game.server.finalSubmissions[uid] = selectBestFinalCallCombination(
+    Object.values(game.private[uid]?.hand ?? {}),
+  );
+  game.public.finalTurnPendingUids =
+    removeFinalTurnPendingPlayer(game.public.finalTurnPendingUids, uid);
+  if (game.public.finalTurnPendingUids.length === 0) {
+    resolveFinalCallRound(game, now, false);
+    return;
+  }
+  game.public.phase = "finalTurns";
+  const allowed = new Set(game.public.finalTurnPendingUids);
+  startTurn(game, nextFinalCallPlayer(game.public.players, uid, allowed), now);
+  game.public.revision += 1;
+}
+
 export function startTurn(game: FinalCallGameState, uid: string, now: number): void {
   game.public.turnUid = uid;
   game.public.turnDeadlineAt = now + FINAL_CALL_TURN_MS;

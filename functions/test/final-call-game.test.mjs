@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  applyFinalCallDraw,
+  autoSubmitFinalCallHand,
   calculateFinalCallScore,
+  continueFinalCallTurn,
   createFinalCallPlayers,
   createInitialFinalCallGame,
   finalCallTeamForSeat,
@@ -15,7 +18,10 @@ import {
 } from "../lib/final-call/game.js";
 
 import {excludeFinalCallPlayer} from "../lib/final-call/exclude-player.js";
-import {assertFinalCallTurn} from "../lib/final-call/validation.js";
+import {
+  assertFinalCallTurn,
+  requireFinalCallGame,
+} from "../lib/final-call/validation.js";
 
 function card(id, color, value) {
   return {id, color, value};
@@ -513,4 +519,89 @@ test("관전자 제외는 게임에 영향을 주지 않고 실제 참가자 퇴
   const six = await sixPlayerGame();
   excludeFinalCallPlayer(six, "p0", 300);
   assert.equal(six.public.finishReason, "insufficientPlayers");
+});
+
+test("카드를 가져와도 턴 제한 시간은 다시 30초로 늘어나지 않는다", () => {
+  const game = finalCallGame({automaticCall: true});
+  game.public.turnDeadlineAt = 30_000;
+  game.server.deck = [card("deckTop", "red", 7)];
+  const drawn = game.server.deck.pop();
+  applyFinalCallDraw(game, "uid2", "deck", drawn, 25_000);
+  assert.equal(game.public.turnDeadlineAt, 30_000);
+  assert.deepEqual(game.private.uid2.pendingDraw, drawn);
+  assert.equal(game.public.pendingDrawUid, "uid2");
+  assert.equal(game.public.pendingDrawSource, "deck");
+  assert.equal(game.public.deckRemainingCount, 0);
+});
+
+test("마감이 비어 있는 오래된 상태에서는 가져온 시점부터 30초를 준다", () => {
+  const game = finalCallGame({automaticCall: true});
+  delete game.public.turnDeadlineAt;
+  applyFinalCallDraw(game, "uid2", "discard", game.public.discardCard, 5_000);
+  assert.equal(game.public.turnDeadlineAt, 35_000);
+});
+
+test("마지막 바퀴와 CALL 뒤 조합 선택은 턴의 남은 시간을 이어 쓴다", () => {
+  for (const phase of ["finalSubmit", "callerSubmit"]) {
+    const game = finalCallGame();
+    game.public.phase = phase === "finalSubmit" ? "finalTurns" : "playing";
+    game.public.turnDeadlineAt = 30_000;
+    continueFinalCallTurn(game, phase, "uid2", 25_000);
+    assert.equal(game.public.phase, phase);
+    assert.equal(game.public.turnUid, "uid2");
+    assert.equal(game.public.turnDeadlineAt, 30_000);
+    assert.equal(game.public.revision, 2);
+  }
+});
+
+test("마지막 바퀴 턴 시간이 끝나면 최고 조합을 대신 내고 다음 사람의 30초를 시작한다", () => {
+  const game = finalCallGame();
+  game.public.phase = "finalTurns";
+  game.public.finalTurnPendingUids = ["uid2", "uid4"];
+  autoSubmitFinalCallHand(game, "uid2", 40_000);
+  assert.deepEqual(
+    game.server.finalSubmissions.uid2,
+    selectBestFinalCallCombination(Object.values(game.private.uid2.hand)),
+  );
+  assert.deepEqual(game.public.finalTurnPendingUids, ["uid4"]);
+  assert.equal(game.public.phase, "finalTurns");
+  assert.equal(game.public.turnUid, "uid4");
+  assert.equal(game.public.turnDeadlineAt, 70_000);
+
+  // 마지막 남은 사람까지 끝나면 바로 라운드를 판정합니다.
+  autoSubmitFinalCallHand(game, "uid4", 80_000);
+  assert.deepEqual(game.public.finalTurnPendingUids, []);
+  assert.ok(game.public.roundResult);
+});
+
+/** Realtime Database처럼 빈 배열과 빈 객체를 지운 사본을 만듭니다. */
+function throughRealtimeDatabase(value) {
+  if (Array.isArray(value)) {
+    const items = value.map(throughRealtimeDatabase);
+    return items.length === 0 ? undefined : items;
+  }
+  if (value === null || typeof value !== "object") return value;
+  const entries = Object.entries(value)
+    .map(([key, child]) => [key, throughRealtimeDatabase(child)])
+    .filter(([, child]) => child !== undefined && child !== null);
+  return entries.length === 0 ? undefined : Object.fromEntries(entries);
+}
+
+test("덱의 마지막 카드를 가져온 뒤에도 다음 명령이 덱을 읽을 수 있다", () => {
+  const game = finalCallGame({automaticCall: true});
+  game.public.gameType = "final_call";
+  game.server.deck = [card("last", "red", 7)];
+  applyFinalCallDraw(game, "uid2", "deck", game.server.deck.pop(), 10);
+
+  const stored = throughRealtimeDatabase({game});
+  assert.equal(stored.game.server.deck, undefined);
+
+  const loaded = requireFinalCallGame(stored);
+  assert.deepEqual(loaded.server.deck, []);
+  assert.equal(loaded.server.deck.length, 0);
+  assert.deepEqual(loaded.public.finalTurnPendingUids, []);
+  // 덱이 비었으니 교체 뒤에는 자동 판정으로 넘어갈 수 있어야 합니다.
+  delete loaded.private.uid2.pendingDraw;
+  resolveFinalCallRound(loaded, 20, true);
+  assert.ok(loaded.public.roundResult);
 });

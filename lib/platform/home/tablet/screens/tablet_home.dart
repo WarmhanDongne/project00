@@ -86,7 +86,7 @@ class _TabletHomeState extends State<TabletHome>
     super.initState();
     //================태블릿 플랫폼 전체 화면=================
     // 자리 배치 직전에 viewport를 바꾸지 않도록 로비부터 같은 전체 화면을 씁니다.
-    // 로비에서는 wakelock을 켜지 않아 기기 절전 설정은 그대로 유지합니다.
+    // 방이 없는 로비에서는 wakelock을 켜지 않아 기기 절전 설정을 따릅니다.
     unawaited(AppSystemUi.enterTabletPlatformFullscreen());
     //=======================초기 화면 방향 요청 금지==============================
     // 앱 첫 실행에서는 이 initState가 iOS scene 연결보다 먼저 호출될 수 있습니다.
