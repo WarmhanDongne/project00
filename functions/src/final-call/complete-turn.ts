@@ -9,6 +9,7 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {ownEntry} from "../common/own-entry.js";
 import {finalCallProcessed, recordFinalCallCommand} from "./commands.js";
 import {
+  continueFinalCallTurn,
   nextFinalCallPlayer,
   resolveFinalCallRound,
   startTurn,
@@ -69,10 +70,8 @@ export const game_final_call_complete_turn = onCall<Data>(
         // =======================마지막 교체 후 최종 조합 선택==============================
         // CALL하지 않은 플레이어도 마지막 교체를 마친 뒤 같은 턴에서 최종
         // 점수 조합을 직접 선택합니다. 제출이 끝나기 전에는 다음 플레이어로
-        // 넘기지 않습니다.
-        game.public.phase = "finalSubmit";
-        startTurn(game, uid, now);
-        game.public.revision += 1;
+        // 넘기지 않고, 교체와 선택을 합쳐 한 턴 30초를 그대로 이어 씁니다.
+        continueFinalCallTurn(game, "finalSubmit", uid, now);
       } else {
         startTurn(game, nextFinalCallPlayer(game.public.players, uid), now);
         game.public.revision += 1;

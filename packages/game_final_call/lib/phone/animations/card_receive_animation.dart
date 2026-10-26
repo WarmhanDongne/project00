@@ -23,12 +23,16 @@ class FinalCallCardReceiveAnimation extends StatelessWidget {
     required this.isLandscape,
     required this.onRevealStarted,
     required this.onCompleted,
+    this.showTapHint = false,
   });
 
   final List<FinalCallCard> cards;
   final bool isLandscape;
   final VoidCallback onRevealStarted;
   final VoidCallback onCompleted;
+
+  /// 덱을 눌러 펼치라는 안내를 보여 줄지입니다. 첫 라운드에서만 켭니다.
+  final bool showTapHint;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +60,7 @@ class FinalCallCardReceiveAnimation extends StatelessWidget {
           totalDuration: FinalCallPhoneTiming.cardReceive,
           onRevealStarted: onRevealStarted,
           onCompleted: onCompleted,
+          showTapHint: showTapHint,
           cardBuilder: (context, index, front) => front
               ? FinalCallCardFace(card: cards[index], width: cardWidth)
               : FinalCallCardBack(width: cardWidth),

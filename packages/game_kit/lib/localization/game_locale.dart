@@ -323,6 +323,7 @@ const _commonUiCopy = <String, (String, String, String)>{
   '소리 다시 켜기': ('Turn sound on', '开启声音', '開啟聲音'),
   '모두 음소거': ('Mute all', '全部静音', '全部靜音'),
   '카드 확인': ('View cards', '查看卡牌', '查看卡牌'),
+  '카드를 눌러 펼쳐 보세요': ('Tap the cards to open', '点击卡牌展开', '點擊卡牌展開'),
   '이 방에 대한 권한이 없습니다. 방 상태를 다시 확인해주세요.': (
     'You do not have access to this room. Check the room status.',
     '你没有此房间的访问权限。请检查房间状态。',
@@ -360,6 +361,7 @@ const _commonUiCopy = <String, (String, String, String)>{
   '대기실': ('Lobby', '大厅', '大廳'),
   '대기실로': ('Back to lobby', '返回大厅', '返回大廳'),
   '섞기': ('Shuffle', '随机排列', '隨機排列'),
+  '이전 자리': ('Last seats', '上次座位', '上次座位'),
   '설정 완료': ('Finish setup', '完成设置', '完成設定'),
   '곧 나올 게임': ('Coming soon', '即将推出', '即將推出'),
   '새 게임 소식은 상점에서 확인해 주세요. 알림 신청은 준비 중이에요.': (

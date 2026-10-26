@@ -75,6 +75,7 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
     this.selectionMode = FinalCallHandSelectionMode.replace,
     this.combinationCardIds = const {},
     this.combinationLabel,
+    this.showTapHint = false,
   });
 
   final List<FinalCallCard> cards;
@@ -96,6 +97,9 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
 
   /// 묶음 아래 꼬리표 문구입니다(예: 7 + 7 = 14점).
   final String? combinationLabel;
+
+  /// 받은 덱을 눌러 펼치라는 안내를 보여 줄지입니다(게임 첫 배분).
+  final bool showTapHint;
   final VoidCallback onRevealStarted;
   final VoidCallback onRevealCompleted;
   final ValueChanged<String> onCardSelected;
@@ -113,6 +117,7 @@ class FinalCallPhoneHandCardStack extends StatelessWidget {
         isLandscape: isLandscape,
         onRevealStarted: onRevealStarted,
         onCompleted: onRevealCompleted,
+        showTapHint: showTapHint,
       );
     }
 

@@ -282,6 +282,8 @@ class _TabletGameLauncher {
         .where((player) => player.isActive && player.isPlayer)
         .toList(growable: false);
     final initialLayout = PlayerLayoutFactory.create(lockedPlayers);
+    // 같은 사람들이 이어서 하면 지난 게임 자리를 버튼 한 번으로 불러옵니다.
+    final previousLayout = PlayerLayoutFactory.fromSavedSeats(lockedPlayers);
 
     //================상태바 표시=================
     // 게임 선택 직후 자리 배치 화면부터 실제 게임과 같은 전체 화면을 유지합니다.
@@ -292,6 +294,7 @@ class _TabletGameLauncher {
       layoutContext,
       templateGame: templateGame,
       initialLayout: initialLayout,
+      previousLayout: previousLayout,
       roomCode: roomCode,
     );
     final PageRoute<void> setupRoute = origin == null
@@ -353,6 +356,7 @@ class _TabletGameLauncher {
     BuildContext layoutContext, {
     required TemplateGame templateGame,
     required PlayerLayoutModel initialLayout,
+    required PlayerLayoutModel? previousLayout,
     required String roomCode,
   }) {
     // 게임 시작 명령이 서버에 닿은 뒤에는 참가자 변경으로 자리 배치를 되감지
@@ -583,6 +587,7 @@ class _TabletGameLauncher {
           ) ??
           PlayerLayoutEditor(
             initialLayout: initialLayout,
+            previousLayout: previousLayout,
             tableColor: templateGame.tableColor,
             tableBackgroundImage: templateGame.tableBackgroundImage,
             tableImage: templateGame.layoutTableImage,

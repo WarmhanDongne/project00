@@ -47,7 +47,8 @@ class FinalCallPhoneTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final me = controller.players[controller.uid];
+    // 태블릿 공개 전에는 이번 라운드에 잃은 하트를 아직 보여 주지 않습니다.
+    final me = controller.displayedPlayer(controller.uid);
     return SizedBox(
       height: finalCallPhoneTopBarHeight,
       child: Padding(
@@ -163,7 +164,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final game = controller;
-    if (game.isEliminated || game.isFinished || game.status != 'playing') {
+    if (game.showsEliminated || game.isFinished || game.status != 'playing') {
       return const SizedBox.shrink();
     }
     final deadline = game.turnDeadlineAt;

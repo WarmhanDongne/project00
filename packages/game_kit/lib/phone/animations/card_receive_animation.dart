@@ -38,6 +38,7 @@ class CardReceiveAnimation extends StatefulWidget {
     this.onRevealStarted,
     this.onCompleted,
     this.cardBuilder,
+    this.showTapHint = false,
   }) : assert(
          cardBuilder == null
              ? frontCardAssets.length > 0 && backCardAsset != null
@@ -79,6 +80,12 @@ class CardReceiveAnimation extends StatefulWidget {
   /// 넘깁니다. `front`가 true면 앞면입니다.
   final Widget Function(BuildContext context, int cardIndex, bool front)?
   cardBuilder;
+
+  /// 덱이 멈춘 뒤 눌러야 펼쳐진다는 안내(번지는 테두리·손가락·문구)를 보여 줍니다.
+  ///
+  /// 처음 하는 사람이 덱을 누를 때까지 기다린다는 것을 모르고 멈춰 있지 않도록
+  /// 게임의 첫 배분에서 켭니다.
+  final bool showTapHint;
 
   @override
   State<CardReceiveAnimation> createState() => _CardReceiveAnimationState();
@@ -208,6 +215,8 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
                 children: [
                   for (var index = 0; index < _cardCount; index++)
                     _buildAnimatedCard(frame: frame, cardIndex: index),
+                  if (_canReveal && widget.showTapHint)
+                    _buildTapHint(frame, size),
                   if (_canReveal) _buildRevealTapTarget(frame),
                 ],
               ),
@@ -232,6 +241,105 @@ class _CardReceiveAnimationState extends State<CardReceiveAnimation>
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: _revealCards,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 덱을 눌러 카드를 펼치라는 안내입니다.
+  ///
+  /// 대기 모션과 같은 주기로 테두리가 번지고 손가락이 덱을 누릅니다. 탭은
+  /// [_buildRevealTapTarget]이 받으므로 이 안내는 터치를 가로채지 않습니다.
+  Widget _buildTapHint(_PhoneCardFrame frame, Size size) {
+    final pulse = _idleController.value;
+    final deckRect = Rect.fromCenter(
+      center: frame.entryCenter + Offset(0, frame.deckIdleOffsetY),
+      width: widget.cardWidth,
+      height: frame.cardHeight,
+    );
+    final ringGrowth = 4 + 14 * Curves.easeOutCubic.transform(pulse);
+    final press = math.sin((pulse / 0.4).clamp(0.0, 1.0) * math.pi);
+    final handSize = (widget.cardWidth * 0.42).clamp(30.0, 52.0);
+    const labelHeight = 34.0;
+    const labelGap = 16.0;
+    const labelMaxWidth = 320.0;
+    // 아래 공간이 모자라면 문구를 덱 아래쪽 위에 겹쳐 화면 안에 둡니다.
+    final labelTop = deckRect.bottom + labelGap + labelHeight <= size.height
+        ? deckRect.bottom + labelGap
+        : deckRect.bottom - labelHeight - labelGap;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 280),
+          builder: (context, opacity, child) =>
+              Opacity(opacity: opacity, child: child),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fromRect(
+                rect: deckRect.inflate(ringGrowth),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: (1 - pulse) * 0.9),
+                      width: 3,
+                    ),
+                    borderRadius: BorderRadius.circular(10 + ringGrowth),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: deckRect.right - handSize * 0.62,
+                top: deckRect.bottom - handSize * 0.78 + 6 * press,
+                child: Transform.scale(
+                  scale: 1 - 0.08 * press,
+                  child: Icon(
+                    Icons.touch_app_rounded,
+                    size: handSize,
+                    color: Colors.white,
+                    shadows: const [
+                      Shadow(color: Color(0x99000000), blurRadius: 8),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: deckRect.center.dx - labelMaxWidth / 2,
+                width: labelMaxWidth,
+                top: labelTop,
+                height: labelHeight,
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xF2FFFFFF),
+                      borderRadius: BorderRadius.circular(labelHeight / 2),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x55000000), blurRadius: 10),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        '카드를 눌러 펼쳐 보세요'.localized,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: Color(0xFF1B1530),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -549,6 +549,8 @@ class _PhoneHandCardStackState extends State<PhoneHandCardStack> {
                   spreadToLeft: widget.spreadToLeft,
                   entryCenterOffsetX: widget.entryCenterOffsetX,
                   entryCenterOffsetY: widget.entryCenterOffsetY,
+                  // 처음 받는 손패에서만 덱을 눌러 펼치라고 안내합니다.
+                  showTapHint: widget.roundNumber == 1,
                   onRevealStarted: widget.onRevealStarted,
                   onCompleted: () {
                     if (!mounted) return;

@@ -51,7 +51,9 @@ FinalCallPhoneStage resolveFinalCallPhoneStage({
         ? FinalCallPhoneStage.roundResultWaiting
         : FinalCallPhoneStage.result;
   }
-  if (game.isEliminated) return FinalCallPhoneStage.spectating;
+  // 이번 라운드에 탈락했으면 태블릿 공개가 끝날 때까지 다른 플레이어와 같은
+  // 화면을 유지해, 휴대폰에서 결과를 먼저 알 수 없게 합니다.
+  if (game.showsEliminated) return FinalCallPhoneStage.spectating;
   if (game.phase == 'dealing') return FinalCallPhoneStage.dealing;
   if (announcedRound != game.round && game.hand.isEmpty) {
     return FinalCallPhoneStage.dealing;

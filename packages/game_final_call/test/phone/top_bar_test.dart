@@ -31,6 +31,10 @@ class _Revealing extends Fake implements FinalCallController {
   bool get isMyTurn => false;
   @override
   Map<String, FinalCallPlayer> get players => const {};
+  @override
+  bool get showsEliminated => false;
+  @override
+  FinalCallPlayer? displayedPlayer(String playerUid) => players[playerUid];
 }
 
 void main() {

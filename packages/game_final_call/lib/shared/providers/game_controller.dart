@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:game_final_call/shared/models/game_models.dart';
 import 'package:game_final_call/shared/models/game_state.dart';
+import 'package:game_final_call/shared/models/round_reveal.dart';
 import 'package:game_final_call/shared/services/game_service.dart';
 import 'package:game_final_call/shared/services/private_state_mapper.dart';
 import 'package:game_final_call/shared/services/public_state_mapper.dart';
@@ -122,6 +123,30 @@ class FinalCallController extends GameSessionController<FinalCallGameState> {
   // ---------------------------------------------------------------------------
   bool get isMyTurn => turnUid == uid;
   bool get isEliminated => players[uid]?.status == 'eliminated';
+
+  /// 태블릿이 이번 라운드의 카드 공개와 하트 연출을 아직 끝내지 않았는지입니다.
+  ///
+  /// 중간 라운드는 태블릿이 공개를 마치고 다음 라운드를 열 때(`roundResult`
+  /// 단계가 끝날 때), 마지막 라운드는 `resultRevealCompletedAt`이 기록될 때
+  /// 공개가 끝납니다.
+  bool get isRoundRevealPending =>
+      roundResult != null &&
+      (phase == 'roundResult' ||
+          (isFinished && resultRevealCompletedAt == null));
+
+  /// 휴대폰에 보여 줄 플레이어 상태입니다. 태블릿 공개 전에는 이번 라운드의
+  /// 하트 손실과 탈락을 숨깁니다.
+  FinalCallPlayer? displayedPlayer(String playerUid) =>
+      displayedFinalCallPlayer(
+        players: players,
+        roundResult: roundResult,
+        revealPending: isRoundRevealPending,
+        uid: playerUid,
+      );
+
+  /// 휴대폰에서 관전 화면을 보여 줄지입니다. 이번 라운드에 탈락했어도 태블릿
+  /// 공개가 끝나기 전에는 false입니다.
+  bool get showsEliminated => displayedPlayer(uid)?.status == 'eliminated';
   int get remainingTeamCount => players.values
       .where((player) => player.status == 'alive')
       .map((player) => player.team)

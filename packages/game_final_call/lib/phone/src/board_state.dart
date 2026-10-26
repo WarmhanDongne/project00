@@ -344,8 +344,8 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
           introTextColor: Colors.white,
           background: const FinalCallPopBackground(),
           // 손패가 준비되고 펼치기가 끝나야 상단바가 등장합니다.
-          contentReady: game.isEliminated || game.hand.isNotEmpty,
-          contentRevealed: game.isEliminated || revealedRound == game.round,
+          contentReady: game.showsEliminated || game.hand.isNotEmpty,
+          contentRevealed: game.showsEliminated || revealedRound == game.round,
           onIntroCompleted: () {
             if (mounted) setState(() => gameStartCompleted = true);
           },
@@ -369,7 +369,7 @@ class _FinalCallPhoneGameState extends ConsumerState<FinalCallPhoneGame> {
                 )
               : const SizedBox.shrink(),
           content: RepaintBoundary(
-            child: game.isEliminated
+            child: game.showsEliminated
                 ? FinalCallSpectatorView(
                     remainingTeamCount: game.remainingTeamCount,
                     waitingForResult: game.isFinished,

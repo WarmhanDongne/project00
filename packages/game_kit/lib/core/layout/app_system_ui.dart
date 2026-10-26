@@ -7,6 +7,7 @@
 
 // ========================[ import ]==========================
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -18,14 +19,42 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 /// 시스템 영역을 표시합니다. 게임별 화면에서 직접 다른 모드를 지정하지 말고
 /// 이 API만 사용합니다.
 abstract final class AppSystemUi {
+  static bool _gameScreenActive = false;
+  static final Set<Object> _roomHolders = <Object>{};
+
+  //================방 참여 중 화면 켜짐=================
+  /// 방에 들어가 있는 동안은 로비·대기실에서도 화면이 꺼지지 않게 합니다.
+  ///
+  /// 대기실이나 자리 배치를 기다리는 동안 화면이 꺼지면 앱이 백그라운드로
+  /// 내려가 연결이 끊기고, 게임 시작을 놓치거나 방에서 나가게 됩니다.
+  /// [holder]마다 따로 기록하므로 방 상태를 가진 객체가 여럿이어도 모두
+  /// 방을 나가야 잠금이 풀립니다. 방 밖의 로비는 기기 절전 설정을 따릅니다.
+  static void setInRoom(Object holder, bool inRoom) {
+    final changed = inRoom
+        ? _roomHolders.add(holder)
+        : _roomHolders.remove(holder);
+    if (changed) unawaited(_applyWakelock());
+  }
+
+  /// 지금 화면 켜짐 잠금을 걸어야 하는지입니다.
+  @visibleForTesting
+  static bool get keepsScreenOn => _gameScreenActive || _roomHolders.isNotEmpty;
+
+  @visibleForTesting
+  static void resetForTesting() {
+    _gameScreenActive = false;
+    _roomHolders.clear();
+  }
+
   //================태블릿 플랫폼 전체 화면=================
-  /// 태블릿 로비를 전체 화면으로 유지하되 화면 켜짐 잠금은 해제합니다.
+  /// 태블릿 로비를 전체 화면으로 유지하되, 방이 없으면 화면 켜짐 잠금을 풉니다.
   ///
   /// 로비와 자리 배치가 같은 viewport를 쓰므로 진입 순간 안전 영역과 요소 크기가
-  /// 다시 계산되지 않습니다. 게임처럼 계속 켜 두지는 않아 기기 절전 설정은
-  /// 그대로 따릅니다.
+  /// 다시 계산되지 않습니다. 방이 열려 있으면 [setInRoom] 때문에 계속 켜 두고,
+  /// 방이 없으면 기기 절전 설정을 그대로 따릅니다.
   static Future<void> enterTabletPlatformFullscreen() {
-    unawaited(_setWakelock(false));
+    _gameScreenActive = false;
+    unawaited(_applyWakelock());
     return SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
@@ -35,24 +64,27 @@ abstract final class AppSystemUi {
   /// 게임 중에는 입력이 한동안 없어도(태블릿 관전, 상대 턴 대기) 화면이
   /// 절전으로 꺼지지 않도록 화면 켜짐 잠금도 함께 겁니다.
   static Future<void> enterGameFullscreen() {
-    unawaited(_setWakelock(true));
+    _gameScreenActive = true;
+    unawaited(_applyWakelock());
     return SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   //================상태바 표시=================
-  /// 휴대폰 플랫폼 화면으로 돌아왔을 때 시스템 바를 다시 표시하고 화면 켜짐
-  /// 잠금을 해제해 기기 절전 설정을 원래대로 되돌립니다.
+  /// 휴대폰 플랫폼 화면으로 돌아왔을 때 시스템 바를 다시 표시합니다. 방
+  /// 대기실이면 화면을 계속 켜 두고, 방을 나왔으면 화면 켜짐 잠금을 풀어
+  /// 기기 절전 설정을 원래대로 되돌립니다.
   static Future<void> showPlatformSystemBars() {
-    unawaited(_setWakelock(false));
+    _gameScreenActive = false;
+    unawaited(_applyWakelock());
     return SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
     );
   }
 
-  static Future<void> _setWakelock(bool enabled) async {
+  static Future<void> _applyWakelock() async {
     try {
-      await WakelockPlus.toggle(enable: enabled);
+      await WakelockPlus.toggle(enable: keepsScreenOn);
     } catch (_) {
       // 일부 플랫폼·테스트 환경에서 잠금이 지원되지 않아도 화면 전환과
       // 게임 진행을 막지 않습니다.

@@ -1,3 +1,4 @@
+import 'package:game_kit/core/layout/app_system_ui.dart';
 import 'package:game_kit/firebase/firebase_backend.dart';
 import 'package:game_kit/recovery/services/room_recovery_batch.dart';
 import 'package:game_kit/recovery/services/room_session_identity_store.dart';
@@ -196,6 +197,8 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   @override
   void notifyListeners() {
     if (!_isDisposed) {
+      // 방에 있는 동안은 대기실·로비에서도 화면이 꺼져 연결이 끊기지 않게 합니다.
+      AppSystemUi.setInRoom(this, isInRoom);
       super.notifyListeners();
     }
   }
@@ -2115,6 +2118,7 @@ class RoomProvider extends GameRoomContext with WidgetsBindingObserver {
   @override
   void dispose() {
     _isDisposed = true;
+    AppSystemUi.setInRoom(this, false);
     _releaseReconnect();
     _lifecycleBinding?.removeObserver(this);
     roomSubscription?.cancel();
